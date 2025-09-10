@@ -20,8 +20,8 @@ package org.rdfarchitect.services;
 import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.changelog.ChangeLogEntry;
-import org.rdfarchitect.cim.changelog.GraphChangeLog;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.util.UUID;

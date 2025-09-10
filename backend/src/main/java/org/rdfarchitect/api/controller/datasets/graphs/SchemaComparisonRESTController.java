@@ -24,10 +24,10 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.cim.changes.PackageChange;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.SchemaComparisonUseCase;
+import org.rdfarchitect.services.compare.SchemaComparisonUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -60,12 +60,12 @@ public class SchemaComparisonRESTController {
                         responseCode = "200",
                         content = @Content(
                                   mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = PackageChange.class))
+                                  array = @ArraySchema(schema = @Schema(implementation = TriplePackageChange.class))
                         ))
               }
     )
     @PostMapping
-    public List<PackageChange> compareSchemas(
+    public List<TriplePackageChange> compareSchemas(
               @Parameter(description = "The name/url of the inquirer.")
               @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
@@ -96,13 +96,13 @@ public class SchemaComparisonRESTController {
                                   responseCode = "200",
                                   content = @Content(
                                             mediaType = "application/json",
-                                            array = @ArraySchema(schema = @Schema(implementation = PackageChange.class))
+                                            array = @ArraySchema(schema = @Schema(implementation = TriplePackageChange.class))
                                   )
                         )
               }
     )
     @GetMapping()
-    public List<PackageChange> compareDatasetSchemas(
+    public List<TriplePackageChange> compareDatasetSchemas(
               @Parameter(description = "The name/url of the inquirer.")
               @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,

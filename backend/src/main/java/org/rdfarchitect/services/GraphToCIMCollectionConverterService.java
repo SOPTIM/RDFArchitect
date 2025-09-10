@@ -25,20 +25,20 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.cim.CIMQuerySolutionParser;
-import org.rdfarchitect.cim.data.CIMObjectFetcher;
-import org.rdfarchitect.cim.data.dto.CIMClass;
-import org.rdfarchitect.cim.data.dto.CIMCollection;
-import org.rdfarchitect.cim.data.dto.CIMPackage;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.queries.CIMQueryVars;
-import org.rdfarchitect.cim.queries.select.CIMBaseQueryBuilder;
-import org.rdfarchitect.cim.queries.select.CIMQueries;
-import org.rdfarchitect.cim.queries.select.CIMQueryBuilder;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.cim.rdf.resources.RDFA;
-import org.rdfarchitect.cim.rendering.GraphFilter;
+import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
+import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.queries.CIMQueryVars;
+import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
+import org.rdfarchitect.models.cim.queries.select.CIMQueries;
+import org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
@@ -49,7 +49,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.rdfarchitect.cim.queries.select.CIMQueryBuilder.Mode.*;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.*;
 
 /**
  * Implementation of {@link GraphToCIMCollectionConverterUseCase}.

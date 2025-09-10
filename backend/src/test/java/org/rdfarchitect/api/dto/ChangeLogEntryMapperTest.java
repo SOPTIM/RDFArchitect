@@ -24,7 +24,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
-import org.rdfarchitect.cim.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.time.LocalDateTime;
