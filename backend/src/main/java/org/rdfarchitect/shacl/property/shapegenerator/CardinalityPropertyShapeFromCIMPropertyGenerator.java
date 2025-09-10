@@ -20,10 +20,10 @@ package org.rdfarchitect.shacl.property.shapegenerator;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
-import org.rdfarchitect.cim.relations.model.properties.CIMAssociationUtils;
-import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
-import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
-import org.rdfarchitect.shacl.property.shapebuilder.CardinalityPropertyShapeBuilder;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMAssociationUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.shacl.generator.property.CIMPropertySHACLUtils;
+import org.rdfarchitect.shacl.generator.property.shapebuilder.CardinalityPropertyShapeBuilder;
 
 public class CardinalityPropertyShapeFromCIMPropertyGenerator implements PropertyShapeFromCIMPropertyGenerator {
 

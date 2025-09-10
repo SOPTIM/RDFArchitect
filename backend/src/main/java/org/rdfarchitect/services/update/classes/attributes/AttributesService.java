@@ -20,11 +20,11 @@ package org.rdfarchitect.services.update.classes.attributes;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
-import org.rdfarchitect.cim.changelog.ChangeLogEntry;
-import org.rdfarchitect.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
+import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
 
@@ -48,7 +48,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var update = CIMUpdates.insertAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
+        InMemorySparqlExecutor.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
     }
@@ -58,7 +58,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var update = CIMUpdates.replaceAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
+        InMemorySparqlExecutor.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
     }
@@ -68,7 +68,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var update = CIMUpdates.replaceAttributes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID, attributeCIMObjects);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
+        InMemorySparqlExecutor.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("All attributes for class " + classUUID + " replaced", graph.getLastDelta()));
     }
 }

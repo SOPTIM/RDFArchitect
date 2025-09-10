@@ -29,7 +29,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.vocabulary.RDF;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
 
 @Setter
 @Accessors(chain = true)

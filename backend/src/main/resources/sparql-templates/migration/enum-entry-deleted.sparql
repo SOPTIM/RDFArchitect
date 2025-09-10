@@ -1,0 +1,7 @@
+DELETE {
+    ?instance ?attribute ?enumEntry .
+} INSERT {
+    ?instance ?attribute ?replacementValue .
+} WHERE {
+    ?instance ?attribute ?enumEntry .
+}

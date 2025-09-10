@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services;
 
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
 
 import java.util.List;
 

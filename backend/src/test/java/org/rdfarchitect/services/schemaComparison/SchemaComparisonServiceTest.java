@@ -22,23 +22,23 @@ import org.apache.jena.vocabulary.RDFS;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.changes.ClassChange;
-import org.rdfarchitect.cim.changes.NestedObjectChange;
-import org.rdfarchitect.cim.changes.PackageChange;
-import org.rdfarchitect.cim.changes.PropertyChange;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.SchemaComparisonService;
+import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
+import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
+import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;
+import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.services.compare.SchemaComparisonService;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Map;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.assertj.core.api.Assertions.*;
 import static utils.TestUtils.*;
 
 class SchemaComparisonServiceTest {
@@ -73,11 +73,12 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(1);
-        assertThat(result.getFirst().getLabel()).isEqualTo("http://example.org#package");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getUri()).isEqualTo("http://example.org#package");
+        assertThat(result.getFirst().getLabel()).isEqualTo("package");
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEmpty();
-        assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.MAP)
-                                                  .containsEntry(RDFS.comment.toString(), new PropertyChange(null, "\"This is a new comment\""));
+        assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.LIST)
+                                                  .contains(new TriplePropertyChange(RDFS.comment.toString(), "\"This is a new comment\"", null));
     }
 
     @Test
@@ -85,44 +86,36 @@ class SchemaComparisonServiceTest {
         // arrange
         MultipartFile uploadedFile = readMultipartFileFromFile(PATH, "changedPackageLabel.ttl");
 
-        // act
-        var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
+        var package1 = new TriplePackageChange();
+        package1.setUri("http://example.org#package");
+        package1.setLabel("package");
+        package1.setChanges(List.of(
+                  new TriplePropertyChange(RDF.type.getURI(), null, CIMS.classCategory.toString()),
+                  new TriplePropertyChange(RDFS.label.getURI(), null, "\"package\"@en")));
 
-        // assert
-        var expected = List.of(
-                  PackageChange.builder()
-                               .label("http://example.org#package")
-                               .changes(Map.of(
-                                         RDFS.label.getURI(), PropertyChange.builder().from("\"package\"@en").to(null).build(),
-                                         RDF.type.getURI(), PropertyChange.builder().from(CIMS.classCategory.toString()).to(null).build()
-                                              ))
-                               .classes(List.of(
-                                         ClassChange.builder()
-                                                    .label("http://example.org#class")
-                                                    .changes(Map.of(
-                                                              CIMS.belongsToCategory.toString(),
-                                                              PropertyChange.builder().from("http://example.org#package").to("http://example.org#newPackage").build()
-                                                                   ))
-                                                    .build()
-                                               ))
-                               .build(),
-                  PackageChange.builder()
-                               .label("http://example.org#newPackage")
-                               .changes(Map.of(
-                                         RDFS.label.getURI(), PropertyChange.builder().from(null).to("\"newPackage\"@en").build(),
-                                         RDF.type.getURI(), PropertyChange.builder().from(null).to(CIMS.classCategory.toString()).build()
-                                              ))
-                               .classes(List.of(
-                                         ClassChange.builder()
-                                                    .label("http://example.org#class")
-                                                    .changes(Map.of(
-                                                              CIMS.belongsToCategory.toString(),
-                                                              PropertyChange.builder().from("http://example.org#package").to("http://example.org#newPackage").build()
-                                                                   ))
-                                                    .build()
-                                               ))
-                               .build()
-                              );
+        var class1 = new TripleClassChange();
+        class1.setUri("http://example.org#class");
+        class1.setLabel("class");
+        class1.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#newPackage", "http://example.org#package")));
+        package1.setClasses(List.of(class1));
+
+        var package2 = new TriplePackageChange();
+        package2.setUri("http://example.org#newPackage");
+        package2.setLabel("newPackage");
+        package2.setChanges(List.of(
+                  new TriplePropertyChange(RDF.type.getURI(), CIMS.classCategory.toString(), null),
+                  new TriplePropertyChange(RDFS.label.getURI(), "\"newPackage\"@en", null)));
+
+        var class2 = new TripleClassChange();
+        class2.setUri("http://example.org#class");
+        class2.setLabel("class");
+        class2.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#newPackage", "http://example.org#package")));
+        package2.setClasses(List.of(class2));
+
+        var expected = List.of(package1, package2);
+        var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         assertThat(result).usingRecursiveComparison().isEqualTo(expected);
     }
@@ -136,26 +129,28 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(1);
-        assertThat(result.getFirst().getLabel()).isEqualTo("http://example.org#newPackage");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getUri()).isEqualTo("http://example.org#newPackage");
+        assertThat(result.getFirst().getLabel()).isEqualTo("newPackage");
         assertThat(result.getFirst().getChanges()).isEqualTo(
-                  Map.of(
-                            RDF.type.toString(), PropertyChange.builder().from(null).to(CIMS.classCategory.toString()).build(),
-                            RDFS.label.toString(), PropertyChange.builder().from(null).to("\"newPackage\"@en").build()
-                        )
-                                                            );
+                  List.of(
+                            new TriplePropertyChange(RDF.type.toString(), CIMS.classCategory.toString(), null),
+                            new TriplePropertyChange(RDFS.label.toString(), "\"newPackage\"@en", null)
+                         )
+                                                        );
+
+        var expectedClass = new TripleClassChange();
+        expectedClass.setUri("http://example.org#newClass");
+        expectedClass.setLabel("newClass");
+        expectedClass.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#newPackage", null),
+                  new TriplePropertyChange(RDF.type.toString(), RDFS.Class.toString(), null),
+                  new TriplePropertyChange(RDFS.label.toString(), "\"newClass\"@en", null)));
+
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                                  .hasSize(1)
-                                                  .first()
-                                                  .isEqualTo(ClassChange.builder()
-                                                                        .label("http://example.org#newClass")
-                                                                        .changes(Map.of(
-                                                                                  CIMS.belongsToCategory.toString(), PropertyChange.builder().from(null)
-                                                                                                                                   .to("http://example.org#newPackage").build(),
-                                                                                  RDFS.label.toString(), PropertyChange.builder().from(null).to("\"newClass\"@en").build(),
-                                                                                  RDF.type.toString(), PropertyChange.builder().from(null).to(RDFS.Class.toString()).build()
-                                                                                       ))
-                                                                        .build());
+                                              .hasSize(1)
+                                              .first()
+                                              .isEqualTo(expectedClass);
     }
 
     @Test
@@ -167,28 +162,33 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(2);
-        assertThat(result.getFirst().getLabel()).isEqualTo("http://example.org#package");
-        assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.MAP)
-                                              .containsEntry(RDFS.label.toString(), new PropertyChange("\"package\"@en", null))
-                                              .containsEntry(RDF.type.toString(), new PropertyChange(CIMS.classCategory.toString(), null));
-        assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
-                  List.of(ClassChange.builder()
-                                     .label("http://example.org#class")
-                                     .changes(Map.of(
-                                               CIMS.belongsToCategory.toString(), PropertyChange.builder().from("http://example.org#package").to(null).build()
-                                                    ))
-                                     .build())
-                                                                                                     );
+        assertThat(result).hasSize(2);
+        assertThat(result.getFirst().getUri()).isEqualTo("http://example.org#package");
+        assertThat(result.getFirst().getLabel()).isEqualTo("package");
+        assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.LIST)
+                                              .contains(new TriplePropertyChange(RDFS.label.toString(), null, "\"package\"@en"))
+                                              .contains(new TriplePropertyChange(RDF.type.toString(), null, CIMS.classCategory.toString()));
+
+        var expectedClass1 = new TripleClassChange();
+        expectedClass1.setUri("http://example.org#class");
+        expectedClass1.setLabel("class");
+        expectedClass1.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), null, "http://example.org#package")));
+
+        assertThat(result.get(0).getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
+                  List.of(expectedClass1));
+
         assertThat(result.get(1).getLabel()).isEqualTo("default");
         assertThat(result.get(1).getChanges()).isNull();
+
+        var expectedClass2 = new TripleClassChange();
+        expectedClass2.setUri("http://example.org#class");
+        expectedClass2.setLabel("class");
+        expectedClass2.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), null, "http://example.org#package")));
+
         assertThat(result.get(1).getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
-                  List.of(ClassChange.builder()
-                                     .label("http://example.org#class")
-                                     .changes(Map.of(
-                                               CIMS.belongsToCategory.toString(), PropertyChange.builder().from("http://example.org#package").to(null).build()
-                                                    ))
-                                     .build()));
+                  List.of(expectedClass2));
     }
 
     @Test
@@ -200,32 +200,28 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
         assertThat(result.getFirst().getLabel()).isEqualTo("default");
+
+        var class1 = new TripleClassChange();
+        class1.setUri("http://example.org#subClass");
+        class1.setLabel("subClass");
+        class1.setChanges(List.of(
+                  new TriplePropertyChange(RDFS.subClassOf.toString(), null, "http://example.org#class"),
+                  new TriplePropertyChange(RDF.type.toString(), null, RDFS.Class.toString()),
+                  new TriplePropertyChange(RDFS.label.toString(), null, "\"subClass\"@en")));
+
+        var class2 = new TripleClassChange();
+        class2.setUri("http://example.org#newSubClass");
+        class2.setLabel("newSubClass");
+        class2.setChanges(List.of(
+                  new TriplePropertyChange(RDFS.subClassOf.toString(), "http://example.org#class", null),
+                  new TriplePropertyChange(RDF.type.toString(), RDFS.Class.toString(), null),
+                  new TriplePropertyChange(RDFS.label.toString(), "\"newSubClass\"@en", null)));
+
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                                  .hasSize(2)
-                                                  .isEqualTo(List.of(ClassChange.builder()
-                                                                                .label("http://example.org#subClass")
-                                                                                .changes(Map.of(
-                                                                                          RDF.type.toString(), PropertyChange.builder().from(RDFS.Class.toString()).to(null)
-                                                                                                                             .build(),
-                                                                                          RDFS.label.toString(), PropertyChange.builder().from("\"subClass\"@en").to(null).build(),
-                                                                                          RDFS.subClassOf.toString(), PropertyChange.builder().from("http://example.org#class")
-                                                                                                                                    .to(null).build()
-                                                                                               ))
-                                                                                .build(),
-                                                                     ClassChange.builder()
-                                                                                .label("http://example.org#newSubClass")
-                                                                                .changes(Map.of(
-                                                                                          RDF.type.toString(), PropertyChange.builder().from(null).to(RDFS.Class.toString())
-                                                                                                                             .build(),
-                                                                                          RDFS.label.toString(), PropertyChange.builder().from(null).to("\"newSubClass\"@en")
-                                                                                                                               .build(),
-                                                                                          RDFS.subClassOf.toString(), PropertyChange.builder().from(null)
-                                                                                                                                    .to("http://example.org#class").build()
-                                                                                               ))
-                                                                                .build(
-                                                                                      )));
+                                              .hasSize(2)
+                                              .isEqualTo(List.of(class1, class2));
     }
 
     @Test
@@ -237,23 +233,28 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(1);
-        assertThat(result.getFirst().getLabel()).isEqualTo("http://example.org#package");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getUri()).isEqualTo("http://example.org#package");
+        assertThat(result.getFirst().getLabel()).isEqualTo("package");
+
+        var expectedClass = new TripleClassChange();
+        expectedClass.setUri("http://example.org#class");
+        expectedClass.setLabel("class");
+
+        var attributeChange = new TripleResourceChange();
+        attributeChange.setUri("http://example.org#class.attribute");
+        attributeChange.setLabel("attribute");
+        attributeChange.setChanges(List.of(
+                  new TriplePropertyChange(RDFS.range.toString(),
+                                           "http://www.w3.org/2001/XMLSchema#int",
+                                           "http://www.w3.org/2001/XMLSchema#string")));
+
+        expectedClass.setAttributes(List.of(attributeChange));
+
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                                  .hasSize(1)
-                                                  .first()
-                                                  .isEqualTo(ClassChange.builder()
-                                                                        .label("http://example.org#class")
-                                                                        .attributes(List.of(NestedObjectChange.builder()
-                                                                                                              .label("attribute")
-                                                                                                              .changes(Map.of(
-                                                                                                                        RDFS.range.toString(), PropertyChange.builder()
-                                                                                                                                                             .from("http://www.w3.org/2001/XMLSchema#string")
-                                                                                                                                                             .to("http://www.w3.org/2001/XMLSchema#int")
-                                                                                                                                                             .build()
-                                                                                                                             )).build()
-                                                                                           ))
-                                                                        .build());
+                                              .hasSize(1)
+                                              .first()
+                                              .isEqualTo(expectedClass);
     }
 
     @Test
@@ -265,23 +266,28 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(1);
-        assertThat(result.getFirst().getLabel()).isEqualTo("http://example.org#package");
+        assertThat(result).hasSize(1);
+        assertThat(result.getFirst().getUri()).isEqualTo("http://example.org#package");
+        assertThat(result.getFirst().getLabel()).isEqualTo("package");
+
+        var expectedClass = new TripleClassChange();
+        expectedClass.setUri("http://example.org#class");
+        expectedClass.setLabel("class");
+
+        var associationChange = new TripleResourceChange();
+        associationChange.setUri("http://example.org#class.associatedClass");
+        associationChange.setLabel("class.associatedClass");
+        associationChange.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.multiplicity.toString(),
+                                           "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1",
+                                           "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..n")));
+
+        expectedClass.setAssociations(List.of(associationChange));
+
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                                  .hasSize(1)
-                                                  .first()
-                                                  .isEqualTo(ClassChange.builder()
-                                                                        .label("http://example.org#class")
-                                                                        .associations(List.of(NestedObjectChange.builder()
-                                                                                                                .label("class.associatedClass")
-                                                                                                                .changes(Map.of(
-                                                                                                                          CIMS.multiplicity.toString(), PropertyChange.builder()
-                                                                                                                                                                      .from("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..n")
-                                                                                                                                                                      .to("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1")
-                                                                                                                                                                      .build()
-                                                                                                                               )).build()
-                                                                                             ))
-                                                                        .build());
+                                              .hasSize(1)
+                                              .first()
+                                              .isEqualTo(expectedClass);
     }
 
     @Test
@@ -293,22 +299,25 @@ class SchemaComparisonServiceTest {
         var result = service.compareSchemas(GRAPH_IDENTIFIER, uploadedFile);
 
         // assert
-        assertThat(result.size()).isEqualTo(1);
+        assertThat(result).hasSize(1);
         assertThat(result.getFirst().getLabel()).isEqualTo("default");
+
+        var expectedClass = new TripleClassChange();
+        expectedClass.setUri("http://example.org#enum");
+        expectedClass.setLabel("enum");
+
+        var enumEntryChange = new TripleResourceChange();
+        enumEntryChange.setUri("http://example.org#enum.enumEntry");
+        enumEntryChange.setLabel("enumEntry");
+        enumEntryChange.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.stereotype.toString(), null, "\"enum\"")));
+
+        expectedClass.setEnumEntries(List.of(enumEntryChange));
+
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                                  .hasSize(1)
-                                                  .first()
-                                                  .isEqualTo(ClassChange.builder()
-                                                                        .label("http://example.org#enum")
-                                                                        .enumEntries(List.of(NestedObjectChange.builder()
-                                                                                                               .label("enumEntry")
-                                                                                                               .changes(Map.of(
-                                                                                                                         CIMS.stereotype.toString(), PropertyChange.builder()
-                                                                                                                                                                   .from("\"enum\"")
-                                                                                                                                                                   .to(null).build()
-                                                                                                                              )).build()
-                                                                                            ))
-                                                                        .build());
+                                              .hasSize(1)
+                                              .first()
+                                              .isEqualTo(expectedClass);
     }
 
     @Test

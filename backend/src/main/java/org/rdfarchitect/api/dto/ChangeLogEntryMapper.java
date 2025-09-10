@@ -21,7 +21,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
-import org.rdfarchitect.cim.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;

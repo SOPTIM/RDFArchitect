@@ -26,16 +26,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.data.dto.CIMEnumEntry;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.RDFType;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.search.data.dto.CIMEnumEntry;
+import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSComment;
+import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.search.data.dto.relations.RDFType;
+import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
 import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
-import org.rdfarchitect.cim.queries.update.CIMUpdates;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.List;
 

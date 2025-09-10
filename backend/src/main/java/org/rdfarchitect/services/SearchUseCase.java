@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services;
 
-import org.rdfarchitect.cim.search.SearchFilter;
-import org.rdfarchitect.cim.search.data.SearchResults;
+import org.rdfarchitect.models.search.SearchFilter;
+import org.rdfarchitect.models.search.data.SearchResults;
 
 /**
  * SearchUseCase interface defines the contract for searching RDF data.

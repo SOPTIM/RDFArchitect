@@ -21,12 +21,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.rdfarchitect.cim.data.dto.CIMClass;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.cim.rendering.mermaid.builder.CIMClassToMermaidBuilder;
+import org.rdfarchitect.models.cim.search.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMClassToMermaidBuilder;
 
 import java.util.ArrayList;
 import java.util.List;

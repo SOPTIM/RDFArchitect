@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.models.cim.search.data.dto.CIMPrefixPair;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.services.select.ListPrefixesUseCase;

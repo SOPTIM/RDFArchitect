@@ -20,7 +20,7 @@ package org.rdfarchitect.shacl.property;
 import lombok.experimental.UtilityClass;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
 
 import java.util.ArrayList;
 

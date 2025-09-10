@@ -1,0 +1,9 @@
+DELETE {
+    ?instance ?attribute ?oldEnumEntry .
+}
+INSERT {
+    ?instance ?attribute ?newEnumEntry .
+}
+WHERE {
+    ?instance ?attribute ?oldEnumEntry .
+}

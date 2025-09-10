@@ -21,7 +21,12 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { editorState, compareState } from "$lib/sharedState.svelte.js";
+    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import {
+        editorState,
+        compareState,
+        migrationState,
+    } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
 
@@ -142,6 +147,15 @@
         const changeList = await response.json();
         changeList.sort((a, b) => a.label.localeCompare(b.label));
         compareState.changeList.updateValue(changeList);
+        migrationState.set({
+            compareMode,
+            datasetA,
+            graphA,
+            datasetB,
+            graphB,
+            fileA,
+            fileB,
+        });
 
         showDialog = false;
         await goto("/compare");

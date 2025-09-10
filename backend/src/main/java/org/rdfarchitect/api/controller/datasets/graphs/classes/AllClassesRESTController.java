@@ -60,9 +60,9 @@ public class AllClassesRESTController {
      *
      * @param packageDTO     PackageDTO object of the package to which the new class is going to be added
      * @param classURIPrefix URI Prefix of the new class
-     * @param className      Name of the new class
+     * @param classLabel     Name of the new class
      */
-    public record AddNewClassRequest(PackageDTO packageDTO, String classURIPrefix, String className) {
+    public record AddNewClassRequest(PackageDTO packageDTO, String classURIPrefix, String classLabel) {
 
     }
 

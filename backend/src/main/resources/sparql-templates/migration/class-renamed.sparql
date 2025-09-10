@@ -1,0 +1,9 @@
+DELETE {
+    ?instance a ?oldClass .
+}
+INSERT {
+    ?instance a ?newClass .
+}
+WHERE {
+    ?instance a ?oldClass .
+}

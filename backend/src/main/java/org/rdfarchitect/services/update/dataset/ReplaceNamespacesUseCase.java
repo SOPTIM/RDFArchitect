@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.update.dataset;
 
-import org.rdfarchitect.cim.data.dto.CIMPrefixPair;
+import org.rdfarchitect.models.cim.search.data.dto.CIMPrefixPair;
 
 import java.util.List;
 

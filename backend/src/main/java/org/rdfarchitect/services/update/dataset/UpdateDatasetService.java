@@ -19,7 +19,7 @@ package org.rdfarchitect.services.update.dataset;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
-import org.rdfarchitect.cim.data.dto.CIMPrefixPair;
+import org.rdfarchitect.models.cim.search.data.dto.CIMPrefixPair;
 import org.rdfarchitect.database.DatabasePort;
 import org.springframework.stereotype.Service;
 

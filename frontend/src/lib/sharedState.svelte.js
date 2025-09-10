@@ -15,6 +15,8 @@
  *
  */
 
+import { writable } from "svelte/store";
+
 /**
  * StateValuePair allows us to create a state with a value and a trigger,
  * we can subscribe to the trigger or alternatively subscribe to only value changes.
@@ -89,3 +91,13 @@ export const forceReloadTrigger = new SimpleTrigger();
 export const compareState = {
     changeList: new StateValuePair(null),
 };
+
+export const migrationState = writable({
+    compareMode: null,
+    datasetA: null,
+    graphA: null,
+    graphB: null,
+    datasetB: null,
+    fileA: null,
+    fileB: null,
+});

@@ -30,6 +30,7 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
+import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.context.SessionContext;
