@@ -56,7 +56,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         }
         var update = CIMUpdates.insertAssociation(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAssociationPair);
 
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created association from " + from.getUuid() + " to " + to.getUuid(), graph.getLastDelta()));
         return new AssociationUUIDs(from.getUuid(), to.getUuid());
@@ -69,7 +69,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
         var fromUUID = cimAssociationPair.getFrom().getUuid();
         var toUUID = cimAssociationPair.getTo().getUuid();
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced association from " + fromUUID + " to " + toUUID, graph.getLastDelta()));
         return new AssociationUUIDs(fromUUID, toUUID);
@@ -79,7 +79,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
     public void replaceAllAssociations(GraphIdentifier graphIdentifier, String classUUID, List<AssociationPairDTO> associationPairList) {
         var cimAssociationPairs = associationPairMapper.toCIMObjectList(associationPairList);
         var update = CIMUpdates.replaceAssociations(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID, cimAssociationPairs);
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier,
                                       new ChangeLogEntry("Replaced all associations for class " + classUUID, graph.getLastDelta()));

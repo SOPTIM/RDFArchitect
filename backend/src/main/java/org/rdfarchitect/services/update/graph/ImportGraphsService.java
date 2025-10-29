@@ -30,10 +30,11 @@ import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSource
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
+//TODO imports
 import java.io.*;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -50,6 +51,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private final ChangeLogUseCase changeLogUseCase;
 
     private final DatabasePort databasePort;
+    private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
+
     private static final String FALL_BACK_NAME = "graph";
 
     @Override
@@ -73,6 +76,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
         for (var graphUri : importedGraphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
             changeLogUseCase.recordChange(
                       graphIdentifier,
                       new ChangeLogEntry("Imported graph into dataset '" + datasetName + "' with graph URI '"

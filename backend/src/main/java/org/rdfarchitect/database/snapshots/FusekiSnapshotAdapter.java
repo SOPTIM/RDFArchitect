@@ -97,7 +97,7 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
     private void transferGraph(RDFConnection conn, GraphIdentifier graphIdentifier) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
 
             var copiedGraph = GraphUtils.deepCopy(graph);

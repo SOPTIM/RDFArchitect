@@ -125,9 +125,10 @@ public class AllPackagesRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var extendedPackageURIPrefix = expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
         packageDTO.setPrefix(extendedPackageURIPrefix);
 
-        var newPackageUUID = addPackageUseCase.addPackage(new GraphIdentifier(datasetName, extendedGraphURI), packageDTO);
+        var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".", datasetName, graphURI, originURL);
         return newPackageUUID;

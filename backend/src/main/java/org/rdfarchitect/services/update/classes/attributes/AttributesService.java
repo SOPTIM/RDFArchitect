@@ -47,7 +47,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         }
         var update = CIMUpdates.insertAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
 
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
@@ -57,7 +57,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var update = CIMUpdates.replaceAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
@@ -67,7 +67,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public void replaceAllAttributes(GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var update = CIMUpdates.replaceAttributes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID, attributeCIMObjects);
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("All attributes for class " + classUUID + " replaced", graph.getLastDelta()));
     }

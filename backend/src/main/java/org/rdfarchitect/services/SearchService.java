@@ -237,8 +237,10 @@ public class SearchService implements SearchUseCase {
         var externalQueryWithPackageConstraint = appendPackageConstraint(filter, specificExternalQuery);
         var internalQueryObject = QueryFactory.create(internalQueryWithPackageConstraint);
         var externalQueryObject = QueryFactory.create(externalQueryWithPackageConstraint);
-        var internalResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), internalQueryObject, graphIdentifier.getGraphUri());
-        var externalResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), externalQueryObject, graphIdentifier.getGraphUri());
+        var internalResultSet =
+                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), internalQueryObject, graphIdentifier.getGraphUri());
+        var externalResultSet =
+                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), externalQueryObject, graphIdentifier.getGraphUri());
 
         searchResults.addAll(SearchResultObjectFactory.createSearchResultObjectList(graphIdentifier, internalResultSet));
         externalSearchResults.addAll(SearchResultObjectFactory.createSearchResultObjectList(graphIdentifier, externalResultSet));

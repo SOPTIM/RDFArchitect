@@ -46,4 +46,11 @@ public class CIMCollection {
     private final SortedSet<CIMClass> enums;
 
     private final SortedSet<CIMEnumEntry> enumEntries;
+
+    public SortedSet<CIMClass> getClassesAndEnums() {
+        SortedSet<CIMClass> allClassesAndEnums = new TreeSet<>(Comparator.comparing(cimClassOrEnum -> cimClassOrEnum.getUri().toString()));
+        allClassesAndEnums.addAll(this.getClasses());
+        allClassesAndEnums.addAll(this.getEnums());
+        return allClassesAndEnums;
+    }
 }

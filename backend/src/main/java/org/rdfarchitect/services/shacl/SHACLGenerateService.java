@@ -40,7 +40,7 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
         GraphRewindable ontologyGraph = null;
         var prefixes = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
         try (var outStream = new ByteArrayOutputStream()) {
-            ontologyGraph = databasePort.getGraph(graphIdentifier);
+            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             ontologyGraph.begin(TxnType.READ);
             var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
             ontologyModel.setNsPrefixes(prefixes);

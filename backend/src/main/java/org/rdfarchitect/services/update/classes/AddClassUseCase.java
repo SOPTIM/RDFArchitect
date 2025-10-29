@@ -20,9 +20,6 @@ package org.rdfarchitect.services.update.classes;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
-/**
- * Use case for adding a new class to a graph.
- */
 public interface AddClassUseCase {
 
     /**

@@ -91,7 +91,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -119,7 +119,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -132,7 +132,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
     public ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format) {
         GraphRewindableWithUUIDs graph = null;
         try (var out = new ByteArrayOutputStream()) {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
             var copiedGraph = GraphUtils.deepCopy(graph);
             copiedGraph.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
@@ -168,7 +168,8 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
         //execute package query
         var internalPackageQueryResultSet =
-                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), internalPackageQuery, graphIdentifier.getGraphUri());
+                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier)
+                                                                           .getRdfGraph(), internalPackageQuery, graphIdentifier.getGraphUri());
 
         //format results
         var cimPackageList = CIMObjectFactory.createCIMPackageList(internalPackageQueryResultSet);
@@ -201,7 +202,8 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
         //execute external package query
         var externalPackageQueryResultSet =
-                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), externalPackageQuery, graphIdentifier.getGraphUri());
+                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier)
+                                                                           .getRdfGraph(), externalPackageQuery, graphIdentifier.getGraphUri());
 
         var cimExternalPackageList = CIMObjectFactory.createExternalCIMPackageList(externalPackageQueryResultSet);
 
@@ -226,7 +228,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -250,7 +252,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
 
         //execute query
-        var queryResult = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraph(graphIdentifier), query, graphIdentifier.getGraphUri());
+        var queryResult = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         List<CIMSStereotype> resultList = new ArrayList<>();
@@ -266,7 +268,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
     public UUID resolveIRI(GraphIdentifier graphIdentifier, String resourceIRI) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
             var model = ModelFactory.createModelForGraph(graph);
             var resource = model.getResource(resourceIRI);

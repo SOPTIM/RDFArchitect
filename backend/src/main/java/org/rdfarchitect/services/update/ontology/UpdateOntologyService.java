@@ -46,7 +46,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
@@ -75,7 +75,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
@@ -103,7 +103,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
     public void deleteOntology(GraphIdentifier graphIdentifier) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
