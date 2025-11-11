@@ -1,0 +1,8 @@
+PREFIX ex:      <http://example.org/instances#>
+PREFIX cim:     <http://iec.ch/TC57/CIM100#>
+PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+ex:child a cim:Child ;
+          cim:Child.childAtt 42 ;
+         cim:Child.childEnumAtt cim:EnumClass.entry1 ;
+          cim:Parent.parentAtt "3.14"^^xsd:float .

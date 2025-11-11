@@ -1,0 +1,8 @@
+database:
+  defaultDataset: default
+  databaseType: http
+  http:
+    endpoint: http://localhost:3030
+  file:
+    endpoint: C:/fileDatabase
+    dataType: trig #trig, n-quads

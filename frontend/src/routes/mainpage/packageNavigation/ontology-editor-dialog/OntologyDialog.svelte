@@ -1,0 +1,247 @@
+<!--
+  -    Copyright (c) 2024-2026 SOPTIM AG
+  -
+  -    Licensed under the Apache License, Version 2.0 (the "License");
+  -    you may not use this file except in compliance with the License.
+  -    You may obtain a copy of the License at
+  -
+  -        http://www.apache.org/licenses/LICENSE-2.0
+  -
+  -    Unless required by applicable law or agreed to in writing, software
+  -    distributed under the License is distributed on an "AS IS" BASIS,
+  -    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  -    See the License for the specific language governing permissions and
+  -    limitations under the License.
+  -
+  -->
+<script>
+    import { faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
+    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
+    import { BackendConnection } from "$lib/api/backend.js";
+    import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import SearchableSelect from "$lib/components/SearchableSelect.svelte";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import Dialog from "$lib/dialog/Dialog.svelte";
+    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+
+    import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
+    import OntologyEntryRow from "./OntologyEntryRow.svelte";
+
+    let {
+        showDialog = $bindable(),
+        dataset,
+        graphUri,
+        ontology = $bindable(),
+        readonly,
+    } = $props();
+
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+
+    let showAddKnownEntriesPopUp = $state(false);
+
+    let namespaces = $state([]);
+    let tableContainerRef = $state(null);
+
+    let ontologyObject = $state();
+
+    let disableSubmit = $derived(
+        !ontologyObject ||
+            !ontologyObject.isValid ||
+            !ontologyObject.isModified,
+    );
+
+    async function onOpen() {
+        namespaces = await getNamespaces(dataset);
+        if (!ontology) {
+            ontologyObject = new ReactiveOntology();
+        } else {
+            ontologyObject = new ReactiveOntology(
+                ontology.uuid,
+                ontology.namespace,
+                ontology.entries,
+            );
+        }
+    }
+
+    function onClose() {
+        ontologyObject = null;
+    }
+
+    function handleAddEntry() {
+        ontologyObject.entries.append();
+        scrollEntriesToBottom();
+    }
+
+    async function saveOntology(datasetName, graphUri, ontologyObject) {
+        const serializable = ontologyObject.getPlainObject();
+        if (ontologyObject.uuid.value) {
+            await bec.putOntology(datasetName, graphUri, serializable);
+        } else {
+            await bec.postOntology(datasetName, graphUri, serializable);
+        }
+    }
+
+    function scrollEntriesToBottom() {
+        // Scroll to bottom after the DOM updates
+        setTimeout(() => {
+            if (tableContainerRef) {
+                tableContainerRef.scrollTop = tableContainerRef.scrollHeight;
+            }
+        }, 0);
+    }
+
+    function getSubstitutedNamespace(namespace) {
+        const namespaceObj = namespaces.find(p => p?.prefix === namespace);
+        return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
+    }
+</script>
+
+<Dialog bind:showDialog {onOpen} {onClose} size="w-2/3 h-3/4">
+    <div class="mx-2 flex h-full flex-col">
+        {#key ontologyObject}
+            {#if ontologyObject}
+                <p>Ontology UUID:</p>
+                <span class="mb-2">
+                    {#if !ontologyObject.uuid.value}
+                        <em class="text-muted-text">not assigned yet</em>
+                    {:else}
+                        {ontologyObject.uuid.value}
+                    {/if}
+                </span>
+                <div class="mb-2 w-150">
+                    <SearchableSelect
+                        label="Namespace:"
+                        placeholder="*namespace"
+                        value={getSubstitutedNamespace(
+                            ontologyObject.namespace.value,
+                        )}
+                        optionObjectList={namespaces}
+                        accessDisplayData={namespace =>
+                            getSubstitutedNamespace(
+                                namespace.substitutedPrefix,
+                            )}
+                        accessIdentifier={namespace =>
+                            `${namespace.substitutedPrefix} (${namespace?.prefix})`}
+                        callOnValidChange={value =>
+                            (ontologyObject.namespace.value = value?.prefix)}
+                        {readonly}
+                    />
+                </div>
+
+                <span class="">Ontology entries:</span>
+                <div
+                    bind:this={tableContainerRef}
+                    class="border-border text-default-text mt-1 overflow-y-auto rounded-lg border-2"
+                >
+                    <table class="w-full border-collapse text-sm">
+                        <thead
+                            class="bg-default-background border-border sticky top-0 z-10 border-b"
+                        >
+                            <tr>
+                                <th
+                                    class="w-1/3 px-2 py-1 text-left tracking-wide uppercase"
+                                >
+                                    Entry IRI
+                                </th>
+                                <th
+                                    class="px-2 py-1 text-left tracking-wide uppercase"
+                                >
+                                    Value
+                                </th>
+                                <th
+                                    class="px-2 py-1 text-left tracking-wide uppercase"
+                                >
+                                    Data Type
+                                </th>
+                                <th
+                                    class="w-11 px-2 py-1 text-center tracking-wide uppercase"
+                                >
+                                    IRI
+                                </th>
+                                <th
+                                    class="w-11 px-2 py-1 text-left tracking-wide uppercase"
+                                ></th>
+                                {#if !readonly}
+                                    <th class="w-11 px-2 py-1 text-center">
+                                        <DropdownMenu.Root>
+                                            <DropdownMenu.Trigger>
+                                                <div class="size-9">
+                                                    <ButtonControl height={9}>
+                                                        <Fa icon={faPlus} />
+                                                    </ButtonControl>
+                                                </div>
+                                            </DropdownMenu.Trigger>
+                                            <DropdownMenu.Content>
+                                                <DropdownMenu.Item.Button
+                                                    onSelect={handleAddEntry}
+                                                >
+                                                    Add Empty Entry
+                                                </DropdownMenu.Item.Button>
+                                                <DropdownMenu.Item.Button
+                                                    onSelect={() =>
+                                                        (showAddKnownEntriesPopUp = true)}
+                                                >
+                                                    Add CGMES 3.0 entries
+                                                </DropdownMenu.Item.Button>
+                                            </DropdownMenu.Content>
+                                        </DropdownMenu.Root>
+                                    </th>
+                                {/if}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {#each ontologyObject.entries.values as entry}
+                                <OntologyEntryRow
+                                    entries={ontologyObject.entries}
+                                    {entry}
+                                    {readonly}
+                                    {namespaces}
+                                />
+                            {/each}
+                        </tbody>
+                    </table>
+                </div>
+            {:else}
+                <p>Loading...</p>
+            {/if}
+        {/key}
+        <!-- Submit and Cancel buttons -->
+        <div class="flex justify-end">
+            {#if readonly}
+                <div class="h-9">
+                    <ButtonControl
+                        variant="white"
+                        callOnClick={() => (showDialog = false)}
+                    >
+                        close
+                    </ButtonControl>
+                </div>
+            {:else}
+                <DialogLeaveButtons
+                    bind:showDialog
+                    submitLabel="save"
+                    onSubmit={() => {
+                        saveOntology(dataset, graphUri, ontologyObject);
+                        forceReloadTrigger.trigger();
+                    }}
+                    {disableSubmit}
+                />
+            {/if}
+        </div>
+    </div>
+</Dialog>
+
+<AddKnownFieldsDialog
+    bind:showDialog={showAddKnownEntriesPopUp}
+    existingEntries={ontologyObject.entries}
+    scrollToBottom={scrollEntriesToBottom}
+    {namespaces}
+    {dataset}
+    {graphUri}
+/>

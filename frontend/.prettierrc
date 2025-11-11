@@ -1,0 +1,8 @@
+{
+    "tabWidth": 4,
+    "proseWrap": "always",
+    "arrowParens": "avoid",
+    "htmlWhitespaceSensitivity": "ignore",
+    "plugins": ["prettier-plugin-svelte", "prettier-plugin-tailwindcss"],
+    "overrides": [{ "files": "*.svelte", "options": { "parser": "svelte" } }]
+}

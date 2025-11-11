@@ -1,0 +1,18 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX entsoe: <http://entsoe.eu/CIM/SchemaExtension/3/1#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ex:     <http://example.com#>
+PREFIX owl:    <http://www.w3.org/2002/07/owl#>
+
+ex:class
+    <http://example.org#uuid>   "43836908-c7f7-4749-bb8b-3ac9250de655" ;
+    rdf:type                    rdfs:Class ;
+    rdfs:label                  "class"@en ;
+    cims:stereotype             <http://iec.ch/TC57/NonStandard/UML#enumeration> .
+
+ex:class.existing_enumEntry
+    rdf:type        ex:class ;
+    rdfs:label      "existing_enumEntry"@en .

@@ -1,0 +1,45 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX entsoe: <http://entsoe.eu/CIM/SchemaExtension/3/1#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ex:     <http://example.org#>
+
+ex:class
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "oldLabel"@en ;
+    <http://example.org#uuid> "43836908-c7f7-4749-bb8b-3ac9250de655" .
+
+ex:associatedClass
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "associatedClass"@en ;
+    rdfs:subClassOf           ex:class .
+
+ex:class.associatedClass
+    rdf:type             rdf:Property ;
+    rdfs:label           "associatedClass"@en ;
+    rdfs:domain          ex:class ;
+    rdfs:range           ex:associatedClass ;
+    cims:AssociationUsed "Yes" ;
+    cims:inverseRoleName ex:associatedClass.class ;
+    cims:multiplicity    cims:M:0..n .
+
+ex:associatedClass.class
+    rdf:type             rdf:Property ;
+    rdfs:label           "class"@en ;
+    rdfs:domain          ex:associatedClass ;
+    rdfs:range           ex:class ;
+    cims:AssociationUsed "Yes" ;
+    cims:inverseRoleName ex:class.associatedClass ;
+    cims:multiplicity    cims:M:0..n .
+
+ex:subClass
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "subClass"@en ;
+    rdfs:subClassOf           ex:class .
+
+ex:newPackage
+    rdf:type                  rdfs:Category ;
+    rdfs:label                "newPackage"@en ;
+    <http://example.org#uuid> "75844dc0-d937-4184-bf6b-d35d8ca6d92a" .

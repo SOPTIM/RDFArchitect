@@ -1,0 +1,99 @@
+PREFIX cim:     <http://iec.ch/TC57/CIM100#>
+PREFIX cims:    <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+
+cim:Child.childEnumAtt
+    rdf:type           rdf:Property;
+    rdfs:domain        cim:Child;
+    rdfs:label         "childEnumAtt"@en;
+    rdfs:range         cim:EnumClass;
+    cims:multiplicity  cims:M:1..1;
+    cims:stereotype    <http://iec.ch/TC57/NonStandard/UML#attribute> .
+
+cim:Parent.parentAtt
+    rdf:type  rdf:Property;
+    rdfs:domain        cim:Parent;
+    rdfs:label         "parentAtt"@en;
+    cims:dataType      cim:Float;
+    cims:multiplicity  cims:M:1..1;
+    cims:stereotype    <http://iec.ch/TC57/NonStandard/UML#attribute> .
+
+cim:EnumClass
+    rdf:type         rdfs:Class;
+    rdfs:label              "EnumClass"@en;
+    cims:belongsToCategory  cim:Package_Profile1;
+    cims:stereotype         <http://iec.ch/TC57/NonStandard/UML#enumeration> .
+
+cim:Parent
+    rdf:type            rdfs:Class;
+    rdfs:label              "Parent"@en;
+    cims:belongsToCategory  cim:Package_Profile1 .
+
+cim:Float
+    rdf:type             rdfs:Class;
+    rdfs:label              "Float"@en;
+    cims:belongsToCategory  cim:Package_Profile1;
+    cims:stereotype         "Primitive" .
+
+cim:EnumClass.entry3
+    rdf:type  cim:EnumClass;
+    rdfs:label  "entry3"@en .
+
+cim:EnumClass.entry1
+    rdf:type  cim:EnumClass;
+    rdfs:label  "entry1"@en .
+
+cim:Integer
+    rdf:type           rdfs:Class;
+    rdfs:comment            "An integer number. The range is unspecified and not limited.";
+    rdfs:label              "Integer"@en;
+    cims:belongsToCategory  cim:Package_Profile1;
+    cims:stereotype         "Primitive" .
+
+cim:OtherClass
+    rdf:type        rdfs:Class;
+    rdfs:label              "OtherClass"@en;
+    cims:belongsToCategory  cim:Package_Profile1;
+    cims:stereotype         <http://iec.ch/TC57/NonStandard/UML#concrete> .
+
+cim:Child.childAtt
+    rdf:type  rdf:Property;
+    rdfs:domain        cim:Child;
+    rdfs:label         "childAtt"@en;
+    cims:dataType      cim:Integer;
+    cims:multiplicity  cims:M:0..1;
+    cims:stereotype    <http://iec.ch/TC57/NonStandard/UML#attribute> .
+
+cim:Child.OtherClass
+    rdf:type  rdf:Property;
+    rdfs:domain           cim:Child;
+    rdfs:label            "Child"@en;
+    rdfs:range            cim:OtherClass;
+    cims:AssociationUsed  "Yes";
+    cims:inverseRoleName  cim:OtherClass.Child;
+    cims:multiplicity     cims:M:0..1 .
+
+cim:Child
+    rdf:type             rdfs:Class;
+    rdfs:label              "Child"@en;
+    rdfs:subClassOf         cim:Parent;
+    cims:belongsToCategory  cim:Package_Profile1;
+    cims:stereotype         <http://iec.ch/TC57/NonStandard/UML#concrete> .
+
+cim:OtherClass.Child
+    rdf:type  rdf:Property;
+    rdfs:domain           cim:OtherClass;
+    rdfs:label            "Child"@en;
+    rdfs:range            cim:Child;
+    cims:AssociationUsed  "No";
+    cims:inverseRoleName  cim:Child.OtherClass;
+    cims:multiplicity     cims:M:2..3 .
+
+cim:EnumClass.entry2
+    rdf:type  cim:EnumClass;
+    rdfs:label  "entry2"@en .
+
+cim:Package_Profile1
+    rdf:type  cims:ClassCategory;
+    rdfs:label  "Profile1"@en .

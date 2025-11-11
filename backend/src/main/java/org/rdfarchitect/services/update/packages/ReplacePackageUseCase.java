@@ -1,0 +1,33 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.services.update.packages;
+
+import org.rdfarchitect.api.dto.packages.PackageDTO;
+import org.rdfarchitect.database.GraphIdentifier;
+
+public interface ReplacePackageUseCase {
+
+    /**
+     * Replaces an existing package in the specified graph with the provided package data.
+     * The package is identified by its UUID within the packageDTO and updated with all new values.
+     *
+     * @param graphIdentifier The graph URI and database name of the graph containing the package to replace.
+     * @param packageDTO      The package data to replace the existing package with.
+     */
+    void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO);
+}

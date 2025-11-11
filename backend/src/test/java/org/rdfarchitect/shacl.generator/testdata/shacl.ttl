@@ -1,0 +1,177 @@
+PREFIX cim:     <http://iec.ch/TC57/CIM100#>
+PREFIX cims:    <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX dash:    <http://datashapes.org/dash#>
+PREFIX dc:      <http://purl.org/dc/elements/1.1/>
+PREFIX dcat:    <http://www.w3.org/ns/dcat#>
+PREFIX dct:     <http://purl.org/dc/terms/>
+PREFIX dl:      <http://iec.ch/TC57/ns/CIM/DiagramLayout-EU/Constraints#>
+PREFIX dli:     <http://iec.ch/TC57/ns/CIM/DiagramLayout-EU/constraints/inverseAssociations/3.0#>
+PREFIX dlu:     <http://iec.ch/TC57/ns/CIM/DiagramLayout-EU/constraints/IEC61970-301/3.0#>
+PREFIX eu:      <http://iec.ch/TC57/CIM100-European#>
+PREFIX ido:     <http://iec.ch/TC57/ns/CIM/IdentifiedObject/constraints/3.0#>
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+PREFIX prof:    <http://iec.ch/TC57/ns/CIM/prof-cim#>
+PREFIX profcim: <http://iec.ch/TC57/ns/CIM/prof-cim#>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfash:  <http://example.com/shacl#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX sh:      <http://www.w3.org/ns/shacl#>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+PREFIX xsd:     <http://www.w3.org/2001/XMLSchema#>
+
+rdfash:Parent.parentAtt-cardinality
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the cardinality of the property (attribute).";
+        sh:group        rdfash:CardinalityGroup;
+        sh:maxCount     1;
+        sh:message      "Missing required property (attribute).";
+        sh:minCount     1;
+        sh:name         "Parent.parentAtt-cardinality";
+        sh:order        1.0;
+        sh:path         cim:Parent.parentAtt;
+        sh:severity     sh:Violation .
+
+rdfash:Parent.parentAtt-datatype
+        rdf:type        sh:PropertyShape;
+        sh:datatype     xsd:float;
+        sh:description  "This constraint validates the datatype of the property (attribute).";
+        sh:group        rdfash:DatatypeGroup;
+        sh:message      "The datatype is not literal or it violates the xsd datatype.";
+        sh:name         "Parent.parentAtt-datatype";
+        sh:nodeKind     sh:Literal;
+        sh:order        1.0;
+        sh:path         cim:Parent.parentAtt;
+        sh:severity     sh:Violation .
+
+rdfash:OtherClass.Child-InverseCardinality
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the cardinality of the association at the inverse direction.";
+        sh:group        rdfash:InverseCardinalityGroup;
+        sh:maxCount     3;
+        sh:message      "Cardinality violation 2..3 (association).";
+        sh:minCount     2;
+        sh:name         "OtherClass.Child-InverseCardinality";
+        sh:order        0.0;
+        sh:path         [ sh:inversePath  cim:Child.OtherClass ];
+        sh:severity     sh:Violation .
+
+rdfash:OtherClass  rdf:type   sh:NodeShape;
+        sh:closed             true;
+        sh:ignoredProperties  ( rdf:type );
+        sh:property           rdfash:OtherClass.Child-InverseCardinality;
+        sh:targetClass        cim:OtherClass .
+
+rdfash:Child.OtherClass-valueType
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the value type of the association at the used direction.";
+        sh:group        rdfash:ValueTypeGroup;
+        sh:in           ( cim:OtherClass );
+        sh:message      "One of the following occurs: 1) The value type is not IRI; 2) The value type is not the right class.";
+        sh:name         "Child.OtherClass-valueType";
+        sh:nodeKind     sh:IRI;
+        sh:order        3.0;
+        sh:path         ( cim:Child.OtherClass rdf:type );
+        sh:severity     sh:Violation .
+
+rdfash:DatatypeGroup  rdf:type  sh:PropertyGroup;
+        rdfs:label  "DatatypeGroup";
+        sh:order    "3.0"^^xsd:double .
+
+rdfash:Child  rdf:type        sh:NodeShape;
+        sh:closed             true;
+        sh:ignoredProperties  ( rdf:type );
+        sh:property           rdfash:Child.childEnumAtt-cardinality , rdfash:Child.OtherClass-hasType , rdfash:Child.OtherClass-valueType , rdfash:Child.OtherClass-cardinality , rdfash:Parent.parentAtt-cardinality , rdfash:Child.childEnumAtt-datatype , rdfash:Parent.parentAtt-datatype , rdfash:Child.childAtt-cardinality , rdfash:Child.childAtt-datatype;
+        sh:targetClass        cim:Child .
+
+rdfash:ValueTypeGroup
+        rdf:type    sh:PropertyGroup;
+        rdfs:label  "ValueTypeGroup";
+        sh:order    "0.0"^^xsd:double .
+
+rdfash:Child.childEnumAtt-datatype
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the datatype of the property (attribute).";
+        sh:group        rdfash:DatatypeGroup;
+        sh:in           ( cim:EnumClass.entry3 cim:EnumClass.entry2 cim:EnumClass.entry1 );
+        sh:message      "The datatype is not an IRI (Internationalized Resource Identifier) or its enumerated value is not part of the profile.";
+        sh:name         "Child.childEnumAtt-datatype";
+        sh:nodeKind     sh:IRI;
+        sh:order        2.0;
+        sh:path         cim:Child.childEnumAtt;
+        sh:severity     sh:Violation .
+
+rdfash:Child.childAtt-datatype
+        rdf:type        sh:PropertyShape;
+        sh:datatype     xsd:integer;
+        sh:description  "This constraint validates the datatype of the property (attribute).";
+        sh:group        rdfash:DatatypeGroup;
+        sh:message      "The datatype is not literal or it violates the xsd datatype.";
+        sh:name         "Child.childAtt-datatype";
+        sh:nodeKind     sh:Literal;
+        sh:order        1.0;
+        sh:path         cim:Child.childAtt;
+        sh:severity     sh:Violation .
+
+rdfash:Child.childEnumAtt-cardinality
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the cardinality of the property (attribute).";
+        sh:group        rdfash:CardinalityGroup;
+        sh:maxCount     1;
+        sh:message      "Missing required property (attribute).";
+        sh:minCount     1;
+        sh:name         "Child.childEnumAtt-cardinality";
+        sh:order        2.0;
+        sh:path         cim:Child.childEnumAtt;
+        sh:severity     sh:Violation .
+
+rdfash:InverseCardinalityGroup
+        rdf:type    sh:PropertyGroup;
+        rdfs:label  "InverseCardinalityGroup";
+        sh:order    "1.0"^^xsd:double .
+
+rdfash:Child.OtherClass-cardinality
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the cardinality of the property (association).";
+        sh:group        rdfash:CardinalityGroup;
+        sh:maxCount     1;
+        sh:message      "Cardinality violation (association). Upper bound shall be 1.";
+        sh:name         "Child.OtherClass-cardinality";
+        sh:order        3.0;
+        sh:path         cim:Child.OtherClass;
+        sh:severity     sh:Violation .
+
+rdfash:CardinalityGroup
+        rdf:type    sh:PropertyGroup;
+        rdfs:label  "CardinalityGroup";
+        sh:order    "2.0"^^xsd:double .
+
+rdfash:HasTypeGroup
+        rdf:type    sh:PropertyGroup;
+        rdfs:label  "HasTypeGroup";
+        sh:order    "4.0"^^xsd:double .
+
+rdfash:Child.OtherClass-hasType
+        rdf:type        sh:PropertyShape;
+        sh:description  "If the association exists, the referenced ressource must have at least one rdf:type.";
+        sh:group        rdfash:HasTypeGroup;
+        sh:message      "Missing rdf:type for referenced resource.";
+        sh:name         "Child.OtherClass-hasType";
+        sh:node         [ rdf:type     sh:NodeShape;
+                          sh:property  [ sh:minCount  1;
+                                         sh:path      rdf:type
+                                       ]
+                        ];
+        sh:order        3.0;
+        sh:path         cim:Child.OtherClass;
+        sh:severity     sh:Violation .
+
+rdfash:Child.childAtt-cardinality
+        rdf:type        sh:PropertyShape;
+        sh:description  "This constraint validates the cardinality of the property (attribute).";
+        sh:group        rdfash:CardinalityGroup;
+        sh:maxCount     1;
+        sh:message      "Cardinality violation (attribute). Upper bound shall be 1.";
+        sh:name         "Child.childAtt-cardinality";
+        sh:order        1.0;
+        sh:path         cim:Child.childAtt;
+        sh:severity     sh:Violation .

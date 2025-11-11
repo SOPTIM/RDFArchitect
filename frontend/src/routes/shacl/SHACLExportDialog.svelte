@@ -1,0 +1,66 @@
+<!--
+  -    Copyright (c) 2024-2026 SOPTIM AG
+  -
+  -    Licensed under the Apache License, Version 2.0 (the "License");
+  -    you may not use this file except in compliance with the License.
+  -    You may obtain a copy of the License at
+  -
+  -        http://www.apache.org/licenses/LICENSE-2.0
+  -
+  -    Unless required by applicable law or agreed to in writing, software
+  -    distributed under the License is distributed on an "AS IS" BASIS,
+  -    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  -    See the License for the specific language governing permissions and
+  -    limitations under the License.
+  -
+  -->
+
+<script>
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import Dialog from "$lib/dialog/Dialog.svelte";
+    import GraphExport from "$lib/GraphExport.svelte";
+
+    let {
+        showDialog = $bindable(),
+        lockedDatasetName,
+        lockedGraphUri,
+    } = $props();
+
+    let exportMode = $state("generate");
+
+    function toggleGeneratedOrCustom() {
+        if (exportMode === "generate") {
+            exportMode = "custom";
+        } else if (exportMode === "custom") {
+            exportMode = "combined";
+        } else {
+            exportMode = "generate";
+        }
+        console.log(exportMode);
+    }
+</script>
+
+<Dialog bind:showDialog>
+    <div class="h-10 w-24">
+        <ButtonControl callOnClick={toggleGeneratedOrCustom}>
+            {exportMode}
+        </ButtonControl>
+    </div>
+    {#key showDialog}
+        <GraphExport
+            bind:showDialog
+            getAPIRoute={(datasetName, graphURI) =>
+                PUBLIC_BACKEND_URL +
+                "/datasets/" +
+                encodeURIComponent(datasetName) +
+                "/graphs/" +
+                encodeURIComponent(graphURI) +
+                "/shacl/" +
+                exportMode +
+                "/file"}
+            {lockedDatasetName}
+            {lockedGraphUri}
+        />
+    {/key}
+</Dialog>
