@@ -1,0 +1,173 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+.menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    height: 1.75rem;
+    padding: 0 0.7rem;
+    border-radius: 0.45rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition:
+        background-color 0.16s ease,
+        color 0.16s ease,
+        border-color 0.16s ease;
+}
+
+.toolbar-menubar .menu-trigger:hover,
+.toolbar-menubar .menu-trigger[data-state="open"] {
+    background: var(--color-window-background);
+    border-color: transparent;
+    color: var(--color-button-default-background);
+}
+
+.toolbar-menubar .menu-trigger:active {
+    transform: translateY(1px);
+}
+
+.menu-surface {
+    padding: 0.35rem;
+    border-radius: 0.4rem;
+    background: var(--color-window-background);
+    border: 1px solid var(--color-border);
+    z-index: 70;
+    transform-origin: top center;
+    transform: translateY(-4px) scale(0.97);
+    opacity: 0;
+    transition:
+        opacity 0.16s ease,
+        transform 0.16s ease;
+}
+
+.menu-surface[data-state="open"] {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+.menu-surface[data-state="closed"] {
+    pointer-events: none;
+}
+
+.menu-surface--dropdown {
+    min-width: 12.5rem;
+}
+
+.menu-surface--context {
+    min-width: 10.5rem;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 0.5rem;
+    border-radius: 0.35rem;
+    padding: 0.35rem 0.5rem;
+    color: inherit;
+    transition:
+        background-color 0.14s ease,
+        color 0.14s ease;
+}
+
+.menu-item--interactive {
+    cursor: pointer;
+}
+
+.menu-item--interactive:hover,
+.group[data-highlighted] .menu-item,
+.group[data-state="open"] .menu-item {
+    background: var(--color-button-hover-background);
+    color: var(--color-button-hover-text);
+}
+
+.menu-item--interactive:active {
+    transform: translateY(1px);
+}
+
+.menu-item--disabled {
+    cursor: not-allowed;
+    color: var(--color-border-disabled);
+    opacity: 0.65;
+}
+
+.menu-icon {
+    width: 1.1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.menu-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.menu-shortcut {
+    margin-left: 0.5rem;
+    padding-left: 0.3rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-text-subtle);
+}
+
+.group[data-highlighted] .menu-shortcut,
+.group[data-state="open"] .menu-shortcut {
+    color: var(--color-button-hover-text);
+}
+
+.menu-sub-indicator {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    color: var(--color-text-subtle);
+    transition:
+        transform 0.16s ease,
+        color 0.16s ease;
+}
+
+.group[data-state="open"] .menu-sub-indicator {
+    transform: translateX(2px);
+    color: var(--color-button-default-background);
+}
+
+.menu-separator {
+    height: 1px;
+    width: 100%;
+    margin: 0.3rem 0;
+    border: none;
+    background: var(--color-border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-surface {
+        transition:
+            opacity 0.01s linear,
+            transform 0.01s linear;
+    }
+    .menu-item,
+    .menu-trigger,
+    .toolbar-icon-button {
+        transition-duration: 0.01s;
+    }
+}

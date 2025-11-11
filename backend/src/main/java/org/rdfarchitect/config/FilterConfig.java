@@ -1,0 +1,48 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.config;
+
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.filters.DatasetFilter;
+import org.rdfarchitect.filters.SessionContextFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class FilterConfig {
+
+    @Bean
+    public FilterRegistrationBean<SessionContextFilter> sessionContextFilterRegistration() {
+        FilterRegistrationBean<SessionContextFilter> registrationBean = new FilterRegistrationBean<>();
+        registrationBean.setFilter(new SessionContextFilter());
+        registrationBean.setOrder(1);
+        registrationBean.addUrlPatterns("/*");
+        return registrationBean;
+    }
+
+    @Bean
+    public FilterRegistrationBean<DatasetFilter> datasetFilterRegistration(DatabasePort databasePort) {
+        FilterRegistrationBean<DatasetFilter> registrationBean = new FilterRegistrationBean<>();
+        registrationBean.setFilter(new DatasetFilter(databasePort));
+        registrationBean.setOrder(2);
+        //erinnerung: das URL pattern /api/datasets/* matched auch auf /api/datasets, obwohl am ende kein slash ist
+        registrationBean.addUrlPatterns("/api/datasets/*");
+        return registrationBean;
+    }
+}

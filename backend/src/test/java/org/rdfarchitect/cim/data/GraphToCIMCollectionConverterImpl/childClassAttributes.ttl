@@ -1,0 +1,23 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX entsoe: <http://entsoe.eu/CIM/SchemaExtension/3/1#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+
+cim:ChildClass.attribute1
+    rdf:type          rdf:Property ;
+    rdfs:domain       cim:ChildClass ;
+    rdfs:label        "attribute1"@en ;
+    cims:dataType     xsd:string ;
+    cims:multiplicity cims:M:1..1 ;
+    cims:stereotype   <http://iec.ch/TC57/NonStandard/UML#attribute> .
+
+cim:ChildClass.attribute2
+    rdf:type          rdf:Property ;
+    rdfs:domain       cim:ChildClass ;
+    rdfs:label        "attribute2"@en ;
+    cims:dataType     xsd:integer ;
+    cims:multiplicity cims:M:1..1 ;
+    cims:stereotype   <http://iec.ch/TC57/NonStandard/UML#attribute> .
+

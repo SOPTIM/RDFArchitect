@@ -1,0 +1,151 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+@import "tailwindcss";
+@import "./routes/toolbar.css";
+@import "./lib/components/bitsui/base/menu/menu.css";
+@import "./lib/styles/splitpanes-opencgmes.css";
+
+.line-through {
+    text-decoration: line-through;
+}
+
+.underline {
+    text-decoration: underline;
+}
+
+@layer base {
+    /* centers dialogs */
+    dialog {
+        margin: auto;
+    }
+
+    /* adopted from opencgmes */
+    body {
+        font-family:
+            "Bahnschrift",
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            Roboto,
+            Oxygen,
+            Ubuntu,
+            Cantarell,
+            "Open Sans",
+            "Helvetica Neue",
+            sans-serif;
+        background-color: var(--color-default-background);
+        color: var(--color-default-text);
+        margin: 0;
+        padding: 0;
+    }
+
+    button {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    button svg,
+    button img,
+    button .icon {
+        display: inline-block !important;
+        vertical-align: middle !important;
+        margin: auto !important;
+    }
+}
+
+@layer utilities {
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+/* still works despite the warning
+https://tailwindcss.com/docs/colors#using-a-custom-palette
+*/
+@theme {
+    --color-*: initial;
+    --color-dialog-backlight: rgba(0, 0, 0, 0.5);
+
+    /* soptim colors */
+    --color-soptim-blau: #009ee0;
+    --color-soptim-dunkelgrau: #7d7d7d;
+    --color-soptim-dunkelblau: #14162b;
+    --color-soptim-pink: #e74890;
+    --color-soptim-orange: #f0881a;
+
+    /* opencgmes colors */
+    --color-blue: #1f75cb;
+    --color-lightblue: #e3eef8;
+    --color-orange: #fc6d26;
+    --color-purple: #6e49cb;
+    --color-red: #db3b21;
+    --color-gray: #2e2e2e;
+    --color-lightgray: #e0e0e0;
+    --color-white: #ffffff;
+    --color-text-subtle: #787878;
+    --color-background-subtle: #f1f1f1;
+
+    --color-default-text: #303030;
+    --color-default-background: #e0e0e0;
+
+    --color-window-background: #f9f9f9;
+
+    --color-button-default-text: var(--color-white);
+    --color-button-default-background: #1f75cb;
+    --color-button-hover-text: var(--color-white);
+    --color-button-hover-background: #90c1f1;
+    --color-button-red-background: #db3b21;
+    --color-button-darkgray-background: #8d8d8d;
+    --color-button-border: #bcd6ef;
+
+    --color-border: #e0e0e0;
+    --color-border-select: #1f75cb;
+    --color-border-strong: #c6c6c6;
+
+    /* 'RDFA-Colors */
+    --color-button-disabled-background: #b0b0b0;
+
+    --color-border-disabled: #666;
+    --color-input-default-background: var(--color-white);
+
+    --color-green-background: oklch(98.2% 0.018 155.826);
+    --color-green-hover-background: oklch(96.2% 0.044 156.743);
+    --color-green-border: oklch(92.5% 0.084 155.995);
+    --color-green-text: oklch(44.8% 0.119 151.328);
+
+    --color-red-background: oklch(97.1% 0.013 17.38);
+    --color-red-hover-background: oklch(93.6% 0.032 17.717);
+    --color-red-border: oklch(88.5% 0.062 18.334);
+    --color-red-text: oklch(44.4% 0.177 26.899);
+
+    --color-nav-surface: var(--color-white);
+    --color-nav-border: #dfe6ef;
+    --color-nav-hover-background: #e8efff;
+    --color-nav-active-background: #d8e7ff;
+    --color-nav-active-text: #0f3e78;
+    --color-nav-text: #1f2937;
+    --color-nav-secondary-text: #5c6676;
+    --color-nav-badge-background: #1f75cb;
+    --color-nav-badge-text: #ffffff;
+    --color-nav-external-badge-background: #f0881a;
+}

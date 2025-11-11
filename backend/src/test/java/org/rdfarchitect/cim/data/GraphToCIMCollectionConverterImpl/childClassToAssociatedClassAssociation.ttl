@@ -1,0 +1,42 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX entsoe: <http://entsoe.eu/CIM/SchemaExtension/3/1#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+
+cim:ChildClass
+    rdf:type               rdfs:Class ;
+    rdfs:label             "ChildClass"@en ;
+    rdfs:subClassOf        cim:SuperClass ;
+    cims:belongsToCategory cim:Package_Infrastruktur ;
+    cims:stereotype        <http://iec.ch/TC57/NonStandard/UML#concrete> .
+
+cim:ChildClass.AssociatedClass
+    rdf:type             rdf:Property ;
+    rdfs:domain          cim:ChildClass ;
+    rdfs:label           "AssociatedClass"@en ;
+    rdfs:range           cim:AssociatedClass ;
+    cims:AssociationUsed "No" ;
+    cims:inverseRoleName cim:AssociatedClass.ChildClass ;
+    cims:multiplicity    cims:M:1 .
+
+cim:AssociatedClass.ChildClass
+    rdf:type             rdf:Property ;
+    rdfs:domain          cim:AssociatedClass ;
+    rdfs:label           "ChildClass"@en ;
+    rdfs:range           cim:ChildClass ;
+    cims:AssociationUsed "Yes" ;
+    cims:inverseRoleName cim:ChildClass.AssociatedClass ;
+    cims:multiplicity    cims:M:0..n .
+
+cim:AssociatedClass
+    rdf:type        rdfs:Class ;
+    rdfs:comment    "associatedClassComment"^^rdf:XMLLiteral ;
+    rdfs:label      "AssociatedClass"@en ;
+    cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> .
+
+cim:Package_Infrastruktur
+    rdf:type   cims:ClassCategory ;
+    rdfs:label "Infrastruktur"@en ;
+    <http://example.org#uuid>  "123e4567-e89b-12d3-a456-426614174000" .

@@ -1,0 +1,33 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX entsoe: <http://entsoe.eu/CIM/SchemaExtension/3/1#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ex:     <http://example.com#>
+PREFIX owl:    <http://www.w3.org/2002/07/owl#>
+
+ex:class
+    <http://example.org#uuid> "43836908-c7f7-4749-bb8b-3ac9250de655" ;
+    rdf:type               rdfs:Class ;
+    rdfs:label             "class"@en .
+
+ex:class.other_class
+    <http://example.org#uuid> "43236908-a7f7-4749-bb8b-3ac9250de656" ;
+    rdf:type                rdf:Property ;
+    rdfs:label              "other_class"@en ;
+    rdfs:domain             ex:class ;
+    rdfs:range              ex:other_class ;
+    cims:AssociationUsed    "No" ;
+    cims:inverseRoleName    ex:other_class.class ;
+    cims:multiplicity       cims:M:2..2 .
+
+ex:other_class.class
+    <http://example.org#uuid> "43836908-b7f7-4749-bb8b-3ac9250de657" ;
+    rdf:type                rdf:Property ;
+    rdfs:label              "class"@en ;
+    rdfs:domain             ex:other_class ;
+    rdfs:range              ex:class ;
+    cims:AssociationUsed    "No" ;
+    cims:inverseRoleName    ex:class.other_class ;
+    cims:multiplicity       cims:M:2..2 .

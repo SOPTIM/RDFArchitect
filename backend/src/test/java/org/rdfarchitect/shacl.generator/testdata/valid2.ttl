@@ -1,0 +1,50 @@
+@prefix cim:     <http://iec.ch/TC57/CIM100#> .
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+
+# Concrete Child instances (inherits from abstract Parent)
+cim:Child1 a cim:Child ;
+           cim:Parent.parentAtt "15.2"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry1 ;
+           cim:Child.childAtt 7 ;
+           cim:Child.OtherClass cim:OtherClass1 .
+
+cim:Child2 a cim:Child ;
+           cim:Parent.parentAtt "18.4"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry2 ;
+           cim:Child.OtherClass cim:OtherClass1 .
+
+cim:Child3 a cim:Child ;
+           cim:Parent.parentAtt "22.9"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry3 ;
+           cim:Child.childAtt 3 ;
+           cim:Child.OtherClass cim:OtherClass2 .
+
+cim:Child4 a cim:Child ;
+           cim:Parent.parentAtt "10.0"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry1 ;
+           cim:Child.OtherClass cim:OtherClass2 .
+
+cim:Child5 a cim:Child ;
+           cim:Parent.parentAtt "11.0"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry2 ;
+           cim:Child.childAtt 5 ;
+           cim:Child.OtherClass cim:OtherClass2 .
+
+cim:Child6 a cim:Child ;
+           cim:Parent.parentAtt "12.3"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry3 ;
+           cim:Child.childAtt 9 ;
+           cim:Child.OtherClass cim:OtherClass3 .
+
+cim:Child7 a cim:Child ;
+           cim:Parent.parentAtt "20.1"^^xsd:float ;
+           cim:Child.childEnumAtt cim:EnumClass.entry1 ;
+           cim:Child.OtherClass cim:OtherClass3 .
+
+# OtherClass instances with inverse relationships
+cim:OtherClass1 a cim:OtherClass .
+
+cim:OtherClass2 a cim:OtherClass .
+
+cim:OtherClass3 a cim:OtherClass .

@@ -1,0 +1,91 @@
+Configuration:
+  Appenders:
+    Console:
+      name: "CONSOLE"
+      PatternLayout:
+        disableAnsi: false
+        pattern: "[%d] - %highlight{%-5level} - [%thread] %c{1.} - %msg%n%throwable"
+    RollingFile:
+
+      #DEBUG_ALL
+      - name: "ROLLING_DEBUG_ALL_FILE"
+        fileName: "logs/debug-all.log"
+        filePattern: "logs/debug-all-archive/debug-all-%d{HH}h%d{mm}m%d{ss}s-$${date:HH}h$${date:mm}m$${date:ss}s.log"
+        PatternLayout:
+          pattern: "[%d{yyyy-MM-dd HH:mm:ss}] - %-5level - [%thread] %c{1.} - %msg%n%throwable"
+        DefaultRolloverStrategy:
+          delete:
+            basePath: "logs/debug-all-archive"
+            IfAccumulatedFileCount:
+              exceeds: 5
+        Policies:
+          OnStartupTriggeringPolicy: { }
+          SizeBasedTriggeringPolicy:
+            size: "20MB"
+
+        #DEBUG_RDFA
+      - name: "ROLLING_DEBUG_RDFA_FILE"
+        fileName: "logs/debug-rdfa.log"
+        filePattern: "logs/debug-rdfa-archive/debug-rdfa-%d{HH}h%d{mm}m%d{ss}s-$${date:HH}h$${date:mm}m$${date:ss}s.log"
+        PatternLayout:
+          pattern: "[%d{yyyy-MM-dd HH:mm:ss}] - %-5level - [%thread] %c{1.} - %msg%n%throwable"
+        DefaultRolloverStrategy:
+          delete:
+            basePath: "logs/debug-rdfa-archive"
+            IfAccumulatedFileCount:
+              exceeds: 5
+        Policies:
+          OnStartupTriggeringPolicy: { }
+          SizeBasedTriggeringPolicy:
+            size: "20MB"
+
+        #INFO_ALL
+      - name: "ROLLING_INFO_ALL_FILE"
+        fileName: "logs/info-all.log"
+        filePattern: "logs/info-all-archive/info-all-%d{HH}h%d{mm}m%d{ss}s-$${date:HH}h$${date:mm}m$${date:ss}s.log"
+        PatternLayout:
+          pattern: "[%d{yyy-MM-dd HH:mm:ss}] - %-5level - [%thread] %c{1.} - %msg%n%throwable"
+        DefaultRolloverStrategy:
+          delete:
+            basePath: "logs/info-all-archive"
+            IfAccumulatedFileCount:
+              exceeds: 5
+        Policies:
+          OnStartupTriggeringPolicy: { }
+          SizeBasedTriggeringPolicy:
+            size: "100KB"
+
+        #INFO_RDFA
+      - name: "ROLLING_INFO_RDFA_FILE"
+        fileName: "logs/info-rdfa.log"
+        filePattern: "logs/info-rdfa-archive/info-rdfa-%d{HH}h%d{mm}m%d{ss}s-$${date:HH}h$${date:mm}m$${date:ss}s.log"
+        PatternLayout:
+          pattern: "[%d{yyy-MM-dd HH:mm:ss}] - %-5level - [%thread] %c{1.} - %msg%n%throwable"
+        DefaultRolloverStrategy:
+          delete:
+            basePath: "logs/info-rdfa-archive"
+            IfAccumulatedFileCount:
+              exceeds: 5
+        Policies:
+          OnStartupTriggeringPolicy: { }
+          SizeBasedTriggeringPolicy:
+            size: "100KB"
+
+
+  Loggers:
+    Logger:
+      - name: "org.rdfarchitect" # logs only from this package
+        AppenderRef:
+          - ref: "ROLLING_INFO_RDFA_FILE"
+            level: "INFO"
+          - ref: "ROLLING_DEBUG_RDFA_FILE"
+            level: "DEBUG"
+    Root: #logs fromm everywhere
+      level: "TRACE"
+      AppenderRef:
+        - ref: "CONSOLE"
+          level: "INFO"
+        - ref: "ROLLING_INFO_ALL_FILE"
+          level: "INFO"
+        - ref: "ROLLING_DEBUG_ALL_FILE"
+          level: "DEBUG"

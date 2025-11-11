@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: RDFArchitect
+  config:
+    import:
+      - application-database.yml
+      - application-frontend.yml
+      - application-graph.yml
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+server:
+  servlet:
+    session:
+      tracking-modes: cookie
+      cookie:
+        name: RDFA_SESSION_ID
+        same-site: lax      #für production: lax, strict oder none?
+        secure: false       #für production: setz das auf true
+        http-only: false    #für production: setz das auf true
+        path: /
+        max-age: 365d
+      timeout: 365d
