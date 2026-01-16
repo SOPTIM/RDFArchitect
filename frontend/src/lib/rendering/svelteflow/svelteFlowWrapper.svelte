@@ -34,6 +34,7 @@
     import {
         editorState,
         forceReloadTrigger,
+        diagramFocusState,
     } from "$lib/sharedState.svelte.js";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
@@ -119,6 +120,33 @@
     $effect(async () => {
         const dataset = editorState.selectedDataset.getValue();
         isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+    });
+
+    $effect(() => {
+        diagramFocusState.classUUID.subscribe();
+        const focusClassUUID = diagramFocusState.classUUID.getValue();
+        if (!focusClassUUID || !nodesInit.current) {
+            return;
+        }
+
+        if (!svelteFlowAPI?.svelteFlow) {
+            return;
+        }
+
+        const focusNode = nodes.find(node => node.id === focusClassUUID);
+        if (!focusNode) {
+            return;
+        }
+
+        queueMicrotask(() => {
+            svelteFlowAPI.svelteFlow.fitView({
+                nodes: [focusNode],
+                padding: 0.4,
+                duration: 400,
+                maxZoom: 1.6,
+            });
+            diagramFocusState.classUUID.updateValue(null);
+        });
     });
 
     onMount(() => {

@@ -87,3 +87,11 @@ export const forceReloadTrigger = new SimpleTrigger();
 export const compareState = {
     changeList: new StateValuePair(null),
 };
+
+/**
+ * The diagramFocusState contains focus requests for the diagram view.
+ * @type {{ classUUID: StateValuePair<string | null> }}
+ */
+export const diagramFocusState = {
+    classUUID: new StateValuePair(null),
+};

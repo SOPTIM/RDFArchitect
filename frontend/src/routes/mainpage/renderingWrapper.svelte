@@ -34,9 +34,6 @@
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
 
-    /** @type {{ rightInsetPercent?: number }} */
-    let { rightInsetPercent = 0 } = $props();
-
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const MERMAID_FORMAT = "MERMAID";
@@ -162,7 +159,7 @@
                 {#if isLoading}
                     <div
                         class="bg-window-background absolute inset-0 z-10 flex items-center justify-center"
-                        style="width: calc(100% - {rightInsetPercent}%);"
+                        style="width: 100%;"
                     >
                         <LoadingSpinner ariaLabel="Loading diagram" />
                     </div>
@@ -191,7 +188,7 @@
             {:else}
                 <div
                     class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                    style="width: calc(100% - {rightInsetPercent}%);"
+                    style="width: 100%;"
                 >
                     <EmptyStateCard
                         title="No classes in this package"
@@ -207,7 +204,7 @@
         <div class="relative h-full overflow-hidden">
             <div
                 class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                style="width: calc(100% - {rightInsetPercent}%);"
+                style="width: 100%;"
             >
                 <EmptyStateCard
                     title="No diagram requested yet"
