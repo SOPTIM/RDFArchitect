@@ -17,31 +17,25 @@
 
 package org.rdfarchitect.cim.data.dto.relations;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.apache.jena.datatypes.TypeMapper;
-import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.ResourceFactory;
+import lombok.ToString;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 
-@Data
-@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 @NoArgsConstructor
-public class CIMSIsDefault {
+public class CIMSIsDefault extends CIMSValueNode {
 
     public CIMSIsDefault(String value) {
-        this.value = value;
+        this(value, null, false, null, false);
     }
 
-    private String value;
+    public CIMSIsDefault(String value, URI dataType) {
+        this(value, dataType, false, null, false);
+    }
 
-    private URI dataType;
-
-    public Literal asLiteral() {
-        if (dataType == null) {
-            return ResourceFactory.createPlainLiteral(value);
-        }
-        return ResourceFactory.createTypedLiteral(value, TypeMapper.getInstance().getSafeTypeByName(dataType.toString()));
+    public CIMSIsDefault(String value, URI dataType, boolean blankNode, URI blankNodePredicate, boolean uriValue) {
+        super(value, dataType, blankNode, blankNodePredicate, uriValue);
     }
 }

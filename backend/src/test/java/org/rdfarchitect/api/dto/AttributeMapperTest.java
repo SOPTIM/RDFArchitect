@@ -163,6 +163,23 @@ class AttributeMapperTest {
         }
 
         @Test
+        void toCIMObject_nonPrimitiveDoesNotForceXsdDatatypeForFixedDefault() {
+            attributeDTO.setComment("Test comment");
+            attributeDTO.setFixedValue("FixedValue");
+            attributeDTO.setDefaultValue("DefaultValue");
+            attributeDTO.setDataType(new DataTypeDTO("CustomType", "http://example.org#", DataTypeDTO.Type.RANGE));
+
+            var mappedCIMAttribute = attributeMapper.toCIMObject(attributeDTO);
+
+            assertAll(
+                      () -> assertThat(mappedCIMAttribute.getFixedValue()).isNotNull(),
+                      () -> assertThat(mappedCIMAttribute.getFixedValue().getDataType()).isNull(),
+                      () -> assertThat(mappedCIMAttribute.getDefaultValue()).isNotNull(),
+                      () -> assertThat(mappedCIMAttribute.getDefaultValue().getDataType()).isNull()
+                     );
+        }
+
+        @Test
         void toCIMObject_nullAttribute() {
             var mappedCIMAttribute = attributeMapper.toCIMObject(null);
 

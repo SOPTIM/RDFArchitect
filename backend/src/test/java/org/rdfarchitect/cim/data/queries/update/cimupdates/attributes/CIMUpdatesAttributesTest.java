@@ -54,6 +54,9 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
     private static final String ATTRIBUTE_OPTIONAL_FILE_PATH = "attributes/attribute_optional.ttl";
     private static final String MULTIPLE_ATTRIBUTES_FILE_PATH = "attributes/multiple_attributes.ttl";
     private static final String MULTIPLE_CLASSES_FILE_PATH = "attributes/multiple_classes.ttl";
+    private static final String BLANK_NODE_FIXED_PREDICATE = URI_PREFIX + "fixedPredicate";
+    private static final String BLANK_NODE_DEFAULT_PREDICATE = URI_PREFIX + "defaultPredicate";
+    private static final String URI_FIXED_VALUE = URI_PREFIX + "fixedValue";
 
     private static CIMAttribute attributeRequired;
     /**
@@ -64,6 +67,8 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
      * New attribute with only requireds like newAttributeRequired, but with a primitive datatype instead of an unknown one.
      */
     private static CIMAttribute attributePrimitive;
+    private static CIMAttribute attributeBlankNodeValues;
+    private static CIMAttribute attributeUriValue;
 
     @BeforeAll
     static void setUpAttributeEnvironment() {
@@ -85,6 +90,13 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
         attributePrimitive = baseAttribute.toBuilder()
                                           .dataType(new CIMSPrimitiveDataType(new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
                                           .build();
+        attributeBlankNodeValues = baseAttribute.toBuilder()
+                                                .fixedValue(new CIMSIsFixed(URI_FIXED_VALUE, null, true, new URI(BLANK_NODE_FIXED_PREDICATE), true))
+                                                .defaultValue(new CIMSIsDefault(IS_DEFAULT_VALUE, null, true, new URI(BLANK_NODE_DEFAULT_PREDICATE), false))
+                                                .build();
+        attributeUriValue = baseAttribute.toBuilder()
+                                         .fixedValue(new CIMSIsFixed(URI_FIXED_VALUE, null, false, null, true))
+                                         .build();
     }
 
     @Nested
@@ -102,7 +114,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           attributeRequired)
-                                .build()
                                     );
 
             //Assert
@@ -134,7 +145,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           attributeOptional)
-                                .build()
                                     );
 
             //Assert
@@ -172,7 +182,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           newAttribute)
-                                .build()
                                                                         ));
         }
 
@@ -188,7 +197,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           attributePrimitive)
-                                .build()
                                     );
 
             //Assert
@@ -209,6 +217,103 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
         }
 
         @Test
+        @DisplayName("Replaces existing attribute with blank node fixed/default values")
+        void replaceAttribute_attributeWithBlankNodeValues_insertsBlankNodes() {
+            //Arrange
+            addGraphFromFile(ATTRIBUTE_FILE_PATH);
+
+            //Act
+            executeUpdateOnTestGraph(
+                      CIMUpdates.replaceAttribute(
+                                          databasePort.getPrefixMapping(DATASET_NAME),
+                                          GRAPH_URI,
+                                          attributeBlankNodeValues)
+                                    );
+
+            //Assert
+            try {
+                testGraph.begin(TxnType.READ);
+                var subject = NodeFactory.createURI(ATTRIBUTE_URI);
+                var fixedTriples = testGraph.find(subject, CIMS.isFixed.asNode(), Node.ANY).toList();
+                var defaultTriples = testGraph.find(subject, CIMS.isDefault.asNode(), Node.ANY).toList();
+
+                assertThat(fixedTriples).hasSize(1);
+                assertThat(defaultTriples).hasSize(1);
+
+                var fixedBlank = fixedTriples.get(0).getObject();
+                var defaultBlank = defaultTriples.get(0).getObject();
+
+                assertThat(fixedBlank.isBlank()).isTrue();
+                assertThat(defaultBlank.isBlank()).isTrue();
+                assertThat(testGraph.contains(fixedBlank,
+                                              NodeFactory.createURI(BLANK_NODE_FIXED_PREDICATE),
+                                              NodeFactory.createURI(URI_FIXED_VALUE))).isTrue();
+                assertThat(testGraph.contains(defaultBlank,
+                                              NodeFactory.createURI(BLANK_NODE_DEFAULT_PREDICATE),
+                                              NodeFactory.createLiteral(IS_DEFAULT_VALUE))).isTrue();
+            } finally {
+                testGraph.end();
+            }
+        }
+
+        @Test
+        @DisplayName("Replaces existing attribute and removes blank node fixed/default values")
+        void replaceAttribute_attributeWithBlankNodeValues_removesBlankNodes() {
+            //Arrange
+            addGraphFromFile(ATTRIBUTE_FILE_PATH);
+            var fixedBlank = NodeFactory.createBlankNode();
+            var defaultBlank = NodeFactory.createBlankNode();
+            executeWriteTransaction(graph -> {
+                graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI), CIMS.isFixed.asNode(), fixedBlank);
+                graph.add(fixedBlank, NodeFactory.createURI(BLANK_NODE_FIXED_PREDICATE), NodeFactory.createLiteralString(URI_FIXED_VALUE));
+                graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI), CIMS.isDefault.asNode(), defaultBlank);
+                graph.add(defaultBlank, NodeFactory.createURI(BLANK_NODE_DEFAULT_PREDICATE), NodeFactory.createLiteralString(IS_DEFAULT_VALUE));
+            });
+
+            //Act
+            executeUpdateOnTestGraph(
+                      CIMUpdates.replaceAttribute(
+                                databasePort.getPrefixMapping(DATASET_NAME),
+                                GRAPH_URI,
+                                attributeRequired)
+                                    );
+
+            //Assert
+            try {
+                testGraph.begin(TxnType.READ);
+                assertThat(testGraph.contains(fixedBlank, Node.ANY, Node.ANY)).isFalse();
+                assertThat(testGraph.contains(defaultBlank, Node.ANY, Node.ANY)).isFalse();
+            } finally {
+                testGraph.end();
+            }
+        }
+
+        @Test
+        @DisplayName("Replaces existing attribute with URI fixed value")
+        void replaceAttribute_attributeWithUriValue_insertsUriNode() {
+            //Arrange
+            addGraphFromFile(ATTRIBUTE_FILE_PATH);
+
+            //Act
+            executeUpdateOnTestGraph(
+                      CIMUpdates.replaceAttribute(
+                                          databasePort.getPrefixMapping(DATASET_NAME),
+                                          GRAPH_URI,
+                                          attributeUriValue)
+                                    );
+
+            //Assert
+            try {
+                testGraph.begin(TxnType.READ);
+                assertThat(testGraph.contains(NodeFactory.createURI(ATTRIBUTE_URI),
+                                              CIMS.isFixed.asNode(),
+                                              NodeFactory.createURI(URI_FIXED_VALUE))).isTrue();
+            } finally {
+                testGraph.end();
+            }
+        }
+
+        @Test
         @DisplayName("Replaces existing attribute without optionals with attribute with new label and optionals")
         void replaceAttribute_attributeExistsRequired_replacesAttributeWithOptional() {
             //Arrange
@@ -220,7 +325,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           attributeOptional)
-                                .build()
                                     );
 
             //Assert
@@ -350,7 +454,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           GRAPH_URI,
                                           MY_UUID.toString(),
                                           List.of(newAttributeOne))
-                                .build()
                                     );
 
             //Assert
@@ -389,7 +492,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           GRAPH_URI,
                                           MY_UUID.toString(),
                                           List.of(newAttributeOne))
-                                .build()
                                     );
 
             //Assert
@@ -430,7 +532,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           GRAPH_URI,
                                           MY_UUID.toString(),
                                           List.of())
-                                .build()
                                     );
 
             //Assert
@@ -457,7 +558,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           GRAPH_URI,
                                           "does not exist",
                                           List.of())
-                                .build()
                                     );
 
             //Assert

@@ -21,6 +21,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.update.Update;
+import org.apache.jena.update.UpdateRequest;
 import org.junit.jupiter.api.BeforeAll;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -136,6 +137,10 @@ public class CIMUpdatesTestBase {
     /**
      * Use this method to execute write actions per Update class by bulding the UpdateBuilder
      */
+    protected void executeUpdateOnTestGraph(UpdateRequest update) {
+        InMemorySparqlExecutioner.executeSingleUpdate(databasePort.getGraph(graphIdentifier), update, graphIdentifier.getGraphUri());
+    }
+
     protected void executeUpdateOnTestGraph(Update update) {
         InMemorySparqlExecutioner.executeSingleUpdate(databasePort.getGraph(graphIdentifier), update, graphIdentifier.getGraphUri());
     }

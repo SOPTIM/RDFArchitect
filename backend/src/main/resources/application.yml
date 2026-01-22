@@ -23,3 +23,6 @@ server:
         path: /
         max-age: 365d
       timeout: 365d
+
+attributes:
+  newValuesBlankNode: false

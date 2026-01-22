@@ -31,6 +31,7 @@ import org.rdfarchitect.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.apache.jena.vocabulary.XSD;
 
 import java.util.List;
 
@@ -84,14 +85,14 @@ public interface AttributeMapper {
         if (dto.getFixedValue() == null) {
             return null;
         }
-        return new CIMSIsFixed(dto.getFixedValue(), new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
+        return new CIMSIsFixed(dto.getFixedValue(), buildXsdDatatype(dto));
     }
 
     default CIMSIsDefault buildDefaultValue(AttributeDTO dto) {
         if (dto.getDefaultValue() == null) {
             return null;
         }
-        return new CIMSIsDefault(dto.getDefaultValue(), new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
+        return new CIMSIsDefault(dto.getDefaultValue(), buildXsdDatatype(dto));
     }
 
     default CIMSDataType buildDataType(DataTypeDTO dto) {
@@ -100,5 +101,15 @@ public interface AttributeMapper {
                   new RDFSLabel(dto.getLabel(), "en"),
                   CIMSDataType.Type.valueOf(dto.getType().toString())
         );
+    }
+
+    private static URI buildXsdDatatype(AttributeDTO dto) {
+        if (dto.getDataType() == null || dto.getDataType().getLabel() == null) {
+            return null;
+        }
+        if (dto.getDataType().getType() == null || dto.getDataType().getType() != DataTypeDTO.Type.PRIMITIVE) {
+            return null;
+        }
+        return new URI(XSD.getURI() + dto.getDataType().getLabel());
     }
 }
