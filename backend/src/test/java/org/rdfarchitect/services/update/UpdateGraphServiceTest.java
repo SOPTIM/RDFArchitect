@@ -19,10 +19,13 @@ package org.rdfarchitect.services.update;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.apache.jena.graph.Graph;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.update.graph.UpdateGraphService;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.mockito.Mockito.*;
 
@@ -47,11 +50,28 @@ class UpdateGraphServiceTest {
     @Test
     void replaceGraph_callsDeleteAndCreateGraph() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
-        var mockFile = mock(MultipartFile.class);
+        var mockFile = new MockMultipartFile(
+                "graph.ttl",
+                "graph.ttl",
+                "text/turtle",
+                "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                        .getBytes(StandardCharsets.UTF_8)
+        );
 
         updateGraphService.replaceGraph(graphIdentifier, mockFile);
 
         verify(mockDatabasePort).deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).createGraph(graphIdentifier, mockFile);
+        verify(mockDatabasePort).createGraph(eq(graphIdentifier), any(Graph.class));
+    }
+
+    @Test
+    void replaceGraph_withoutFile_createsEmptyGraph() {
+        var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
+
+        updateGraphService.replaceGraph(graphIdentifier, null);
+
+        verify(mockDatabasePort).deleteGraph(graphIdentifier);
+        verify(mockDatabasePort).createEmptyGraph(graphIdentifier);
+        verify(mockDatabasePort, never()).createGraph(any(), any());
     }
 }

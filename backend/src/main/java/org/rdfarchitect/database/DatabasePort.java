@@ -17,10 +17,9 @@
 
 package org.rdfarchitect.database;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 import java.util.UUID;
 
@@ -55,9 +54,18 @@ public interface DatabasePort {
      * Creates or replaces the graph referenced by {@code graphIdentifier} using the supplied RDF content.
      *
      * @param graphIdentifier identifies dataset and graph URI
-     * @param file            uploaded RDF file
+     * @param graph           graph contents to persist
      */
-    void createGraph(GraphIdentifier graphIdentifier, MultipartFile file);
+    void createGraph(GraphIdentifier graphIdentifier, Graph graph);
+
+    /**
+     * Creates an empty graph referenced by {@code graphIdentifier}.
+     *
+     * <p>If the dataset does not exist yet, it will be created.</p>
+     *
+     * @param graphIdentifier identifies dataset and graph URI
+     */
+    void createEmptyGraph(GraphIdentifier graphIdentifier);
 
     /**
      * Indicates whether there is a forward change that can be re-applied on the graph.

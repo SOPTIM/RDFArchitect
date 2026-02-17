@@ -28,6 +28,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetSchemaUseCase;
 import org.rdfarchitect.services.update.graph.DeleteGraphUseCase;
+import org.rdfarchitect.services.update.graph.ReplaceGraphUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -36,9 +37,12 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.AbstractMap;
 import java.util.List;
@@ -55,6 +59,7 @@ public class GraphContentRESTController {
     private final ExpandURIUseCase expandURIUseCase;
     private final GetSchemaUseCase getSchemaUseCase;
     private final DeleteGraphUseCase deleteGraphUseCase;
+    private final ReplaceGraphUseCase replaceGraphUseCase;
 
     @Operation(
             summary = "export graph",
@@ -151,4 +156,34 @@ public class GraphContentRESTController {
         return "success";
     }
 
+    @Operation(
+            summary = "Replace/Insert graph",
+            description = "Replace or insert an rdf-schema graph",
+            tags = {"graph"},
+            responses = {
+                    @ApiResponse(
+                            responseCode = "200")
+            }
+    )
+    @PutMapping
+    public String replaceGraph(
+            @Parameter(description = "The name/url of the inquirer.")
+            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            String originURL,
+            @Parameter(description = "The literal name of the dataset.")
+            @PathVariable
+            String datasetName,
+            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+            @PathVariable
+            String graphURI,
+            @Parameter(description = "The file containing the graph to be inserted")
+            @RequestParam(value = "file", required = false)
+            MultipartFile file) {
+        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".", datasetName, graphURI, originURL);
+
+        replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphURI), file);
+
+        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".", datasetName, graphURI, originURL);
+        return "success";
+    }
 }
