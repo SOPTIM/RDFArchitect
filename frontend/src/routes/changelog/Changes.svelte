@@ -15,9 +15,9 @@
   -->
 
 <script>
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
+    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         forceReloadTrigger,
         editorState,
@@ -31,8 +31,17 @@
 
     let changelog = $state();
 
+    let readonlyDataset = $state(true);
+
     let selectedDatasetName = $derived(editorState.selectedDataset.getValue());
     let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
+
+    $effect(async () => {
+        forceReloadTrigger.subscribe();
+        if (selectedDatasetName) {
+            readonlyDataset = await isReadOnly(selectedDatasetName);
+        }
+    });
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -80,6 +89,7 @@
                             {getExpanded}
                             {setExpanded}
                             newest={i === 0}
+                            readonly={readonlyDataset}
                         />
                     {/each}
                 </tbody>

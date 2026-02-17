@@ -409,7 +409,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
         try {
             assertThatDatasetExists(datasetName);
             graphCollections.get(datasetName).setReadOnly(true);
-            graphCollections.get(datasetName).resetHistory();
         } finally {
             lock.unlock();
         }
