@@ -17,6 +17,11 @@
 
 package org.rdfarchitect.context;
 
+import lombok.NoArgsConstructor;
+
+import static lombok.AccessLevel.*;
+
+@NoArgsConstructor(access = PRIVATE)
 public class SessionContext {
 
     public static final ThreadLocal<String> sessionID = new ThreadLocal<>();
@@ -26,7 +31,8 @@ public class SessionContext {
     }
 
     public static String getSessionId() {
-        return sessionID.get();
+        var id = sessionID.get();
+        return id != null ? id : "default";
     }
 
     public static void clear() {
