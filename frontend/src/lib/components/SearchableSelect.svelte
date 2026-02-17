@@ -50,12 +50,12 @@
             callOnValidChange(value);
             return;
         }
-        for (let i = 0; i < optionObjectList.length; i++) {
-            if (accessIdentifier(optionObjectList[i]) === value) {
-                lastSavedValue = accessDisplayData(optionObjectList[i]);
+        for (let optionObj of optionObjectList) {
+            if (accessIdentifier(optionObj) === value) {
+                lastSavedValue = accessDisplayData(optionObj);
                 tooltip = value;
                 value = lastSavedValue;
-                callOnValidChange(optionObjectList[i]);
+                callOnValidChange(optionObj);
                 return;
             }
         }

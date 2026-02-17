@@ -26,7 +26,25 @@
     const classEditorContext = getContext("classEditor");
     const readonly = classEditorContext.readonly;
     const namespaces = classEditorContext.namespaces;
+    const reactiveClass = classEditorContext.reactiveClass;
     const id = uuid();
+
+    function trickleDownNamespaceChange(newNamespaceUri) {
+        const oldNamespaceUri = namespace.value;
+        namespace.value = newNamespaceUri;
+        replaceNamespaceIfMatching(reactiveClass.attributes, oldNamespaceUri, newNamespaceUri);
+        replaceNamespaceIfMatching(reactiveClass.associations,oldNamespaceUri,  newNamespaceUri);
+        replaceNamespaceIfMatching(reactiveClass.enumEntries, oldNamespaceUri, newNamespaceUri);
+    }
+
+    function replaceNamespaceIfMatching(reactiveObjectsArray, oldNamespaceUri, newNamespace) {
+        reactiveObjectsArray.values.forEach(obj => {
+            console.warn("Comparing object namespace", obj.namespace.value, "with old namespace", oldNamespaceUri, " for object", obj.label.value);
+            if (obj.namespace.value === oldNamespaceUri) {
+                obj.namespace.value = newNamespace;
+            }
+        })
+    }
 </script>
 
 <tr>
@@ -43,11 +61,9 @@
             accessDisplayData={namespace =>
                 classEditorContext.getSubstitutedNamespace(namespace.prefix)}
             accessIdentifier={namespace => namespace.prefix}
-            callOnValidChange={newNamespace => {
-                namespace.value = newNamespace.prefix;
-            }}
+            callOnValidChange={namespace => trickleDownNamespaceChange(namespace.prefix)}
             {readonly}
-            buttons={getControlButtonsForReactiveObject(namespace, readonly)}
+            buttons={getControlButtonsForReactiveObject(namespace, readonly, trickleDownNamespaceChange)}
         />
         <ViolationMessages violations={namespace.violations} />
     </td>
