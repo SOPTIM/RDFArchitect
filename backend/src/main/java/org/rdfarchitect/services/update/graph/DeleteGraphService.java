@@ -21,22 +21,15 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateGraphService implements DeleteGraphUseCase, ReplaceGraphUseCase {
+public class DeleteGraphService implements DeleteGraphUseCase {
 
     private final DatabasePort databasePort;
 
     @Override
     public void deleteGraph(GraphIdentifier graphIdentifier) {
         databasePort.deleteGraph(graphIdentifier);
-    }
-
-    @Override
-    public void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        databasePort.deleteGraph(graphIdentifier);
-        databasePort.createGraph(graphIdentifier, file);
     }
 }

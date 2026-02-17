@@ -18,44 +18,39 @@
 package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.riot.RDFLanguages;
 import org.jetbrains.annotations.NotNull;
+import org.rdfarchitect.cim.changelog.ChangeLogEntry;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.services.ChangeLogUseCase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
-public class GraphBulkImportService {
+public class ImportGraphsService implements ImportGraphsUseCase {
 
-    private final ReplaceGraphUseCase replaceGraphUseCase;
+    private static final Logger logger = LoggerFactory.getLogger(ImportGraphsService.class);
+    private final ChangeLogUseCase changeLogUseCase;
+
     private final DatabasePort databasePort;
     private static final String FALL_BACK_NAME = "graph";
 
+    @Override
     public List<String> importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris) {
         var reservedGraphUris = loadExistingGraphUris(datasetName);
         var importedGraphUris = new ArrayList<String>();
@@ -68,9 +63,19 @@ public class GraphBulkImportService {
                 var requestedGraphUri = uriProvided ? graphUris.get(i) : null;
                 var graphUri = normalizeGraphUri(requestedGraphUri, file.getOriginalFilename());
                 graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
-                replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphUri), file);
+                var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+                databasePort.deleteGraph(graphIdentifier);
+                databasePort.createGraph(graphIdentifier, file);
                 importedGraphUris.add(graphUri);
             }
+        }
+        for (var graphUri : importedGraphUris) {
+            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            changeLogUseCase.recordChange(
+                      graphIdentifier,
+                      new ChangeLogEntry("Imported graph into dataset '" + datasetName + "' with graph URI '"
+                                                   + graphUri + "'.", databasePort.getGraph(graphIdentifier).getLastDelta())
+                                         );
         }
         return importedGraphUris;
     }
@@ -87,18 +92,20 @@ public class GraphBulkImportService {
                 }
                 var entryName = entry.getName();
                 if (!isGraphFile(entryName)) {
-                    log.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.", entryName, datasetName);
+                    logger.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.", entryName, datasetName);
                     zipInputStream.closeEntry();
                     continue;
                 }
                 var extractedFile = toMultipartFile(entryName, zipInputStream);
                 var graphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entryName), reservedGraphUris);
                 try {
-                    replaceGraphUseCase.replaceGraph(new GraphIdentifier(datasetName, graphUri), extractedFile);
+                    var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+                    databasePort.deleteGraph(graphIdentifier);
+                    databasePort.createGraph(graphIdentifier, extractedFile);
                     importedGraphUris.add(graphUri);
                 } catch (RuntimeException exception) {
                     error = true;
-                    log.warn("Skipping ZIP entry '{}' for dataset '{}' because import failed: {}", entryName, datasetName, exception.getMessage(), exception);
+                    logger.warn("Skipping ZIP entry '{}' for dataset '{}' because import failed: {}", entryName, datasetName, exception.getMessage(), exception);
                 }
                 zipInputStream.closeEntry();
             }
@@ -138,13 +145,15 @@ public class GraphBulkImportService {
     }
 
     private String buildGraphUriFromFileName(String fileName) {
-        var name = Objects.requireNonNullElse(fileName,  FALL_BACK_NAME);
+        var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
         var lastPathSegment = Paths.get(name).getFileName().toString();
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
         var sanitized = lastPathSegment.substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
                                        .replaceAll("\\W", "_");
 
-        if (sanitized.isBlank()) sanitized = FALL_BACK_NAME;
+        if (sanitized.isBlank()) {
+            sanitized = FALL_BACK_NAME;
+        }
         return RDFA.GRAPH_URI + sanitized;
     }
 
@@ -176,65 +185,69 @@ public class GraphBulkImportService {
 
         @Override
         public @NotNull String getName() {
-                return name;
-            }
-
-            @Override
-            public String getOriginalFilename() {
-                return originalFilename;
-            }
-
-            @Override
-            public String getContentType() {
-                return contentType;
-            }
-
-            @Override
-            public boolean isEmpty() {
-                return content.length == 0;
-            }
-
-            @Override
-            public long getSize() {
-                return content.length;
-            }
-
-            @Override
-            public byte @NotNull [] getBytes() {
-                return content;
-            }
-
-            @Override
-            public @NotNull InputStream getInputStream() {
-                return new ByteArrayInputStream(content);
-            }
-
-            @Override
-            public void transferTo(File dest) throws IOException, IllegalStateException {
-                Files.write(dest.toPath(), content);
-            }
-
-            @Override
-            public boolean equals(Object o) {
-                if (this == o) return true;
-                if (!(o instanceof SimpleMultipartFile that)) return false;
-                return Objects.equals(name, that.name)
-                        && Objects.equals(originalFilename, that.originalFilename)
-                        && Objects.equals(contentType, that.contentType)
-                        && Arrays.equals(content, that.content);
-            }
-
-            @Override
-            public int hashCode() {
-                int result = Objects.hash(name, originalFilename, contentType);
-                result = 31 * result + Arrays.hashCode(content);
-                return result;
-            }
-
-            @Override
-            public @NotNull String toString() {
-                return "SimpleMultipartFile[name=%s, originalFilename=%s, contentType=%s, contentLength=%d]"
-                        .formatted(name, originalFilename, contentType, content.length);
-            }
+            return name;
         }
+
+        @Override
+        public String getOriginalFilename() {
+            return originalFilename;
+        }
+
+        @Override
+        public String getContentType() {
+            return contentType;
+        }
+
+        @Override
+        public boolean isEmpty() {
+            return content.length == 0;
+        }
+
+        @Override
+        public long getSize() {
+            return content.length;
+        }
+
+        @Override
+        public byte @NotNull [] getBytes() {
+            return content;
+        }
+
+        @Override
+        public @NotNull InputStream getInputStream() {
+            return new ByteArrayInputStream(content);
+        }
+
+        @Override
+        public void transferTo(File dest) throws IOException, IllegalStateException {
+            Files.write(dest.toPath(), content);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof SimpleMultipartFile that)) {
+                return false;
+            }
+            return Objects.equals(name, that.name)
+                      && Objects.equals(originalFilename, that.originalFilename)
+                      && Objects.equals(contentType, that.contentType)
+                      && Arrays.equals(content, that.content);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = Objects.hash(name, originalFilename, contentType);
+            result = 31 * result + Arrays.hashCode(content);
+            return result;
+        }
+
+        @Override
+        public @NotNull String toString() {
+            return "SimpleMultipartFile[name=%s, originalFilename=%s, contentType=%s, contentLength=%d]"
+                      .formatted(name, originalFilename, contentType, content.length);
+        }
+    }
 }

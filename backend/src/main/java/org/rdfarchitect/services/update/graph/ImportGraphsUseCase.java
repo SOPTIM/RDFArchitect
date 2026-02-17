@@ -17,10 +17,20 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import org.rdfarchitect.database.GraphIdentifier;
 import org.springframework.web.multipart.MultipartFile;
 
-public interface ReplaceGraphUseCase {
+import java.util.List;
 
-    void replaceGraph(GraphIdentifier graphIdentifier, MultipartFile file);
+public interface ImportGraphsUseCase {
+
+    /**
+     * Imports multiple graphs into the specified dataset.
+     *
+     * @param datasetName The name of the dataset where the graphs will be imported.
+     * @param files       The list of files containing the graph data to be imported.
+     * @param graphUris   The list of graph URIs corresponding to each file.
+     *
+     * @return A list of graph URIs that were successfully imported.
+     */
+    List<String> importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris);
 }

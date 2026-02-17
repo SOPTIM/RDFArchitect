@@ -17,10 +17,6 @@
 
 package org.rdfarchitect.services.update;
 
-import org.apache.jena.graph.Graph;
-import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.graph.Triple;
-import org.apache.jena.mem.GraphMem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.cim.data.dto.CIMPrefixPair;

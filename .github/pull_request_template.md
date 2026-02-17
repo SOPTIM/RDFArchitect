@@ -107,7 +107,7 @@
 
 ### Changelog Page
 - [ ] Select graph and display write operations works
-- [ ] Operations shown in chronological order
+- [ ] Operations shown in reverse chronological order
 - [ ] Detailed view of changed triples works
 - [ ] Restoring graph to a version works
 

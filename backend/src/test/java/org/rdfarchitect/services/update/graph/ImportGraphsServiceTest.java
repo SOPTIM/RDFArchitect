@@ -1,0 +1,85 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.services.update.graph;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.rdfarchitect.cim.rdf.resources.RDFA;
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+import org.rdfarchitect.services.ChangeLogUseCase;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+class ImportGraphsServiceTest {
+
+    private ImportGraphsUseCase importGraphsUseCase;
+    private ChangeLogUseCase changeLogUseCaseMock;
+    private DatabasePort databasePortMock;
+
+    @BeforeEach
+    void setUp() {
+        changeLogUseCaseMock = mock(ChangeLogUseCase.class);
+        databasePortMock = mock(DatabasePort.class);
+        importGraphsUseCase = new ImportGraphsService(changeLogUseCaseMock, databasePortMock);
+    }
+
+    @Test
+    void importGraphs_sameFileNameTwice_autoGeneratesUniqueGraphUris() {
+        var datasetName = "ds";
+
+        var file1Mock = mock(MultipartFile.class);
+        var file2Mock = mock(MultipartFile.class);
+
+        when(file1Mock.getOriginalFilename()).thenReturn("graph.ttl");
+        when(file2Mock.getOriginalFilename()).thenReturn("graph.ttl");
+
+        when(databasePortMock.listGraphUris(datasetName))
+                  .thenThrow(new RuntimeException("dataset does not exist"));
+
+        var graphMock = mock(GraphRewindableWithUUIDs.class, RETURNS_DEEP_STUBS);
+        when(databasePortMock.getGraph(any(GraphIdentifier.class))).thenReturn(graphMock);
+
+        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1Mock, file2Mock), null);
+
+        assertThat(result).containsExactly(
+                  RDFA.GRAPH_URI + "graph",
+                  RDFA.GRAPH_URI + "graph_1"
+                                          );
+
+        var captor = ArgumentCaptor.forClass(GraphIdentifier.class);
+
+        verify(databasePortMock, times(2)).createGraph(captor.capture(), any(MultipartFile.class));
+
+        assertThat(captor.getAllValues())
+                  .extracting(GraphIdentifier::getGraphUri)
+                  .containsExactly(
+                            RDFA.GRAPH_URI + "graph",
+                            RDFA.GRAPH_URI + "graph_1"
+                                  );
+
+        verify(changeLogUseCaseMock, times(2)).recordChange(any(GraphIdentifier.class), any());
+    }
+}
