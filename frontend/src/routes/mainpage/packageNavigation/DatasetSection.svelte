@@ -24,14 +24,16 @@
         faDatabase,
         faPenToSquare,
         faLock,
+        faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
     import { onMount } from "svelte";
+
+    import { PUBLIC_BACKEND_URL } from "$env/static/public";
 
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { URI } from "$lib/models/dto";
     import {
         forceReloadTrigger,
@@ -47,6 +49,7 @@
     } from "./packageNavigationUtils.svelte.js";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
+    import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
 
     let { dataset } = $props();
@@ -55,6 +58,7 @@
 
     let graphs = $state([]);
     let showImportDialog = $state(false);
+    let showNewGraphDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
@@ -145,7 +149,6 @@
         if (!dataset?.label || !readonly) {
             return;
         }
-        selectDataset();
         await bec.enableEditing(dataset.label);
         await updateReadonly();
         forceReloadTrigger.trigger();
@@ -156,7 +159,6 @@
         if (!dataset?.label || readonly) {
             return;
         }
-        selectDataset();
         await bec.disableEditing(dataset.label);
         await updateReadonly();
         forceReloadTrigger.trigger();
@@ -187,6 +189,16 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     selectDataset();
+                    showNewGraphDialog = true;
+                }}
+                disabled={readonly}
+                faIcon={faDiagramProject}
+            >
+                Add Graph
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    selectDataset();
                     showImportDialog = true;
                 }}
                 disabled={readonly}
@@ -194,6 +206,20 @@
             >
                 Import Graph
             </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    selectDataset();
+                    showNamespacesDialog = true;
+                }}
+                faIcon={faTags}
+            >
+                {#if readonly}
+                    View Namespaces
+                {:else}
+                    Manage Namespaces
+                {/if}
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
                     selectDataset();
@@ -218,19 +244,7 @@
                     Disable Editing
                 </ContextMenu.Item.Button>
             {/if}
-            <ContextMenu.Item.Button
-                onSelect={() => {
-                    selectDataset();
-                    showNamespacesDialog = true;
-                }}
-                faIcon={faTags}
-            >
-                {#if readonly}
-                    View Namespaces
-                {:else}
-                    Manage Namespaces
-                {/if}
-            </ContextMenu.Item.Button>
+
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -261,6 +275,10 @@
 
 <ImportDialog
     bind:showDialog={showImportDialog}
+    lockedDatasetName={dataset.label}
+/>
+<NewGraphDialog
+    bind:showDialog={showNewGraphDialog}
     lockedDatasetName={dataset.label}
 />
 <SnapshotDialog

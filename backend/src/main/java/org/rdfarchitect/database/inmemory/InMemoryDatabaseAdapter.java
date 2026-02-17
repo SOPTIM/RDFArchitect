@@ -18,14 +18,14 @@
 package org.rdfarchitect.database.inmemory;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,16 +51,24 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public void createGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        var graphSource = new GraphFileSourceBuilderImpl()
-                  .setFile(file)
-                  .setGraphName(graphIdentifier.getGraphUri())
-                  .build();
-        database.create(graphIdentifier, graphSource.graph());
+    public void createGraph(GraphIdentifier graphIdentifier, Graph graph) {
+        database.create(graphIdentifier, graph);
         var currentPrefixMapping = new PrefixMappingImpl()
                   .setNsPrefixes(database.getPrefixMapping(graphIdentifier.getDatasetName()))
-                  .setNsPrefixes(graphSource.graph().getPrefixMapping());
+                  .setNsPrefixes(graph.getPrefixMapping());
         database.setPrefixMapping(graphIdentifier.getDatasetName(), currentPrefixMapping);
+    }
+
+    @Override
+    public void createEmptyGraph(GraphIdentifier graphIdentifier) {
+        var datasetName = graphIdentifier.getDatasetName();
+        var isNewDataset = !database.listDatasets().contains(datasetName);
+        database.create(graphIdentifier, GraphFactory.createDefaultGraph());
+        if (isNewDataset) {
+            var prefixMapping = new PrefixMappingImpl()
+                      .setNsPrefixes(PrefixMapping.Standard);
+            database.setPrefixMapping(graphIdentifier.getDatasetName(), prefixMapping);
+        }
     }
 
     @Override

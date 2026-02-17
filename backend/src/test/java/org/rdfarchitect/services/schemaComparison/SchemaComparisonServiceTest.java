@@ -31,6 +31,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.SchemaComparisonService;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -55,8 +56,12 @@ class SchemaComparisonServiceTest {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
         service = new SchemaComparisonService(databasePort);
 
-        var graph = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
-        databasePort.createGraph(GRAPH_IDENTIFIER, graph);
+        var file = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
+        var graphSource = new GraphFileSourceBuilderImpl()
+                  .setFile(file)
+                  .setGraphName(GRAPH_IDENTIFIER.getGraphUri())
+                  .build();
+        databasePort.createGraph(GRAPH_IDENTIFIER, graphSource.graph());
     }
 
     @Test
@@ -343,7 +348,11 @@ class SchemaComparisonServiceTest {
     void compareSchemas_dbDb_noChanges_returnsEmptyList() {
         // arrange
         var otherGraphFile = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
-        databasePort.createGraph(OTHER_GRAPH_IDENTIFIER, otherGraphFile);
+        var graphSource = new GraphFileSourceBuilderImpl()
+                  .setFile(otherGraphFile)
+                  .setGraphName(OTHER_GRAPH_IDENTIFIER.getGraphUri())
+                  .build();
+        databasePort.createGraph(OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 
         // act
         var result = service.compareSchemas(GRAPH_IDENTIFIER, OTHER_GRAPH_IDENTIFIER);
