@@ -18,10 +18,9 @@
     import { faCaretDown, faCaretUp } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
         forceReloadTrigger,
@@ -29,7 +28,13 @@
 
     import TripleTable from "./TripleTable.svelte";
 
-    const { change, getExpanded, setExpanded, newest = false } = $props();
+    const {
+        change,
+        getExpanded,
+        setExpanded,
+        newest = false,
+        readonly,
+    } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -96,7 +101,11 @@
         {#if newest}
             <span class="text-default-text text-sm">Current Version</span>
         {:else if hasTriples(change)}
-            <ButtonControl callOnClick={() => restoreVersion(change.changeId)}>
+            <ButtonControl
+                disabled={readonly}
+                title={readonly ? "cannot restore in readonly dataset" : ""}
+                callOnClick={() => restoreVersion(change.changeId)}
+            >
                 Restore Version
             </ButtonControl>
         {:else}
