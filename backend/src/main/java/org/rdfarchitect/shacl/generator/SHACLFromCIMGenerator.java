@@ -34,6 +34,8 @@ import org.rdfarchitect.shacl.generator.property.shapegenerator.DatatypeProperty
 import org.rdfarchitect.shacl.generator.property.shapegenerator.InverseCardinalityPropertyShapeFromCIMAssociationGenerator;
 import org.rdfarchitect.shacl.generator.property.shapegenerator.PropertyShapeFromCIMPropertyGenerator;
 import org.rdfarchitect.shacl.generator.property.shapegenerator.ValueTypePropertyShapeFromCIMAssociationGenerator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
 import java.util.HashMap;
@@ -45,6 +47,9 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class SHACLFromCIMGenerator {
+
+    private static final Logger logger = LoggerFactory.getLogger(SHACLFromCIMGenerator.class);
+
 
     private final Model ontology;
 
@@ -172,14 +177,25 @@ public class SHACLFromCIMGenerator {
         }
         var propertyShapes = new HashSet<Resource>();
         for (var converter : propertyConverters) {
-            var propertyShape = converter.setOntologyModel(ontology)
-                    .setShaclModel(shacl)
-                    .setShaclPrefix(shaclPrefix)
-                    .createPropertyShape(property);
-            if (propertyShape != null) {
-                //create property shapes
-                shacl.add(propertyShape.listProperties());
-                propertyShapes.add(propertyShape);
+            try {
+                var propertyShape = converter.setOntologyModel(ontology)
+                                             .setShaclModel(shacl)
+                                             .setShaclPrefix(shaclPrefix)
+                                             .createPropertyShape(property);
+                if (propertyShape != null) {
+                    //create property shapes
+                    shacl.add(propertyShape.listProperties());
+                    propertyShapes.add(propertyShape);
+                }
+            } catch (Exception e) {
+                logger.warn("Error creating property shape for property {} with converter {}: {}", property.getURI(), converter.getClass().getSimpleName(), e.getMessage());
+                shacl.add(shacl.createResource(RDFA.URI + "Errors"),
+                          RDFS.comment,
+                          String.format("Error creating property shape for property %s with converter %s: %s",
+                                        property.getURI(),
+                                        converter.getClass().getSimpleName(), e.getMessage()
+                                       )
+                         );
             }
         }
         //add property shapes to ontology

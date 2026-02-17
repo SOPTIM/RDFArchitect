@@ -24,6 +24,8 @@ import org.apache.jena.rdf.model.ResourceFactory;
 @UtilityClass
 public class RDFA {
 
+    public final String URI = "https://rdf-architect.soptim.de#";
+
     public final Property uuid = ResourceFactory.createProperty("http://example.org#uuid");
 
     public final String GRAPH_URI = "http://graph#";
