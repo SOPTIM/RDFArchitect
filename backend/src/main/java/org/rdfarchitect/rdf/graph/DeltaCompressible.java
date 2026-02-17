@@ -42,6 +42,11 @@ import java.util.UUID;
 
 public class DeltaCompressible extends CompositionBase implements Graph {
 
+    /**
+     * -- GETTER --
+     * Answer the base graph.
+     */
+    @Getter
     private Graph base;
     /**
      * -- GETTER --

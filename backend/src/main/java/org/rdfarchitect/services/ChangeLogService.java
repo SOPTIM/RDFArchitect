@@ -50,9 +50,9 @@ public class ChangeLogService implements ChangeLogUseCase {
     @Override
     public void recordChange(GraphIdentifier graphIdentifier, ChangeLogEntry entry) {
         var graphChangeLog = changeLogs
-                  .computeIfAbsent(SessionContext.getSessionId(), k -> new ConcurrentHashMap<>())
-                  .computeIfAbsent(graphIdentifier.getDatasetName(), k -> new ConcurrentHashMap<>())
-                  .computeIfAbsent(graphIdentifier.getGraphUri(), k -> new GraphChangeLog());
+                  .computeIfAbsent(SessionContext.getSessionId(), _ -> new ConcurrentHashMap<>())
+                  .computeIfAbsent(graphIdentifier.getDatasetName(), _ -> new ConcurrentHashMap<>())
+                  .computeIfAbsent(graphIdentifier.getGraphUri(), _ -> new GraphChangeLog());
         graphChangeLog.addEntry(entry);
     }
 

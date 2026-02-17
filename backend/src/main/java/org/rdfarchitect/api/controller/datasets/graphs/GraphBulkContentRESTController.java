@@ -21,7 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.services.update.graph.GraphBulkImportService;
+import org.rdfarchitect.services.update.graph.ImportGraphsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
@@ -45,7 +45,7 @@ public class GraphBulkContentRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphBulkContentRESTController.class);
 
-    private final GraphBulkImportService graphBulkImportService;
+    private final ImportGraphsUseCase importGraphsUseCase;
 
     @Operation(
               summary = "Replace/Insert multiple graphs",
@@ -72,12 +72,13 @@ public class GraphBulkContentRESTController {
               List<String> graphUris) {
         logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/content\" from \"{}\".", datasetName, originURL);
 
-        var importedGraphUris = graphBulkImportService.importGraphs(datasetName, files, graphUris);
+        var importedGraphUris = importGraphsUseCase.importGraphs(datasetName, files, graphUris);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/content\" to \"{}\".", datasetName, originURL);
         return ResponseEntity.ok(new GraphBulkImportResponse("success", importedGraphUris));
     }
 
     public record GraphBulkImportResponse(String message, List<String> importedGraphUris) {
+
     }
 }

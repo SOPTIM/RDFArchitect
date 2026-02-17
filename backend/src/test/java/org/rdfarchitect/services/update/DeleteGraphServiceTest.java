@@ -21,37 +21,25 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.update.graph.UpdateGraphService;
-import org.springframework.web.multipart.MultipartFile;
+import org.rdfarchitect.services.update.graph.DeleteGraphService;
 
 import static org.mockito.Mockito.*;
 
-class UpdateGraphServiceTest {
+class DeleteGraphServiceTest {
 
-    private UpdateGraphService updateGraphService;
-    private DatabasePort mockDatabasePort;
+    private DeleteGraphService deleteGraphService;
+    private DatabasePort mockDatabasePortMock;
 
     @BeforeEach
     void setUp() {
-        mockDatabasePort = mock(DatabasePort.class);
-        updateGraphService = new UpdateGraphService(mockDatabasePort);
+        mockDatabasePortMock = mock(DatabasePort.class);
+        deleteGraphService = new DeleteGraphService(mockDatabasePortMock);
     }
 
     @Test
     void deleteGraph_callsDeleteGraph() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
-        updateGraphService.deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
-    }
-
-    @Test
-    void replaceGraph_callsDeleteAndCreateGraph() {
-        var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
-        var mockFile = mock(MultipartFile.class);
-
-        updateGraphService.replaceGraph(graphIdentifier, mockFile);
-
-        verify(mockDatabasePort).deleteGraph(graphIdentifier);
-        verify(mockDatabasePort).createGraph(graphIdentifier, mockFile);
+        deleteGraphService.deleteGraph(graphIdentifier);
+        verify(mockDatabasePortMock).deleteGraph(graphIdentifier);
     }
 }

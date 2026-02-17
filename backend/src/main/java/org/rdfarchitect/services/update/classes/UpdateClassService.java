@@ -59,7 +59,7 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
                 graph.end();
             }
         }
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced class " + newClass.getUuid(), graph.getLastDelta()));
+        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Updated class " + newClass.getUuid(), graph.getLastDelta()));
     }
 
     @Override

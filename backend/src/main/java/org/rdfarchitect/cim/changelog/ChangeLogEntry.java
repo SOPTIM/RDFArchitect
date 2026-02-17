@@ -38,7 +38,18 @@ public class ChangeLogEntry {
         this.changeId = delta.getVersionId();
         this.timestamp = LocalDateTime.now();
         this.message = message;
+
         this.additions = new WeakReference<>(delta.getAdditions());
         this.deletions = new WeakReference<>(delta.getDeletions());
+
+        var additionsGraph = this.additions.get();
+        var deletionsGraph = this.deletions.get();
+        if (additionsGraph == null || deletionsGraph == null) {
+            return;
+        }
+
+        if (additionsGraph.isEmpty() && deletionsGraph.isEmpty()) {
+            this.additions = new WeakReference<>(delta.getBase());
+        }
     }
 }
