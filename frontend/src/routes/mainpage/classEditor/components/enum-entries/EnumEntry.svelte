@@ -16,7 +16,7 @@
   -->
 
 <script>
-    import { faMinus } from "@fortawesome/free-solid-svg-icons";
+    import { faEye, faGear, faMinus } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
@@ -24,7 +24,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
 
-    const { enumEntries, enumEntry } = $props();
+    const { enumEntries, enumEntry, openEnumEntryEditor } = $props();
 
     const readonly = getContext("classEditor").readonly;
 </script>
@@ -42,11 +42,19 @@
             {readonly}
         />
     </td>
+    <td class="size-8">
+        <FaIconButton
+            callOnClick={() => openEnumEntryEditor(enumEntry)}
+            icon={readonly ? faEye : faGear}
+            title={readonly ? "View" : "Edit" + " enum entry"}
+        />
+    </td>
     {#if !readonly}
         <td class="size-8">
             <FaIconButton
                 icon={faMinus}
                 callOnClick={() => enumEntries.remove(enumEntry, true)}
+                title="Remove enum entry"
             />
         </td>
     {/if}
