@@ -18,10 +18,9 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
     import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
 

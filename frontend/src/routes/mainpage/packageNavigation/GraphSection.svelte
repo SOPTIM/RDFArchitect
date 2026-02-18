@@ -33,8 +33,6 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { onMount } from "svelte";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import {
         undo,
         fetchCanUndo,
@@ -45,6 +43,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
         forceReloadTrigger,
