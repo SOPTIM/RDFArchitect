@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -915,15 +916,23 @@ class GraphRewindableTest {
         @Test
         void changesShouldNotAffectOtherTransactions() {
             graphRewindable.begin(TxnType.WRITE);
-            executor.submit(() -> graphRewindable.begin(TxnType.WRITE));
-            executor.submit(() -> graphRewindable.add(triple("a a a")));
-            executor.submit(() -> graphRewindable.commit());
+            Future<?> beginFuture = executor.submit(() -> graphRewindable.begin(TxnType.WRITE));
+            Future<?> addFuture = executor.submit(() -> graphRewindable.add(triple("a a a")));
+            Future<?> commitFuture = executor.submit(graphRewindable::commit);
             assertThat(graphRewindable.contains(triple("a a a"))).isFalse();
             graphRewindable.end();
-            executor.submit(graphRewindable::end);
+            waitFor(beginFuture);
+            waitFor(addFuture);
+            waitFor(commitFuture);
+            Future<?> endFuture = executor.submit(graphRewindable::end);
+            waitFor(endFuture);
             graphRewindable.begin(TxnType.READ);
             assertThat(graphRewindable.contains(triple("a a a"))).isTrue();
             graphRewindable.end();
+        }
+
+        private void waitFor(Future<?> future) {
+            assertThatNoException().isThrownBy(() -> future.get());
         }
     }
 }
