@@ -25,6 +25,7 @@
     import { mapReactiveEnumEntryToEnumEntryDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
 
@@ -68,15 +69,6 @@
             }
         });
     }
-
-    function getIdentifierWithNamespace(namespace) {
-        let namespacePrefix = namespace.substitutedPrefix;
-        if (namespacePrefix && namespacePrefix.endsWith(":")) {
-            namespacePrefix = namespacePrefix.slice(0, -1);
-        }
-        const namespaceUri = namespace.prefix;
-        return `(${namespacePrefix}) ${namespaceUri}`;
-    }
 </script>
 
 <ModifyDataDialog
@@ -89,79 +81,93 @@
     {readonly}
 >
     {#if enumEntry && classEditorContext && readonly !== undefined}
-        <div class="mx-2 flex h-full flex-col">
-            <span class="mb-2 text-lg">
-                {#if isNewEnumEntry}
-                    Creating new enum entry
-                {:else}
-                    Editing enum entry <b>{enumEntry.label.backup}</b>
-                {/if}
-            </span>
+        <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
+            <!-- Title -->
+            <div>
+                <span class="text-lg">
+                    {#if isNewEnumEntry}
+                        Creating new enum entry
+                    {:else}
+                        Editing enum entry <b>{enumEntry.label.backup}</b>
+                    {/if}
+                </span>
+            </div>
 
-            <span class="mb-1 font-semibold">UUID:</span>
-            <p class="mb-2 w-full">
-                {#if enumEntry.uuid.value}
-                    {enumEntry.uuid.value}
-                {:else}
-                    not yet assigned
-                {/if}
-            </p>
+            <!-- UUID -->
+            <div>
+                <span class="mb-1">UUID:</span>
+                <p class="w-full">
+                    {#if enumEntry.uuid.value}
+                        {enumEntry.uuid.value}
+                    {:else}
+                        not yet assigned
+                    {/if}
+                </p>
+            </div>
 
             <!-- NAMESPACE -->
-            <span class="mb-1 font-semibold">Namespace:</span>
-            <SearchableSelect
-                placeholder="namespace..."
-                value={classEditorContext.getSubstitutedNamespace(
-                    enumEntry.namespace.value,
-                )}
-                optionObjectList={classEditorContext.namespaces}
-                accessDisplayData={namespace => namespace.substitutedPrefix}
-                accessIdentifier={getIdentifierWithNamespace}
-                callOnValidChange={newNamespace =>
-                    (enumEntry.namespace.value = newNamespace.prefix)}
-                highlight={enumEntry.namespace.isModified}
-                warn={!enumEntry.namespace.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    enumEntry.namespace,
-                    readonly,
-                )}
-                tooltip={enumEntry.namespace.value}
-            />
-            <ViolationMessages violations={enumEntry.namespace.violations} />
+            <div>
+                <span class="mb-1">Namespace:</span>
+                <SearchableSelect
+                    placeholder="namespace..."
+                    value={classEditorContext.getSubstitutedNamespace(
+                        enumEntry.namespace.value,
+                    )}
+                    optionObjectList={classEditorContext.namespaces}
+                    accessDisplayData={namespace => namespace.substitutedPrefix}
+                    accessIdentifier={getNsPrefixNsUriString}
+                    callOnValidChange={newNamespace =>
+                        (enumEntry.namespace.value = newNamespace.prefix)}
+                    highlight={enumEntry.namespace.isModified}
+                    warn={!enumEntry.namespace.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        enumEntry.namespace,
+                        readonly,
+                    )}
+                    tooltip={enumEntry.namespace.value}
+                />
+                <ViolationMessages
+                    violations={enumEntry.namespace.violations}
+                />
+            </div>
 
             <!-- LABEL -->
-            <TextEditControl
-                label="Label:"
-                placeholder="enum entry label..."
-                bind:value={enumEntry.label.value}
-                highlight={enumEntry.label.isModified}
-                warn={!enumEntry.label.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    enumEntry.label,
-                    readonly,
-                )}
-            />
-            <ViolationMessages violations={enumEntry.label.violations} />
+            <div>
+                <TextEditControl
+                    label="Label:"
+                    placeholder="enum entry label..."
+                    bind:value={enumEntry.label.value}
+                    highlight={enumEntry.label.isModified}
+                    warn={!enumEntry.label.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        enumEntry.label,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages violations={enumEntry.label.violations} />
+            </div>
 
             <!-- COMMENT -->
-            <label for="enum-entry-edit-dialog-comment-text-area">
-                Comment:
-            </label>
-            <TextAreaControl
-                id="enum-entry-edit-dialog-comment-text-area"
-                placeholder="comment..."
-                bind:value={enumEntry.comment.value}
-                highlight={enumEntry.comment.isModified}
-                warn={!enumEntry.comment.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    enumEntry.comment,
-                    readonly,
-                )}
-            />
-            <ViolationMessages violations={enumEntry.comment.violations} />
+            <div>
+                <label for="enum-entry-edit-dialog-comment-text-area">
+                    Comment:
+                </label>
+                <TextAreaControl
+                    id="enum-entry-edit-dialog-comment-text-area"
+                    placeholder="comment..."
+                    bind:value={enumEntry.comment.value}
+                    highlight={enumEntry.comment.isModified}
+                    warn={!enumEntry.comment.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        enumEntry.comment,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages violations={enumEntry.comment.violations} />
+            </div>
         </div>
     {/if}
 </ModifyDataDialog>

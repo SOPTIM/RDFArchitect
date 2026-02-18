@@ -24,26 +24,18 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     const { association } = $props();
 
     const classEditorContext = getContext("classEditor");
     const readonly = classEditorContext.readonly;
     const classes = classEditorContext.classes;
-
-    function getIdentifierWithNamespace(namespace) {
-        let namespacePrefix = namespace.substitutedPrefix;
-        if (namespacePrefix && namespacePrefix.endsWith(":")) {
-            namespacePrefix = namespacePrefix.slice(0, -1);
-        }
-        const namespaceUri = namespace.prefix;
-        return `(${namespacePrefix}) ${namespaceUri}`;
-    }
 </script>
 
 <div class="contents">
     <!-- Row 1: Title -->
-    <div class="col-start-1 row-1 mb-2">
+    <div class="col-start-1 row-start-1">
         <span class="text-lg">
             Association
             <b>
@@ -62,14 +54,14 @@
     </div>
 
     <!-- Row 2: UUID -->
-    <div class="col-start-1 row-2 mb-2 pl-2">
-        <span class="mb-1 font-semibold">UUID:</span>
+    <div class="col-start-1 row-start-2 pl-2">
+        <span class="mb-1">UUID:</span>
         <p class="w-full">{association.uuid.value}</p>
     </div>
 
     <!-- Row 3: Namespace -->
-    <div class="col-start-1 row-3 mb-2 pl-2">
-        <span class="mb-1 font-semibold">Namespace:</span>
+    <div class="col-start-1 row-start-3 pl-2">
+        <span class="mb-1">Namespace:</span>
         <SearchableSelect
             placeholder="namespace..."
             value={classEditorContext.getSubstitutedNamespace(
@@ -77,7 +69,7 @@
             )}
             optionObjectList={classEditorContext.namespaces}
             accessDisplayData={namespace => namespace.substitutedPrefix}
-            accessIdentifier={getIdentifierWithNamespace}
+            accessIdentifier={getNsPrefixNsUriString}
             callOnValidChange={newNamespace =>
                 (association.namespace.value = newNamespace.prefix)}
             highlight={association.namespace.isModified}
@@ -93,7 +85,7 @@
     </div>
 
     <!-- Row 4: Label -->
-    <div class="col-start-1 row-4 mb-2 pl-2">
+    <div class="col-start-1 row-start-4 pl-2">
         <TextEditControl
             label="Label:"
             placeholder="association label..."
@@ -110,7 +102,7 @@
     </div>
 
     <!-- Row 5: Target -->
-    <div class="col-start-1 row-5 mb-2 pl-2">
+    <div class="col-start-1 row-start-5 pl-2">
         <SearchableSelect
             label="Target:"
             placeholder="Target"
@@ -138,7 +130,7 @@
     </div>
 
     <!-- Row 6: Multiplicity LowerBound -->
-    <div class="col-start-1 row-6 mb-2 pl-2">
+    <div class="col-start-1 row-start-6 pl-2">
         <NumberInputControl
             label="Multiplicity LowerBound:"
             placeholder="multiplicity LowerBound..."
@@ -157,7 +149,7 @@
     </div>
 
     <!-- Row 7: Multiplicity UpperBound -->
-    <div class="col-start-1 row-7 mb-2 pl-2">
+    <div class="col-start-1 row-start-7 pl-2">
         <NumberInputControl
             label="Multiplicity UpperBound:"
             placeholder="multiplicity UpperBound..."
@@ -176,7 +168,7 @@
     </div>
 
     <!-- Row 8: Use association checkbox -->
-    <div class="col-start-1 row-8 mb-2 pl-2">
+    <div class="col-start-1 row-start-8 pl-2">
         <div class="relative flex items-end space-x-1">
             <CheckBoxEditControl
                 label="Use association?"
@@ -194,7 +186,7 @@
     </div>
 
     <!-- Row 9: Comment -->
-    <div class="col-start-1 row-9 mb-2 pl-2">
+    <div class="col-start-1 row-start-9 pl-2">
         <label for="association-edit-dialog-direct-comment-text-area">
             Comment:
         </label>

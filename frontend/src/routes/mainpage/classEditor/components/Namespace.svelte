@@ -21,6 +21,7 @@
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     let { namespace } = $props();
 
@@ -61,15 +62,6 @@
             }
         });
     }
-
-    function getIdentifierWithNamespace(namespace) {
-        let namespacePrefix = namespace.substitutedPrefix;
-        if (namespacePrefix && namespacePrefix.endsWith(":")) {
-            namespacePrefix = namespacePrefix.slice(0, -1);
-        }
-        const namespaceUri = namespace.prefix;
-        return `(${namespacePrefix}) ${namespaceUri}`;
-    }
 </script>
 
 <tr>
@@ -84,7 +76,7 @@
             warn={!namespace.isValid}
             optionObjectList={namespaces}
             accessDisplayData={namespace => namespace.substitutedPrefix}
-            accessIdentifier={getIdentifierWithNamespace}
+            accessIdentifier={getNsPrefixNsUriString}
             callOnValidChange={namespace =>
                 trickleDownNamespaceChange(namespace.prefix)}
             {readonly}

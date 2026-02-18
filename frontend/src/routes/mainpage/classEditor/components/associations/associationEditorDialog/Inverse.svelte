@@ -24,25 +24,17 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     const { association } = $props();
 
     const classEditorContext = getContext("classEditor");
     const readonly = classEditorContext.readonly;
-
-    function getIdentifierWithNamespace(namespace) {
-        let namespacePrefix = namespace.substitutedPrefix;
-        if (namespacePrefix && namespacePrefix.endsWith(":")) {
-            namespacePrefix = namespacePrefix.slice(0, -1);
-        }
-        const namespaceUri = namespace.prefix;
-        return `(${namespacePrefix}) ${namespaceUri}`;
-    }
 </script>
 
 <div class="contents">
     <!-- Row 1: Title -->
-    <div class="col-start-2 row-1 mb-2">
+    <div class="col-start-2 row-start-1">
         <span class="text-lg">
             Inverse Association
             <b>
@@ -61,14 +53,14 @@
     </div>
 
     <!-- Row 2: UUID -->
-    <div class="col-start-2 row-2 mb-2 pl-2">
-        <span class="mb-1 font-semibold">UUID:</span>
+    <div class="col-start-2 row-start-2 pl-2">
+        <span class="mb-1">UUID:</span>
         <p class="w-full">{association.inverse.uuid.value}</p>
     </div>
 
     <!-- Row 3: Namespace -->
-    <div class="col-start-2 row-3 mb-2 pl-2">
-        <span class="mb-1 font-semibold">Inverse Namespace:</span>
+    <div class="col-start-2 row-start-3 pl-2">
+        <span class="mb-1">Inverse Namespace:</span>
         <SearchableSelect
             placeholder="namespace..."
             value={classEditorContext.getSubstitutedNamespace(
@@ -76,7 +68,7 @@
             )}
             optionObjectList={classEditorContext.namespaces}
             accessDisplayData={namespace => namespace.substitutedPrefix}
-            accessIdentifier={getIdentifierWithNamespace}
+            accessIdentifier={getNsPrefixNsUriString}
             callOnValidChange={newNamespace =>
                 (association.inverse.namespace.value = newNamespace.prefix)}
             highlight={association.inverse.namespace.isModified}
@@ -94,7 +86,7 @@
     </div>
 
     <!-- Row 4: Label -->
-    <div class="col-start-2 row-4 mb-2 pl-2">
+    <div class="col-start-2 row-start-4 pl-2">
         <TextEditControl
             label="Inverse Label:"
             placeholder="association label..."
@@ -111,7 +103,7 @@
     </div>
 
     <!-- Row 5: Target (disabled) -->
-    <div class="col-start-2 row-5 mb-2 pl-2">
+    <div class="col-start-2 row-start-5 pl-2">
         <TextEditControl
             label="Inverse Target:"
             disabled={true}
@@ -120,7 +112,7 @@
     </div>
 
     <!-- Row 6: Multiplicity LowerBound -->
-    <div class="col-start-2 row-6 mb-2 pl-2">
+    <div class="col-start-2 row-start-6 pl-2">
         <NumberInputControl
             label="Inverse Multiplicity LowerBound:"
             placeholder="multiplicity LowerBound..."
@@ -139,7 +131,7 @@
     </div>
 
     <!-- Row 7: Multiplicity UpperBound -->
-    <div class="col-start-2 row-7 mb-2 pl-2">
+    <div class="col-start-2 row-start-7 pl-2">
         <NumberInputControl
             label="Inverse Multiplicity UpperBound:"
             placeholder="multiplicity UpperBound..."
@@ -158,7 +150,7 @@
     </div>
 
     <!-- Row 8: Use inverse association checkbox -->
-    <div class="col-start-2 row-8 mb-2 pl-2">
+    <div class="col-start-2 row-start-8 pl-2">
         <div class="relative flex items-end space-x-1">
             <CheckBoxEditControl
                 label="Use inverse association?"
@@ -176,7 +168,7 @@
     </div>
 
     <!-- Row 9: Comment -->
-    <div class="col-start-2 row-9 mb-2 pl-2">
+    <div class="col-start-2 row-start-9 pl-2">
         <label for="association-edit-dialog-inverse-comment-text-area">
             Inverse Comment:
         </label>
