@@ -38,6 +38,7 @@
         lockedDatasetName,
         lockedGraphUri,
         generateOntologyEntries = false,
+        supportedMediaTypes = supportedRDFMediaTypes,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -231,7 +232,7 @@
         id="media-types-Download"
         bind:value={selectedMediaType}
     >
-        {#each supportedRDFMediaTypes as mediaType}
+        {#each supportedMediaTypes as mediaType}
             <option value={mediaType}>{mediaType.name}</option>
         {/each}
     </select>
