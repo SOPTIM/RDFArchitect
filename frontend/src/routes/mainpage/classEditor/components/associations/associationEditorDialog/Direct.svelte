@@ -30,126 +30,186 @@
     const classEditorContext = getContext("classEditor");
     const readonly = classEditorContext.readonly;
     const classes = classEditorContext.classes;
+
+    function getIdentifierWithNamespace(namespace) {
+        let namespacePrefix = namespace.substitutedPrefix;
+        if (namespacePrefix && namespacePrefix.endsWith(":")) {
+            namespacePrefix = namespacePrefix.slice(0, -1);
+        }
+        const namespaceUri = namespace.prefix;
+        return `(${namespacePrefix}) ${namespaceUri}`;
+    }
 </script>
 
-<span class="mb-2 text-lg">
-    Association
-    <b>
-        {classEditorContext.getClassByUuid(association.domain.value)?.label}
-    </b>
-    to
-    <b>
-        {classEditorContext.getClassByUuid(association.target.value)
-            ? classEditorContext.getClassByUuid(association.target.value).label
-            : "not yet defined"}
-    </b>
-</span>
-<div class="pl-2">
-    <span class="mb-1 font-semibold">UUID:</span>
-    <p class="mb-2 w-full">{association.uuid.value}</p>
+<div class="contents">
+    <!-- Row 1: Title -->
+    <div class="col-start-1 row-1 mb-2">
+        <span class="text-lg">
+            Association
+            <b>
+                {classEditorContext.getClassByUuid(association.domain.value)
+                    ?.label}
+            </b>
+            to
+            <b>
+                {classEditorContext.getClassByUuid(association.target.value)
+                    ? classEditorContext.getClassByUuid(
+                          association.target.value,
+                      ).label
+                    : "not yet defined"}
+            </b>
+        </span>
+    </div>
 
-    <!--FROM LABEL-->
-    <TextEditControl
-        label="Label:"
-        placeholder="association label..."
-        bind:value={association.label.value}
-        highlight={association.label.isModified}
-        warn={!association.label.isValid}
-        {readonly}
-        buttons={getControlButtonsForReactiveObject(
-            association.label,
-            readonly,
-        )}
-    />
-    <ViolationMessages violations={association.label.violations} />
+    <!-- Row 2: UUID -->
+    <div class="col-start-1 row-2 mb-2 pl-2">
+        <span class="mb-1 font-semibold">UUID:</span>
+        <p class="w-full">{association.uuid.value}</p>
+    </div>
 
-    <!--FROM TARGET-->
-    <SearchableSelect
-        label="Target:"
-        placeholder="Target"
-        value={classEditorContext.getClassByUuid(association.target.value)
-            ?.label}
-        optionObjectList={classes}
-        accessDisplayData={cls => {
-            return cls.label;
-        }}
-        accessIdentifier={cls =>
-            classEditorContext.getSubstitutedNamespace(cls.prefix) + cls.label}
-        callOnValidChange={newTarget =>
-            (association.target.value = newTarget.uuid)}
-        highlight={association.target.isModified}
-        warn={!association.target.isValid}
-        {readonly}
-        buttons={getControlButtonsForReactiveObject(
-            association.target,
-            readonly,
-        )}
-        tooltip={association.target.value}
-    />
-    <ViolationMessages violations={association.target.violations} />
+    <!-- Row 3: Namespace -->
+    <div class="col-start-1 row-3 mb-2 pl-2">
+        <span class="mb-1 font-semibold">Namespace:</span>
+        <SearchableSelect
+            placeholder="namespace..."
+            value={classEditorContext.getSubstitutedNamespace(
+                association.namespace.value,
+            )}
+            optionObjectList={classEditorContext.namespaces}
+            accessDisplayData={namespace => namespace.substitutedPrefix}
+            accessIdentifier={getIdentifierWithNamespace}
+            callOnValidChange={newNamespace =>
+                (association.namespace.value = newNamespace.prefix)}
+            highlight={association.namespace.isModified}
+            warn={!association.namespace.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.namespace,
+                readonly,
+            )}
+            tooltip={association.namespace.value}
+        />
+        <ViolationMessages violations={association.namespace.violations} />
+    </div>
 
-    <!--FROM MULTIPLICITY-->
-    <NumberInputControl
-        label="Multiplicity LowerBound:"
-        placeholder="multiplicity LowerBound..."
-        bind:value={association.multiplicityLowerBound.value}
-        highlight={association.multiplicityLowerBound.isModified}
-        warn={!association.multiplicityLowerBound.isValid}
-        {readonly}
-        buttons={getControlButtonsForReactiveObject(
-            association.multiplicityLowerBound,
-            readonly,
-        )}
-    />
-    <ViolationMessages
-        violations={association.multiplicityLowerBound.violations}
-    />
+    <!-- Row 4: Label -->
+    <div class="col-start-1 row-4 mb-2 pl-2">
+        <TextEditControl
+            label="Label:"
+            placeholder="association label..."
+            bind:value={association.label.value}
+            highlight={association.label.isModified}
+            warn={!association.label.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.label,
+                readonly,
+            )}
+        />
+        <ViolationMessages violations={association.label.violations} />
+    </div>
 
-    <NumberInputControl
-        label="Multiplicity UpperBound:"
-        placeholder="multiplicity UpperBound..."
-        bind:value={association.multiplicityUpperBound.value}
-        highlight={association.multiplicityUpperBound.isModified}
-        warn={!association.multiplicityUpperBound.isValid}
-        {readonly}
-        buttons={getControlButtonsForReactiveObject(
-            association.multiplicityUpperBound,
-            readonly,
-        )}
-    />
-    <ViolationMessages
-        violations={association.multiplicityUpperBound.violations}
-    />
+    <!-- Row 5: Target -->
+    <div class="col-start-1 row-5 mb-2 pl-2">
+        <SearchableSelect
+            label="Target:"
+            placeholder="Target"
+            value={classEditorContext.getClassByUuid(association.target.value)
+                ?.label}
+            optionObjectList={classes}
+            accessDisplayData={cls => {
+                return cls.label;
+            }}
+            accessIdentifier={cls =>
+                classEditorContext.getSubstitutedNamespace(cls.prefix) +
+                cls.label}
+            callOnValidChange={newTarget =>
+                (association.target.value = newTarget.uuid)}
+            highlight={association.target.isModified}
+            warn={!association.target.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.target,
+                readonly,
+            )}
+            tooltip={association.target.value}
+        />
+        <ViolationMessages violations={association.target.violations} />
+    </div>
 
-    <!--FROM ASSOC USED-->
-    <CheckBoxEditControl
-        label="Use association?"
-        bind:value={association.isUsed.value}
-        highlight={association.isUsed.isModified}
-        warn={!association.isUsed.isValid}
-        {readonly}
-        buttons={getControlButtonsForReactiveObject(
-            association.isUsed,
-            readonly,
-        )}
-    />
-    <ViolationMessages violations={association.isUsed.violations} />
+    <!-- Row 6: Multiplicity LowerBound -->
+    <div class="col-start-1 row-6 mb-2 pl-2">
+        <NumberInputControl
+            label="Multiplicity LowerBound:"
+            placeholder="multiplicity LowerBound..."
+            bind:value={association.multiplicityLowerBound.value}
+            highlight={association.multiplicityLowerBound.isModified}
+            warn={!association.multiplicityLowerBound.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.multiplicityLowerBound,
+                readonly,
+            )}
+        />
+        <ViolationMessages
+            violations={association.multiplicityLowerBound.violations}
+        />
+    </div>
 
-    <!--COMMENT-->
-    <label for="association-edit-dialog-direct-comment-text-area">
-        Comment:
-    </label>
-    <TextAreaControl
-        id="association-edit-dialog-direct-comment-text-area"
-        placeholder="comment..."
-        bind:value={association.comment.value}
-        highlight={association.comment.isModified}
-        warn={!association.comment.isValid}
-        {readonly}
-        buttons={getControlButtonsForReactiveObject(
-            association.comment,
-            readonly,
-        )}
-    />
-    <ViolationMessages violations={association.comment.violations} />
+    <!-- Row 7: Multiplicity UpperBound -->
+    <div class="col-start-1 row-7 mb-2 pl-2">
+        <NumberInputControl
+            label="Multiplicity UpperBound:"
+            placeholder="multiplicity UpperBound..."
+            bind:value={association.multiplicityUpperBound.value}
+            highlight={association.multiplicityUpperBound.isModified}
+            warn={!association.multiplicityUpperBound.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.multiplicityUpperBound,
+                readonly,
+            )}
+        />
+        <ViolationMessages
+            violations={association.multiplicityUpperBound.violations}
+        />
+    </div>
+
+    <!-- Row 8: Use association checkbox -->
+    <div class="col-start-1 row-8 mb-2 pl-2">
+        <div class="relative flex items-end space-x-1">
+            <CheckBoxEditControl
+                label="Use association?"
+                bind:value={association.isUsed.value}
+                highlight={association.isUsed.isModified}
+                warn={!association.isUsed.isValid}
+                {readonly}
+                buttons={getControlButtonsForReactiveObject(
+                    association.isUsed,
+                    readonly,
+                )}
+            />
+        </div>
+        <ViolationMessages violations={association.isUsed.violations} />
+    </div>
+
+    <!-- Row 9: Comment -->
+    <div class="col-start-1 row-9 mb-2 pl-2">
+        <label for="association-edit-dialog-direct-comment-text-area">
+            Comment:
+        </label>
+        <TextAreaControl
+            id="association-edit-dialog-direct-comment-text-area"
+            placeholder="comment..."
+            bind:value={association.comment.value}
+            highlight={association.comment.isModified}
+            warn={!association.comment.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.comment,
+                readonly,
+            )}
+        />
+        <ViolationMessages violations={association.comment.violations} />
+    </div>
 </div>

@@ -78,16 +78,12 @@
     discardChanges={() => association.reset()}
     hasChanges={isNewAssociation || association?.isModified}
     isValid={association?.isValid}
+    size="w-3/5"
     {readonly}
 >
     {#if association}
-        <div class="mx-2 flex h-full flex-col">
+        <div class="mx-2 grid w-full grid-cols-2 items-start gap-x-4 px-2">
             <Direct {association} />
-
-            <div class="my-4 flex justify-center">
-                <div class="bg-default-background h-1 w-full rounded"></div>
-            </div>
-
             <Inverse {association} />
         </div>
     {/if}
