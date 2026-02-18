@@ -82,7 +82,7 @@
 
     async function fetchGraphs() {
         let graphUris = await getGraphNames(dataset.label);
-        const newGraphs = [];
+        let newGraphs = [];
         const previous = graphs ?? [];
 
         for (let graphUri of graphUris) {
@@ -96,6 +96,9 @@
                     keepExpanded || isSelectedGraph(dataset.label, graphUri),
             });
         }
+        newGraphs = newGraphs.sort((a, b) =>
+            a.uri.suffix.localeCompare(b.uri.suffix),
+        );
         graphs = newGraphs;
     }
 
