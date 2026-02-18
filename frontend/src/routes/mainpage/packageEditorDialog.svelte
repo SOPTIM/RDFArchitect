@@ -14,15 +14,17 @@
   -    limitations under the License.
   -
   -->
-
 <script>
     import { BackendConnection } from "$lib/api/backend.js";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { Package } from "$lib/models/dto";
+    import { mapReactivePackageToPackageDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
+    import { ReactivePackage } from "$lib/models/reactive/reactive-package.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -39,87 +41,31 @@
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-    // modeled after the PackageObject, because Classes are not reactive
-    let modifiedPackage = $state({
-        uuid: "",
-        prefix: "",
-        label: "",
-        comment: "",
-        external: false,
-    });
 
+    let pkg = $state(null);
+    let isNewPackage = $state(true);
     let namespaces = $state([]);
-    let resolvedPack = $state(null);
 
-    const originalPackage = $derived(
-        resolvedPack || pack ? new Package(resolvedPack ?? pack) : null,
-    );
-
-    let hasUnsavedChanges = $derived(
-        originalPackage
-            ? !new Package({
-                  ...originalPackage,
-                  comment: normalizeOptionalComment(originalPackage.comment),
-              }).equals(
-                  new Package({
-                      ...modifiedPackage,
-                      comment: normalizeOptionalComment(
-                          modifiedPackage.comment,
-                      ),
-                  }),
-              )
-            : false,
-    );
-    //disable if required properties are not set
-    let disableSubmit = $derived(
-        !modifiedPackage.label || !modifiedPackage.prefix,
-    );
-
-    function normalizeOptionalComment(value) {
-        return value === "" ? null : value;
+    function getSubstitutedNamespace(namespace) {
+        const namespaceObj = namespaces.find(n => n.prefix === namespace);
+        return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
     }
 
     async function onOpen() {
-        if (!pack || !datasetName || !graphUri) {
-            return;
+        if (pack) {
+            isNewPackage = false;
+            pkg = new ReactivePackage({
+                uuid: pack.uuid,
+                label: pack.label,
+                namespace: pack.prefix,
+                comment: pack.comment,
+            });
+        } else {
+            isNewPackage = true;
+            pkg = new ReactivePackage();
         }
-        resolvedPack = null;
-        resolvedPack = await resolveCurrentPackage();
-        const packageToEdit = new Package(resolvedPack ?? pack);
-        modifiedPackage = {
-            uuid: packageToEdit.uuid,
-            prefix: packageToEdit.prefix,
-            label: packageToEdit.label,
-            comment: packageToEdit.comment,
-            external: packageToEdit.external,
-        };
-        if (!readonly) {
+        if (!readonly && datasetName) {
             namespaces = await getNamespaces(datasetName);
-        }
-    }
-
-    async function resolveCurrentPackage() {
-        if (!pack?.uuid) {
-            return pack;
-        }
-
-        if (!datasetName || !graphUri) {
-            return pack;
-        }
-
-        try {
-            const response = await bec.getPackages(datasetName, graphUri);
-            if (!response.ok) {
-                return pack;
-            }
-            const packageJson = await response.json();
-            const allPackages = [
-                ...(packageJson.internalPackageList ?? []),
-                ...(packageJson.externalPackageList ?? []),
-            ];
-            return allPackages.find(p => p?.uuid === pack.uuid) ?? pack;
-        } catch {
-            return pack;
         }
     }
 
@@ -127,62 +73,85 @@
         if (!datasetName || !graphUri) {
             return;
         }
-        const response = await bec.putPackage(datasetName, graphUri, {
-            ...modifiedPackage,
-            comment: normalizeOptionalComment(modifiedPackage.comment),
-        });
-        if (!response.ok) {
-            return;
+
+        const apiPackage = mapReactivePackageToPackageDto(pkg);
+
+        let saveCall;
+        if (isNewPackage) {
+            saveCall = bec.postPackage(datasetName, graphUri, apiPackage);
+        } else {
+            saveCall = bec.putPackage(datasetName, graphUri, apiPackage);
         }
-        editorState.selectedPackageUUID.trigger();
-        editorState.selectedClassUUID.trigger();
-        forceReloadTrigger.trigger();
-    }
 
-    function onClose() {
-        resolvedPack = null;
-    }
-
-    function getSubstitutedNamespace(namespace) {
-        const namespaceObj = namespaces.find(p => p.prefix === namespace);
-        return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
+        return saveCall
+            .then(async res => {
+                if (res.ok) {
+                    const packageUUID = await res.json();
+                    console.log("Successfully saved package:", packageUUID);
+                    pkg.save();
+                } else {
+                    const errorText = await res.text();
+                    console.error("Could not save package:", errorText);
+                }
+                return res;
+            })
+            .finally(() => {
+                editorState.selectedClassUUID.trigger();
+                editorState.selectedPackageUUID.trigger();
+                forceReloadTrigger.trigger();
+            });
     }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
-    {onClose}
     saveChanges={savePackage}
-    hasChanges={hasUnsavedChanges}
-    isValid={!disableSubmit}
+    discardChanges={() => pkg.reset()}
+    hasChanges={isNewPackage || pkg?.isModified}
+    isValid={pkg?.isValid}
     {readonly}
 >
-    {#if pack}
+    {#if pkg}
         <div class="mx-2 flex h-full flex-col">
             <span class="mb-2 text-lg">
-                {#if readonly}
-                    Viewing package <b>{originalPackage.label}</b>
+                {#if isNewPackage}
+                    Creating new package
+                {:else if readonly}
+                    Viewing package <b>{pkg.label.backup}</b>
                 {:else}
-                    Editing package <b>{originalPackage.label}</b>
+                    Editing package <b>{pkg.label.backup}</b>
                 {/if}
             </span>
 
             <span class="mb-1 font-semibold">UUID:</span>
-            <p class="mb-2 w-full">{originalPackage.uuid}</p>
+            <p class="mb-2 w-full">
+                {#if pkg.uuid.value}
+                    {pkg.uuid.value}
+                {:else}
+                    not yet assigned
+                {/if}
+            </p>
 
-            <!--LABEL-->
+            <!-- LABEL -->
             <TextEditControl
                 label="Label:"
-                bind:value={modifiedPackage.label}
                 placeholder="package label..."
+                bind:value={pkg.label.value}
+                highlight={pkg.label.isModified}
+                warn={!pkg.label.isValid}
                 {readonly}
+                buttons={getControlButtonsForReactiveObject(
+                    pkg.label,
+                    readonly,
+                )}
             />
+            <ViolationMessages violations={pkg.label.violations} />
 
-            <!--URI PREFIX-->
+            <!-- NAMESPACE -->
             <SearchableSelect
-                label="URI Prefix:"
-                value={getSubstitutedNamespace(modifiedPackage.prefix)}
+                label="Namespace:"
+                value={getSubstitutedNamespace(pkg.namespace.value)}
                 optionObjectList={namespaces}
                 accessDisplayData={namespace =>
                     getSubstitutedNamespace(namespace.prefix)}
@@ -192,19 +161,35 @@
                     namespace.prefix +
                     ") "}
                 callOnValidChange={newNamespace =>
-                    (modifiedPackage.prefix = newNamespace
+                    (pkg.namespace.value = newNamespace
                         ? newNamespace.prefix
                         : null)}
+                highlight={pkg.namespace.isModified}
+                warn={!pkg.namespace.isValid}
                 {readonly}
+                buttons={getControlButtonsForReactiveObject(
+                    pkg.namespace,
+                    readonly,
+                )}
+                tooltip={pkg.namespace.value}
             />
-            <!--COMMENT-->
+            <ViolationMessages violations={pkg.namespace.violations} />
+
+            <!-- COMMENT -->
             <label for="package-edit-dialog-comment-text-area">Comment:</label>
             <TextAreaControl
                 id="package-edit-dialog-comment-text-area"
-                bind:value={modifiedPackage.comment}
-                placeholder="package comment..."
+                placeholder="comment..."
+                bind:value={pkg.comment.value}
+                highlight={pkg.comment.isModified}
+                warn={!pkg.comment.isValid}
                 {readonly}
+                buttons={getControlButtonsForReactiveObject(
+                    pkg.comment,
+                    readonly,
+                )}
             />
+            <ViolationMessages violations={pkg.comment.violations} />
         </div>
     {/if}
 </ModifyDataDialog>

@@ -19,6 +19,7 @@ import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelt
 import { ReactiveClass } from "$lib/models/reactive/reactive-class.svelte.js";
 import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
 import { ReactiveNamespace } from "$lib/models/reactive/reactive-namespace.svelte.js";
+import { ReactivePackage } from "$lib/models/reactive/reactive-package.svelte.js";
 
 /**
  * Maps a ReactiveClass to a class DTO for API submission
@@ -264,6 +265,23 @@ export function mapReactiveNamespaceToNamespaceDto(namespace) {
     return {
         prefix: namespace.iri,
         substitutedPrefix: namespace.prefix,
+    };
+}
+
+/**
+ * Maps a ReactivePackage to a package DTO for API submission
+ * @param {ReactivePackage | Object} pkg - The reactive package instance or a plain object of it
+ * @returns {Object} The package DTO
+ */
+export function mapReactivePackageToPackageDto(pkg) {
+    if (pkg instanceof ReactivePackage) {
+        pkg = pkg.getPlainObject();
+    }
+    return {
+        uuid: pkg.uuid,
+        prefix: pkg.namespace,
+        label: pkg.label,
+        comment: pkg.comment ?? null,
     };
 }
 
