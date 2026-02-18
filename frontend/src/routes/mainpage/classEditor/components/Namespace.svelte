@@ -21,6 +21,7 @@
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+
     let { namespace } = $props();
 
     const classEditorContext = getContext("classEditor");
@@ -32,18 +33,42 @@
     function trickleDownNamespaceChange(newNamespaceUri) {
         const oldNamespaceUri = namespace.value;
         namespace.value = newNamespaceUri;
-        replaceNamespaceIfMatching(reactiveClass.attributes, oldNamespaceUri, newNamespaceUri);
-        replaceNamespaceIfMatching(reactiveClass.associations,oldNamespaceUri,  newNamespaceUri);
-        replaceNamespaceIfMatching(reactiveClass.enumEntries, oldNamespaceUri, newNamespaceUri);
+        replaceNamespaceIfMatching(
+            reactiveClass.attributes,
+            oldNamespaceUri,
+            newNamespaceUri,
+        );
+        replaceNamespaceIfMatching(
+            reactiveClass.associations,
+            oldNamespaceUri,
+            newNamespaceUri,
+        );
+        replaceNamespaceIfMatching(
+            reactiveClass.enumEntries,
+            oldNamespaceUri,
+            newNamespaceUri,
+        );
     }
 
-    function replaceNamespaceIfMatching(reactiveObjectsArray, oldNamespaceUri, newNamespace) {
+    function replaceNamespaceIfMatching(
+        reactiveObjectsArray,
+        oldNamespaceUri,
+        newNamespace,
+    ) {
         reactiveObjectsArray.values.forEach(obj => {
-            console.warn("Comparing object namespace", obj.namespace.value, "with old namespace", oldNamespaceUri, " for object", obj.label.value);
             if (obj.namespace.value === oldNamespaceUri) {
                 obj.namespace.value = newNamespace;
             }
-        })
+        });
+    }
+
+    function getIdentifierWithNamespace(namespace) {
+        let namespacePrefix = namespace.substitutedPrefix;
+        if (namespacePrefix && namespacePrefix.endsWith(":")) {
+            namespacePrefix = namespacePrefix.slice(0, -1);
+        }
+        const namespaceUri = namespace.prefix;
+        return `(${namespacePrefix}) ${namespaceUri}`;
     }
 </script>
 
@@ -54,16 +79,21 @@
     <td class="flex w-full flex-col space-x-1">
         <SearchableSelect
             {id}
-            value={namespace.value}
+            value={classEditorContext.getSubstitutedNamespace(namespace.value)}
             highlight={namespace.isModified}
             warn={!namespace.isValid}
             optionObjectList={namespaces}
-            accessDisplayData={namespace =>
-                classEditorContext.getSubstitutedNamespace(namespace.prefix)}
-            accessIdentifier={namespace => namespace.prefix}
-            callOnValidChange={namespace => trickleDownNamespaceChange(namespace.prefix)}
+            accessDisplayData={namespace => namespace.substitutedPrefix}
+            accessIdentifier={getIdentifierWithNamespace}
+            callOnValidChange={namespace =>
+                trickleDownNamespaceChange(namespace.prefix)}
             {readonly}
-            buttons={getControlButtonsForReactiveObject(namespace, readonly, trickleDownNamespaceChange)}
+            buttons={getControlButtonsForReactiveObject(
+                namespace,
+                readonly,
+                trickleDownNamespaceChange,
+            )}
+            tooltip={namespace.value}
         />
         <ViolationMessages violations={namespace.violations} />
     </td>

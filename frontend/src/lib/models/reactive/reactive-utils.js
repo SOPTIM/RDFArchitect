@@ -24,7 +24,11 @@ import { faRotateLeft, faTrash } from "@fortawesome/free-solid-svg-icons";
  * @param callOnChange A function called when the value is updated
  * @returns a list containing objects defining control buttons for reactive Objects
  */
-export function getControlButtonsForReactiveObject(obj, readonly, callOnChange = () => {}) {
+export function getControlButtonsForReactiveObject(
+    obj,
+    readonly,
+    callOnChange = () => {},
+) {
     if (readonly) {
         return [];
     }
@@ -43,7 +47,7 @@ export function getControlButtonsForReactiveObject(obj, readonly, callOnChange =
         },
         {
             callOnClick: () => {
-                callOnChange(obj.value);
+                callOnChange(obj.backup);
                 obj.reset();
             },
             title: "Revert Changes",

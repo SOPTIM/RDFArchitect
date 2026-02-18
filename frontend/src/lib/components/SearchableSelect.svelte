@@ -53,7 +53,6 @@
         for (let optionObj of optionObjectList) {
             if (accessIdentifier(optionObj) === value) {
                 lastSavedValue = accessDisplayData(optionObj);
-                tooltip = value;
                 value = lastSavedValue;
                 callOnValidChange(optionObj);
                 return;

@@ -79,6 +79,15 @@
             }
         });
     }
+
+    function getIdentifierWithNamespace(namespace) {
+        let namespacePrefix = namespace.substitutedPrefix;
+        if (namespacePrefix && namespacePrefix.endsWith(":")) {
+            namespacePrefix = namespacePrefix.slice(0, -1);
+        }
+        const namespaceUri = namespace.prefix;
+        return `(${namespacePrefix}) ${namespaceUri}`;
+    }
 </script>
 
 <ModifyDataDialog
@@ -108,6 +117,29 @@
                     not yet assigned
                 {/if}
             </p>
+
+            <!-- NAMESPACE-->
+            <span class="mb-1 font-semibold">Namespace:</span>
+            <SearchableSelect
+                placeholder="namespace..."
+                value={classEditorContext.getSubstitutedNamespace(
+                    attribute.namespace.value,
+                )}
+                optionObjectList={classEditorContext.namespaces}
+                accessDisplayData={namespace => namespace.substitutedPrefix}
+                accessIdentifier={getIdentifierWithNamespace}
+                callOnValidChange={newNamespace =>
+                    (attribute.namespace.value = newNamespace.prefix)}
+                highlight={attribute.namespace.isModified}
+                warn={!attribute.namespace.isValid}
+                {readonly}
+                buttons={getControlButtonsForReactiveObject(
+                    attribute.namespace,
+                    readonly,
+                )}
+                tooltip={attribute.namespace.value}
+            />
+            <ViolationMessages violations={attribute.namespace.violations} />
 
             <!--LABEL-->
             <TextEditControl
