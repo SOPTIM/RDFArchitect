@@ -21,10 +21,9 @@
         faFileImport,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import DatasetSection from "./DatasetSection.svelte";

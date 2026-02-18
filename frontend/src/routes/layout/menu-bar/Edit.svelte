@@ -31,14 +31,13 @@
         faEye,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import {
         undo as doUndo,
         redo as doRedo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
         forceReloadTrigger,
