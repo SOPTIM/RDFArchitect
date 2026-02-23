@@ -56,6 +56,7 @@ import static org.rdfarchitect.cim.queries.select.CIMQueryBuilder.Mode.*;
  */
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("java:S1192")
 public class GraphToCIMCollectionConverterService implements GraphToCIMCollectionConverterUseCase {
 
     private final DatabasePort databasePort;
