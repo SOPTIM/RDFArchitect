@@ -20,12 +20,16 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
     import GraphExport from "$lib/GraphExport.svelte";
+    import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     let {
         showDialog = $bindable(),
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
+
+    const [first, second, ...rest] = supportedRDFMediaTypes;
+    const reorderedSupportedRDFMediaTypes = [second, first, ...rest];
 
     let exportMode = $state("generate");
 
@@ -61,6 +65,7 @@
                 "/file"}
             {lockedDatasetName}
             {lockedGraphUri}
+            supportedMediaTypes={reorderedSupportedRDFMediaTypes}
         />
     {/key}
 </Dialog>
