@@ -47,7 +47,7 @@ public class ClassRelationsDTO {
                                                                   entry -> entry.getValue()
                                                                                 .stream()
                                                                                 .map(ClassMapper.INSTANCE::toDTO)
-                                                                                .collect(Collectors.toList())
+                                                                                .toList()
                                                                                  )
                                                                 );
     }

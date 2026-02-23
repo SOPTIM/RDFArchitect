@@ -64,7 +64,7 @@ public class PropertyShapeToClassAssigner {
             if (propertyShapesWrapper.getPropertyShapes().isEmpty()) {
                 return 0.0;
             }
-            return propertyShapesWrapper.getPropertyShapes().get(0).getOrder();
+            return propertyShapesWrapper.getPropertyShapes().getFirst().getOrder();
         }));
         return resultList;
     }

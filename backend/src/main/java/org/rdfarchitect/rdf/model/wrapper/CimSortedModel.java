@@ -326,7 +326,7 @@ public class CimSortedModel implements Model {
                   .collect(Collectors.toMap(
                             Map.Entry::getKey,
                             Map.Entry::getValue,
-                            (e1, e2) -> e1,
+                            (e1, _) -> e1,
                             java.util.LinkedHashMap::new
                                            ));
     }
