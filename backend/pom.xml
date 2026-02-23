@@ -26,9 +26,9 @@
     <packaging>jar</packaging>
     <properties>
         <maven.compiler.release>25</maven.compiler.release>
-        <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+        <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <surefire-plugin.version>3.5.4</surefire-plugin.version> <!-- 3.3.0 -->
+        <surefire-plugin.version>3.5.5</surefire-plugin.version> <!-- 3.3.0 -->
         <jacoco.version>0.8.14</jacoco.version> <!-- 0.8.12 -->
         <mycila-license-plugin.version>5.0.0</mycila-license-plugin.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
@@ -192,7 +192,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.2</version>
+        <version>4.0.3</version>
     </parent>
     <dependencies>
         <dependency>
@@ -222,7 +222,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>4.0.2</version>
+            <version>4.0.3</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -241,7 +241,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>4.0.2</version>
+            <version>4.0.3</version>
         </dependency>
 
         <dependency>
@@ -278,7 +278,7 @@
         <dependency>
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
-            <version>26.0.2-1</version>
+            <version>26.1.0</version>
             <scope>compile</scope>
         </dependency>
 
