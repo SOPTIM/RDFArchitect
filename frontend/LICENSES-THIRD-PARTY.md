@@ -8,7 +8,7 @@
 
 ### @eslint/js
 - **Package:** @eslint/js
-- **Version:** 9.39.2
+- **Version:** 9.39.3
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.51.0
+- **Version:** 2.53.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -68,7 +68,7 @@
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.1.18
+- **Version:** 4.2.0
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.55.0
+- **Version:** 8.56.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -97,7 +97,7 @@
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.15.5
+- **Version:** 2.16.2
 - **License:** MIT
 
 ### codemirror
@@ -114,7 +114,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 9.39.2
+- **Version:** 9.39.3
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -138,7 +138,7 @@
 
 ### espree
 - **Package:** espree
-- **Version:** 11.1.0
+- **Version:** 11.1.1
 - **License:** BSD-2-Clause
 - **URL:** [https://github.com/eslint/js/blob/main/packages/espree/README.md](https://github.com/eslint/js/blob/main/packages/espree/README.md)
 
@@ -155,7 +155,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.12.2
+- **Version:** 11.12.3
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
@@ -173,7 +173,7 @@
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 3.4.1
+- **Version:** 3.5.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
@@ -185,7 +185,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.50.3
+- **Version:** 5.53.2
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -215,13 +215,13 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.1.18
+- **Version:** 4.2.0
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.55.0
+- **Version:** 8.56.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
