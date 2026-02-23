@@ -58,63 +58,63 @@ public class SHACLGenerateContentRestController {
     private final SHACLGenerateUseCase shaclGenerateUseCase;
 
     @Operation(
-            summary = "generate shacl",
-            description = "generate shacl for the whole graph and return it as a Turtle string.",
-            tags = {"shacl"}
+              summary = "generate shacl",
+              description = "generate shacl for the whole graph and return it as a Turtle string.",
+              tags = {"shacl"}
     )
     @GetMapping("/string")
     public String getGeneratedSHACLAsString(
-            @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI) {
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @PathVariable
+              String graphURI) {
         logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" from \"{}\".", datasetName, graphURI, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var result = shaclGenerateUseCase.exportGeneratedSHACLGraph(
-                new GraphIdentifier(datasetName, extendedGraphURI),
-                PrefixEntry.create("rdfash", "http://www.example.com/shacl#")
-        );
+                  new GraphIdentifier(datasetName, extendedGraphURI),
+                  PrefixEntry.create("rdfash", "http://www.example.com/shacl#")
+                                                                   );
 
         logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".", datasetName, graphURI, originURL);
         return result;
     }
 
     @Operation(
-            summary = "export shacl",
-            description = "Export the rdf-shacl graph as a file",
-            tags = {"shacl"},
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            content = {
-                                    @Content(mediaType = "text/turtle"),
-                                    @Content(mediaType = "application/rdf+xml"),
-                                    @Content(mediaType = "application/rdf+json"),
-                                    @Content(mediaType = "application/n-triples")
-                            })
-            }
+              summary = "export shacl",
+              description = "Export the rdf-shacl graph as a file",
+              tags = {"shacl"},
+              responses = {
+                        @ApiResponse(
+                                  responseCode = "200",
+                                  content = {
+                                            @Content(mediaType = "text/turtle"),
+                                            @Content(mediaType = "application/rdf+xml"),
+                                            @Content(mediaType = "application/rdf+json"),
+                                            @Content(mediaType = "application/n-triples")
+                                  })
+              }
     )
     @GetMapping("/file")
     public ResponseEntity<byte[]> getGeneratedSHACLAsFile(
-            @Parameter(description = "The requested Datatype.", hidden = true)
-            @RequestHeader("Accept")
-            String acceptHeader,
-            @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI) {
+              @Parameter(description = "The requested Datatype.", hidden = true)
+              @RequestHeader("Accept")
+              String acceptHeader,
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @PathVariable
+              String graphURI) {
         logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/file\" from \"{}\".", datasetName, graphURI, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
@@ -139,17 +139,17 @@ public class SHACLGenerateContentRestController {
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         return ResponseEntity.ok()
-                .headers(headers)
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
-                .body(outStream.toByteArray());
+                             .headers(headers)
+                             .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                             .body(outStream.toByteArray());
     }
 
     private final Map<String, RDFFormat> supportedFormats = Map.ofEntries(
-            new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
-            new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
-            new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
-            new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES)
-    );
+              new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
+              new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
+              new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
+              new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES)
+                                                                         );
 
     private RDFFormat getRdfFormat(String acceptHeader) {
         for (var entry : supportedFormats.entrySet()) {

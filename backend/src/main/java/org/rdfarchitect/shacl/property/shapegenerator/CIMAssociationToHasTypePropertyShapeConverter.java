@@ -15,22 +15,19 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapegenerator;
+package org.rdfarchitect.shacl.property.shapegenerator;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
-import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.relations.model.CIMClassUtils;
 import org.rdfarchitect.cim.relations.model.properties.CIMAssociationUtils;
 import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
-import org.rdfarchitect.shacl.generator.property.CIMPropertySHACLUtils;
-import org.rdfarchitect.shacl.generator.property.shapebuilder.InverseCardinalityPropertyShapeBuilder;
+import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
+import org.rdfarchitect.shacl.property.shapebuilder.HasTypePropertyShapeBuilder;
 
-public class InverseCardinalityPropertyShapeFromCIMAssociationGenerator implements PropertyShapeFromCIMPropertyGenerator {
+public class CIMAssociationToHasTypePropertyShapeConverter implements PropertyShapeFromCIMPropertyGenerator {
 
-    private static final String PROPERTY_GROUP_LABEL = "InverseCardinalityGroup";
+    private static final String PROPERTY_GROUP_LABEL = "HasTypeGroup";
 
     private Model ontologyModel;
 
@@ -61,28 +58,17 @@ public class InverseCardinalityPropertyShapeFromCIMAssociationGenerator implemen
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
             throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
         }
-        if (!CIMPropertyUtils.isAssociation(association) || !shouldCreateInverseCardinalityPropertyShape(association)) {
-            return null; // This converter only creates shapes for associations that have an inverse Cardinality Constraint for an instantiable class
+        if (!CIMPropertyUtils.isAssociation(association) || !CIMAssociationUtils.isUsedAssociation(association)) {
+            return null; // This converter only creates shapes for used associations
         }
-        var order = CIMPropertySHACLUtils.getOrder(ontologyModel, association.getURI());
-        var multiplicity = CIMPropertyUtils.resolveMultiplicity(association);
-        return new InverseCardinalityPropertyShapeBuilder(shaclModel)
-                .setPrefixEntry(shaclPrefix)
-                .setPropertyUri(association.getURI())
-                .setInversePropertyUri(association.getProperty(CIMS.inverseRoleName).getResource().getURI())
-                .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL)
-                .setOrder(order)
-                .setLowerBound(multiplicity.lowerBound())
-                .setUpperBound(multiplicity.upperBound())
-                .build();
-    }
 
-    private boolean shouldCreateInverseCardinalityPropertyShape(Resource association) {
-        if (!CIMAssociationUtils.isUsedAssociation(association.getProperty(CIMS.inverseRoleName).getResource())) {
-            return false;
-        }
-        var range = association.getProperty(RDFS.range).getResource();
-        return CIMClassUtils.isInstantiableClass(range) ||
-               !CIMClassUtils.findDerivingClasses(range).isEmpty();
+        var order = CIMPropertySHACLUtils.getOrder(ontologyModel, association.getURI());
+
+        return new HasTypePropertyShapeBuilder(shaclModel)
+                .setPrefixEntry(shaclPrefix)
+                .setAssociationUri(association.getURI())
+                .setOrder(order)
+                .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL)
+                .build();
     }
 }

@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapegenerator;
+package org.rdfarchitect.shacl.property.shapegenerator;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;

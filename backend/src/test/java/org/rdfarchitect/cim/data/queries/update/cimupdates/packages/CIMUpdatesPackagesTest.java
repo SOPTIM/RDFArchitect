@@ -34,8 +34,6 @@ import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.cim.rdf.resources.CIMS;
 
-import java.util.UUID;
-
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 

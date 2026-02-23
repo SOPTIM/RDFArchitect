@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapebuilder;
+package org.rdfarchitect.shacl.property.shapebuilder;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;

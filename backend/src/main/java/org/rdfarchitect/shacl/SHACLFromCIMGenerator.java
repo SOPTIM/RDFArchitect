@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator;
+package org.rdfarchitect.shacl;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -26,14 +26,14 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.cim.relations.model.CIMClassUtils;
-import org.rdfarchitect.shacl.generator.property.PropertyGroupFactory;
-import org.rdfarchitect.shacl.generator.property.shapebuilder.NodeShapeBuilder;
-import org.rdfarchitect.shacl.generator.property.shapegenerator.CIMAssociationToHasTypePropertyShapeConverter;
-import org.rdfarchitect.shacl.generator.property.shapegenerator.CardinalityPropertyShapeFromCIMPropertyGenerator;
-import org.rdfarchitect.shacl.generator.property.shapegenerator.DatatypePropertyShapeFromCIMAttributeGenerator;
-import org.rdfarchitect.shacl.generator.property.shapegenerator.InverseCardinalityPropertyShapeFromCIMAssociationGenerator;
-import org.rdfarchitect.shacl.generator.property.shapegenerator.PropertyShapeFromCIMPropertyGenerator;
-import org.rdfarchitect.shacl.generator.property.shapegenerator.ValueTypePropertyShapeFromCIMAssociationGenerator;
+import org.rdfarchitect.shacl.property.PropertyGroupFactory;
+import org.rdfarchitect.shacl.property.shapebuilder.NodeShapeBuilder;
+import org.rdfarchitect.shacl.property.shapegenerator.CIMAssociationToHasTypePropertyShapeConverter;
+import org.rdfarchitect.shacl.property.shapegenerator.CardinalityPropertyShapeFromCIMPropertyGenerator;
+import org.rdfarchitect.shacl.property.shapegenerator.DatatypePropertyShapeFromCIMAttributeGenerator;
+import org.rdfarchitect.shacl.property.shapegenerator.InverseCardinalityPropertyShapeFromCIMAssociationGenerator;
+import org.rdfarchitect.shacl.property.shapegenerator.PropertyShapeFromCIMPropertyGenerator;
+import org.rdfarchitect.shacl.property.shapegenerator.ValueTypePropertyShapeFromCIMAssociationGenerator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +49,6 @@ import java.util.stream.Collectors;
 public class SHACLFromCIMGenerator {
 
     private static final Logger logger = LoggerFactory.getLogger(SHACLFromCIMGenerator.class);
-
 
     private final Model ontology;
 

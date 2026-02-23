@@ -22,6 +22,11 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.mermaid.MermaidDTO;
 import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.cim.data.dto.relations.RDFSSubClassOf;
+import org.rdfarchitect.cim.data.dto.*;
+import org.rdfarchitect.cim.data.dto.relations.*;
+import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSPrimitiveDataType;
+import org.rdfarchitect.cim.data.dto.relations.datatype.RDFSRange;
+import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
 
 import java.util.ArrayList;
@@ -30,6 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase {

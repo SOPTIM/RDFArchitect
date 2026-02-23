@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapegenerator;
+package org.rdfarchitect.shacl.property.shapegenerator;
 
 import org.apache.jena.datatypes.xsd.impl.XMLLiteralType;
 import org.apache.jena.rdf.model.Model;
@@ -23,8 +23,8 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.rdfarchitect.cim.relations.model.properties.CIMAttributeUtils;
 import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
-import org.rdfarchitect.shacl.generator.property.CIMPropertySHACLUtils;
-import org.rdfarchitect.shacl.generator.property.shapebuilder.DatatypePropertyShapeBuilder;
+import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
+import org.rdfarchitect.shacl.property.shapebuilder.DatatypePropertyShapeBuilder;
 
 public class DatatypePropertyShapeFromCIMAttributeGenerator implements PropertyShapeFromCIMPropertyGenerator {
 

@@ -15,19 +15,19 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapegenerator;
+package org.rdfarchitect.shacl.property.shapegenerator;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.rdfarchitect.cim.relations.model.properties.CIMAssociationUtils;
 import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
-import org.rdfarchitect.shacl.generator.property.CIMPropertySHACLUtils;
-import org.rdfarchitect.shacl.generator.property.shapebuilder.ValueTypePropertyShapeBuilder;
+import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
+import org.rdfarchitect.shacl.property.shapebuilder.CardinalityPropertyShapeBuilder;
 
-public class ValueTypePropertyShapeFromCIMAssociationGenerator implements PropertyShapeFromCIMPropertyGenerator {
+public class CardinalityPropertyShapeFromCIMPropertyGenerator implements PropertyShapeFromCIMPropertyGenerator {
 
-    private static final String PROPERTY_GROUP_LABEL = "ValueTypeGroup";
+    private static final String PROPERTY_GROUP_LABEL = "CardinalityGroup";
 
     private Model ontologyModel;
 
@@ -54,24 +54,29 @@ public class ValueTypePropertyShapeFromCIMAssociationGenerator implements Proper
     }
 
     @Override
-    public Resource createPropertyShape(Resource association) {
+    public Resource createPropertyShape(Resource property) {
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
             throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
         }
-        if (!CIMPropertyUtils.isAssociation(association) || !CIMAssociationUtils.isUsedAssociation(association)) {
-            return null; // This converter only creates shapes for used associations
+        var propertyType = "unknown";
+        if (CIMPropertyUtils.isAttribute(property)) {
+            propertyType = "attribute";
         }
-        var order = CIMPropertySHACLUtils.getOrder(ontologyModel, association.getURI());
-        return new ValueTypePropertyShapeBuilder(shaclModel)
+        if (CIMPropertyUtils.isAssociation(property)) {
+            if(!CIMAssociationUtils.isUsedAssociation(property)){
+                return null; // This converter only creates shapes for used associations
+            }
+            propertyType = "association";
+        }
+        var order = CIMPropertySHACLUtils.getOrder(ontologyModel, property.getURI());
+        var multiplicity = CIMPropertyUtils.resolveMultiplicity(property);
+        return new CardinalityPropertyShapeBuilder(shaclModel, propertyType)
                 .setPrefixEntry(shaclPrefix)
-                .setPropertyUri(association.getURI())
-                .setOrder(order)
+                .setPropertyUri(property.getURI())
                 .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL)
-                .setValueTypeUris(CIMAssociationUtils.listAssociationDatatypes(association)
-                        .stream()
-                        .map(Resource::getURI)
-                        .toList()
-                )
+                .setOrder(order)
+                .setLowerBound(multiplicity.lowerBound())
+                .setUpperBound(multiplicity.upperBound())
                 .build();
     }
 }

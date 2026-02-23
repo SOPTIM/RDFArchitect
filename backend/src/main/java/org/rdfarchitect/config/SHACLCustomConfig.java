@@ -18,7 +18,14 @@
 package org.rdfarchitect.config;
 
 import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.services.shacl.*;
+import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
+import org.rdfarchitect.services.shacl.SHACLExportUseCase;
+import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
+import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
+import org.rdfarchitect.services.shacl.SHACLInsertUseCase;
+import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
+import org.rdfarchitect.services.shacl.SHACLUpdateUseCase;
+import org.rdfarchitect.services.shacl.SingletonPrimitiveSHACLStoringService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

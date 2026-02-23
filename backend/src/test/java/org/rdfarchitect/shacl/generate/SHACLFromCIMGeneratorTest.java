@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator;
+package org.rdfarchitect.shacl.generate;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -27,17 +27,18 @@ import org.apache.jena.shacl.ShaclValidator;
 import org.apache.jena.shacl.lib.ShLib;
 import org.apache.jena.shacl.validation.Severity;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 class SHACLFromCIMGeneratorTest {
 
@@ -134,7 +135,7 @@ class SHACLFromCIMGeneratorTest {
 
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
-        void validate_cardinalityViolationMultipleAssociation_fails(boolean closed){
+        void validate_cardinalityViolationMultipleAssociation_fails(boolean closed) {
             // Arrange
             var ontology = readFile("ontology.ttl");
             var instance = readFile("cardinalityViolationMultipleAssociation.ttl");
@@ -376,7 +377,7 @@ class SHACLFromCIMGeneratorTest {
     class ClosedShapeTests {
 
         @Test
-        void validate_closedShapeWithUnknownProperties_fails(){
+        void validate_closedShapeWithUnknownProperties_fails() {
             // Arrange
             var ontology = readFile("ontology.ttl");
             var instance = readFile("closedShapeWithUnknownProperties.ttl");
@@ -396,7 +397,7 @@ class SHACLFromCIMGeneratorTest {
         }
 
         @Test
-        void validate_nonClosedShapeWithUnknownProperties_passes(){
+        void validate_nonClosedShapeWithUnknownProperties_passes() {
             // Arrange
             var ontology = readFile("ontology.ttl");
             var instance = readFile("closedShapeWithUnknownProperties.ttl");
@@ -410,7 +411,7 @@ class SHACLFromCIMGeneratorTest {
         }
 
         @Test
-        void validate_unknownTriplesWithClosedShapes_fails(){
+        void validate_unknownTriplesWithClosedShapes_fails() {
             // Arrange
             var ontology = readFile("ontology.ttl");
             var instance = readFile("validWithUnknownProperty.ttl");
@@ -424,7 +425,7 @@ class SHACLFromCIMGeneratorTest {
         }
 
         @Test
-        void validate_unknownTriplesWithUnClosedShapes_passes(){
+        void validate_unknownTriplesWithUnClosedShapes_passes() {
             // Arrange
             var ontology = readFile("ontology.ttl");
             var instance = readFile("validWithUnknownProperty.ttl");
@@ -443,7 +444,7 @@ class SHACLFromCIMGeneratorTest {
 
         @ParameterizedTest
         @ValueSource(booleans = {true, false})
-        void validate_validAndInvalidClass_fails(boolean closed){
+        void validate_validAndInvalidClass_fails(boolean closed) {
             // Arrange
             var ontology = readFile("ontology.ttl");
             var instance = readFile("validAndInvalidClass.ttl");

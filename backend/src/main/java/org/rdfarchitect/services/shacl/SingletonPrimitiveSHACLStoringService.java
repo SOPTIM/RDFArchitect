@@ -45,7 +45,7 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
-import org.rdfarchitect.shacl.generator.SHACLFromCIMGenerator;
+import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

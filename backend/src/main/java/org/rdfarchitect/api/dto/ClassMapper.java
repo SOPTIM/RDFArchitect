@@ -20,11 +20,11 @@ package org.rdfarchitect.api.dto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
+import org.rdfarchitect.cim.data.dto.CIMClass;
 import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.data.dto.CIMClass;
 
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +43,8 @@ public interface ClassMapper {
     List<ClassDTO> toDTOList(List<CIMClass> cimClassList);
 
     @Mapping(target = "uri", source = ".")
-    @Mapping(target = "belongsToCategory", ignore = true) // Wird separat behandelt
+    @Mapping(target = "belongsToCategory", ignore = true)
+        // Wird separat behandelt
     CIMClass toCIMObject(ClassDTO dto);
 
     List<CIMClass> toCIMObjectList(List<ClassDTO> dtoList);

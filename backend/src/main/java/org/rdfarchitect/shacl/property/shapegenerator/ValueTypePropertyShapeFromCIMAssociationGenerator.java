@@ -15,19 +15,19 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapegenerator;
+package org.rdfarchitect.shacl.property.shapegenerator;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.rdfarchitect.cim.relations.model.properties.CIMAssociationUtils;
 import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
-import org.rdfarchitect.shacl.generator.property.CIMPropertySHACLUtils;
-import org.rdfarchitect.shacl.generator.property.shapebuilder.HasTypePropertyShapeBuilder;
+import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
+import org.rdfarchitect.shacl.property.shapebuilder.ValueTypePropertyShapeBuilder;
 
-public class CIMAssociationToHasTypePropertyShapeConverter implements PropertyShapeFromCIMPropertyGenerator {
+public class ValueTypePropertyShapeFromCIMAssociationGenerator implements PropertyShapeFromCIMPropertyGenerator {
 
-    private static final String PROPERTY_GROUP_LABEL = "HasTypeGroup";
+    private static final String PROPERTY_GROUP_LABEL = "ValueTypeGroup";
 
     private Model ontologyModel;
 
@@ -61,14 +61,17 @@ public class CIMAssociationToHasTypePropertyShapeConverter implements PropertySh
         if (!CIMPropertyUtils.isAssociation(association) || !CIMAssociationUtils.isUsedAssociation(association)) {
             return null; // This converter only creates shapes for used associations
         }
-
         var order = CIMPropertySHACLUtils.getOrder(ontologyModel, association.getURI());
-
-        return new HasTypePropertyShapeBuilder(shaclModel)
+        return new ValueTypePropertyShapeBuilder(shaclModel)
                 .setPrefixEntry(shaclPrefix)
-                .setAssociationUri(association.getURI())
+                .setPropertyUri(association.getURI())
                 .setOrder(order)
                 .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL)
+                .setValueTypeUris(CIMAssociationUtils.listAssociationDatatypes(association)
+                        .stream()
+                        .map(Resource::getURI)
+                        .toList()
+                )
                 .build();
     }
 }

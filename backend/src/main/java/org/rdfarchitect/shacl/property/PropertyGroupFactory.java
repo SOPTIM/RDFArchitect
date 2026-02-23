@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property;
+package org.rdfarchitect.shacl.property;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.rdf.model.Model;
@@ -23,7 +23,7 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.shacl.generator.property.shapebuilder.PropertyGroupBuilder;
+import org.rdfarchitect.shacl.property.shapebuilder.PropertyGroupBuilder;
 
 import java.util.ArrayList;
 import java.util.Collection;

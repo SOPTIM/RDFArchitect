@@ -15,11 +15,10 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property.shapebuilder;
+package org.rdfarchitect.shacl.property.shapebuilder;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Literal;
@@ -36,57 +35,53 @@ import java.util.Collection;
 
 @Setter
 @Accessors(chain = true)
-public class DatatypePropertyShapeBuilder {
+public class ValueTypePropertyShapeBuilder {
 
-    private static final String DESCRIPTION_TEXT = "This constraint validates the datatype of the property (attribute).";
-    private static final String MESSAGE_TEXT_PRIMITIVE = "The datatype is not literal or it violates the xsd datatype.";
-    private static final String MESSAGE_TEXT_ENUMERATION = "The datatype is not an IRI (Internationalized Resource Identifier) or its enumerated value is not part of the profile.";
+    private static final String DESCRIPTION_TEXT = "This constraint validates the value type of the association at the used direction.";
+    private static final String MESSAGE_TEXT_MULTIPLE_CLASSES = "One of the following occurs: 1) The value type is not IRI; 2) The value type is not the right class.";
 
     private static final Literal DESCRIPTION = ResourceFactory.createPlainLiteral(DESCRIPTION_TEXT);
-    private static final Literal MESSAGE_PRIMITIVE = ResourceFactory.createPlainLiteral(MESSAGE_TEXT_PRIMITIVE);
-    private static final Literal MESSAGE_ENUMERATION = ResourceFactory.createPlainLiteral(MESSAGE_TEXT_ENUMERATION);
+    private static final Literal MESSAGE = ResourceFactory.createPlainLiteral(MESSAGE_TEXT_MULTIPLE_CLASSES);
 
-    // Set by user
+    // set by user
     private PrefixEntry prefixEntry;
-    private String attributeUri;
-    private double order;
     private String propertyGroupUri;
-    private RDFDatatype primitiveDatatype;
-    private Collection<String> datatypeUris;
+    private String propertyUri;
+    private double order;
+    private Collection<String> valueTypeUris;
 
     // Internal state
     private final Model shaclModel;
 
-    public DatatypePropertyShapeBuilder(Model resultModel) {
+    public ValueTypePropertyShapeBuilder(Model resultModel) {
         this.shaclModel = resultModel;
     }
 
+    public ValueTypePropertyShapeBuilder setPrefixEntry(PrefixEntry prefixEntry) {
+        this.prefixEntry = prefixEntry;
+        return this;
+    }
+
     public Resource build() {
-        var attributeLabel = new URI(attributeUri).getSuffix();
-        var propertyShapeName = shaclModel.createLiteral(attributeLabel + "-datatype");
+        var valueTypes = valueTypeUris.stream()
+                .map(shaclModel::createResource)
+                .iterator();
+
+        var attributeLabel = new URI(propertyUri).getSuffix();
+        var propertyShapeName = shaclModel.createLiteral(attributeLabel + "-valueType");
         var shapeUri = prefixEntry.getUri() + propertyShapeName.getString();
         var propertyShape = shaclModel.createResource(shapeUri);
 
         propertyShape.addProperty(RDF.type, shaclModel.asRDFNode(SHACL.PropertyShape));
         propertyShape.addProperty(asProperty(SHACL.description), DESCRIPTION);
         propertyShape.addProperty(asProperty(SHACL.group), shaclModel.createResource(propertyGroupUri));
+        propertyShape.addProperty(asProperty(SHACL.in), shaclModel.createList(valueTypes));
+        propertyShape.addProperty(asProperty(SHACL.message), MESSAGE);
         propertyShape.addProperty(asProperty(SHACL.name), propertyShapeName);
-        propertyShape.addLiteral(asProperty(SHACL.order), shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
-        propertyShape.addProperty(asProperty(SHACL.path), shaclModel.createResource(attributeUri));
+        propertyShape.addProperty(asProperty(SHACL.nodeKind), shaclModel.asRDFNode(SHACL.IRI));
+        propertyShape.addProperty(asProperty(SHACL.order), shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
+        propertyShape.addProperty(asProperty(SHACL.path), shaclModel.createList(shaclModel.createResource(propertyUri), RDF.type));
         propertyShape.addProperty(asProperty(SHACL.severity), shaclModel.asRDFNode(SHACL.Violation));
-
-        if (primitiveDatatype != null) {
-            propertyShape.addProperty(asProperty(SHACL.datatype), shaclModel.createResource(primitiveDatatype.getURI()));
-            propertyShape.addProperty(asProperty(SHACL.message), MESSAGE_PRIMITIVE);
-            propertyShape.addProperty(asProperty(SHACL.nodeKind), shaclModel.asRDFNode(SHACL.Literal));
-        } else if (datatypeUris != null) {
-            var datatypes = datatypeUris.stream()
-                    .map(shaclModel::createResource)
-                    .iterator();
-            propertyShape.addProperty(asProperty(SHACL.in), shaclModel.createList(datatypes));
-            propertyShape.addProperty(asProperty(SHACL.message), MESSAGE_ENUMERATION);
-            propertyShape.addProperty(asProperty(SHACL.nodeKind), shaclModel.asRDFNode(SHACL.IRI));
-        }
 
         return propertyShape;
     }
@@ -94,4 +89,5 @@ public class DatatypePropertyShapeBuilder {
     private Property asProperty(Node predicate) {
         return shaclModel.createProperty(predicate.getURI());
     }
+
 }

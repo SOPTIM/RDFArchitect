@@ -26,7 +26,7 @@ import org.apache.jena.shacl.ShaclException;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
-import org.rdfarchitect.shacl.generator.SHACLFromCIMGenerator;
+import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

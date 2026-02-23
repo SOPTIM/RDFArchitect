@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generator.property;
+package org.rdfarchitect.shacl.property;
 
 import lombok.experimental.UtilityClass;
 import org.apache.jena.query.QueryExecutionFactory;
