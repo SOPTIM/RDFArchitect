@@ -415,6 +415,7 @@ class GraphRewindableTest {
         }
     }
 
+    @SuppressWarnings("java:S5976")
     @Nested
     class Transactions {
 
@@ -932,7 +933,7 @@ class GraphRewindableTest {
         }
 
         private void waitFor(Future<?> future) {
-            assertThatNoException().isThrownBy(() -> future.get());
+            assertThatNoException().isThrownBy(future::get);
         }
     }
 }

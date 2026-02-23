@@ -156,7 +156,7 @@ class GraphWithContextCollectionTest {
                   createExampleGraph(),
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.READ);
@@ -218,7 +218,7 @@ class GraphWithContextCollectionTest {
                   createExampleGraph(),
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.WRITE);
@@ -240,7 +240,7 @@ class GraphWithContextCollectionTest {
                   createExampleGraph(),
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.READ_PROMOTE);
@@ -262,7 +262,7 @@ class GraphWithContextCollectionTest {
                   createExampleGraph(),
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.READ_COMMITTED_PROMOTE);
@@ -287,7 +287,7 @@ class GraphWithContextCollectionTest {
                                );
 
         // Act
-        collection.create(graphUri, exampleGraphs.get(0));
+        collection.create(graphUri, exampleGraphs.getFirst());
         GraphRewindableWithUUIDs graph = collection.begin(graphUri, TxnType.READ);
 
         // Assert
@@ -309,10 +309,9 @@ class GraphWithContextCollectionTest {
                                );
 
         // Act/Assert
+        var firstGraph = exampleGraphs.getFirst();
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> {
-                      collection.create(graphUri, exampleGraphs.get(0));
-                  });
+                  .isThrownBy(() -> collection.create(graphUri, firstGraph));
     }
 
     @Test
@@ -322,7 +321,7 @@ class GraphWithContextCollectionTest {
         exampleGraphs = List.of(
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         collection.remove("http://example.org/graph1");
@@ -350,7 +349,7 @@ class GraphWithContextCollectionTest {
         exampleGraphs = List.of(
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
         boolean containsGraph = collection.containsGraph("http://example.org/graph1");
@@ -633,7 +632,7 @@ class GraphWithContextCollectionTest {
         exampleGraphs = List.of(
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
         GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.WRITE);
         graph.add(TestRDFUtils.triple("a a d"));
         graph.commit();
@@ -676,7 +675,7 @@ class GraphWithContextCollectionTest {
         exampleGraphs = List.of(
                   createExampleGraph()
                                );
-        collection.create("http://example.org/graph1", exampleGraphs.get(0));
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
         GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.WRITE);
         graph.add(TestRDFUtils.triple("a a d"));
         graph.commit();
