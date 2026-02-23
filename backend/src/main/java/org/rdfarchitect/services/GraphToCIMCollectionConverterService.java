@@ -42,6 +42,7 @@ import org.rdfarchitect.cim.rendering.GraphFilter;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
@@ -62,21 +63,23 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
     @Override
     public CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter) {
         var cimCollection = new CIMCollection();
+        Graph copiedGraph;
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraph(graphIdentifier);
             graph.begin(TxnType.READ);
-
-            fetchAllPackages(graph, graphIdentifier, cimCollection);
-            fetchClasses(graph, graphIdentifier, filter, cimCollection);
-            fetchEnums(graph, graphIdentifier, filter, cimCollection);
-            fetchAssociations(graph, graphIdentifier, filter, cimCollection);
-            return cimCollection;
+            copiedGraph = GraphUtils.deepCopy(graph);
         } finally {
             if (graph != null) {
                 graph.end();
             }
         }
+
+        fetchAllPackages(copiedGraph, graphIdentifier, cimCollection);
+        fetchClasses(copiedGraph, graphIdentifier, filter, cimCollection);
+        fetchEnums(copiedGraph, graphIdentifier, filter, cimCollection);
+        fetchAssociations(copiedGraph, graphIdentifier, filter, cimCollection);
+        return cimCollection;
     }
 
     private CIMBaseQueryBuilder buildBaseQuery(GraphIdentifier graphIdentifier) {
