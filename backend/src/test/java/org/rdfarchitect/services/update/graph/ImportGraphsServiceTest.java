@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.update.graph;
 
+import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -25,7 +26,9 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
-import org.springframework.web.multipart.MultipartFile;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.nio.charset.StandardCharsets;
 
 import java.util.List;
 
@@ -50,11 +53,18 @@ class ImportGraphsServiceTest {
     void importGraphs_sameFileNameTwice_autoGeneratesUniqueGraphUris() {
         var datasetName = "ds";
 
-        var file1Mock = mock(MultipartFile.class);
-        var file2Mock = mock(MultipartFile.class);
-
-        when(file1Mock.getOriginalFilename()).thenReturn("graph.ttl");
-        when(file2Mock.getOriginalFilename()).thenReturn("graph.ttl");
+        var file1 = new MockMultipartFile(
+                  "graph",
+                  "graph.ttl",
+                  "text/turtle",
+                  "@prefix ex: <http://example.com/> . ex:a ex:b ex:c .".getBytes(StandardCharsets.UTF_8)
+        );
+        var file2 = new MockMultipartFile(
+                  "graph",
+                  "graph.ttl",
+                  "text/turtle",
+                  "@prefix ex: <http://example.com/> . ex:d ex:e ex:f .".getBytes(StandardCharsets.UTF_8)
+        );
 
         when(databasePortMock.listGraphUris(datasetName))
                   .thenThrow(new RuntimeException("dataset does not exist"));
@@ -62,7 +72,7 @@ class ImportGraphsServiceTest {
         var graphMock = mock(GraphRewindableWithUUIDs.class, RETURNS_DEEP_STUBS);
         when(databasePortMock.getGraph(any(GraphIdentifier.class))).thenReturn(graphMock);
 
-        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1Mock, file2Mock), null);
+        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
 
         assertThat(result).containsExactly(
                   RDFA.GRAPH_URI + "graph",
@@ -71,7 +81,7 @@ class ImportGraphsServiceTest {
 
         var captor = ArgumentCaptor.forClass(GraphIdentifier.class);
 
-        verify(databasePortMock, times(2)).createGraph(captor.capture(), any(MultipartFile.class));
+        verify(databasePortMock, times(2)).createGraph(captor.capture(), any(Graph.class));
 
         assertThat(captor.getAllValues())
                   .extracting(GraphIdentifier::getGraphUri)

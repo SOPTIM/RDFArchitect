@@ -20,6 +20,8 @@ package org.rdfarchitect.database.inmemory;
 import org.apache.jena.shared.PrefixMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.cim.rdf.resources.CIM;
+import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;
@@ -39,7 +41,7 @@ class InMemoryDatabaseAdapterTest {
     }
 
     @Test
-    void createEmptyGraph_newDataset_addsStandardPrefixMapping() {
+    void createEmptyGraph_newDataset_addsDefaultPrefixMapping() {
         var graphIdentifier = new GraphIdentifier("new-dataset", "http://example.com/graph");
         when(database.listDatasets()).thenReturn(List.of("existing-dataset"));
 
@@ -47,7 +49,9 @@ class InMemoryDatabaseAdapterTest {
 
         verify(database).create(eq(graphIdentifier), any());
         verify(database).setPrefixMapping(eq("new-dataset"), argThat(prefixMapping ->
-                                                                               prefixMapping.getNsPrefixMap().equals(PrefixMapping.Standard.getNsPrefixMap())));
+                prefixMapping.getNsPrefixMap().entrySet().containsAll(PrefixMapping.Standard.getNsPrefixMap().entrySet())
+                        && CIM.namespace.equals(prefixMapping.getNsPrefixURI("cim"))
+                        && CIMS.namespace.equals(prefixMapping.getNsPrefixURI("cims"))));
     }
 
     @Test

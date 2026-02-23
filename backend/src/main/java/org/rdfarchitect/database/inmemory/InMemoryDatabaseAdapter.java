@@ -22,6 +22,8 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.rdfarchitect.cim.rdf.resources.CIM;
+import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -32,6 +34,9 @@ import java.util.UUID;
 
 @RequiredArgsConstructor
 public class InMemoryDatabaseAdapter implements DatabasePort {
+
+    private static final String CIM_PREFIX = "cim";
+    private static final String CIMS_PREFIX = "cims";
 
     private final InMemoryDatabase database;
 
@@ -66,7 +71,9 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
         database.create(graphIdentifier, GraphFactory.createDefaultGraph());
         if (isNewDataset) {
             var prefixMapping = new PrefixMappingImpl()
-                      .setNsPrefixes(PrefixMapping.Standard);
+                      .setNsPrefixes(PrefixMapping.Standard)
+                      .setNsPrefix(CIM_PREFIX, CIM.namespace)
+                      .setNsPrefix(CIMS_PREFIX, CIMS.namespace);
             database.setPrefixMapping(graphIdentifier.getDatasetName(), prefixMapping);
         }
     }

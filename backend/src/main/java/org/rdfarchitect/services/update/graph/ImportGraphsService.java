@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.riot.RDFLanguages;
 import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.cim.changelog.ChangeLogEntry;
@@ -25,6 +26,7 @@ import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +67,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                 graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
                 var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
                 databasePort.deleteGraph(graphIdentifier);
-                databasePort.createGraph(graphIdentifier, file);
+                databasePort.createGraph(graphIdentifier, parseGraph(file, graphUri));
                 importedGraphUris.add(graphUri);
             }
         }
@@ -101,7 +103,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                 try {
                     var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
                     databasePort.deleteGraph(graphIdentifier);
-                    databasePort.createGraph(graphIdentifier, extractedFile);
+                    databasePort.createGraph(graphIdentifier, parseGraph(extractedFile, graphUri));
                     importedGraphUris.add(graphUri);
                 } catch (RuntimeException exception) {
                     error = true;
@@ -124,6 +126,14 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         } catch (RuntimeException exception) {
             return new HashSet<>();
         }
+    }
+
+    private Graph parseGraph(MultipartFile file, String graphUri) {
+        return new GraphFileSourceBuilderImpl()
+                  .setFile(file)
+                  .setGraphName(graphUri)
+                  .build()
+                  .graph();
     }
 
     private String ensureUniqueGraphUri(String graphUri, Set<String> reservedGraphUris) {
