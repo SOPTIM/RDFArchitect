@@ -46,8 +46,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             cimAttribute.setUuid(UUID.randomUUID());
         }
         var graph = databasePort.getGraph(graphIdentifier);
-        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
-        var update = CIMUpdates.insertAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
+        var update = CIMUpdates.insertAttribute(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
@@ -57,8 +56,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var graph = databasePort.getGraph(graphIdentifier);
-        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
-        var update = CIMUpdates.replaceAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
+        var update = CIMUpdates.replaceAttribute(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update, graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
@@ -68,8 +66,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public void replaceAllAttributes(GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var graph = databasePort.getGraph(graphIdentifier);
-        AttributeFixedDefaultResolver.apply(graph, attributeCIMObjects);
-        var update = CIMUpdates.replaceAttributes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID, attributeCIMObjects);
+        var update = CIMUpdates.replaceAttributes(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID,
+                                                  attributeCIMObjects);
         InMemorySparqlExecutioner.executeSingleUpdate(graph, update, graphIdentifier.getGraphUri());
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("All attributes for class " + classUUID + " replaced", graph.getLastDelta()));
     }

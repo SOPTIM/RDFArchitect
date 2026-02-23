@@ -18,7 +18,6 @@
 package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
@@ -35,7 +34,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
-import org.rdfarchitect.services.update.classes.attributes.AttributeFixedDefaultResolver;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -54,7 +52,6 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             graph = databasePort.getGraph(graphIdentifier);
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
-            AttributeFixedDefaultResolver.apply(ModelFactory.createModelForGraph(graph), cimClass.getAttributes());
             CIMUpdates.replaceClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), cimClass);
             graph.commit();
         } finally {

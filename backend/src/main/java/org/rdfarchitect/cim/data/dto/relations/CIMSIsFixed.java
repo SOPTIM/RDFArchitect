@@ -25,7 +25,7 @@ import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 @NoArgsConstructor
-public class CIMSIsFixed extends CIMSValueNode {
+public class CIMSIsFixed extends AttributeValueNode {
 
     public CIMSIsFixed(String value) {
         this(value, null, false, null, false);

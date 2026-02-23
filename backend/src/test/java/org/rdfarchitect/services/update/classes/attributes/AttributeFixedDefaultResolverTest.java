@@ -179,4 +179,26 @@ class AttributeFixedDefaultResolverTest {
                   () -> assertThat(cimAttribute.getDefaultValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"))
                  );
     }
+
+    @Test
+    void apply_graphOverloadWorksInsideOpenTransaction() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var cimAttribute = CIMAttribute.builder()
+                                       .uuid(UUID.randomUUID())
+                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                  new RDFSLabel("string", "en"),
+                                                                  CIMSDataType.Type.PRIMITIVE))
+                                       .fixedValue(new CIMSIsFixed("fixedValue"))
+                                       .build();
+
+        graph.begin(TxnType.WRITE);
+        try {
+            assertThatCode(() -> AttributeFixedDefaultResolver.apply(graph, cimAttribute)).doesNotThrowAnyException();
+            graph.commit();
+        } finally {
+            graph.end();
+        }
+
+        assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"));
+    }
 }

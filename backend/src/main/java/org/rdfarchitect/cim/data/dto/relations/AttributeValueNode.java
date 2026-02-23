@@ -36,7 +36,7 @@ import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 @EqualsAndHashCode
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PROTECTED)
-public abstract class CIMSValueNode {
+public abstract class AttributeValueNode {
 
     private String value;
 

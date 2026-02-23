@@ -29,7 +29,7 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 import org.rdfarchitect.cim.data.dto.CIMAttribute;
-import org.rdfarchitect.cim.data.dto.relations.CIMSValueNode;
+import org.rdfarchitect.cim.data.dto.relations.AttributeValueNode;
 import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.cim.rdf.resources.CIMS;
@@ -49,12 +49,18 @@ public class AttributeFixedDefaultResolver {
         if (graph == null) {
             return;
         }
-        graph.begin(TxnType.READ);
+        var startedReadTx = false;
+        if (!graph.isInTransaction()) {
+            graph.begin(TxnType.READ);
+            startedReadTx = true;
+        }
         try {
             var model = ModelFactory.createModelForGraph(graph);
             apply(model, attribute);
         } finally {
-            graph.end();
+            if (startedReadTx) {
+                graph.end();
+            }
         }
     }
 
@@ -62,12 +68,18 @@ public class AttributeFixedDefaultResolver {
         if (graph == null) {
             return;
         }
-        graph.begin(TxnType.READ);
+        var startedReadTx = false;
+        if (!graph.isInTransaction()) {
+            graph.begin(TxnType.READ);
+            startedReadTx = true;
+        }
         try {
             var model = ModelFactory.createModelForGraph(graph);
             apply(model, attributes);
         } finally {
-            graph.end();
+            if (startedReadTx) {
+                graph.end();
+            }
         }
     }
 
@@ -92,7 +104,7 @@ public class AttributeFixedDefaultResolver {
         }
     }
 
-    private void applyValueMetadata(Model model, CIMAttribute attribute, CIMSValueNode valueNode, org.apache.jena.rdf.model.Property predicate) {
+    private void applyValueMetadata(Model model, CIMAttribute attribute, AttributeValueNode valueNode, org.apache.jena.rdf.model.Property predicate) {
         var metadata = readExistingValueMetadata(model, attribute.getUuid(), predicate);
         if (metadata != null) {
             valueNode.setBlankNode(metadata.blankNode());
@@ -108,7 +120,7 @@ public class AttributeFixedDefaultResolver {
         valueNode.setDataType(resolveFixedDefaultDatatype(model, attribute.getDataType()));
     }
 
-    private void applyNewValueDefaults(CIMSValueNode valueNode) {
+    private void applyNewValueDefaults(AttributeValueNode valueNode) {
         if (valueNode == null) {
             return;
         }
