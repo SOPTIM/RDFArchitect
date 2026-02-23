@@ -27,7 +27,6 @@ import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -36,7 +35,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/{shaclShapeURI}")
 @RequiredArgsConstructor

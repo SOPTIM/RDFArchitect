@@ -28,7 +28,6 @@ import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -40,7 +39,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes/{attributeUUID}/shacl")
 @RequiredArgsConstructor

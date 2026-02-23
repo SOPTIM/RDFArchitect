@@ -33,7 +33,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}/shacl")
 @RequiredArgsConstructor

@@ -33,7 +33,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,7 +47,6 @@ import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/content")
 @RequiredArgsConstructor
@@ -62,34 +60,34 @@ public class GraphContentRESTController {
     private final ReplaceGraphUseCase replaceGraphUseCase;
 
     @Operation(
-            summary = "export graph",
-            description = "Export the rdf-schema graph",
-            tags = {"graph"},
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            content = {
-                                    @Content(mediaType = "text/turtle"),
-                                    @Content(mediaType = "application/rdf+xml"),
-                                    @Content(mediaType = "application/rdf+json"),
-                                    @Content(mediaType = "application/n-triples")
-                            })
-            }
+              summary = "export graph",
+              description = "Export the rdf-schema graph",
+              tags = {"graph"},
+              responses = {
+                        @ApiResponse(
+                                  responseCode = "200",
+                                  content = {
+                                            @Content(mediaType = "text/turtle"),
+                                            @Content(mediaType = "application/rdf+xml"),
+                                            @Content(mediaType = "application/rdf+json"),
+                                            @Content(mediaType = "application/n-triples")
+                                  })
+              }
     )
     @GetMapping
     public ResponseEntity<byte[]> getSchema(
-            @Parameter(description = "The requested Datatype.", hidden = true)
-            @RequestHeader("Accept")
-            String acceptHeader,
-            @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI) {
+              @Parameter(description = "The requested Datatype.", hidden = true)
+              @RequestHeader("Accept")
+              String acceptHeader,
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @PathVariable
+              String graphURI) {
         logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".", datasetName, graphURI, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
@@ -108,19 +106,19 @@ public class GraphContentRESTController {
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
         var body = ResponseEntity.ok()
-                .headers(headers)
-                .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
-                .body(outStream.toByteArray());
+                                 .headers(headers)
+                                 .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                                 .body(outStream.toByteArray());
         logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".", datasetName, graphURI, originURL);
         return body;
     }
 
     private final Map<String, RDFFormat> supportedFormats = Map.ofEntries(
-            new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
-            new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
-            new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
-            new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES)
-    );
+              new AbstractMap.SimpleEntry<>("text/turtle", RDFFormat.TURTLE),
+              new AbstractMap.SimpleEntry<>("application/rdf+xml", RDFFormat.RDFXML),
+              new AbstractMap.SimpleEntry<>("application/rdf+json", RDFFormat.RDFJSON),
+              new AbstractMap.SimpleEntry<>("application/n-triples", RDFFormat.NTRIPLES)
+                                                                         );
 
     private RDFFormat getRdfFormat(String acceptHeader) {
         for (var entry : supportedFormats.entrySet()) {
@@ -132,22 +130,22 @@ public class GraphContentRESTController {
     }
 
     @Operation(
-            summary = "delete graph",
-            description = "Delete an rdf-schema graph",
-            tags = {"graph"},
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200")
-            }
+              summary = "delete graph",
+              description = "Delete an rdf-schema graph",
+              tags = {"graph"},
+              responses = {
+                        @ApiResponse(
+                                  responseCode = "200")
+              }
     )
     @DeleteMapping
     public String deleteGraph(
-            @Parameter(description = "The name/url of the inquirer.") @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.") @PathVariable
-            String graphURI) {
+              @Parameter(description = "The name/url of the inquirer.") @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.") @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.") @PathVariable
+              String graphURI) {
         logger.info("Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".", datasetName, graphURI, originURL);
 
         deleteGraphUseCase.deleteGraph(new GraphIdentifier(datasetName, graphURI));
