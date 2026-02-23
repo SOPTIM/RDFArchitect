@@ -33,11 +33,12 @@ public class GraphCompressionConfig {
     private static int compressCount = DEFAULT_COMPRESS_COUNT;
 
     @Value("${graph.maxVersions:" + DEFAULT_MAX_VERSIONS + "}")
+    @SuppressWarnings("java:S2696")
     public void setMaxVersions(int maxVersions) {
         GraphCompressionConfig.maxVersions = maxVersions;
     }
-
     @Value("${graph.compressCount:" + DEFAULT_COMPRESS_COUNT + "}")
+    @SuppressWarnings("java:S2696")
     public void setCompressCount(int compressCount) {
         GraphCompressionConfig.compressCount = compressCount;
     }
