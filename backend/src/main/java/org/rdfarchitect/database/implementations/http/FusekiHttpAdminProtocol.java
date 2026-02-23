@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.database.implementations.http;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.rdfarchitect.database.implementations.DatabaseAdminProtocol;
@@ -45,16 +44,17 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
 
     @Override
     public boolean ping() {
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                                             .uri(URI.create(url + "/$/ping"))
-                                             .GET()
-                                             .build();
-            HttpResponse<String> response = null;
-            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        try (var client = HttpClient.newHttpClient()) {
+            var request = HttpRequest.newBuilder()
+                                     .uri(URI.create(url + "/$/ping"))
+                                     .GET()
+                                     .build();
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200;
         } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             logger.warn("Ping failed against endpoint: {}", url);
             return false;
         }
@@ -62,29 +62,31 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
 
     @Override
     public List<String> listDatasets() {
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                                             .uri(URI.create(url + "/$/datasets"))
-                                             .GET()
-                                             .build();
+        try (var client = HttpClient.newHttpClient()) {
+            var request = HttpRequest.newBuilder()
+                                     .uri(URI.create(url + "/$/datasets"))
+                                     .GET()
+                                     .build();
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                String jsonResponse = response.body();
-                JSONObject jsonObject = new JSONObject(jsonResponse);
-                JSONArray datasets = jsonObject.getJSONArray("datasets");
+                var jsonResponse = response.body();
+                var jsonObject = new JSONObject(jsonResponse);
+                var datasets = jsonObject.getJSONArray("datasets");
 
-                List<String> datasetNames = new ArrayList<>();
-                for (int i = 0; i < datasets.length(); i++) {
-                    JSONObject dataset = datasets.getJSONObject(i);
-                    String datasetId = dataset.getString("ds.name").replace("/", "");
+                var datasetNames = new ArrayList<String>();
+                for (var i = 0; i < datasets.length(); i++) {
+                    var dataset = datasets.getJSONObject(i);
+                    var datasetId = dataset.getString("ds.name").replace("/", "");
                     datasetNames.add(datasetId);
                 }
                 return datasetNames;
             }
-        } catch (IOException | InterruptedException | JSONException e) {
+        } catch (IOException | JSONException e) {
+            throw new DataAccessException("Failed to list datasets", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new DataAccessException("Failed to list datasets", e);
         }
         throw new DataAccessException("Failed to list datasets");
@@ -92,43 +94,47 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
 
     @Override
     public void createDataset(String datasetName) {
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            String requestBody = "dbName=" + datasetName + "&dbType=tdb2";
-            HttpRequest request = HttpRequest.newBuilder()
-                                             .uri(URI.create(this.url + "/$/datasets"))
-                                             .header("Content-Type", "application/x-www-form-urlencoded")
-                                             .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                                             .build();
+        try (var client = HttpClient.newHttpClient()) {
+            var requestBody = "dbName=" + datasetName + "&dbType=tdb2";
+            var request = HttpRequest.newBuilder()
+                                     .uri(URI.create(this.url + "/$/datasets"))
+                                     .header("Content-Type", "application/x-www-form-urlencoded")
+                                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                                     .build();
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
                 logger.info("Successfully created dataset: \"{}\" at endpoint: \"{}\"", datasetName, this.url);
             } else {
                 throw new DataAccessException("Failed to create dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"");
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
+            throw new DataAccessException("Failed to create dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new DataAccessException("Failed to create dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
         }
     }
 
     @Override
     public void deleteDataset(String datasetName) {
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest request = HttpRequest.newBuilder()
-                                             .uri(URI.create(this.url + "/$/datasets/" + datasetName))
-                                             .DELETE()
-                                             .build();
+        try (var client = HttpClient.newHttpClient()) {
+            var request = HttpRequest.newBuilder()
+                                     .uri(URI.create(this.url + "/$/datasets/" + datasetName))
+                                     .DELETE()
+                                     .build();
 
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
                 logger.info("Successfully deleted dataset: \"{}\" at endpoint: \"{}\"", datasetName, this.url);
             } else {
                 throw new DataAccessException("Failed to delete dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"");
             }
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
+            throw new DataAccessException("Failed to delete dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             throw new DataAccessException("Failed to delete dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
         }
     }
