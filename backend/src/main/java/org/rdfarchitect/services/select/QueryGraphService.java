@@ -109,7 +109,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .setOrder()
                   .setDistinct()
                   .setType(RDFS.Class)
-                  .filterStereotypes(CIMStereotypes.enumeration.getURI(), "CIMDatatype", "Entsoe")
+                  .filterStereotypes(CIMStereotypes.enumeration.getURI(), "Entsoe")
                   .build();
         var query = new CIMQueryBuilder(baseQuery)
                   .appendLabelQuery(OPTIONAL)
@@ -214,7 +214,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .setOrder()
                   .setDistinct()
                   .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.getGraphUri()))
-                  .filterStereotypes("Primitive")
+                  .filterStereotypes(CIMStereotypes.primitiveString, CIMStereotypes.cimDatatypeString)
                   .setGraph(graphIdentifier.getGraphUri())
                   .setType(RDFS.Class)
                   .build();
