@@ -86,46 +86,61 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private List<String> importZipFile(String datasetName, MultipartFile file, Set<String> reservedGraphUris) {
         try (var zipInputStream = new ZipInputStream(file.getInputStream())) {
-            boolean error = false;
-            var importedGraphUris = new ArrayList<String>();
-            ZipEntry entry;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                if (entry.isDirectory()) {
-                    zipInputStream.closeEntry();
-                    continue;
-                }
-                var entryName = entry.getName();
-                if (!isGraphFile(entryName)) {
-                    logger.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.", entryName, datasetName);
-                    zipInputStream.closeEntry();
-                    continue;
-                }
-                var extractedFile = toMultipartFile(entryName, zipInputStream);
-                var graphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entryName), reservedGraphUris);
-                try {
-                    var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-                    databasePort.deleteGraph(graphIdentifier);
-                    databasePort.createGraph(graphIdentifier, parseGraph(extractedFile, graphUri));
-                    importedGraphUris.add(graphUri);
-                } catch (RuntimeException exception) {
-                    error = true;
-                    logger.warn("Skipping ZIP entry '{}' for dataset '{}' because import failed: {}", entryName, datasetName, exception.getMessage(), exception);
-                }
-                zipInputStream.closeEntry();
-            }
-            if (error) {
+            var result = processZipEntries(datasetName, zipInputStream, reservedGraphUris);
+            if (result.hasErrors()) {
                 throw new DataAccessException("One or more graphs could not be imported from the zip file.");
             }
-            return importedGraphUris;
+            return result.importedGraphUris();
         } catch (IOException exception) {
             throw new DataAccessException("Unable to import graphs from zip file.", exception);
         }
     }
 
+    private ZipImportResult processZipEntries(String datasetName, ZipInputStream zipInputStream, Set<String> reservedGraphUris) throws IOException {
+        boolean error = false;
+        var importedGraphUris = new ArrayList<String>();
+        ZipEntry entry;
+        while ((entry = zipInputStream.getNextEntry()) != null) {
+            try {
+                if (entry.isDirectory() || !isGraphFile(entry.getName())) {
+                    if (!entry.isDirectory()) {
+                        logger.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.", entry.getName(), datasetName);
+                    }
+                    continue;
+                }
+                if (importGraph(datasetName, zipInputStream, entry.getName(), reservedGraphUris)) {
+                    importedGraphUris.add(ensureUniqueGraphUri(buildGraphUriFromFileName(entry.getName()), reservedGraphUris));
+                } else {
+                    error = true;
+                }
+            } finally {
+                zipInputStream.closeEntry();
+            }
+        }
+        return new ZipImportResult(importedGraphUris, error);
+    }
+
+    private boolean importGraph(String datasetName, ZipInputStream zipInputStream, String entryName, Set<String> reservedGraphUris) throws IOException {
+        var extractedFile = toMultipartFile(entryName, zipInputStream);
+        var graphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entryName), reservedGraphUris);
+        try {
+            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            databasePort.deleteGraph(graphIdentifier);
+            databasePort.createGraph(graphIdentifier, parseGraph(extractedFile, graphUri));
+            return true;
+        } catch (RuntimeException exception) {
+            logger.warn("Skipping ZIP entry '{}' for dataset '{}' because import failed: {}", entryName, datasetName, exception.getMessage(), exception);
+            return false;
+        }
+    }
+
+    private record ZipImportResult(List<String> importedGraphUris, boolean hasErrors) {
+    }
+
     private Set<String> loadExistingGraphUris(String datasetName) {
         try {
             return new HashSet<>(databasePort.listGraphUris(datasetName));
-        } catch (RuntimeException exception) {
+        } catch (RuntimeException _) {
             return new HashSet<>();
         }
     }
@@ -181,7 +196,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private boolean isZipFile(MultipartFile file) {
-        var originalFilename = Objects.requireNonNullElse(file.getOriginalFilename(), "");
+        var originalFilename = Optional.ofNullable(file.getOriginalFilename()).orElse("");
         return originalFilename.toLowerCase(Locale.ROOT).endsWith(".zip");
     }
 
@@ -240,13 +255,13 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof SimpleMultipartFile that)) {
+            if (!(o instanceof SimpleMultipartFile(var thatName, var thatOriginalFilename, var thatContentType, var thatContent))) {
                 return false;
             }
-            return Objects.equals(name, that.name)
-                      && Objects.equals(originalFilename, that.originalFilename)
-                      && Objects.equals(contentType, that.contentType)
-                      && Arrays.equals(content, that.content);
+            return Objects.equals(name, thatName)
+                      && Objects.equals(originalFilename, thatOriginalFilename)
+                      && Objects.equals(contentType, thatContentType)
+                      && Arrays.equals(content, thatContent);
         }
 
         @Override
