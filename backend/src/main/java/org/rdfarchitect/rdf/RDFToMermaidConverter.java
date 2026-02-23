@@ -34,6 +34,7 @@ import org.unbescape.html.HtmlEscape;
 
 import java.util.ArrayList;
 
+@SuppressWarnings("java:S1192")
 @RequiredArgsConstructor
 public class RDFToMermaidConverter {
 
@@ -411,7 +412,7 @@ public class RDFToMermaidConverter {
             var substitutedPrefix = prefixMapping.getNsURIPrefix(split[0] + "#");
             assert substitutedPrefix != null;
             res = substitutedPrefix + ":" + split[1];
-        } catch (Exception e) {
+        } catch (Exception _) {
             res = uri;
         }
         return res;
