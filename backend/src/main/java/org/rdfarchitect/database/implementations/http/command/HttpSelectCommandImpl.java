@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.jena.atlas.web.HttpException;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.ResultSetFormatter;
-import org.apache.jena.query.ResultSetRewindable;
 import org.apache.jena.shared.JenaException;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.engine.http.QueryExceptionHTTP;
@@ -93,18 +92,18 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
             throw new QueryException("Query is null. Execution against endpoint " + this.endpoint + " skipped.");
         }
 
-        String hex = Integer.toHexString(this.query.hashCode());
+        var hex = Integer.toHexString(this.query.hashCode());
         logger.debug("Execute query@{} against endpoint \"{}\":\n{}", hex, this.endpoint, this.query);
-        try {
-            ResultSetRewindable result = QueryExecutionHTTPBuilder
-                      .create()
-                      .endpoint(this.endpoint)
-                      .query(this.query)
-                      .build()
-                      .execSelect().rewindable();
+        try (var qExec = QueryExecutionHTTPBuilder
+                  .create()
+                  .endpoint(this.endpoint)
+                  .query(this.query)
+                  .build()){
+            var result = qExec.execSelect().rewindable();
 
-
-            logger.debug("Received result for query@{} from \"{}\":\n{}", hex, this.endpoint, ResultSetFormatter.asText(result));
+            if (logger.isDebugEnabled()) {
+                logger.debug("Received result for query@{} from \"{}\":\n{}", hex, this.endpoint, ResultSetFormatter.asText(result));
+            }
             result.reset();
             return new ResultSetFormatterImpl(result);
         } catch (QueryExceptionHTTP e) {
@@ -120,22 +119,19 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
 
     @Override
     public PrefixMappingReadOnly getCurrentPrefixMapping() {
-        @SuppressWarnings("java:S2095")//warning doesn't make sense, since it's not closable
-        HttpClient client = HttpClient.newHttpClient();
+        try (var client = HttpClient.newHttpClient()) {
+            var request = HttpRequest.newBuilder()
+                                     .uri(URI.create(endpoint + "/prefixes"))
+                                     .GET()
+                                     .build();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                                         .uri(URI.create(endpoint + "/prefixes"))
-                                         .GET()
-                                         .build();
-
-        try {
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            PrefixMapping result = PrefixMapping.Factory.create();
+            var result = PrefixMapping.Factory.create();
             List<Map<String, String>> httpResult = new ObjectMapper().readValue(response.body(), new TypeReference<>() {
             });
-            for (Map<String, String> map : httpResult) {
-                String prefix = map.get("prefix");
-                String uri = map.get("uri");
+            for (var map : httpResult) {
+                var prefix = map.get("prefix");
+                var uri = map.get("uri");
                 result.setNsPrefix(prefix, uri);
             }
             return new PrefixMappingReadOnly(result);
