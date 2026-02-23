@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
+import org.springframework.http.HttpHeaders;
 
 import java.util.List;
 
@@ -45,7 +46,7 @@ class DatasetRESTControllerTest {
     void listDatasets_returnsValueFromUseCase() {
         when(listDatasetsUseCase.listDatasets()).thenReturn(List.of("dataset-a", "dataset-b"));
 
-        var result = controller.listDatasets("origin");
+        var result = controller.listDatasets(HttpHeaders.ORIGIN);
 
         assertThat(result).containsExactly("dataset-a", "dataset-b");
         verify(listDatasetsUseCase).listDatasets();
@@ -53,7 +54,7 @@ class DatasetRESTControllerTest {
 
     @Test
     void deleteDataset_invokesUseCaseAndReturnsSuccess() {
-        var response = controller.deleteDataset("origin", "dataset-a");
+        var response = controller.deleteDataset(HttpHeaders.ORIGIN, "dataset-a");
 
         assertThat(response).isEqualTo(Response.SUCCESS);
         verify(deleteDatasetUseCase).deleteDataset("dataset-a");

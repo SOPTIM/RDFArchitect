@@ -81,7 +81,7 @@ public class GraphContentRESTController {
               @RequestHeader("Accept")
               String acceptHeader,
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -141,7 +141,8 @@ public class GraphContentRESTController {
     )
     @DeleteMapping
     public String deleteGraph(
-              @Parameter(description = "The name/url of the inquirer.") @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.") @PathVariable
               String datasetName,

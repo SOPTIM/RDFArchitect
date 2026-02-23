@@ -25,6 +25,7 @@ import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.CanUndoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -48,7 +49,8 @@ public class CanUndoRESTController {
     )
     @PostMapping
     public boolean canUndo(
-              @Parameter(description = "The name/url of the inquirer.") @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.") @PathVariable
               String datasetName,

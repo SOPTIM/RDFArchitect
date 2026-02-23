@@ -65,7 +65,7 @@ public class SHACLGenerateContentRestController {
     @GetMapping("/string")
     public String getGeneratedSHACLAsString(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable
@@ -107,7 +107,7 @@ public class SHACLGenerateContentRestController {
             @RequestHeader("Accept")
             String acceptHeader,
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable

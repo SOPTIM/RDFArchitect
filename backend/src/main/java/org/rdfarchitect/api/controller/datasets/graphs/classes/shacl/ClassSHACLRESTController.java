@@ -30,6 +30,7 @@ import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -58,7 +59,7 @@ public class ClassSHACLRESTController {
     @GetMapping
     public CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLRelatedToClass(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable
@@ -90,7 +91,7 @@ public class ClassSHACLRESTController {
     @PutMapping("/custom")
     public String putSHACL(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable

@@ -28,6 +28,7 @@ import org.rdfarchitect.cim.changes.PackageChange;
 import org.rdfarchitect.services.SchemaComparisonUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -62,7 +63,7 @@ public class SchemaComparisonFromFilesRESTController {
     @PostMapping
     public List<PackageChange> compareSchemas(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The first graph file.")
               @RequestParam("fileA")

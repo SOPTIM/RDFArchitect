@@ -25,6 +25,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
+import org.springframework.http.HttpHeaders;
 
 import java.util.UUID;
 
@@ -51,7 +52,7 @@ class PackageRESTControllerTest {
         when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
         UUID packageUuid = UUID.randomUUID();
 
-        var response = controller.deletePackage("origin", "dataset", "graph", packageUuid);
+        var response = controller.deletePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUuid);
 
         assertThat(response).isEqualTo(Response.SUCCESS);
         verify(deletePackageUseCase).deletePackage(new GraphIdentifier("dataset", "expanded-graph"), packageUuid);
@@ -63,7 +64,7 @@ class PackageRESTControllerTest {
         var packageUUID = UUID.randomUUID();
         var dto = PackageDTO.builder().label("pkg").build();
 
-        var response = controller.replacePackage("origin", "dataset", "graph", packageUUID.toString(), dto);
+        var response = controller.replacePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUUID.toString(), dto);
 
         assertThat(response).isEqualTo(Response.SUCCESS);
         verify(replacePackageUseCase).replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
