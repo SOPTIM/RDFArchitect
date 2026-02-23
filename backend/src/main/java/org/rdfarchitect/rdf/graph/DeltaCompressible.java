@@ -18,12 +18,11 @@
 package org.rdfarchitect.rdf.graph;
 
 import lombok.Getter;
-import org.apache.jena.graph.Capabilities;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.GraphMemFactory;
 import org.apache.jena.graph.GraphUtil;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.graph.compose.CompositionBase;
-import org.apache.jena.graph.impl.GraphPlain;
 import org.apache.jena.graph.impl.SimpleEventManager;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.util.iterator.ExtendedIterator;
@@ -65,23 +64,17 @@ public class DeltaCompressible extends CompositionBase implements Graph {
 
     public DeltaCompressible(@NotNull Graph base) {
         super();
-        this.base = GraphPlain.plain(base);
-        this.additions = GraphPlain.plain();
-        this.deletions = GraphPlain.plain();
+        this.base = base;
+        this.additions = GraphMemFactory.createDefaultGraph();
+        this.deletions = GraphMemFactory.createDefaultGraph();
     }
 
     public void compress() {
-        Graph newBase = GraphFactory.createDefaultGraph();
+        var newBase = GraphFactory.createDefaultGraph();
         GraphUtil.add(newBase, this.find());
         base = newBase;
-        additions = GraphPlain.plain();
-        deletions = GraphPlain.plain();
-    }
-
-    @Override
-    public Capabilities getCapabilities() {
-        // Not strictly accurate.
-        return base.getCapabilities();
+        additions = GraphMemFactory.createDefaultGraph();
+        deletions = GraphMemFactory.createDefaultGraph();
     }
 
     /**

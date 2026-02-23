@@ -52,7 +52,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * An Implementation of the Graph interface that allows for storing changes and then cycling through them.
  * Perform any amount of update operations on this Graph, then commit to store those changes as a version.
  * Undoing a change and then redoing is possible. However, new changes after an undo will delete all previously following changes.
- * this implementation ensures thread safety by utilising the single-writer multiple-reader principle (SWMR).
+ * this implementation ensures thread safety by utilizing the single-writer multiple-reader principle (SWMR).
  */
 public class GraphRewindable implements Graph, Transactional, Rewindable {
 
@@ -443,28 +443,26 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         if (!isInTransaction()) {
             throw new GraphNotInATransactionException();
         }
-        switch (transactionType()) {
+        return switch (transactionType()) {
             case READ -> throw new GraphTransactionException("Cannot promote a read transaction!");
-            case WRITE -> {
-                return true;
-            }
+            case WRITE -> true;
             case READ_COMMITTED_PROMOTE -> {
                 end();
                 begin(TxnType.WRITE);
-                return true;
+                yield true;
             }
             case READ_PROMOTE -> {
                 if (rwLock.getReadLockCount() == 1) {
                     rwLock.readLock().unlock();
                     if (rwLock.writeLock().tryLock()) {
                         transactionType.set(TxnType.WRITE);
-                        return true;
+                        yield true;
                     }
                     rwLock.readLock().lock();
                 }
+                yield false;
             }
-        }
-        return false;
+        };
     }
 
     @Override
