@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.riot.RDFLanguages;
 import org.jetbrains.annotations.NotNull;
@@ -47,6 +48,10 @@ import java.util.zip.ZipInputStream;
 public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportGraphsService.class);
+
+    private static final long MAX_ENTRY_SIZE = FileUtils.ONE_GB;
+    private static final int MAX_ENTRIES = 1000;
+
     private final ChangeLogUseCase changeLogUseCase;
     private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
     private final DatabasePort databasePort;
@@ -100,7 +105,15 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         boolean error = false;
         var importedGraphUris = new ArrayList<String>();
         ZipEntry entry;
+        int entryCount = 0;
         while ((entry = zipInputStream.getNextEntry()) != null) {
+            entryCount++;
+            if (entryCount > MAX_ENTRIES) {
+                throw new DataAccessException("ZIP file contains too many entries.");
+            }
+            if (entry.getSize() > MAX_ENTRY_SIZE) {
+                throw new DataAccessException("ZIP entry exceeds maximum allowed size: " + entry.getName());
+            }
             try {
                 if (entry.isDirectory() || !isGraphFile(entry.getName())) {
                     if (!entry.isDirectory()) {
