@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
+import org.apache.jena.shacl.ShaclException;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphFileSourceImpl;
@@ -207,7 +208,7 @@ public class SHACLCustomContentRestController {
 
         logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" to \"{}\".", datasetName, graphURI, originURL);
         if(shaclString.isEmpty()){
-            throw new RuntimeException("SHACL graph is empty for graph: " + extendedGraphURI);
+            throw new ShaclException("SHACL graph is empty for graph: " + extendedGraphURI);
         }
         return shaclString;
     }
@@ -218,7 +219,7 @@ public class SHACLCustomContentRestController {
         if (!extendedGraphURI.equals("default")) {
             fileName = new URI(extendedGraphURI + "-shacl").getSuffix();
         }
-        fileName += "." + format.getLang().getFileExtensions().get(0);
+        fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));

@@ -75,7 +75,7 @@ public class DatasetContentRESTController {
 
         var format = getRdfFormat(acceptHeader);
 
-        var fileName = datasetName + "." + getRdfFormat(acceptHeader).getLang().getFileExtensions().get(0);
+        var fileName = datasetName + "." + getRdfFormat(acceptHeader).getLang().getFileExtensions().getFirst();
 
         var outStream = getDatasetSchemaUseCase.getDatasetSchema(datasetName, format);
         var headers = new HttpHeaders();

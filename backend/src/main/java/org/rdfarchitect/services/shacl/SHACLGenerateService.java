@@ -22,6 +22,7 @@ import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.system.PrefixEntry;
+import org.apache.jena.shacl.ShaclException;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
@@ -48,7 +49,7 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
             shaclModel.write(outStream, Lang.TTL.getName());
             return outStream.toString();
         } catch (IOException e) {
-            throw new RuntimeException("Error while writing SHACL model to output stream", e);
+            throw new ShaclException("Error while writing SHACL model to output stream", e);
         } finally {
             if (ontologyGraph != null) {
                 ontologyGraph.end();

@@ -101,7 +101,7 @@ public class GraphContentRESTController {
         if (!extendedGraphURI.equals("default")) {
             fileName = new URI(extendedGraphURI).getSuffix();
         }
-        fileName += "." + format.getLang().getFileExtensions().get(0);
+        fileName += "." + format.getLang().getFileExtensions().getFirst();
 
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
