@@ -72,14 +72,16 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
 
     private static final String TAB = "    ";
 
+    private static final String DARK_GRAY = "#303030";
+
     @Getter
     public enum MermaidThemeConfig {
         THEME("base"),
         FONT_FAMILY("sans-serif"),
-        TEXT_COLOR("#303030"),
+        TEXT_COLOR(DARK_GRAY),
         PRIMARY_COLOR("#e0e0e0"),
-        PRIMARY_BORDER_COLOR("#303030"),
-        LINE_COLOR("#303030");
+        PRIMARY_BORDER_COLOR(DARK_GRAY),
+        LINE_COLOR(DARK_GRAY);
 
         private final String value;
 
@@ -142,7 +144,7 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     private List<StringBuilder> getClassMermaidStrings(RenderContext renderContext, CIMPackage cimPackage) {
         var classMermaidStrings = new ArrayList<StringBuilder>();
         for (var cimClass : renderContext.cimCollection.getClasses()) {
-            if (!classIsInPackage(cimClass, cimPackage)) {
+            if (classIsNotInPackage(cimClass, cimPackage)) {
                 continue;
             }
             classMermaidStrings.add(
@@ -157,7 +159,7 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     private List<StringBuilder> getEnumMermaidStrings(RenderContext renderContext, CIMPackage cimPackage) {
         var enumMermaidStrings = new ArrayList<StringBuilder>();
         for (var cimEnumClass : renderContext.cimCollection.getEnums()) {
-            if (!classIsInPackage(cimEnumClass, cimPackage)) {
+            if (classIsNotInPackage(cimEnumClass, cimPackage)) {
                 continue;
             }
             enumMermaidStrings.add(
@@ -269,13 +271,13 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
 
     }
 
-    private boolean classIsInPackage(CIMClass cimClass, CIMPackage cimPackage) {
+    private boolean classIsNotInPackage(CIMClass cimClass, CIMPackage cimPackage) {
         if (cimClass.getBelongsToCategory() == null) {
-            return cimPackage == null;
+            return cimPackage != null;
         }
         if (cimPackage == null) {
-            return false;
+            return true;
         }
-        return cimClass.getBelongsToCategory().getUri().equals(cimPackage.getUri());
+        return !cimClass.getBelongsToCategory().getUri().equals(cimPackage.getUri());
     }
 }
