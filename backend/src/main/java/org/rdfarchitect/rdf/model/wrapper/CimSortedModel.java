@@ -116,7 +116,7 @@ public class CimSortedModel implements Model {
 
     @Override
     public Model write(OutputStream out, String lang, String base) {
-        var rdfLang = RDFLanguages.nameToLang(lang);
+        var rdfLang = lang != null ? RDFLanguages.nameToLang(lang) : Lang.RDFXML;
         if (rdfLang == null) {
             throw new IllegalArgumentException("Unsupported language: " + lang);
         }
