@@ -55,6 +55,9 @@
                 showContents: keepExpanded || isSelectedDataset(datasetName),
             });
         }
+        newDatasetList = newDatasetList.sort((a, b) =>
+            a.label.localeCompare(b.label),
+        );
         datasetList = newDatasetList;
         initialDatasetsLoaded = true;
     }

@@ -152,7 +152,7 @@
                 return;
             }
 
-            const localPackagesList = [];
+            let localPackagesList = [];
             const previous = packages ?? [];
             const selectedPackageId =
                 editorState.selectedPackageUUID.getValue();
@@ -176,7 +176,7 @@
                     external: true,
                 });
             });
-            packages = localPackagesList.map(pack => {
+            localPackagesList = localPackagesList.map(pack => {
                 const packageId = getPackageId(pack);
                 const prev = previous.find(p => getPackageId(p) === packageId);
                 const keepExpanded = prev?.showContents ?? false;
@@ -193,6 +193,11 @@
                         ? false
                         : keepExpanded || isSelected || hasSelectedClass,
                 };
+            });
+            packages = localPackagesList.sort((a, b) => {
+                if (!a || !a.label || a.label === "default") return 1;
+                if (!b || !b.label || b.label === "default") return -1;
+                return a.label.localeCompare(b.label);
             });
         } catch (err) {
             console.error("Failed to load packages:", err);
