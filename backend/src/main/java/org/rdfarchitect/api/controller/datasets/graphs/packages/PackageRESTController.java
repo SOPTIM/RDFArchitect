@@ -20,6 +20,7 @@ package org.rdfarchitect.api.controller.datasets.graphs.packages;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -81,7 +82,7 @@ public class PackageRESTController {
         replacePackageUseCase.replacePackage(graphIdentifier, packageDTO);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".", datasetName, graphURI, originURL, packageUUID);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -112,6 +113,6 @@ public class PackageRESTController {
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

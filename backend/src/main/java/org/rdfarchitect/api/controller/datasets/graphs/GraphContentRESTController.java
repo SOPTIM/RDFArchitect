@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -151,7 +152,7 @@ public class GraphContentRESTController {
         deleteGraphUseCase.deleteGraph(new GraphIdentifier(datasetName, graphURI));
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/content\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(

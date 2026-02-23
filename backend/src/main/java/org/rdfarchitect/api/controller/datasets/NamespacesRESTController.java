@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.services.select.ListPrefixesUseCase;
 import org.rdfarchitect.services.update.dataset.ReplaceNamespacesUseCase;
@@ -121,6 +122,6 @@ public class NamespacesRESTController {
         replaceNamespacesUseCase.replaceNamespaces(datasetName, namespaces);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/namespaces\" from \"{}\".", datasetName, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

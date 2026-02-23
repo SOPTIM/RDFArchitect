@@ -53,8 +53,8 @@ class PackageRESTControllerTest {
 
         var response = controller.deletePackage("origin", "dataset", "graph", packageUuid);
 
-        assertThat(response).isEqualTo("success");
-        verify(deletePackageUseCase).deletePackage(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(packageUuid));
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(deletePackageUseCase).deletePackage(new GraphIdentifier("dataset", "expanded-graph"), packageUuid);
     }
 
     @Test
@@ -65,7 +65,7 @@ class PackageRESTControllerTest {
 
         var response = controller.replacePackage("origin", "dataset", "graph", packageUUID.toString(), dto);
 
-        assertThat(response).isEqualTo("success");
-        verify(replacePackageUseCase).replacePackage(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(dto));
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(replacePackageUseCase).replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
     }
 }

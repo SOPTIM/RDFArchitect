@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
@@ -110,6 +111,6 @@ public class ClassSHACLRESTController {
         shaclUpdateUseCase.updateClassSHACL(graphIdentifier, UUID.fromString(classUUID), shaclString);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

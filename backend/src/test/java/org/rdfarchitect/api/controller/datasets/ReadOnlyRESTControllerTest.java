@@ -19,6 +19,7 @@ package org.rdfarchitect.api.controller.datasets;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.readonly.DisableEditingUseCase;
 import org.rdfarchitect.services.readonly.EnableEditingUseCase;
 import org.rdfarchitect.services.readonly.IsReadOnlyUseCase;
@@ -53,7 +54,7 @@ class ReadOnlyRESTControllerTest {
     void enableEditing_invokesUseCase() {
         var response = controller.enableEditing("origin", "dataset");
 
-        assertThat(response).isEqualTo("success");
+        assertThat(response).isEqualTo(Response.SUCCESS);
         verify(enableEditingUseCase).enableEditing("dataset");
     }
 
@@ -61,7 +62,7 @@ class ReadOnlyRESTControllerTest {
     void disableEditing_invokesUseCase() {
         var response = controller.disableEditing("origin", "dataset");
 
-        assertThat(response).isEqualTo("success");
+        assertThat(response).isEqualTo(Response.SUCCESS);
         verify(disableEditingUseCase).disableEditing("dataset");
     }
 }

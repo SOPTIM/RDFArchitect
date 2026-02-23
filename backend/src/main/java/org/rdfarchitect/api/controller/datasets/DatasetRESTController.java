@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
 import org.slf4j.Logger;
@@ -90,6 +91,6 @@ public class DatasetRESTController {
         deleteDatasetUseCase.deleteDataset(datasetName);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}\" to \"{}\".", datasetName, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

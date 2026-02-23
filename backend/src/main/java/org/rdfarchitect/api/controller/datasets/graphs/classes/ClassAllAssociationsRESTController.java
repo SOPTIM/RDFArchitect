@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -85,7 +86,7 @@ public class ClassAllAssociationsRESTController {
         updateAssociationsUseCase.replaceAllAssociations(graphIdentifier, classUUID, associationPairList);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(

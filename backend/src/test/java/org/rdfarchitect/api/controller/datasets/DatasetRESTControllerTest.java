@@ -19,6 +19,7 @@ package org.rdfarchitect.api.controller.datasets;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
 
@@ -54,7 +55,7 @@ class DatasetRESTControllerTest {
     void deleteDataset_invokesUseCaseAndReturnsSuccess() {
         var response = controller.deleteDataset("origin", "dataset-a");
 
-        assertThat(response).isEqualTo("success");
+        assertThat(response).isEqualTo(Response.SUCCESS);
         verify(deleteDatasetUseCase).deleteDataset("dataset-a");
     }
 }

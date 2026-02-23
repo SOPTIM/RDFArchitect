@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.RestoreVersionUseCase;
@@ -79,6 +80,6 @@ public class RestoreVersionRESTController {
         restoreVersionUseCase.restoreVersion(new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(versionId));
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

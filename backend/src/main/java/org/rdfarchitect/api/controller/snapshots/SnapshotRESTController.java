@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.snapshot.LoadSnapshotUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,6 @@ public class SnapshotRESTController {
         loadSnapshotUseCase.loadSnapshot(base64Token);
 
         logger.info("Sending response to GET request: \"/api/snapshots/{{}}\" from \"{}\".", base64Token, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

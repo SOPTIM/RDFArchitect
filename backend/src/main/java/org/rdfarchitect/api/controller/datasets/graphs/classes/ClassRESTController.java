@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -124,7 +125,7 @@ public class ClassRESTController {
         replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -157,6 +158,6 @@ public class ClassRESTController {
         deleteClassUseCase.deleteClass(graphIdentifier, classUUID);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

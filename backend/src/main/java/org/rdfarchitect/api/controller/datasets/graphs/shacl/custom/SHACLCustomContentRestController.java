@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.shacl.ShaclException;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.implementations.GraphFileSourceImpl;
@@ -95,7 +96,7 @@ public class SHACLCustomContentRestController {
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/file\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -130,7 +131,7 @@ public class SHACLCustomContentRestController {
         shaclInsertUseCase.replaceCustomSHACLGraph(graphIdentifier, graph);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/content/string\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(

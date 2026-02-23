@@ -20,6 +20,7 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes.associations;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
@@ -112,6 +113,6 @@ public class ClassAssociationsSHACLRESTController {
         shaclUpdateUseCase.updatePropertyShacl(graphIdentifier, UUID.fromString(associationUUID), shaclString);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}/shacl\" to \"{}\".", datasetName, graphURI, classUUID, associationUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

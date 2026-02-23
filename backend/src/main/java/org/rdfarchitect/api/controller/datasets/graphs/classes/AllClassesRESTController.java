@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -96,7 +97,7 @@ public class AllClassesRESTController {
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".", datasetName, graphURI, originURL);
 
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(

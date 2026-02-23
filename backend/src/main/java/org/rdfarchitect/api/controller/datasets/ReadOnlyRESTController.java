@@ -21,6 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.readonly.DisableEditingUseCase;
 import org.rdfarchitect.services.readonly.EnableEditingUseCase;
 import org.rdfarchitect.services.readonly.IsReadOnlyUseCase;
@@ -95,7 +96,7 @@ public class ReadOnlyRESTController {
         enableEditingUseCase.enableEditing(datasetName);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/readonly\" to \"{}\".", datasetName, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -121,6 +122,6 @@ public class ReadOnlyRESTController {
         disableEditingUseCase.disableEditing(datasetName);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/readonly\" to \"{}\".", datasetName, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

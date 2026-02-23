@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -120,7 +121,7 @@ public class OntologyRESTController {
         createOntologyUseCase.createOntology(graphIdentifier, newOntology);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -156,7 +157,7 @@ public class OntologyRESTController {
         updateOntologyUseCase.replaceOntology(graphIdentifier, newOntology);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -186,6 +187,6 @@ public class OntologyRESTController {
         deleteOntologyUseCase.deleteOntology(graphIdentifier);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

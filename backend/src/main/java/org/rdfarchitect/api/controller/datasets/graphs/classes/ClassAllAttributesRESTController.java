@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -122,6 +123,6 @@ public class ClassAllAttributesRESTController {
         updateAttributesUseCase.replaceAllAttributes(graphIdentifier, classUUID, attributeList);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }
