@@ -119,8 +119,8 @@ public class CIMUpdates {
 
     public void deleteClass(Graph graph, PrefixMapping prefixMapping, String classUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
-        var deleteAttributes = deleteAttributes(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAttributes.build(), dataset).execute();
+        var deleteAttributes = deleteAttributesWithValueNodes(prefixMapping, null, classUUID);
+        UpdateExecutionFactory.create(deleteAttributes, dataset).execute();
         var deleteAssociations = deleteAssociations(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteAssociations.build(), dataset).execute();
         var deleteAttributesOfType = deleteAttributesOfType(prefixMapping, null, classUUID);
@@ -235,12 +235,17 @@ public class CIMUpdates {
     }
 
     public UpdateRequest replaceAttributes(PrefixMapping prefixMapping, String graphURI, String classUUID, List<CIMAttribute> attributes) {
-        var updateRequest = new UpdateRequest();
-        addUpdateOperations(updateRequest, deleteAttributeValueNodesForClass(graphURI, classUUID));
-        updateRequest.add(CIMUpdates.deleteAttributes(prefixMapping, graphURI, classUUID).build());
+        var updateRequest = deleteAttributesWithValueNodes(prefixMapping, graphURI, classUUID);
         for (CIMAttribute attribute : attributes) {
             updateRequest.add(insertAttribute(prefixMapping, graphURI, attribute).build());
         }
+        return updateRequest;
+    }
+
+    private UpdateRequest deleteAttributesWithValueNodes(PrefixMapping prefixMapping, String graphURI, String classUUID) {
+        var updateRequest = new UpdateRequest();
+        addUpdateOperations(updateRequest, deleteAttributeValueNodesForClass(graphURI, classUUID));
+        updateRequest.add(deleteAttributes(prefixMapping, graphURI, classUUID).build());
         return updateRequest;
     }
 

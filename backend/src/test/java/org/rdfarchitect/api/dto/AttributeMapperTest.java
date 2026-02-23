@@ -157,8 +157,8 @@ class AttributeMapperTest {
                                                                                                     CIMSDataType.Type.PRIMITIVE)),
                       () -> assertThat(mappedCIMAttribute.getComment()).isEqualTo(new RDFSComment("Test comment", new URI("http://www.w3.org/2001/XMLSchema#String"))),
                       () -> assertThat(mappedCIMAttribute.getStereotype()).isEqualTo(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute")),
-                      () -> assertThat(mappedCIMAttribute.getFixedValue()).isEqualTo(new CIMSIsFixed("FixedValue", new URI("http://www.w3.org/2001/XMLSchema#String"))),
-                      () -> assertThat(mappedCIMAttribute.getDefaultValue()).isEqualTo(new CIMSIsDefault("DefaultValue", new URI("http://www.w3.org/2001/XMLSchema#String")))
+                      () -> assertThat(mappedCIMAttribute.getFixedValue()).isEqualTo(new CIMSIsFixed("FixedValue", new URI("http://www.w3.org/2001/XMLSchema#string"))),
+                      () -> assertThat(mappedCIMAttribute.getDefaultValue()).isEqualTo(new CIMSIsDefault("DefaultValue", new URI("http://www.w3.org/2001/XMLSchema#string")))
                      );
         }
 

@@ -35,19 +35,25 @@ public class URI {
     private String suffix;
 
     public URI(String uri) {
-        String[] split = uri.split("#", 2);
-        if (split.length == 2) {
-            //split
-            prefix = split[0] + "#";
-            suffix = split[1];
-        } else {
+        if (uri == null) {
+            return;
+        }
+        int splitIndex = uri.indexOf('#');
+        if (splitIndex < 0) {
+            splitIndex = uri.lastIndexOf('/');
+        }
+        if (splitIndex < 0) {
             prefix = null;
             suffix = uri;
+            return;
         }
+        prefix = uri.substring(0, splitIndex + 1);
+        suffix = uri.substring(splitIndex + 1);
     }
 
+    @Override
     public String toString() {
-        return prefix + suffix;
+        return (prefix == null ? "" : prefix) + (suffix == null ? "" : suffix);
     }
 
     public Node toNode() {
@@ -65,4 +71,3 @@ public class URI {
         return this.toString().hashCode();
     }
 }
-

@@ -105,10 +105,78 @@ class AttributeFixedDefaultResolverTest {
 
             assertAll(
                       () -> assertThat(cimAttribute.getFixedValue().isBlankNode()).isTrue(),
-                      () -> assertThat(cimAttribute.getDefaultValue().isBlankNode()).isTrue()
+                      () -> assertThat(cimAttribute.getDefaultValue().isBlankNode()).isTrue(),
+                      () -> assertThat(cimAttribute.getFixedValue().getBlankNodePredicate()).isEqualTo(new URI("http://www.w3.org/2000/01/rdf-schema#Literal")),
+                      () -> assertThat(cimAttribute.getDefaultValue().getBlankNodePredicate()).isEqualTo(new URI("http://www.w3.org/2000/01/rdf-schema#Literal"))
                      );
         } finally {
             config.setNewValuesBlankNode(false);
         }
+    }
+
+    @Test
+    void apply_uriValueDoesNotKeepDatatype() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var cimAttribute = CIMAttribute.builder()
+                                       .uuid(UUID.randomUUID())
+                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                  new RDFSLabel("string", "en"),
+                                                                  CIMSDataType.Type.PRIMITIVE))
+                                       .fixedValue(new CIMSIsFixed("http://example.com#value",
+                                                                   new URI(XSD.integer.getURI()),
+                                                                   false,
+                                                                   null,
+                                                                   true))
+                                       .build();
+
+        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+
+        assertAll(
+                  () -> assertThat(cimAttribute.getFixedValue().isUriValue()).isTrue(),
+                  () -> assertThat(cimAttribute.getFixedValue().getDataType()).isNull()
+                 );
+    }
+
+    @Test
+    void apply_withUnknownDatatypeLabelFallsBackToXsdString() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var cimAttribute = CIMAttribute.builder()
+                                       .uuid(UUID.randomUUID())
+                                       .dataType(new CIMSDataType(new URI("http://example.com#NotKnownType"),
+                                                                  new RDFSLabel("DefinitelyNotADatatype", "en"),
+                                                                  CIMSDataType.Type.PRIMITIVE))
+                                       .fixedValue(new CIMSIsFixed("fixedValue"))
+                                       .build();
+
+        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+
+        assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"));
+    }
+
+    @Test
+    void apply_modelOverloadWorksInsideOpenTransaction() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var cimAttribute = CIMAttribute.builder()
+                                       .uuid(UUID.randomUUID())
+                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                  new RDFSLabel("string", "en"),
+                                                                  CIMSDataType.Type.PRIMITIVE))
+                                       .fixedValue(new CIMSIsFixed("fixedValue"))
+                                       .defaultValue(new CIMSIsDefault("defaultValue"))
+                                       .build();
+
+        graph.begin(TxnType.WRITE);
+        try {
+            var model = ModelFactory.createModelForGraph(graph);
+            assertThatCode(() -> AttributeFixedDefaultResolver.apply(model, cimAttribute)).doesNotThrowAnyException();
+            graph.commit();
+        } finally {
+            graph.end();
+        }
+
+        assertAll(
+                  () -> assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string")),
+                  () -> assertThat(cimAttribute.getDefaultValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"))
+                 );
     }
 }

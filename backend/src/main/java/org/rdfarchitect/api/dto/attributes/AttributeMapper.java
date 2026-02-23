@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.api.dto.attributes;
 
+import org.apache.jena.datatypes.BaseDatatype;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -31,7 +32,7 @@ import org.rdfarchitect.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.apache.jena.vocabulary.XSD;
+import org.rdfarchitect.shacl.XSDDatatypeMapper;
 
 import java.util.List;
 
@@ -110,6 +111,10 @@ public interface AttributeMapper {
         if (dto.getDataType().getType() == null || dto.getDataType().getType() != DataTypeDTO.Type.PRIMITIVE) {
             return null;
         }
-        return new URI(XSD.getURI() + dto.getDataType().getLabel());
+        var datatype = XSDDatatypeMapper.classLabelToDatatype(dto.getDataType().getLabel());
+        if (datatype.getClass().equals(BaseDatatype.class)) {
+            return null;
+        }
+        return new URI(datatype.getURI());
     }
 }

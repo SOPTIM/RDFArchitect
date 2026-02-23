@@ -546,6 +546,44 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
         }
 
         @Test
+        @DisplayName("Replaces attributes and removes fixed/default blank nodes of deleted attributes")
+        void replacesAttributes_attributesWithBlankNodes_removesBlankNodes() {
+            //Arrange
+            addGraphFromFile(MULTIPLE_ATTRIBUTES_FILE_PATH);
+            var fixedBlank = NodeFactory.createBlankNode();
+            var defaultBlank = NodeFactory.createBlankNode();
+            executeWriteTransaction(graph -> {
+                graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"), CIMS.isFixed.asNode(), fixedBlank);
+                graph.add(fixedBlank, NodeFactory.createURI(BLANK_NODE_FIXED_PREDICATE), NodeFactory.createLiteralString(URI_FIXED_VALUE));
+                graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"), CIMS.isDefault.asNode(), defaultBlank);
+                graph.add(defaultBlank, NodeFactory.createURI(BLANK_NODE_DEFAULT_PREDICATE), NodeFactory.createLiteralString(IS_DEFAULT_VALUE));
+            });
+
+            CIMAttribute newAttribute = attributeRequired.toBuilder()
+                                                        .uri(new URI(ATTRIBUTE_URI))
+                                                        .label(new RDFSLabel(ATTRIBUTE_LABEL, "en"))
+                                                        .build();
+
+            //Act
+            executeUpdateOnTestGraph(
+                      CIMUpdates.replaceAttributes(
+                                          databasePort.getPrefixMapping(DATASET_NAME),
+                                          GRAPH_URI,
+                                          MY_UUID.toString(),
+                                          List.of(newAttribute))
+                                    );
+
+            //Assert
+            try {
+                testGraph.begin(TxnType.READ);
+                assertThat(testGraph.contains(fixedBlank, Node.ANY, Node.ANY)).isFalse();
+                assertThat(testGraph.contains(defaultBlank, Node.ANY, Node.ANY)).isFalse();
+            } finally {
+                testGraph.end();
+            }
+        }
+
+        @Test
         @DisplayName("Does nothing if class is non-existing and no new attributes have been provided")
         void replacesAttributes_classDoesNotExist_doesNothing() {
             //Arrange

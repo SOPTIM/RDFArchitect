@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
@@ -51,13 +52,13 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraph(graphIdentifier);
-            var cimClass = classMapper.toCIMObject(newClass);
-            AttributeFixedDefaultResolver.apply(graph, cimClass.getAttributes());
             graph.begin(TxnType.WRITE);
+            var cimClass = classMapper.toCIMObject(newClass);
+            AttributeFixedDefaultResolver.apply(ModelFactory.createModelForGraph(graph), cimClass.getAttributes());
             CIMUpdates.replaceClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), cimClass);
             graph.commit();
         } finally {
-            if (graph != null) {
+            if (graph != null && graph.isInTransaction()) {
                 graph.end();
             }
         }
@@ -78,7 +79,7 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             CIMUpdates.insertClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newClass);
             graph.commit();
         } finally {
-            if (graph != null) {
+            if (graph != null && graph.isInTransaction()) {
                 graph.end();
             }
         }
@@ -107,7 +108,7 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             CIMUpdates.deleteClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), classUUID);
             graph.commit();
         } finally {
-            if (graph != null) {
+            if (graph != null && graph.isInTransaction()) {
                 graph.end();
             }
         }

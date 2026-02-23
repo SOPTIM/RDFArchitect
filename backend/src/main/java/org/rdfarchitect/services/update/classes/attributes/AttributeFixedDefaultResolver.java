@@ -18,7 +18,7 @@
 package org.rdfarchitect.services.update.classes.attributes;
 
 import lombok.experimental.UtilityClass;
-import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.datatypes.BaseDatatype;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -46,7 +46,7 @@ import java.util.UUID;
 public class AttributeFixedDefaultResolver {
 
     public void apply(GraphRewindableWithUUIDs graph, CIMAttribute attribute) {
-        if (graph == null || attribute == null) {
+        if (graph == null) {
             return;
         }
         graph.begin(TxnType.READ);
@@ -59,22 +59,20 @@ public class AttributeFixedDefaultResolver {
     }
 
     public void apply(GraphRewindableWithUUIDs graph, List<CIMAttribute> attributes) {
-        if (graph == null || attributes == null || attributes.isEmpty()) {
+        if (graph == null) {
             return;
         }
         graph.begin(TxnType.READ);
         try {
             var model = ModelFactory.createModelForGraph(graph);
-            for (var attribute : attributes) {
-                apply(model, attribute);
-            }
+            apply(model, attributes);
         } finally {
             graph.end();
         }
     }
 
-    private void apply(Model model, CIMAttribute attribute) {
-        if (attribute == null) {
+    public void apply(Model model, CIMAttribute attribute) {
+        if (model == null || attribute == null) {
             return;
         }
         if (attribute.getFixedValue() != null) {
@@ -82,6 +80,15 @@ public class AttributeFixedDefaultResolver {
         }
         if (attribute.getDefaultValue() != null) {
             applyValueMetadata(model, attribute, attribute.getDefaultValue(), CIMS.isDefault);
+        }
+    }
+
+    public void apply(Model model, List<CIMAttribute> attributes) {
+        if (model == null || attributes == null || attributes.isEmpty()) {
+            return;
+        }
+        for (var attribute : attributes) {
+            apply(model, attribute);
         }
     }
 
@@ -94,9 +101,11 @@ public class AttributeFixedDefaultResolver {
         } else {
             applyNewValueDefaults(valueNode);
         }
-        if (!valueNode.isUriValue()) {
-            valueNode.setDataType(resolveFixedDefaultDatatype(model, attribute.getDataType()));
+        if (valueNode.isUriValue()) {
+            valueNode.setDataType(null);
+            return;
         }
+        valueNode.setDataType(resolveFixedDefaultDatatype(model, attribute.getDataType()));
     }
 
     private void applyNewValueDefaults(CIMSValueNode valueNode) {
@@ -105,6 +114,9 @@ public class AttributeFixedDefaultResolver {
         }
         if (AttributeValueConfig.isNewValuesBlankNode() && !valueNode.isBlankNode()) {
             valueNode.setBlankNode(true);
+        }
+        if (valueNode.isBlankNode() && valueNode.getBlankNodePredicate() == null) {
+            valueNode.setBlankNodePredicate(new URI(RDFS.Literal.getURI()));
         }
     }
 
@@ -155,16 +167,13 @@ public class AttributeFixedDefaultResolver {
 
     private URI resolveFixedDefaultDatatype(Model model, CIMSDataType dataType) {
         if (dataType == null || dataType.getUri() == null) {
-            return new URI(XSD.getURI() + "string");
+            return defaultXsdString();
         }
         var dataTypeUri = dataType.getUri().toString();
         if (dataTypeUri.startsWith(XSD.getURI())) {
             return new URI(dataTypeUri);
         }
         var datatypeResource = model.getResource(dataTypeUri);
-        if (datatypeResource == null) {
-            return new URI(XSD.getURI() + "string");
-        }
         if (datatypeResource.hasProperty(CIMS.stereotype, model.createLiteral(CIMStereotypes.primitiveString))) {
             return mapLabelToXsd(extractLabel(datatypeResource));
         }
@@ -205,11 +214,15 @@ public class AttributeFixedDefaultResolver {
             return false;
         }
         var labels = resource.listProperties(RDFS.label);
-        while (labels.hasNext()) {
-            var labelNode = labels.next().getObject();
-            if (labelNode.isLiteral() && "value".equalsIgnoreCase(labelNode.asLiteral().getString())) {
-                return true;
+        try {
+            while (labels.hasNext()) {
+                var labelNode = labels.next().getObject();
+                if (labelNode.isLiteral() && "value".equalsIgnoreCase(labelNode.asLiteral().getString())) {
+                    return true;
+                }
             }
+        } finally {
+            labels.close();
         }
         return false;
     }
@@ -226,24 +239,21 @@ public class AttributeFixedDefaultResolver {
         if (uri == null) {
             return null;
         }
-        return extractSuffix(uri);
-    }
-
-    private String extractSuffix(String uri) {
-        var hashIndex = uri.lastIndexOf('#');
-        var slashIndex = uri.lastIndexOf('/');
-        var splitIndex = Math.max(hashIndex, slashIndex);
-        return splitIndex >= 0 ? uri.substring(splitIndex + 1) : uri;
+        return new URI(uri).getSuffix();
     }
 
     private URI mapLabelToXsd(String label) {
         if (label == null || label.isBlank()) {
-            return new URI(XSD.getURI() + "string");
+            return defaultXsdString();
         }
         var rdfDatatype = XSDDatatypeMapper.classLabelToDatatype(label);
-        if (TypeMapper.getInstance().getTypeByName(rdfDatatype.getURI()) == null) {
-            return new URI(XSD.getURI() + "string");
+        if (rdfDatatype.getClass().equals(BaseDatatype.class)) {
+            return defaultXsdString();
         }
         return new URI(rdfDatatype.getURI());
+    }
+
+    private URI defaultXsdString() {
+        return new URI(XSD.xstring.getURI());
     }
 }
