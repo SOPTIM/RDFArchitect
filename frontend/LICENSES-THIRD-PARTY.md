@@ -68,7 +68,7 @@
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.2.0
+- **Version:** 4.2.1
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.56.0
+- **Version:** 8.56.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -185,7 +185,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.53.2
+- **Version:** 5.53.3
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -197,7 +197,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.4.1
+- **Version:** 1.5.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -215,13 +215,13 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.2.0
+- **Version:** 4.2.1
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.56.0
+- **Version:** 8.56.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
