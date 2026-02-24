@@ -32,7 +32,7 @@
 
 ### JetBrains Java Annotations
 - **Package:** org.jetbrains
-- **Version:** 26.0.2-1
+- **Version:** 26.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/JetBrains/java-annotations](https://github.com/JetBrains/java-annotations)
 
@@ -44,43 +44,43 @@
 
 ### spring-boot-starter
 - **Package:** org.springframework.boot
-- **Version:** 4.0.2
+- **Version:** 4.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-log4j2
 - **Package:** org.springframework.boot
-- **Version:** 4.0.2
+- **Version:** 4.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-test
 - **Package:** org.springframework.boot
-- **Version:** 4.0.2
+- **Version:** 4.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-thymeleaf
 - **Package:** org.springframework.boot
-- **Version:** 4.0.2
+- **Version:** 4.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webflux
 - **Package:** org.springframework.boot
-- **Version:** 4.0.2
+- **Version:** 4.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webmvc
 - **Package:** org.springframework.boot
-- **Version:** 4.0.2
+- **Version:** 4.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-session-core
 - **Package:** org.springframework.session
-- **Version:** 4.0.1
+- **Version:** 4.0.2
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-session](https://spring.io/projects/spring-session)
 
