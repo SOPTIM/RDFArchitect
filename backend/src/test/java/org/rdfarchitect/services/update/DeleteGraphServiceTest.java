@@ -17,29 +17,61 @@
 
 package org.rdfarchitect.services.update;
 
+import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.update.graph.DeleteGraphService;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.nio.charset.StandardCharsets;
 
 import static org.mockito.Mockito.*;
 
 class DeleteGraphServiceTest {
 
     private DeleteGraphService deleteGraphService;
-    private DatabasePort mockDatabasePortMock;
+    private DatabasePort mockDatabasePort;
 
     @BeforeEach
     void setUp() {
-        mockDatabasePortMock = mock(DatabasePort.class);
-        deleteGraphService = new DeleteGraphService(mockDatabasePortMock);
+        mockDatabasePort = mock(DatabasePort.class);
+        deleteGraphService = new DeleteGraphService(mockDatabasePort);
     }
 
     @Test
     void deleteGraph_callsDeleteGraph() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
         deleteGraphService.deleteGraph(graphIdentifier);
-        verify(mockDatabasePortMock).deleteGraph(graphIdentifier);
+        verify(mockDatabasePort).deleteGraph(graphIdentifier);
+    }
+
+    @Test
+    void replaceGraph_callsDeleteAndCreateGraph() {
+        var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
+        var mockFile = new MockMultipartFile(
+                "graph.ttl",
+                "graph.ttl",
+                "text/turtle",
+                "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                        .getBytes(StandardCharsets.UTF_8)
+        );
+
+        deleteGraphService.replaceGraph(graphIdentifier, mockFile);
+
+        verify(mockDatabasePort).deleteGraph(graphIdentifier);
+        verify(mockDatabasePort).createGraph(eq(graphIdentifier), any(Graph.class));
+    }
+
+    @Test
+    void replaceGraph_withoutFile_createsEmptyGraph() {
+        var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
+
+        deleteGraphService.replaceGraph(graphIdentifier, null);
+
+        verify(mockDatabasePort).deleteGraph(graphIdentifier);
+        verify(mockDatabasePort).createEmptyGraph(graphIdentifier);
+        verify(mockDatabasePort, never()).createGraph(any(), any());
     }
 }

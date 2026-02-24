@@ -26,6 +26,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.mock.web.MockMultipartFile;
@@ -112,7 +113,12 @@ public class CIMUpdatesTestBase {
             throw new RuntimeException(e);
         }
         var file = new MockMultipartFile(fileName, fileName, "text/turtle", content);
-        databasePort.createGraph(graphIdentifier, file);
+        var graph = new GraphFileSourceBuilderImpl()
+                .setFile(file)
+                .setGraphName(graphIdentifier.getGraphUri())
+                .build()
+                .graph();
+        databasePort.createGraph(graphIdentifier, graph);
         testGraph = databasePort.getGraph(graphIdentifier);
     }
 

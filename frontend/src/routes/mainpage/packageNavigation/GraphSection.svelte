@@ -415,8 +415,8 @@
             >
                 Redo
             </ContextMenu.Item.Button>
-            <ContextMenu.Separator />
             {#if !readOnly}
+                <ContextMenu.Separator />
                 {#if ontology}
                     <ContextMenu.Item.Button
                         onSelect={() => {

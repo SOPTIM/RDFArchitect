@@ -16,7 +16,10 @@
   -->
 
 <script>
-    import { faFileImport } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faDiagramProject,
+        faFileImport,
+    } from "@fortawesome/free-solid-svg-icons";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -26,11 +29,13 @@
     import DatasetSection from "./DatasetSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
     import ImportDialog from "../../ImportDialog.svelte";
+    import NewGraphDialog from "../../NewGraphDialog.svelte";
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let datasetList = $state([]);
     let initialDatasetsLoaded = $state(false);
     let showImportDialog = $state(false);
+    let showNewGraphDialog = $state(false);
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -94,6 +99,12 @@
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
             <ContextMenu.Item.Button
+                onSelect={() => (showNewGraphDialog = true)}
+                faIcon={faDiagramProject}
+            >
+                Add graph
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
                 onSelect={() => (showImportDialog = true)}
                 faIcon={faFileImport}
             >
@@ -101,5 +112,6 @@
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
         <ImportDialog bind:showDialog={showImportDialog} />
+        <NewGraphDialog bind:showDialog={showNewGraphDialog} />
     </ContextMenu.Root>
 </div>

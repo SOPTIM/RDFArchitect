@@ -18,20 +18,25 @@
 package org.rdfarchitect.database.inmemory;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.sparql.graph.GraphFactory;
+import org.rdfarchitect.cim.rdf.resources.CIM;
+import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
 
 @RequiredArgsConstructor
 public class InMemoryDatabaseAdapter implements DatabasePort {
+
+    private static final String CIM_PREFIX = "cim";
+    private static final String CIMS_PREFIX = "cims";
 
     private final InMemoryDatabase database;
 
@@ -51,16 +56,26 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public void createGraph(GraphIdentifier graphIdentifier, MultipartFile file) {
-        var graphSource = new GraphFileSourceBuilderImpl()
-                  .setFile(file)
-                  .setGraphName(graphIdentifier.getGraphUri())
-                  .build();
-        database.create(graphIdentifier, graphSource.graph());
+    public void createGraph(GraphIdentifier graphIdentifier, Graph graph) {
+        database.create(graphIdentifier, graph);
         var currentPrefixMapping = new PrefixMappingImpl()
                   .setNsPrefixes(database.getPrefixMapping(graphIdentifier.getDatasetName()))
-                  .setNsPrefixes(graphSource.graph().getPrefixMapping());
+                  .setNsPrefixes(graph.getPrefixMapping());
         database.setPrefixMapping(graphIdentifier.getDatasetName(), currentPrefixMapping);
+    }
+
+    @Override
+    public void createEmptyGraph(GraphIdentifier graphIdentifier) {
+        var datasetName = graphIdentifier.getDatasetName();
+        var isNewDataset = !database.listDatasets().contains(datasetName);
+        database.create(graphIdentifier, GraphFactory.createDefaultGraph());
+        if (isNewDataset) {
+            var prefixMapping = new PrefixMappingImpl()
+                      .setNsPrefixes(PrefixMapping.Standard)
+                      .setNsPrefix(CIM_PREFIX, CIM.namespace)
+                      .setNsPrefix(CIMS_PREFIX, CIMS.namespace);
+            database.setPrefixMapping(graphIdentifier.getDatasetName(), prefixMapping);
+        }
     }
 
     @Override

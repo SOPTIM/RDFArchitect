@@ -18,6 +18,7 @@
 <script>
     import {
         faCube,
+        faDiagramProject,
         faLock,
         faPlus,
         faFolderPlus,
@@ -48,6 +49,7 @@
     import PackageDeleteDialog from "../../mainpage/packageNavigation/PackageDeleteDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
+    import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
 
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
@@ -55,6 +57,7 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let showNewClassDialog = $state(false);
+    let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
     let showFilterViewDialog = $state(false);
     let showPackageDeleteDialog = $state(false);
@@ -219,17 +222,21 @@
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
                     onSelect={() => (showNewClassDialog = true)}
-                    disabled={isDatasetReadOnly}
                     faIcon={faCube}
                 >
                     Class
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showNewPackageDialog = true)}
-                    disabled={isDatasetReadOnly}
                     faIcon={faFolderPlus}
                 >
                     Package
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => (showNewGraphDialog = true)}
+                    faIcon={faDiagramProject}
+                >
+                    Graph
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -339,6 +346,7 @@
 </Menubar.Menu>
 
 <NewClassDialog bind:showDialog={showNewClassDialog} />
+<NewGraphDialog bind:showDialog={showNewGraphDialog} />
 <NewPackageDialog bind:showDialog={showNewPackageDialog} />
 {#if packageDialogTarget && showPackageEditorDialog}
     <PackageEditorDialog

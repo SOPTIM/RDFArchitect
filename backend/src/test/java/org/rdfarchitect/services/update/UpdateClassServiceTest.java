@@ -34,6 +34,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,7 +69,11 @@ class UpdateClassServiceTest {
         var mockChangeLogService = mock(ChangeLogService.class);
         updateClassService = new UpdateClassService(databasePort, classMapper, packageMapper, mockChangeLogService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
-        databasePort.createGraph(graphIdentifier, file);
+        var graphSource = new GraphFileSourceBuilderImpl()
+                  .setFile(file)
+                  .setGraphName(graphIdentifier.getGraphUri())
+                  .build();
+        databasePort.createGraph(graphIdentifier, graphSource.graph());
     }
 
     @Test
