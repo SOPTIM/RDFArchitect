@@ -28,8 +28,8 @@
     import { goto } from "$app/navigation";
 
     const externalResources = {
-        help: "https://github.com/SOPTIM/rdfarchitect#readme",
-        feedback: "https://github.com/SOPTIM/rdfarchitect/issues/new/choose",
+        help: "https://github.com/SOPTIM/RDFArchitect#readme",
+        feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
 
     function openExternalResource(key) {
