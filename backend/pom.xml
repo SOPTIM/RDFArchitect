@@ -22,7 +22,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.soptim.rdfa</groupId>
     <artifactId>rdf-architect-backend</artifactId>
-    <version>0.13.0</version>
+    <version>0.14.0</version>
     <packaging>jar</packaging>
     <properties>
         <maven.compiler.release>25</maven.compiler.release>

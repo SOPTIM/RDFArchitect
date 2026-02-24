@@ -33,7 +33,7 @@ import org.springframework.boot.web.server.servlet.context.ServletComponentScan;
 @OpenAPIDefinition(
           info = @Info(
                     title = "RDFArchitect backend",
-                    version = "0.13.0",
+                    version = "0.14.0",
                     description = "This API provides utilities for editing RDFGraphs that model UML classes using the CIM standard.",
                     license = @License(name = "Apache License 2.0", url = "https://www.apache.org/licenses/LICENSE-2.0"),
                     contact = @Contact(url = "https://www.soptim.de/", name = "soptim")
