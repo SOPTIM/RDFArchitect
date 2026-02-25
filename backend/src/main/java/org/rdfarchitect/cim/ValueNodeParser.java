@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.cim;
 
+import org.apache.jena.rdf.model.Model;
 import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
@@ -33,6 +34,10 @@ public class ValueNodeParser {
     }
 
     public ParsedValue parse(RDFNode node) {
+        return parse(node, null);
+    }
+
+    public ParsedValue parse(RDFNode node, Model lookupModel) {
         Objects.requireNonNull(node, "value node must not be null");
         if (node.isLiteral()) {
             return parseLiteral(node);
@@ -41,9 +46,16 @@ public class ValueNodeParser {
             throw new IllegalArgumentException("Invalid value node shape: URI resources are not allowed for fixed/default values");
         }
         if (node.isAnon()) {
-            return parseBlankNode(node.asResource());
+            return parseBlankNode(resolveResource(node, lookupModel));
         }
         throw new IllegalArgumentException("Invalid value node shape: expected literal or blank node");
+    }
+
+    private Resource resolveResource(RDFNode node, Model lookupModel) {
+        if (lookupModel == null) {
+            return node.asResource();
+        }
+        return lookupModel.asRDFNode(node.asNode()).asResource();
     }
 
     private ParsedValue parseBlankNode(Resource resource) {

@@ -24,6 +24,7 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.cim.data.dto.CIMAssociationPair;
@@ -145,7 +146,14 @@ public class CIMObjectFetcher {
      * @return List of {@link CIMAttribute CIMAttributes}.
      */
     public List<CIMAttribute> fetchCIMAttributeList(Query query) {
-        return executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
+        return executeQueryForList(query, resultSet -> CIMObjectFactory.createCIMAttributeList(resultSet, getQueryModel()));
+    }
+
+    private Model getQueryModel() {
+        if (graphURI == null || graphURI.equals("default")) {
+            return dataset.getDefaultModel();
+        }
+        return dataset.getNamedModel(graphURI);
     }
 
     /**

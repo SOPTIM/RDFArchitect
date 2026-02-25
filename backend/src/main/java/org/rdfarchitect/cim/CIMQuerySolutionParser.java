@@ -19,6 +19,7 @@ package org.rdfarchitect.cim;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QuerySolution;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.cim.data.dto.relations.CIMSInverseRoleName;
@@ -43,6 +44,7 @@ import java.util.UUID;
 public class CIMQuerySolutionParser {
 
     private final QuerySolution qs;
+    private final Model valueNodeModel;
 
     /**
      * Creates a new {@link CIMQuerySolutionParser} with the given {@link QuerySolution}.
@@ -50,7 +52,12 @@ public class CIMQuerySolutionParser {
      * @param qs The query solution to parse.
      */
     public CIMQuerySolutionParser(QuerySolution qs) {
+        this(qs, null);
+    }
+
+    public CIMQuerySolutionParser(QuerySolution qs, Model valueNodeModel) {
         this.qs = qs;
+        this.valueNodeModel = valueNodeModel;
     }
 
     /**
@@ -178,7 +185,7 @@ public class CIMQuerySolutionParser {
             return null;
         }
         var isDefaultRDFNode = qs.get(isDefaultVar);
-        var parsedValue = ValueNodeParser.parse(isDefaultRDFNode);
+        var parsedValue = ValueNodeParser.parse(isDefaultRDFNode, valueNodeModel);
         return new CIMSIsDefault(
                 parsedValue.value(),
                 parsedValue.dataType(),
@@ -198,7 +205,7 @@ public class CIMQuerySolutionParser {
             return null;
         }
         var isFixedRDFNode = qs.get(isFixedVar);
-        var parsedValue = ValueNodeParser.parse(isFixedRDFNode);
+        var parsedValue = ValueNodeParser.parse(isFixedRDFNode, valueNodeModel);
         return new CIMSIsFixed(
                 parsedValue.value(),
                 parsedValue.dataType(),
