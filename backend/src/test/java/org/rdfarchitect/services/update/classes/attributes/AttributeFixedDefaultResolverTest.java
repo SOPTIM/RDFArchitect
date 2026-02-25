@@ -144,6 +144,34 @@ class AttributeFixedDefaultResolverTest {
     }
 
     @Test
+    void apply_rejectsMultipleIsFixedStatementsForSingleAttribute() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var model = ModelFactory.createModelForGraph(graph);
+        var attributeUuid = UUID.randomUUID();
+        graph.begin(TxnType.WRITE);
+        try {
+            var attributeResource = model.createResource("http://example.com#Class.attribute");
+            attributeResource.addProperty(RDFA.uuid, attributeUuid.toString());
+            attributeResource.addProperty(CIMS.isFixed, model.createLiteral("fixedValueA"));
+            attributeResource.addProperty(CIMS.isFixed, model.createLiteral("fixedValueB"));
+
+            var cimAttribute = CIMAttribute.builder()
+                                           .uuid(attributeUuid)
+                                           .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                      new RDFSLabel("string", "en"),
+                                                                      CIMSDataType.Type.PRIMITIVE))
+                                           .fixedValue(new CIMSIsFixed("fixedValue"))
+                                           .build();
+
+            assertThatThrownBy(() -> AttributeFixedDefaultResolver.apply(graph, cimAttribute))
+                      .isInstanceOf(IllegalArgumentException.class)
+                      .hasMessageContaining("exactly one isFixed statement");
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
     void apply_rejectsBlankNodeWithWrongPredicate() {
         var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
         var model = ModelFactory.createModelForGraph(graph);
@@ -199,6 +227,28 @@ class AttributeFixedDefaultResolverTest {
         } finally {
             graph.end();
         }
+    }
+
+    @Test
+    void apply_canonicalizesNonCanonicalXsdDatatypeUri() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var cimAttribute = CIMAttribute.builder()
+                                       .uuid(UUID.randomUUID())
+                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "String"),
+                                                                  new RDFSLabel("String", "en"),
+                                                                  CIMSDataType.Type.PRIMITIVE))
+                                       .fixedValue(new CIMSIsFixed("fixedValue"))
+                                       .build();
+
+        graph.begin(TxnType.WRITE);
+        try {
+            AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+            graph.commit();
+        } finally {
+            graph.end();
+        }
+
+        assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"));
     }
 
     @Test

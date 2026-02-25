@@ -243,7 +243,7 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                               NodeFactory.createLiteralString(IS_FIXED_VALUE))).isTrue();
                 assertThat(testGraph.contains(defaultBlank,
                                               RDFS.Literal.asNode(),
-                                              NodeFactory.createLiteral(IS_DEFAULT_VALUE))).isTrue();
+                                              NodeFactory.createLiteralString(IS_DEFAULT_VALUE))).isTrue();
             } finally {
                 testGraph.end();
             }

@@ -18,9 +18,10 @@
 package org.rdfarchitect.services.update.classes.attributes;
 
 import lombok.experimental.UtilityClass;
-import org.apache.jena.datatypes.BaseDatatype;
+import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
@@ -79,7 +80,7 @@ public class AttributeFixedDefaultResolver {
         }
     }
 
-    private void applyValueMetadata(Model model, CIMAttribute attribute, AttributeValueNode valueNode, org.apache.jena.rdf.model.Property predicate) {
+    private void applyValueMetadata(Model model, CIMAttribute attribute, AttributeValueNode valueNode, Property predicate) {
         var metadata = readExistingValueMetadata(model, attribute.getUuid(), predicate);
         if (metadata != null) {
             valueNode.setBlankNode(metadata.blankNode());
@@ -101,12 +102,26 @@ public class AttributeFixedDefaultResolver {
     private record ExistingValueMetadata(boolean blankNode) {
     }
 
-    private ExistingValueMetadata readExistingValueMetadata(Model model, UUID attributeUuid, org.apache.jena.rdf.model.Property predicate) {
+    private ExistingValueMetadata readExistingValueMetadata(Model model, UUID attributeUuid, Property predicate) {
         var attributeResource = findAttributeResource(model, attributeUuid);
         if (attributeResource == null) {
             return null;
         }
-        Statement stmt = attributeResource.getProperty(predicate);
+        Statement stmt = null;
+        var valueStatements = attributeResource.listProperties(predicate);
+        try {
+            while (valueStatements.hasNext()) {
+                if (stmt != null) {
+                    throw new IllegalArgumentException(
+                              "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                        ": attribute must contain exactly one " + predicate.getLocalName() + " statement"
+                    );
+                }
+                stmt = valueStatements.next();
+            }
+        } finally {
+            valueStatements.close();
+        }
         if (stmt == null) {
             return null;
         }
@@ -180,7 +195,7 @@ public class AttributeFixedDefaultResolver {
         }
         var dataTypeUri = dataType.getUri().toString();
         if (dataTypeUri.startsWith(XSD.getURI())) {
-            return new URI(dataTypeUri);
+            return mapLabelToXsd(new URI(dataTypeUri).getSuffix());
         }
         var datatypeResource = model.getResource(dataTypeUri);
         if (datatypeResource.hasProperty(CIMS.stereotype, model.createLiteral(CIMStereotypes.primitiveString))) {
@@ -256,7 +271,7 @@ public class AttributeFixedDefaultResolver {
             return defaultXsdString();
         }
         var rdfDatatype = XSDDatatypeMapper.classLabelToDatatype(label);
-        if (rdfDatatype.getClass().equals(BaseDatatype.class)) {
+        if (TypeMapper.getInstance().getTypeByName(rdfDatatype.getURI()) == null) {
             return defaultXsdString();
         }
         return new URI(rdfDatatype.getURI());
