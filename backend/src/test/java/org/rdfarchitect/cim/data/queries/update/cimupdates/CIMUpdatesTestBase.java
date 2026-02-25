@@ -113,16 +113,6 @@ public class CIMUpdatesTestBase {
             throw new RuntimeException(e);
         }
         var file = new MockMultipartFile(fileName, fileName, "text/turtle", content);
-        /*TODO
-                   var graph = new GraphFileSourceBuilderImpl()
-                            .setFile(file)
-                            .setGraphName(graphIdentifier.getGraphUri())
-                            .build()
-                            .graph();
-                    databasePort.createGraph(graphIdentifier, graph);
-                    testGraph = databasePort.getGraph(graphIdentifier);
-                }
-        */
         var graph = new GraphFileSourceBuilderImpl()
                         .setFile(file)
                         .setGraphName(graphIdentifier.getGraphUri())

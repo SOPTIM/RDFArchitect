@@ -231,21 +231,6 @@ public class GraphWithContextCollection {
         }
     }
 
-/*TODO IDK
-        **
-         * Clears undo/redo history for all graphs while keeping their current state.
-         *
-        public void resetHistory() {
-            lock.lock();
-            try {
-                graphs.values().forEach(graphWithContext ->
-                                                  graphWithContext.getRdfGraph().resetHistory()
-                                       );
-            } finally {
-                lock.unlock();
-            }
-        }*/
-
     /**
      * Lists all names of the {@link GraphRewindableWithUUIDs}.
      *

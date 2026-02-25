@@ -41,8 +41,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-
-//TODO imports wieder
 @RestController
 @RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/rendering")
 @RequiredArgsConstructor

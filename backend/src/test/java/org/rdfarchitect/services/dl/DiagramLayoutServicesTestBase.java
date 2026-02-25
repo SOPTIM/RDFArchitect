@@ -32,6 +32,7 @@ import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
@@ -85,7 +86,12 @@ public class DiagramLayoutServicesTestBase {
             throw new RuntimeException(e);
         }
         var file = new MockMultipartFile(fileName, fileName, "text/turtle", content);
-        databasePort.createGraph(graphIdentifier, file);
+        var graph = new GraphFileSourceBuilderImpl()
+                  .setFile(file)
+                  .setGraphName(graphIdentifier.getGraphUri())
+                  .build()
+                  .graph();
+        databasePort.createGraph(graphIdentifier, graph);
         databasePort.getGraphWithContext(graphIdentifier).setDiagramLayout(diagramLayout);
     }
 
