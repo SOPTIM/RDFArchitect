@@ -19,14 +19,11 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.database.inmemory.GraphWithContext;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.UUID;
 
-//TODO die imports oben vllt
 
 public interface DatabasePort {
 

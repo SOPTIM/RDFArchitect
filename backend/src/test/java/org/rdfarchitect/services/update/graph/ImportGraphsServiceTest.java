@@ -24,8 +24,10 @@ import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
@@ -45,8 +47,9 @@ class ImportGraphsServiceTest {
     @BeforeEach
     void setUp() {
         changeLogUseCaseMock = mock(ChangeLogUseCase.class);
+        var createDiagramLayoutUseCaseMock = mock(CreateDiagramLayoutUseCase.class);
         databasePortMock = mock(DatabasePort.class);
-        importGraphsUseCase = new ImportGraphsService(changeLogUseCaseMock, databasePortMock);
+        importGraphsUseCase = new ImportGraphsService(changeLogUseCaseMock, createDiagramLayoutUseCaseMock, databasePortMock);
     }
 
     @Test
@@ -69,8 +72,10 @@ class ImportGraphsServiceTest {
         when(databasePortMock.listGraphUris(datasetName))
                   .thenThrow(new RuntimeException("dataset does not exist"));
 
+        var graphWithContextMock = mock(GraphWithContext.class);
+        when(databasePortMock.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(graphWithContextMock);
         var graphMock = mock(GraphRewindableWithUUIDs.class, RETURNS_DEEP_STUBS);
-        when(databasePortMock.getGraph(any(GraphIdentifier.class))).thenReturn(graphMock);
+        when(graphWithContextMock.getRdfGraph()).thenReturn(graphMock);
 
         var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
 

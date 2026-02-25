@@ -34,7 +34,6 @@ import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseC
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-//TODO imports
 import java.io.*;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -49,9 +48,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportGraphsService.class);
     private final ChangeLogUseCase changeLogUseCase;
-
-    private final DatabasePort databasePort;
     private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
+    private final DatabasePort databasePort;
 
     private static final String FALL_BACK_NAME = "graph";
 
@@ -80,7 +78,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             changeLogUseCase.recordChange(
                       graphIdentifier,
                       new ChangeLogEntry("Imported graph into dataset '" + datasetName + "' with graph URI '"
-                                                   + graphUri + "'.", databasePort.getGraph(graphIdentifier).getLastDelta())
+                                                   + graphUri + "'.", databasePort.getGraphWithContext(graphIdentifier).getRdfGraph().getLastDelta())
                                          );
         }
         return importedGraphUris;
