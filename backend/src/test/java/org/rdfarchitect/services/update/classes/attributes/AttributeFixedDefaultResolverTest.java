@@ -20,6 +20,7 @@ package org.rdfarchitect.services.update.classes.attributes;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.cim.data.dto.CIMAttribute;
@@ -35,8 +36,10 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 class AttributeFixedDefaultResolverTest {
 
@@ -51,39 +54,34 @@ class AttributeFixedDefaultResolverTest {
             attributeResource.addProperty(RDFA.uuid, attributeUuid.toString());
 
             var fixedBlank = model.createResource();
+            fixedBlank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createLiteral("fixedValue"));
             attributeResource.addProperty(CIMS.isFixed, fixedBlank);
-            fixedBlank.addProperty(model.createProperty("http://example.com#fixedPredicate"),
-                                   model.createResource("http://example.com#fixedValue"));
 
             var defaultBlank = model.createResource();
+            defaultBlank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createLiteral("defaultValue"));
             attributeResource.addProperty(CIMS.isDefault, defaultBlank);
-            defaultBlank.addProperty(model.createProperty("http://example.com#defaultPredicate"),
-                                     model.createLiteral("defaultValue"));
+
+            var cimAttribute = CIMAttribute.builder()
+                                           .uuid(attributeUuid)
+                                           .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                      new RDFSLabel("string", "en"),
+                                                                      CIMSDataType.Type.PRIMITIVE))
+                                           .fixedValue(new CIMSIsFixed("fixedValue"))
+                                           .defaultValue(new CIMSIsDefault("defaultValue"))
+                                           .build();
+
+            AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+
+            assertAll(
+                      () -> assertThat(cimAttribute.getFixedValue().isBlankNode()).isTrue(),
+                      () -> assertThat(cimAttribute.getDefaultValue().isBlankNode()).isTrue(),
+                      () -> assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string")),
+                      () -> assertThat(cimAttribute.getDefaultValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"))
+                     );
             graph.commit();
         } finally {
             graph.end();
         }
-
-        var cimAttribute = CIMAttribute.builder()
-                                       .uuid(attributeUuid)
-                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
-                                                                  new RDFSLabel("string", "en"),
-                                                                  CIMSDataType.Type.PRIMITIVE))
-                                       .fixedValue(new CIMSIsFixed("http://example.com#fixedValue"))
-                                       .defaultValue(new CIMSIsDefault("defaultValue"))
-                                       .build();
-
-        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
-
-        assertAll(
-                  () -> assertThat(cimAttribute.getFixedValue().isBlankNode()).isTrue(),
-                  () -> assertThat(cimAttribute.getFixedValue().isUriValue()).isTrue(),
-                  () -> assertThat(cimAttribute.getFixedValue().getBlankNodePredicate()).isEqualTo(new URI("http://example.com#fixedPredicate")),
-                  () -> assertThat(cimAttribute.getDefaultValue().isBlankNode()).isTrue(),
-                  () -> assertThat(cimAttribute.getDefaultValue().isUriValue()).isFalse(),
-                  () -> assertThat(cimAttribute.getDefaultValue().getBlankNodePredicate()).isEqualTo(new URI("http://example.com#defaultPredicate")),
-                  () -> assertThat(cimAttribute.getDefaultValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"))
-                 );
     }
 
     @Test
@@ -101,13 +99,17 @@ class AttributeFixedDefaultResolverTest {
                                            .defaultValue(new CIMSIsDefault("defaultValue"))
                                            .build();
 
-            AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+            graph.begin(TxnType.WRITE);
+            try {
+                AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+                graph.commit();
+            } finally {
+                graph.end();
+            }
 
             assertAll(
                       () -> assertThat(cimAttribute.getFixedValue().isBlankNode()).isTrue(),
-                      () -> assertThat(cimAttribute.getDefaultValue().isBlankNode()).isTrue(),
-                      () -> assertThat(cimAttribute.getFixedValue().getBlankNodePredicate()).isEqualTo(new URI("http://www.w3.org/2000/01/rdf-schema#Literal")),
-                      () -> assertThat(cimAttribute.getDefaultValue().getBlankNodePredicate()).isEqualTo(new URI("http://www.w3.org/2000/01/rdf-schema#Literal"))
+                      () -> assertThat(cimAttribute.getDefaultValue().isBlankNode()).isTrue()
                      );
         } finally {
             config.setNewValuesBlankNode(false);
@@ -115,26 +117,88 @@ class AttributeFixedDefaultResolverTest {
     }
 
     @Test
-    void apply_uriValueDoesNotKeepDatatype() {
+    void apply_rejectsDirectUriValueMetadata() {
         var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
-        var cimAttribute = CIMAttribute.builder()
-                                       .uuid(UUID.randomUUID())
-                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
-                                                                  new RDFSLabel("string", "en"),
-                                                                  CIMSDataType.Type.PRIMITIVE))
-                                       .fixedValue(new CIMSIsFixed("http://example.com#value",
-                                                                   new URI(XSD.integer.getURI()),
-                                                                   false,
-                                                                   null,
-                                                                   true))
-                                       .build();
+        var model = ModelFactory.createModelForGraph(graph);
+        var attributeUuid = UUID.randomUUID();
+        graph.begin(TxnType.WRITE);
+        try {
+            var attributeResource = model.createResource("http://example.com#Class.attribute");
+            attributeResource.addProperty(RDFA.uuid, attributeUuid.toString());
+            attributeResource.addProperty(CIMS.isFixed, model.createResource("http://example.com#fixedUri"));
 
-        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+            var cimAttribute = CIMAttribute.builder()
+                                           .uuid(attributeUuid)
+                                           .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                      new RDFSLabel("string", "en"),
+                                                                      CIMSDataType.Type.PRIMITIVE))
+                                           .fixedValue(new CIMSIsFixed("fixedValue"))
+                                           .build();
 
-        assertAll(
-                  () -> assertThat(cimAttribute.getFixedValue().isUriValue()).isTrue(),
-                  () -> assertThat(cimAttribute.getFixedValue().getDataType()).isNull()
-                 );
+            assertThatThrownBy(() -> AttributeFixedDefaultResolver.apply(graph, cimAttribute))
+                      .isInstanceOf(IllegalArgumentException.class)
+                      .hasMessageContaining("URI resources are not allowed");
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void apply_rejectsBlankNodeWithWrongPredicate() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var model = ModelFactory.createModelForGraph(graph);
+        var attributeUuid = UUID.randomUUID();
+        graph.begin(TxnType.WRITE);
+        try {
+            var attributeResource = model.createResource("http://example.com#Class.attribute");
+            attributeResource.addProperty(RDFA.uuid, attributeUuid.toString());
+            var fixedBlank = model.createResource();
+            fixedBlank.addProperty(model.createProperty("http://example.com#predicate"), model.createLiteral("fixedValue"));
+            attributeResource.addProperty(CIMS.isFixed, fixedBlank);
+
+            var cimAttribute = CIMAttribute.builder()
+                                           .uuid(attributeUuid)
+                                           .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                      new RDFSLabel("string", "en"),
+                                                                      CIMSDataType.Type.PRIMITIVE))
+                                           .fixedValue(new CIMSIsFixed("fixedValue"))
+                                           .build();
+
+            assertThatThrownBy(() -> AttributeFixedDefaultResolver.apply(graph, cimAttribute))
+                      .isInstanceOf(IllegalArgumentException.class)
+                      .hasMessageContaining("predicate must be rdfs:Literal");
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void apply_rejectsBlankNodeWithNonLiteralObject() {
+        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
+        var model = ModelFactory.createModelForGraph(graph);
+        var attributeUuid = UUID.randomUUID();
+        graph.begin(TxnType.WRITE);
+        try {
+            var attributeResource = model.createResource("http://example.com#Class.attribute");
+            attributeResource.addProperty(RDFA.uuid, attributeUuid.toString());
+            var fixedBlank = model.createResource();
+            fixedBlank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createResource("http://example.com#fixedUri"));
+            attributeResource.addProperty(CIMS.isFixed, fixedBlank);
+
+            var cimAttribute = CIMAttribute.builder()
+                                           .uuid(attributeUuid)
+                                           .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
+                                                                      new RDFSLabel("string", "en"),
+                                                                      CIMSDataType.Type.PRIMITIVE))
+                                           .fixedValue(new CIMSIsFixed("fixedValue"))
+                                           .build();
+
+            assertThatThrownBy(() -> AttributeFixedDefaultResolver.apply(graph, cimAttribute))
+                      .isInstanceOf(IllegalArgumentException.class)
+                      .hasMessageContaining("object must be a literal");
+        } finally {
+            graph.end();
+        }
     }
 
     @Test
@@ -148,7 +212,13 @@ class AttributeFixedDefaultResolverTest {
                                        .fixedValue(new CIMSIsFixed("fixedValue"))
                                        .build();
 
-        AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+        graph.begin(TxnType.WRITE);
+        try {
+            AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+            graph.commit();
+        } finally {
+            graph.end();
+        }
 
         assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"));
     }
@@ -178,27 +248,5 @@ class AttributeFixedDefaultResolverTest {
                   () -> assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string")),
                   () -> assertThat(cimAttribute.getDefaultValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"))
                  );
-    }
-
-    @Test
-    void apply_graphOverloadWorksInsideOpenTransaction() {
-        var graph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 5, 1);
-        var cimAttribute = CIMAttribute.builder()
-                                       .uuid(UUID.randomUUID())
-                                       .dataType(new CIMSDataType(new URI(XSD.getURI() + "string"),
-                                                                  new RDFSLabel("string", "en"),
-                                                                  CIMSDataType.Type.PRIMITIVE))
-                                       .fixedValue(new CIMSIsFixed("fixedValue"))
-                                       .build();
-
-        graph.begin(TxnType.WRITE);
-        try {
-            assertThatCode(() -> AttributeFixedDefaultResolver.apply(graph, cimAttribute)).doesNotThrowAnyException();
-            graph.commit();
-        } finally {
-            graph.end();
-        }
-
-        assertThat(cimAttribute.getFixedValue().getDataType()).isEqualTo(new URI(XSD.getURI() + "string"));
     }
 }

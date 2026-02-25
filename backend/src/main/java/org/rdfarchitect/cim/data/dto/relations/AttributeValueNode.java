@@ -23,7 +23,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.Literal;
-import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 
@@ -38,21 +37,10 @@ public abstract class AttributeValueNode {
 
     private boolean blankNode;
 
-    private URI blankNodePredicate;
-
-    private boolean uriValue;
-
     public Literal asLiteral() {
         if (dataType == null) {
             return ResourceFactory.createPlainLiteral(value);
         }
         return ResourceFactory.createTypedLiteral(value, TypeMapper.getInstance().getSafeTypeByName(dataType.toString()));
-    }
-
-    public RDFNode asRdfNode() {
-        if (uriValue) {
-            return ResourceFactory.createResource(value);
-        }
-        return asLiteral();
     }
 }

@@ -28,14 +28,14 @@ import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 public class CIMSIsDefault extends AttributeValueNode {
 
     public CIMSIsDefault(String value) {
-        this(value, null, false, null, false);
+        this(value, null, false);
     }
 
     public CIMSIsDefault(String value, URI dataType) {
-        this(value, dataType, false, null, false);
+        this(value, dataType, false);
     }
 
-    public CIMSIsDefault(String value, URI dataType, boolean blankNode, URI blankNodePredicate, boolean uriValue) {
-        super(value, dataType, blankNode, blankNodePredicate, uriValue);
+    public CIMSIsDefault(String value, URI dataType, boolean blankNode) {
+        super(value, dataType, blankNode);
     }
 }

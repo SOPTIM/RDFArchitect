@@ -21,63 +21,61 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.Statement;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+
+import java.util.Objects;
 
 @UtilityClass
 public class ValueNodeParser {
 
-    public record ParsedValue(String value, URI dataType, boolean blankNode, URI blankNodePredicate, boolean uriValue) {
+    public record ParsedValue(String value, URI dataType, boolean blankNode) {
     }
 
     public ParsedValue parse(RDFNode node) {
-        if (node == null) {
-            return new ParsedValue(null, null, false, null, false);
-        }
+        Objects.requireNonNull(node, "value node must not be null");
         if (node.isLiteral()) {
-            var literal = node.asLiteral();
-            var dataTypeUri = literal.getDatatypeURI();
-            var datatype = dataTypeUri == null || dataTypeUri.isEmpty() ? null : new URI(dataTypeUri);
-            return new ParsedValue(literal.getLexicalForm(), datatype, false, null, false);
+            return parseLiteral(node);
         }
         if (node.isURIResource()) {
-            return new ParsedValue(node.asResource().getURI(), null, false, null, true);
+            throw new IllegalArgumentException("Invalid value node shape: URI resources are not allowed for fixed/default values");
         }
         if (node.isAnon()) {
             return parseBlankNode(node.asResource());
         }
-        return new ParsedValue(null, null, false, null, false);
+        throw new IllegalArgumentException("Invalid value node shape: expected literal or blank node");
     }
 
     private ParsedValue parseBlankNode(Resource resource) {
-        if (resource == null) {
-            return new ParsedValue(null, null, true, null, false);
-        }
-        Statement fallbackStatement = null;
+        Statement onlyStatement = null;
         var it = resource.listProperties();
         try {
             while (it.hasNext()) {
-                var stmt = it.next();
-                var object = stmt.getObject();
-                if (object.isLiteral()) {
-                    var literal = object.asLiteral();
-                    var dataTypeUri = literal.getDatatypeURI();
-                    var datatype = dataTypeUri == null || dataTypeUri.isEmpty() ? null : new URI(dataTypeUri);
-                    return new ParsedValue(literal.getLexicalForm(), datatype, true, new URI(stmt.getPredicate().getURI()), false);
+                if (onlyStatement != null) {
+                    throw new IllegalArgumentException("Invalid value node shape: blank node must contain exactly one statement");
                 }
-                if (fallbackStatement == null) {
-                    fallbackStatement = stmt;
-                }
-                if (object.isURIResource()) {
-                    return new ParsedValue(object.asResource().getURI(), null, true, new URI(stmt.getPredicate().getURI()), true);
-                }
+                onlyStatement = it.next();
             }
         } finally {
             it.close();
         }
-        if (fallbackStatement != null) {
-            var object = fallbackStatement.getObject();
-            return new ParsedValue(object.toString(), null, true, new URI(fallbackStatement.getPredicate().getURI()), false);
+        if (onlyStatement == null) {
+            throw new IllegalArgumentException("Invalid value node shape: blank node must contain exactly one rdfs:Literal statement");
         }
-        return new ParsedValue(null, null, true, null, false);
+        if (!RDFS.Literal.getURI().equals(onlyStatement.getPredicate().getURI())) {
+            throw new IllegalArgumentException("Invalid value node shape: blank node predicate must be rdfs:Literal");
+        }
+        if (!onlyStatement.getObject().isLiteral()) {
+            throw new IllegalArgumentException("Invalid value node shape: rdfs:Literal object must be a literal");
+        }
+        var parsedLiteral = parseLiteral(onlyStatement.getObject());
+        return new ParsedValue(parsedLiteral.value(), parsedLiteral.dataType(), true);
+    }
+
+    private ParsedValue parseLiteral(RDFNode node) {
+        var literal = node.asLiteral();
+        var dataTypeUri = literal.getDatatypeURI();
+        var datatype = dataTypeUri == null || dataTypeUri.isEmpty() ? null : new URI(dataTypeUri);
+        return new ParsedValue(literal.getLexicalForm(), datatype, false);
     }
 }

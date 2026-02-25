@@ -182,9 +182,7 @@ public class CIMQuerySolutionParser {
         return new CIMSIsDefault(
                 parsedValue.value(),
                 parsedValue.dataType(),
-                parsedValue.blankNode(),
-                parsedValue.blankNodePredicate(),
-                parsedValue.uriValue()
+                parsedValue.blankNode()
         );
     }
 
@@ -204,9 +202,7 @@ public class CIMQuerySolutionParser {
         return new CIMSIsFixed(
                 parsedValue.value(),
                 parsedValue.dataType(),
-                parsedValue.blankNode(),
-                parsedValue.blankNodePredicate(),
-                parsedValue.uriValue()
+                parsedValue.blankNode()
         );
     }
 

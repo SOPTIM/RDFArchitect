@@ -19,7 +19,6 @@ package org.rdfarchitect.services.update.classes.attributes;
 
 import lombok.experimental.UtilityClass;
 import org.apache.jena.datatypes.BaseDatatype;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
@@ -49,38 +48,14 @@ public class AttributeFixedDefaultResolver {
         if (graph == null) {
             return;
         }
-        var startedReadTx = false;
-        if (!graph.isInTransaction()) {
-            graph.begin(TxnType.READ);
-            startedReadTx = true;
-        }
-        try {
-            var model = ModelFactory.createModelForGraph(graph);
-            apply(model, attribute);
-        } finally {
-            if (startedReadTx) {
-                graph.end();
-            }
-        }
+        apply(ModelFactory.createModelForGraph(graph), attribute);
     }
 
     public void apply(GraphRewindableWithUUIDs graph, List<CIMAttribute> attributes) {
         if (graph == null) {
             return;
         }
-        var startedReadTx = false;
-        if (!graph.isInTransaction()) {
-            graph.begin(TxnType.READ);
-            startedReadTx = true;
-        }
-        try {
-            var model = ModelFactory.createModelForGraph(graph);
-            apply(model, attributes);
-        } finally {
-            if (startedReadTx) {
-                graph.end();
-            }
-        }
+        apply(ModelFactory.createModelForGraph(graph), attributes);
     }
 
     public void apply(Model model, CIMAttribute attribute) {
@@ -108,14 +83,8 @@ public class AttributeFixedDefaultResolver {
         var metadata = readExistingValueMetadata(model, attribute.getUuid(), predicate);
         if (metadata != null) {
             valueNode.setBlankNode(metadata.blankNode());
-            valueNode.setUriValue(metadata.uriValue());
-            valueNode.setBlankNodePredicate(metadata.blankNodePredicate());
         } else {
             applyNewValueDefaults(valueNode);
-        }
-        if (valueNode.isUriValue()) {
-            valueNode.setDataType(null);
-            return;
         }
         valueNode.setDataType(resolveFixedDefaultDatatype(model, attribute.getDataType()));
     }
@@ -127,12 +96,9 @@ public class AttributeFixedDefaultResolver {
         if (AttributeValueConfig.isNewValuesBlankNode() && !valueNode.isBlankNode()) {
             valueNode.setBlankNode(true);
         }
-        if (valueNode.isBlankNode() && valueNode.getBlankNodePredicate() == null) {
-            valueNode.setBlankNodePredicate(new URI(RDFS.Literal.getURI()));
-        }
     }
 
-    private record ExistingValueMetadata(boolean blankNode, boolean uriValue, URI blankNodePredicate) {
+    private record ExistingValueMetadata(boolean blankNode) {
     }
 
     private ExistingValueMetadata readExistingValueMetadata(Model model, UUID attributeUuid, org.apache.jena.rdf.model.Property predicate) {
@@ -146,23 +112,54 @@ public class AttributeFixedDefaultResolver {
         }
         RDFNode object = stmt.getObject();
         if (object.isAnon()) {
+            Statement onlyStatement = null;
             var propertyIt = object.asResource().listProperties();
             try {
                 if (propertyIt.hasNext()) {
-                    var innerStmt = propertyIt.next();
-                    var uriValue = innerStmt.getObject().isURIResource();
-                    var blankNodePredicate = new URI(innerStmt.getPredicate().getURI());
-                    return new ExistingValueMetadata(true, uriValue, blankNodePredicate);
+                    onlyStatement = propertyIt.next();
+                }
+                if (propertyIt.hasNext()) {
+                    throw new IllegalArgumentException(
+                              "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                        ": blank node must contain exactly one rdfs:Literal statement"
+                    );
                 }
             } finally {
                 propertyIt.close();
             }
-            return new ExistingValueMetadata(true, false, null);
+            if (onlyStatement == null) {
+                throw new IllegalArgumentException(
+                          "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                    ": blank node must contain exactly one rdfs:Literal statement"
+                );
+            }
+            if (!RDFS.Literal.getURI().equals(onlyStatement.getPredicate().getURI())) {
+                throw new IllegalArgumentException(
+                          "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                    ": blank node predicate must be rdfs:Literal"
+                );
+            }
+            if (!onlyStatement.getObject().isLiteral()) {
+                throw new IllegalArgumentException(
+                          "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                    ": rdfs:Literal object must be a literal"
+                );
+            }
+            return new ExistingValueMetadata(true);
         }
         if (object.isURIResource()) {
-            return new ExistingValueMetadata(false, true, null);
+            throw new IllegalArgumentException(
+                      "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                ": URI resources are not allowed"
+            );
         }
-        return new ExistingValueMetadata(false, false, null);
+        if (!object.isLiteral()) {
+            throw new IllegalArgumentException(
+                      "Invalid " + predicate.getLocalName() + " value shape for attribute " + attributeUuid +
+                                ": expected a literal or a valid blank node value container"
+            );
+        }
+        return new ExistingValueMetadata(false);
     }
 
     private Resource findAttributeResource(Model model, UUID attributeUuid) {

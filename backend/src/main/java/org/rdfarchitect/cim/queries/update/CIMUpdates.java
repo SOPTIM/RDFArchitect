@@ -22,8 +22,6 @@ import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
-import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.PrefixMapping;
@@ -49,8 +47,6 @@ import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.rdf.RDFUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.update.classes.attributes.AttributeFixedDefaultResolver;
 
 import java.util.List;
 import java.util.UUID;
@@ -71,9 +67,6 @@ public class CIMUpdates {
      * @param newClass      The new {@link CIMClassUMLAdapted} to replace.
      */
     public void replaceClass(Graph graph, PrefixMapping prefixMapping, CIMClassUMLAdapted newClass) {
-        if (graph instanceof GraphRewindableWithUUIDs rewindableGraph) {
-            resolveAttributeValueMetadata(rewindableGraph, newClass.getAttributes());
-        }
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         //replace attributes in database
         var updateAttributes = replaceAttributes(prefixMapping, null, newClass.getUuid().toString(), newClass.getAttributes());
@@ -169,22 +162,12 @@ public class CIMUpdates {
         return appendInsertAttribute(baseUpdate, attribute);
     }
 
-    public UpdateBuilder insertAttribute(GraphRewindableWithUUIDs graph, PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
-        resolveAttributeValueMetadata(graph, attribute);
-        return insertAttribute(prefixMapping, graphURI, attribute);
-    }
-
     public UpdateRequest replaceAttribute(PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
         var updateRequest = new UpdateRequest();
         addUpdateOperations(updateRequest, deleteAttributeValueNodes(graphURI, attribute.getUuid()));
         updateRequest.add(deleteAttribute(prefixMapping, graphURI, attribute.getUuid()).build());
         updateRequest.add(insertAttribute(prefixMapping, graphURI, attribute).build());
         return updateRequest;
-    }
-
-    public UpdateRequest replaceAttribute(GraphRewindableWithUUIDs graph, PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
-        resolveAttributeValueMetadata(graph, attribute);
-        return replaceAttribute(prefixMapping, graphURI, attribute);
     }
 
     private UpdateBuilder appendInsertAttribute(UpdateBuilder baseUpdate, CIMAttribute attribute) {
@@ -225,21 +208,13 @@ public class CIMUpdates {
         if (valueNode.isBlankNode()) {
             var blankNode = NodeFactory.createBlankNode();
             baseUpdate.addInsert(subject, predicate, blankNode);
-            var predicateUri = valueNode.getBlankNodePredicate() != null
-                               ? valueNode.getBlankNodePredicate().toString()
-                    : RDFS.Literal.getURI();
-            var objectNode = valueNode.asRdfNode().asNode();
-            baseUpdate.addInsert(blankNode, ResourceFactory.createProperty(predicateUri), objectNode);
-            return;
-        }
-        if (valueNode.isUriValue()) {
-            baseUpdate.addInsert(subject, predicate, ResourceFactory.createResource(valueNode.getValue()));
+            baseUpdate.addInsert(blankNode, ResourceFactory.createProperty(RDFS.Literal.getURI()), valueNode.asLiteral());
             return;
         }
         baseUpdate.addInsert(subject, predicate, valueNode.asLiteral());
     }
 
-    private UpdateBuilder deleteAttributes(PrefixMapping prefixMapping, String graphURI, String classUUID) {
+    private UpdateBuilder deleteAttributesBase(PrefixMapping prefixMapping, String graphURI, String classUUID) {
         return new CIMBaseUpdateBuilder()
                   .addPrefixes(prefixMapping)
                   .setGraph(graphURI)
@@ -259,15 +234,10 @@ public class CIMUpdates {
         return updateRequest;
     }
 
-    public UpdateRequest replaceAttributes(GraphRewindableWithUUIDs graph, PrefixMapping prefixMapping, String graphURI, String classUUID, List<CIMAttribute> attributes) {
-        resolveAttributeValueMetadata(graph, attributes);
-        return replaceAttributes(prefixMapping, graphURI, classUUID, attributes);
-    }
-
     private UpdateRequest deleteAttributesWithValueNodes(PrefixMapping prefixMapping, String graphURI, String classUUID) {
         var updateRequest = new UpdateRequest();
         addUpdateOperations(updateRequest, deleteAttributeValueNodesForClass(graphURI, classUUID));
-        updateRequest.add(deleteAttributes(prefixMapping, graphURI, classUUID).build());
+        updateRequest.add(deleteAttributesBase(prefixMapping, graphURI, classUUID).build());
         return updateRequest;
     }
 
@@ -276,42 +246,6 @@ public class CIMUpdates {
             return;
         }
         source.getOperations().forEach(target::add);
-    }
-
-    private void resolveAttributeValueMetadata(GraphRewindableWithUUIDs graph, CIMAttribute attribute) {
-        if (graph == null || attribute == null) {
-            return;
-        }
-        var startedReadTx = false;
-        if (!graph.isInTransaction()) {
-            graph.begin(TxnType.READ);
-            startedReadTx = true;
-        }
-        try {
-            AttributeFixedDefaultResolver.apply(ModelFactory.createModelForGraph(graph), attribute);
-        } finally {
-            if (startedReadTx) {
-                graph.end();
-            }
-        }
-    }
-
-    private void resolveAttributeValueMetadata(GraphRewindableWithUUIDs graph, List<CIMAttribute> attributes) {
-        if (graph == null || attributes == null || attributes.isEmpty()) {
-            return;
-        }
-        var startedReadTx = false;
-        if (!graph.isInTransaction()) {
-            graph.begin(TxnType.READ);
-            startedReadTx = true;
-        }
-        try {
-            AttributeFixedDefaultResolver.apply(ModelFactory.createModelForGraph(graph), attributes);
-        } finally {
-            if (startedReadTx) {
-                graph.end();
-            }
-        }
     }
 
     private UpdateRequest deleteAttributeValueNodes(String graphURI, UUID attributeUUID) {

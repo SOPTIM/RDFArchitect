@@ -24,20 +24,14 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.cim.data.dto.CIMClass;
 import org.rdfarchitect.cim.data.dto.CIMEnumEntry;
-import org.rdfarchitect.cim.data.dto.relations.CIMSIsDefault;
-import org.rdfarchitect.cim.data.dto.relations.CIMSIsFixed;
 import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.ValueNodeParser;
 import org.rdfarchitect.cim.queries.select.CIMQueries;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 
 import java.util.ArrayList;
@@ -151,62 +145,7 @@ public class CIMObjectFetcher {
      * @return List of {@link CIMAttribute CIMAttributes}.
      */
     public List<CIMAttribute> fetchCIMAttributeList(Query query) {
-        var attributes = executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
-        hydrateFixedDefaultValues(attributes);
-        return attributes;
-    }
-
-    private void hydrateFixedDefaultValues(List<CIMAttribute> attributes) {
-        if (attributes == null || attributes.isEmpty()) {
-            return;
-        }
-        var model = getGraphModel();
-        for (var attribute : attributes) {
-            if (attribute == null || attribute.getUri() == null) {
-                continue;
-            }
-            var attributeResource = model.getResource(attribute.getUri().toString());
-            if (attributeResource == null) {
-                continue;
-            }
-            var fixedStmt = attributeResource.getProperty(CIMS.isFixed);
-            if (fixedStmt != null) {
-                attribute.setFixedValue(buildFixedValue(fixedStmt));
-            }
-            var defaultStmt = attributeResource.getProperty(CIMS.isDefault);
-            if (defaultStmt != null) {
-                attribute.setDefaultValue(buildDefaultValue(defaultStmt));
-            }
-        }
-    }
-
-    private Model getGraphModel() {
-        if (graphURI == null || "default".equals(graphURI)) {
-            return dataset.getDefaultModel();
-        }
-        return dataset.getNamedModel(graphURI);
-    }
-
-    private CIMSIsFixed buildFixedValue(Statement stmt) {
-        var parsedValue = ValueNodeParser.parse(stmt.getObject());
-        return new CIMSIsFixed(
-                parsedValue.value(),
-                parsedValue.dataType(),
-                parsedValue.blankNode(),
-                parsedValue.blankNodePredicate(),
-                parsedValue.uriValue()
-        );
-    }
-
-    private CIMSIsDefault buildDefaultValue(Statement stmt) {
-        var parsedValue = ValueNodeParser.parse(stmt.getObject());
-        return new CIMSIsDefault(
-                parsedValue.value(),
-                parsedValue.dataType(),
-                parsedValue.blankNode(),
-                parsedValue.blankNodePredicate(),
-                parsedValue.uriValue()
-        );
+        return executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
     }
 
     /**

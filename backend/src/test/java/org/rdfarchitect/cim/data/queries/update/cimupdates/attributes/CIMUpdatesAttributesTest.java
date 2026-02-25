@@ -54,9 +54,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
     private static final String ATTRIBUTE_OPTIONAL_FILE_PATH = "attributes/attribute_optional.ttl";
     private static final String MULTIPLE_ATTRIBUTES_FILE_PATH = "attributes/multiple_attributes.ttl";
     private static final String MULTIPLE_CLASSES_FILE_PATH = "attributes/multiple_classes.ttl";
-    private static final String BLANK_NODE_FIXED_PREDICATE = URI_PREFIX + "fixedPredicate";
-    private static final String BLANK_NODE_DEFAULT_PREDICATE = URI_PREFIX + "defaultPredicate";
-    private static final String URI_FIXED_VALUE = URI_PREFIX + "fixedValue";
 
     private static CIMAttribute attributeRequired;
     /**
@@ -68,7 +65,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
      */
     private static CIMAttribute attributePrimitive;
     private static CIMAttribute attributeBlankNodeValues;
-    private static CIMAttribute attributeUriValue;
 
     @BeforeAll
     static void setUpAttributeEnvironment() {
@@ -91,11 +87,8 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                           .dataType(new CIMSPrimitiveDataType(new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
                                           .build();
         attributeBlankNodeValues = baseAttribute.toBuilder()
-                                                .fixedValue(new CIMSIsFixed(URI_FIXED_VALUE, null, true, new URI(BLANK_NODE_FIXED_PREDICATE), true))
-                                                .defaultValue(new CIMSIsDefault(IS_DEFAULT_VALUE, null, true, new URI(BLANK_NODE_DEFAULT_PREDICATE), false))
-                                                .build();
-        attributeUriValue = baseAttribute.toBuilder()
-                                         .fixedValue(new CIMSIsFixed(URI_FIXED_VALUE, null, false, null, true))
+                                                .fixedValue(new CIMSIsFixed(IS_FIXED_VALUE, null, true))
+                                                .defaultValue(new CIMSIsDefault(IS_DEFAULT_VALUE, null, true))
                                          .build();
     }
 
@@ -246,10 +239,10 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                 assertThat(fixedBlank.isBlank()).isTrue();
                 assertThat(defaultBlank.isBlank()).isTrue();
                 assertThat(testGraph.contains(fixedBlank,
-                                              NodeFactory.createURI(BLANK_NODE_FIXED_PREDICATE),
-                                              NodeFactory.createURI(URI_FIXED_VALUE))).isTrue();
+                                              RDFS.Literal.asNode(),
+                                              NodeFactory.createLiteralString(IS_FIXED_VALUE))).isTrue();
                 assertThat(testGraph.contains(defaultBlank,
-                                              NodeFactory.createURI(BLANK_NODE_DEFAULT_PREDICATE),
+                                              RDFS.Literal.asNode(),
                                               NodeFactory.createLiteral(IS_DEFAULT_VALUE))).isTrue();
             } finally {
                 testGraph.end();
@@ -265,9 +258,9 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             var defaultBlank = NodeFactory.createBlankNode();
             executeWriteTransaction(graph -> {
                 graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI), CIMS.isFixed.asNode(), fixedBlank);
-                graph.add(fixedBlank, NodeFactory.createURI(BLANK_NODE_FIXED_PREDICATE), NodeFactory.createLiteralString(URI_FIXED_VALUE));
+                graph.add(fixedBlank, RDFS.Literal.asNode(), NodeFactory.createLiteralString(IS_FIXED_VALUE));
                 graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI), CIMS.isDefault.asNode(), defaultBlank);
-                graph.add(defaultBlank, NodeFactory.createURI(BLANK_NODE_DEFAULT_PREDICATE), NodeFactory.createLiteralString(IS_DEFAULT_VALUE));
+                graph.add(defaultBlank, RDFS.Literal.asNode(), NodeFactory.createLiteralString(IS_DEFAULT_VALUE));
             });
 
             //Act
@@ -283,31 +276,6 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                 testGraph.begin(TxnType.READ);
                 assertThat(testGraph.contains(fixedBlank, Node.ANY, Node.ANY)).isFalse();
                 assertThat(testGraph.contains(defaultBlank, Node.ANY, Node.ANY)).isFalse();
-            } finally {
-                testGraph.end();
-            }
-        }
-
-        @Test
-        @DisplayName("Replaces existing attribute with URI fixed value")
-        void replaceAttribute_attributeWithUriValue_insertsUriNode() {
-            //Arrange
-            addGraphFromFile(ATTRIBUTE_FILE_PATH);
-
-            //Act
-            executeUpdateOnTestGraph(
-                      CIMUpdates.replaceAttribute(
-                                          databasePort.getPrefixMapping(DATASET_NAME),
-                                          GRAPH_URI,
-                                          attributeUriValue)
-                                    );
-
-            //Assert
-            try {
-                testGraph.begin(TxnType.READ);
-                assertThat(testGraph.contains(NodeFactory.createURI(ATTRIBUTE_URI),
-                                              CIMS.isFixed.asNode(),
-                                              NodeFactory.createURI(URI_FIXED_VALUE))).isTrue();
             } finally {
                 testGraph.end();
             }
@@ -554,9 +522,9 @@ public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             var defaultBlank = NodeFactory.createBlankNode();
             executeWriteTransaction(graph -> {
                 graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"), CIMS.isFixed.asNode(), fixedBlank);
-                graph.add(fixedBlank, NodeFactory.createURI(BLANK_NODE_FIXED_PREDICATE), NodeFactory.createLiteralString(URI_FIXED_VALUE));
+                graph.add(fixedBlank, RDFS.Literal.asNode(), NodeFactory.createLiteralString(IS_FIXED_VALUE));
                 graph.add(NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"), CIMS.isDefault.asNode(), defaultBlank);
-                graph.add(defaultBlank, NodeFactory.createURI(BLANK_NODE_DEFAULT_PREDICATE), NodeFactory.createLiteralString(IS_DEFAULT_VALUE));
+                graph.add(defaultBlank, RDFS.Literal.asNode(), NodeFactory.createLiteralString(IS_DEFAULT_VALUE));
             });
 
             CIMAttribute newAttribute = attributeRequired.toBuilder()

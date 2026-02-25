@@ -32,11 +32,22 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 @UtilityClass
 public class InMemorySparqlExecutioner {
 
+    public void executeSingleUpdateInCurrentTransaction(GraphRewindableWithUUIDs graph, UpdateRequest update, String graphUri) {
+        if (!graph.isInTransaction()) {
+            throw new IllegalStateException("Expected an open transaction before executing update");
+        }
+        var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
+        UpdateExecutionFactory.create(update, dataset).execute();
+    }
+
+    public void executeSingleUpdateInCurrentTransaction(GraphRewindableWithUUIDs graph, Update update, String graphUri) {
+        executeSingleUpdateInCurrentTransaction(graph, new UpdateRequest().add(update), graphUri);
+    }
+
     public void executeSingleUpdate(GraphRewindableWithUUIDs graph, UpdateRequest update, String graphUri) {
         try {
             graph.begin(TxnType.WRITE);
-            var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
-            UpdateExecutionFactory.create(update, dataset).execute();
+            executeSingleUpdateInCurrentTransaction(graph, update, graphUri);
             graph.commit();
         } finally {
             graph.end();

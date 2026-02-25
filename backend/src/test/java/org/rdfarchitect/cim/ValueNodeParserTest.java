@@ -19,12 +19,14 @@ package org.rdfarchitect.cim;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 class ValueNodeParserTest {
 
@@ -38,77 +40,76 @@ class ValueNodeParserTest {
         assertAll(
                   () -> assertThat(parsed.value()).isEqualTo("42"),
                   () -> assertThat(parsed.dataType()).isEqualTo(new URI(XSD.integer.getURI())),
-                  () -> assertThat(parsed.blankNode()).isFalse(),
-                  () -> assertThat(parsed.blankNodePredicate()).isNull(),
-                  () -> assertThat(parsed.uriValue()).isFalse()
+                  () -> assertThat(parsed.blankNode()).isFalse()
                  );
     }
 
     @Test
-    void parse_uriNode_readsUriValue() {
-        Model model = ModelFactory.createDefaultModel();
-        var resource = model.createResource("http://example.com#value");
-
-        var parsed = ValueNodeParser.parse(resource);
-
-        assertAll(
-                  () -> assertThat(parsed.value()).isEqualTo("http://example.com#value"),
-                  () -> assertThat(parsed.dataType()).isNull(),
-                  () -> assertThat(parsed.blankNode()).isFalse(),
-                  () -> assertThat(parsed.blankNodePredicate()).isNull(),
-                  () -> assertThat(parsed.uriValue()).isTrue()
-                 );
-    }
-
-    @Test
-    void parse_blankNodeLiteral_readsPredicateAndLiteral() {
+    void parse_blankNodeLiteral_readsLiteralValueWithBlankNodeMarker() {
         Model model = ModelFactory.createDefaultModel();
         var blank = model.createResource();
-        var predicate = model.createProperty("http://example.com#predicate");
-        blank.addProperty(predicate, model.createLiteral("blank"));
+        blank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createLiteral("blank"));
 
         var parsed = ValueNodeParser.parse(blank);
 
         assertAll(
                   () -> assertThat(parsed.value()).isEqualTo("blank"),
-                  () -> assertThat(parsed.dataType()).isEqualTo(new URI(XSD.getURI() + "string")),
-                  () -> assertThat(parsed.blankNode()).isTrue(),
-                  () -> assertThat(parsed.blankNodePredicate()).isEqualTo(new URI("http://example.com#predicate")),
-                  () -> assertThat(parsed.uriValue()).isFalse()
+                  () -> assertThat(parsed.dataType()).isEqualTo(new URI(XSD.xstring.getURI())),
+                  () -> assertThat(parsed.blankNode()).isTrue()
                  );
     }
 
     @Test
-    void parse_blankNodeUri_readsPredicateAndUri() {
+    void parse_uriNode_throwsException() {
         Model model = ModelFactory.createDefaultModel();
-        var blank = model.createResource();
-        var predicate = model.createProperty("http://example.com#predicate");
-        blank.addProperty(predicate, model.createResource("http://example.com#target"));
+        var resource = model.createResource("http://example.com#value");
 
-        var parsed = ValueNodeParser.parse(blank);
-
-        assertAll(
-                  () -> assertThat(parsed.value()).isEqualTo("http://example.com#target"),
-                  () -> assertThat(parsed.dataType()).isNull(),
-                  () -> assertThat(parsed.blankNode()).isTrue(),
-                  () -> assertThat(parsed.blankNodePredicate()).isEqualTo(new URI("http://example.com#predicate")),
-                  () -> assertThat(parsed.uriValue()).isTrue()
-                 );
+        assertThatThrownBy(() -> ValueNodeParser.parse(resource))
+                  .isInstanceOf(IllegalArgumentException.class)
+                  .hasMessageContaining("URI resources are not allowed");
     }
 
     @Test
-    void parse_blankNodeWithoutProperties_returnsBlankMetadata() {
+    void parse_blankNodeWithWrongPredicate_throwsException() {
+        Model model = ModelFactory.createDefaultModel();
+        var blank = model.createResource();
+        blank.addProperty(model.createProperty("http://example.com#predicate"), model.createLiteral("value"));
+
+        assertThatThrownBy(() -> ValueNodeParser.parse(blank))
+                  .isInstanceOf(IllegalArgumentException.class)
+                  .hasMessageContaining("predicate must be rdfs:Literal");
+    }
+
+    @Test
+    void parse_blankNodeWithUriObject_throwsException() {
+        Model model = ModelFactory.createDefaultModel();
+        var blank = model.createResource();
+        blank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createResource("http://example.com#target"));
+
+        assertThatThrownBy(() -> ValueNodeParser.parse(blank))
+                  .isInstanceOf(IllegalArgumentException.class)
+                  .hasMessageContaining("object must be a literal");
+    }
+
+    @Test
+    void parse_blankNodeWithoutProperties_throwsException() {
         Model model = ModelFactory.createDefaultModel();
         var blank = model.createResource();
 
-        var parsed = ValueNodeParser.parse(blank);
+        assertThatThrownBy(() -> ValueNodeParser.parse(blank))
+                  .isInstanceOf(IllegalArgumentException.class)
+                  .hasMessageContaining("must contain exactly one rdfs:Literal statement");
+    }
 
-        assertAll(
-                  () -> assertThat(parsed.value()).isNull(),
-                  () -> assertThat(parsed.dataType()).isNull(),
-                  () -> assertThat(parsed.blankNode()).isTrue(),
-                  () -> assertThat(parsed.blankNodePredicate()).isNull(),
-                  () -> assertThat(parsed.uriValue()).isFalse()
-                 );
+    @Test
+    void parse_blankNodeWithMultipleProperties_throwsException() {
+        Model model = ModelFactory.createDefaultModel();
+        var blank = model.createResource();
+        blank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createLiteral("value1"));
+        blank.addProperty(model.createProperty(RDFS.Literal.getURI()), model.createLiteral("value2"));
+
+        assertThatThrownBy(() -> ValueNodeParser.parse(blank))
+                  .isInstanceOf(IllegalArgumentException.class)
+                  .hasMessageContaining("must contain exactly one statement");
     }
 }
