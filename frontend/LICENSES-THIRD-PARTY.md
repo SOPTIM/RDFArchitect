@@ -86,7 +86,7 @@
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.4.0
+- **Version:** 1.5.1
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
