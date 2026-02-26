@@ -54,7 +54,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
             } else {
-                if (!validateUUID(ontologyDTO.getUuid())) {
+                if (isInvalidUUID(ontologyDTO.getUuid())) {
                     throw new IllegalArgumentException("Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
@@ -83,7 +83,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
             } else {
-                if (!validateUUID(ontologyDTO.getUuid())) {
+                if (isInvalidUUID(ontologyDTO.getUuid())) {
                     throw new IllegalArgumentException("Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
@@ -133,12 +133,12 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         }
     }
 
-    private boolean validateUUID(String uuidString) {
+    private boolean isInvalidUUID(String uuidString) {
         try {
             UUID.fromString(uuidString);
-            return true;
-        } catch (IllegalArgumentException e) {
             return false;
+        } catch (IllegalArgumentException _) {
+            return true;
         }
     }
 }

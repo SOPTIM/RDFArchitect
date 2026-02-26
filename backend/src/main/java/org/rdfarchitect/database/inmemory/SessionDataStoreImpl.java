@@ -167,7 +167,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
         try {
             assertThatDatasetExists(datasetName);
             return graphCollections.get(datasetName).getPrefixMapping();
-        } catch (DataAccessException exception) {
+        } catch (DataAccessException _) {
             return new PrefixMappingReadOnly(PrefixMapping.Factory.create());
         } finally {
             lock.unlock();

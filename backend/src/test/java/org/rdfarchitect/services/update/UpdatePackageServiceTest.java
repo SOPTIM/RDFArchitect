@@ -50,12 +50,11 @@ class UpdatePackageServiceTest {
     private UpdatePackageService service;
     private GraphRewindableWithUUIDs mockGraph;
     private final PackageMapper mapper = Mappers.getMapper(PackageMapper.class);
-    private DatabasePort databasePort;
     private ChangeLogUseCase changeLogUseCase;
 
     @BeforeEach
     void setUp() {
-        databasePort = mock(DatabasePort.class);
+        DatabasePort databasePort = mock(DatabasePort.class);
         changeLogUseCase = mock(ChangeLogUseCase.class);
         var mockUpdatePackageLayoutService = mock(UpdatePackageLayoutService.class);
         service = new UpdatePackageService(databasePort, mapper, changeLogUseCase, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService);
@@ -139,7 +138,7 @@ class UpdatePackageServiceTest {
 
             try {
                 service.addPackage(new GraphIdentifier("default", "test"), dto);
-            } catch (Exception e) {
+            } catch (Exception _) {
                 // expected
             }
 

@@ -168,11 +168,11 @@ class SchemaComparisonServiceTest {
 
         // assert
         assertThat(result.size()).isEqualTo(2);
-        assertThat(result.get(0).getLabel()).isEqualTo("http://example.org#package");
-        assertThat(result.get(0).getChanges()).asInstanceOf(InstanceOfAssertFactories.MAP)
+        assertThat(result.getFirst().getLabel()).isEqualTo("http://example.org#package");
+        assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.MAP)
                                               .containsEntry(RDFS.label.toString(), new PropertyChange("\"package\"@en", null))
                                               .containsEntry(RDF.type.toString(), new PropertyChange(CIMS.classCategory.toString(), null));
-        assertThat(result.get(0).getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
+        assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
                   List.of(ClassChange.builder()
                                      .label("http://example.org#class")
                                      .changes(Map.of(
