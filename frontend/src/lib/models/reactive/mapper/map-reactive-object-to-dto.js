@@ -161,7 +161,7 @@ export function mapReactiveAssociationListToAssociationDtoList(
  * Maps a ReactiveAssociation to an association pair DTO for API submission
  * @param {ReactiveAssociation | Object} association - The reactive association instance or a plain object of it
  * @param {ReactiveClass | Object} cls - The domain class or a plain object of it
- * @param {function(uuid)} getClassByUuid - A function that returns the class object of a given uuid
+ * @param {function(string)} getClassByUuid - A function that returns the class object of a given uuid
  * @returns {Object} The association pair DTO with 'from' and 'to' properties
  */
 export function mapReactiveAssociationToAssociationDto(

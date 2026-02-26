@@ -47,9 +47,7 @@ export function getNCNameViolations(str) {
 
         if (index === 0) {
             if (!isNameStartChar(cp)) violations.add(ch);
-        } else {
-            if (!isNameChar(cp)) violations.add(ch);
-        }
+        } else if (!isNameChar(cp)) violations.add(ch);
         index++;
     }
     return [...violations];
