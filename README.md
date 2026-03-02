@@ -3,7 +3,7 @@
 [![Backend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)
 [![Version](https://img.shields.io/badge/version-0.14.0-blue.svg)](https://github.com/SOPTIM/RDFArchitect/releases)
-[![License](https://img.shields.io/github/license/SOPTIM/RDFArchitect)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 RDFArchitect is a web-based tool for visualizing and editing RDF graphs that model UML classes using the CIM standard.
 
@@ -116,12 +116,6 @@ Please see [SECURITY.md](SECURITY.md) for responsible vulnerability reporting.
 ## Support
 
 Please see [SUPPORT.md](SUPPORT.md) for usage help, issue routing, and support options.
-
-## Commercial Support
-
-RDFArchitect is developed by SOPTIM AG. Organizations requiring commercial support, professional maintenance, integration services, or custom extensions can contact:
-
-- `opencgmes@soptim.de`
 
 ## Changelog
 
