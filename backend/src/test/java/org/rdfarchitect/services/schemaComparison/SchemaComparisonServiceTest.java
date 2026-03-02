@@ -332,6 +332,18 @@ class SchemaComparisonServiceTest {
     }
 
     @Test
+    void compareSchemas_changedCommentWhitespace_returnsEmptyList() {
+        // arrange
+        MultipartFile file = readMultipartFileFromFile(PATH, "changedCommentWhitespace.ttl");
+
+        // act
+        var result = service.compareSchemas(GRAPH_IDENTIFIER, file);
+
+        // assert
+        assertThat(result).asInstanceOf(InstanceOfAssertFactories.LIST).isEmpty();
+    }
+
+    @Test
     void compareSchemas_changedTripleOrder_returnsEmptyList() {
         // arrange
         MultipartFile identicalFile = readMultipartFileFromFile(PATH, "changedOrder.ttl");
@@ -374,6 +386,19 @@ class SchemaComparisonServiceTest {
         // arrange
         var file1 = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
         var file2 = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
+
+        // act
+        var result = service.compareSchemas(file1, file2);
+
+        // assert
+        assertThat(result).asInstanceOf(InstanceOfAssertFactories.LIST).isEmpty();
+    }
+
+    @Test
+    void compareSchemas_fileFile_changedCommentWhitespace_returnsEmptyList() {
+        // arrange
+        var file1 = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
+        var file2 = readMultipartFileFromFile(PATH, "changedCommentWhitespace.ttl");
 
         // act
         var result = service.compareSchemas(file1, file2);
