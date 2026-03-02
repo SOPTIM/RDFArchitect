@@ -37,6 +37,7 @@ npm run dev
 - Create focused branches from `main`.
 - Keep changes scoped and reviewable.
 - Open a pull request using `.github/pull_request_template.md`.
+- Pull requests are merged via squash commits.
 - Ensure your PR description explains:
   - What changed
   - Why it changed
@@ -76,12 +77,58 @@ CI runs these checks through GitHub Actions and must pass.
 - Java files are validated with license header checks in backend CI.
 - Keep third-party license files current when dependencies change.
 
-## Commit Guidance
+## Squash Commit Format
 
-- Use clear, descriptive commit messages.
-- Prefer small commits with a single purpose.
-- Reference issue IDs when applicable.
-- Use conventional commits format if possible.
+Squash commit titles should follow this format:
+
+```text
+<type>[optional scope][!]: <description> (#<pr>, RDFA-<id>, GH-<issue>)
+```
+
+Examples:
+
+```text
+feat(editor): add class filter (#123, RDFA-456, GH-78)
+fix(api)!: change namespace validation rules (#124, RDFA-457, GH-79)
+```
+
+Notes:
+
+- `type` should be `feat` or `fix` for product-facing changes whenever possible.
+- `#<pr>`, `RDFA-<id>`, and `GH-<issue>` are optional in automation, but include all available IDs in squash commits.
+- Keep the description short, action-oriented, and specific.
+
+## Breaking Changes
+
+Breaking changes are detected when either of these is present:
+
+- `!` in the commit header (`feat!:` or `feat(scope)!:`)
+- `BREAKING CHANGE:` in the commit body
+
+Use one of these markers whenever the change is not backward compatible.
+
+## Changelog Automation
+
+The changelog workflow reads new commits and updates `CHANGELOG.md` automatically.
+
+- On pushes to `main`, it appends entries to `## [Unreleased]`.
+- On `vX.Y.Z` tags, it moves `Unreleased` into the matching release section with date and creates a fresh `Unreleased`.
+- Entries are deduplicated by any known identifier (`commit`, `PR`, `GH issue`, `RDFA`) and by normalized description.
+- Manual edits are preserved; if an entry already exists elsewhere (for example in a custom section), automation does not add it again.
+
+Generated changelog entry format:
+
+```text
+GH-<issue>: Description ([#<pr>](...), RDFA-<id>, [<sha8>](...))
+```
+
+## Contributor Checklist
+
+- Keep branch changes scoped to one topic.
+- Ensure the squash commit title follows the required format.
+- Try to use conventional commits in the feature branch to make squash commit writing easier.
+- Mark breaking changes with `!` or `BREAKING CHANGE:`.
+- Run required checks locally before opening/updating the PR.
 
 ## Review Process
 

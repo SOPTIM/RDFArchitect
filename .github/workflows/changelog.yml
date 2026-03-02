@@ -27,7 +27,27 @@ jobs:
           python-version: "3.13"
 
       - name: Update changelog
-        run: python3 .github/scripts/update_changelog.py --mode auto
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: |
+          if [ "${REF_TYPE}" = "tag" ]; then
+            python3 .github/scripts/changelog_sync.py \
+              --mode release \
+              --release-version "${REF_NAME#v}" \
+              --release-date "$(date -u +%F)"
+          else
+            FROM_SHA="${BEFORE_SHA}"
+            if [ -z "${FROM_SHA}" ]; then
+              FROM_SHA="${CURRENT_SHA}"
+            fi
+            python3 .github/scripts/changelog_sync.py \
+              --mode main \
+              --from-sha "${FROM_SHA}" \
+              --to-sha "${CURRENT_SHA}"
+          fi
 
       - name: Commit changelog update
         run: |
@@ -40,7 +60,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add CHANGELOG.md
-          git commit -m "docs(changelog): auto-update CHANGELOG.md [skip ci]"
+          git commit -m "docs(changelog): auto-update CHANGELOG.md"
 
           if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
             git push origin HEAD:${{ github.event.repository.default_branch }}
