@@ -19,7 +19,10 @@
     import { faMinus } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
+    import { buildInlineValueDiff } from "$lib/utils/valueDiff.js";
+
     let { changes } = $props();
+    const diffCache = new Map();
 
     function getChangeType(change) {
         if (change.from === null && change.to !== null) {
@@ -47,6 +50,28 @@
                 return `${baseClasses} hover:bg-default-background`;
         }
     }
+
+    function getDiff(change) {
+        const cacheKey = `${change.from}\u0000${change.to}`;
+        if (!diffCache.has(cacheKey)) {
+            diffCache.set(
+                cacheKey,
+                buildInlineValueDiff(change.from, change.to),
+            );
+        }
+        return diffCache.get(cacheKey);
+    }
+
+    function getSegmentClass(segmentKind) {
+        switch (segmentKind) {
+            case "removed":
+                return "text-red-text line-through";
+            case "added":
+                return "text-green-text";
+            default:
+                return "text-default-text";
+        }
+    }
 </script>
 
 <table class="w-full table-fixed text-left">
@@ -67,6 +92,9 @@
     </thead>
     <tbody>
         {#each Object.entries(changes) as [key, change]}
+            {@const changeType = getChangeType(change)}
+            {@const diff =
+                changeType === "modification" ? getDiff(change) : null}
             <tr class={getRowClasses(change)}>
                 <td class="border-default-text border-b p-4">
                     <p class="text-default-text block text-sm">
@@ -74,18 +102,34 @@
                     </p>
                 </td>
                 <td class="border-default-text border-b p-4">
-                    <p class="text-default-text block text-sm">
+                    <p
+                        class="text-default-text block font-mono text-sm break-all whitespace-pre-wrap"
+                    >
                         {#if change.from === null}
                             <Fa icon={faMinus} />
+                        {:else if changeType === "modification"}
+                            {#each diff.fromSegments as segment}
+                                <span class={getSegmentClass(segment.kind)}>
+                                    {segment.text}
+                                </span>
+                            {/each}
                         {:else}
                             {change.from}
                         {/if}
                     </p>
                 </td>
                 <td class="border-default-text border-b p-4">
-                    <p class="text-default-text block text-sm">
+                    <p
+                        class="text-default-text block font-mono text-sm break-all whitespace-pre-wrap"
+                    >
                         {#if change.to === null}
                             <Fa icon={faMinus} />
+                        {:else if changeType === "modification"}
+                            {#each diff.toSegments as segment}
+                                <span class={getSegmentClass(segment.kind)}>
+                                    {segment.text}
+                                </span>
+                            {/each}
                         {:else}
                             {change.to}
                         {/if}
