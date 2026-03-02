@@ -121,7 +121,7 @@ Please see [SUPPORT.md](SUPPORT.md) for usage help, issue routing, and support o
 
 RDFArchitect is developed by SOPTIM AG. Organizations requiring commercial support, professional maintenance, integration services, or custom extensions can contact:
 
-- `rdfarchitect@soptim.de`
+- `opencgmes@soptim.de`
 
 ## Changelog
 

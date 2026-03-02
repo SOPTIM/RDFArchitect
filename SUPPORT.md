@@ -27,4 +27,4 @@ SOPTIM AG provides professional services for organizations that need commercial 
 
 Contact:
 
-- `rdfarchitect@soptim.de`
+- `opencgmes@soptim.de`

@@ -18,7 +18,7 @@ Please report suspected vulnerabilities privately. Do not open public GitHub iss
 
 Send details to:
 
-- `rdfarchitect@soptim.de`
+- `opencgmes@soptim.de`
 
 ### Alternative channel (GitHub private reporting)
 
