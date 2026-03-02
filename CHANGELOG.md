@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add changelog update script and workflow for automatic CHANGELOG.md updates
+
 ### Changed
 
-- add documentation and issue templates for contributing and support
-- specify github action versions for renovate (RDFA-267, #31)
-- set action versions to full length commit sha (RDFA-267, #28)
+- Add documentation and issue templates for contributing and support
+- RDFA-267: Specify github action versions for renovate (GH-31)
+- RDFA-267: Set action versions to full length commit sha (GH-28)
 
 ### Fixed
 
-- added exception handling for failed propertyshape generation (#6, RDFA-333)
-- ignore github actions bot in renovate prs
+- RDFA-333: Added exception handling for failed propertyshape generation (GH-6)
+- Ignore github actions bot in renovate prs

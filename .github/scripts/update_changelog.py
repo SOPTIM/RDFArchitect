@@ -23,6 +23,9 @@ CC_RE = re.compile(
     r"^(feat|fix|perf|refactor|docs|chore|build|ci|test|style)(?:\([^)]+\))?!?:\s*(.+)$",
     re.IGNORECASE,
 )
+JIRA_RE = re.compile(r"\b(RDFA-\d+)\b", re.IGNORECASE)
+GH_RE = re.compile(r"(?:\(#(\d+)\)|#(\d+)\b|\bGH-(\d+)\b)", re.IGNORECASE)
+REMOVED_RE = re.compile(r"\b(remove|removed|delete|deleted|drop|dropped|deprecat(?:e|ed|ion))\b", re.IGNORECASE)
 
 KEEP_A_CHANGELOG_PREAMBLE = """# Changelog
 
@@ -30,6 +33,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)."""
+CATEGORY_ORDER = ("Added", "Changed", "Fixed", "Removed")
 
 
 def run_git(args: list[str], cwd: Path) -> str:
@@ -87,23 +91,136 @@ def commit_subjects(repo_root: Path, revision_range: str | None) -> list[str]:
 
 
 def classify_subjects(subjects: list[str]) -> OrderedDict[str, list[str]]:
-    groups: OrderedDict[str, list[str]] = OrderedDict((k, []) for k in ("Added", "Changed", "Fixed"))
+    groups: OrderedDict[str, list[str]] = OrderedDict((k, []) for k in CATEGORY_ORDER)
 
     for subject in subjects:
         m = CC_RE.match(subject)
         if m:
             kind = m.group(1).lower()
             msg = m.group(2).strip()
-            if kind == "feat":
-                groups["Added"].append(msg)
-            elif kind == "fix":
-                groups["Fixed"].append(msg)
-            else:
-                groups["Changed"].append(msg)
+            category = classify_category(kind, msg)
+            groups[category].append(format_entry(subject, msg))
         else:
-            groups["Changed"].append(subject)
+            category = classify_category("", subject)
+            groups[category].append(format_entry(subject, subject))
 
     return groups
+
+
+def classify_category(kind: str, message: str) -> str:
+    if kind == "feat":
+        return "Added"
+    if kind == "fix":
+        return "Fixed"
+    if REMOVED_RE.search(message):
+        return "Removed"
+    return "Changed"
+
+
+def format_entry(subject: str, message: str) -> str:
+    jira = extract_jira_id(subject)
+    gh = extract_gh_id(subject)
+    description = normalize_message(message)
+    line = f"{jira}: {description}" if jira else description
+    if gh:
+        line = f"{line} ({gh})"
+    return line
+
+
+def extract_jira_id(text: str) -> str | None:
+    match = JIRA_RE.search(text)
+    if not match:
+        return None
+    return match.group(1).upper()
+
+
+def extract_gh_id(text: str) -> str | None:
+    match = GH_RE.search(text)
+    if not match:
+        return None
+    digits = next((g for g in match.groups() if g), "")
+    return f"GH-{digits}" if digits else None
+
+
+def normalize_message(message: str) -> str:
+    msg = message
+    msg = JIRA_RE.sub("", msg)
+    msg = re.sub(r"\(#\d+\)", "", msg)
+    msg = re.sub(r"\bGH-\d+\b", "", msg, flags=re.IGNORECASE)
+    msg = re.sub(r"#\d+\b", "", msg)
+    msg = re.sub(r"\((?:\s|[,;:/-])*\)", "", msg)
+    msg = re.sub(r"\(\s*\)", "", msg)
+    msg = re.sub(r"\[\s*\]", "", msg)
+    msg = re.sub(r"\s+", " ", msg)
+    msg = re.sub(r",\s*,", ",", msg)
+    msg = re.sub(r"\(\s*,\s*", "(", msg)
+    msg = re.sub(r"\s+([,;:.!?])", r"\1", msg)
+    msg = msg.strip(" \t-_,;:.")
+    if not msg:
+        return "No description provided"
+    return msg[0].upper() + msg[1:]
+
+
+def canonical_entry_key(entry: str) -> str:
+    msg = entry.strip()
+    msg = re.sub(r"^RDFA-\d+:\s*", "", msg, flags=re.IGNORECASE)
+    msg = re.sub(r"\s*\(GH-\d+\)\s*$", "", msg, flags=re.IGNORECASE)
+    msg = re.sub(r"\s+", " ", msg).strip().lower()
+    return msg
+
+
+def parse_grouped_section(body: str) -> OrderedDict[str, list[str]]:
+    groups: OrderedDict[str, list[str]] = OrderedDict((k, []) for k in CATEGORY_ORDER)
+    current: str | None = None
+
+    for raw_line in body.splitlines():
+        line = raw_line.strip()
+        category_match = re.match(r"^### (Added|Changed|Fixed|Removed)$", line)
+        if category_match:
+            current = category_match.group(1)
+            continue
+
+        if current and line.startswith("- "):
+            entry = sanitize_existing_entry(line[2:].strip())
+            if entry:
+                groups[current].append(entry)
+
+    return groups
+
+
+def sanitize_existing_entry(entry: str) -> str:
+    # Backward-compatible cleanup for old placeholder IDs.
+    cleaned = entry.strip()
+    cleaned = re.sub(r"^RDFA-000:\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*\(GH-000\)\s*$", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def merge_grouped_sections(
+    existing: OrderedDict[str, list[str]],
+    generated: OrderedDict[str, list[str]],
+) -> OrderedDict[str, list[str]]:
+    merged: OrderedDict[str, list[str]] = OrderedDict((k, []) for k in CATEGORY_ORDER)
+    seen_keys: set[str] = set()
+
+    for category in CATEGORY_ORDER:
+        for entry in existing.get(category, []):
+            key = canonical_entry_key(entry)
+            if key:
+                seen_keys.add(key)
+            merged[category].append(entry)
+
+    for category in CATEGORY_ORDER:
+        for entry in generated.get(category, []):
+            key = canonical_entry_key(entry)
+            if key and key in seen_keys:
+                continue
+            if key:
+                seen_keys.add(key)
+            merged[category].append(entry)
+
+    return merged
 
 
 def render_section(title: str, date: str | None, grouped: OrderedDict[str, list[str]], empty_note: str | None = None) -> str:
@@ -111,7 +228,7 @@ def render_section(title: str, date: str | None, grouped: OrderedDict[str, list[
     chunks = [header, ""]
 
     has_entries = False
-    for group_name in ("Added", "Changed", "Fixed"):
+    for group_name in CATEGORY_ORDER:
         entries = grouped.get(group_name, [])
         if not entries:
             continue
@@ -202,21 +319,32 @@ def main() -> int:
     if not preamble.strip():
         preamble = KEEP_A_CHANGELOG_PREAMBLE + "\n"
 
+    existing_unreleased_body = ""
     preserved_versions: list[tuple[str, str | None, str]] = []
     for name, date, body in sections:
-        if name != "Unreleased":
-            preserved_versions.append((name, date, body))
+        if name == "Unreleased":
+            existing_unreleased_body = body
+            continue
+        preserved_versions.append((name, date, body))
 
-    unreleased_grouped = build_unreleased_from_git(repo_root)
+    generated_unreleased_grouped = build_unreleased_from_git(repo_root)
+    existing_unreleased_grouped = parse_grouped_section(existing_unreleased_body)
+    unreleased_grouped = merge_grouped_sections(existing_unreleased_grouped, generated_unreleased_grouped)
     unreleased_text = render_section("Unreleased", None, unreleased_grouped, empty_note="_No unreleased changes yet._")
 
     final_sections: list[str] = [unreleased_text]
 
     if mode == "release":
-        current_tag = f"v{version}"
-        release_grouped = build_release_from_git(repo_root, current_tag)
-        today = dt.date.today().isoformat()
-        release_text = render_section(version, today, release_grouped, empty_note="_No notable changes in this release._")
+        existing_release = next((section for section in preserved_versions if section[0] == version), None)
+        if existing_release is None:
+            current_tag = f"v{version}"
+            release_grouped = build_release_from_git(repo_root, current_tag)
+            today = dt.date.today().isoformat()
+            release_text = render_section(version, today, release_grouped, empty_note="_No notable changes in this release._")
+        else:
+            existing_name, existing_date, existing_body = existing_release
+            heading = f"## [{existing_name}]" + (f" - {existing_date}" if existing_date else "")
+            release_text = (heading + "\n\n" + existing_body.strip() + "\n").replace("\n\n\n", "\n\n")
         final_sections.append(release_text)
         for name, date, body in preserved_versions:
             if name == version:
