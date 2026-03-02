@@ -32,8 +32,19 @@
     });
 
     function getPackageLabel(pack) {
-        if (pack.label === "default") return "default";
-        return pack.label.split("#")[1].replace("Package_", "");
+        const label = pack?.label;
+        if (label === "default") {
+            return "default";
+        }
+        if (typeof label !== "string") {
+            return String(label ?? "default");
+        }
+
+        const fragment = label.includes("#") ? (label.split("#").pop() ?? "") : label;
+        const segment = fragment.includes("/") ? (fragment.split("/").pop() ?? "") : fragment;
+        const normalized = segment || fragment || label;
+
+        return normalized.replace("Package_", "");
     }
 
     function getPackageChangeType(pack) {

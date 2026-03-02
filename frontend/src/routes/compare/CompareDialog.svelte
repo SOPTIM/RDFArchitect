@@ -141,7 +141,9 @@
         }
 
         const changeList = await response.json();
-        changeList.sort((a, b) => a.label.localeCompare(b.label));
+        changeList.sort((a, b) =>
+            (a?.label ?? "").localeCompare(b?.label ?? ""),
+        );
         compareState.changeList.updateValue(changeList);
 
         showDialog = false;
