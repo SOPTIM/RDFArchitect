@@ -48,11 +48,12 @@ import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.rdf.model.wrapper.AlphabeticallySortedModel;
+import org.rdfarchitect.rdf.model.wrapper.CimSortedModel;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -137,11 +138,11 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
             var copiedGraph = GraphUtils.deepCopy(graph);
             copiedGraph.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
             removeUUIDs(copiedGraph);
-            var sortedModel = new AlphabeticallySortedModel(ModelFactory.createModelForGraph(copiedGraph));
+            var sortedModel = new CimSortedModel(ModelFactory.createModelForGraph(copiedGraph));
             sortedModel.write(out, format.getLang().getName());
             return out;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         } finally {
             if (graph != null) {
                 graph.end();
