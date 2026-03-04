@@ -37,6 +37,7 @@
         lockedDatasetName,
         lockedGraphUri,
         lockedPackage,
+        onClassCreated = () => {},
     } = $props();
 
     const uuid = uuidv4();
@@ -152,6 +153,8 @@
     async function newClass() {
         const datasetNameLocal = datasetName;
         const graphURILocal = graphURI;
+        const classNameLocal = className;
+        const classURINamespaceLocal = classURINamespace;
         const selectedPackageUUID = classPackage?.uuid ?? "default";
         const packageDTO = classPackage?.uuid ? classPackage : null;
         let promise = fetch(
@@ -166,14 +169,20 @@
                 headers: new Headers({ "Content-Type": "application/json" }),
                 body: JSON.stringify({
                     packageDTO,
-                    classURIPrefix: classURINamespace,
-                    className: className,
+                    classURIPrefix: classURINamespaceLocal,
+                    className: classNameLocal,
                 }),
                 credentials: "include",
             },
         ).then(res => {
             if (res.ok) {
                 console.log("successfully added class");
+                onClassCreated({
+                    datasetName: datasetNameLocal,
+                    graphURI: graphURILocal,
+                    packageUUID: selectedPackageUUID,
+                    className: classNameLocal,
+                });
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedPackageUUID.updateValue(

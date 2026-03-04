@@ -41,6 +41,10 @@
     import ClassNode from "./components/ClassNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
+    import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
+    import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import DeleteClassConfirmDialog from "../../../routes/DeleteClassConfirmDialog.svelte";
+    import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
         nodes: inputNodes,
@@ -61,6 +65,15 @@
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
+    let paneContextMenuOpen = $state(false);
+    let classContextMenuOpen = $state(false);
+    let contextMenuFlowPosition = $state({ x: 0, y: 0 });
+    let contextMenuScreenPosition = $state({ x: 0, y: 0 });
+    let contextMenuClass = $state(null);
+    let deleteClassTarget = $state(null);
+    let showDeleteClassDialog = $state(false);
+    let showNewClassDialog = $state(false);
+    let pendingNewClassPlacement = null;
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
@@ -75,12 +88,67 @@
     );
 
     $effect(() => {
-        const nextNodes = [...inputNodes];
+        let nextNodes = [...inputNodes];
         const nextHasDefaultLayout =
             nextNodes.length > 0 &&
             nextNodes.every(
                 node => node.position.x === 0 && node.position.y === 0,
             );
+
+        if (
+            pendingNewClassPlacement &&
+            editorState.selectedPackageUUID.getValue() ===
+                pendingNewClassPlacement.packageUUID
+        ) {
+            const addedNodes = nextNodes.filter(
+                node => !pendingNewClassPlacement.existingNodeIds.has(node.id),
+            );
+            const addedNode =
+                addedNodes.find(
+                    node =>
+                        node.data?.label ===
+                            pendingNewClassPlacement.className &&
+                        node.position.x === 0 &&
+                        node.position.y === 0,
+                ) ??
+                addedNodes.find(
+                    node =>
+                        node.data?.label === pendingNewClassPlacement.className,
+                ) ??
+                (addedNodes.length === 1 ? addedNodes[0] : null);
+
+            if (addedNode) {
+                const { x, y } = pendingNewClassPlacement.position;
+                nextNodes = nextNodes.map(node =>
+                    node.id === addedNode.id
+                        ? {
+                              ...node,
+                              position: { x, y },
+                          }
+                        : node,
+                );
+
+                bec.updateClassPositions(
+                    pendingNewClassPlacement.datasetName,
+                    pendingNewClassPlacement.graphURI,
+                    pendingNewClassPlacement.packageUUID,
+                    [
+                        {
+                            classUUID: addedNode.id,
+                            xPosition: x,
+                            yPosition: y,
+                        },
+                    ],
+                ).catch(error => {
+                    console.error(
+                        "Could not persist newly created class position:",
+                        error,
+                    );
+                });
+
+                pendingNewClassPlacement = null;
+            }
+        }
 
         nodes = nextNodes;
         edges = inputEdges.map(edge => {
@@ -176,6 +244,7 @@
     }
 
     function handleNodeClick(nodeClickEvent) {
+        closeContextMenus();
         if (nodeClickEvent.node.type === "class") {
             const id = nodeClickEvent.node.id;
             console.log("selecting class: ", id);
@@ -203,6 +272,112 @@
 
     function handleNodeMove(nodeMoveEvent) {
         updateNodePositions(nodeMoveEvent.nodes);
+    }
+
+    function closeContextMenus() {
+        paneContextMenuOpen = false;
+        classContextMenuOpen = false;
+    }
+
+    function getContextMenuScreenPosition(event) {
+        const contextMenuWidth = 176;
+        const contextMenuHeight = 48;
+        const viewportPadding = 8;
+
+        const maxX = Math.max(
+            viewportPadding,
+            window.innerWidth - contextMenuWidth - viewportPadding,
+        );
+        const maxY = Math.max(
+            viewportPadding,
+            window.innerHeight - contextMenuHeight - viewportPadding,
+        );
+
+        return {
+            x: Math.min(Math.max(event.clientX, viewportPadding), maxX),
+            y: Math.min(Math.max(event.clientY, viewportPadding), maxY),
+        };
+    }
+
+    function handlePaneContextMenu({ event }) {
+        event.preventDefault();
+        event.stopPropagation();
+        if (
+            event.target instanceof Element &&
+            event.target.closest(".svelte-flow__node")
+        ) {
+            return;
+        }
+
+        contextMenuClass = null;
+        contextMenuScreenPosition = getContextMenuScreenPosition(event);
+        classContextMenuOpen = false;
+        if (!svelteFlowAPI?.svelteFlow) {
+            contextMenuFlowPosition = { x: 0, y: 0 };
+            paneContextMenuOpen = true;
+            return;
+        }
+
+        contextMenuFlowPosition = svelteFlowAPI.svelteFlow.screenToFlowPosition(
+            {
+                x: event.clientX,
+                y: event.clientY,
+            },
+            { snapToGrid: false },
+        );
+        paneContextMenuOpen = true;
+    }
+
+    function handleEdgeContextMenu({ event }) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeContextMenus();
+    }
+
+    function handleNodeContextMenu({ event, node }) {
+        event.preventDefault();
+        event.stopPropagation();
+        contextMenuClass = {
+            uuid: node.id,
+            label: node.data?.label ?? node.id,
+        };
+        contextMenuScreenPosition = getContextMenuScreenPosition(event);
+        paneContextMenuOpen = false;
+        classContextMenuOpen = true;
+        editorState.selectedClassUUID.updateValue(node.id);
+    }
+
+    function openNewClassDialog() {
+        showNewClassDialog = true;
+        closeContextMenus();
+    }
+
+    function handleClassCreated({
+        datasetName,
+        graphURI,
+        packageUUID,
+        className,
+    }) {
+        pendingNewClassPlacement = {
+            datasetName,
+            graphURI,
+            packageUUID,
+            className,
+            existingNodeIds: new Set(nodes.map(node => node.id)),
+            position: {
+                x: contextMenuFlowPosition.x,
+                y: contextMenuFlowPosition.y,
+            },
+        };
+    }
+
+    function openDeleteClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        deleteClassTarget = contextMenuClass;
+        showDeleteClassDialog = true;
+        closeContextMenus();
     }
 
     function updateNodePositions(movedNodes) {
@@ -314,23 +489,59 @@
     }
 </script>
 
-<SvelteFlow
-    bind:nodes
-    bind:edges
-    {nodeTypes}
-    {edgeTypes}
-    nodesDraggable={!isDatasetReadOnly}
-    fitView
-    elementsSelectable={false}
-    nodesFocusable={false}
-    onnodeclick={handleNodeClick}
-    onnodedragstop={handleNodeMove}
-    selectionMode={"full"}
-    connectionMode={"loose"}
-    multiSelectionKey={null}
-    minZoom={0.1}
-    maxZoom={5}
->
-    <EdgeMarkers />
-    <Background patternColor="#aaa" gap={16} />
-</SvelteFlow>
+<div class="relative h-full w-full">
+    <SvelteFlow
+        bind:nodes
+        bind:edges
+        {nodeTypes}
+        {edgeTypes}
+        nodesDraggable={!isDatasetReadOnly}
+        fitView
+        elementsSelectable={false}
+        nodesFocusable={false}
+        onnodeclick={handleNodeClick}
+        onnodecontextmenu={handleNodeContextMenu}
+        onpaneclick={closeContextMenus}
+        onpanecontextmenu={handlePaneContextMenu}
+        onedgecontextmenu={handleEdgeContextMenu}
+        onnodedragstop={handleNodeMove}
+        selectionMode={"full"}
+        connectionMode={"loose"}
+        multiSelectionKey={null}
+        minZoom={0.1}
+        maxZoom={5}
+    >
+        <EdgeMarkers />
+        <Background patternColor="#aaa" gap={16} />
+    </SvelteFlow>
+
+    <SvelteFlowPaneContextMenu
+        isOpen={paneContextMenuOpen}
+        position={contextMenuScreenPosition}
+        disabled={isDatasetReadOnly}
+        onAddClass={openNewClassDialog}
+        onClose={closeContextMenus}
+    />
+    <SvelteFlowClassContextMenu
+        isOpen={classContextMenuOpen}
+        position={contextMenuScreenPosition}
+        disabled={isDatasetReadOnly || !contextMenuClass}
+        onDeleteClass={openDeleteClassDialog}
+        onClose={closeContextMenus}
+    />
+</div>
+
+<NewClassDialog
+    bind:showDialog={showNewClassDialog}
+    lockedDatasetName={editorState.selectedDataset.getValue()}
+    lockedGraphUri={editorState.selectedGraph.getValue()}
+    onClassCreated={handleClassCreated}
+/>
+
+<DeleteClassConfirmDialog
+    bind:showDialog={showDeleteClassDialog}
+    datasetName={editorState.selectedDataset.getValue()}
+    graphUri={editorState.selectedGraph.getValue()}
+    classUuid={deleteClassTarget?.uuid}
+    classLabel={deleteClassTarget?.label}
+/>
