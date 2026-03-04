@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.shacl.generate;
+package org.rdfarchitect.shacl;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -31,7 +31,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,7 +41,7 @@ import static org.assertj.core.api.Assertions.*;
 
 class SHACLFromCIMGeneratorTest {
 
-    private static final String TEST_DATA_DIR = "src/test/java/org/rdfarchitect/shacl.generator/testdata/";
+    private static final String TEST_DATA_DIR = "src/test/java/org/rdfarchitect/shacl/testdata/";
 
     private static final PrefixEntry PREFIX_ENTRY = PrefixEntry.create("rdfash", "https://example.com/shacl#");
 
