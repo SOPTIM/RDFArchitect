@@ -38,7 +38,7 @@ public class RDFUtils {
             throw new NullPointerException("URI or Literal cannot be null");
         }
         try {
-            new URI(s).toURL();
+            var _ = new URI(s).toURL();
             return "<" + s + ">";
         } catch (URISyntaxException | MalformedURLException | IllegalArgumentException _) {
             return "\"" + s + "\"";
@@ -57,7 +57,7 @@ public class RDFUtils {
             return false;
         }
         try {
-            new URI(s).toURL();
+            var _ = new URI(s).toURL();
             return true;
         } catch (URISyntaxException | MalformedURLException | IllegalArgumentException _) {
             return false;
