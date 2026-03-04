@@ -128,7 +128,7 @@
                     accessDisplayData={namespace => namespace.substitutedPrefix}
                     accessIdentifier={getNsPrefixNsUriString}
                     callOnValidChange={newNamespace =>
-                        (attribute.namespace.value = newNamespace.prefix)}
+                        (attribute.namespace.value = newNamespace?.prefix)}
                     highlight={attribute.namespace.isModified}
                     warn={!attribute.namespace.isValid}
                     {readonly}

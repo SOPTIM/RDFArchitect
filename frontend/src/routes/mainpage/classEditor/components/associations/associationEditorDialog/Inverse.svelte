@@ -70,7 +70,7 @@
             accessDisplayData={namespace => namespace.substitutedPrefix}
             accessIdentifier={getNsPrefixNsUriString}
             callOnValidChange={newNamespace =>
-                (association.inverse.namespace.value = newNamespace.prefix)}
+                (association.inverse.namespace.value = newNamespace?.prefix)}
             highlight={association.inverse.namespace.isModified}
             warn={!association.inverse.namespace.isValid}
             {readonly}
