@@ -24,6 +24,7 @@
     import RenderingWrapper from "./renderingWrapper.svelte";
 
     let classEditorPaneWidth = 30;
+    let paneSizeByPackage = $state({});
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
             editorState.selectedDataset.getValue(),
@@ -32,7 +33,6 @@
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
-    let paneSizeByPackage = $state({});
 
     const selectionTrigger = $derived([
         editorState.selectedPackageUUID.subscribe(),

@@ -26,11 +26,12 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { editorState, diagramFocusState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import {
         getUri,
+        getPackageId,
         isSelectedClass,
     } from "./packageNavigationUtils.svelte.js";
     import DeleteClassConfirmDialog from "../../DeleteClassConfirmDialog.svelte";
@@ -79,6 +80,22 @@
             classUuid: cls.uuid,
         });
     }
+
+    function focusClassInDiagram() {
+        if (diagramFocusState.classUUID.getValue() === cls.uuid) {
+            diagramFocusState.classUUID.trigger();
+            return;
+        }
+        diagramFocusState.classUUID.updateValue(cls.uuid);
+    }
+
+    function showClassInPackage() {
+        editorState.selectedDataset.updateValue(dataset.label);
+        editorState.selectedGraph.updateValue(getUri(graph));
+        editorState.selectedPackageUUID.updateValue(getPackageId(pack));
+        selectClass();
+        focusClassInDiagram();
+    }
 </script>
 
 <ContextMenu.Root>
@@ -95,10 +112,10 @@
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
         <ContextMenu.Item.Button
-            onSelect={selectClass}
+            onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}
         >
-            Open Class
+            Show in package
         </ContextMenu.Item.Button>
         <ContextMenu.Item.Button
             onSelect={() => {
