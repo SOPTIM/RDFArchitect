@@ -67,6 +67,7 @@
         if (!editorState.selectedPackageUUID.getValue()) {
             response = null;
             renderingFormat = null;
+            isLoading = false;
             return;
         }
 
@@ -95,6 +96,7 @@
             const responseText = await res.text();
             if (!responseText) {
                 displayDiagram = false;
+                isLoading = false;
             } else {
                 response = JSON.parse(responseText);
                 renderingFormat = response.format;
@@ -104,6 +106,7 @@
             console.error("Error fetching diagram data:", error);
             response = null;
             renderingFormat = null;
+            isLoading = false;
         }
     });
 
