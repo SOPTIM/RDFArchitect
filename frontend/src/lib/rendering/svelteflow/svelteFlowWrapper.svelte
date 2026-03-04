@@ -65,14 +65,24 @@
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
     let hasDefaultLayout = $derived(
-        nodes.every(node => node.position.x === 0 && node.position.y === 0),
+        nodes.length > 0 &&
+            nodes.every(
+                node => node.position.x === 0 && node.position.y === 0,
+            ),
     );
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
     );
 
     $effect(() => {
-        nodes = [...inputNodes];
+        const nextNodes = [...inputNodes];
+        const nextHasDefaultLayout =
+            nextNodes.length > 0 &&
+            nextNodes.every(
+                node => node.position.x === 0 && node.position.y === 0,
+            );
+
+        nodes = nextNodes;
         edges = inputEdges.map(edge => {
             //applies offset to inheritance edge if an association edge already exists between the same two nodes
             if (edge.type === "inheritance") {
@@ -105,7 +115,11 @@
             return edge;
         });
         layouted = false;
-        isLoading = false;
+
+        // When nodes already have persisted positions (or no nodes are returned)
+        if (!nextHasDefaultLayout) {
+            isLoading = false;
+        }
     });
 
     $effect(async () => {
