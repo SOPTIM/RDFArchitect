@@ -150,7 +150,7 @@
             />
             <ViolationMessages violations={attribute.datatype.violations} />
 
-            <!--MULTIPLICITIY-->
+            <!--MULTIPLICITY-->
             <NumberInputControl
                 label="Multiplicity LowerBound:"
                 placeholder="multiplicity LowerBound..."

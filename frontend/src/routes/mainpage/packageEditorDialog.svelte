@@ -75,31 +75,20 @@
         }
 
         const apiPackage = mapReactivePackageToPackageDto(pkg);
+        const res = await bec.putPackage(datasetName, graphUri, apiPackage);
 
-        let saveCall;
-        if (isNewPackage) {
-            saveCall = bec.postPackage(datasetName, graphUri, apiPackage);
+        if (res.ok) {
+            console.log("Successfully saved package");
+            pkg.save();
+            editorState.selectedClassUUID.trigger();
+            editorState.selectedPackageUUID.trigger();
+            forceReloadTrigger.trigger();
         } else {
-            saveCall = bec.putPackage(datasetName, graphUri, apiPackage);
+            const errorText = await res.text();
+            console.error("Could not save package:", errorText);
         }
 
-        return saveCall
-            .then(async res => {
-                if (res.ok) {
-                    const packageUUID = await res.json();
-                    console.log("Successfully saved package:", packageUUID);
-                    pkg.save();
-                } else {
-                    const errorText = await res.text();
-                    console.error("Could not save package:", errorText);
-                }
-                return res;
-            })
-            .finally(() => {
-                editorState.selectedClassUUID.trigger();
-                editorState.selectedPackageUUID.trigger();
-                forceReloadTrigger.trigger();
-            });
+        return res;
     }
 </script>
 
