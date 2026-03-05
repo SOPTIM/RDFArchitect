@@ -341,7 +341,7 @@ public class CimSortedModel implements Model {
      *
      * @return negative if a comes first, positive if b comes first, 0 if equal
      */
-    private <T> int compareOntologyFirst(Predicate<T> isOntology, T a, T b) {
+    private <T> int compareWithOntologyPrioritized(Predicate<T> isOntology, T a, T b) {
         var aIsOntology = isOntology.test(a);
         var bIsOntology = isOntology.test(b);
         if (aIsOntology && !bIsOntology) {
@@ -354,18 +354,18 @@ public class CimSortedModel implements Model {
     }
 
     private int compareResources(Resource r1, Resource r2) {
-        return compareOntologyFirst(r -> r.hasProperty(RDF.type, OWL2.Ontology), r1, r2);
+        return compareWithOntologyPrioritized(r -> r.hasProperty(RDF.type, OWL2.Ontology), r1, r2);
     }
 
     private int compareStatements(Statement s1, Statement s2) {
-        return compareOntologyFirst(s -> s.getSubject().hasProperty(RDF.type, OWL2.Ontology), s1, s2);
+        return compareWithOntologyPrioritized(s -> s.getSubject().hasProperty(RDF.type, OWL2.Ontology), s1, s2);
     }
 
     private int compareNodes(RDFNode n1, RDFNode n2) {
-        return compareOntologyFirst(n -> n.isResource() && n.asResource().hasProperty(RDF.type, OWL2.Ontology), n1, n2);
+        return compareWithOntologyPrioritized(n -> n.isResource() && n.asResource().hasProperty(RDF.type, OWL2.Ontology), n1, n2);
     }
 
     private int compareTriples(Triple t1, Triple t2) {
-        return compareOntologyFirst(t -> model.wrapAsResource(t.getSubject()).hasProperty(RDF.type, OWL2.Ontology), t1, t2);
+        return compareWithOntologyPrioritized(t -> model.wrapAsResource(t.getSubject()).hasProperty(RDF.type, OWL2.Ontology), t1, t2);
     }
 }

@@ -37,7 +37,7 @@ import java.util.stream.IntStream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
-class AlphabeticallySortedModelTest {
+class CimSortedModelTest {
 
     private CimSortedModel createTestModel() {
         var m = ModelFactory.createDefaultModel();
@@ -90,18 +90,6 @@ class AlphabeticallySortedModelTest {
         }
 
         @Test
-        void listSubjects_givenOntologyResource_returnsOntologyFirst() {
-            // Arrange
-            var model = createTestModelWithOntology();
-            // Act
-            var subjects = toStringList(model.listSubjects());
-            // Assert
-            assertThat(subjects.getFirst()).isEqualTo("http://example.org/MyOntology");
-            assertThat(subjects.subList(1, subjects.size()))
-                      .isEqualTo(subjects.subList(1, subjects.size()).stream().sorted().toList());
-        }
-
-        @Test
         void listNameSpaces_givenUnsortedNamespaces_returnsAlphabeticallySorted() {
             // Arrange
             var model = createTestModel();
@@ -119,22 +107,6 @@ class AlphabeticallySortedModelTest {
             var objs = toStringList(model.listObjects());
             // Assert
             assertThat(objs).isEqualTo(objs.stream().sorted().toList());
-        }
-
-        @Test
-        void listObjects_givenOntologyResource_returnsOntologyFirst() {
-            // Arrange
-            var m = ModelFactory.createDefaultModel();
-            var ontology = m.createResource("http://example.org/ZZZOntology");
-            var p = m.createProperty("http://example.org/ref");
-            m.add(ontology, RDF.type, OWL2.Ontology);
-            m.add(m.createResource("http://example.org/A"), p, ontology);
-            m.add(m.createResource("http://example.org/B"), p, m.createResource("http://example.org/AAA"));
-            var model = new CimSortedModel(m);
-            // Act
-            var objs = toStringList(model.listObjectsOfProperty(p));
-            // Assert
-            assertThat(objs.getFirst()).isEqualTo("http://example.org/ZZZOntology");
         }
 
         @Test
@@ -168,17 +140,6 @@ class AlphabeticallySortedModelTest {
             var stmts = toStringList(model.listStatements());
             // Assert
             assertThat(stmts).isEqualTo(stmts.stream().sorted().toList());
-        }
-
-        @Test
-        void listStatements_givenOntologyResource_returnsOntologyStatementsFirst() {
-            // Arrange
-            var model = createTestModelWithOntology();
-            // Act
-            var stmts = toStringList(model.listStatements());
-            // Assert
-            assertThat(stmts.getFirst()).contains("MyOntology");
-            assertThat(stmts.get(1)).contains("MyOntology");
         }
 
         @Test
@@ -398,19 +359,6 @@ class AlphabeticallySortedModelTest {
         }
 
         @Test
-        void listResourcesWithProperty_givenOntologyResource_returnsOntologyFirst() {
-            // Arrange
-            var model = createTestModelWithOntology();
-            var p = model.getProperty("http://example.org/prop");
-            // Act
-            var res = toStringList(model.listResourcesWithProperty(p));
-            // Assert
-            assertThat(res.getFirst()).isEqualTo("http://example.org/MyOntology");
-            assertThat(res.subList(1, res.size()))
-                      .isEqualTo(res.subList(1, res.size()).stream().sorted().toList());
-        }
-
-        @Test
         void listSubjectsWithPropertyString_givenUnsortedSubjects_returnsAlphabeticallySorted() {
             // Arrange
             var model = createTestModel();
@@ -502,54 +450,62 @@ class AlphabeticallySortedModelTest {
             // Assert
             assertThat(res).isEqualTo(res.stream().sorted().toList());
         }
-
-        @Test
-        void write_rdfxmlFormat_writesValidRdfXml() {
-            // Arrange
-            var model = createTestModel();
-            var out = new ByteArrayOutputStream();
-            // Act
-            model.write(out, "RDF/XML");
-            var result = out.toString(StandardCharsets.UTF_8);
-            // Assert
-            assertThat(result).contains("rdf:RDF")
-                              .contains("http://example.org/A")
-                              .contains("http://example.org/B")
-                              .contains("http://example.org/C");
-        }
-
-        @Test
-        void write_turtleFormat_writesValidTurtle() {
-            // Arrange
-            var model = createTestModel();
-            var out = new ByteArrayOutputStream();
-            // Act
-            model.write(out, "TURTLE");
-            var result = out.toString(StandardCharsets.UTF_8);
-            // Assert
-            assertThat(result).contains("http://example.org/A")
-                              .contains("http://example.org/B")
-                              .contains("http://example.org/C")
-                              .contains("http://example.org/prop");
-        }
-
-        @Test
-        void write_ntriplesFormat_writesSortedNTriples() {
-            // Arrange
-            var model = createTestModel();
-            var out = new ByteArrayOutputStream();
-            // Act
-            model.write(out, "N-TRIPLES");
-            var result = out.toString(StandardCharsets.UTF_8);
-            // Assert
-            var lines = result.lines().filter(l -> l.contains("http://example.org/")).toList();
-            var sortedLines = lines.stream().sorted().toList();
-            assertThat(lines).isEqualTo(sortedLines);
-        }
     }
 
     @Nested
     class ontologyFirstTests {
+
+        @Test
+        void listStatements_givenOntologyResource_returnsOntologyStatementsFirst() {
+            // Arrange
+            var model = createTestModelWithOntology();
+            // Act
+            var stmts = toStringList(model.listStatements());
+            // Assert
+            assertThat(stmts.getFirst()).contains("MyOntology");
+            assertThat(stmts.get(1)).contains("MyOntology");
+        }
+
+        @Test
+        void listSubjects_givenOntologyResource_returnsOntologyFirst() {
+            // Arrange
+            var model = createTestModelWithOntology();
+            // Act
+            var subjects = toStringList(model.listSubjects());
+            // Assert
+            assertThat(subjects.getFirst()).isEqualTo("http://example.org/MyOntology");
+            assertThat(subjects.subList(1, subjects.size()))
+                      .isEqualTo(subjects.subList(1, subjects.size()).stream().sorted().toList());
+        }
+
+        @Test
+        void listObjects_givenOntologyResource_returnsOntologyFirst() {
+            // Arrange
+            var m = ModelFactory.createDefaultModel();
+            var ontology = m.createResource("http://example.org/ZZZOntology");
+            var p = m.createProperty("http://example.org/ref");
+            m.add(ontology, RDF.type, OWL2.Ontology);
+            m.add(m.createResource("http://example.org/A"), p, ontology);
+            m.add(m.createResource("http://example.org/B"), p, m.createResource("http://example.org/AAA"));
+            var model = new CimSortedModel(m);
+            // Act
+            var objs = toStringList(model.listObjectsOfProperty(p));
+            // Assert
+            assertThat(objs.getFirst()).isEqualTo("http://example.org/ZZZOntology");
+        }
+
+        @Test
+        void listResourcesWithProperty_givenOntologyResource_returnsOntologyFirst() {
+            // Arrange
+            var model = createTestModelWithOntology();
+            var p = model.getProperty("http://example.org/prop");
+            // Act
+            var res = toStringList(model.listResourcesWithProperty(p));
+            // Assert
+            assertThat(res.getFirst()).isEqualTo("http://example.org/MyOntology");
+            assertThat(res.subList(1, res.size()))
+                      .isEqualTo(res.subList(1, res.size()).stream().sorted().toList());
+        }
 
         @Test
         void listSubjectsWithProperty_givenOntologyAndRegularResources_returnsOntologyFirst() {
@@ -580,17 +536,6 @@ class AlphabeticallySortedModelTest {
             var subjects = toStringList(model.listSubjectsWithProperty(p, o));
             // Assert
             assertThat(subjects.getFirst()).isEqualTo("http://example.org/ZZZOntology");
-        }
-
-        @Test
-        void listStatements_givenOntologyAndRegularResources_returnsOntologyStatementsFirst() {
-            // Arrange
-            var model = createTestModelWithOntology();
-            // Act
-            var stmts = toStringList(model.listStatements());
-            // Assert
-            assertThat(stmts.getFirst()).contains("MyOntology");
-            assertThat(stmts.get(1)).contains("MyOntology");
         }
 
         @Test
@@ -834,6 +779,44 @@ class AlphabeticallySortedModelTest {
             assertThat(result)
                       .as("Method should return the same model instance for method chaining")
                       .isSameAs(model);
+        }
+
+        @Test
+        void write_rdfxmlFormat_writesValidRdfXml() {
+            // Arrange
+            // Act
+            model.write(outputStream, "RDF/XML");
+            var result = outputStream.toString(StandardCharsets.UTF_8);
+            // Assert
+            assertThat(result).contains("rdf:RDF")
+                              .contains("http://example.org/A")
+                              .contains("http://example.org/B")
+                              .contains("http://example.org/C");
+        }
+
+        @Test
+        void write_turtleFormat_writesValidTurtle() {
+            // Arrange
+            // Act
+            model.write(outputStream, "TURTLE");
+            var result = outputStream.toString(StandardCharsets.UTF_8);
+            // Assert
+            assertThat(result).contains("http://example.org/A")
+                              .contains("http://example.org/B")
+                              .contains("http://example.org/C")
+                              .contains("http://example.org/prop");
+        }
+
+        @Test
+        void write_ntriplesFormat_writesSortedNTriples() {
+            // Arrange
+            // Act
+            model.write(outputStream, "N-TRIPLES");
+            var result = outputStream.toString(StandardCharsets.UTF_8);
+            // Assert
+            var lines = result.lines().filter(l -> l.contains("http://example.org/")).toList();
+            var sortedLines = lines.stream().sorted().toList();
+            assertThat(lines).isEqualTo(sortedLines);
         }
     }
 }
