@@ -20,9 +20,14 @@ package org.rdfarchitect.cim.queries.update;
 import lombok.experimental.UtilityClass;
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.update.UpdateExecutionFactory;
+import org.apache.jena.update.UpdateFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.cim.data.dto.CIMAssociation;
@@ -31,6 +36,7 @@ import org.rdfarchitect.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.cim.data.dto.CIMClass;
 import org.rdfarchitect.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.cim.data.dto.CIMPackage;
+import org.rdfarchitect.cim.data.dto.relations.AttributeValueNode;
 import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
@@ -64,7 +70,7 @@ public class CIMUpdates {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         //replace attributes in database
         var updateAttributes = replaceAttributes(prefixMapping, null, newClass.getUuid().toString(), newClass.getAttributes());
-        UpdateExecutionFactory.create(updateAttributes.build(), dataset).execute();
+        UpdateExecutionFactory.create(updateAttributes, dataset).execute();
         //replace associations in database
         var updateAssociations = replaceAssociations(prefixMapping, null, newClass.getUuid().toString(), newClass.getAssociationPairs());
         UpdateExecutionFactory.create(updateAssociations.build(), dataset).execute();
@@ -113,8 +119,8 @@ public class CIMUpdates {
 
     public void deleteClass(Graph graph, PrefixMapping prefixMapping, String classUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
-        var deleteAttributes = deleteAttributes(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAttributes.build(), dataset).execute();
+        var deleteAttributes = deleteAttributesWithValueNodes(prefixMapping, null, classUUID);
+        UpdateExecutionFactory.create(deleteAttributes, dataset).execute();
         var deleteAssociations = deleteAssociations(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteAssociations.build(), dataset).execute();
         var deleteAttributesOfType = deleteAttributesOfType(prefixMapping, null, classUUID);
@@ -151,14 +157,17 @@ public class CIMUpdates {
                   .addPrefixes(prefixMapping)
                   .setGraph(graphURI)
                   .build()
-                  .addOptional("?sub", "?pre", "?obj");
+                  .addBind("1", "?__insertAttribute");
 
         return appendInsertAttribute(baseUpdate, attribute);
     }
 
-    public UpdateBuilder replaceAttribute(PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
-        var baseUpdate = deleteAttribute(prefixMapping, graphURI, attribute.getUuid());
-        return appendInsertAttribute(baseUpdate, attribute);
+    public UpdateRequest replaceAttribute(PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
+        var updateRequest = new UpdateRequest();
+        addUpdateOperations(updateRequest, deleteAttributeValueNodes(graphURI, attribute.getUuid()));
+        updateRequest.add(deleteAttribute(prefixMapping, graphURI, attribute.getUuid()).build());
+        updateRequest.add(insertAttribute(prefixMapping, graphURI, attribute).build());
+        return updateRequest;
     }
 
     private UpdateBuilder appendInsertAttribute(UpdateBuilder baseUpdate, CIMAttribute attribute) {
@@ -183,16 +192,29 @@ public class CIMUpdates {
         }
         //isFixed
         if (attribute.getFixedValue() != null) {
-            baseUpdate.addInsert(newURI, CIMS.isFixed, attribute.getFixedValue().asLiteral());
+            appendValueNode(baseUpdate, newURI, CIMS.isFixed, attribute.getFixedValue());
         }
         //isDefault
         if (attribute.getDefaultValue() != null) {
-            baseUpdate.addInsert(newURI, CIMS.isDefault, attribute.getDefaultValue().asLiteral());
+            appendValueNode(baseUpdate, newURI, CIMS.isDefault, attribute.getDefaultValue());
         }
         return baseUpdate;
     }
 
-    private UpdateBuilder deleteAttributes(PrefixMapping prefixMapping, String graphURI, String classUUID) {
+    private void appendValueNode(UpdateBuilder baseUpdate, Node subject, Property predicate, AttributeValueNode valueNode) {
+        if (valueNode == null || valueNode.getValue() == null) {
+            return;
+        }
+        if (valueNode.isBlankNode()) {
+            var blankNode = NodeFactory.createBlankNode();
+            baseUpdate.addInsert(subject, predicate, blankNode);
+            baseUpdate.addInsert(blankNode, ResourceFactory.createProperty(RDFS.Literal.getURI()), valueNode.asLiteral());
+            return;
+        }
+        baseUpdate.addInsert(subject, predicate, valueNode.asLiteral());
+    }
+
+    private UpdateBuilder deleteAttributesBase(PrefixMapping prefixMapping, String graphURI, String classUUID) {
         return new CIMBaseUpdateBuilder()
                   .addPrefixes(prefixMapping)
                   .setGraph(graphURI)
@@ -204,12 +226,67 @@ public class CIMUpdates {
                   .addWhere(CIMQueryVars.URI, ANY_1, ANY_2);
     }
 
-    public UpdateBuilder replaceAttributes(PrefixMapping prefixMapping, String graphURI, String classUUID, List<CIMAttribute> attributes) {
-        var baseUpdate = CIMUpdates.deleteAttributes(prefixMapping, graphURI, classUUID);
+    public UpdateRequest replaceAttributes(PrefixMapping prefixMapping, String graphURI, String classUUID, List<CIMAttribute> attributes) {
+        var updateRequest = deleteAttributesWithValueNodes(prefixMapping, graphURI, classUUID);
         for (CIMAttribute attribute : attributes) {
-            appendInsertAttribute(baseUpdate, attribute);
+            updateRequest.add(insertAttribute(prefixMapping, graphURI, attribute).build());
         }
-        return baseUpdate;
+        return updateRequest;
+    }
+
+    private UpdateRequest deleteAttributesWithValueNodes(PrefixMapping prefixMapping, String graphURI, String classUUID) {
+        var updateRequest = new UpdateRequest();
+        addUpdateOperations(updateRequest, deleteAttributeValueNodesForClass(graphURI, classUUID));
+        updateRequest.add(deleteAttributesBase(prefixMapping, graphURI, classUUID).build());
+        return updateRequest;
+    }
+
+    private void addUpdateOperations(UpdateRequest target, UpdateRequest source) {
+        if (target == null || source == null) {
+            return;
+        }
+        source.getOperations().forEach(target::add);
+    }
+
+    private UpdateRequest deleteAttributeValueNodes(String graphURI, UUID attributeUUID) {
+        if (attributeUUID == null) {
+            return new UpdateRequest();
+        }
+        var whereBody = "?attribute <" + RDFA.uuid.getURI() + "> \"" + attributeUUID + "\" .\n" +
+                  "?attribute ?valuePredicate ?blank .\n" +
+                  "VALUES ?valuePredicate { <" + CIMS.isFixed.getURI() + "> <" + CIMS.isDefault.getURI() + "> }\n" +
+                  "FILTER(isBlank(?blank))\n" +
+                  "?blank ?p ?o .\n";
+        return buildBlankNodeDeleteUpdate(graphURI, whereBody);
+    }
+
+    private UpdateRequest deleteAttributeValueNodesForClass(String graphURI, String classUUID) {
+        if (classUUID == null || classUUID.isBlank()) {
+            return new UpdateRequest();
+        }
+        var whereBody = "?class <" + RDFA.uuid.getURI() + "> \"" + classUUID + "\" .\n" +
+                  "?attribute <" + RDFS.domain.getURI() + "> ?class .\n" +
+                  "?attribute <" + CIMS.stereotype.getURI() + "> <" + CIMStereotypes.attribute.getURI() + "> .\n" +
+                  "?attribute ?valuePredicate ?blank .\n" +
+                  "VALUES ?valuePredicate { <" + CIMS.isFixed.getURI() + "> <" + CIMS.isDefault.getURI() + "> }\n" +
+                  "FILTER(isBlank(?blank))\n" +
+                  "?blank ?p ?o .\n";
+        return buildBlankNodeDeleteUpdate(graphURI, whereBody);
+    }
+
+    private UpdateRequest buildBlankNodeDeleteUpdate(String graphURI, String whereBody) {
+        var deleteBody = "?blank ?p ?o .";
+        var deleteClause = wrapGraphPattern(graphURI, deleteBody);
+        var whereClause = wrapGraphPattern(graphURI, whereBody);
+        var updateString = "DELETE { " + deleteClause + " } WHERE { " + whereClause + " }";
+        return UpdateFactory.create(updateString);
+    }
+
+    private String wrapGraphPattern(String graphURI, String patternBody) {
+        if (graphURI != null && !"default".equals(graphURI)) {
+            return "GRAPH <" + graphURI + "> {\n" + patternBody + "\n}";
+        }
+        return patternBody;
     }
 
     public UpdateBuilder deleteAssociation(PrefixMapping prefixMapping, String graphURI, UUID fromAssociationUUID) {

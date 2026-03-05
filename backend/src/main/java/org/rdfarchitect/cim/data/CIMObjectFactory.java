@@ -21,6 +21,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.cim.data.dto.CIMAssociationPair;
@@ -87,7 +88,11 @@ public class CIMObjectFactory {
      * @return The created attribute.
      */
     public static CIMAttribute createCIMAttribute(QuerySolution querySolution) {
-        var parser = new CIMQuerySolutionParser(querySolution);
+        return createCIMAttribute(querySolution, null);
+    }
+
+    public static CIMAttribute createCIMAttribute(QuerySolution querySolution, Model valueNodeModel) {
+        var parser = new CIMQuerySolutionParser(querySolution, valueNodeModel);
         CIMSDataType dataType = parser.getPrimitiveDataType(CIMQueryVars.DATA_TYPE_URI, CIMQueryVars.DATA_TYPE_LABEL);
         if (dataType == null) {
             dataType = parser.getRange(CIMQueryVars.RANGE_URI, CIMQueryVars.RANGE_LABEL);
@@ -114,7 +119,15 @@ public class CIMObjectFactory {
      * @return a list containing {@link CIMAttribute CIMAttributes}.
      */
     public static List<CIMAttribute> createCIMAttributeList(ResultSet attributeResultSet) {
-        return createObjectList(attributeResultSet, CIMObjectFactory::createCIMAttribute);
+        return createCIMAttributeList(attributeResultSet, null);
+    }
+
+    public static List<CIMAttribute> createCIMAttributeList(ResultSet attributeResultSet, Model valueNodeModel) {
+        List<CIMAttribute> objectList = new ArrayList<>();
+        while (attributeResultSet.hasNext()) {
+            objectList.add(createCIMAttribute(attributeResultSet.next(), valueNodeModel));
+        }
+        return objectList;
     }
 
     /**

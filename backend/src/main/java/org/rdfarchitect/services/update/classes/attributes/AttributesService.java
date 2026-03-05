@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes.attributes;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.cim.changelog.ChangeLogEntry;
@@ -45,10 +46,18 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         if (cimAttribute.getUuid() == null) {
             cimAttribute.setUuid(UUID.randomUUID());
         }
-        var update = CIMUpdates.insertAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
-
         var graph = databasePort.getGraph(graphIdentifier);
-        InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
+        try {
+            graph.begin(TxnType.WRITE);
+            AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+            var update = CIMUpdates.insertAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
+            InMemorySparqlExecutioner.executeSingleUpdateInCurrentTransaction(graph, update.build(), graphIdentifier.getGraphUri());
+            graph.commit();
+        } finally {
+            if (graph.isInTransaction()) {
+                graph.end();
+            }
+        }
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
     }
@@ -56,9 +65,18 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     @Override
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
-        var update = CIMUpdates.replaceAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
         var graph = databasePort.getGraph(graphIdentifier);
-        InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
+        try {
+            graph.begin(TxnType.WRITE);
+            AttributeFixedDefaultResolver.apply(graph, cimAttribute);
+            var update = CIMUpdates.replaceAttribute(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAttribute);
+            InMemorySparqlExecutioner.executeSingleUpdateInCurrentTransaction(graph, update, graphIdentifier.getGraphUri());
+            graph.commit();
+        } finally {
+            if (graph.isInTransaction()) {
+                graph.end();
+            }
+        }
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
     }
@@ -66,9 +84,19 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     @Override
     public void replaceAllAttributes(GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
-        var update = CIMUpdates.replaceAttributes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID, attributeCIMObjects);
         var graph = databasePort.getGraph(graphIdentifier);
-        InMemorySparqlExecutioner.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
+        try {
+            graph.begin(TxnType.WRITE);
+            AttributeFixedDefaultResolver.apply(graph, attributeCIMObjects);
+            var update = CIMUpdates.replaceAttributes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID,
+                                                      attributeCIMObjects);
+            InMemorySparqlExecutioner.executeSingleUpdateInCurrentTransaction(graph, update, graphIdentifier.getGraphUri());
+            graph.commit();
+        } finally {
+            if (graph.isInTransaction()) {
+                graph.end();
+            }
+        }
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("All attributes for class " + classUUID + " replaced", graph.getLastDelta()));
     }
 }

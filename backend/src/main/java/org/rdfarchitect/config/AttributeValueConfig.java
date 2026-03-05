@@ -15,27 +15,20 @@
  *
  */
 
-package org.rdfarchitect.cim.data.dto.relations;
+package org.rdfarchitect.config;
 
-import lombok.EqualsAndHashCode;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import lombok.Getter;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Configuration;
 
-@EqualsAndHashCode(callSuper = true)
-@ToString(callSuper = true)
-@NoArgsConstructor
-public class CIMSIsFixed extends AttributeValueNode {
+@Configuration
+public class AttributeValueConfig {
 
-    public CIMSIsFixed(String value) {
-        this(value, null, false);
-    }
+    @Getter
+    private static boolean newValuesBlankNode;
 
-    public CIMSIsFixed(String value, URI dataType) {
-        this(value, dataType, false);
-    }
-
-    public CIMSIsFixed(String value, URI dataType, boolean blankNode) {
-        super(value, dataType, blankNode);
+    @Value("${attributes.newValuesBlankNode:false}")
+    public void setNewValuesBlankNode(boolean newValuesBlankNode) {
+        AttributeValueConfig.newValuesBlankNode = newValuesBlankNode;
     }
 }

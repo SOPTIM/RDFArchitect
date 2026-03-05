@@ -219,4 +219,54 @@ class InMemorySparqlExecutionerTest {
             graphRewindable.end();
         }
     }
+
+    @Test
+    void executeSingleUpdateInCurrentTransaction_withoutOpenTransaction_throwsException() {
+        // Arrange
+        String graphUri = "default";
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
+        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.get(0), 20, 5);
+        var triple = TestRDFUtils.triple("a a a");
+        var update = new UpdateBuilder()
+                  .addInsert(triple)
+                  .addOptional(Node.ANY, Node.ANY, Node.ANY)
+                  .build();
+
+        // Act + Assert
+        assertThatThrownBy(() -> InMemorySparqlExecutioner.executeSingleUpdateInCurrentTransaction(graphRewindable, update, graphUri))
+                  .isInstanceOf(IllegalStateException.class)
+                  .hasMessageContaining("open transaction");
+    }
+
+    @Test
+    void executeSingleUpdateInCurrentTransaction_withOpenTransaction_updatesGraph() {
+        // Arrange
+        String graphUri = "default";
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
+        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.get(0), 20, 5);
+        var triple = TestRDFUtils.triple("a a a");
+        var update = new UpdateBuilder()
+                  .addInsert(triple)
+                  .addOptional(Node.ANY, Node.ANY, Node.ANY)
+                  .build();
+
+        // Act
+        graphRewindable.begin(TxnType.WRITE);
+        try {
+            InMemorySparqlExecutioner.executeSingleUpdateInCurrentTransaction(graphRewindable, update, graphUri);
+            graphRewindable.commit();
+        } finally {
+            if (graphRewindable.isInTransaction()) {
+                graphRewindable.end();
+            }
+        }
+
+        // Assert
+        try {
+            graphRewindable.begin(TxnType.READ);
+            assertThat(graphRewindable.contains(triple)).isTrue();
+        } finally {
+            graphRewindable.end();
+        }
+    }
 }

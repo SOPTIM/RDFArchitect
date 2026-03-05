@@ -157,8 +157,25 @@ class AttributeMapperTest {
                                                                                                     CIMSDataType.Type.PRIMITIVE)),
                       () -> assertThat(mappedCIMAttribute.getComment()).isEqualTo(new RDFSComment("Test comment", new URI("http://www.w3.org/2001/XMLSchema#String"))),
                       () -> assertThat(mappedCIMAttribute.getStereotype()).isEqualTo(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute")),
-                      () -> assertThat(mappedCIMAttribute.getFixedValue()).isEqualTo(new CIMSIsFixed("FixedValue", new URI("http://www.w3.org/2001/XMLSchema#String"))),
-                      () -> assertThat(mappedCIMAttribute.getDefaultValue()).isEqualTo(new CIMSIsDefault("DefaultValue", new URI("http://www.w3.org/2001/XMLSchema#String")))
+                      () -> assertThat(mappedCIMAttribute.getFixedValue()).isEqualTo(new CIMSIsFixed("FixedValue", new URI("http://www.w3.org/2001/XMLSchema#string"))),
+                      () -> assertThat(mappedCIMAttribute.getDefaultValue()).isEqualTo(new CIMSIsDefault("DefaultValue", new URI("http://www.w3.org/2001/XMLSchema#string")))
+                     );
+        }
+
+        @Test
+        void toCIMObject_nonPrimitiveDoesNotForceXsdDatatypeForFixedDefault() {
+            attributeDTO.setComment("Test comment");
+            attributeDTO.setFixedValue("FixedValue");
+            attributeDTO.setDefaultValue("DefaultValue");
+            attributeDTO.setDataType(new DataTypeDTO("CustomType", "http://example.org#", DataTypeDTO.Type.RANGE));
+
+            var mappedCIMAttribute = attributeMapper.toCIMObject(attributeDTO);
+
+            assertAll(
+                      () -> assertThat(mappedCIMAttribute.getFixedValue()).isNotNull(),
+                      () -> assertThat(mappedCIMAttribute.getFixedValue().getDataType()).isNull(),
+                      () -> assertThat(mappedCIMAttribute.getDefaultValue()).isNotNull(),
+                      () -> assertThat(mappedCIMAttribute.getDefaultValue().getDataType()).isNull()
                      );
         }
 
