@@ -15,7 +15,7 @@
   -
   -->
 <script>
-    import { faFloppyDisk } from "@fortawesome/free-solid-svg-icons";
+    import { faFloppyDisk, faXmark } from "@fortawesome/free-solid-svg-icons";
     import {
         faDiagramProject,
         faRotateLeft,
@@ -92,7 +92,7 @@
 </script>
 
 <div class="flex gap-1">
-    <div class="w-1/4">
+    <div class="w-1/5">
         <FaIconButton
             callOnClick={() => (showSHACLClassDialog = true)}
             icon={faDiagramProject}
@@ -109,7 +109,7 @@
         />
     </div>
     {#if !readonly}
-        <div class="w-1/4">
+        <div class="w-1/5">
             <FaIconButton
                 callOnClick={() => saveChanges(reactiveClass)}
                 icon={faFloppyDisk}
@@ -118,7 +118,7 @@
                 title="Save class"
             />
         </div>
-        <div class="w-1/4">
+        <div class="w-1/5">
             <FaIconButton
                 callOnClick={() => reactiveClass.reset()}
                 icon={faRotateLeft}
@@ -127,13 +127,13 @@
                 title="Reset changes"
             />
         </div>
-        <div class="w-1/4">
+        <div class="w-1/5">
             <FaIconButton
                 callOnClick={() => (showClassDeleteDialog = true)}
                 icon={faTrash}
                 variant="danger"
                 text="Delete"
-                title="Delete Class"
+                title="Delete class"
             />
             <DeleteClassConfirmDialog
                 {datasetName}
@@ -144,6 +144,27 @@
             />
         </div>
     {/if}
+    <div class="ml-auto w-1/5">
+        <FaIconButton
+            callOnClick={() => {
+                if (reactiveClass.isModified) {
+                    showDiscardSaveConfirmDialog = true;
+                } else {
+                    editorState.selectedClassDataset.updateValue(
+                        datasetOfClassToOpenNext,
+                    );
+                    editorState.selectedClassGraph.updateValue(
+                        graphOfClassToOpenNext,
+                    );
+                    editorState.selectedClassUUID.updateValue(classToOpenNext);
+                }
+            }}
+            icon={faXmark}
+            variant="danger"
+            text="Close"
+            title="Close class editor"
+        />
+    </div>
 </div>
 
 <DiscardCancelConfirmDialog
