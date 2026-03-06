@@ -35,10 +35,8 @@
 </script>
 
 <div
-    class={`bg-class-node-upper-background min-w-45 rounded-md border font-sans text-sm shadow-sm ${cursorClass} ${
-        highlighted
-            ? "ring-class-node-highlighted border-transparent ring-3"
-            : "border-default-text"
+    class={`class-node-shell bg-class-node-upper-background min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
+        highlighted ? "ring-class-node-highlighted ring-3" : ""
     }`}
     role="button"
     tabindex="0"
@@ -69,7 +67,7 @@
 
         <span class="text-default-text mt-1 font-bold">{label}</span>
     </div>
-    <div class="bg-class-node-lower-background min-h-6 rounded-md p-2">
+    <div class="bg-class-node-lower-background min-h-6 rounded-b-md p-2">
         {#if attributes && attributes.length > 0}
             {#each attributes as attr}
                 <div class="text-default-text leading-6">
@@ -85,3 +83,20 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .class-node-shell {
+        position: relative;
+        isolation: isolate;
+    }
+
+    .class-node-shell::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 1px var(--color-default-text);
+        pointer-events: none;
+        z-index: 2;
+    }
+</style>
