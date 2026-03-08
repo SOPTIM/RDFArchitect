@@ -26,7 +26,7 @@
     } from "@xyflow/svelte";
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
     import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -39,6 +39,12 @@
     import ClassNode from "./components/ClassNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
+    import {
+        assignDeterministicNodeZIndices,
+        assignEdgeZIndices,
+        bringNodeToFront as promoteNodeToFront,
+        initializeNextFrontZIndex,
+    } from "./layering.ts";
 
     let {
         nodes: inputNodes,
@@ -58,6 +64,7 @@
 
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
+    let nextFrontZIndex = $state(1);
     let isDatasetReadOnly = $state();
 
     let nodesInit = useNodesInitialized();
@@ -70,8 +77,7 @@
     );
 
     $effect(() => {
-        nodes = [...inputNodes];
-        edges = inputEdges.map(edge => {
+        const preprocessedEdges = inputEdges.map(edge => {
             //applies offset to inheritance edge if an association edge already exists between the same two nodes
             if (edge.type === "inheritance") {
                 const hasAssociationEdgeBetweenSameNodes = inputEdges.some(
@@ -102,6 +108,24 @@
 
             return edge;
         });
+
+        let layeredNodes = assignDeterministicNodeZIndices(inputNodes);
+        let currentNextFrontZIndex = initializeNextFrontZIndex(layeredNodes);
+        const selectedClassUUID = editorState.selectedClassUUID.getValue();
+
+        if (selectedClassUUID) {
+            const promotedSelection = promoteNodeToFront(
+                layeredNodes,
+                selectedClassUUID,
+                currentNextFrontZIndex,
+            );
+            layeredNodes = promotedSelection.nodes;
+            currentNextFrontZIndex = promotedSelection.nextFrontZIndex;
+        }
+
+        nodes = layeredNodes;
+        edges = assignEdgeZIndices(preprocessedEdges);
+        nextFrontZIndex = currentNextFrontZIndex;
         layouted = false;
     });
 
@@ -119,6 +143,15 @@
         isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
     });
 
+    $effect(() => {
+        editorState.selectedClassUUID.subscribe();
+        const selectedClassUUID = editorState.selectedClassUUID.getValue();
+        if (!selectedClassUUID) return;
+
+        // Avoid tracking node/z-index state in this effect to prevent self-triggering loops.
+        untrack(() => bringNodeToFront(selectedClassUUID));
+    });
+
     onMount(() => {
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
@@ -131,12 +164,26 @@
         return await res.json();
     }
 
+    function bringNodeToFront(nodeId) {
+        const promotedNode = promoteNodeToFront(nodes, nodeId, nextFrontZIndex);
+        if (!promotedNode.changed) return;
+        nodes = promotedNode.nodes;
+        nextFrontZIndex = promotedNode.nextFrontZIndex;
+    }
+
     function handleNodeClick(nodeClickEvent) {
         if (nodeClickEvent.node.type === "class") {
             const id = nodeClickEvent.node.id;
+            bringNodeToFront(id);
             console.log("selecting class: ", id);
             editorState.selectedClassUUID.updateValue(id);
             nodeClickEvent.event.stopPropagation();
+        }
+    }
+
+    function handleNodeDragStart(nodeDragEvent) {
+        if (nodeDragEvent.targetNode?.id) {
+            bringNodeToFront(nodeDragEvent.targetNode.id);
         }
     }
 
@@ -262,7 +309,11 @@
     fitView
     elementsSelectable={false}
     nodesFocusable={false}
+    zIndexMode={"manual"}
+    elevateNodesOnSelect={false}
+    elevateEdgesOnSelect={false}
     onnodeclick={handleNodeClick}
+    onnodedragstart={handleNodeDragStart}
     onnodedragstop={handleNodeMove}
     selectionMode={"full"}
     connectionMode={"loose"}
