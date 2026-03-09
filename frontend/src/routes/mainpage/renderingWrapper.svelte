@@ -26,7 +26,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
     import SvelteFlowWrapper from "$lib/rendering/svelteflow/svelteFlowWrapper.svelte";
-    import { editorState, graphViewState } from "$lib/sharedState.svelte.js";
+    import { editorState, graphViewState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
 
@@ -58,6 +58,7 @@
 
     $effect(async () => {
         isLoading = true;
+        forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedPackageUUID.subscribe();
@@ -194,33 +195,10 @@
                         icon={faBoxOpen}
                     />
                 </div>
-                <div
-                    class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                    style="width: calc(100% - {rightInsetPercent}%);"
-                >
-                    <EmptyStateCard
-                        title="No classes in this package"
-                        description="Select another package to load a different diagram."
-                        icon={faBoxOpen}
-                    />
-                </div>
             {/if}
         </div>
     </div>
 {:else}
-    <div class="bg-window-background flex h-full flex-col justify-between">
-        <div class="relative h-full overflow-hidden">
-            <div
-                class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                style="width: calc(100% - {rightInsetPercent}%);"
-            >
-                <EmptyStateCard
-                    title="No diagram requested yet"
-                    description="Select a package to load and render its diagram."
-                />
-            </div>
-        </div>
-    </div>
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             <div

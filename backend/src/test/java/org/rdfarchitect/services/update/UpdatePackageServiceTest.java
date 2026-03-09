@@ -58,7 +58,7 @@ class UpdatePackageServiceTest {
         databasePort = mock(DatabasePort.class);
         changeLogUseCase = mock(ChangeLogUseCase.class);
         var mockUpdatePackageLayoutService = mock(UpdatePackageLayoutService.class);
-        service = new UpdatePackageService(databasePort, mapper, changeLogUseCase, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService);
+        service = new UpdatePackageService(databasePort, mapper, changeLogUseCase, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService);
         mockGraph = mock(GraphRewindableWithUUIDs.class);
         var mockGraphWithContext = mock(GraphWithContext.class);
         when(databasePort.getGraphWithContext(any())).thenReturn(mockGraphWithContext);
