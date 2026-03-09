@@ -35,10 +35,8 @@
 </script>
 
 <div
-    class={`bg-class-node-upper-background min-w-45 rounded-md border font-sans text-sm shadow-sm ${cursorClass} ${
-        highlighted
-            ? "ring-class-node-highlighted border-transparent ring-3"
-            : "border-default-text"
+    class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
+        highlighted ? "ring-class-node-highlighted ring-3" : ""
     }`}
     role="button"
     tabindex="0"
@@ -50,7 +48,10 @@
         isConnectableStart={false}
     />
 
-    <div class="border-default-text border-b p-2 text-center">
+    <div
+        class="p-2 text-center"
+        style="box-shadow: inset 0 -1px 0 var(--color-default-text);"
+    >
         {#if stereotypes.length > 0}
             <div class="flex flex-col gap-0.5">
                 {#each stereotypes as stereotype}
@@ -69,7 +70,9 @@
 
         <span class="text-default-text mt-1 font-bold">{label}</span>
     </div>
-    <div class="bg-class-node-lower-background min-h-6 rounded-md p-2">
+    <div
+        class="class-node-divider bg-class-node-lower-background p-2 text-center"
+    >
         {#if attributes && attributes.length > 0}
             {#each attributes as attr}
                 <div class="text-default-text leading-6">
@@ -85,3 +88,19 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .class-node-shell::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        box-shadow: inset 0 0 0 1px var(--color-default-text);
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    .class-node-divider {
+        box-shadow: inset 0 -1px 0 var(--color-default-text);
+    }
+</style>

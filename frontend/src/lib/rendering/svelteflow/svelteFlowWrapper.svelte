@@ -30,6 +30,7 @@
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -103,6 +104,7 @@
             return edge;
         });
         layouted = false;
+        isLoading = false;
     });
 
     $effect(async () => {
@@ -135,7 +137,24 @@
         if (nodeClickEvent.node.type === "class") {
             const id = nodeClickEvent.node.id;
             console.log("selecting class: ", id);
-            editorState.selectedClassUUID.updateValue(id);
+
+            if (!editorState.selectedClassUUID.getValue()) {
+                eventStack.executeNewestEvent(id);
+                editorState.selectedClassDataset.updateValue(
+                    editorState.selectedDataset.getValue(),
+                );
+                editorState.selectedClassGraph.updateValue(
+                    editorState.selectedGraph.getValue(),
+                );
+                editorState.selectedClassUUID.updateValue(id);
+            } else {
+                eventStack.executeNewestEvent({
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphUri: editorState.selectedGraph.getValue(),
+                    classUuid: id,
+                });
+            }
+
             nodeClickEvent.event.stopPropagation();
         }
     }

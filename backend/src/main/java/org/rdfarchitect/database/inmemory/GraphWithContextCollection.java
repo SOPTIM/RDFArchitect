@@ -74,12 +74,14 @@ public class GraphWithContextCollection {
             if (!dataset.getDefaultModel().isEmpty()) {
                 var rdfGraph = new GraphRewindableWithUUIDs(dataset.getDefaultModel().getGraph(), maxVersions, compressCount);
                 var graph = new GraphWithContext(rdfGraph);
+                graph.setDiagramLayout(new DiagramLayout());
                 graphs.put(DEFAULT_GRAPH_NAME, graph);
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
                 var graphURI = it.next().getURI();
                 var rdfGraph = new GraphRewindableWithUUIDs(dataset.getNamedModel(graphURI).getGraph(), maxVersions, compressCount);
                 var graph = new GraphWithContext(rdfGraph);
+                graph.setDiagramLayout(new DiagramLayout());
                 graphs.put(graphURI, graph);
             }
         } finally {

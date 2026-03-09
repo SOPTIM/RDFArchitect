@@ -29,6 +29,7 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -43,6 +44,7 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
 
     private final CreatePackageLayoutDataUseCase createPackageLayoutData;
     private final ReplaceDiagramUseCase replaceDiagramUseCase;
+    private final DeletePackageLayoutDataUseCase deletePackageLayoutDataUseCase;
 
     @Override
     public UUID addPackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
@@ -100,6 +102,9 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
                 graph.end();
             }
         }
+
+        deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
+
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted package " + packageUUID, graph.getLastDelta()));
     }
 }

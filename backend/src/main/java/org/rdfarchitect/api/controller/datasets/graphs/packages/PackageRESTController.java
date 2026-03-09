@@ -48,7 +48,6 @@ public class PackageRESTController {
     private final ExpandURIUseCase expandURIUseCase;
     private final ReplacePackageUseCase replacePackageUseCase;
     private final DeletePackageUseCase deletePackageUseCase;
-    private final DeletePackageLayoutDataUseCase deletePackageLayoutData;
 
     @Operation(
               summary = "replace package",
@@ -109,8 +108,6 @@ public class PackageRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-
-        deletePackageLayoutData.deletePackageLayoutData(graphIdentifier, packageUUID);
 
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 

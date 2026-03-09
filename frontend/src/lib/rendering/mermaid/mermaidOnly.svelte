@@ -35,6 +35,7 @@
         if (mermaidString) {
             try {
                 await mermaid.run();
+                console.log("MERMAID END TIME: ", performance.now());
             } catch (err) {
                 validSyntax = false;
                 console.error(

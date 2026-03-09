@@ -39,13 +39,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase, EnsureDiagramLayoutForCIMCollectionUseCase {
 
+    final String DEFAULT_PACKAGE_NAME = "default";
+
     private final DatabasePort databasePort;
     private final GraphToCIMCollectionConverterUseCase converter;
 
     @Override
     public void createDiagramLayout(GraphIdentifier graphIdentifier) {
-        final String DEFAULT_PACKAGE_NAME = "default";
-
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
@@ -106,15 +106,21 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase, E
         if (diagram == null) {
             String packageName = null;
 
-            for (var cimPackage : cimCollection.getPackages()) {
-                if (cimPackage.getUuid().equals(resolvedPackageUUID)) {
-                    packageName = cimPackage.getLabel().getValue();
-                    break;
-                }
+            //finds the package name for the DL diagram to be added
+            if(resolvedPackageUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
+                packageName = graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME;
             }
+            else {
+                for (var cimPackage : cimCollection.getPackages()) {
+                    if (cimPackage.getUuid().equals(resolvedPackageUUID)) {
+                        packageName = cimPackage.getLabel().getValue();
+                        break;
+                    }
+                }
 
-            if (packageName == null) {
-                throw new IllegalArgumentException("Package with UUID " + resolvedPackageUUID + " not found");
+                if (packageName == null) {
+                    throw new IllegalArgumentException("Package with UUID " + resolvedPackageUUID + " not found");
+                }
             }
 
             DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, resolvedPackageUUID, packageName);

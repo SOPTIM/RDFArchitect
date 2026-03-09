@@ -124,7 +124,7 @@
         <div class="relative h-full">
             {#if displayDiagram}
                 <div
-                    class="absolute top-1 left-1 z-10 flex flex-col space-y-0.5"
+                    class="absolute top-1 left-1 z-1 flex flex-col space-y-0.5"
                 >
                     <div class="h-9 w-28">
                         <ButtonControl

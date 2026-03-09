@@ -122,6 +122,7 @@
         }
         await enableEditing(selectedDataset);
         await reload();
+        editorState.selectedPackageUUID.trigger();
     }
 
     async function requestDisableEditing() {
@@ -130,6 +131,7 @@
         }
         await disableEditing(selectedDataset);
         await reload();
+        editorState.selectedPackageUUID.trigger();
     }
 
     function openNamespaceManager() {

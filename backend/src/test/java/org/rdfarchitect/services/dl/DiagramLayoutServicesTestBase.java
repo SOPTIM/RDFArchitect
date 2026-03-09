@@ -142,8 +142,6 @@ public class DiagramLayoutServicesTestBase {
     public static void assertClassDiagramObjectsDoNotExist(UUID classUUID) {
         var model = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout().getDiagramLayoutModel();
 
-        model.write(System.out, "TURTLE");
-
         var diagramObjects = model.listSubjectsWithProperty(
                   DL.belongsToIdentifiedObject,
                   ResourceFactory.createResource(new MRID(classUUID).getFullMRID())

@@ -23,7 +23,6 @@ import org.rdfarchitect.api.controller.datasets.graphs.packages.PackageRESTContr
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
 
@@ -37,7 +36,6 @@ class PackageRESTControllerTest {
     private ExpandURIUseCase expandURIUseCase;
     private ReplacePackageUseCase replacePackageUseCase;
     private DeletePackageUseCase deletePackageUseCase;
-    private DeletePackageLayoutDataUseCase deletePackageLayoutDataUseCase;
     private PackageRESTController controller;
 
     @BeforeEach
@@ -45,8 +43,7 @@ class PackageRESTControllerTest {
         expandURIUseCase = mock(ExpandURIUseCase.class);
         replacePackageUseCase = mock(ReplacePackageUseCase.class);
         deletePackageUseCase = mock(DeletePackageUseCase.class);
-        deletePackageLayoutDataUseCase = mock(DeletePackageLayoutDataUseCase.class);
-        controller = new PackageRESTController(expandURIUseCase, replacePackageUseCase, deletePackageUseCase, deletePackageLayoutDataUseCase);
+        controller = new PackageRESTController(expandURIUseCase, replacePackageUseCase, deletePackageUseCase);
     }
 
     @Test
@@ -57,7 +54,6 @@ class PackageRESTControllerTest {
         var response = controller.deletePackage("origin", "dataset", "graph", packageUuid);
 
         assertThat(response).isEqualTo("success");
-        verify(deletePackageLayoutDataUseCase).deletePackageLayoutData(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(packageUuid));
         verify(deletePackageUseCase).deletePackage(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(packageUuid));
     }
 
