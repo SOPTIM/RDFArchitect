@@ -57,13 +57,13 @@ public interface InMemoryDatabase {
     GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType);
 
     /**
-     * Get a {@link GraphRewindableWithUUIDs} from the database.
+     * Get a {@link GraphWithContext} from the database.
      *
      * @param graphIdentifier The identifier of the graph.
      *
-     * @return The {@link GraphRewindableWithUUIDs}.
+     * @return {@link GraphWithContext}
      */
-    GraphRewindableWithUUIDs getGraph(GraphIdentifier graphIdentifier);
+    GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
 
     /**
      * Creates a new {@link GraphRewindableWithUUIDs} in a specified dataset. If the dataset does not exist yet, it will be created.

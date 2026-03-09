@@ -41,7 +41,7 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
     public List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));

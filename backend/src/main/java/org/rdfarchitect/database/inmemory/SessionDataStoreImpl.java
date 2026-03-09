@@ -47,13 +47,13 @@ import static org.rdfarchitect.database.snapshots.SnapshotUtils.*;
  */
 public class SessionDataStoreImpl implements SessionDataStore {
 
-    private final ConcurrentHashMap<String, GraphRewindableCollection> graphCollections = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, GraphWithContextCollection> graphCollections = new ConcurrentHashMap<>();
 
     //lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
 
     private void createDataset(String datasetName) {
-        graphCollections.putIfAbsent(datasetName, new GraphRewindableCollection());
+        graphCollections.putIfAbsent(datasetName, new GraphWithContextCollection());
     }
 
     @Override
@@ -99,11 +99,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public GraphRewindableWithUUIDs getGraph(GraphIdentifier graphIdentifier) {
+    public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         lock.lock();
         try {
             createDataset(graphIdentifier.getDatasetName());
-            return graphCollections.get(graphIdentifier.getDatasetName()).getGraph(graphIdentifier.getGraphUri());
+            return graphCollections.get(graphIdentifier.getDatasetName()).getGraphWithContext(graphIdentifier.getGraphUri());
         } finally {
             lock.unlock();
         }
@@ -210,7 +210,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     private void clearGraphCollections() {
         lock.lock();
         try {
-            graphCollections.values().forEach(GraphRewindableCollection::clear);
+            graphCollections.values().forEach(GraphWithContextCollection::clear);
             graphCollections.clear();
         } finally {
             lock.unlock();
@@ -226,7 +226,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
             for (var datasetName : datasetNames) {
                 if (!datasetName.startsWith(SNAPSHOT_PREFIX)) {
                     var dataset = fetchDataset(databaseConnection, datasetName);
-                    graphCollections.put(datasetName, new GraphRewindableCollection(dataset));
+                    graphCollections.put(datasetName, new GraphWithContextCollection(dataset));
                 }
             }
         } finally {
@@ -241,7 +241,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
             var matchingDataset = findSnapshotName(databaseConnection.listDatasets(), base64Token);
             if (matchingDataset != null) {
                 var dataset = fetchDataset(databaseConnection, matchingDataset);
-                graphCollections.put(matchingDataset, new GraphRewindableCollection(dataset));
+                graphCollections.put(matchingDataset, new GraphWithContextCollection(dataset));
             }
         } finally {
             lock.unlock();

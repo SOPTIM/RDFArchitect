@@ -18,7 +18,7 @@
 package org.rdfarchitect.cim.queries;
 
 /**
- * Class contains variables for SPARQL queries that are used in the context of CIM.
+ * Class containing variables for SPARQL queries that are used in the context of CIM.
  * This is to ensure they are the same over multiple files.
  * This prohibits typos in query and results.
  */

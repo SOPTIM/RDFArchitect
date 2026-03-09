@@ -84,6 +84,12 @@
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
+### @xyflow/svelte
+- **Package:** @xyflow/svelte
+- **Version:** 1.5.1
+- **License:** MIT
+- **URL:** [https://svelteflow.dev](https://svelteflow.dev)
+
 ### asciidoctor
 - **Package:** asciidoctor
 - **Version:** 3.0.4
@@ -111,6 +117,12 @@
 - **Version:** 0.0.2
 - **License:** MIT
 - **URL:** [https://github.com/aatauil/codemirror-lang-turtle](https://github.com/aatauil/codemirror-lang-turtle)
+
+### elkjs
+- **Package:** elkjs
+- **Version:** 0.10.2
+- **License:** EPL-2.0
+- **URL:** [https://github.com/kieler/elkjs](https://github.com/kieler/elkjs)
 
 ### eslint
 - **Package:** eslint

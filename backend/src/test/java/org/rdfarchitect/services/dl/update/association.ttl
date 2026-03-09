@@ -1,0 +1,50 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX entsoe: <http://entsoe.eu/CIM/SchemaExtension/3/1#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX ex:     <http://example.com#>
+PREFIX owl:    <http://www.w3.org/2002/07/owl#>
+
+ex:Package_packageA
+    <http://example.org#uuid>   "43836908-c7f7-4749-bb8b-3ac9250de655" ;
+    rdf:type        cims:ClassCategory ;
+    rdfs:label      "packageA"@en  .
+
+ex:Package_packageB
+    <http://example.org#uuid>   "05ef0165-712c-4eaa-833b-cedf2d340a3b" ;
+    rdf:type        cims:ClassCategory ;
+    rdfs:label      "packageB"@en  .
+
+ex:classA
+    <http://example.org#uuid>   "62118c18-10a9-49ba-b605-e74292a85186" ;
+    rdf:type                    rdfs:Class ;
+    rdfs:label                  "classA"@en ;
+    cims:belongsToCategory      ex:Package_packageA .
+
+ex:classB
+    <http://example.org#uuid>   "a516a307-21ee-4a79-a817-1a4a57a1b8de" ;
+    rdf:type                    rdfs:Class ;
+    rdfs:label                  "classB"@en ;
+    cims:belongsToCategory      ex:Package_packageB .
+
+ex:classA.classB
+    <http://example.org#uuid> "43236908-a7f7-4749-bb8b-3ac9250de656" ;
+    rdf:type                rdf:Property ;
+    rdfs:label              "classB"@en ;
+    rdfs:domain             ex:classA ;
+    rdfs:range              ex:classB ;
+    cims:AssociationUsed    "No" ;
+    cims:inverseRoleName    ex:classA.classB ;
+    cims:multiplicity       cims:M:2..2 .
+
+ex:classB.classA
+    <http://example.org#uuid> "e88a28a4-bced-4945-9157-8cd4a0af7268" ;
+    rdf:type                rdf:Property ;
+    rdfs:label              "classA"@en ;
+    rdfs:domain             ex:classB ;
+    rdfs:range              ex:classA ;
+    cims:AssociationUsed    "No" ;
+    cims:inverseRoleName    ex:classA.classB ;
+    cims:multiplicity       cims:M:2..2 .

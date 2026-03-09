@@ -27,6 +27,9 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -39,13 +42,17 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
 
+    private final CreatePackageLayoutDataUseCase createPackageLayoutData;
+    private final ReplaceDiagramUseCase replaceDiagramUseCase;
+    private final DeletePackageLayoutDataUseCase deletePackageLayoutDataUseCase;
+
     @Override
     public UUID addPackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
         GraphRewindableWithUUIDs graph = null;
-        UUID uuid = UUID.randomUUID();
-        packageDTO.setUuid(uuid);
+        UUID newPackageUUID = UUID.randomUUID();
+        packageDTO.setUuid(newPackageUUID);
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var newPackage = packageMapper.toCIMObject(packageDTO);
             CIMUpdates.insertPackage(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newPackage);
@@ -56,15 +63,17 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
             }
         }
 
+        createPackageLayoutData.createPackageLayoutData(graphIdentifier, packageDTO, newPackageUUID);
+
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Added package " + packageDTO.getLabel(), graph.getLastDelta()));
-        return uuid;
+        return newPackageUUID;
     }
 
     @Override
     public void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var newPackage = packageMapper.toCIMObject(packageDTO);
             CIMUpdates.replacePackage(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newPackage);
@@ -74,6 +83,9 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
                 graph.end();
             }
         }
+
+        replaceDiagramUseCase.replaceDiagram(graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
+
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced package " + packageDTO.getUuid(), graph.getLastDelta()));
     }
 
@@ -81,7 +93,7 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
     public void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             CIMUpdates.deletePackage(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), packageUUID.toString());
             graph.commit();
@@ -90,6 +102,9 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
                 graph.end();
             }
         }
+
+        deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
+
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted package " + packageUUID, graph.getLastDelta()));
     }
 }

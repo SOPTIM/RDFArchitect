@@ -90,8 +90,9 @@ public class AllClassesRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var extendedClassURIPrefix = expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        addClassUseCase.addClass(new GraphIdentifier(datasetName, extendedGraphURI), addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.className);
+        addClassUseCase.addClass(graphIdentifier, addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.className);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".", datasetName, graphURI, originURL);
 

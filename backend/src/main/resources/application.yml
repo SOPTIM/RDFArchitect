@@ -6,6 +6,7 @@ spring:
       - application-database.yml
       - application-frontend.yml
       - application-graph.yml
+      - application-rendering.yml
   servlet:
     multipart:
       max-file-size: 10MB

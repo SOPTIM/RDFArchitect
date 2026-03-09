@@ -54,8 +54,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public GraphRewindableWithUUIDs getGraph(GraphIdentifier graphIdentifier) {
-        return getOrCreateSessionDataStore().getGraph(graphIdentifier);
+    public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
+        return getOrCreateSessionDataStore().getGraphWithContext(graphIdentifier);
     }
 
     @Override

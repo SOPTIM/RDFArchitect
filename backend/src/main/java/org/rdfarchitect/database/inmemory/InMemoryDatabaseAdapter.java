@@ -27,7 +27,6 @@ import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
 import java.util.UUID;
@@ -41,8 +40,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     private final InMemoryDatabase database;
 
     @Override
-    public GraphRewindableWithUUIDs getGraph(GraphIdentifier graphIdentifier) {
-        return database.getGraph(graphIdentifier);
+    public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
+        return database.getGraphWithContext(graphIdentifier);
     }
 
     @Override

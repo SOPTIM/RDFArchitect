@@ -151,6 +151,7 @@
         await bec.enableEditing(dataset.label);
         await updateReadonly();
         forceReloadTrigger.trigger();
+        editorState.selectedPackageUUID.trigger();
         editorState.selectedClassUUID.trigger();
     }
 
@@ -161,6 +162,7 @@
         await bec.disableEditing(dataset.label);
         await updateReadonly();
         forceReloadTrigger.trigger();
+        editorState.selectedPackageUUID.trigger();
         editorState.selectedClassUUID.trigger();
     }
 </script>

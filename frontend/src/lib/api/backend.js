@@ -26,10 +26,10 @@ export class BackendConnection {
         this.url = url;
     }
 
-    async fetchMermaidUMLFiltered(datasetName, graphURI, graphFilter) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/mermaid/UMLDiagram`;
+    async fetchFilteredRenderingData(datasetName, graphURI, graphFilter) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/rendering`;
         return fetch(url, {
-            method: "Post",
+            method: "POST",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(graphFilter),
@@ -371,6 +371,22 @@ export class BackendConnection {
             headers: new Headers({ "Content-Type": "application/json" }),
             mode: "cors",
             body: JSON.stringify(pack),
+            credentials: "include",
+        });
+    }
+
+    async updateClassPositions(
+        datasetName,
+        graphURI,
+        packageUUID,
+        classPositionDTOList,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}/layout/classes`;
+        return await fetch(url, {
+            method: "PUT",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            mode: "cors",
+            body: JSON.stringify(classPositionDTOList),
             credentials: "include",
         });
     }

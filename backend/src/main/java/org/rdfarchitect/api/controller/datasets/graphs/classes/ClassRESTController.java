@@ -119,8 +119,9 @@ public class ClassRESTController {
         logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        replaceClassUseCase.replaceClass(new GraphIdentifier(datasetName, extendedGraphURI), newClass);
+        replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
         return "success";

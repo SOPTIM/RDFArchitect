@@ -21,7 +21,7 @@
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "./classEditor/classEditor.svelte";
-    import MermaidWrapper from "./mermaidWrapper.svelte";
+    import RenderingWrapper from "./renderingWrapper.svelte";
 
     let classEditorPaneWidth = 30;
     let classDatasetName = $derived(
@@ -46,7 +46,7 @@
 <div class="relative h-full w-full overflow-hidden">
     {#key editorState.selectedPackageUUID.subscribe()}
         <div class="h-full">
-            <MermaidWrapper
+            <RenderingWrapper
                 rightInsetPercent={editorState.selectedClassUUID.getValue()
                     ? classEditorPaneWidth
                     : 0}

@@ -19,6 +19,7 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.datasets.graphs.packages.PackageRESTController;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -59,9 +60,10 @@ class PackageRESTControllerTest {
     @Test
     void replacePackage_passesPayloadToUseCase() {
         when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
+        var packageUUID = UUID.randomUUID();
         var dto = PackageDTO.builder().label("pkg").build();
 
-        var response = controller.replacePackage("origin", "dataset", "graph", "uuid", dto);
+        var response = controller.replacePackage("origin", "dataset", "graph", packageUUID.toString(), dto);
 
         assertThat(response).isEqualTo("success");
         verify(replacePackageUseCase).replacePackage(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(dto));
