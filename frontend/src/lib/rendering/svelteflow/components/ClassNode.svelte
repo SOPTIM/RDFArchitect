@@ -36,7 +36,7 @@
 
 <div
     class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
-        highlighted ? "ring-class-node-highlighted ring-3" : ""
+        highlighted ? "class-node-highlighted" : ""
     }`}
     role="button"
     tabindex="0"
@@ -98,6 +98,10 @@
         box-shadow: inset 0 0 0 1px var(--color-default-text);
         pointer-events: none;
         z-index: 2;
+    }
+
+    .class-node-highlighted::after {
+        box-shadow: inset 0 0 0 3px var(--color-class-node-highlighted);
     }
 
     .class-node-divider {
