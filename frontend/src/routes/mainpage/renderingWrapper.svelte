@@ -26,7 +26,11 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
     import SvelteFlowWrapper from "$lib/rendering/svelteflow/svelteFlowWrapper.svelte";
-    import { editorState, graphViewState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        graphViewState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
 
