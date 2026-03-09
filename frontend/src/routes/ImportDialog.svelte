@@ -251,20 +251,6 @@
             forceReloadTrigger.trigger();
         }
     }
-    $inspect(
-        "dataset: ",
-        editorState.selectedDataset.getValue(),
-        ", graph: ",
-        editorState.selectedGraph.getValue(),
-        ", pkg: ",
-        editorState.selectedPackageUUID.getValue(),
-        ", class dataset: ",
-        editorState.selectedClassDataset.getValue(),
-        ", class graph: ",
-        editorState.selectedClassGraph.getValue(),
-        ", class: ",
-        editorState.selectedClassUUID.getValue(),
-    );
 </script>
 
 <Dialog bind:showDialog {onOpen} {onClose}>
