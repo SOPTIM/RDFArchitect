@@ -156,7 +156,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 16.5.0
+- **Version:** 17.4.0
 - **License:** MIT
 
 ### jsdom
