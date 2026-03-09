@@ -74,14 +74,13 @@ public class GraphBulkContentRESTController {
         var importedGraphUris = importGraphsUseCase.importGraphs(datasetName, files, graphUris);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/content\" to \"{}\".", datasetName, originURL);
-        var msg = "success";
-        if(!importedGraphUris.getFirst().isEmpty()) {
-            msg = "failed imports";
-        }
-        return ResponseEntity.ok(new GraphBulkImportResponse(msg, importedGraphUris.getFirst(), importedGraphUris.subList(1, importedGraphUris.size())));
+        var hasFailures = !importedGraphUris.getFirst().trim().isEmpty();
+        var msg = hasFailures ? "failed imports" : "success";
+        var failedImports = hasFailures ? List.of(importedGraphUris.getFirst().split(", ")) : List.<String>of();
+        return ResponseEntity.ok(new GraphBulkImportResponse(msg, failedImports, importedGraphUris.subList(1, importedGraphUris.size())));
     }
 
-    public record GraphBulkImportResponse(String message, String failedImports, List<String> importedGraphUris) {
+    public record GraphBulkImportResponse(String message, List<String> failedImports, List<String> importedGraphUris) {
 
     }
 }
