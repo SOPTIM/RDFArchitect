@@ -161,7 +161,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 27.4.0
+- **Version:** 28.1.0
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
