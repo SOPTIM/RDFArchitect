@@ -85,11 +85,13 @@
 
 ### Editor - Package View
 - [ ] Class diagram displays correctly
+- [ ] Moving nodes works and layout changes persist after reload
 - [ ] Loading animation shows while loading
 - [ ] Info cards show when no package or no classes available
 - [ ] Drag and zoom diagram works
 - [ ] "Reset View" button works
 - [ ] "Filter View" works
+- [ ] "Reset Layout" button resets diagram to auto-generated layout
 - [ ] Click on class opens class editor
 
 ### Editor - Class Editor
