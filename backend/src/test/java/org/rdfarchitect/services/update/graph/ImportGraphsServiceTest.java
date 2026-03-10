@@ -31,7 +31,6 @@ import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseC
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
-
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -80,6 +79,7 @@ class ImportGraphsServiceTest {
         var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
 
         assertThat(result).containsExactly(
+                  "",
                   RDFA.GRAPH_URI + "graph",
                   RDFA.GRAPH_URI + "graph_1"
                                           );
