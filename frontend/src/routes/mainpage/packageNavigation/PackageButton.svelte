@@ -51,6 +51,7 @@
         dataset,
         graph,
         pack,
+        packages = [],
         classes = [],
         prefixes = [],
         onPackChange = () => {},
@@ -228,6 +229,7 @@
     bind:showDialog={showPackageEditorDialog}
     datasetName={dataset.label}
     graphUri={getUri(graph)}
+    {packages}
     {pack}
     {readOnly}
 />

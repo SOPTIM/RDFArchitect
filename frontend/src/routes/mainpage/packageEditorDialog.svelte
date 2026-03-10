@@ -34,6 +34,7 @@
 
     let {
         showDialog = $bindable(),
+        packages = [],
         pack,
         readonly = false,
         datasetName = null,
@@ -64,6 +65,16 @@
             isNewPackage = true;
             pkg = new ReactivePackage();
         }
+        pkg.label.violationChecks.push(value => {
+            if (
+                packages.some(
+                    p => p.label === value && p.uuid !== pkg.uuid.value,
+                )
+            ) {
+                return ["must be unique"];
+            }
+            return [];
+        });
         if (!readonly && datasetName) {
             namespaces = await getNamespaces(datasetName);
         }
