@@ -95,7 +95,7 @@ fix(api)!: change namespace validation rules (#124, RDFA-457, GH-79)
 Notes:
 
 - `type` should be `feat` or `fix` for product-facing changes whenever possible.
-- `#<pr>`, `RDFA-<id>`, and `GH-<issue>` are optional in automation, but include all available IDs in squash commits.
+- `#<pr>`, `RDFA-<id>`, and `GH-<issue>` are optional, but should be included in squash commits if available.
 - Keep the description short, action-oriented, and specific.
 
 ## Breaking Changes

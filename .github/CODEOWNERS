@@ -1,0 +1,32 @@
+# Default code owners for the repository.
+*           @SOPTIM/RDFA
+
+
+# Documentation and CI/CD
+README.md   @spah-soptim
+VERSION     @spah-soptim
+/.github/   @spah-soptim
+/docker/    @spah-soptim
+Dockerfile* @spah-soptim
+
+# Code Quality Tools
+eslint*     @spah-soptim
+.prettier*  @spah-soptim
+
+# License
+LICENSE     @lomb-soptim @bern-soptim
+license/    @lomb-soptim @bern-soptim
+copyright/  @lomb-soptim @bern-soptim
+
+
+# Rendering / Diagram Layout
+rendering/  @abba-soptim
+dl/         @abba-soptim
+
+# SHACL Shapes / Ontology
+shacl/      @rema-soptim
+ontology/   @rema-soptim
+
+# Navigation / Homepage
+packageNavigation/                  @spah-soptim
+frontend/src/routes/+page.svelte    @spah-soptim
