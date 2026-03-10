@@ -78,10 +78,7 @@
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
     let hasDefaultLayout = $derived(
-        nodes.length > 0 &&
-            nodes.every(
-                node => node.position.x === 0 && node.position.y === 0,
-            ),
+        nodes.every(node => node.position.x === 0 && node.position.y === 0),
     );
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
@@ -183,11 +180,7 @@
             return edge;
         });
         layouted = false;
-
-        // When nodes already have persisted positions (or no nodes are returned)
-        if (!nextHasDefaultLayout) {
-            isLoading = false;
-        }
+        isLoading = false;
     });
 
     $effect(async () => {
