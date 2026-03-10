@@ -3,6 +3,7 @@ description: Report a reproducible problem in RDFArchitect
 title: "[Bug]: "
 labels:
   - bug
+type: bug
 body:
   - type: markdown
     attributes:

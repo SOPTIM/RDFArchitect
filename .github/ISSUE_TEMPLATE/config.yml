@@ -3,6 +3,3 @@ contact_links:
   - name: Support and usage questions
     url: https://github.com/SOPTIM/RDFArchitect/blob/main/SUPPORT.md
     about: Please review support channels and open the appropriate issue template.
-  - name: Security vulnerability reporting
-    url: https://github.com/SOPTIM/RDFArchitect/blob/main/SECURITY.md
-    about: Please report vulnerabilities privately using the methods described in SECURITY.md.
