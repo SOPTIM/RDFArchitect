@@ -115,7 +115,7 @@
             onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}
         >
-            View in package
+            Show in package
         </ContextMenu.Item.Button>
         <ContextMenu.Item.Button
             onSelect={() => {

@@ -56,8 +56,6 @@
         prefixes = [],
         onPackChange = () => {},
     } = $props();
-    const disablePackageDelete = pack?.label === "default" || pack?.external;
-
     let readOnly = $state(false);
     let showNewClassDialog = $state(false);
     let showPackageEditorDialog = $state(false);
@@ -72,6 +70,9 @@
     ]);
 
     let disablePackageEditing = $derived(
+        pack?.label === "default" || pack?.external,
+    );
+    let disablePackageDelete = $derived(
         pack?.label === "default" || pack?.external,
     );
     let isPackageSelected = $derived(

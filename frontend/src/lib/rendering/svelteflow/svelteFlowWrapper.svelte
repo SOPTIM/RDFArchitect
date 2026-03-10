@@ -78,7 +78,8 @@
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
     let hasDefaultLayout = $derived(
-        nodes.every(node => node.position.x === 0 && node.position.y === 0),
+        nodes.length > 0 &&
+            nodes.every(node => node.position.x === 0 && node.position.y === 0),
     );
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
@@ -180,7 +181,11 @@
             return edge;
         });
         layouted = false;
-        isLoading = false;
+
+        // Keep the loading state active until persisted positions or ELK layout
+        if (!nextHasDefaultLayout) {
+            isLoading = false;
+        }
     });
 
     $effect(async () => {

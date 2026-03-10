@@ -23,7 +23,7 @@
     import ClassEditor from "./classEditor/classEditor.svelte";
     import RenderingWrapper from "./renderingWrapper.svelte";
 
-    let classEditorPaneWidth = 30;
+    let classEditorPaneWidth = $state(30);
     let paneSizeByPackage = $state({});
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
