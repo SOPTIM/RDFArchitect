@@ -2,27 +2,27 @@
 
 set -euo pipefail
 
-semver_regex='^v([0-9]+)\.([0-9]+)\.([0-9]+)$'
+describe_regex='^v([0-9]+\.[0-9]+\.[0-9]+)(-([0-9]+)-g([0-9a-f]+))?$'
 
-find_stable_tag() {
-  while IFS= read -r tag; do
-    if [[ "$tag" =~ $semver_regex ]]; then
-      printf '%s.%s.%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}" "${BASH_REMATCH[3]}"
-      return 0
+parse_describe_version() {
+  local describe_output="$1"
+
+  if [[ "$describe_output" =~ $describe_regex ]]; then
+    if [[ -n "${BASH_REMATCH[3]:-}" && -n "${BASH_REMATCH[4]:-}" ]]; then
+      printf '%s-%s-g%s\n' "${BASH_REMATCH[1]}" "${BASH_REMATCH[3]}" "${BASH_REMATCH[4]}"
+    else
+      printf '%s\n' "${BASH_REMATCH[1]}"
     fi
-  done
+    return 0
+  fi
 
   return 1
 }
 
-exact_version="$(find_stable_tag < <(git tag --points-at HEAD --sort=-version:refname) || true)"
-latest_version="$(find_stable_tag < <(git tag --merged HEAD --sort=-version:refname) || true)"
+describe_version="$(git describe --tags --match 'v[0-9]*.[0-9]*.[0-9]*' --abbrev=8 2>/dev/null || true)"
+app_version="$(parse_describe_version "$describe_version" || true)"
 
-if [[ -n "$exact_version" ]]; then
-  app_version="$exact_version"
-elif [[ -n "$latest_version" ]]; then
-  app_version="${latest_version}-SNAPSHOT"
-else
+if [[ -z "$app_version" ]]; then
   app_version="0.0.0-SNAPSHOT"
 fi
 

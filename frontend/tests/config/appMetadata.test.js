@@ -22,14 +22,14 @@ import { getAppMetadata } from "$lib/config/appMetadata.js";
 describe("getAppMetadata", () => {
     test("builds a GitHub commit URL and environment label", () => {
         const metadata = getAppMetadata({
-            appVersion: "1.2.3-SNAPSHOT",
+            appVersion: "1.2.3-7-gabc12345",
             commitSha: "abc12345",
             repositoryUrl: "https://github.com/SOPTIM/RDFArchitect/",
             deploymentEnvironment: "dev",
         });
 
         expect(metadata).toEqual({
-            versionLabel: "1.2.3-SNAPSHOT",
+            versionLabel: "1.2.3-7-gabc12345",
             commitLabel: "abc12345",
             commitUrl: "https://github.com/SOPTIM/RDFArchitect/commit/abc12345",
             environmentLabel: "dev",

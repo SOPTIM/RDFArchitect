@@ -17,7 +17,7 @@
 
 import { execFileSync } from "node:child_process";
 
-const SEMVER_TAG_PATTERN = /^v(\d+\.\d+\.\d+)$/;
+const GIT_DESCRIBE_PATTERN = /^v(\d+\.\d+\.\d+)(?:-(\d+)-g([0-9a-f]+))?$/;
 const DEFAULT_VERSION = "0.0.0-SNAPSHOT";
 
 function runGitCommand(rootDir, args) {
@@ -32,42 +32,29 @@ function runGitCommand(rootDir, args) {
     }
 }
 
-function findStableTag(output) {
-    for (const line of output.split(/\r?\n/)) {
-        const match = SEMVER_TAG_PATTERN.exec(line.trim());
-        if (match) {
-            return match[1];
-        }
+function parseDescribeVersion(output) {
+    const match = GIT_DESCRIBE_PATTERN.exec(output.trim());
+    if (!match) {
+        return "";
     }
 
-    return "";
+    const [, version, commitCount, commitSha] = match;
+    return commitCount && commitSha
+        ? `${version}-${commitCount}-g${commitSha}`
+        : version;
 }
 
 export function resolveGitBuildMetadata(rootDir) {
-    const exactVersion = findStableTag(
-        runGitCommand(rootDir, [
-            "tag",
-            "--points-at",
-            "HEAD",
-            "--sort=-version:refname",
-        ]),
-    );
-    const latestVersion = exactVersion
-        ? exactVersion
-        : findStableTag(
-              runGitCommand(rootDir, [
-                  "tag",
-                  "--merged",
-                  "HEAD",
-                  "--sort=-version:refname",
-              ]),
-          );
-
-    const version = exactVersion
-        ? exactVersion
-        : latestVersion
-          ? `${latestVersion}-SNAPSHOT`
-          : DEFAULT_VERSION;
+    const version =
+        parseDescribeVersion(
+            runGitCommand(rootDir, [
+                "describe",
+                "--tags",
+                "--match",
+                "v[0-9]*.[0-9]*.[0-9]*",
+                "--abbrev=8",
+            ]),
+        ) || DEFAULT_VERSION;
 
     return {
         version,

@@ -41,11 +41,11 @@ class AppVersionResolverTest {
     void resolveVersion_usesGitPropertiesBeforeGitCommand() {
         var resolver = new AppVersionResolver(
                 "",
-                () -> Optional.of("1.2.3-SNAPSHOT"),
+                () -> Optional.of("1.2.3-7-gabc12345"),
                 () -> Optional.of("9.9.9")
         );
 
-        assertThat(resolver.resolveVersion()).isEqualTo("1.2.3-SNAPSHOT");
+        assertThat(resolver.resolveVersion()).isEqualTo("1.2.3-7-gabc12345");
     }
 
     @Test
@@ -69,12 +69,13 @@ class AppVersionResolverTest {
     }
 
     @Test
-    void resolveVersionFromGitProperties_returnsSnapshotVersionWhenAheadOfTag() {
+    void resolveVersionFromGitProperties_returnsDescribedVersionWhenAheadOfTag() {
         var properties = new Properties();
         properties.setProperty("git.closest.tag.name", "v1.2.3");
         properties.setProperty("git.closest.tag.commit.count", "7");
+        properties.setProperty("git.commit.id.abbrev", "abc12345");
 
-        assertThat(AppVersionResolver.resolveVersionFromGitProperties(properties)).hasValue("1.2.3-SNAPSHOT");
+        assertThat(AppVersionResolver.resolveVersionFromGitProperties(properties)).hasValue("1.2.3-7-gabc12345");
     }
 
     @Test

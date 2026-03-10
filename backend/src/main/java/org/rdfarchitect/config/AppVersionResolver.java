@@ -37,6 +37,7 @@ public class AppVersionResolver {
 
     static final String DEFAULT_VERSION = "0.0.0-SNAPSHOT";
     private static final Pattern SEMVER_TAG_PATTERN = Pattern.compile("^v(\\d+\\.\\d+\\.\\d+)$");
+    private static final Pattern GIT_DESCRIBE_PATTERN = Pattern.compile("^v(\\d+\\.\\d+\\.\\d+)(?:-(\\d+)-g([0-9a-f]+))?$");
 
     private final String configuredVersion;
     private final Supplier<Optional<String>> gitPropertiesVersionSupplier;
@@ -76,13 +77,21 @@ public class AppVersionResolver {
         }
 
         var stableVersion = extractStableVersion(gitProperties.getProperty("git.closest.tag.name"));
-        if (stableVersion.isEmpty()) {
+        var commitCount = normalize(gitProperties.getProperty("git.closest.tag.commit.count"));
+        if (stableVersion.isEmpty() || commitCount.isEmpty()) {
             return Optional.empty();
         }
 
-        return "0".equals(normalize(gitProperties.getProperty("git.closest.tag.commit.count")))
-                ? stableVersion
-                : stableVersion.map(version -> version + "-SNAPSHOT");
+        if ("0".equals(commitCount)) {
+            return stableVersion;
+        }
+
+        var commitAbbreviation = normalize(gitProperties.getProperty("git.commit.id.abbrev"));
+        if (commitAbbreviation.isEmpty()) {
+            return Optional.empty();
+        }
+
+        return stableVersion.map(version -> version + "-" + commitCount + "-g" + commitAbbreviation);
     }
 
     private static Properties loadGitProperties() {
@@ -101,16 +110,16 @@ public class AppVersionResolver {
     }
 
     private static Optional<String> resolveVersionFromGitCommands() {
-        var exactVersion = readStableVersionFromGit("tag", "--points-at", "HEAD", "--sort=-version:refname");
-        if (exactVersion.isPresent()) {
-            return exactVersion;
-        }
-
-        return readStableVersionFromGit("tag", "--merged", "HEAD", "--sort=-version:refname")
-                .map(version -> version + "-SNAPSHOT");
+        return readGitDescribeVersion(
+                "describe",
+                "--tags",
+                "--match",
+                "v[0-9]*.[0-9]*.[0-9]*",
+                "--abbrev=8"
+        );
     }
 
-    private static Optional<String> readStableVersionFromGit(String... args) {
+    private static Optional<String> readGitDescribeVersion(String... args) {
         var gitCommand = new ArrayList<String>();
         gitCommand.add("git");
         gitCommand.addAll(List.of(args));
@@ -126,12 +135,7 @@ public class AppVersionResolver {
                 return Optional.empty();
             }
 
-            for (var line : output.split("\\R")) {
-                var stableVersion = extractStableVersion(line);
-                if (stableVersion.isPresent()) {
-                    return stableVersion;
-                }
-            }
+            return extractDescribeVersion(output);
         } catch (IOException exception) {
             log.debug("Unable to execute git while resolving app version", exception);
         } catch (InterruptedException exception) {
@@ -152,6 +156,27 @@ public class AppVersionResolver {
         return matcher.matches()
                 ? Optional.of(matcher.group(1))
                 : Optional.empty();
+    }
+
+    private static Optional<String> extractDescribeVersion(String describeOutput) {
+        var normalizedDescribeOutput = normalize(describeOutput);
+        if (normalizedDescribeOutput.isEmpty()) {
+            return Optional.empty();
+        }
+
+        var matcher = GIT_DESCRIBE_PATTERN.matcher(normalizedDescribeOutput);
+        if (!matcher.matches()) {
+            return Optional.empty();
+        }
+
+        var version = matcher.group(1);
+        var commitCount = matcher.group(2);
+        var commitAbbreviation = matcher.group(3);
+        if (commitCount == null || commitAbbreviation == null) {
+            return Optional.of(version);
+        }
+
+        return Optional.of(version + "-" + commitCount + "-g" + commitAbbreviation);
     }
 
     private static String normalize(String value) {
