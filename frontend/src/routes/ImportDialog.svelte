@@ -272,7 +272,7 @@
             </datalist>
 
             {#if isDatasetReadOnly(datasetNameUserInput)}
-                <div class="mt-1 mb-1 h-6 text-sm">
+                <div class="text-red mt-1 mb-1 h-6 text-sm">
                     Cannot import into read-only dataset
                 </div>
             {/if}
