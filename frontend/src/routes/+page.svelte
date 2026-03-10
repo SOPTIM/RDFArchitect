@@ -27,47 +27,41 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { env } from "$env/dynamic/public";
-
     import InteractiveNetwork from "$lib/components/InteractiveNetwork.svelte";
+    import { getAppMetadata } from "$lib/config/appMetadata.js";
+    import {
+        PUBLIC_APP_VERSION,
+        PUBLIC_COMMIT_SHA,
+        PUBLIC_DEPLOYMENT_ENVIRONMENT,
+        PUBLIC_REPOSITORY_URL,
+    } from "$lib/config/runtime";
 
     import { goto } from "$app/navigation";
 
-    const isLocal = !env.PUBLIC_COMMIT_REF || !env.PUBLIC_COMMIT_REF.trim();
-    const version = isLocal
-        ? `v${env.PUBLIC_APP_VERSION}-SNAPSHOT`
-        : `v${env.PUBLIC_APP_VERSION}`;
-    const cluster = isLocal
-        ? "local"
-        : (() => {
-              switch (env.PUBLIC_COMMIT_REF.trim()) {
-                  case "develop":
-                      return "dev";
-                  case "main":
-                      return "prod";
-                  default:
-                      return env.PUBLIC_COMMIT_REF.trim();
-              }
-          })();
+    const appMetadata = getAppMetadata({
+        appVersion: PUBLIC_APP_VERSION,
+        commitSha: PUBLIC_COMMIT_SHA,
+        repositoryUrl: PUBLIC_REPOSITORY_URL,
+        deploymentEnvironment: PUBLIC_DEPLOYMENT_ENVIRONMENT,
+    });
 
-    const repoCommitBaseUrl =
-        env.PUBLIC_REPOSITORY_URL && env.PUBLIC_REPOSITORY_URL.trim()
-            ? env.PUBLIC_REPOSITORY_URL.trim().replace(/\/$/, "") + "/-/commit/"
-            : "";
-
-    const leftItems = $derived([
-        ...(env.PUBLIC_APP_VERSION ? [{ icon: faTag, label: version }] : []),
-        { icon: faServer, label: cluster },
-        ...(env.PUBLIC_COMMIT_SHA
+    const leftItems = [
+        ...(appMetadata.versionLabel
+            ? [{ icon: faTag, label: appMetadata.versionLabel }]
+            : []),
+        ...(appMetadata.environmentLabel
+            ? [{ icon: faServer, label: appMetadata.environmentLabel }]
+            : []),
+        ...(appMetadata.commitLabel
             ? [
                   {
                       icon: faCodeBranch,
-                      label: env.PUBLIC_COMMIT_SHA,
-                      href: repoCommitBaseUrl + env.PUBLIC_COMMIT_SHA,
+                      label: appMetadata.commitLabel,
+                      href: appMetadata.commitUrl,
                   },
               ]
             : []),
-    ]);
+    ];
 </script>
 
 <section class="relative h-full w-full overflow-auto pb-12">
@@ -211,25 +205,16 @@
                         </ul>
                     </li>
                     <li>
-                        <strong>Cluster (internal)</strong>
+                        <strong>Deployment</strong>
                         <ul class="mt-1 list-disc space-y-1 pl-5">
                             <li>
-                                The cluster is reachable only on the internal
-                                network; it is not publicly accessible.
-                            </li>
-                            <li>
-                                Data is session-specific and isolated; other
-                                users cannot view your session’s data.
-                            </li>
-                            <li>
-                                Session data is ephemeral and is removed when
-                                the cluster restarts (e.g., on a new push to the
-                                repository).
+                                Session data is ephemeral and may be cleared
+                                after restarts or updates.
                             </li>
                             <li>
                                 When you share a snapshot, the snapshot data is
-                                uploaded to Fuseki and remains there. Snapshots
-                                cannot currently be deleted.
+                                uploaded to Fuseki and remains there. Currently
+                                snapshots cannot be deleted via the UI.
                             </li>
                         </ul>
                     </li>

@@ -4,7 +4,6 @@
 
 # Documentation and CI/CD
 README.md   @spah-soptim
-VERSION     @spah-soptim
 /.github/   @spah-soptim
 /docker/    @spah-soptim
 Dockerfile* @spah-soptim

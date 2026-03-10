@@ -1,5 +1,13 @@
 FROM nginx:alpine3.22
 
+ARG PUBLIC_APP_VERSION=""
+ARG PUBLIC_COMMIT_SHA=""
+ARG PUBLIC_REPOSITORY_URL=""
+
+ENV PUBLIC_APP_VERSION="${PUBLIC_APP_VERSION}" \
+    PUBLIC_COMMIT_SHA="${PUBLIC_COMMIT_SHA}" \
+    PUBLIC_REPOSITORY_URL="${PUBLIC_REPOSITORY_URL}"
+
 #RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
 COPY build /usr/share/nginx/html

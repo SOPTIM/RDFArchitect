@@ -17,11 +17,6 @@
 
 package org.rdfarchitect;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.info.Contact;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.info.License;
-import io.swagger.v3.oas.annotations.servers.Server;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 import lombok.extern.log4j.Log4j2;
@@ -29,22 +24,6 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.web.server.servlet.context.ServletComponentScan;
 
-//TODO: Openapi-Beschreibung, license wurde schon ergänzt
-@OpenAPIDefinition(
-          info = @Info(
-                    title = "RDFArchitect backend",
-                    version = "0.14.0",
-                    description = "This API provides utilities for editing RDFGraphs that model UML classes using the CIM standard.",
-                    license = @License(name = "Apache License 2.0", url = "https://www.apache.org/licenses/LICENSE-2.0"),
-                    contact = @Contact(url = "https://www.soptim.de/", name = "soptim")
-          ),
-          servers = {
-                    @Server(
-                              description = "local hosted",
-                              url = "http://localhost:8080/"
-                    )
-          }
-)
 @SpringBootApplication
 @ServletComponentScan
 @NoArgsConstructor

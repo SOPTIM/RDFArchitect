@@ -1,6 +1,6 @@
 {
-    "name": "rdf-architect-frontend",
-    "version": "0.14.0",
+    "name": "@soptim/rdfarchitect-frontend",
+    "version": "0.0.0",
     "scripts": {
         "dev": "vite dev --port 1407",
         "build": "vite build",

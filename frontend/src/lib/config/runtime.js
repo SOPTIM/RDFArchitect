@@ -14,9 +14,27 @@
  *    limitations under the License.
  */
 
+import { env as publicEnv } from "$env/dynamic/public";
+
 import { browser } from "$app/environment";
 
 const runtimeConfig = browser ? window.__RDFARCHITECT_CONFIG__ : {};
 
-export const PUBLIC_BACKEND_URL =
-    runtimeConfig?.PUBLIC_BACKEND_URL?.trim() || "";
+export const PUBLIC_BACKEND_URL = readPublicValue("PUBLIC_BACKEND_URL");
+
+export const PUBLIC_APP_VERSION = readPublicValue("PUBLIC_APP_VERSION");
+export const PUBLIC_COMMIT_SHA = readPublicValue("PUBLIC_COMMIT_SHA");
+export const PUBLIC_REPOSITORY_URL = readPublicValue("PUBLIC_REPOSITORY_URL");
+export const PUBLIC_DEPLOYMENT_ENVIRONMENT = readPublicValue(
+    "PUBLIC_DEPLOYMENT_ENVIRONMENT",
+);
+
+function readPublicValue(key) {
+    const runtimeValue = runtimeConfig?.[key];
+    if (typeof runtimeValue === "string" && runtimeValue.trim()) {
+        return runtimeValue.trim();
+    }
+
+    const envValue = publicEnv[key];
+    return typeof envValue === "string" ? envValue.trim() : "";
+}

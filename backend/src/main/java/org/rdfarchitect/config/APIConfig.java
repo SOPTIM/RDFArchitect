@@ -17,10 +17,17 @@
 
 package org.rdfarchitect.config;
 
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Contact;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.servers.Server;
 import org.apache.tomcat.util.buf.EncodedSolidusHandling;
 import org.springframework.boot.tomcat.TomcatConnectorCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import java.util.List;
 
 @Configuration
 public class APIConfig {
@@ -29,5 +36,22 @@ public class APIConfig {
     @Bean
     TomcatConnectorCustomizer connectorCustomizer() {
         return connector -> connector.setEncodedSolidusHandling(EncodedSolidusHandling.DECODE.getValue());
+    }
+
+    @Bean
+    OpenAPI rdfArchitectOpenAPI(AppVersionResolver appVersionResolver) {
+        return new OpenAPI()
+                .info(
+                        new Info()
+                                .title("RDFArchitect backend")
+                                .version(appVersionResolver.resolveVersion())
+                                .description("This API provides utilities for editing RDFGraphs that model UML classes using the CIM standard.")
+                                .license(new License().name("Apache License 2.0")
+                                                      .url("https://www.apache.org/licenses/LICENSE-2.0"))
+                                .contact(new Contact().url("https://www.soptim.de/")
+                                                      .name("soptim"))
+                )
+                .servers(List.of(new Server().description("local hosted")
+                                             .url("http://localhost:8080/")));
     }
 }

@@ -107,20 +107,10 @@ Breaking changes are detected when either of these is present:
 
 Use one of these markers whenever the change is not backward compatible.
 
-## Changelog Automation
+## Changelog
 
-The changelog workflow reads new commits and updates `CHANGELOG.md` automatically.
-
-- On pushes to `main`, it appends entries to `## [Unreleased]`.
-- On `vX.Y.Z` tags, it moves `Unreleased` into the matching release section with date and creates a fresh `Unreleased`.
-- Entries are deduplicated by any known identifier (`commit`, `PR`, `GH issue`, `RDFA`) and by normalized description.
-- Manual edits are preserved; if an entry already exists elsewhere (for example in a custom section), automation does not add it again.
-
-Generated changelog entry format:
-
-```text
-GH-<issue>: Description ([#<pr>](...), RDFA-<id>, [<sha8>](...))
-```
+- Keep `CHANGELOG.md` up to date manually for notable user-facing changes.
+- Release versions are derived from git tags (`vX.Y.Z`).
 
 ## Contributor Checklist
 

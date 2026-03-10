@@ -16,27 +16,22 @@
  */
 import { sveltekit } from "@sveltejs/kit/vite";
 import tailwindcss from "@tailwindcss/vite";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-// Read version from repo root VERSION file and expose as PUBLIC_APP_VERSION
+import { resolveGitBuildMetadata } from "./config/gitVersion.js";
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
-const versionFile = path.join(rootDir, "VERSION");
-let version;
-try {
-    if (fs.existsSync(versionFile)) {
-        const raw = fs.readFileSync(versionFile, "utf8").trim();
-        if (raw) version = raw;
-    }
-} catch {
-    // ignore
+const gitBuildMetadata = resolveGitBuildMetadata(rootDir);
+
+if (!process.env.PUBLIC_APP_VERSION) {
+    process.env.PUBLIC_APP_VERSION = gitBuildMetadata.version;
 }
 
-if (!process.env.PUBLIC_APP_VERSION && version) {
-    process.env.PUBLIC_APP_VERSION = version;
+if (!process.env.PUBLIC_COMMIT_SHA && gitBuildMetadata.commitSha) {
+    process.env.PUBLIC_COMMIT_SHA = gitBuildMetadata.commitSha;
 }
 
 export default defineConfig({

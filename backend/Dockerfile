@@ -1,5 +1,9 @@
 FROM eclipse-temurin:25.0.2_10-jre
 
+ARG APP_VERSION=""
+
+ENV APP_VERSION="${APP_VERSION}"
+
 WORKDIR /app
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser

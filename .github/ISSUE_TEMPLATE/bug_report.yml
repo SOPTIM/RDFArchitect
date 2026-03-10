@@ -56,8 +56,8 @@ body:
     id: version
     attributes:
       label: RDFArchitect version
-      description: "Example: 0.14.0"
-      placeholder: 0.14.0
+      description: "Semantic version (X.Y.Z) or commit SHA."
+      placeholder: 0.0.0
     validations:
       required: true
   - type: textarea
