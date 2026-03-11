@@ -29,12 +29,13 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -132,8 +133,9 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                     }
                     continue;
                 }
-                if (importGraph(datasetName, zipInputStream, entry.getName(), reservedGraphUris)) {
-                    importedGraphUris.add(ensureUniqueGraphUri(buildGraphUriFromFileName(entry.getName()), reservedGraphUris));
+                var uniqueGraphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entry.getName()), reservedGraphUris);
+                if (importGraph(datasetName, zipInputStream, entry.getName(), uniqueGraphUri)) {
+                    importedGraphUris.add(uniqueGraphUri);
                 } else {
                     error = true;
                 }
@@ -144,9 +146,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return new ZipImportResult(importedGraphUris, error);
     }
 
-    private boolean importGraph(String datasetName, ZipInputStream zipInputStream, String entryName, Set<String> reservedGraphUris) throws IOException {
+    private boolean importGraph(String datasetName, ZipInputStream zipInputStream, String entryName, String graphUri) throws IOException {
         var extractedFile = toMultipartFile(entryName, zipInputStream);
-        var graphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entryName), reservedGraphUris);
         try {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
             databasePort.deleteGraph(graphIdentifier);
@@ -159,6 +160,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private record ZipImportResult(List<String> importedGraphUris, boolean hasErrors) {
+
     }
 
     private Set<String> loadExistingGraphUris(String datasetName) {
