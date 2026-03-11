@@ -42,12 +42,4 @@ public class CIMEnumEntry {
     private RDFSComment comment;
 
     private CIMSStereotype stereotype;
-
-    public String getEnumClassString() {
-        return uri.getSuffix().split("\\.", 2)[0];
-    }
-
-    public URI getEnumClassURI() {
-        return new URI(uri.getPrefix() + this.getEnumClassString());
-    }
 }
