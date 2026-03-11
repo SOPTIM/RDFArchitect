@@ -17,66 +17,79 @@
 
 <script>
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
-    import { Fa } from "svelte-fa";
+
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu";
 
     let {
-        isOpen = false,
-        position = { x: 0, y: 0 },
+        request = null,
         disabled = false,
         onAddClass = () => {},
         onClose = () => {},
     } = $props();
 
-    function handleOverlayClick() {
-        onClose();
-    }
+    let triggerRef = $state(null);
+    let open = $state(false);
 
-    function handleOverlayContextMenu(event) {
-        event.preventDefault();
-        onClose();
-    }
+    let triggerStyle = $derived(
+        request
+            ? `position: fixed; left: ${request.x}px; top: ${request.y}px; width: 1px; height: 1px; opacity: 0; pointer-events: none;`
+            : "position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none;",
+    );
 
-    function handleItemContextMenu(event) {
-        event.preventDefault();
-    }
-
-    function handleAddClass(event) {
-        event.stopPropagation();
+    $effect(() => {
         if (disabled) {
+            open = false;
             return;
         }
+        if (!request) {
+            open = false;
+            return;
+        }
+        if (!triggerRef) {
+            return;
+        }
+
+        queueMicrotask(() => {
+            triggerRef.dispatchEvent(
+                new MouseEvent("contextmenu", {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 2,
+                    buttons: 2,
+                    clientX: request.x,
+                    clientY: request.y,
+                    view: window,
+                }),
+            );
+        });
+    });
+
+    function handleOpenChange(nextOpen) {
+        open = nextOpen;
+        if (!nextOpen) {
+            onClose();
+        }
+    }
+
+    function handleAddClass() {
         onAddClass();
     }
 </script>
 
-{#if isOpen}
-    <div
-        class="fixed inset-0"
-        style="z-index: 1198;"
-        role="presentation"
-        onclick={handleOverlayClick}
-        oncontextmenu={handleOverlayContextMenu}
-    ></div>
-    <div
-        class="menu-surface menu-surface--context fixed"
-        style={`left: ${position.x}px; top: ${position.y}px; z-index: 1199;`}
-        data-svelteflow-context-menu
-        data-state="open"
-    >
-        <button
-            type="button"
-            class={`menu-item w-full border-0 bg-transparent text-left ${
-                disabled ? "menu-item--disabled" : "menu-item--interactive"
-            }`}
-            onclick={handleAddClass}
-            oncontextmenu={handleItemContextMenu}
+<ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
+    <ContextMenu.TriggerArea
+        bind:ref={triggerRef}
+        class="fixed h-px w-px opacity-0"
+        style={triggerStyle}
+        {disabled}
+    />
+    <ContextMenu.Content style="z-index: 1200;">
+        <ContextMenu.Item.Button
+            onSelect={handleAddClass}
             {disabled}
+            faIcon={faPlus}
         >
-            <span class="menu-icon">
-                <Fa icon={faPlus} />
-            </span>
-            <span class="menu-label">Add class</span>
-            <span class="menu-shortcut"></span>
-        </button>
-    </div>
-{/if}
+            Add class
+        </ContextMenu.Item.Button>
+    </ContextMenu.Content>
+</ContextMenu.Root>

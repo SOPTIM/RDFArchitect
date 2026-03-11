@@ -65,10 +65,9 @@
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
-    let paneContextMenuOpen = $state(false);
-    let classContextMenuOpen = $state(false);
     let contextMenuFlowPosition = $state({ x: 0, y: 0 });
-    let contextMenuScreenPosition = $state({ x: 0, y: 0 });
+    let paneContextMenuRequest = $state(null);
+    let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
     let deleteClassTarget = $state(null);
     let showDeleteClassDialog = $state(false);
@@ -273,46 +272,31 @@
     }
 
     function closeContextMenus() {
-        paneContextMenuOpen = false;
-        classContextMenuOpen = false;
-    }
-
-    function getContextMenuScreenPosition(event) {
-        const contextMenuWidth = 176;
-        const contextMenuHeight = 48;
-        const viewportPadding = 8;
-
-        const maxX = Math.max(
-            viewportPadding,
-            window.innerWidth - contextMenuWidth - viewportPadding,
-        );
-        const maxY = Math.max(
-            viewportPadding,
-            window.innerHeight - contextMenuHeight - viewportPadding,
-        );
-
-        return {
-            x: Math.min(Math.max(event.clientX, viewportPadding), maxX),
-            y: Math.min(Math.max(event.clientY, viewportPadding), maxY),
-        };
+        paneContextMenuRequest = null;
+        classContextMenuRequest = null;
     }
 
     function handlePaneContextMenu({ event }) {
         event.preventDefault();
         event.stopPropagation();
+        closeContextMenus();
         if (
             event.target instanceof Element &&
             event.target.closest(".svelte-flow__node")
         ) {
             return;
         }
+        if (isDatasetReadOnly) {
+            return;
+        }
 
         contextMenuClass = null;
-        contextMenuScreenPosition = getContextMenuScreenPosition(event);
-        classContextMenuOpen = false;
         if (!svelteFlowAPI?.svelteFlow) {
             contextMenuFlowPosition = { x: 0, y: 0 };
-            paneContextMenuOpen = true;
+            paneContextMenuRequest = {
+                x: event.clientX,
+                y: event.clientY,
+            };
             return;
         }
 
@@ -323,7 +307,10 @@
             },
             { snapToGrid: false },
         );
-        paneContextMenuOpen = true;
+        paneContextMenuRequest = {
+            x: event.clientX,
+            y: event.clientY,
+        };
     }
 
     function handleEdgeContextMenu({ event }) {
@@ -335,13 +322,18 @@
     function handleNodeContextMenu({ event, node }) {
         event.preventDefault();
         event.stopPropagation();
+        closeContextMenus();
+        if (isDatasetReadOnly) {
+            return;
+        }
         contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
         };
-        contextMenuScreenPosition = getContextMenuScreenPosition(event);
-        paneContextMenuOpen = false;
-        classContextMenuOpen = true;
+        classContextMenuRequest = {
+            x: event.clientX,
+            y: event.clientY,
+        };
         editorState.selectedClassUUID.updateValue(node.id);
     }
 
@@ -514,15 +506,13 @@
     </SvelteFlow>
 
     <SvelteFlowPaneContextMenu
-        isOpen={paneContextMenuOpen}
-        position={contextMenuScreenPosition}
+        request={paneContextMenuRequest}
         disabled={isDatasetReadOnly}
         onAddClass={openNewClassDialog}
         onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
-        isOpen={classContextMenuOpen}
-        position={contextMenuScreenPosition}
+        request={classContextMenuRequest}
         disabled={isDatasetReadOnly || !contextMenuClass}
         onDeleteClass={openDeleteClassDialog}
         onClose={closeContextMenus}

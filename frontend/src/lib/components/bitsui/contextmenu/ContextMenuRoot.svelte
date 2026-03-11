@@ -16,9 +16,16 @@
   -->
 <script>
     import { ContextMenu as BitsUiContextMenu } from "bits-ui";
-    let { children } = $props();
+
+    let {
+        children,
+        open = $bindable(false),
+        dir = "ltr",
+        onOpenChange = () => {},
+        onOpenChangeComplete = () => {},
+    } = $props();
 </script>
 
-<BitsUiContextMenu.Root>
+<BitsUiContextMenu.Root bind:open {dir} {onOpenChange} {onOpenChangeComplete}>
     {@render children?.()}
 </BitsUiContextMenu.Root>

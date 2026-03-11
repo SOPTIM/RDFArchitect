@@ -17,9 +17,15 @@
 <script>
     import { ContextMenu as BitsUiContextMenu } from "bits-ui";
 
-    let { children, class: cls = "", style = "" } = $props();
+    let {
+        children,
+        ref = $bindable(null),
+        class: cls = "",
+        style = "",
+        disabled = false,
+    } = $props();
 </script>
 
-<BitsUiContextMenu.Trigger class={cls} {style}>
+<BitsUiContextMenu.Trigger bind:ref class={cls} {style} {disabled}>
     {@render children?.()}
 </BitsUiContextMenu.Trigger>
