@@ -19,6 +19,7 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.controller.datasets.graphs.packages.PackageRESTController;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
