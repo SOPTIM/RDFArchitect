@@ -11,7 +11,7 @@ Thank you for your interest in contributing to RDFArchitect.
 ## Repository Structure
 
 - `backend/`: Spring Boot backend (Java/Maven)
-- `frontend/`: Svelte frontend (Node/npm)
+- `frontend/`: SvelteKit frontend (Node/npm)
 - `.github/workflows/`: CI workflows for backend and frontend
 
 ## Development Setup
