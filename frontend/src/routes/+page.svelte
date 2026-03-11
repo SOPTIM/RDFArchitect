@@ -214,7 +214,7 @@
                             <li>
                                 When you share a snapshot, the snapshot data is
                                 uploaded to Fuseki and remains there. Currently
-                                snapshots cannot be deleted via the UI.
+                                snapshots cannot be deleted by the user.
                             </li>
                         </ul>
                     </li>
