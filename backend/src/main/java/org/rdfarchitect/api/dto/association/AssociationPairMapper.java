@@ -21,6 +21,7 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.rdfarchitect.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.cim.data.dto.CIMAssociationPair;
+import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 
@@ -36,12 +37,12 @@ public interface AssociationPairMapper {
     default CIMAssociationPair toCIMObject(AssociationPairDTO associationPairDTO) {
         CIMAssociation from = AssociationMapper.INSTANCE.toCIMObject(
                   associationPairDTO.getFrom(),
-                  associationPairDTO.getTo().getLabel()
+                  associationPairDTO.getTo().getPrefix() + new URI(associationPairDTO.getTo().getDomain()).getSuffix() + "." + associationPairDTO.getTo().getLabel()
                                                                     );
 
         CIMAssociation to = AssociationMapper.INSTANCE.toCIMObject(
                   associationPairDTO.getTo(),
-                  associationPairDTO.getFrom().getLabel()
+                  associationPairDTO.getFrom().getPrefix() + new URI(associationPairDTO.getFrom().getDomain()).getSuffix() + "." + associationPairDTO.getFrom().getLabel()
                                                                   );
 
         return new CIMAssociationPair(from, to);

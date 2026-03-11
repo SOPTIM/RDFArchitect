@@ -171,7 +171,9 @@
                     accessIdentifier={datatype =>
                         classEditorContext.getSubstitutedNamespace(
                             datatype.prefix,
-                        ) + datatype.label}
+                        ) +
+                        ":" +
+                        datatype.label}
                     callOnValidChange={newDatatype =>
                         (attribute.datatype.value = newDatatype
                             ? newDatatype.prefix + newDatatype.label
