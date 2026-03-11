@@ -19,8 +19,12 @@ package org.rdfarchitect.database.inmemory;
 
 import lombok.Getter;
 import lombok.Setter;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Wrapper class that combines an {@link GraphRewindableWithUUIDs} with its associated {@link DiagramLayout}.
@@ -30,6 +34,8 @@ public class GraphWithContext {
 
     @Getter
     private final GraphRewindableWithUUIDs rdfGraph;
+    @Getter
+    private final ConcurrentHashMap<UUID, CustomDiagram> customDiagrams = new  ConcurrentHashMap<>();
     @Getter
     @Setter
     private DiagramLayout diagramLayout;

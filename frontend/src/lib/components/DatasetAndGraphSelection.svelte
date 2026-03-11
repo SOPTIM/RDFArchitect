@@ -30,6 +30,7 @@
         lockedGraphUri,
         allowSelectionOfReadonlyDatasets = true,
         displayAsCard = true,
+        onGraphSelected,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);

@@ -25,6 +25,8 @@ import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
+import java.util.List;
+
 public class CIMQueryBuilder {
 
     public enum Mode {
@@ -55,6 +57,20 @@ public class CIMQueryBuilder {
     public CIMQueryBuilder(SelectBuilder baseQuery, String subjectUUID) {
         if (subjectUUID != null) {
             baseQuery.addWhere(CIMQueryVars.URI, RDFA.uuid, subjectUUID);
+        }
+        this.baseQuery = baseQuery;
+        this.inverseSubquery = null;
+    }
+
+    /**
+     * Constructor for the {@link CIMQueryBuilder}, provide a {@link SelectBuilder baseQuery} and a list of subject UUIDs
+     *
+     * @param baseQuery    {@link SelectBuilder}
+     * @param subjectUUIDs List of UUIDs that the uuid variable can be assigned to
+     */
+    public CIMQueryBuilder(SelectBuilder baseQuery, List<String> subjectUUIDs) {
+        if (subjectUUIDs != null && !subjectUUIDs.isEmpty()) {
+            baseQuery.addWhereValueVar(CIMQueryVars.UUID, subjectUUIDs.toArray());
         }
         this.baseQuery = baseQuery;
         this.inverseSubquery = null;

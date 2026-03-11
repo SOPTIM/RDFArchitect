@@ -430,10 +430,17 @@
             classPositionDTOList.push(classPositionDTO);
         }
 
+        let diagramUUID;
+        if (editorState.selectedPackageUUID.getValue()) {
+            diagramUUID = editorState.selectedPackageUUID.getValue();
+        } else if (editorState.selectedCustomDiagramUUID.getValue()) {
+            diagramUUID = editorState.selectedCustomDiagramUUID.getValue();
+        }
+
         bec.updateClassPositions(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
-            editorState.selectedPackageUUID.getValue(),
+            diagramUUID,
             classPositionDTOList,
         );
     }

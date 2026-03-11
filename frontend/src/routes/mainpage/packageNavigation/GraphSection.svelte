@@ -33,6 +33,7 @@
         faRotateLeft,
         faRotateRight,
         faGear,
+        faObjectGroup
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -40,7 +41,7 @@
         undo,
         fetchCanUndo,
         redo,
-        fetchCanRedo,
+        fetchCanRedo
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -48,22 +49,25 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import CustomDiagramDialog from "./custom-diagram-dialog/CustomDiagramDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
 
     import { goto } from "$app/navigation";
+
 
     let {
         datasetNavEntry,
@@ -78,6 +82,7 @@
     let showExportDialog = $state(false);
     let showDeleteDialog = $state(false);
     let showNewPackageDialog = $state(false);
+    let showNewDiagramDialog = $state(false);
     let showCompareDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showSHACLExportDialog = $state(false);
@@ -166,6 +171,15 @@
                 faIcon={faPlus}
             >
                 New Package
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
+                    showNewDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                New Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -336,6 +350,30 @@
                     {readonly}
                 />
             {/each}
+
+            <div class="h-0.5 bg-border my-1 ml-14"></div>
+            <NavigationEntry
+                level={3}
+                label="Custom Diagrams"
+                icon={faObjectGroup}
+                hasChildren={diagrams.length > 0}
+                expanded={diagramsExpanded}
+                isSelected={
+                    isSelectedGraph(dataset, graph) &&
+                    editorState.selectedCustomDiagramUUID.getValue() !== null
+                }
+                onToggle={() => diagramsExpanded = !diagramsExpanded}
+            />
+            {#if diagramsExpanded && diagrams.length > 0}
+                {#each diagrams as diagram (diagram.id)}
+                    <CustomDiagramButton
+                        {dataset}
+                        {graph}
+                        {diagram}
+                        {readOnly}
+                    />
+                {/each}
+            {/if}
         </div>
     {/if}
 </div>
@@ -348,6 +386,11 @@
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+/>
+<CustomDiagramDialog
+    bind:showDialog={showNewDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />

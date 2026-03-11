@@ -60,7 +60,7 @@
         >
             <div class="flex h-full w-full">
                 <div
-                    class="flex h-full min-h-0 w-full flex-1 flex-col border-r border-[var(--color-nav-border)] bg-[var(--color-nav-surface)]"
+                    class="flex h-full min-h-0 w-full flex-1 flex-col border-r border-nav-border bg-color-nav-surface"
                 >
                     <div
                         class="no-scrollbar min-h-0 flex-1 overflow-y-auto py-[0.4rem]"

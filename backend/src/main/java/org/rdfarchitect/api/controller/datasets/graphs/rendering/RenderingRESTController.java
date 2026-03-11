@@ -29,7 +29,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;

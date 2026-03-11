@@ -15,21 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.services.diagrams;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
-import java.util.UUID;
-
-public interface EnsureDiagramLayoutForCIMCollectionUseCase {
-
-    /**
-     * Ensures that the necessary diagram layout data exists for the {@link CIMCollection} provided
-     *
-     * @param graphIdentifier the identifier of the graph
-     * @param diagramUUID     the UUID of the package or diagram to be rendered
-     * @param cimCollection   the CIMCollection containing all packages, classes and enums
-     */
-    void ensureDiagramLayoutExists(GraphIdentifier graphIdentifier, UUID diagramUUID, CIMCollection cimCollection);
+public interface DeleteCustomDiagramUseCase {
+        /**
+        * Deletes a custom diagram defined in a graph.
+        *
+        * @param graphIdentifier The graph containing the diagram
+        * @param diagramId       The ID of the diagram to be deleted.
+        */
+        void deleteCustomDiagram(GraphIdentifier graphIdentifier, String diagramId);
 }

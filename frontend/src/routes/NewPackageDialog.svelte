@@ -160,6 +160,7 @@
                 editorState.selectedDataset.updateValue(ds);
                 editorState.selectedGraph.updateValue(graph);
                 editorState.selectedPackageUUID.updateValue(uuid);
+                editorState.selectedCustomDiagramUUID.updateValue(null);
             });
         promise
             .catch(e => {

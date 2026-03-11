@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.packages;
+package org.rdfarchitect.api.controller.datasets.graphs.rendering;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages/{packageUUID}/layout/classes")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/layout/{diagramUUID}/classes")
 @RequiredArgsConstructor
 public class ClassLayoutDataRESTController {
 
@@ -65,9 +65,9 @@ public class ClassLayoutDataRESTController {
               @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
               @PathVariable
               String graphURI,
-              @Parameter(description = "The UUID of the package to be replaced.")
+              @Parameter(description = "The UUID of the package or custom diagram being updated.")
               @PathVariable
-              String packageUUID,
+              String diagramUUID,
               @io.swagger.v3.oas.annotations.parameters.RequestBody(
                         required = true,
                         description = "The DTO with necessary information for class reposition",
@@ -77,14 +77,14 @@ public class ClassLayoutDataRESTController {
               @RequestBody
               List<ClassPositionDTO> classPositionDTOList) {
 
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}/layout/classes\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
+        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".", datasetName, graphURI, diagramUUID, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var resolvedPackageUUID = !packageUUID.equals("default") ? UUID.fromString(packageUUID) : null;
+        var resolvedPackageUUID = !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateClassPositionsUseCase.updateClassPositions(new GraphIdentifier(datasetName, extendedGraphURI), resolvedPackageUUID, classPositionDTOList);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}/layout/classes\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
+        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".", datasetName, graphURI, diagramUUID, originURL);
         return "success";
     }
 }

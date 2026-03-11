@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services;
+package org.rdfarchitect.services.rendering;
 
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;

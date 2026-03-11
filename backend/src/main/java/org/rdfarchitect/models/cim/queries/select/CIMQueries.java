@@ -25,13 +25,73 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
+import java.util.List;
+
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.*;
 
 @UtilityClass
 public class CIMQueries {
 
     /**
-     * Get a {@link SelectBuilder} for a query that retrieves the class with the given URI.
+     * Get a {@link SelectBuilder} for a query that retrieves a list of specified classes.
+     *
+     * @param prefixMapping The {@link PrefixMapping} to use for the query.
+     * @param classUUIDs    The possible UUIDs of the classes to retrieve, set to null to retrieve all classes.
+     * @param graphURI      The URI of the graph to query.
+     *
+     * @return A {@link SelectBuilder} for the query.
+     */
+    public SelectBuilder getSpecifiedClassesQuery(PrefixMapping prefixMapping, String graphURI, List<String> classUUIDs) {
+
+        var baseQuery = new CIMBaseQueryBuilder()
+                  .addPrefixes(prefixMapping)
+                  .setOrder()
+                  .setType(RDFS.Class)
+                  .setGraph(graphURI)
+                  .build();
+
+        var builder = new CIMQueryBuilder(baseQuery, classUUIDs);
+
+        return builder
+                  .appendUUIDQuery(REQUIRED)
+                  .appendLabelQuery(REQUIRED)
+                  .appendSuperClassQuery(OPTIONAL)
+                  .appendCommentQuery(OPTIONAL)
+                  .appendPackageQuery(OPTIONAL)
+                  .buildSelectBuilder();
+    }
+
+    /**
+     * Get a {@link SelectBuilder} for a query that retrieves a list of classes.
+     *
+     * @param prefixMapping The {@link PrefixMapping} to use for the query.
+     * @param graphURI      The URI of the graph to query.
+     *
+     * @return A {@link SelectBuilder} for the query.
+     */
+    public SelectBuilder getClassesQuery(PrefixMapping prefixMapping, String graphURI) {
+
+        var baseQuery = new CIMBaseQueryBuilder()
+                  .addPrefixes(prefixMapping)
+                  .setOrder()
+                  .setType(RDFS.Class)
+                  .setGraph(graphURI)
+                  .build();
+
+        var builder = new CIMQueryBuilder(baseQuery);
+
+        return builder
+                  .appendUUIDQuery(REQUIRED)
+                  .appendLabelQuery(REQUIRED)
+                  .appendSuperClassQuery(OPTIONAL)
+                  .appendCommentQuery(OPTIONAL)
+                  .appendPackageQuery(OPTIONAL)
+                  .buildSelectBuilder();
+    }
+
+
+    /**
+     * Get a {@link SelectBuilder} for a query that retrieves the class with the given UUID.
      *
      * @param prefixMapping The {@link PrefixMapping} to use for the query.
      * @param classUUID     The UUID of the class to retrieve, set to null to retrieve all classes.

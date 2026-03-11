@@ -30,6 +30,7 @@ import org.apache.jena.sparql.core.Transactional;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
@@ -60,6 +61,7 @@ public class GraphWithContextCollection {
 
     //holds graphs
     private final ConcurrentMap<String, GraphWithContext> graphs = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
 
     //lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
@@ -144,7 +146,7 @@ public class GraphWithContextCollection {
             }
             var rdfGraph = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), maxVersions, compressCount);
             var graph = new GraphWithContext(rdfGraph);
-            graphs.put(DEFAULT_GRAPH_NAME, graph);
+            graphs.put(graphUri, graph);
         }
     }
 

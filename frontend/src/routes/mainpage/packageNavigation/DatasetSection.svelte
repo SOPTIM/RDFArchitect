@@ -53,7 +53,7 @@
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
-    let readonly = $state(false);
+    let readOnly = $state(false);
     let namespaces = $state([]);
 
     let wasDatasetSelected = false;
@@ -64,7 +64,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readonly = await isReadOnly(datasetNavEntry.label);
+        readOnly = await isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {
@@ -93,11 +93,12 @@
         }
         editorState.selectedGraph.updateValue(null);
         editorState.selectedPackageUUID.updateValue(null);
+        editorState.selectedCustomDiagramUUID.updateValue(null);
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
     }
 
     async function enableEditing() {
-        if (!datasetNavEntry?.id || !readonly) {
+        if (!datasetNavEntry?.id || !readOnly) {
             return;
         }
 
@@ -108,7 +109,7 @@
     }
 
     async function disableEditing() {
-        if (!datasetNavEntry?.id || readonly) {
+        if (!datasetNavEntry?.id || readOnly) {
             return;
         }
         await bec.disableEditing(datasetNavEntry.id).then(() => {
@@ -129,7 +130,7 @@
                 expanded={datasetNavEntry.isOpen}
                 isSelected={isDatasetSelected}
                 title={datasetNavEntry.tooltip}
-                badgeText={readonly ? "Read-only" : ""}
+                badgeText={readOnly ? "Read-only" : ""}
                 badgeVariant="readonly"
                 onclick={selectDataset}
                 onToggle={() => datasetNavEntry.toggle()}
@@ -141,7 +142,7 @@
                     selectDataset();
                     showNewGraphDialog = true;
                 }}
-                disabled={readonly}
+                disabled={readOnly}
                 faIcon={faDiagramProject}
             >
                 Add Schema
@@ -151,7 +152,7 @@
                     selectDataset();
                     showImportDialog = true;
                 }}
-                disabled={readonly}
+                disabled={readOnly}
                 faIcon={faFileImport}
             >
                 Import Schema
@@ -163,7 +164,7 @@
                 }}
                 faIcon={faTags}
             >
-                {#if readonly}
+                {#if readOnly}
                     View Namespaces
                 {:else}
                     Manage Namespaces
@@ -179,7 +180,7 @@
             >
                 Share Snapshot
             </ContextMenu.Item.Button>
-            {#if readonly}
+            {#if readOnly}
                 <ContextMenu.Item.Button
                     onSelect={() => enableEditing()}
                     faIcon={faPenToSquare}
@@ -215,8 +216,9 @@
                 <GraphSection
                     {datasetNavEntry}
                     {graphNavEntry}
+                    onExpandDataset={ensureDatasetExpanded}
                     {namespaces}
-                    {readonly}
+                    {readOnly}
                 />
             {/each}
         </div>

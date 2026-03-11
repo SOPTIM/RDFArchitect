@@ -381,7 +381,7 @@ export class BackendConnection {
         packageUUID,
         classPositionDTOList,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}/layout/classes`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/layout/${encodeURIComponent(packageUUID)}/classes`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -451,5 +451,36 @@ export class BackendConnection {
             headers: new Headers({ "Content-Type": "application/json" }),
             credentials: "include",
         });
+    }
+
+    async getCustomDiagrams(datasetName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async getCustomDiagramRenderingData(datasetName, graphURI, diagramId) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        })
+    }
+
+    async putCustomDiagram(datasetName, graphURI, diagramId, newDiagram) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
+        return await fetch(url, {
+            method: "PUT",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(newDiagram),
+            credentials: "include",
+        })
     }
 }

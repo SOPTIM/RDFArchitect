@@ -34,8 +34,8 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 
 import java.io.IOException;
 import java.io.InputStream;
