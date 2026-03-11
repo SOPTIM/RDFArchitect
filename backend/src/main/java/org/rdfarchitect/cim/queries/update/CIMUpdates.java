@@ -334,7 +334,7 @@ public class CIMUpdates {
     private void appendInsertEnumEntry(UpdateBuilder baseUpdate, CIMEnumEntry newEnumEntry) {
         var newEnumEntryURI = NodeFactory.createURI(newEnumEntry.getUri().toString());
         baseUpdate
-                  .addInsert(newEnumEntryURI, RDF.type, newEnumEntry.getEnumClassURI().toNode())
+                  .addInsert(newEnumEntryURI, RDF.type, newEnumEntry.getType().getUri().toNode())
                   .addInsert(newEnumEntryURI, RDFS.label, newEnumEntry.getLabel().asLangLiteral());
         if (newEnumEntry.getUuid() != null) {
             baseUpdate.addInsert(newEnumEntryURI, RDFA.uuid, newEnumEntry.getUuid().toString());

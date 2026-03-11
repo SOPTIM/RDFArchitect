@@ -14,3 +14,17 @@
  *    limitations under the License.
  *
  */
+
+/**
+ * Formats the given namespace as "(substitutedPrefix) prefix", e.g. "(ex) http://example.com/"
+ * @param namespace The namespace to format, must have the properties "prefix" and "substitutedPrefix"
+ * @returns {string} The formatted namespace string
+ */
+export function getNsPrefixNsUriString(namespace) {
+    let namespacePrefix = namespace.substitutedPrefix;
+    if (namespacePrefix && namespacePrefix.endsWith(":")) {
+        namespacePrefix = namespacePrefix.slice(0, -1);
+    }
+    const namespaceUri = namespace.prefix;
+    return `(${namespacePrefix}) ${namespaceUri}`;
+}

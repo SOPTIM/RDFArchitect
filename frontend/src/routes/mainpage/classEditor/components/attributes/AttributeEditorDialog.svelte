@@ -26,6 +26,7 @@
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
 
@@ -91,144 +92,199 @@
     {readonly}
 >
     {#if attribute && classEditorContext && datatypes && readonly !== undefined}
-        <div class="mx-2 flex h-full flex-col">
-            <span class="mb-2 text-lg">
-                {#if isNewAttribute}
-                    Creating new attribute
-                {:else}
-                    Editing attribute <b>{attribute.label.backup}</b>
-                {/if}
-            </span>
+        <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
+            <!-- Title -->
+            <div>
+                <span class="text-lg">
+                    {#if isNewAttribute}
+                        Creating new attribute
+                    {:else}
+                        Editing attribute <b>{attribute.label.backup}</b>
+                    {/if}
+                </span>
+            </div>
 
-            <span class="mb-1 font-semibold">UUID:</span>
-            <p class="mb-2 w-full">
-                {#if attribute.uuid.value}
-                    {attribute.uuid.value}
-                {:else}
-                    not yet assigned
-                {/if}
-            </p>
+            <!-- UUID -->
+            <div>
+                <span class="mb-1">UUID:</span>
+                <p class="w-full">
+                    {#if attribute.uuid.value}
+                        {attribute.uuid.value}
+                    {:else}
+                        not yet assigned
+                    {/if}
+                </p>
+            </div>
 
-            <!--LABEL-->
-            <TextEditControl
-                label="Label:"
-                placeholder="attribute label..."
-                bind:value={attribute.label.value}
-                highlight={attribute.label.isModified}
-                warn={!attribute.label.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.label,
-                    readonly,
-                )}
-            />
-            <ViolationMessages violations={attribute.label.violations} />
+            <!-- NAMESPACE -->
+            <div>
+                <span class="mb-1">Namespace:</span>
+                <SearchableSelect
+                    placeholder="namespace..."
+                    value={classEditorContext.getSubstitutedNamespace(
+                        attribute.namespace.value,
+                    )}
+                    optionObjectList={classEditorContext.namespaces}
+                    accessDisplayData={namespace => namespace.substitutedPrefix}
+                    accessIdentifier={getNsPrefixNsUriString}
+                    callOnValidChange={newNamespace =>
+                        (attribute.namespace.value = newNamespace?.prefix)}
+                    highlight={attribute.namespace.isModified}
+                    warn={!attribute.namespace.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.namespace,
+                        readonly,
+                    )}
+                    tooltip={attribute.namespace.value}
+                />
+                <ViolationMessages
+                    violations={attribute.namespace.violations}
+                />
+            </div>
 
-            <!--DATATYPE-->
-            <SearchableSelect
-                label="Type:"
-                placeholder="type label..."
-                value={getDatatypeLabelByUri(attribute.datatype.value)}
-                optionObjectList={classEditorContext.datatypes}
-                accessDisplayData={datatype => datatype.label}
-                accessIdentifier={datatype =>
-                    classEditorContext.getSubstitutedNamespace(
-                        datatype.prefix,
-                    ) + datatype.label}
-                callOnValidChange={newDatatype =>
-                    (attribute.datatype.value = newDatatype
-                        ? newDatatype.prefix + newDatatype.label
-                        : null)}
-                highlight={attribute.datatype.isModified}
-                warn={!attribute.datatype.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.datatype,
-                    readonly,
-                )}
-                tooltip={attribute.datatype.value}
-            />
-            <ViolationMessages violations={attribute.datatype.violations} />
+            <!-- LABEL -->
+            <div>
+                <TextEditControl
+                    label="Label:"
+                    placeholder="attribute label..."
+                    bind:value={attribute.label.value}
+                    highlight={attribute.label.isModified}
+                    warn={!attribute.label.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.label,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages violations={attribute.label.violations} />
+            </div>
 
-            <!--MULTIPLICITY-->
-            <NumberInputControl
-                label="Multiplicity LowerBound:"
-                placeholder="multiplicity LowerBound..."
-                bind:value={attribute.multiplicityLowerBound.value}
-                highlight={attribute.multiplicityLowerBound.isModified}
-                warn={!attribute.multiplicityLowerBound.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.multiplicityLowerBound,
-                    readonly,
-                )}
-            />
-            <ViolationMessages
-                violations={attribute.multiplicityLowerBound.violations}
-            />
-            <NumberInputControl
-                label="Multiplicity UpperBound:"
-                placeholder="multiplicity UpperBound..."
-                bind:value={attribute.multiplicityUpperBound.value}
-                highlight={attribute.multiplicityUpperBound.isModified}
-                warn={!attribute.multiplicityUpperBound.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.multiplicityUpperBound,
-                    readonly,
-                )}
-            />
-            <ViolationMessages
-                violations={attribute.multiplicityUpperBound.violations}
-            />
+            <!-- DATATYPE -->
+            <div>
+                <SearchableSelect
+                    label="Type:"
+                    placeholder="type label..."
+                    value={getDatatypeLabelByUri(attribute.datatype.value)}
+                    optionObjectList={classEditorContext.datatypes}
+                    accessDisplayData={datatype => datatype.label}
+                    accessIdentifier={datatype =>
+                        classEditorContext.getSubstitutedNamespace(
+                            datatype.prefix,
+                        ) +
+                        ":" +
+                        datatype.label}
+                    callOnValidChange={newDatatype =>
+                        (attribute.datatype.value = newDatatype
+                            ? newDatatype.prefix + newDatatype.label
+                            : null)}
+                    highlight={attribute.datatype.isModified}
+                    warn={!attribute.datatype.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.datatype,
+                        readonly,
+                    )}
+                    tooltip={attribute.datatype.value}
+                />
+                <ViolationMessages violations={attribute.datatype.violations} />
+            </div>
 
-            <!--FIXED VALUE-->
-            <TextEditControl
-                label="Fixed Value:"
-                placeholder="fixed value..."
-                bind:value={attribute.fixedValue.value}
-                highlight={attribute.fixedValue.isModified}
-                warn={!attribute.fixedValue.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.fixedValue,
-                    readonly,
-                )}
-            />
-            <ViolationMessages violations={attribute.fixedValue.violations} />
+            <!-- MULTIPLICITY LOWERBOUND -->
+            <div>
+                <NumberInputControl
+                    label="Multiplicity LowerBound:"
+                    placeholder="multiplicity LowerBound..."
+                    bind:value={attribute.multiplicityLowerBound.value}
+                    highlight={attribute.multiplicityLowerBound.isModified}
+                    warn={!attribute.multiplicityLowerBound.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.multiplicityLowerBound,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages
+                    violations={attribute.multiplicityLowerBound.violations}
+                />
+            </div>
 
-            <!--DEFAULT VALUE-->
-            <TextEditControl
-                label="Default Value:"
-                placeholder="default value..."
-                bind:value={attribute.defaultValue.value}
-                highlight={attribute.defaultValue.isModified}
-                warn={!attribute.defaultValue.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.defaultValue,
-                    readonly,
-                )}
-            />
-            <ViolationMessages violations={attribute.defaultValue.violations} />
+            <!-- MULTIPLICITY UPPERBOUND -->
+            <div>
+                <NumberInputControl
+                    label="Multiplicity UpperBound:"
+                    placeholder="multiplicity UpperBound..."
+                    bind:value={attribute.multiplicityUpperBound.value}
+                    highlight={attribute.multiplicityUpperBound.isModified}
+                    warn={!attribute.multiplicityUpperBound.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.multiplicityUpperBound,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages
+                    violations={attribute.multiplicityUpperBound.violations}
+                />
+            </div>
 
-            <!--COMMENT-->
-            <label for="attribute-edit-dialog-comment-text-area">
-                Comment:
-            </label>
-            <TextAreaControl
-                id="attribute-edit-dialog-comment-text-area"
-                placeholder="comment..."
-                bind:value={attribute.comment.value}
-                highlight={attribute.comment.isModified}
-                warn={!attribute.comment.isValid}
-                {readonly}
-                buttons={getControlButtonsForReactiveObject(
-                    attribute.comment,
-                    readonly,
-                )}
-            />
-            <ViolationMessages violations={attribute.comment.violations} />
+            <!-- FIXED VALUE -->
+            <div>
+                <TextEditControl
+                    label="Fixed Value:"
+                    placeholder="fixed value..."
+                    bind:value={attribute.fixedValue.value}
+                    highlight={attribute.fixedValue.isModified}
+                    warn={!attribute.fixedValue.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.fixedValue,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages
+                    violations={attribute.fixedValue.violations}
+                />
+            </div>
+
+            <!-- DEFAULT VALUE -->
+            <div>
+                <TextEditControl
+                    label="Default Value:"
+                    placeholder="default value..."
+                    bind:value={attribute.defaultValue.value}
+                    highlight={attribute.defaultValue.isModified}
+                    warn={!attribute.defaultValue.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.defaultValue,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages
+                    violations={attribute.defaultValue.violations}
+                />
+            </div>
+
+            <!-- COMMENT -->
+            <div>
+                <label for="attribute-edit-dialog-comment-text-area">
+                    Comment:
+                </label>
+                <TextAreaControl
+                    id="attribute-edit-dialog-comment-text-area"
+                    placeholder="comment..."
+                    bind:value={attribute.comment.value}
+                    highlight={attribute.comment.isModified}
+                    warn={!attribute.comment.isValid}
+                    {readonly}
+                    buttons={getControlButtonsForReactiveObject(
+                        attribute.comment,
+                        readonly,
+                    )}
+                />
+                <ViolationMessages violations={attribute.comment.violations} />
+            </div>
         </div>
     {/if}
 </ModifyDataDialog>

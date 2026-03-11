@@ -21,12 +21,47 @@
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
+
     let { namespace } = $props();
 
     const classEditorContext = getContext("classEditor");
     const readonly = classEditorContext.readonly;
     const namespaces = classEditorContext.namespaces;
+    const reactiveClass = classEditorContext.reactiveClass;
     const id = uuid();
+
+    function trickleDownNamespaceChange(newNamespaceUri) {
+        const oldNamespaceUri = namespace.value;
+        namespace.value = newNamespaceUri;
+        replaceNamespaceIfMatching(
+            reactiveClass.attributes,
+            oldNamespaceUri,
+            newNamespaceUri,
+        );
+        replaceNamespaceIfMatching(
+            reactiveClass.associations,
+            oldNamespaceUri,
+            newNamespaceUri,
+        );
+        replaceNamespaceIfMatching(
+            reactiveClass.enumEntries,
+            oldNamespaceUri,
+            newNamespaceUri,
+        );
+    }
+
+    function replaceNamespaceIfMatching(
+        reactiveObjectsArray,
+        oldNamespaceUri,
+        newNamespace,
+    ) {
+        reactiveObjectsArray.values.forEach(obj => {
+            if (obj.namespace.value === oldNamespaceUri) {
+                obj.namespace.value = newNamespace;
+            }
+        });
+    }
 </script>
 
 <tr>
@@ -36,18 +71,21 @@
     <td class="flex w-full flex-col space-x-1">
         <SearchableSelect
             {id}
-            value={namespace.value}
+            value={classEditorContext.getSubstitutedNamespace(namespace.value)}
             highlight={namespace.isModified}
             warn={!namespace.isValid}
             optionObjectList={namespaces}
-            accessDisplayData={namespace =>
-                classEditorContext.getSubstitutedNamespace(namespace.prefix)}
-            accessIdentifier={namespace => namespace.prefix}
-            callOnValidChange={newNamespace => {
-                namespace.value = newNamespace.prefix;
-            }}
+            accessDisplayData={namespace => namespace.substitutedPrefix}
+            accessIdentifier={getNsPrefixNsUriString}
+            callOnValidChange={namespace =>
+                trickleDownNamespaceChange(namespace.prefix)}
             {readonly}
-            buttons={getControlButtonsForReactiveObject(namespace, readonly)}
+            buttons={getControlButtonsForReactiveObject(
+                namespace,
+                readonly,
+                trickleDownNamespaceChange,
+            )}
+            tooltip={namespace.value}
         />
         <ViolationMessages violations={namespace.violations} />
     </td>

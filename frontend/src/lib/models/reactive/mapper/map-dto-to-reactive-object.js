@@ -116,14 +116,10 @@ function mapAssociationDtoToReactiveAssociation(associationDto, classes) {
     );
     const toMultiplicity = parseMultiplicity(associationDto.to.multiplicity);
     const targetUuid = classes.find(
-        cls =>
-            cls.prefix + cls.label ===
-            associationDto.from.range.prefix + associationDto.from.range.label,
+        cls => cls.prefix + cls.label === associationDto.to.domain,
     ).uuid;
     const domainUuid = classes.find(
-        cls =>
-            cls.prefix + cls.label ===
-            associationDto.to.range.prefix + associationDto.to.range.label,
+        cls => cls.prefix + cls.label === associationDto.from.domain,
     ).uuid;
     return {
         uuid: associationDto.from.uuid,
