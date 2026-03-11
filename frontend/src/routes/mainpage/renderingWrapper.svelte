@@ -70,11 +70,12 @@
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedPackageUUID.subscribe();
+        editorState.selectedCustomDiagramUUID.subscribe();
 
         const datasetName = editorState.selectedDataset.getValue();
         const graphUri = editorState.selectedGraph.getValue();
         const packageUUID = editorState.selectedPackageUUID.getValue();
-        const filter = graphViewState.filter.getValue();
+        const diagramId = editorState.selectedCustomDiagramUUID.getValue();
         const nextDiagramRequestKey = getDiagramRequestKey(
             datasetName,
             graphUri,
@@ -86,26 +87,31 @@
             nextDiagramRequestKey !== diagramRequestKey || !hasCurrentResponse;
         diagramRequestKey = nextDiagramRequestKey;
 
-        if (!packageUUID) {
-            response = null;
-            renderingFormat = null;
-            displayDiagram = false;
-            isLoading = false;
-            return;
-        }
-
         if (showBlockingLoading) {
             isLoading = true;
         }
 
+        if (diagramId) {
+            await fetchDiagramRenderingData(diagramId);
+        } else if (packageUUID) {
+            await fetchPackageRenderingData(packageUUID);
+        } else {
+            response = null;
+            renderingFormat = null;
+            displayDiagram = false;
+            isLoading = false;
+        }
+    });
+
+    async function fetchPackageRenderingData(packageUUID) {
+        const filter = graphViewState.filter.getValue();
         let graphFilter = {
             packageUUID,
             includeEnumEntries: filter.includeEnumEntries,
             includeAttributes: filter.includeAttributes,
             includeAssociations: filter.includeAssociations,
             includeInheritance: filter.includeInheritance,
-            includeRelationsToExternalPackages:
-                filter.includeRelationsToExternalPackages,
+            includeRelationsToExternalPackages: filter.includeRelationsToExternalPackages,
         };
 
         try {
@@ -134,7 +140,33 @@
             displayDiagram = false;
             isLoading = false;
         }
-    });
+    }
+
+    async function fetchDiagramRenderingData(diagramId) {
+        try {
+            const res = await bec.getCustomDiagramRenderingData(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                diagramId,
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+            displayDiagram = false;
+        } finally {
+            isLoading = false;
+        }
+    }
 
     function getDiagramRequestKey(datasetName, graphUri, packageUUID, filter) {
         return JSON.stringify({
@@ -159,7 +191,7 @@
     }
 </script>
 
-{#if editorState.selectedPackageUUID.getValue()}
+{#if editorState.selectedPackageUUID.getValue() || editorState.selectedCustomDiagramUUID.getValue()}
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             {#if displayDiagram}

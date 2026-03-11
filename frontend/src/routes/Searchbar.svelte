@@ -50,6 +50,7 @@
         editorState.selectedPackageUUID.updateValue(
             searchResult.packageUUID ?? "default",
         );
+        editorState.selectedCustomDiagramUUID.updateValue(null);
 
         if (searchResult.type === "CLASS") {
             editorState.selectedClassDataset.updateValue(

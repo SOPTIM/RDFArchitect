@@ -38,6 +38,10 @@ export function isSelectedPackage(dataset, graph, pack) {
     );
 }
 
+export function isSelectedCustomDiagram(dataset, graph, diagram) {
+    return isSelectedGraph(dataset, graph) && editorState.selectedCustomDiagramUUID.getValue() === diagram.diagramId;
+}
+
 export function isSelectedClass(dataset, graph, cls) {
     if (typeof cls === "string") {
         cls = { uuid: cls };

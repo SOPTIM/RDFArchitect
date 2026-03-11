@@ -106,6 +106,7 @@
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
         editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
+        editorState.selectedCustomDiagramUUID.updateValue(null);
     }
 </script>
 

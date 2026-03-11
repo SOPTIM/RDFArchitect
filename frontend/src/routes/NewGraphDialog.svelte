@@ -128,6 +128,7 @@
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedPackageUUID.updateValue("default");
+                editorState.selectedCustomDiagramUUID.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);
             } else {
                 console.log("failed to create graph");

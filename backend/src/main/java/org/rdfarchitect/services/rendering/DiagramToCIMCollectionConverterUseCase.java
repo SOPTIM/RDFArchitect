@@ -15,21 +15,23 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.services.rendering;
 
+import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
-import java.util.UUID;
-
-public interface EnsureDiagramLayoutForCIMCollectionUseCase {
+/**
+ * Converts a Diagram to a {@link CIMCollection}.
+ */
+public interface DiagramToCIMCollectionConverterUseCase {
 
     /**
-     * Ensures that the necessary diagram layout data exists for the {@link CIMCollection} provided
+     * Converts a Diagram to a {@link CIMCollection}.
      *
-     * @param graphIdentifier the identifier of the graph
-     * @param diagramUUID     the UUID of the package or diagram to be rendered
-     * @param cimCollection   the CIMCollection containing all packages, classes and enums
+     * @param graphIdentifier The graph containing the diagram
+     * @param diagramId       The ID of the diagram to be converted.
+     *
+     * @return The {@link CIMCollection}.
      */
-    void ensureDiagramLayoutExists(GraphIdentifier graphIdentifier, UUID diagramUUID, CIMCollection cimCollection);
+    CIMCollection convert(GraphIdentifier graphIdentifier, String diagramId);
 }

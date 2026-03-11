@@ -39,6 +39,7 @@ import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.CIMObjectFactory;
@@ -77,7 +78,8 @@ public class QueryGraphService
                 ListExternalPackagesUseCase,
                 ListPrimitivesUseCase,
                 ListStereotypesUseCase,
-                ResolveIdentifierUseCase {
+                ResolveIdentifierUseCase,
+                ListCustomDiagramsForGraphUseCase {
 
     private static final String BLANK_PACKAGE_NAME = "default";
     private static final String BLANK_PACKAGE_LANG = "en";
@@ -311,6 +313,11 @@ public class QueryGraphService
                 CIMObjectFactory.createExternalCIMPackageList(externalPackageQueryResultSet);
 
         return packageMapper.toDTOList(cimExternalPackageList);
+    }
+
+    @Override
+    public List<CustomDiagram> listCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
+        return databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values().stream().toList();
     }
 
     @Override

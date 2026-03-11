@@ -15,21 +15,20 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update;
+package org.rdfarchitect.services.select;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 
-import java.util.UUID;
+import java.util.List;
 
-public interface EnsureDiagramLayoutForCIMCollectionUseCase {
-
-    /**
-     * Ensures that the necessary diagram layout data exists for the {@link CIMCollection} provided
-     *
-     * @param graphIdentifier the identifier of the graph
-     * @param diagramUUID     the UUID of the package or diagram to be rendered
-     * @param cimCollection   the CIMCollection containing all packages, classes and enums
-     */
-    void ensureDiagramLayoutExists(GraphIdentifier graphIdentifier, UUID diagramUUID, CIMCollection cimCollection);
+public interface ListCustomDiagramsForGraphUseCase {
+        /**
+        * Lists the custom diagrams belonging to a single graph.
+        *
+        * @param graphIdentifier The graph identifier.
+        *
+        * @return The custom diagrams for the graph.
+        */
+        List<CustomDiagram> listCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
 }

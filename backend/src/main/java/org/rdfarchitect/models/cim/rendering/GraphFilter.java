@@ -19,6 +19,8 @@ package org.rdfarchitect.models.cim.rendering;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class GraphFilter {
 
@@ -33,6 +35,7 @@ public class GraphFilter {
         this.includeAssociations = defaultValue;
         this.includeInheritance = defaultValue;
         this.includeRelationsToExternalPackages = defaultValue;
+        this.allowedUUIDs = null;
     }
 
     private String packageUUID;
@@ -46,4 +49,6 @@ public class GraphFilter {
     private boolean includeInheritance;
 
     private boolean includeRelationsToExternalPackages;
+
+    private List<String> allowedUUIDs;
 }

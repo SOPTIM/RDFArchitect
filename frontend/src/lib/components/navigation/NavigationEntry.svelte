@@ -37,6 +37,9 @@
         title,
         onToggle,
         onclick,
+        showCheckbox = false,
+        selected = false,
+        onSelect,
         ...restProps
     } = $props();
 
@@ -65,6 +68,15 @@
         event.preventDefault();
         event.stopPropagation();
         onToggle(event);
+    }
+
+    function handleCheckbox(event) {
+        if (disabled) {
+            event.preventDefault();
+            return;
+        }
+        event.stopPropagation();
+        onSelect(event);
     }
 
     function badgeClass(variant) {
@@ -103,6 +115,9 @@
         <span class={`nav-entry__badge ${badgeClass(badgeVariant)}`}>
             {badgeText}
         </span>
+    {/if}
+    {#if showCheckbox}
+        <input type="checkbox" checked={selected} onchange={handleCheckbox}/>
     {/if}
 </button>
 

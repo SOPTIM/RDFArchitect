@@ -15,21 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services;
+package org.rdfarchitect.database.inmemory.diagrams;
 
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
-import org.rdfarchitect.models.cim.rendering.GraphFilter;
+import lombok.Data;
 
-/** Converts a Graph to a {@link CIMCollection}. */
-public interface GraphToCIMCollectionConverterUseCase {
+import java.util.List;
+import java.util.UUID;
 
-    /**
-     * Converts a Graph to a {@link CIMCollection}.
-     *
-     * @param graphIdentifier The graph to getClassDefinition.
-     * @param filter The filter to apply to the graph.
-     * @return The {@link CIMCollection}.
-     */
-    CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter);
+@Data
+public class CustomDiagram {
+    private final UUID diagramId;
+    private String name;
+    private List<ClassInDiagram> classes;
 }
