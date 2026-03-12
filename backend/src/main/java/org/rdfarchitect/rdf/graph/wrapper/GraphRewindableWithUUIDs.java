@@ -23,12 +23,12 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.jetbrains.annotations.NotNull;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
+import java.util.HashSet;
 import java.util.UUID;
 
 public class GraphRewindableWithUUIDs extends GraphRewindable {
@@ -68,33 +68,59 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
     }
 
     static Graph enhanceWithUUIDs(Graph graph) {
+        addUUIDsToTypedResources(graph);
+        addUUIDsToUnreferencedResources(graph);
+        return graph;
+    }
+
+    private static void addUUIDsToTypedResources(Graph graph) {
+        var subjects = new HashSet<Node>();
         var typeTriples = graph.find(Node.ANY, RDF.type.asNode(), Node.ANY);
         while (typeTriples.hasNext()) {
             var triple = typeTriples.next();
             var subject = triple.getSubject();
 
-            if (graph.contains(subject, RDFA.uuid.asNode(), Node.ANY) || subject.isBlank()) {
+            if (subject.isBlank() || graph.contains(subject, RDFA.uuid.asNode(), Node.ANY)) {
                 continue;
             }
 
-            var uuid = ResourceFactory.createPlainLiteral(UUID.randomUUID().toString()).asNode();
-            graph.add(subject, RDFA.uuid.asNode(), uuid);
+            subjects.add(subject);
         }
 
-        var belongsToCategoryTriples = graph.find(Node.ANY, CIMS.belongsToCategory.asNode(), Node.ANY);
-        while (belongsToCategoryTriples.hasNext()) {
-            var triple = belongsToCategoryTriples.next();
+        for (var subject : subjects) {
+            graph.add(subject, RDFA.uuid.asNode(), createUUIDNode());
+        }
+    }
+
+    private static void addUUIDsToUnreferencedResources(Graph graph) {
+        var objects = new HashSet<Node>();
+        var allTriples = graph.find(Node.ANY, Node.ANY, Node.ANY);
+        while (allTriples.hasNext()) {
+            var triple = allTriples.next();
             var object = triple.getObject();
 
-            if (graph.contains(object, RDF.type.asNode(), CIMS.classCategory.asNode()) ||
-                      graph.contains(object, RDFA.uuid.asNode(), Node.ANY)) {
+            if (!object.isURI()) {
                 continue;
             }
 
-            var uuid = ResourceFactory.createPlainLiteral(UUID.randomUUID().toString()).asNode();
-            graph.add(object, RDFA.uuid.asNode(), uuid);
+            if (graph.contains(object, RDFA.uuid.asNode(), Node.ANY)) {
+                continue;
+            }
+
+            if (graph.contains(object, Node.ANY, Node.ANY)) {
+                continue;
+            }
+
+            objects.add(object);
         }
-        return graph;
+
+        for (var object : objects) {
+            graph.add(object, RDFA.uuid.asNode(), createUUIDNode());
+        }
+    }
+
+    private static Node createUUIDNode() {
+        return ResourceFactory.createPlainLiteral(UUID.randomUUID().toString()).asNode();
     }
 
     public static void removeUUIDs(Graph graph) {

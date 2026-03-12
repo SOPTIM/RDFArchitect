@@ -21,6 +21,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -78,10 +79,21 @@ public class CIMUpdates {
         UpdateExecutionFactory.create(updateClassBase.build(), dataset).execute();
     }
 
-    public void insertClass(Graph graph, PrefixMapping prefixMapping, CIMClass newClass) {
+    public UUID insertClass(Graph graph, PrefixMapping prefixMapping, CIMClass newClass) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
+        var uuid = UUID.randomUUID();
+        var model = ModelFactory.createModelForGraph(graph);
+        var existingResource = model.getResource(newClass.getUri().toString());
+        if (existingResource != null){
+            var existingUUIDLiteral = existingResource.getProperty(RDFA.uuid).getObject();
+            if (existingUUIDLiteral != null) {
+                uuid = UUID.fromString(existingUUIDLiteral.asLiteral().getString());
+            }
+        }
+        newClass.setUuid(uuid);
         var insertClass = insertClass(prefixMapping, null, newClass);
         UpdateExecutionFactory.create(insertClass.build(), dataset).execute();
+        return uuid;
     }
 
     private UpdateBuilder insertClass(PrefixMapping prefixMapping, String graphURI, CIMClass newClass) {
@@ -115,23 +127,8 @@ public class CIMUpdates {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         var deleteAttributes = deleteAttributes(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteAttributes.build(), dataset).execute();
-        var deleteAssociations = deleteAssociations(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAssociations.build(), dataset).execute();
-        var deleteAttributesOfType = deleteAttributesOfType(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAttributesOfType.build(), dataset).execute();
-
         var deleteEnumEntries = deleteEnumEntries(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteEnumEntries.build(), dataset).execute();
-
-        var deleteReferencesToThis = new CIMBaseUpdateBuilder()
-                  .addPrefixes(prefixMapping)
-                  .setGraph(null)
-                  .build()
-                  .addDelete(CIMQueryVars.URI, "?pre", "?ref")
-                  .addWhere("?ref", RDFA.uuid, classUUID)
-                  .addWhere(CIMQueryVars.URI, "?pre", "?ref");
-        UpdateExecutionFactory.create(deleteReferencesToThis.build(), dataset).execute();
-
         var classBaseDelete = deleteBase(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(classBaseDelete.build(), dataset).execute();
     }

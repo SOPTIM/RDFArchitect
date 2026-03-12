@@ -131,7 +131,7 @@ public class CIMQueryBuilder {
         if (mode == Mode.REQUIRED) {
             baseQuery
                       .addWhere(CIMQueryVars.URI, primaryRelation, primaryVariable)
-                      .addWhere(primaryVariable, secondaryRelation, secondaryVariable);
+                      .addOptional(primaryVariable, secondaryRelation, secondaryVariable);
         } else {
             baseQuery
                       .addOptional(new SelectBuilder()
