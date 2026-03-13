@@ -20,8 +20,13 @@ package org.rdfarchitect.rdf.graph.wrapper;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
@@ -29,9 +34,12 @@ import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class GraphRewindableWithUUIDs extends GraphRewindable {
+
+    private static final Set<String> RELEVANT_TYPES = Set.of(RDF.Property.toString(), RDFS.Class.toString());
 
     /**
      * Accepts a {@link Graph} that serves as a base version of the {@link GraphRewindableWithUUIDs}.
@@ -68,59 +76,52 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
     }
 
     static Graph enhanceWithUUIDs(Graph graph) {
-        addUUIDsToTypedResources(graph);
-        addUUIDsToUnreferencedResources(graph);
+        var model = ModelFactory.createModelForGraph(graph);
+        addUUIDsToTypedResources(model);
+        addUUIDsToReferencedOnlyResources(model);
         return graph;
     }
 
-    private static void addUUIDsToTypedResources(Graph graph) {
-        var subjects = new HashSet<Node>();
-        var typeTriples = graph.find(Node.ANY, RDF.type.asNode(), Node.ANY);
-        while (typeTriples.hasNext()) {
-            var triple = typeTriples.next();
-            var subject = triple.getSubject();
-
-            if (subject.isBlank() || graph.contains(subject, RDFA.uuid.asNode(), Node.ANY)) {
-                continue;
-            }
-
-            subjects.add(subject);
-        }
+    private static void addUUIDsToTypedResources(Model model) {
+        var subjects = model.listSubjects()
+                            .filterKeep(r -> r.isURIResource() && !r.hasProperty(RDFA.uuid))
+                            .toSet();
 
         for (var subject : subjects) {
-            graph.add(subject, RDFA.uuid.asNode(), createUUIDNode());
+            subject.addProperty(RDFA.uuid, createUUID());
         }
     }
 
-    private static void addUUIDsToUnreferencedResources(Graph graph) {
-        var objects = new HashSet<Node>();
-        var allTriples = graph.find(Node.ANY, Node.ANY, Node.ANY);
-        while (allTriples.hasNext()) {
-            var triple = allTriples.next();
-            var object = triple.getObject();
+    private static void addUUIDsToReferencedOnlyResources(Model model) {
+        var objects = new HashSet<Resource>();
 
-            if (!object.isURI()) {
-                continue;
-            }
+        model.listResourcesWithProperty(RDF.type)
+             .filterKeep(r -> r.isURIResource() && hasAnyType(r))
+             .forEachRemaining(subject ->
+                                         subject.listProperties()
+                                                .mapWith(Statement::getObject)
+                                                .filterKeep(GraphRewindableWithUUIDs::isReferencedOnlyURI)
+                                                .mapWith(RDFNode::asResource)
+                                                .forEachRemaining(objects::add));
 
-            if (graph.contains(object, RDFA.uuid.asNode(), Node.ANY)) {
-                continue;
-            }
-
-            if (graph.contains(object, Node.ANY, Node.ANY)) {
-                continue;
-            }
-
-            objects.add(object);
-        }
-
-        for (var object : objects) {
-            graph.add(object, RDFA.uuid.asNode(), createUUIDNode());
-        }
+        objects.forEach(o -> o.addProperty(RDFA.uuid, createUUID()));
     }
 
-    private static Node createUUIDNode() {
-        return ResourceFactory.createPlainLiteral(UUID.randomUUID().toString()).asNode();
+    private static boolean hasAnyType(Resource resource) {
+        return resource.listProperties(RDF.type)
+                       .mapWith(Statement::getObject)
+                       .filterKeep(o -> RELEVANT_TYPES.contains(o.asResource().getURI()))
+                       .hasNext();
+    }
+
+    private static boolean isReferencedOnlyURI(RDFNode node) {
+        return node.isURIResource()
+                  && !node.asResource().hasProperty(RDFA.uuid)
+                  && !node.asResource().listProperties().hasNext();
+    }
+
+    private static String createUUID() {
+        return UUID.randomUUID().toString();
     }
 
     public static void removeUUIDs(Graph graph) {
