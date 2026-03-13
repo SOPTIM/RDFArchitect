@@ -17,7 +17,8 @@
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
 
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import DialogHeader from "$lib/dialog/DialogHeader.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
 
     let {
@@ -30,6 +31,7 @@
         hasChanges = false,
         isValid = true,
         readonly,
+        title,
         children,
     } = $props();
 
@@ -63,17 +65,22 @@
 
 <Dialog bind:showDialog {onOpen} onClose={() => closeDialog(true)} {size}>
     <div>
-        {@render children?.()}
-        <DialogLeaveButtons
+        <DialogHeader
             bind:showDialog
-            cancelLabel={hasChanges ? "Discard" : "Close"}
-            cancelVariant={hasChanges ? "danger" : "contrast"}
+            {title}
+            icon={readonly ? "eye" : hasChanges ? "edit" : "plus"}
+        />
+        {@render children?.()}
+        <DialogButtons
+            bind:showDialog
+            cancelLabel={"Discard"}
+            cancelIcon={faRotateLeft}
+            cancelVariant={"danger"}
             onCancel={() => closeDialog(false)}
             submitLabel={hasChanges ? "Save" : "No Changes"}
             onSubmit={save}
             disableSubmit={!hasChanges || !isValid}
             submitIcon={faSave}
-            cancelIcon={hasChanges ? faRotateLeft : null}
             {readonly}
         />
     </div>

@@ -24,7 +24,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {
@@ -405,7 +405,8 @@
             {/if}
         </div>
     </div>
-    <DialogLeaveButtons
+    //TODO: RDFA-403 finish refactoring
+    <DialogButtons
         bind:showDialog
         submitLabel="Import"
         onSubmit={importGraphs}

@@ -89,21 +89,13 @@
     discardChanges={() => attribute.reset()}
     hasChanges={isNewAttribute || attribute?.isModified}
     isValid={attribute?.isValid}
+    title={isNewAttribute
+        ? "Creating new attribute"
+        : `Editing attribute '${attribute.label.backup}'`}
     {readonly}
 >
     {#if attribute && classEditorContext && datatypes && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
-            <!-- Title -->
-            <div>
-                <span class="text-lg">
-                    {#if isNewAttribute}
-                        Creating new attribute
-                    {:else}
-                        Editing attribute <b>{attribute.label.backup}</b>
-                    {/if}
-                </span>
-            </div>
-
             <!-- UUID -->
             <div>
                 <span class="mb-1">UUID:</span>

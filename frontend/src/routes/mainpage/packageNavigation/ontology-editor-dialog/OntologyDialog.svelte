@@ -25,7 +25,7 @@
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
@@ -102,139 +102,130 @@
 </script>
 
 <Dialog bind:showDialog {onOpen} {onClose} size="w-2/3 h-3/4">
-    <div class="mx-2 flex h-full flex-col">
-        {#key ontologyObject}
-            {#if ontologyObject}
-                <p>Ontology UUID:</p>
-                <span class="mb-2">
-                    {#if !ontologyObject.uuid.value}
-                        <em class="text-muted-text">not assigned yet</em>
-                    {:else}
-                        {ontologyObject.uuid.value}
-                    {/if}
-                </span>
-                <div class="mb-2 w-150">
-                    <SearchableSelect
-                        label="Namespace:"
-                        placeholder="*namespace"
-                        value={getSubstitutedNamespace(
-                            ontologyObject.namespace.value,
-                        )}
-                        optionObjectList={namespaces}
-                        accessDisplayData={namespace =>
-                            getSubstitutedNamespace(
-                                namespace.substitutedPrefix,
+    <DialogButtons
+        bind:showDialog
+        primaryLabel={readonly ? null : "save"}
+        onPrimary={() => {
+            saveOntology(dataset, graphUri, ontologyObject);
+            forceReloadTrigger.trigger();
+        }}
+        disablePrimary={disableSubmit}
+        title={readonly ? "View Ontology" : "Edit Ontology"}
+    >
+        <div class="mx-2 flex h-full flex-col overflow-scroll">
+            {#key ontologyObject}
+                {#if ontologyObject}
+                    <p>UUID:</p>
+                    <span class="mb-2">
+                        {#if !ontologyObject.uuid.value}
+                            <em class="text-muted-text">not assigned yet</em>
+                        {:else}
+                            {ontologyObject.uuid.value}
+                        {/if}
+                    </span>
+                    <div class="mb-2 w-150">
+                        <SearchableSelect
+                            label="Namespace:"
+                            placeholder="*namespace"
+                            value={getSubstitutedNamespace(
+                                ontologyObject.namespace.value,
                             )}
-                        accessIdentifier={namespace =>
-                            `${namespace.substitutedPrefix} (${namespace?.prefix})`}
-                        callOnValidChange={value =>
-                            (ontologyObject.namespace.value = value?.prefix)}
-                        {readonly}
-                    />
-                </div>
+                            optionObjectList={namespaces}
+                            accessDisplayData={namespace =>
+                                getSubstitutedNamespace(
+                                    namespace.substitutedPrefix,
+                                )}
+                            accessIdentifier={namespace =>
+                                `${namespace.substitutedPrefix} (${namespace?.prefix})`}
+                            callOnValidChange={value =>
+                                (ontologyObject.namespace.value =
+                                    value?.prefix)}
+                            {readonly}
+                        />
+                    </div>
 
-                <span class="">Ontology entries:</span>
-                <div
-                    bind:this={tableContainerRef}
-                    class="border-border text-default-text mt-1 overflow-y-auto rounded-lg border-2"
-                >
-                    <table class="w-full border-collapse text-sm">
-                        <thead
-                            class="bg-default-background border-border sticky top-0 z-10 border-b"
-                        >
-                            <tr>
-                                <th
-                                    class="w-1/3 px-2 py-1 text-left tracking-wide uppercase"
-                                >
-                                    Entry IRI
-                                </th>
-                                <th
-                                    class="px-2 py-1 text-left tracking-wide uppercase"
-                                >
-                                    Value
-                                </th>
-                                <th
-                                    class="px-2 py-1 text-left tracking-wide uppercase"
-                                >
-                                    Data Type
-                                </th>
-                                <th
-                                    class="w-11 px-2 py-1 text-center tracking-wide uppercase"
-                                >
-                                    IRI
-                                </th>
-                                <th
-                                    class="w-11 px-2 py-1 text-left tracking-wide uppercase"
-                                ></th>
-                                {#if !readonly}
-                                    <th class="w-11 px-2 py-1 text-center">
-                                        <DropdownMenu.Root>
-                                            <DropdownMenu.Trigger>
-                                                <div class="size-9">
-                                                    <ButtonControl height={9}>
-                                                        <Fa icon={faPlus} />
-                                                    </ButtonControl>
-                                                </div>
-                                            </DropdownMenu.Trigger>
-                                            <DropdownMenu.Content>
-                                                <DropdownMenu.Item.Button
-                                                    onSelect={handleAddEntry}
-                                                >
-                                                    Add Empty Entry
-                                                </DropdownMenu.Item.Button>
-                                                <DropdownMenu.Item.Button
-                                                    onSelect={() =>
-                                                        (showAddKnownEntriesPopUp = true)}
-                                                >
-                                                    Add CGMES 3.0 entries
-                                                </DropdownMenu.Item.Button>
-                                            </DropdownMenu.Content>
-                                        </DropdownMenu.Root>
-                                    </th>
-                                {/if}
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {#each ontologyObject.entries.values as entry}
-                                <OntologyEntryRow
-                                    entries={ontologyObject.entries}
-                                    {entry}
-                                    {readonly}
-                                    {namespaces}
-                                />
-                            {/each}
-                        </tbody>
-                    </table>
-                </div>
-            {:else}
-                <p>Loading...</p>
-            {/if}
-        {/key}
-        <!-- Submit and Cancel buttons -->
-        <div class="flex justify-end">
-            {#if readonly}
-                <div class="h-9">
-                    <ButtonControl
-                        variant="white"
-                        callOnClick={() => (showDialog = false)}
+                    <span class="">Entries:</span>
+                    <div
+                        bind:this={tableContainerRef}
+                        class="border-border text-default-text mt-1 overflow-auto rounded-lg border-2"
                     >
-                        close
-                    </ButtonControl>
-                </div>
-            {:else}
-                <DialogLeaveButtons
-                    bind:showDialog
-                    submitLabel="save"
-                    onSubmit={() => {
-                        saveOntology(dataset, graphUri, ontologyObject);
-                        forceReloadTrigger.trigger();
-                    }}
-                    {disableSubmit}
-                />
-            {/if}
+                        <table class="w-full border-collapse text-sm">
+                            <thead
+                                class="bg-default-background border-border sticky top-0 z-10 border-b"
+                            >
+                                <tr>
+                                    <th
+                                        class="w-1/3 px-2 py-1 text-left tracking-wide uppercase"
+                                    >
+                                        Entry IRI
+                                    </th>
+                                    <th
+                                        class="px-2 py-1 text-left tracking-wide uppercase"
+                                    >
+                                        Value
+                                    </th>
+                                    <th
+                                        class="px-2 py-1 text-left tracking-wide uppercase"
+                                    >
+                                        Data Type
+                                    </th>
+                                    <th
+                                        class="w-11 px-2 py-1 text-center tracking-wide uppercase"
+                                    >
+                                        IRI
+                                    </th>
+                                    <th
+                                        class="w-11 px-2 py-1 text-left tracking-wide uppercase"
+                                    ></th>
+                                    {#if !readonly}
+                                        <th class="w-11 px-2 py-1 text-center">
+                                            <DropdownMenu.Root>
+                                                <DropdownMenu.Trigger>
+                                                    <div class="size-9">
+                                                        <ButtonControl
+                                                            height={9}
+                                                        >
+                                                            <Fa icon={faPlus} />
+                                                        </ButtonControl>
+                                                    </div>
+                                                </DropdownMenu.Trigger>
+                                                <DropdownMenu.Content>
+                                                    <DropdownMenu.Item.Button
+                                                        onSelect={handleAddEntry}
+                                                    >
+                                                        Add Empty Entry
+                                                    </DropdownMenu.Item.Button>
+                                                    <DropdownMenu.Item.Button
+                                                        onSelect={() =>
+                                                            (showAddKnownEntriesPopUp = true)}
+                                                    >
+                                                        Add CGMES 3.0 entries
+                                                    </DropdownMenu.Item.Button>
+                                                </DropdownMenu.Content>
+                                            </DropdownMenu.Root>
+                                        </th>
+                                    {/if}
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {#each ontologyObject.entries.values as entry}
+                                    <OntologyEntryRow
+                                        entries={ontologyObject.entries}
+                                        {entry}
+                                        {readonly}
+                                        {namespaces}
+                                    />
+                                {/each}
+                            </tbody>
+                        </table>
+                    </div>
+                {:else}
+                    <p>Loading...</p>
+                {/if}
+            {/key}
         </div>
-    </div>
+    </DialogButtons>
 </Dialog>
 
 <AddKnownFieldsDialog

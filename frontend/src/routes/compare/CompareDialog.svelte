@@ -21,7 +21,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import { editorState, compareState } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
@@ -150,115 +150,113 @@
 </script>
 
 <Dialog bind:showDialog {onOpen} {onClose}>
-    <div class="mx-2 mt-4 flex h-full flex-col font-[350]">
-        <div class="mb-3">
-            <h2 class="text-default-text text-xl leading-tight font-semibold">
-                Compare Graphs
-            </h2>
-            <p class="text-text-subtle mt-1 text-sm">
-                Select a source and a modified graph to see what changed
-            </p>
-        </div>
-
-        <div class="mx-2 flex h-full flex-col space-y-4">
-            <div class="border-border bg-background-subtle rounded border p-3">
-                <label for="compareMode" class="mb-1 block text-sm">
-                    Comparison type
-                </label>
-                <SelectEditControl
-                    id="compareMode"
-                    options={compareModeOptions}
-                    bind:value={compareMode}
-                    getOptionValue={o => o.value}
-                    getOptionLabel={o => o.label}
-                    onchange={value => onCompareModeChange(Number(value))}
-                />
+    <DialogButtons
+        bind:showDialog
+        primaryLabel="Compare"
+        onPrimary={runCompare}
+        disablePrimary={disableSubmit}
+        title="Compare Graphs"
+    >
+        <div class="mx-2 flex h-full flex-col font-[350]">
+            <div class="mb-3">
+                <p class="text-text-subtle mt-1 text-sm">
+                    Select a source and a modified graph to see what changed
+                </p>
             </div>
 
-            {#if compareMode === CompareMode.STORED_TO_STORED}
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetA}
-                    bind:graph={graphA}
-                    {lockedDatasetName}
-                    {lockedGraphUri}
-                />
-
-                <div class="flex items-center gap-3">
-                    <div class="bg-border h-px w-full"></div>
-                    <span
-                        class="text-text-subtle text-xs font-light text-nowrap"
-                    >
-                        COMPARE TO
-                    </span>
-                    <div class="bg-border h-px w-full"></div>
-                </div>
-
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetB}
-                    bind:graph={graphB}
-                />
-            {/if}
-
-            {#if compareMode === CompareMode.STORED_TO_UPLOADED}
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetA}
-                    bind:graph={graphA}
-                    {lockedDatasetName}
-                    {lockedGraphUri}
-                />
-
-                <div class="flex items-center gap-3">
-                    <div class="bg-border h-px w-full"></div>
-                    <span
-                        class="text-text-subtle text-xs font-light text-nowrap"
-                    >
-                        COMPARE TO
-                    </span>
-                    <div class="bg-border h-px w-full"></div>
-                </div>
-
+            <div class="mx-2 flex h-full flex-col space-y-4">
                 <div
                     class="border-border bg-background-subtle rounded border p-3"
                 >
-                    <FileSelectButton bind:file={fileA} />
-                </div>
-            {/if}
-
-            {#if compareMode === CompareMode.FILE_TO_FILE}
-                <div
-                    class="border-border bg-background-subtle rounded border p-3"
-                >
-                    <FileSelectButton bind:file={fileA} />
-                </div>
-
-                <div class="flex items-center gap-3">
-                    <div class="bg-border h-px w-full"></div>
-                    <span
-                        class="text-text-subtle text-xs font-light text-nowrap"
-                    >
-                        COMPARE TO
-                    </span>
-                    <div class="bg-border h-px w-full"></div>
-                </div>
-
-                <div
-                    class="border-border bg-background-subtle rounded border p-3"
-                >
-                    <FileSelectButton
-                        bind:file={fileB}
-                        label="Select second file"
+                    <label for="compareMode" class="mb-1 block text-sm">
+                        Comparison type
+                    </label>
+                    <SelectEditControl
+                        id="compareMode"
+                        options={compareModeOptions}
+                        bind:value={compareMode}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                        onchange={value => onCompareModeChange(Number(value))}
                     />
                 </div>
-            {/if}
-        </div>
 
-        <div>
-            <DialogLeaveButtons
-                bind:showDialog
-                submitLabel="Compare"
-                onSubmit={runCompare}
-                {disableSubmit}
-            />
+                {#if compareMode === CompareMode.STORED_TO_STORED}
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetA}
+                        bind:graph={graphA}
+                        {lockedDatasetName}
+                        {lockedGraphUri}
+                    />
+
+                    <div class="flex items-center gap-3">
+                        <div class="bg-border h-px w-full"></div>
+                        <span
+                            class="text-text-subtle text-xs font-light text-nowrap"
+                        >
+                            COMPARE TO
+                        </span>
+                        <div class="bg-border h-px w-full"></div>
+                    </div>
+
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetB}
+                        bind:graph={graphB}
+                    />
+                {/if}
+
+                {#if compareMode === CompareMode.STORED_TO_UPLOADED}
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetA}
+                        bind:graph={graphA}
+                        {lockedDatasetName}
+                        {lockedGraphUri}
+                    />
+
+                    <div class="flex items-center gap-3">
+                        <div class="bg-border h-px w-full"></div>
+                        <span
+                            class="text-text-subtle text-xs font-light text-nowrap"
+                        >
+                            COMPARE TO
+                        </span>
+                        <div class="bg-border h-px w-full"></div>
+                    </div>
+
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton bind:file={fileA} />
+                    </div>
+                {/if}
+
+                {#if compareMode === CompareMode.FILE_TO_FILE}
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton bind:file={fileA} />
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <div class="bg-border h-px w-full"></div>
+                        <span
+                            class="text-text-subtle text-xs font-light text-nowrap"
+                        >
+                            COMPARE TO
+                        </span>
+                        <div class="bg-border h-px w-full"></div>
+                    </div>
+
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton
+                            bind:file={fileB}
+                            label="Select second file"
+                        />
+                    </div>
+                {/if}
+            </div>
         </div>
-    </div>
+    </DialogButtons>
 </Dialog>

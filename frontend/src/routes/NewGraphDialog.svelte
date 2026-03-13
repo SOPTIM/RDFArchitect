@@ -22,7 +22,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
 
     import {
         editorState,
@@ -194,7 +194,8 @@
         {/if}
     </div>
 
-    <DialogLeaveButtons
+    //TODO: RDFA-403 finish refactoring
+    <DialogButtons
         bind:showDialog
         submitLabel="Add graph"
         onSubmit={addGraph}

@@ -16,10 +16,11 @@
   -->
 
 <script>
+    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
+
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DeleteConfirmationContent from "$lib/dialog/DeleteConfirmationContent.svelte";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import {
         forceReloadTrigger,
         editorState,
@@ -50,17 +51,22 @@
 </script>
 
 <Dialog bind:showDialog size="w-full max-w-lg">
-    <div class="space-y-4 px-3 py-3">
-        <DeleteConfirmationContent
-            title={pack?.label
-                ? `Delete package "${pack.label}"?`
-                : "Delete package?"}
-            description="This removes the package and all of its classes from the current graph."
-        />
-    </div>
-    <DialogLeaveButtons
+    <DialogButtons
         bind:showDialog
-        submitLabel="Delete Package"
-        onSubmit={deletePackage}
-    />
+        primaryLabel="Delete Package"
+        onPrimary={deletePackage}
+        primaryVariant="danger"
+        title={pack?.label
+            ? `Delete package "${pack.label}"?`
+            : "Delete package?"}
+        titleIcon={faExclamation}
+        titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
+    >
+        <div class="space-y-4 px-3 py-3">
+            <p class="text-default-text w-2/3 text-sm leading-relaxed">
+                This removes the package and all of its classes from the current
+                graph.
+            </p>
+        </div>
+    </DialogButtons>
 </Dialog>

@@ -18,7 +18,7 @@
 <script>
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import { graphViewState } from "$lib/sharedState.svelte.js";
 
     let { showDialog = $bindable() } = $props();
@@ -70,7 +70,8 @@
             />
         {/each}
     </div>
-    <DialogLeaveButtons
+    //TODO: RDFA-403 finish refactoring
+    <DialogButtons
         bind:showDialog
         submitLabel="Save Changes"
         onSubmit={submit}

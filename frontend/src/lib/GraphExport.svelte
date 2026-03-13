@@ -25,7 +25,7 @@
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
@@ -237,7 +237,8 @@
         {/each}
     </select>
 </div>
-<DialogLeaveButtons
+//TODO: RDFA-403 finish refactoring
+<DialogButtons
     bind:showDialog
     submitLabel="Export"
     disableSubmit={!selectedDatasetName || !graphURI || !selectedMediaType}

@@ -20,7 +20,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import {
         editorState,
         forceReloadTrigger,
@@ -151,101 +151,107 @@
 </script>
 
 <Dialog bind:showDialog {onOpen}>
-    <div class="mx-2 flex h-full flex-col">
-        {#if datasetSelectionLocked}
-            <p class="mb-1 font-semibold">Dataset</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {datasetName ?? "No dataset selected"}
-            </div>
-        {:else}
-            <label for="datasetNameSHACLDelete" class="mb-1">Dataset:</label>
-            {#key datasetNames}
-                <select
-                    class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
-                    id="datasetNameSHACLDelete"
-                    bind:value={datasetName}
-                    onchange={() => {
-                        graphURI = "";
-                        getGraphNames(datasetName);
-                    }}
-                >
-                    {#each datasetNames as availableDataset}
-                        <option value={availableDataset}>
-                            {availableDataset}
-                        </option>
-                    {/each}
-                </select>
-            {/key}
-        {/if}
-        {#if isReadOnlySelected}
-            <div class="mt-1 mb-1 h-6 text-sm">
-                Cannot import into read-only dataset
-            </div>
-        {/if}
-        {#if graphSelectionLocked}
-            <p class="mt-2 mb-1 font-semibold">Graph:</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {graphURI ?? "No graph selected"}
-            </div>
-        {:else}
-            <label for="graphUriSHACLDelete" class="mt-2 mb-1">Graph:</label>
-            {#key graphNames}
-                <select
-                    class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
-                    id="graphUriSHACLDelete"
-                    bind:value={graphURI}
-                    disabled={graphNames.length === 0}
-                >
-                    {#each graphNames as graphName}
-                        <option
-                            value={(graphName.prefix == null
-                                ? ""
-                                : graphName.prefix) + graphName.suffix}
-                        >
-                            {graphName.suffix}
-                        </option>
-                    {/each}
-                </select>
-            {/key}
-        {/if}
-        <input
-            class="hidden"
-            type="file"
-            id={fileInputId}
-            onchange={event => {
-                file = event.target.files[0];
-            }}
-        />
-        <div class="mt-4 flex h-9 w-full space-x-4">
-            <div class="h-9 w-24">
-                <ButtonControl
-                    height={9}
-                    callOnClick={() => {
-                        document.getElementById(fileInputId).click();
-                    }}
-                >
-                    select file
-                </ButtonControl>
-            </div>
-            <div class="h-9 w-full content-center">
-                <p class="break-all">
-                    {#if file}
-                        {file.name}
-                    {:else}
-                        no file selected
-                    {/if}
-                </p>
-            </div>
-        </div>
-    </div>
-    <DialogLeaveButtons
+    <DialogButtons
         bind:showDialog
         submitLabel="Import"
-        onSubmit={importGraph}
-        {disableSubmit}
-    />
+        disablePrimary={disableSubmit}
+        onPrimary={importGraph}
+        title="Import SHACL Shapes"
+    >
+        <div class="mx-2 flex h-full flex-col">
+            {#if datasetSelectionLocked}
+                <p class="mb-1 font-semibold">Dataset</p>
+                <div
+                    class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
+                >
+                    {datasetName ?? "No dataset selected"}
+                </div>
+            {:else}
+                <label for="datasetNameSHACLDelete" class="mb-1">
+                    Dataset:
+                </label>
+                {#key datasetNames}
+                    <select
+                        class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
+                        id="datasetNameSHACLDelete"
+                        bind:value={datasetName}
+                        onchange={() => {
+                            graphURI = "";
+                            getGraphNames(datasetName);
+                        }}
+                    >
+                        {#each datasetNames as availableDataset}
+                            <option value={availableDataset}>
+                                {availableDataset}
+                            </option>
+                        {/each}
+                    </select>
+                {/key}
+            {/if}
+            {#if isReadOnlySelected}
+                <div class="mt-1 mb-1 h-6 text-sm">
+                    Cannot import into read-only dataset
+                </div>
+            {/if}
+            {#if graphSelectionLocked}
+                <p class="mt-2 mb-1 font-semibold">Graph:</p>
+                <div
+                    class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
+                >
+                    {graphURI ?? "No graph selected"}
+                </div>
+            {:else}
+                <label for="graphUriSHACLDelete" class="mt-2 mb-1">
+                    Graph:
+                </label>
+                {#key graphNames}
+                    <select
+                        class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
+                        id="graphUriSHACLDelete"
+                        bind:value={graphURI}
+                        disabled={graphNames.length === 0}
+                    >
+                        {#each graphNames as graphName}
+                            <option
+                                value={(graphName.prefix == null
+                                    ? ""
+                                    : graphName.prefix) + graphName.suffix}
+                            >
+                                {graphName.suffix}
+                            </option>
+                        {/each}
+                    </select>
+                {/key}
+            {/if}
+            <input
+                class="hidden"
+                type="file"
+                id={fileInputId}
+                onchange={event => {
+                    file = event.target.files[0];
+                }}
+            />
+            <div class="mt-4 flex h-9 w-full space-x-4">
+                <div class="h-9 w-24">
+                    <ButtonControl
+                        height={9}
+                        callOnClick={() => {
+                            document.getElementById(fileInputId).click();
+                        }}
+                    >
+                        select file
+                    </ButtonControl>
+                </div>
+                <div class="h-9 w-full content-center">
+                    <p class="break-all">
+                        {#if file}
+                            {file.name}
+                        {:else}
+                            no file selected
+                        {/if}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </DialogButtons>
 </Dialog>

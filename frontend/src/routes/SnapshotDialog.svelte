@@ -22,7 +22,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
@@ -84,67 +84,68 @@
 </script>
 
 <Dialog bind:showDialog {onOpen}>
-    <div class="mx-2 flex h-full flex-col">
-        {#if !datasetSelectionLocked}
-            <label for="datasetNameDelete" class="mb-1">Dataset</label>
-            {#key datasetNames}
-                <select
-                    class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
-                    id="datasetNameDelete"
-                    bind:value={datasetName}
-                >
-                    {#each datasetNames as availableDatasetName}
-                        <option
-                            value={availableDatasetName}
-                            selected={availableDatasetName ===
-                                editorState.selectedDataset.getValue()}
-                        >
-                            {availableDatasetName}
-                        </option>
-                    {/each}
-                </select>
-            {/key}
-        {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {lockedDatasetName}
-            </div>
-        {/if}
-
-        <div class="mt-4 flex h-full flex-col">
-            <p class="mb-1">Snapshot Link</p>
-            <div class="flex items-center gap-2">
+    <DialogButtons
+        primaryLabel="Share Snapshot"
+        onPrimary={snapshotDataset}
+        onCloseButton={() => (showDialog = false)}
+        title="Share Snapshot"
+    >
+        <div class="mx-2 flex h-full flex-col">
+            {#if !datasetSelectionLocked}
+                <label for="datasetNameDelete" class="mb-1">Dataset</label>
+                {#key datasetNames}
+                    <select
+                        class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
+                        id="datasetNameDelete"
+                        bind:value={datasetName}
+                    >
+                        {#each datasetNames as availableDatasetName}
+                            <option
+                                value={availableDatasetName}
+                                selected={availableDatasetName ===
+                                    editorState.selectedDataset.getValue()}
+                            >
+                                {availableDatasetName}
+                            </option>
+                        {/each}
+                    </select>
+                {/key}
+            {:else}
+                <p class="mb-1 font-semibold">Dataset</p>
                 <div
-                    class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
+                    class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
                 >
-                    {base64Token
-                        ? `${window.location.origin}/?snapshot=${base64Token}`
-                        : ""}
+                    {lockedDatasetName}
                 </div>
-                {#if base64Token}
-                    <div>
-                        <ButtonControl
-                            callOnClick={copyToClipboard}
-                            title="Copy to clipboard"
-                        >
-                            <Fa icon={faClipboardList} />
-                        </ButtonControl>
+            {/if}
+
+            <div class="mt-4 flex h-full flex-col">
+                <p class="mb-1">Snapshot Link</p>
+                <div class="flex items-center gap-2">
+                    <div
+                        class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
+                    >
+                        {base64Token
+                            ? `${window.location.origin}/?snapshot=${base64Token}`
+                            : ""}
                     </div>
+                    {#if base64Token}
+                        <div>
+                            <ButtonControl
+                                callOnClick={copyToClipboard}
+                                title="Copy to clipboard"
+                            >
+                                <Fa icon={faClipboardList} />
+                            </ButtonControl>
+                        </div>
+                    {/if}
+                </div>
+                {#if copySuccess}
+                    <p class="text-green-text mt-1 text-sm">
+                        Link copied to clipboard!
+                    </p>
                 {/if}
             </div>
-            {#if copySuccess}
-                <p class="text-green-text mt-1 text-sm">
-                    Link copied to clipboard!
-                </p>
-            {/if}
         </div>
-    </div>
-    <DialogLeaveButtons
-        submitLabel="Share Snapshot"
-        onSubmit={snapshotDataset}
-        onCancel={() => (showDialog = false)}
-        cancelLabel="Close"
-    />
+    </DialogButtons>
 </Dialog>
