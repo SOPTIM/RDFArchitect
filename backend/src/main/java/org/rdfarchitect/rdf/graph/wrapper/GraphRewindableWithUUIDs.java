@@ -83,7 +83,7 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
     }
 
     private static void addUUIDsToTypedResources(Model model) {
-        var subjects = model.listSubjects()
+        var subjects = model.listResourcesWithProperty(RDF.type)
                             .filterKeep(r -> r.isURIResource() && !r.hasProperty(RDFA.uuid))
                             .toSet();
 
@@ -116,6 +116,7 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
 
     private static boolean isReferencedOnlyURI(RDFNode node) {
         return node.isURIResource()
+                  && !RELEVANT_TYPES.contains(node.asResource().getURI())
                   && !node.asResource().hasProperty(RDFA.uuid)
                   && !node.asResource().listProperties().hasNext();
     }
