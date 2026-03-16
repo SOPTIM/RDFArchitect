@@ -25,7 +25,6 @@
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
     import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
@@ -35,6 +34,8 @@
     let {
         getAPIRoute,
         showDialog = $bindable(),
+        disablePrimary = $bindable(),
+        onSubmit = $bindable(),
         lockedDatasetName,
         lockedGraphUri,
         generateOntologyEntries = false,
@@ -60,6 +61,12 @@
     );
     let someSelected = $derived(
         generatedOntologyEntries.some(entry => entry.generate),
+    );
+
+    $effect(
+        () =>
+            (disablePrimary =
+                !selectedDatasetName || !graphURI || !selectedMediaType),
     );
 
     $effect(async () => {
@@ -98,6 +105,8 @@
         generatedOntologyEntries = [];
     });
 
+    onMount(() => (onSubmit = handleExport));
+
     onMount(async () => {
         selectedDatasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
@@ -130,6 +139,14 @@
     }
 
     async function handleExport() {
+        if (
+            !getAPIRoute ||
+            !selectedDatasetName ||
+            !graphURI ||
+            !selectedMediaType
+        ) {
+            return;
+        }
         if (generateOntologyEntries && someSelected) {
             for (const entry of generatedOntologyEntries) {
                 if (entry.generate) {
@@ -237,10 +254,3 @@
         {/each}
     </select>
 </div>
-//TODO: RDFA-403 finish refactoring
-<DialogButtons
-    bind:showDialog
-    submitLabel="Export"
-    disableSubmit={!selectedDatasetName || !graphURI || !selectedMediaType}
-    onSubmit={handleExport}
-/>

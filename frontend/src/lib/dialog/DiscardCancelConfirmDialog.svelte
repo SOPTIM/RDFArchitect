@@ -20,7 +20,6 @@
         faRotateLeft,
         faXmark,
     } from "@fortawesome/free-solid-svg-icons";
-    import { AlertDialog as BitsUiAlertDialog } from "bits-ui";
     import { Fa } from "svelte-fa";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";

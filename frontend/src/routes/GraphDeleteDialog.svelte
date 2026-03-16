@@ -16,10 +16,10 @@
   -->
 
 <script>
+    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
+
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DeleteConfirmationContent from "$lib/dialog/DeleteConfirmationContent.svelte";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     import {
         editorState,
@@ -79,26 +79,25 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose} size="w-full max-w-lg">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    size="w-full max-w-lg"
+    primaryLabel="Delete Graph"
+    onPrimary={deleteGraph}
+    disablePrimary={disableSubmit}
+    title={graphURI ? `Delete graph "${graphURI}"?` : "Delete graph?"}
+    titleIcon={faExclamation}
+    titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
+>
     <div class="space-y-4 px-3 py-3">
-        <DeleteConfirmationContent
-            title={graphURI ? `Delete graph "${graphURI}"?` : "Delete graph?"}
-            description={datasetName
+        <p class="text-default-text w-3/4 text-sm leading-relaxed">
+            {datasetName
                 ? `The graph will be removed from dataset "${datasetName}".`
                 : "Select a dataset and graph to delete."}
-        >
-            {#if disableSubmit}
-                <p class="text-red-text font-semibold">
-                    Select a dataset and graph before deleting.
-                </p>
-            {/if}
-        </DeleteConfirmationContent>
+            <br />
+            This action is not reversible.
+        </p>
     </div>
-    //TODO: RDFA-403 finish refactoring
-    <DialogButtons
-        bind:showDialog
-        submitLabel="Delete Graph"
-        onSubmit={deleteGraph}
-        {disableSubmit}
-    />
-</Dialog>
+</ActionDialog>

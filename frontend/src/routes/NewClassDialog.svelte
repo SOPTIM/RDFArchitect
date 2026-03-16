@@ -24,8 +24,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     import {
         editorState,
@@ -200,7 +199,15 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Add Class"
+    onPrimary={newClass}
+    disablePrimary={disableSubmit}
+    title="Add Class"
+>
     <div class="mx-2 flex h-full flex-col">
         <DatasetAndGraphSelection
             bind:dataset={datasetName}
@@ -248,11 +255,4 @@
             bind:value={className}
         />
     </div>
-    //TODO: RDFA-403 finish refactoring
-    <DialogButtons
-        bind:showDialog
-        submitLabel="Add Class"
-        onSubmit={newClass}
-        {disableSubmit}
-    />
-</Dialog>
+</ActionDialog>

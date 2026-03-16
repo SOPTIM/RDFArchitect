@@ -28,8 +28,8 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    import DeleteDatasetDialog from "../../DeleteDatasetDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
+    import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import DatasetDeleteDialog from "../../mainpage/packageNavigation/DatasetDeleteDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
@@ -138,7 +138,7 @@
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />
 <SHACLExportDialog bind:showDialog={showSHACLExportDialog} />
 
-<DeleteDatasetDialog bind:showDialog={showDeleteDialog} />
+<GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <DatasetDeleteDialog
     bind:showDialog={showDatasetDeleteDialog}
     datasetName={selectedDataset}

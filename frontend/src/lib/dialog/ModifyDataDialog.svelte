@@ -16,9 +16,7 @@
 <script>
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
 
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
-    import DialogHeader from "$lib/dialog/DialogHeader.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
 
     let {
@@ -63,29 +61,25 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} onClose={() => closeDialog(true)} {size}>
-    <div>
-        <DialogHeader
-            bind:showDialog
-            {title}
-            icon={readonly ? "eye" : hasChanges ? "edit" : "plus"}
-        />
-        {@render children?.()}
-        <DialogButtons
-            bind:showDialog
-            cancelLabel={"Discard"}
-            cancelIcon={faRotateLeft}
-            cancelVariant={"danger"}
-            onCancel={() => closeDialog(false)}
-            submitLabel={hasChanges ? "Save" : "No Changes"}
-            onSubmit={save}
-            disableSubmit={!hasChanges || !isValid}
-            submitIcon={faSave}
-            {readonly}
-        />
-    </div>
-</Dialog>
-
+//TODO: dialog closes before confirmd ialog opens and closen on primary
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    onClose={() => closeDialog(true)}
+    {size}
+    secondaryLabel={"Discard"}
+    secondaryIcon={faRotateLeft}
+    secondaryVariant={"danger"}
+    onSecondary={() => closeDialog(false)}
+    primaryLabel={hasChanges ? "Save" : "No Changes"}
+    onPrimary={save}
+    closeOnPrimary={false}
+    disablePrimary={!hasChanges || !isValid}
+    primaryIcon={faSave}
+    {readonly}
+    {children}
+    {title}
+/>
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}
     onDiscard={discard}

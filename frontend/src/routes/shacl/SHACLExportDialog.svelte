@@ -18,7 +18,7 @@
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import GraphExport from "$lib/GraphExport.svelte";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
@@ -33,6 +33,9 @@
 
     let exportMode = $state("generate");
 
+    let disablePrimary = $state(false);
+    let onPrimary = $state(() => {});
+
     function toggleGeneratedOrCustom() {
         if (exportMode === "generate") {
             exportMode = "custom";
@@ -45,7 +48,13 @@
     }
 </script>
 
-<Dialog bind:showDialog>
+<ActionDialog
+    bind:showDialog
+    primaryLabel="Export"
+    {disablePrimary}
+    {onPrimary}
+    title="Export SHACL"
+>
     <div class="h-10 w-24">
         <ButtonControl callOnClick={toggleGeneratedOrCustom}>
             {exportMode}
@@ -54,6 +63,8 @@
     {#key showDialog}
         <GraphExport
             bind:showDialog
+            bind:disablePrimary
+            bind:onSubmit={onPrimary}
             getAPIRoute={(datasetName, graphURI) =>
                 PUBLIC_BACKEND_URL +
                 "/datasets/" +
@@ -68,4 +79,4 @@
             supportedMediaTypes={reorderedSupportedRDFMediaTypes}
         />
     {/key}
-</Dialog>
+</ActionDialog>

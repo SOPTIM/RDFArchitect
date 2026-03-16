@@ -19,8 +19,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     let {
         showDialog = $bindable(),
@@ -154,118 +153,119 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} onClose={scrollToBottom}>
-    <DialogButtons
-        bind:showDialog
-        primaryLabel="Add Selected Fields"
-        onPrimary={() => {
-            addSelectedFieldsToOntologyEntries();
-            showDialog = false;
-        }}
-        disablePrimary={disableSubmit}
-    >
-        <div class="flex flex-col pb-1">
-            <div
-                class="border-border text-default-text mt-1 overflow-y-auto rounded-lg border-2"
-            >
-                <table class="w-full border-collapse text-sm">
-                    <thead
-                        class="bg-default-background border-border sticky top-0 z-10 border-b"
-                    >
-                        <tr>
-                            <th
-                                class="px-2 py-1 text-center tracking-wide uppercase"
-                            >
-                                <CheckBoxEditControl
-                                    value={addAll}
-                                    callOnInputTrue={() => setToAdd(true)}
-                                    callOnInputFalse={() => {
-                                        resetToAdd();
-                                    }}
-                                />
-                            </th>
-                            <th
-                                class="w-50 px-2 py-1 text-left tracking-wide uppercase"
-                            >
-                                Field iri
-                            </th>
-                            <th
-                                class="py-1 pl-2 text-right tracking-wide uppercase"
-                            >
-                                Override
-                                <CheckBoxEditControl
-                                    value={overrideAll}
-                                    callOnInputTrue={() => setOverride()}
-                                    callOnInputFalse={() => {
-                                        resetOverride();
-                                    }}
-                                />
-                            </th>
-                            <th
-                                class="py-1 pr-10 pl-2 text-right tracking-wide uppercase"
-                            >
-                                autogenerate
-                                <CheckBoxEditControl
-                                    value={generateAll}
-                                    callOnInputTrue={() => setGenerate()}
-                                    callOnInputFalse={() => {
-                                        resetGenerate();
-                                    }}
-                                />
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {#each knownFields as field}
-                            <tr
-                                class="border-border hover:bg-button-hover-background not-last:border-b"
-                            >
-                                <td class="text-center">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    onClose={scrollToBottom}
+    primaryLabel="Add Selected Fields"
+    onPrimary={() => {
+        addSelectedFieldsToOntologyEntries();
+        showDialog = false;
+    }}
+    disablePrimary={disableSubmit}
+    title="Select fields to add"
+>
+    <div class="flex flex-col pb-1">
+        <div
+            class="border-border text-default-text mt-1 overflow-y-auto rounded-lg border-2"
+        >
+            <table class="w-full border-collapse text-sm">
+                <thead
+                    class="bg-default-background border-border sticky top-0 z-10 border-b"
+                >
+                    <tr>
+                        <th
+                            class="px-2 py-1 text-center tracking-wide uppercase"
+                        >
+                            <CheckBoxEditControl
+                                value={addAll}
+                                callOnInputTrue={() => setToAdd(true)}
+                                callOnInputFalse={() => {
+                                    resetToAdd();
+                                }}
+                            />
+                        </th>
+                        <th
+                            class="w-50 px-2 py-1 text-left tracking-wide uppercase"
+                        >
+                            Field iri
+                        </th>
+                        <th
+                            class="py-1 pl-2 text-right tracking-wide uppercase"
+                        >
+                            Override
+                            <CheckBoxEditControl
+                                value={overrideAll}
+                                callOnInputTrue={() => setOverride()}
+                                callOnInputFalse={() => {
+                                    resetOverride();
+                                }}
+                            />
+                        </th>
+                        <th
+                            class="py-1 pr-10 pl-2 text-right tracking-wide uppercase"
+                        >
+                            autogenerate
+                            <CheckBoxEditControl
+                                value={generateAll}
+                                callOnInputTrue={() => setGenerate()}
+                                callOnInputFalse={() => {
+                                    resetGenerate();
+                                }}
+                            />
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {#each knownFields as field}
+                        <tr
+                            class="border-border hover:bg-button-hover-background not-last:border-b"
+                        >
+                            <td class="text-center">
+                                <div
+                                    class="flex h-full items-center justify-center"
+                                >
+                                    <CheckBoxEditControl
+                                        bind:value={field.toAdd}
+                                    />
+                                </div>
+                            </td>
+                            <td class="px-2 py-1 text-left text-nowrap">
+                                {getShortenedIRI(namespaces, field.iri)}
+                            </td>
+
+                            <!-- Override checkbox -->
+                            <td class="text-center">
+                                {#if entryWithIriExists(field.iri)}
                                     <div
-                                        class="flex h-full items-center justify-center"
+                                        class="flex h-full items-center justify-end"
                                     >
                                         <CheckBoxEditControl
-                                            bind:value={field.toAdd}
+                                            bind:value={field.override}
+                                            callOnInputTrue={() =>
+                                                (field.toAdd = true)}
                                         />
                                     </div>
-                                </td>
-                                <td class="px-2 py-1 text-left">
-                                    {getShortenedIRI(namespaces, field.iri)}
-                                </td>
-
-                                <!-- Override checkbox -->
-                                <td class="text-center">
-                                    {#if entryWithIriExists(field.iri)}
-                                        <div
-                                            class="flex h-full items-center justify-end"
-                                        >
-                                            <CheckBoxEditControl
-                                                bind:value={field.override}
-                                                callOnInputTrue={() =>
-                                                    (field.toAdd = true)}
-                                            />
-                                        </div>
-                                    {/if}
-                                </td>
-                                <!-- Autogenerate checkbox -->
-                                <td class="">
-                                    {#if isAutoGeneratableField(field.iri)}
-                                        <div
-                                            class="flex h-full items-center justify-end pr-10"
-                                        >
-                                            <CheckBoxEditControl
-                                                bind:value={field.generate}
-                                                callOnInputTrue={() =>
-                                                    (field.toAdd = true)}
-                                            />
-                                        </div>
-                                    {/if}
-                                </td>
-                            </tr>
-                        {/each}
-                    </tbody>
-                </table>
-            </div>
+                                {/if}
+                            </td>
+                            <!-- Autogenerate checkbox -->
+                            <td class="">
+                                {#if isAutoGeneratableField(field.iri)}
+                                    <div
+                                        class="flex h-full items-center justify-end pr-10"
+                                    >
+                                        <CheckBoxEditControl
+                                            bind:value={field.generate}
+                                            callOnInputTrue={() =>
+                                                (field.toAdd = true)}
+                                        />
+                                    </div>
+                                {/if}
+                            </td>
+                        </tr>
+                    {/each}
+                </tbody>
+            </table>
         </div>
-    </DialogButtons>
-</Dialog>
+    </div>
+</ActionDialog>

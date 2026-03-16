@@ -18,7 +18,7 @@
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import DialogBase from "$lib/dialog/DialogBase.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassReferencedVia from "./ClassReferencedVia.svelte";
@@ -83,7 +83,7 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} size="w-3/5 h-4/5">
+<DialogBase bind:showDialog {onOpen} size="w-3/5 h-4/5">
     <div class="flex h-full flex-col space-y-2">
         <!-- header with title and close button -->
         <div class="flex flex-shrink-0">
@@ -154,4 +154,4 @@
             </div>
         </div>
     </div>
-</Dialog>
+</DialogBase>

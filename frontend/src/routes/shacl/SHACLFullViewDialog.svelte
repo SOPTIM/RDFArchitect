@@ -18,7 +18,7 @@
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import DialogBase from "$lib/dialog/DialogBase.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
@@ -115,7 +115,7 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} size="w-2/3 h-4/5">
+<DialogBase bind:showDialog {onOpen} size="w-2/3 h-4/5">
     <div class="flex h-full flex-col space-y-2">
         <!-- Header -->
         <div class="flex flex-shrink-0">
@@ -172,4 +172,4 @@
             {/if}
         </div>
     </div>
-</Dialog>
+</DialogBase>

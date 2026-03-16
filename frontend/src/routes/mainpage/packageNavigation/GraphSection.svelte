@@ -57,8 +57,8 @@
         getPackageId,
     } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
-    import DeleteDatasetDialog from "../../DeleteDatasetDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
+    import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
@@ -558,7 +558,7 @@
     lockedDatasetName={dataset.label}
     lockedGraphUri={getUri(graph)}
 />
-<DeleteDatasetDialog bind:showDialog={showDeleteDialog} />
+<GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
     lockedDatasetName={dataset.label}

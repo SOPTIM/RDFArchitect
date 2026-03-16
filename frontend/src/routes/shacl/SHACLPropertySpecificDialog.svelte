@@ -18,7 +18,7 @@
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import DialogBase from "$lib/dialog/DialogBase.svelte";
     import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.svelte.js";
     import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -183,7 +183,7 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} size="w-2/5 h-3/5">
+<DialogBase bind:showDialog {onOpen} size="w-2/5 h-3/5">
     <div class="flex h-full flex-col space-y-2">
         {#if property}
             <div class="flex-shrink-0">
@@ -300,4 +300,4 @@
             </div>
         {/if}
     </div>
-</Dialog>
+</DialogBase>

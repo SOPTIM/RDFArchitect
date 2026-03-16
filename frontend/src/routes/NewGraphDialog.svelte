@@ -21,8 +21,7 @@
     import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     import {
         editorState,
@@ -146,7 +145,16 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Add graph"
+    onPrimary={addGraph}
+    disabledPrimary={disableSubmit}
+    title="Add graph"
+    disablePrimary={disableSubmit}
+>
     <div class="mx-2 flex h-full flex-col">
         {#if !datasetSelectionLocked}
             <label for={datasetInputId} class="mb-1">Dataset</label>
@@ -193,12 +201,4 @@
             <div class="mt-1 mb-1 h-6 text-sm">Graph already exists</div>
         {/if}
     </div>
-
-    //TODO: RDFA-403 finish refactoring
-    <DialogButtons
-        bind:showDialog
-        submitLabel="Add graph"
-        onSubmit={addGraph}
-        {disableSubmit}
-    />
-</Dialog>
+</ActionDialog>

@@ -16,13 +16,11 @@
   -->
 
 <script>
-    import { faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
+    import { faExclamation, faTrash } from "@fortawesome/free-solid-svg-icons";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DeleteConfirmationContent from "$lib/dialog/DeleteConfirmationContent.svelte";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         editorState,
         forceReloadTrigger,
@@ -62,22 +60,22 @@
     }
 </script>
 
-<Dialog bind:showDialog size="w-full max-w-md">
+<ActionDialog
+    bind:showDialog
+    size="w-full max-w-md"
+    primaryVariant="danger"
+    primaryIcon={faTrash}
+    primaryLabel="Confirm"
+    onPrimary={deleteClass}
+    title={classLabel ? `Delete class "${classLabel}"?` : "Delete class?"}
+    titleIcon={faExclamation}
+    titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
+>
     <div class="space-y-4 px-3 py-3">
-        <DeleteConfirmationContent
-            title={classLabel
-                ? `Delete class "${classLabel}"?`
-                : "Delete class?"}
-            description="The class will be removed from the model and cannot be restored."
-        />
+        <p class="text-default-text w-3/4 text-sm leading-relaxed">
+            The class will be removed from the model.
+            <br />
+            References to this class will remain.
+        </p>
     </div>
-    //TODO: RDFA-403 finish refactoring
-    <DialogButtons
-        bind:showDialog
-        submitVariant="danger"
-        submitIcon={faTrash}
-        cancelIcon={faXmark}
-        submitLabel="Confirm"
-        onSubmit={deleteClass}
-    />
-</Dialog>
+</ActionDialog>

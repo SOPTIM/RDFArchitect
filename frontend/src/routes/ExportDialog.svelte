@@ -17,7 +17,7 @@
 
 <script>
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import GraphExport from "$lib/GraphExport.svelte";
 
     let {
@@ -25,27 +25,31 @@
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
+
+    let disablePrimary = $state(false);
+    let onPrimary = $state(() => {});
 </script>
 
-<Dialog bind:showDialog>
-    {#key showDialog}
-        <div class="mt-1 mb-2 ml-2">
-            <h2 class="text-default-text text-xl leading-tight font-semibold">
-                Export Graph
-            </h2>
-        </div>
-        <GraphExport
-            bind:showDialog
-            {lockedDatasetName}
-            {lockedGraphUri}
-            getAPIRoute={(datasetName, graphURI) =>
-                PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetName) +
-                "/graphs/" +
-                encodeURIComponent(graphURI) +
-                "/content"}
-            generateOntologyEntries={true}
-        />
-    {/key}
-</Dialog>
+<ActionDialog
+    bind:showDialog
+    primaryLabel="Export"
+    {disablePrimary}
+    {onPrimary}
+    title="Export Graph"
+>
+    <GraphExport
+        bind:showDialog
+        bind:disablePrimary
+        bind:onSubmit={onPrimary}
+        {lockedDatasetName}
+        {lockedGraphUri}
+        getAPIRoute={(datasetName, graphURI) =>
+            PUBLIC_BACKEND_URL +
+            "/datasets/" +
+            encodeURIComponent(datasetName) +
+            "/graphs/" +
+            encodeURIComponent(graphURI) +
+            "/content"}
+        generateOntologyEntries={true}
+    />
+</ActionDialog>

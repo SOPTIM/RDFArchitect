@@ -24,8 +24,7 @@
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogButtons from "$lib/dialog/DialogButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { Package } from "$lib/models/dto";
 
     import {
@@ -193,7 +192,23 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Add Package"
+    onCloseButton={onClose}
+    onPrimary={() =>
+        newPackage(
+            selectedDatasetName,
+            selectedGraphURI,
+            packageLabel,
+            packageComment,
+            packageURINamespace,
+        )}
+    disablePrimary={disableSubmit}
+    title="Add Package"
+>
     <div class="mx-2 flex h-full flex-col">
         {#if !datasetSelectionLocked}
             <label for={domIds.datasetName} class="mb-1">Dataset</label>
@@ -296,18 +311,4 @@
             bind:value={packageComment}
         />
     </div>
-    //TODO: RDFA-403 finish refactoring
-    <DialogButtons
-        bind:showDialog
-        submitLabel="Add Package"
-        onSubmit={() =>
-            newPackage(
-                selectedDatasetName,
-                selectedGraphURI,
-                packageLabel,
-                packageComment,
-                packageURINamespace,
-            )}
-        {disableSubmit}
-    />
-</Dialog>
+</ActionDialog>
