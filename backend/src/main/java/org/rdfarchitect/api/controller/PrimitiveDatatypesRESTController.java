@@ -28,6 +28,7 @@ import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.GetPrimitiveDatatypesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -60,7 +61,7 @@ public class PrimitiveDatatypesRESTController {
     @GetMapping
     public List<URI> getPrimitiveDatatypes(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL
                                           ) {
         logger.info("Received GET request: \"/api/primitives\" from \"{}\".", originURL);

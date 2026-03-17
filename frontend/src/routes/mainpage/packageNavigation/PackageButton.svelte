@@ -37,6 +37,8 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import ClassEntry from "./ClassEntry.svelte";
+    import PackageDeleteDialog from "./PackageDeleteDialog.svelte";
     import {
         isSelectedPackage,
         getUri,
@@ -44,13 +46,12 @@
     } from "./packageNavigationUtils.svelte.js";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import ClassEntry from "./ClassEntry.svelte";
-    import PackageDeleteDialog from "./PackageDeleteDialog.svelte";
 
     let {
         dataset,
         graph,
         pack,
+        packages = [],
         classes = [],
         prefixes = [],
         onPackChange = () => {},
@@ -228,6 +229,7 @@
     bind:showDialog={showPackageEditorDialog}
     datasetName={dataset.label}
     graphUri={getUri(graph)}
+    {packages}
     {pack}
     {readOnly}
 />

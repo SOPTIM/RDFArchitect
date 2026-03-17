@@ -56,6 +56,7 @@ import static org.rdfarchitect.cim.queries.select.CIMQueryBuilder.Mode.*;
  */
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("java:S1192")
 public class GraphToCIMCollectionConverterService implements GraphToCIMCollectionConverterUseCase {
 
     private final DatabasePort databasePort;
@@ -66,7 +67,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         Graph copiedGraph;
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
             copiedGraph = GraphUtils.deepCopy(graph);
         } finally {

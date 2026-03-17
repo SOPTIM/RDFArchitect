@@ -30,6 +30,7 @@ import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.SchemaComparisonUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -66,7 +67,7 @@ public class SchemaComparisonRESTController {
     @PostMapping
     public List<PackageChange> compareSchemas(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -103,7 +104,7 @@ public class SchemaComparisonRESTController {
     @GetMapping()
     public List<PackageChange> compareDatasetSchemas(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the base dataset.")
               @PathVariable

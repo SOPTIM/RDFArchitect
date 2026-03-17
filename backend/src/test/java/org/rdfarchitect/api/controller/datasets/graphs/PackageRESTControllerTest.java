@@ -19,11 +19,14 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.controller.datasets.graphs.packages.PackageRESTController;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
+import org.springframework.http.HttpHeaders;
 
 import java.util.UUID;
 
@@ -50,20 +53,21 @@ class PackageRESTControllerTest {
         when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
         UUID packageUuid = UUID.randomUUID();
 
-        var response = controller.deletePackage("origin", "dataset", "graph", packageUuid);
+        var response = controller.deletePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUuid);
 
-        assertThat(response).isEqualTo("success");
-        verify(deletePackageUseCase).deletePackage(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(packageUuid));
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(deletePackageUseCase).deletePackage(new GraphIdentifier("dataset", "expanded-graph"), packageUuid);
     }
 
     @Test
     void replacePackage_passesPayloadToUseCase() {
         when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
+        var packageUUID = UUID.randomUUID();
         var dto = PackageDTO.builder().label("pkg").build();
 
-        var response = controller.replacePackage("origin", "dataset", "graph", "uuid", dto);
+        var response = controller.replacePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUUID.toString(), dto);
 
-        assertThat(response).isEqualTo("success");
-        verify(replacePackageUseCase).replacePackage(eq(new GraphIdentifier("dataset", "expanded-graph")), eq(dto));
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(replacePackageUseCase).replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
     }
 }

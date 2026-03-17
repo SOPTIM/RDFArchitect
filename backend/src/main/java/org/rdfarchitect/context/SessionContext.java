@@ -17,11 +17,11 @@
 
 package org.rdfarchitect.context;
 
+import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import static lombok.AccessLevel.*;
 
-@NoArgsConstructor(access = PRIVATE)
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SessionContext {
 
     public static final ThreadLocal<String> sessionID = new ThreadLocal<>();

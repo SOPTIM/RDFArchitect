@@ -21,11 +21,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.UndoUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -54,7 +56,7 @@ public class UndoRESTController {
     @PostMapping
     public String undo(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -69,6 +71,6 @@ public class UndoRESTController {
         undoUseCase.undo(new GraphIdentifier(datasetName, extendedGraphURI));
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

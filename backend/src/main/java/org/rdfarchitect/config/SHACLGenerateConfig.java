@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.config.portconfig;
+package org.rdfarchitect.config;
 
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.services.shacl.SHACLGenerateService;

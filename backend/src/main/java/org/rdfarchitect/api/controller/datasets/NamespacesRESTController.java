@@ -24,11 +24,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.services.select.ListPrefixesUseCase;
 import org.rdfarchitect.services.update.dataset.ReplaceNamespacesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -64,7 +66,7 @@ public class NamespacesRESTController {
     @GetMapping
     public List<CIMPrefixPair> listNamespaces(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -85,7 +87,7 @@ public class NamespacesRESTController {
     @GetMapping("/{format:ttl}")
     public String listFormattedNamespaces(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -110,7 +112,8 @@ public class NamespacesRESTController {
     )
     @PutMapping
     public String replaceNamespaces(
-              @Parameter(description = "The name/url of the inquirer.") @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.") @PathVariable
               String datasetName,
@@ -121,6 +124,6 @@ public class NamespacesRESTController {
         replaceNamespacesUseCase.replaceNamespaces(datasetName, namespaces);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/namespaces\" from \"{}\".", datasetName, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

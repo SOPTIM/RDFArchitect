@@ -2,13 +2,13 @@
 
 ### @eslint/compat
 - **Package:** @eslint/compat
-- **Version:** 2.0.2
+- **Version:** 2.0.3
 - **License:** Apache-2.0
 - **URL:** [https://github.com/eslint/rewrite/tree/main/packages/compat#readme](https://github.com/eslint/rewrite/tree/main/packages/compat#readme)
 
 ### @eslint/js
 - **Package:** @eslint/js
-- **Version:** 9.39.3
+- **Version:** 9.39.4
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.53.0
+- **Version:** 2.53.4
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -84,6 +84,12 @@
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
+### @xyflow/svelte
+- **Package:** @xyflow/svelte
+- **Version:** 1.5.1
+- **License:** MIT
+- **URL:** [https://svelteflow.dev](https://svelteflow.dev)
+
 ### asciidoctor
 - **Package:** asciidoctor
 - **Version:** 3.0.4
@@ -92,12 +98,12 @@
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.4.24
+- **Version:** 10.4.27
 - **License:** MIT
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.16.2
+- **Version:** 2.16.3
 - **License:** MIT
 
 ### codemirror
@@ -112,9 +118,15 @@
 - **License:** MIT
 - **URL:** [https://github.com/aatauil/codemirror-lang-turtle](https://github.com/aatauil/codemirror-lang-turtle)
 
+### elkjs
+- **Package:** elkjs
+- **Version:** 0.11.1
+- **License:** EPL-2.0
+- **URL:** [https://github.com/kieler/elkjs](https://github.com/kieler/elkjs)
+
 ### eslint
 - **Package:** eslint
-- **Version:** 9.39.3
+- **Version:** 9.39.4
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -138,18 +150,18 @@
 
 ### espree
 - **Package:** espree
-- **Version:** 11.1.1
+- **Version:** 11.2.0
 - **License:** BSD-2-Clause
 - **URL:** [https://github.com/eslint/js/blob/main/packages/espree/README.md](https://github.com/eslint/js/blob/main/packages/espree/README.md)
 
 ### globals
 - **Package:** globals
-- **Version:** 16.5.0
+- **Version:** 17.4.0
 - **License:** MIT
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 27.4.0
+- **Version:** 29.0.0
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -161,7 +173,7 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.6
+- **Version:** 8.5.8
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
@@ -173,7 +185,7 @@
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 3.5.0
+- **Version:** 3.5.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
@@ -185,7 +197,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.53.3
+- **Version:** 5.53.7
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -197,7 +209,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.5.1
+- **Version:** 1.6.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 

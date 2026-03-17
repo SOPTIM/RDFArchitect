@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support and usage questions
+    url: https://github.com/SOPTIM/RDFArchitect/blob/main/SUPPORT.md
+    about: Please review support channels and open the appropriate issue template.

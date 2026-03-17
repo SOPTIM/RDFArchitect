@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.ontology;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.apache.jena.vocabulary.DCAT;
 import org.apache.jena.vocabulary.DCTerms;
 import org.apache.jena.vocabulary.OWL2;
@@ -29,6 +31,7 @@ import java.util.List;
  * Container class for known ontology field definitions.
  * Based on IEC 61970-600-2 CGMES 3.0.1 ApplicationProfiles
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class KnownOntologyFields {
 
     public static final OntologyField DCT_CONFORMS_TO = OntologyField.builder()

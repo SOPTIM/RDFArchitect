@@ -1,0 +1,84 @@
+name: Bug report
+description: Report a reproducible problem in RDFArchitect
+title: "[Bug]: "
+labels:
+  - bug
+type: bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please provide enough detail for maintainers to reproduce and triage.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A concise description of the problem.
+      placeholder: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Exact steps, including dataset/graph context where relevant.
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      description: How severe is this issue for your workflow?
+      options:
+        - Blocks usage / critical
+        - Significant degradation
+        - Minor issue
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: RDFArchitect version
+      description: "Semantic version (X.Y.Z) or commit SHA."
+      placeholder: 0.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, browser, Java/Node versions, deployment mode (local/dev/docker).
+      placeholder: |
+        - OS:
+        - Browser:
+        - Java:
+        - Node/npm:
+        - Deployment mode:
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and screenshots
+      description: Paste relevant logs or add screenshots.
+      placeholder: Paste logs and attach screenshots if applicable.
+    validations:
+      required: false

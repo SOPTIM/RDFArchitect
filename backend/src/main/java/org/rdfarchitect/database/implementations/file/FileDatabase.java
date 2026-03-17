@@ -94,7 +94,7 @@ public class FileDatabase {
         this.createDatabase();
         this.createDataset(datasetName);
 
-        logger.info("Storing graph  \"{}\" in file database at {}/{}.{} ...", graphName, databasePath, datasetName, lang.getFileExtensions().get(0));
+        logger.info("Storing graph  \"{}\" in file database at {}/{}.{} ...", graphName, databasePath, datasetName, lang.getFileExtensions().getFirst());
         Dataset dataset = FileDatabaseReadWriter.readDataset(databasePath, datasetName, lang);
         if (graphName == null || graphName.isEmpty()) { //add default model
             dataset.getDefaultModel().removeAll();
@@ -110,10 +110,10 @@ public class FileDatabase {
         try {
             FileDatabaseReadWriter.writeToFile(dataset, this.databasePath, datasetName, lang);
             logger.info("Storing graph \"{}\" in file database at: \"{}/{}.{}\" successful", graphName, databasePath,
-                        datasetName, lang.getFileExtensions().get(0));
+                        datasetName, lang.getFileExtensions().getFirst());
         } catch (RuntimeException e) {
             throw new DataAccessException("Storing graph \"" + graphName + "\" in the file database at: " +
-                                                    databasePath + "/" + datasetName + "." + lang.getFileExtensions().get(0) + " failed", e);
+                                                    databasePath + "/" + datasetName + "." + lang.getFileExtensions().getFirst() + " failed", e);
         }
     }
 
@@ -136,25 +136,6 @@ public class FileDatabase {
      */
     public Dataset getDataset(String datasetName) {
         return FileDatabaseReadWriter.readDataset(databasePath, datasetName, lang);
-    }
-
-    /**
-     * returns a Graph from a dataset as {@link Model}
-     *
-     * @param datasetName name of the dataset
-     * @param graphName   name of the graph, set to null or "" for default
-     *
-     * @return a model or null if non existent
-     */
-    public Model getGraphAsModel(String datasetName, String graphName) {
-        Dataset ds = FileDatabaseReadWriter.readDataset(this.databasePath, datasetName, lang);
-        if (graphName == null || graphName.isEmpty()) {
-            return ds.getDefaultModel();
-        }
-        if (ds.containsNamedModel(graphName)) {
-            return ds.getNamedModel(graphName);
-        }
-        throw new DataAccessException("No model named: \"" + graphName + "\"");
     }
 
     public void deleteDataset(String datasetName) {

@@ -19,6 +19,7 @@ import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelt
 import { ReactiveClass } from "$lib/models/reactive/reactive-class.svelte.js";
 import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
 import { ReactiveNamespace } from "$lib/models/reactive/reactive-namespace.svelte.js";
+import { ReactivePackage } from "$lib/models/reactive/reactive-package.svelte.js";
 
 /**
  * Maps a ReactiveClass to a class DTO for API submission
@@ -160,7 +161,7 @@ export function mapReactiveAssociationListToAssociationDtoList(
  * Maps a ReactiveAssociation to an association pair DTO for API submission
  * @param {ReactiveAssociation | Object} association - The reactive association instance or a plain object of it
  * @param {ReactiveClass | Object} cls - The domain class or a plain object of it
- * @param {function(uuid)} getClassByUuid - A function that returns the class object of a given uuid
+ * @param {function(string)} getClassByUuid - A function that returns the class object of a given uuid
  * @returns {Object} The association pair DTO with 'from' and 'to' properties
  */
 export function mapReactiveAssociationToAssociationDto(
@@ -199,7 +200,7 @@ export function mapReactiveAssociationToAssociationDto(
             label: association.label,
             prefix: association.namespace,
             multiplicity: fromMultiplicityString,
-            domain: domainClass.label,
+            domain: domainClass.prefix + domainClass.label,
             comment: association.comment,
             range: targetClassDTO,
             associationUsed: association.isUsed,
@@ -209,7 +210,7 @@ export function mapReactiveAssociationToAssociationDto(
             label: association.inverse.label,
             prefix: association.inverse.namespace,
             multiplicity: inverseMultiplicityString,
-            domain: targetClassDTO.label,
+            domain: targetClassDTO.prefix + targetClassDTO.label,
             comment: association.inverse.comment,
             range: domainClass,
             associationUsed: association.inverse.isUsed,
@@ -264,6 +265,23 @@ export function mapReactiveNamespaceToNamespaceDto(namespace) {
     return {
         prefix: namespace.iri,
         substitutedPrefix: namespace.prefix,
+    };
+}
+
+/**
+ * Maps a ReactivePackage to a package DTO for API submission
+ * @param {ReactivePackage | Object} pkg - The reactive package instance or a plain object of it
+ * @returns {Object} The package DTO
+ */
+export function mapReactivePackageToPackageDto(pkg) {
+    if (pkg instanceof ReactivePackage) {
+        pkg = pkg.getPlainObject();
+    }
+    return {
+        uuid: pkg.uuid,
+        prefix: pkg.namespace,
+        label: pkg.label,
+        comment: pkg.comment ?? null,
     };
 }
 

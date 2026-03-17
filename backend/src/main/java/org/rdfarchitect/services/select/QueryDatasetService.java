@@ -70,7 +70,7 @@ public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsU
     private Model getGraphAsModel(String datasetName, String graphURI) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(new GraphIdentifier(datasetName, graphURI));
+            graph = databasePort.getGraphWithContext(new GraphIdentifier(datasetName, graphURI)).getRdfGraph();
             graph.begin(TxnType.READ);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(graph));
         } finally {

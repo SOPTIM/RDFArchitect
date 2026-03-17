@@ -21,13 +21,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLDeleteShapeUseCase;
 import org.rdfarchitect.services.shacl.SHACLReplaceShapeUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -36,7 +37,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/{shaclShapeURI}")
 @RequiredArgsConstructor
@@ -62,7 +62,7 @@ public class SHACLCustomShapeRESTController {
     @PutMapping
     public String replaceShape(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable
@@ -84,7 +84,7 @@ public class SHACLCustomShapeRESTController {
         shaclReplaceShapeUseCase.replaceSHACLShape(graphIdentifier, extendedShaclShapeURI, shaclString);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".", datasetName, graphURI, shaclShapeURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -99,7 +99,7 @@ public class SHACLCustomShapeRESTController {
     @DeleteMapping
     public String deleteShape(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable
@@ -118,6 +118,6 @@ public class SHACLCustomShapeRESTController {
         shaclDeleteShapeUseCase.deleteSHACLShape(graphIdentifier, extendedShaclShapeURI);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/shacl/{{}}\" to \"{}\".", datasetName, graphURI, shaclShapeURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

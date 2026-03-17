@@ -34,7 +34,12 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -45,11 +50,15 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
 
+    private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
+    private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
+    private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
             CIMUpdates.replaceClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), cimClass);
@@ -59,6 +68,9 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
                 graph.end();
             }
         }
+
+        updateDiagramObjectNameUseCase.updateDiagramObjectName(graphIdentifier, newClass.getUuid(), newClass.getLabel());
+
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Updated class " + newClass.getUuid(), graph.getLastDelta()));
     }
 
@@ -66,13 +78,13 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
     public void addClass(GraphIdentifier graphIdentifier, PackageDTO packageDTO, String classURIPrefix, String className) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         GraphRewindableWithUUIDs graph = null;
-
+        UUID newClassUUID = UUID.randomUUID();
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
 
             var newClass = constructClass(cimPackage, classURIPrefix, className);
-
+            newClass.setUuid(newClassUUID);
             CIMUpdates.insertClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newClass);
             graph.commit();
         } finally {
@@ -80,6 +92,8 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
                 graph.end();
             }
         }
+
+        createClassLayoutDataUseCase.createClassLayoutData(graphIdentifier, packageDTO, className, newClassUUID);
 
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Added class " + className, graph.getLastDelta()));
     }
@@ -100,7 +114,7 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
     public void deleteClass(GraphIdentifier graphIdentifier, String classUUID) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             CIMUpdates.deleteClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), classUUID);
             graph.commit();
@@ -109,6 +123,8 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
                 graph.end();
             }
         }
+
+        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, UUID.fromString(classUUID));
 
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted class: " + classUUID, graph.getLastDelta()));
     }

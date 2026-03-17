@@ -18,7 +18,8 @@
 package org.rdfarchitect.rdf;
 
 import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class RDFUtils {
 
@@ -37,9 +38,9 @@ public class RDFUtils {
             throw new NullPointerException("URI or Literal cannot be null");
         }
         try {
-            new URL(s);
+            var _ = new URI(s).toURL();
             return "<" + s + ">";
-        } catch (MalformedURLException e) {
+        } catch (URISyntaxException | MalformedURLException | IllegalArgumentException _) {
             return "\"" + s + "\"";
         }
     }
@@ -56,9 +57,9 @@ public class RDFUtils {
             return false;
         }
         try {
-            new URL(s);
+            var _ = new URI(s).toURL();
             return true;
-        } catch (MalformedURLException e) {
+        } catch (URISyntaxException | MalformedURLException | IllegalArgumentException _) {
             return false;
         }
     }

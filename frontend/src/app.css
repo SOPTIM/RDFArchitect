@@ -122,7 +122,7 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
     --color-border-select: #1f75cb;
     --color-border-strong: #c6c6c6;
 
-    /* 'RDFA-Colors */
+    /* RDFA-Colors */
     --color-button-disabled-background: #b0b0b0;
 
     --color-border-disabled: #666;
@@ -148,4 +148,10 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
     --color-nav-badge-background: #1f75cb;
     --color-nav-badge-text: #ffffff;
     --color-nav-external-badge-background: #f0881a;
+
+    /* RDFA Rendering colors*/
+    --color-class-node-upper-background: var(--color-default-background);
+    --color-class-node-lower-background: #f2f2f2;
+    --color-class-node-highlighted: var(--color-border-select);
+    --color-inheritance-edge: var(--color-soptim-dunkelgrau);
 }

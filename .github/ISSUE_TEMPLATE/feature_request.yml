@@ -1,0 +1,53 @@
+name: Feature request
+description: Suggest an improvement or new capability
+title: "[Feature]: "
+labels:
+  - enhancement
+type: feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for your suggestion. Please describe the problem and proposed solution clearly.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: What user problem are you trying to solve?
+      placeholder: What is difficult or missing today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe your preferred approach.
+      placeholder: What should RDFArchitect do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any alternatives or workarounds.
+      placeholder: What alternatives did you evaluate?
+    validations:
+      required: false
+  - type: textarea
+    id: impact
+    attributes:
+      label: Value and impact
+      description: Who benefits and how?
+      placeholder: Why is this change valuable?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Suggested acceptance criteria
+      description: Optional checklist for done criteria.
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: false

@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.cim;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.rdf.model.RDFNode;
@@ -41,20 +42,12 @@ import java.util.AbstractMap;
 import java.util.UUID;
 
 /**
- * Parses a {@link QuerySolution} to extract the values of the variables.
+ * Parses a {@link QuerySolution} to extract the values of the variables used in the context of CIM.
  */
+@RequiredArgsConstructor
 public class CIMQuerySolutionParser {
 
     private final QuerySolution qs;
-
-    /**
-     * Creates a new {@link CIMQuerySolutionParser} with the given {@link QuerySolution}.
-     *
-     * @param qs The query solution to parse.
-     */
-    public CIMQuerySolutionParser(QuerySolution qs) {
-        this.qs = qs;
-    }
 
     /**
      * Helper record to store a URI, Label pair

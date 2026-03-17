@@ -46,7 +46,7 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
         UUID uuid;
 
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
 
             if (enumEntryDTO.getLabel() == null || enumEntryDTO.getLabel().trim().isEmpty()) {

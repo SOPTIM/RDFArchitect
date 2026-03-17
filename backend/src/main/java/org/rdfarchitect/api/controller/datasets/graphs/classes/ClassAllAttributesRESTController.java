@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -31,6 +32,7 @@ import org.rdfarchitect.services.update.classes.attributes.CreateAttributeUseCas
 import org.rdfarchitect.services.update.classes.attributes.UpdateAttributesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -61,7 +63,7 @@ public class ClassAllAttributesRESTController {
     @PostMapping
     public UUID createAttribute(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -97,7 +99,7 @@ public class ClassAllAttributesRESTController {
     @PutMapping
     public String replaceAllAttributes(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -122,6 +124,6 @@ public class ClassAllAttributesRESTController {
         updateAttributesUseCase.replaceAllAttributes(graphIdentifier, classUUID, attributeList);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

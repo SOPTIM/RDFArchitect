@@ -21,15 +21,25 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
-    import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
 
     import EnumEntry from "./EnumEntry.svelte";
+    import EnumEntryEditorDialog from "./EnumEntryEditorDialog.svelte";
 
-    const { enumEntries, cls } = $props();
+    const { enumEntries } = $props();
 
     const readonly = getContext("classEditor").readonly;
 
+    const enumEntryEditorDialog = $state({
+        showDialog: false,
+        enumEntry: null,
+    });
+
     let expandStereotypes = $state(true);
+
+    function openEnumEntryEditor(enumEntry) {
+        enumEntryEditorDialog.enumEntry = enumEntry;
+        enumEntryEditorDialog.showDialog = true;
+    }
 </script>
 
 <List
@@ -43,11 +53,7 @@
             <div class="size-8">
                 <FaIconButton
                     callOnClick={() => {
-                        enumEntries.append(
-                            new ReactiveEnumEntry({
-                                namespace: cls.namespace,
-                            }),
-                        );
+                        openEnumEntryEditor(null);
                         expandStereotypes = true;
                     }}
                     icon={faPlus}
@@ -58,8 +64,13 @@
     {#snippet contents()}
         <tbody>
             {#each enumEntries.values as enumEntry}
-                <EnumEntry {enumEntries} {enumEntry} />
+                <EnumEntry {enumEntries} {enumEntry} {openEnumEntryEditor} />
             {/each}
         </tbody>
     {/snippet}
 </List>
+<EnumEntryEditorDialog
+    bind:showDialog={enumEntryEditorDialog.showDialog}
+    enumEntry={enumEntryEditorDialog.enumEntry}
+    {enumEntries}
+/>

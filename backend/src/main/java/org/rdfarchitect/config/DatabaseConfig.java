@@ -55,18 +55,17 @@ public class DatabaseConfig {
 
     @Bean
     public DatabaseConnection databaseConnection() {
-        return switch (databaseType) {
-            case "http" -> new HttpConnectionImpl(httpEndpoint, defaultDataset, new FusekiHttpAdminProtocol(httpEndpoint));
-            default ->
-                      new FileConnectionImpl(fileEndpoint, defaultDataset, getFileLang(dataType)); //all options must return a DatabaseConnection even if the option doesn't happen.
-        };
+        if("http".equals(databaseType)){
+            return new HttpConnectionImpl(httpEndpoint, defaultDataset, new FusekiHttpAdminProtocol(httpEndpoint));
+        }
+        return new FileConnectionImpl(fileEndpoint, defaultDataset, getFileLang(dataType)); //all options must return a DatabaseConnection even if the option doesn't happen.
     }
 
     private static Lang getFileLang(String dataType) {
         dataType = dataType.toUpperCase();
-        return switch (dataType) {
-            case "N-QUADS" -> Lang.NQUADS;
-            default -> Lang.TRIG;
-        };
+        if("N-QUADS".equals(dataType)){
+            return Lang.NQUADS;
+        }
+        return Lang.TRIG;
     }
 }

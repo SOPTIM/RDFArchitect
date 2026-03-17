@@ -114,16 +114,16 @@ public class CIMUpdatesTestBase {
         }
         var file = new MockMultipartFile(fileName, fileName, "text/turtle", content);
         var graph = new GraphFileSourceBuilderImpl()
-                .setFile(file)
-                .setGraphName(graphIdentifier.getGraphUri())
-                .build()
-                .graph();
+                        .setFile(file)
+                        .setGraphName(graphIdentifier.getGraphUri())
+                        .build()
+                        .graph();
         databasePort.createGraph(graphIdentifier, graph);
-        testGraph = databasePort.getGraph(graphIdentifier);
+        testGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
     }
 
     protected void addTriple(Node subject, Node predicate, Node object) {
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.WRITE);
             graph.add(subject, predicate, object);
@@ -137,7 +137,7 @@ public class CIMUpdatesTestBase {
      * Use this method to execute write actions per Update class by bulding the UpdateBuilder
      */
     protected void executeUpdateOnTestGraph(Update update) {
-        InMemorySparqlExecutioner.executeSingleUpdate(databasePort.getGraph(graphIdentifier), update, graphIdentifier.getGraphUri());
+        InMemorySparqlExecutioner.executeSingleUpdate(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), update, graphIdentifier.getGraphUri());
     }
 
     /**

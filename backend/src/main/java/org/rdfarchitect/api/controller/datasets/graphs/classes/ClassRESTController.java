@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -31,6 +32,7 @@ import org.rdfarchitect.services.update.classes.DeleteClassUseCase;
 import org.rdfarchitect.services.update.classes.ReplaceClassUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -65,7 +67,7 @@ public class ClassRESTController {
     @GetMapping
     public ClassUMLAdaptedDTO getClassInformation(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -99,7 +101,7 @@ public class ClassRESTController {
     @PutMapping
     public String replaceClass(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -119,11 +121,12 @@ public class ClassRESTController {
         logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        replaceClassUseCase.replaceClass(new GraphIdentifier(datasetName, extendedGraphURI), newClass);
+        replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -138,7 +141,7 @@ public class ClassRESTController {
     @DeleteMapping
     public String deleteClass(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -156,6 +159,6 @@ public class ClassRESTController {
         deleteClassUseCase.deleteClass(graphIdentifier, classUUID);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

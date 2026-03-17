@@ -24,7 +24,12 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.services.snapshot.CreateSnapshotUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("api/snapshots")
@@ -36,22 +41,22 @@ public class AllSnapshotsRESTController {
     private final CreateSnapshotUseCase createSnapshotUseCase;
 
     @Operation(
-            summary = "snapshot dataset",
-            description = "Creates a snapshot for a dataset and persists it in the database",
-            tags = {"snapshot", "dataset"},
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200")
-            }
+              summary = "snapshot dataset",
+              description = "Creates a snapshot for a dataset and persists it in the database",
+              tags = {"snapshot", "dataset"},
+              responses = {
+                        @ApiResponse(
+                                  responseCode = "200")
+              }
     )
     @PostMapping
     public String createSnapshot(
-            @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @RequestBody
-            String datasetName) {
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @RequestBody
+              String datasetName) {
         logger.info("Received POST request: \"/api/snapshots\" from \"{}\".", originURL);
 
         var base64Token = createSnapshotUseCase.createSnapshot(datasetName);

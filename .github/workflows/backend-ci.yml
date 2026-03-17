@@ -5,7 +5,7 @@ on:
     branches:
       - "**"
     tags:
-      - "v*"
+      - "v*.*.*"
   pull_request:
 
 permissions:
@@ -24,7 +24,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.head_ref }}
+          ref: ${{ github.head_ref || github.ref }}
+          fetch-depth: 0
       - name: Setup Java
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
@@ -32,6 +33,9 @@ jobs:
           java-version: '25'
 
           cache: maven
+      - name: Resolve build metadata
+        run: |
+          bash ../.github/scripts/resolve_version.sh >> "$GITHUB_ENV"
       - name: Unit tests
         run: mvn -B test
       - name: Integration tests
@@ -63,10 +67,10 @@ jobs:
           git diff --exit-code -- LICENSES-THIRD-PARTY.md
       - name: Set up Docker Buildx
         if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
       - name: Log in to GHCR
         if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -74,20 +78,26 @@ jobs:
       - name: Extract Docker metadata
         if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
         id: meta
-        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ghcr.io/${{ github.repository }}-backend
           tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            # output X.Y.Z
+            type=semver,pattern={{version}}
+            # output X.Y
+            type=semver,pattern={{major}}.{{minor}}
+            # output X (disabled if major zero)
+            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
+            # output main on default branch
+            type=raw,value=main,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
       - name: Build and push image
         if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: backend
           file: backend/Dockerfile
           push: true
+          build-args: |
+            APP_VERSION=${{ env.APP_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

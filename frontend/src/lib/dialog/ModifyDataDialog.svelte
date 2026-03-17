@@ -65,6 +65,7 @@
     <div>
         {@render children?.()}
         <DialogLeaveButtons
+            bind:showDialog
             cancelLabel={hasChanges ? "Discard" : "Close"}
             cancelVariant={hasChanges ? "danger" : "contrast"}
             onCancel={() => closeDialog(false)}

@@ -19,10 +19,8 @@ package org.rdfarchitect.database.implementations.file.command;
 
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.ResultSetFormatter;
-import org.apache.jena.query.ResultSetRewindable;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.command.DatabaseSelectCommand;
@@ -75,7 +73,7 @@ public class FileSelectCommandImpl implements DatabaseSelectCommand {
     public ResultFormatter execute() {
         if (query == null) {
             throw new QueryException("Query is null. Execution against endpoint \"" + this.path + "\\" +
-                                               this.datasetName + "." + this.lang.getFileExtensions().get(0) + "\" skipped.");
+                                               this.datasetName + "." + this.lang.getFileExtensions().getFirst() + "\" skipped.");
         }
 
         String hex = Integer.toHexString(this.query.hashCode());
@@ -89,14 +87,16 @@ public class FileSelectCommandImpl implements DatabaseSelectCommand {
                   .getDataset(datasetName);
 
 
-        try (QueryExecution qExec = QueryExecutionFactory.create(query, dataset)) {
-            ResultSetRewindable result = qExec.execSelect().rewindable();
-            logger.debug("Received result for query@{} from \"{}/{}\":\n{}",
-                         hex,
-                         this.path,
-                         this.datasetName,
-                         ResultSetFormatter.asText(result));
-            result.reset();
+        try (var qExec = QueryExecutionFactory.create(query, dataset)) {
+            var result = qExec.execSelect().rewindable();
+            if (logger.isDebugEnabled()) {
+                logger.debug("Received result for query@{} from \"{}/{}\":\n{}",
+                             hex,
+                             this.path,
+                             this.datasetName,
+                             ResultSetFormatter.asText(result));
+                result.reset();
+            }
             return new ResultSetFormatterImpl(result);
         } catch (Exception e) {
             logger.debug("Failed to execute query@{} against endpoint \"{}/{}\"",
@@ -104,7 +104,7 @@ public class FileSelectCommandImpl implements DatabaseSelectCommand {
                          this.path,
                          this.datasetName);
             throw new DataAccessException("Failed to execute query@" + hex + " against endpoint \"" + this.path + "\\" +
-                                                    this.datasetName + "." + this.lang.getFileExtensions().get(0) + "\"", e);
+                                                    this.datasetName + "." + this.lang.getFileExtensions().getFirst() + "\"", e);
         }
     }
 

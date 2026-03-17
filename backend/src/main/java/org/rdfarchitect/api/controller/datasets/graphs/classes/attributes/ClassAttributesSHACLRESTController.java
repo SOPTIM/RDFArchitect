@@ -20,6 +20,7 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes.attributes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetShapeUseCase;
@@ -28,7 +29,7 @@ import org.rdfarchitect.shacl.dto.CustomAndGeneratedTuple;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -40,7 +41,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/attributes/{attributeUUID}/shacl")
 @RequiredArgsConstructor
@@ -62,7 +62,7 @@ public class ClassAttributesSHACLRESTController {
     @GetMapping
     public CustomAndGeneratedTuple<List<PropertyShape>> getAttributeSHACL(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable
@@ -95,7 +95,7 @@ public class ClassAttributesSHACLRESTController {
     @PutMapping
     public String replaceAttributeSHACL(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
             String originURL,
             @Parameter(description = "The literal name of the dataset.")
             @PathVariable
@@ -120,6 +120,6 @@ public class ClassAttributesSHACLRESTController {
         shaclUpdateUseCase.updatePropertyShacl(graphIdentifier, UUID.fromString(attributeUUID), shaclString);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes/{{}}/shacl\" to \"{}\".", datasetName, graphURI, classUUID, attributeUUID, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

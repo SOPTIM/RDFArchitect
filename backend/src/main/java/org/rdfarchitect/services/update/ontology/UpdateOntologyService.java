@@ -46,7 +46,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
@@ -54,7 +54,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
             } else {
-                if (!validateUUID(ontologyDTO.getUuid())) {
+                if (isInvalidUUID(ontologyDTO.getUuid())) {
                     throw new IllegalArgumentException("Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
@@ -75,7 +75,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
@@ -83,7 +83,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
             } else {
-                if (!validateUUID(ontologyDTO.getUuid())) {
+                if (isInvalidUUID(ontologyDTO.getUuid())) {
                     throw new IllegalArgumentException("Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
@@ -103,7 +103,7 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
     public void deleteOntology(GraphIdentifier graphIdentifier) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
@@ -133,12 +133,12 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         }
     }
 
-    private boolean validateUUID(String uuidString) {
+    private boolean isInvalidUUID(String uuidString) {
         try {
             UUID.fromString(uuidString);
-            return true;
-        } catch (IllegalArgumentException e) {
             return false;
+        } catch (IllegalArgumentException _) {
+            return true;
         }
     }
 }

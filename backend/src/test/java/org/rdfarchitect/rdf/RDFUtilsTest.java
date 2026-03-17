@@ -31,8 +31,6 @@ class RDFUtilsTest {
               "http://localhost:1",
               "https://localhost:1",
               "http://www.google.de",
-              "http://",
-              "https://",
     })
     void wrapURLorLiteral_stringIsAnURL_returnsStringWrappedAsURI(String candidate) {
         assertThat(RDFUtils.wrapURLorLiteral(candidate)).isEqualTo("<" + candidate + ">");
@@ -47,7 +45,9 @@ class RDFUtilsTest {
               "localhost",
               "foo#foo#foo",
               "foo.foo.foo",
-              "foo.foo.foo.foo.foo.foo.foo.foo"
+              "foo.foo.foo.foo.foo.foo.foo.foo",
+              "http://",
+              "https://"
     })
     void wrapURLorLiteral_stringIsNotAnURL_returnsStringWrappedAsLiteral(String candidate) {
         assertThat(RDFUtils.wrapURLorLiteral(candidate)).isEqualTo("\"" + candidate + "\"");
@@ -63,8 +63,6 @@ class RDFUtilsTest {
               "http://localhost:1",
               "https://localhost:1",
               "http://www.google.de",
-              "http://",
-              "https://",
     })
     void isURI_stringIsAnURL_returnsTrue(String candidate) {
         assertThat(RDFUtils.isURL(candidate)).isTrue();
@@ -79,7 +77,9 @@ class RDFUtilsTest {
               "localhost",
               "foo#foo#foo",
               "foo.foo.foo",
-              "foo.foo.foo.foo.foo.foo.foo.foo"
+              "foo.foo.foo.foo.foo.foo.foo.foo",
+              "http://",
+              "https://"
     })
     void isURI_stringIsNotAnURL_returnsFalse(String candidate) {
         assertThat(RDFUtils.isURL(candidate)).isFalse();

@@ -542,6 +542,7 @@
                 <PackageButton
                     {dataset}
                     {graph}
+                    {packages}
                     {pack}
                     {prefixes}
                     classes={classesByPackage[getPackageId(pack)] ?? []}

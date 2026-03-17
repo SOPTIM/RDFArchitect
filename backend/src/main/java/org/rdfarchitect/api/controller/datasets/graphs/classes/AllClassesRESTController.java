@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -32,6 +33,7 @@ import org.rdfarchitect.services.select.GetClassListUseCase;
 import org.rdfarchitect.services.update.classes.AddClassUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -73,7 +75,7 @@ public class AllClassesRESTController {
     @PostMapping
     public String addClass(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -90,12 +92,13 @@ public class AllClassesRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var extendedClassURIPrefix = expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        addClassUseCase.addClass(new GraphIdentifier(datasetName, extendedGraphURI), addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.className);
+        addClassUseCase.addClass(graphIdentifier, addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.className);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".", datasetName, graphURI, originURL);
 
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -113,7 +116,7 @@ public class AllClassesRESTController {
     @GetMapping
     public List<ClassUMLAdaptedDTO> getClassList(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable

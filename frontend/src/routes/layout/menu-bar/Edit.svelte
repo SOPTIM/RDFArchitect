@@ -70,6 +70,7 @@
     let packageDialogGraph = $state(null);
     let selectedPackageDetails = $state(null);
     let packageDetailsRequestId = 0;
+    let packages = $state([]);
 
     let ontology = $state();
 
@@ -101,7 +102,8 @@
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
         ontology = await getOntology();
-        await refreshSelectedPackageDetails();
+        packages = await getPackages();
+        await refreshSelectedPackageDetails(packages);
     });
 
     async function getOntology() {
@@ -122,6 +124,7 @@
         }
         await enableEditing(selectedDataset);
         await reload();
+        editorState.selectedPackageUUID.trigger();
     }
 
     async function requestDisableEditing() {
@@ -130,6 +133,7 @@
         }
         await disableEditing(selectedDataset);
         await reload();
+        editorState.selectedPackageUUID.trigger();
     }
 
     function openNamespaceManager() {
@@ -153,7 +157,30 @@
         showPackageDeleteDialog = true;
     }
 
-    async function refreshSelectedPackageDetails() {
+    async function getPackages() {
+        if (!hasGraphSelected) {
+            return [];
+        }
+        try {
+            const response = await bec.getPackages(
+                selectedDataset,
+                selectedGraph,
+            );
+            if (!response.ok) {
+                throw new Error("Failed to fetch packages");
+            }
+            const packagesJSON = await response.json();
+            return [
+                ...(packagesJSON.internalPackageList ?? []),
+                ...(packagesJSON.externalPackageList ?? []),
+            ];
+        } catch (error) {
+            console.error("Failed to fetch packages", error);
+            return [];
+        }
+    }
+
+    async function refreshSelectedPackageDetails(packages) {
         const datasetName = editorState.selectedDataset.getValue();
         const graphURI = editorState.selectedGraph.getValue();
         const packageId = editorState.selectedPackageUUID.getValue();
@@ -171,16 +198,7 @@
         const requestId = ++packageDetailsRequestId;
 
         try {
-            const response = await bec.getPackages(datasetName, graphURI);
-            if (!response.ok) {
-                throw new Error("Failed to fetch packages");
-            }
-            const packagesJSON = await response.json();
-            const candidates = [
-                ...(packagesJSON.internalPackageList ?? []),
-                ...(packagesJSON.externalPackageList ?? []),
-            ];
-            const match = candidates.find(pkg => pkg?.uuid === packageId);
+            const match = packages.find(pkg => pkg?.uuid === packageId);
             if (requestId === packageDetailsRequestId) {
                 selectedPackageDetails = match ?? null;
                 if (!match) {
@@ -353,6 +371,7 @@
         bind:showDialog={showPackageEditorDialog}
         datasetName={packageDialogDataset}
         graphUri={packageDialogGraph}
+        {packages}
         pack={packageDialogTarget}
         readonly={isDatasetReadOnly}
     />

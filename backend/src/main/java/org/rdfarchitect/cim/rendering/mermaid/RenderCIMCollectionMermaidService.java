@@ -18,20 +18,22 @@
 package org.rdfarchitect.cim.rendering.mermaid;
 
 import lombok.Getter;
+import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
+import org.rdfarchitect.api.dto.rendering.mermaid.MermaidDTO;
 import org.rdfarchitect.cim.data.dto.CIMClass;
 import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.cim.data.dto.CIMPackage;
 import org.rdfarchitect.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.cim.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.cim.rendering.RenderingUtils;
 import org.rdfarchitect.cim.rendering.mermaid.builder.CIMAssociationToMermaidBuilder;
 import org.rdfarchitect.cim.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
 import org.rdfarchitect.cim.rendering.mermaid.builder.CIMClassToMermaidBuilder;
 import org.rdfarchitect.cim.rendering.mermaid.builder.CIMEnumEntryToMermaidBuilder;
 import org.rdfarchitect.cim.rendering.mermaid.builder.CIMPackageToMermaidBuilder;
-import org.springframework.stereotype.Service;
+import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,27 +41,47 @@ import java.util.UUID;
 /**
  * Converts a {@link CIMCollection} to a String that can be rendered as a UML diagram using the mermaid syntax.
  */
-@Service
 public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUseCase {
+
+    @Override
+    public RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
+        //setup
+        var renderContext = new RenderContext(
+                  cimCollection,
+                  RenderingUtils.createUUIDUriPairs(cimCollection),
+                  new StringBuilder()
+        );
+
+        //mermaid config
+        appendConfig(renderContext);
+        renderContext.mermaidString.append("classDiagram\n");
+
+        //actual mermaid String generation
+        appendPackages(renderContext);
+
+        appendClassInheritance(renderContext);
+
+        appendAssociations(renderContext);
+
+        appendOnClickFunctionality(renderContext);
+
+        return new MermaidDTO(renderContext.mermaidString.toString());
+    }
 
     private static final String ON_CLICK_CALLBACK_FUNCTION_NAME = "getClassInformation";
 
-    private CIMCollection cimCollection;
-
-    private StringBuilder mermaidString;
-
-    private Map<String, UUID> uriToUUIDMap;
-
     private static final String TAB = "    ";
+
+    private static final String DARK_GRAY = "#303030";
 
     @Getter
     public enum MermaidThemeConfig {
         THEME("base"),
         FONT_FAMILY("sans-serif"),
-        TEXT_COLOR("#303030"),
+        TEXT_COLOR(DARK_GRAY),
         PRIMARY_COLOR("#e0e0e0"),
-        PRIMARY_BORDER_COLOR("#303030"),
-        LINE_COLOR("#303030");
+        PRIMARY_BORDER_COLOR(DARK_GRAY),
+        LINE_COLOR(DARK_GRAY);
 
         private final String value;
 
@@ -68,50 +90,8 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         }
     }
 
-    @Override
-    public String renderUML(CIMCollection cimCollection) {
-        //setup
-        this.cimCollection = cimCollection;
-        this.mermaidString = new StringBuilder();
-        createUUIDUriPairs();
-
-        //mermaid config
-        appendConfig();
-        mermaidString.append("classDiagram\n");
-
-        //actual mermaid String generation
-        appendPackages();
-
-        appendClassInheritance();
-
-        appendAssociations();
-
-        appendOnClickFunctionality();
-        return mermaidString.toString();
-    }
-
-    /**
-     * Assigns a {@link UUID} to each uri in the cimCollection.
-     * The UUIDs are used as ids for each object in the mermaid String since uris can contain chars that are not allowed in the mermaid syntax
-     */
-    private void createUUIDUriPairs() {
-        uriToUUIDMap = new HashMap<>();
-
-        cimCollection.getPackages().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
-
-        cimCollection.getClasses().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
-
-        cimCollection.getAttributes().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
-
-        cimCollection.getAssociations().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
-
-        cimCollection.getEnums().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
-
-        cimCollection.getEnumEntries().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
-    }
-
-    private void appendConfig() {
-        mermaidString
+    private void appendConfig(RenderContext renderContext) {
+        renderContext.mermaidString
                   .append("---\n")
                   .append("config:\n")
                   .append(TAB)
@@ -139,17 +119,17 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     /**
      * Appends all packages to the mermaid String
      */
-    private void appendPackages() {
-        for (var cimPackage : cimCollection.getPackages()) {
-            var packageContents = getClassMermaidStrings(cimPackage);
-            packageContents.addAll(getEnumMermaidStrings(cimPackage));
-            mermaidString.append(
+    private void appendPackages(RenderContext renderContext) {
+        for (var cimPackage : renderContext.cimCollection.getPackages()) {
+            var packageContents = getClassMermaidStrings(renderContext, cimPackage);
+            packageContents.addAll(getEnumMermaidStrings(renderContext, cimPackage));
+            renderContext.mermaidString.append(
                       new CIMPackageToMermaidBuilder(cimPackage, packageContents).build()
                                 );
         }
-        var varNotInPackageContents = getClassMermaidStrings(null);
-        varNotInPackageContents.addAll(getEnumMermaidStrings(null));
-        mermaidString.append(
+        var varNotInPackageContents = getClassMermaidStrings(renderContext, null);
+        varNotInPackageContents.addAll(getEnumMermaidStrings(renderContext, null));
+        renderContext.mermaidString.append(
                   new CIMPackageToMermaidBuilder(null, varNotInPackageContents).build()
                             );
     }
@@ -161,39 +141,39 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
      *
      * @return A list of mermaid Strings for the classes in the package
      */
-    private List<StringBuilder> getClassMermaidStrings(CIMPackage cimPackage) {
+    private List<StringBuilder> getClassMermaidStrings(RenderContext renderContext, CIMPackage cimPackage) {
         var classMermaidStrings = new ArrayList<StringBuilder>();
-        for (var cimClass : cimCollection.getClasses()) {
-            if (!classIsInPackage(cimClass, cimPackage)) {
+        for (var cimClass : renderContext.cimCollection.getClasses()) {
+            if (classIsNotInPackage(cimClass, cimPackage)) {
                 continue;
             }
             classMermaidStrings.add(
-                      new CIMClassToMermaidBuilder(cimClass, uriToUUIDMap.get(cimClass.getUri().toString()))
-                                .appendClassContents(getAttributeMermaidStrings(cimClass))
+                      new CIMClassToMermaidBuilder(cimClass, renderContext.uriToUUIDMap.get(cimClass.getUri().toString()))
+                                .appendClassContents(getAttributeMermaidStrings(renderContext, cimClass))
                                 .build()
                                    );
         }
         return classMermaidStrings;
     }
 
-    private List<StringBuilder> getEnumMermaidStrings(CIMPackage cimPackage) {
+    private List<StringBuilder> getEnumMermaidStrings(RenderContext renderContext, CIMPackage cimPackage) {
         var enumMermaidStrings = new ArrayList<StringBuilder>();
-        for (var cimEnumClass : cimCollection.getEnums()) {
-            if (!classIsInPackage(cimEnumClass, cimPackage)) {
+        for (var cimEnumClass : renderContext.cimCollection.getEnums()) {
+            if (classIsNotInPackage(cimEnumClass, cimPackage)) {
                 continue;
             }
             enumMermaidStrings.add(
-                      new CIMClassToMermaidBuilder(cimEnumClass, uriToUUIDMap.get(cimEnumClass.getUri().toString()))
-                                .appendClassContents(getEnumEntryMermaidStrings(cimEnumClass))
+                      new CIMClassToMermaidBuilder(cimEnumClass, renderContext.uriToUUIDMap.get(cimEnumClass.getUri().toString()))
+                                .appendClassContents(getEnumEntryMermaidStrings(renderContext, cimEnumClass))
                                 .build()
                                   );
         }
         return enumMermaidStrings;
     }
 
-    private List<StringBuilder> getEnumEntryMermaidStrings(CIMClass cimEnumClass) {
+    private List<StringBuilder> getEnumEntryMermaidStrings(RenderContext renderContext, CIMClass cimEnumClass) {
         var enumEntryMermaidStrings = new ArrayList<StringBuilder>();
-        for (var cimEnumEntry : cimCollection.getEnumEntries()) {
+        for (var cimEnumEntry : renderContext.cimCollection.getEnumEntries()) {
             if (!cimEnumEntry.getType().getUri().equals(cimEnumClass.getUri())) {
                 continue;
             }
@@ -211,9 +191,9 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
      *
      * @return A list of mermaid Strings for the attributes in the class.
      */
-    private List<StringBuilder> getAttributeMermaidStrings(CIMClass cimClass) {
+    private List<StringBuilder> getAttributeMermaidStrings(RenderContext renderContext, CIMClass cimClass) {
         var attributeMermaidStrings = new ArrayList<StringBuilder>();
-        for (var cimAttribute : cimCollection.getAttributes()) {
+        for (var cimAttribute : renderContext.cimCollection.getAttributes()) {
             if (!cimAttribute.getDomain().getUri().equals(cimClass.getUri())) {
                 continue;
             }
@@ -224,14 +204,14 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         return attributeMermaidStrings;
     }
 
-    private void appendClassInheritance() {
-        for (var cimClass : cimCollection.getClasses()) {
+    private void appendClassInheritance(RenderContext renderContext) {
+        for (var cimClass : renderContext.cimCollection.getClasses()) {
             if (cimClass.getSuperClass() == null) {
                 continue;
             }
-            var classUUID = uriToUUIDMap.get(cimClass.getUri().toString());
-            var superClassUUID = uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
-            mermaidString
+            var classUUID = renderContext.uriToUUIDMap.get(cimClass.getUri().toString());
+            var superClassUUID = renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
+            renderContext.mermaidString
                       .append(TAB)
                       .append("`")
                       .append(classUUID)
@@ -244,10 +224,10 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         }
     }
 
-    private void appendAssociations() {
+    private void appendAssociations(RenderContext renderContext) {
         var handledAssociations = new ArrayList<URI>();
-        for (var from : cimCollection.getAssociations()) {
-            var to = cimCollection.getAssociations().stream()
+        for (var from : renderContext.cimCollection.getAssociations()) {
+            var to = renderContext.cimCollection.getAssociations().stream()
                                   .filter(possibleTo -> from.getInverseRoleName().getUri().equals(possibleTo.getUri()))
                                   .findFirst()
                                   .orElse(null);
@@ -255,9 +235,9 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
                 continue;
             }
 
-            mermaidString
+            renderContext.mermaidString
                       .append(TAB)
-                      .append(new CIMAssociationToMermaidBuilder(from, to, uriToUUIDMap).build());
+                      .append(new CIMAssociationToMermaidBuilder(from, to, renderContext.uriToUUIDMap).build());
             handledAssociations.add(from.getUri());
             handledAssociations.add(to.getUri());
         }
@@ -266,12 +246,12 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     /**
      * Generates the line for the mermaid String that allows the user to click on the class and call a function.
      */
-    private void appendOnClickFunctionality() {
-        var clickableEntitylist = new ArrayList<>(cimCollection.getClasses());
-        clickableEntitylist.addAll(cimCollection.getEnums());
+    private void appendOnClickFunctionality(RenderContext renderContext) {
+        var clickableEntitylist = new ArrayList<>(renderContext.cimCollection.getClasses());
+        clickableEntitylist.addAll(renderContext.cimCollection.getEnums());
         clickableEntitylist.forEach(cimEntity -> {
-            var uuid = uriToUUIDMap.get(cimEntity.getUri().toString());
-            mermaidString
+            var uuid = renderContext.uriToUUIDMap.get(cimEntity.getUri().toString());
+            renderContext.mermaidString
                       .append(TAB)
                       .append("click `")
                       .append(uuid)
@@ -284,13 +264,20 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         });
     }
 
-    private boolean classIsInPackage(CIMClass cimClass, CIMPackage cimPackage) {
+    /**
+     * Helper record storing the rendering context shared across method calls
+     */
+    private record RenderContext(CIMCollection cimCollection, Map<String, UUID> uriToUUIDMap, StringBuilder mermaidString) {
+
+    }
+
+    private boolean classIsNotInPackage(CIMClass cimClass, CIMPackage cimPackage) {
         if (cimClass.getBelongsToCategory() == null) {
-            return cimPackage == null;
+            return cimPackage != null;
         }
         if (cimPackage == null) {
-            return false;
+            return true;
         }
-        return cimClass.getBelongsToCategory().getUri().equals(cimPackage.getUri());
+        return !cimClass.getBelongsToCategory().getUri().equals(cimPackage.getUri());
     }
 }

@@ -50,7 +50,7 @@ public class QueryClassService implements GetClassInformationUseCase, ListSuperC
     public ClassUMLAdaptedDTO getClassInformation(GraphIdentifier graphIdentifier, String classUUID) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
 
             var cimClass =
@@ -68,7 +68,7 @@ public class QueryClassService implements GetClassInformationUseCase, ListSuperC
     public List<ClassDTO> listSuperClasses(GraphIdentifier graphIdentifier, UUID classUUID) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
 
             var superClassList = new ArrayList<CIMClass>();
@@ -94,7 +94,7 @@ public class QueryClassService implements GetClassInformationUseCase, ListSuperC
     public ClassRelationsDTO getClassesReferencingThisClass(GraphIdentifier graphIdentifier, UUID classUUID) {
         GraphRewindable graph = null;
         try {
-            graph = databasePort.getGraph(graphIdentifier);
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
             return CIMClassRelationFinder.getAllClassRelations(graph, classUUID);
         } finally {

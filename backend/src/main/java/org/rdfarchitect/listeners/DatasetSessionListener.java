@@ -48,7 +48,7 @@ public class DatasetSessionListener implements HttpSessionListener {
                 changeLogUseCase.recordChange(
                           graphIdentifier,
                           new ChangeLogEntry("Imported graph into dataset '" + dataset + "' with graph URI '"
-                                                       + graphUri + "'.", databasePort.getGraph(graphIdentifier).getLastDelta())
+                                                       + graphUri + "'.", databasePort.getGraphWithContext(graphIdentifier).getRdfGraph().getLastDelta())
                                              );
             }
         }

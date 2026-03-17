@@ -53,16 +53,21 @@ public class GraphFileSourceImpl implements GraphSource {
         try {
             Model model = ModelFactory.createDefaultModel();
             Lang lang = RDFLanguages.filenameToLang(fileName);
-            model.read(file.getInputStream(), null, lang.getName());
+            if(lang == null) {
+                model.read(file.getInputStream(), null);
+            }
+            else{
+                model.read(file.getInputStream(), null, lang.getName());
+            }
             graph = model.getGraph();
             if (graph == null) {
                 throw new DataAccessException("Unable to get graph from file " + fileName + ".");
             }
-        } catch (FileNotFoundException e) {
+        } catch (FileNotFoundException _) {
             throw new DataAccessException("Unable to get graph from file " + fileName + " , because the file does not exist.");
-        } catch (IOException e) {
+        } catch (IOException _) {
             throw new DataAccessException("Unable to get graph from file " + fileName + " , because an IO operation failed.");
-        } catch (JenaException e) {
+        } catch (JenaException _) {
             throw new DataAccessException("Unable to get graph from file " + fileName + ".");
         }
         return graph;

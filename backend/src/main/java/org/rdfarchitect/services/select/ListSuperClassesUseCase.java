@@ -18,8 +18,6 @@
 package org.rdfarchitect.services.select;
 
 import org.rdfarchitect.api.dto.ClassDTO;
-import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
-import org.rdfarchitect.cim.data.dto.CIMClass;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;

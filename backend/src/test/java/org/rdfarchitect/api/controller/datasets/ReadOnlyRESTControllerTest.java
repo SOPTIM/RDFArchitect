@@ -19,9 +19,11 @@ package org.rdfarchitect.api.controller.datasets;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.readonly.DisableEditingUseCase;
 import org.rdfarchitect.services.readonly.EnableEditingUseCase;
 import org.rdfarchitect.services.readonly.IsReadOnlyUseCase;
+import org.springframework.http.HttpHeaders;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -45,23 +47,23 @@ class ReadOnlyRESTControllerTest {
     void isReadOnly_returnsFlagFromUseCase() {
         when(isReadOnlyUseCase.isReadOnly("dataset")).thenReturn(true);
 
-        assertThat(controller.isReadOnly("origin", "dataset")).isTrue();
+        assertThat(controller.isReadOnly(HttpHeaders.ORIGIN, "dataset")).isTrue();
         verify(isReadOnlyUseCase).isReadOnly("dataset");
     }
 
     @Test
     void enableEditing_invokesUseCase() {
-        var response = controller.enableEditing("origin", "dataset");
+        var response = controller.enableEditing(HttpHeaders.ORIGIN, "dataset");
 
-        assertThat(response).isEqualTo("success");
+        assertThat(response).isEqualTo(Response.SUCCESS);
         verify(enableEditingUseCase).enableEditing("dataset");
     }
 
     @Test
     void disableEditing_invokesUseCase() {
-        var response = controller.disableEditing("origin", "dataset");
+        var response = controller.disableEditing(HttpHeaders.ORIGIN, "dataset");
 
-        assertThat(response).isEqualTo("success");
+        assertThat(response).isEqualTo(Response.SUCCESS);
         verify(disableEditingUseCase).disableEditing("dataset");
     }
 }

@@ -40,13 +40,17 @@ public interface AssociationMapper {
     @Mapping(target = "label", source = "label.value")
     @Mapping(target = "comment", source = "comment.value")
     @Mapping(target = "multiplicity", source = "multiplicity.uri.suffix")
-    @Mapping(target = "domain", source = "domain.uri.suffix")
+    @Mapping(target = "domain", source = "domain.uri")
     AssociationDTO toDTO(CIMAssociation association);
 
     @Mapping(target = "uri", source = "dto")
     @Mapping(target = "domain", source = "dto")
-    @Mapping(target = "inverseRoleName", expression = "java(buildInverseRoleName(dto, inverseLabel))")
-    CIMAssociation toCIMObject(AssociationDTO dto, String inverseLabel);
+    @Mapping(target = "inverseRoleName", expression = "java(buildInverseRoleName(inverseUri))")
+    CIMAssociation toCIMObject(AssociationDTO dto, String inverseUri);
+
+    default String toDomain(URI value){
+        return value.toString();
+    }
 
     default DataTypeDTO mapRange(RDFSRange range) {
         return new DataTypeDTO(range.getLabel().getValue(), range.getUri().getPrefix(), DataTypeDTO.Type.RANGE);
@@ -57,7 +61,7 @@ public interface AssociationMapper {
     }
 
     default URI buildURI(AssociationDTO dto) {
-        return new URI(dto.getPrefix() + dto.getDomain() + "." + dto.getLabel());
+        return new URI(dto.getPrefix() + new URI(dto.getDomain()).getSuffix() + "." + dto.getLabel());
     }
 
     default CIMSMultiplicity buildMultiplicity(String multiplicity) {
@@ -65,7 +69,8 @@ public interface AssociationMapper {
     }
 
     default RDFSDomain buildDomain(AssociationDTO dto) {
-        return new RDFSDomain(new URI(dto.getPrefix() + dto.getDomain()), new RDFSLabel(dto.getDomain(), "en"));
+        var uri = new URI(dto.getDomain());
+        return new RDFSDomain(uri, new RDFSLabel(uri.getSuffix(), "en"));
     }
 
     default RDFSRange buildRange(DataTypeDTO range) {
@@ -76,7 +81,7 @@ public interface AssociationMapper {
         return new CIMSAssociationUsed(associationUsed ? "Yes" : "No");
     }
 
-    default CIMSInverseRoleName buildInverseRoleName(AssociationDTO dto, String inverseLabel) {
-        return new CIMSInverseRoleName(dto.getRange().getPrefix() + dto.getRange().getLabel() + "." + inverseLabel);
+    default CIMSInverseRoleName buildInverseRoleName(String inverseUri) {
+        return new CIMSInverseRoleName(inverseUri);
     }
 }

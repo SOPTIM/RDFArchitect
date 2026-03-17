@@ -36,6 +36,7 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogService;
+import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -67,7 +68,10 @@ class UpdateClassServiceTest {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
         var mockChangeLogService = mock(ChangeLogService.class);
-        updateClassService = new UpdateClassService(databasePort, classMapper, packageMapper, mockChangeLogService);
+        var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
+        updateClassService =
+                  new UpdateClassService(databasePort, classMapper, packageMapper, mockChangeLogService, mockUpdateClassLayoutService, mockUpdateClassLayoutService,
+                                         mockUpdateClassLayoutService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource = new GraphFileSourceBuilderImpl()
                   .setFile(file)
@@ -86,7 +90,7 @@ class UpdateClassServiceTest {
 
         updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass");
 
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.READ);
             assertThat(graph.contains(NodeFactory.createURI(PREFIX + "newClass"), RDF.type.asNode(), RDFS.Class.asNode())).isTrue();
@@ -107,7 +111,7 @@ class UpdateClassServiceTest {
 
         updateClassService.replaceClass(graphIdentifier, newClass);
 
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.READ);
 
@@ -125,7 +129,7 @@ class UpdateClassServiceTest {
     @Test
     void deleteClass_removesClassFromGraph() {
         updateClassService.deleteClass(graphIdentifier, CLASS_UUID);
-        var graph = databasePort.getGraph(graphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.READ);
             assertThat(graph.contains(NodeFactory.createURI(PREFIX + "class"), Node.ANY, Node.ANY)).isFalse();

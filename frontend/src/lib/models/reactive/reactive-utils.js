@@ -21,15 +21,23 @@ import { faRotateLeft, faTrash } from "@fortawesome/free-solid-svg-icons";
  * Get control button objects for InputControls
  * @param obj a Reactive Object
  * @param readonly if the value the buttons control is readonly
+ * @param callOnChange A function called when the value is updated
  * @returns a list containing objects defining control buttons for reactive Objects
  */
-export function getControlButtonsForReactiveObject(obj, readonly) {
+export function getControlButtonsForReactiveObject(
+    obj,
+    readonly,
+    callOnChange = () => {},
+) {
     if (readonly) {
         return [];
     }
     return [
         {
-            callOnClick: () => (obj.value = null),
+            callOnClick: () => {
+                callOnChange(null);
+                obj.value = null;
+            },
             title: "Clear Value",
             icon: faTrash,
             disabled:
@@ -38,7 +46,10 @@ export function getControlButtonsForReactiveObject(obj, readonly) {
                 obj.value === "",
         },
         {
-            callOnClick: () => obj.reset(),
+            callOnClick: () => {
+                callOnChange(obj.backup);
+                obj.reset();
+            },
             title: "Revert Changes",
             icon: faRotateLeft,
             disabled: !obj.isModified,

@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -32,6 +33,7 @@ import org.rdfarchitect.services.update.ontology.DeleteOntologyUseCase;
 import org.rdfarchitect.services.update.ontology.UpdateOntologyUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -68,7 +70,7 @@ public class OntologyRESTController {
     @GetMapping
     public OntologyDTO getOntology(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -98,7 +100,7 @@ public class OntologyRESTController {
     @PostMapping
     public String createOntology(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -120,7 +122,7 @@ public class OntologyRESTController {
         createOntologyUseCase.createOntology(graphIdentifier, newOntology);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -134,7 +136,7 @@ public class OntologyRESTController {
     @PutMapping
     public String replaceOntology(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -156,7 +158,7 @@ public class OntologyRESTController {
         updateOntologyUseCase.replaceOntology(graphIdentifier, newOntology);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 
     @Operation(
@@ -170,7 +172,7 @@ public class OntologyRESTController {
     @DeleteMapping
     public String deleteOntology(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -186,6 +188,6 @@ public class OntologyRESTController {
         deleteOntologyUseCase.deleteOntology(graphIdentifier);
 
         logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
-        return "success";
+        return Response.SUCCESS;
     }
 }

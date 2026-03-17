@@ -19,20 +19,22 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+import org.rdfarchitect.database.inmemory.GraphWithContext;
+
 import java.util.List;
 import java.util.UUID;
+
 
 public interface DatabasePort {
 
     /**
-     * Retrieves the graph referenced by {@code graphIdentifier} with support for rewinding change history.
+     * Get a {@link GraphWithContext} from the database.
      *
-     * @param graphIdentifier identifies dataset and graph URI
+     * @param graphIdentifier The identifier of the graph.
      *
-     * @return mutable graph wrapper that exposes undo/redo information
+     * @return {@link GraphWithContext}
      */
-    GraphRewindableWithUUIDs getGraph(GraphIdentifier graphIdentifier);
+    GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
 
     /**
      * Loads the namespace prefix mapping for the dataset.

@@ -81,6 +81,7 @@
         await bec.enableEditing(selectedDataset);
         forceReloadTrigger.trigger();
         editorState.selectedClassUUID.trigger();
+        editorState.selectedPackageUUID.trigger();
         isDatasetReadOnly = false;
     }
 

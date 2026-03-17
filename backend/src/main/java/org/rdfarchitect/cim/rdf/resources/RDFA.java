@@ -28,5 +28,10 @@ public class RDFA {
 
     public final Property uuid = ResourceFactory.createProperty("http://example.org#uuid");
 
+    public final String NS_PREFIX = "rdfa";
+
+    public final String NS_PREFIX_SHACL = "rdfash";
+    public final String NS_URI_SHACL = "http://example.com/shacl#";
+
     public final String GRAPH_URI = "http://graph#";
 }

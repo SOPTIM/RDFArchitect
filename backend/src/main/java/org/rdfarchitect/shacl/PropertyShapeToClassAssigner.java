@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+@SuppressWarnings("java:S1192")
 public class PropertyShapeToClassAssigner {
 
     private final Dataset dataset;
@@ -63,7 +64,7 @@ public class PropertyShapeToClassAssigner {
             if (propertyShapesWrapper.getPropertyShapes().isEmpty()) {
                 return 0.0;
             }
-            return propertyShapesWrapper.getPropertyShapes().get(0).getOrder();
+            return propertyShapesWrapper.getPropertyShapes().getFirst().getOrder();
         }));
         return resultList;
     }
@@ -108,8 +109,8 @@ public class PropertyShapeToClassAssigner {
                 .replace("RDFA_UUID", RDFA.uuid.getURI())
                 .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
                 .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
-        try (var quexec = QueryExecutionFactory.create(query, dataset)) {
-            var results = quexec.execSelect();
+        try (var qExec = QueryExecutionFactory.create(query, dataset)) {
+            var results = qExec.execSelect();
             var propertyShapes = new ArrayList<PropertyShapesWrapper>();
             while (results.hasNext()) {
                 var querySolution = results.next();

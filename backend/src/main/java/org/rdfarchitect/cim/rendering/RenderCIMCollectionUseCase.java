@@ -17,12 +17,16 @@
 
 package org.rdfarchitect.cim.rendering;
 
+import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.cim.data.dto.CIMCollection;
+import org.rdfarchitect.database.GraphIdentifier;
+
+import java.util.UUID;
 
 /**
- * Converts a {@link CIMCollection} to a String that can be rendered as a UML diagram.
+ * Converts a {@link CIMCollection} to a DTO that contains data required to render a UML diagram.
  */
 public interface RenderCIMCollectionUseCase {
 
-    String renderUML(CIMCollection cimCollection);
+    RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID);
 }

@@ -32,8 +32,8 @@ public class CIMPropertyUtils {
      * @param resource the resource to check
      * @return true if it's a property, otherwise false
      */
-    public boolean isProperty(Resource resource){
-        return resource.hasProperty(RDF.type, RDF.Property);
+    public boolean isNotProperty(Resource resource){
+        return !resource.hasProperty(RDF.type, RDF.Property);
     }
 
     /**
@@ -43,7 +43,7 @@ public class CIMPropertyUtils {
      * @return true if it's an association, otherwise false
      */
     public boolean isAssociation(Resource property) {
-        if(!isProperty(property)){
+        if(isNotProperty(property)){
             return false;
         }
         return property.hasProperty(CIMS.inverseRoleName) &&
@@ -57,7 +57,7 @@ public class CIMPropertyUtils {
      * @return true if it's an attribute, otherwise false
      */
     public boolean isAttribute(Resource property) {
-        if(!isProperty(property)){
+        if(isNotProperty(property)){
             return false;
         }
         return property.hasProperty(CIMS.stereotype, CIMStereotypes.attribute);
@@ -88,7 +88,7 @@ public class CIMPropertyUtils {
     private Integer parseMultiplicityBound(String s) {
         try {
             return Integer.parseInt(s);
-        } catch (NumberFormatException | NullPointerException e) {
+        } catch (NumberFormatException | NullPointerException _) {
             return null;
         }
     }

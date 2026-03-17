@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.riot.RDFLanguages;
 import org.jetbrains.annotations.NotNull;
@@ -28,17 +29,29 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -47,9 +60,14 @@ import java.util.zip.ZipInputStream;
 public class ImportGraphsService implements ImportGraphsUseCase {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportGraphsService.class);
-    private final ChangeLogUseCase changeLogUseCase;
 
+    private static final long MAX_ENTRY_SIZE = FileUtils.ONE_GB;
+    private static final int MAX_ENTRIES = 1000;
+
+    private final ChangeLogUseCase changeLogUseCase;
+    private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
     private final DatabasePort databasePort;
+
     private static final String FALL_BACK_NAME = "graph";
 
     @Override
@@ -73,10 +91,11 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
         for (var graphUri : importedGraphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
             changeLogUseCase.recordChange(
                       graphIdentifier,
                       new ChangeLogEntry("Imported graph into dataset '" + datasetName + "' with graph URI '"
-                                                   + graphUri + "'.", databasePort.getGraph(graphIdentifier).getLastDelta())
+                                                   + graphUri + "'.", databasePort.getGraphWithContext(graphIdentifier).getRdfGraph().getLastDelta())
                                          );
         }
         return importedGraphUris;
@@ -84,46 +103,70 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private List<String> importZipFile(String datasetName, MultipartFile file, Set<String> reservedGraphUris) {
         try (var zipInputStream = new ZipInputStream(file.getInputStream())) {
-            boolean error = false;
-            var importedGraphUris = new ArrayList<String>();
-            ZipEntry entry;
-            while ((entry = zipInputStream.getNextEntry()) != null) {
-                if (entry.isDirectory()) {
-                    zipInputStream.closeEntry();
-                    continue;
-                }
-                var entryName = entry.getName();
-                if (!isGraphFile(entryName)) {
-                    logger.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.", entryName, datasetName);
-                    zipInputStream.closeEntry();
-                    continue;
-                }
-                var extractedFile = toMultipartFile(entryName, zipInputStream);
-                var graphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entryName), reservedGraphUris);
-                try {
-                    var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-                    databasePort.deleteGraph(graphIdentifier);
-                    databasePort.createGraph(graphIdentifier, parseGraph(extractedFile, graphUri));
-                    importedGraphUris.add(graphUri);
-                } catch (RuntimeException exception) {
-                    error = true;
-                    logger.warn("Skipping ZIP entry '{}' for dataset '{}' because import failed: {}", entryName, datasetName, exception.getMessage(), exception);
-                }
-                zipInputStream.closeEntry();
-            }
-            if (error) {
+            var result = processZipEntries(datasetName, zipInputStream, reservedGraphUris);
+            if (result.hasErrors()) {
                 throw new DataAccessException("One or more graphs could not be imported from the zip file.");
             }
-            return importedGraphUris;
+            return result.importedGraphUris();
         } catch (IOException exception) {
             throw new DataAccessException("Unable to import graphs from zip file.", exception);
         }
     }
 
+    private ZipImportResult processZipEntries(String datasetName, ZipInputStream zipInputStream, Set<String> reservedGraphUris) throws IOException {
+        boolean error = false;
+        var importedGraphUris = new ArrayList<String>();
+        ZipEntry entry;
+        int entryCount = 0;
+        while ((entry = zipInputStream.getNextEntry()) != null) {
+            entryCount++;
+            if (entryCount > MAX_ENTRIES) {
+                throw new DataAccessException("ZIP file contains too many entries.");
+            }
+            if (entry.getSize() > MAX_ENTRY_SIZE) {
+                throw new DataAccessException("ZIP entry exceeds maximum allowed size: " + entry.getName());
+            }
+            try {
+                if (entry.isDirectory() || !isGraphFile(entry.getName())) {
+                    if (!entry.isDirectory()) {
+                        logger.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.", entry.getName(), datasetName);
+                    }
+                    continue;
+                }
+                var uniqueGraphUri = ensureUniqueGraphUri(buildGraphUriFromFileName(entry.getName()), reservedGraphUris);
+                if (importGraph(datasetName, zipInputStream, entry.getName(), uniqueGraphUri)) {
+                    importedGraphUris.add(uniqueGraphUri);
+                } else {
+                    error = true;
+                }
+            } finally {
+                zipInputStream.closeEntry();
+            }
+        }
+        return new ZipImportResult(importedGraphUris, error);
+    }
+
+    private boolean importGraph(String datasetName, ZipInputStream zipInputStream, String entryName, String graphUri) throws IOException {
+        var extractedFile = toMultipartFile(entryName, zipInputStream);
+        try {
+            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            databasePort.deleteGraph(graphIdentifier);
+            databasePort.createGraph(graphIdentifier, parseGraph(extractedFile, graphUri));
+            return true;
+        } catch (RuntimeException exception) {
+            logger.warn("Skipping ZIP entry '{}' for dataset '{}' because import failed: {}", entryName, datasetName, exception.getMessage(), exception);
+            return false;
+        }
+    }
+
+    private record ZipImportResult(List<String> importedGraphUris, boolean hasErrors) {
+
+    }
+
     private Set<String> loadExistingGraphUris(String datasetName) {
         try {
             return new HashSet<>(databasePort.listGraphUris(datasetName));
-        } catch (RuntimeException exception) {
+        } catch (RuntimeException _) {
             return new HashSet<>();
         }
     }
@@ -179,7 +222,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     }
 
     private boolean isZipFile(MultipartFile file) {
-        var originalFilename = Objects.requireNonNullElse(file.getOriginalFilename(), "");
+        var originalFilename = Optional.ofNullable(file.getOriginalFilename()).orElse("");
         return originalFilename.toLowerCase(Locale.ROOT).endsWith(".zip");
     }
 
@@ -238,13 +281,13 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof SimpleMultipartFile that)) {
+            if (!(o instanceof SimpleMultipartFile(var thatName, var thatOriginalFilename, var thatContentType, var thatContent))) {
                 return false;
             }
-            return Objects.equals(name, that.name)
-                      && Objects.equals(originalFilename, that.originalFilename)
-                      && Objects.equals(contentType, that.contentType)
-                      && Arrays.equals(content, that.content);
+            return Objects.equals(name, thatName)
+                      && Objects.equals(originalFilename, thatOriginalFilename)
+                      && Objects.equals(contentType, thatContentType)
+                      && Arrays.equals(content, thatContent);
         }
 
         @Override

@@ -29,8 +29,8 @@
     import {
         getClasses,
         getDataTypes,
-        getPackages,
         getNamespaces,
+        getPackages,
         getStereotypes,
     } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
@@ -179,9 +179,13 @@
                 const namespaceObj = context.namespaces.find(
                     p => p.prefix === namespace,
                 );
-                return namespaceObj
+                let returnValue = namespaceObj
                     ? namespaceObj.substitutedPrefix
                     : namespace;
+                if (returnValue && returnValue.endsWith(":")) {
+                    returnValue = returnValue.slice(0, -1);
+                }
+                return returnValue;
             };
         },
         get getDatatypeByUri() {

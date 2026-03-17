@@ -17,19 +17,22 @@
 
 package org.rdfarchitect.shacl;
 
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
 public class SHACLQueryVars {
-    public static final String PROPERTY_SHAPE = "?SHACLpropertyShape";
-    public static final String NODE_SHAPE = "?SHACLnodeShape";
-    public static final String DESCRIPTION = "?SHACLdescription";
-    public static final String GROUP = "?SHACLgroup";
-    public static final String MESSAGE = "?SHACLmessage";
-    public static final String NAME = "?SHACLname";
-    public static final String NODE_KIND = "?SHACLnodeKind";
-    public static final String ORDER = "?SHACLorder";
-    public static final String PATH = "?SHACLpath";
-    public static final String SEVERITY = "?SHACLseverity";
-    public static final String DATATYPE = "?SHACLdatatype";
-    public static final String IN = "?SHACLin";
-    public static final String MAX_COUNT = "?SHACLmaxCount";
-    public static final String MIN_COUNT = "?SHACLminCount";
+    public final String PROPERTY_SHAPE = "?SHACLpropertyShape";
+    public final String NODE_SHAPE = "?SHACLnodeShape";
+    public final String DESCRIPTION = "?SHACLdescription";
+    public final String GROUP = "?SHACLgroup";
+    public final String MESSAGE = "?SHACLmessage";
+    public final String NAME = "?SHACLname";
+    public final String NODE_KIND = "?SHACLnodeKind";
+    public final String ORDER = "?SHACLorder";
+    public final String PATH = "?SHACLpath";
+    public final String SEVERITY = "?SHACLseverity";
+    public final String DATATYPE = "?SHACLdatatype";
+    public final String IN = "?SHACLin";
+    public final String MAX_COUNT = "?SHACLmaxCount";
+    public final String MIN_COUNT = "?SHACLminCount";
 }

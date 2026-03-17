@@ -21,12 +21,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -37,7 +38,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@CrossOrigin
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/content")
 @RequiredArgsConstructor
@@ -59,7 +59,7 @@ public class GraphBulkContentRESTController {
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GraphBulkImportResponse> replaceGraphs(
               @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
@@ -75,7 +75,7 @@ public class GraphBulkContentRESTController {
         var importedGraphUris = importGraphsUseCase.importGraphs(datasetName, files, graphUris);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/content\" to \"{}\".", datasetName, originURL);
-        return ResponseEntity.ok(new GraphBulkImportResponse("success", importedGraphUris));
+        return ResponseEntity.ok(new GraphBulkImportResponse(Response.SUCCESS, importedGraphUris));
     }
 
     public record GraphBulkImportResponse(String message, List<String> importedGraphUris) {

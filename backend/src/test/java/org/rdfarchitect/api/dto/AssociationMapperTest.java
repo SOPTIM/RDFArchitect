@@ -63,7 +63,7 @@ class AssociationMapperTest {
                                        .prefix("http://example.com#")
                                        .label("Class2")
                                        .multiplicity("1...1")
-                                       .domain("Class1")
+                                       .domain("http://example.com#Class1")
                                        .range(new DataTypeDTO("Class2", "http://example.com/class2#"))
                                        .associationUsed(true)
                                        .build();
@@ -82,7 +82,7 @@ class AssociationMapperTest {
                       () -> assertThat(dto.getLabel()).isEqualTo("Class2"),
                       () -> assertThat(dto.getComment()).isNull(),
                       () -> assertThat(dto.getMultiplicity()).isEqualTo("1...1"),
-                      () -> assertThat(dto.getDomain()).isEqualTo("Class1"),
+                      () -> assertThat(dto.getDomain()).isEqualTo("http://example.com#Class1"),
                       () -> assertThat(dto.getRange().getLabel()).isEqualTo("Class2"),
                       () -> assertThat(dto.getRange().getPrefix()).isEqualTo("http://example.com/class2#"),
                       () -> assertThat(dto.isAssociationUsed()).isTrue()
@@ -101,7 +101,7 @@ class AssociationMapperTest {
                       () -> assertThat(dto.getLabel()).isEqualTo("Class2"),
                       () -> assertThat(dto.getComment()).isEqualTo("Test Comment"),
                       () -> assertThat(dto.getMultiplicity()).isEqualTo("1...1"),
-                      () -> assertThat(dto.getDomain()).isEqualTo("Class1"),
+                      () -> assertThat(dto.getDomain()).isEqualTo("http://example.com#Class1"),
                       () -> assertThat(dto.getRange().getLabel()).isEqualTo("Class2"),
                       () -> assertThat(dto.getRange().getPrefix()).isEqualTo("http://example.com/class2#"),
                       () -> assertThat(dto.isAssociationUsed()).isTrue()
@@ -114,7 +114,7 @@ class AssociationMapperTest {
 
         @Test
         void toCIMObject_minimalAssociation() {
-            var mappedCIMAssociation = associationMapper.toCIMObject(associationDTO, "inverseLabel");
+            var mappedCIMAssociation = associationMapper.toCIMObject(associationDTO, "http://example.com/class2#Class2.inverseLabel");
 
             assertAll(
                       () -> assertThat(mappedCIMAssociation.getUuid()).isEqualTo(associationDTO.getUuid()),
@@ -133,7 +133,7 @@ class AssociationMapperTest {
         void toCIMObject_fullAssociation() {
             associationDTO.setComment("Test Comment");
 
-            var mappedCIMAssociation = associationMapper.toCIMObject(associationDTO, "inverseLabel");
+            var mappedCIMAssociation = associationMapper.toCIMObject(associationDTO, "http://example.com/class2#Class2.inverseLabel");
 
             assertAll(
                       () -> assertThat(mappedCIMAssociation.getUuid()).isEqualTo(associationDTO.getUuid()),
