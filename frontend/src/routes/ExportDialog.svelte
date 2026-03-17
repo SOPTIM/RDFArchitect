@@ -27,7 +27,20 @@
     } = $props();
 
     let disablePrimary = $state(false);
-    let onPrimary = $state(() => {});
+    let graphExportComponent = $state(null);
+    let onPrimary = $derived(
+        graphExportComponent
+            ? graphExportComponent.handleExport(
+                  (datasetName, graphURI) =>
+                      PUBLIC_BACKEND_URL +
+                      "/datasets/" +
+                      encodeURIComponent(datasetName) +
+                      "/graphs/" +
+                      encodeURIComponent(graphURI) +
+                      "/content",
+              )
+            : null,
+    );
 </script>
 
 <ActionDialog
@@ -38,9 +51,9 @@
     title="Export Graph"
 >
     <GraphExport
+        bind:this={graphExportComponent}
         bind:showDialog
         bind:disablePrimary
-        bind:onSubmit={onPrimary}
         {lockedDatasetName}
         {lockedGraphUri}
         getAPIRoute={(datasetName, graphURI) =>

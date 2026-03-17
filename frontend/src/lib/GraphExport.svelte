@@ -32,10 +32,8 @@
     import { editorState } from "../lib/sharedState.svelte.js";
 
     let {
-        getAPIRoute,
         showDialog = $bindable(),
         disablePrimary = $bindable(),
-        onSubmit = $bindable(),
         lockedDatasetName,
         lockedGraphUri,
         generateOntologyEntries = false,
@@ -105,8 +103,6 @@
         generatedOntologyEntries = [];
     });
 
-    onMount(() => (onSubmit = handleExport));
-
     onMount(async () => {
         selectedDatasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
@@ -121,7 +117,7 @@
         generatedOntologyEntries.forEach(entry => (entry.generate = newValue));
     }
 
-    async function fetchGraphFile() {
+    async function fetchGraphFile(getAPIRoute) {
         return fetch(getAPIRoute(selectedDatasetName, graphURI), {
             method: "GET",
             headers: new Headers({ Accept: selectedMediaType.mimeType }),
@@ -138,7 +134,8 @@
         return JSON.parse(content);
     }
 
-    async function handleExport() {
+    // This function is called from the parent component when the user clicks the export button
+    export async function handleExport(getAPIRoute) {
         if (
             !getAPIRoute ||
             !selectedDatasetName ||
@@ -161,7 +158,7 @@
             forceReloadTrigger.trigger();
         }
         try {
-            const response = await fetchGraphFile();
+            const response = await fetchGraphFile(getAPIRoute);
             const blob = await response.blob();
             const suggestedFilename = response.headers.get(
                 "content-disposition",

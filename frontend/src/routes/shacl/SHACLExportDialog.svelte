@@ -34,7 +34,22 @@
     let exportMode = $state("generate");
 
     let disablePrimary = $state(false);
-    let onPrimary = $state(() => {});
+    let shaclExportDialog = $state(null);
+    let onPrimary = $derived(
+        shaclExportDialog
+            ? shaclExportDialog.handleExport(
+                  (datasetName, graphURI) =>
+                      PUBLIC_BACKEND_URL +
+                      "/datasets/" +
+                      encodeURIComponent(datasetName) +
+                      "/graphs/" +
+                      encodeURIComponent(graphURI) +
+                      "/shacl/" +
+                      exportMode +
+                      "/file",
+              )
+            : null,
+    );
 
     function toggleGeneratedOrCustom() {
         if (exportMode === "generate") {
@@ -62,6 +77,7 @@
     </div>
     {#key showDialog}
         <GraphExport
+            bind:this={shaclExportDialog}
             bind:showDialog
             bind:disablePrimary
             bind:onSubmit={onPrimary}

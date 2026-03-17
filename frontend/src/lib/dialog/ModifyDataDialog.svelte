@@ -38,6 +38,7 @@
     function closeDialog(triggerConfirmDialog) {
         if (triggerConfirmDialog && hasChanges) {
             showDiscardSaveConfirmDialog = true;
+            console.warn("Unsaved changes, showing confirm dialog");
             return false;
         }
         if (hasChanges) {
@@ -50,18 +51,17 @@
 
     ///////// confirm dialog  /////////
 
-    function discard() {
+    function discardAndClose() {
         showDialog = false;
         discardChanges();
     }
 
-    function save() {
+    function saveAndClose() {
         showDialog = false;
         saveChanges();
     }
 </script>
 
-//TODO: dialog closes before confirmd ialog opens and closen on primary
 <ActionDialog
     bind:showDialog
     {onOpen}
@@ -70,9 +70,10 @@
     secondaryLabel={"Discard"}
     secondaryIcon={faRotateLeft}
     secondaryVariant={"danger"}
-    onSecondary={() => closeDialog(false)}
+    onSecondary={() => discardChanges()}
+    disableSecondary={!hasChanges}
     primaryLabel={hasChanges ? "Save" : "No Changes"}
-    onPrimary={save}
+    onPrimary={saveChanges}
     closeOnPrimary={false}
     disablePrimary={!hasChanges || !isValid}
     primaryIcon={faSave}
@@ -82,7 +83,7 @@
 />
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}
-    onDiscard={discard}
-    onSave={save}
+    onDiscard={discardAndClose}
+    onSave={saveAndClose}
     disableSave={!hasChanges || !isValid}
 />

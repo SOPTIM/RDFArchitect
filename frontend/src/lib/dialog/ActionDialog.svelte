@@ -39,7 +39,7 @@
         primaryVariant,
         disablePrimary,
         closeOnPrimary = true,
-        onPrimary = () => {},
+        onPrimary,
         onOpen = () => {},
         onClose = () => {},
         children,
@@ -91,7 +91,9 @@
         }
 
         event.preventDefault();
-        onPrimary();
+        if (onPrimary instanceof Function) {
+            onPrimary();
+        }
         closeDialog();
     }
 </script>
@@ -100,7 +102,7 @@
 <DialogBase bind:showDialog {onOpen} {onClose} {...restProps}>
     <div class="flex h-full flex-col">
         <div class="flex h-full w-full flex-col">
-            <div class="mb-1 flex shrink-0 items-center justify-between">
+            <div class="mb-1 ml-2 flex shrink-0 items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <p
                         class="text-default-text flex items-center gap-2 text-lg"
@@ -117,8 +119,9 @@
                     <FaIconButton
                         variant="danger"
                         callOnClick={() => {
-                            closeDialog();
-                            onClose();
+                            let onCloseRes = onClose();
+                            if (onCloseRes || onCloseRes === undefined)
+                                closeDialog();
                         }}
                         icon={faXmark}
                     />
@@ -146,7 +149,6 @@
                             <FaIconButton
                                 callOnClick={() => {
                                     if (!readonly) onSecondary();
-                                    closeDialog();
                                 }}
                                 variant={secondaryVariant}
                                 disabled={disableSecondary}
@@ -159,7 +161,11 @@
                         <div>
                             <FaIconButton
                                 callOnClick={() => {
-                                    if (!readonly) onPrimary();
+                                    if (
+                                        !readonly &&
+                                        onPrimary instanceof Function
+                                    )
+                                        onPrimary();
                                     if (closeOnPrimary) closeDialog();
                                 }}
                                 variant={primaryVariant}
