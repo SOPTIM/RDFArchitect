@@ -19,7 +19,6 @@
     import { faXmark } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import DialogBase from "$lib/dialog/DialogBase.svelte";
 
@@ -127,23 +126,11 @@
                     />
                 </div>
             </div>
-            <div class="min-h-0 flex-grow overflow-auto">
+            <div class="min-h-0 grow overflow-auto">
                 {@render children?.()}
             </div>
-            <div class="mx-2 my-1 mt-4 flex shrink-0 justify-end space-x-2">
-                {#if readonly}
-                    <!-- In readonly mode, only show the cancel button -->
-                    <div>
-                        <ButtonControl
-                            variant="contrast"
-                            callOnClick={() => {
-                                closeDialog();
-                            }}
-                        >
-                            Close
-                        </ButtonControl>
-                    </div>
-                {:else}
+            {#if !readonly && (secondaryButtonExists || primaryButtonExists)}
+                <div class="mx-2 my-1 mt-4 flex shrink-0 justify-end space-x-2">
                     {#if secondaryButtonExists}
                         <div>
                             <FaIconButton
@@ -175,8 +162,8 @@
                             />
                         </div>
                     {/if}
-                {/if}
-            </div>
+                </div>
+            {/if}
         </div>
     </div>
 </DialogBase>

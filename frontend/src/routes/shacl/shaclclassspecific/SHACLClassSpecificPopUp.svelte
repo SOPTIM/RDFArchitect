@@ -18,7 +18,7 @@
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DialogBase from "$lib/dialog/DialogBase.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassReferencedVia from "./ClassReferencedVia.svelte";
@@ -83,31 +83,24 @@
     }
 </script>
 
-<DialogBase bind:showDialog {onOpen} size="w-3/5 h-4/5">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    size="w-3/5 h-4/5"
+    title={`SHACL shapes validating: "${reactiveClass.label.value}"`}
+    primaryLabel={null}
+>
     <div class="flex h-full flex-col space-y-2">
-        <!-- header with title and close button -->
-        <div class="flex flex-shrink-0">
-            <div class="grow">
-                <p>
-                    SHACL shapes validating: "{reactiveClass.label.value}"
-                </p>
-            </div>
-            <div class="m-1 w-fit">
-                <ButtonControl callOnClick={() => (showDialog = false)}>
-                    close dialog
-                </ButtonControl>
-            </div>
-        </div>
-
         <!-- main content area -->
         <div class="flex min-h-0 flex-1 space-x-2">
             <!-- main content/display of shacl shapes-->
             <div class="flex w-3/4 flex-col">
                 <!-- button controls -->
-                <div class="flex h-9 w-full flex-shrink-0 space-x-2">
+                <div class="flex h-9 w-full shrink-0 space-x-2">
                     <div class="text-nowrap">
                         <ButtonControl
                             callOnClick={() => (showGeneratedShacl = true)}
+                            variant={showGeneratedShacl ? "" : "inline"}
                         >
                             Generated SHACL
                         </ButtonControl>
@@ -115,6 +108,7 @@
                     <div class="text-nowrap">
                         <ButtonControl
                             callOnClick={() => (showGeneratedShacl = false)}
+                            variant={showGeneratedShacl ? "inline" : ""}
                         >
                             Custom SHACL
                         </ButtonControl>
@@ -154,4 +148,4 @@
             </div>
         </div>
     </div>
-</DialogBase>
+</ActionDialog>
