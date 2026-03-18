@@ -88,15 +88,13 @@
     }
 
     function discardChanges() {
-        // Reset ontology object to discard unsaved changes
-        onClose();
+        ontologyObject.reset();
     }
 
     function save() {
-        showDialog = false;
         saveOntology(dataset, graphUri, ontologyObject);
+        ontologyObject.save();
         forceReloadTrigger.trigger();
-        onClose();
     }
 
     function discard() {
@@ -140,10 +138,12 @@
     secondaryLabel={readonly ? null : "Discard"}
     secondaryIcon={faRotateLeft}
     secondaryVariant={"danger"}
-    onSecondary={() => closeDialog(false)}
+    onSecondary={discardChanges}
+    disableSecondary={!hasChanges}
     primaryLabel={readonly ? null : hasChanges ? "Save" : "No Changes"}
     primaryIcon={faSave}
     onPrimary={save}
+    closeOnPrimary={false}
     disablePrimary={disableSubmit}
     {readonly}
     title={readonly ? "View Ontology" : "Edit Ontology"}

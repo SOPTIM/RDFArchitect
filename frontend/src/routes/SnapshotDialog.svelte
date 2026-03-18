@@ -45,7 +45,9 @@
     function onOpen() {
         datasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
-        if (!datasetSelectionLocked) {
+        if (datasetSelectionLocked) {
+            datasets = [{ label: lockedDatasetName }];
+        } else {
             loadDatasets();
         }
     }

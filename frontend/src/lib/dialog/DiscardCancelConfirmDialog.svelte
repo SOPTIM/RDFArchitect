@@ -17,7 +17,7 @@
     import {
         faExclamation,
         faFloppyDisk,
-        faRotateLeft,
+        faTrash,
         faXmark,
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
@@ -95,7 +95,7 @@
         <div>
             <FaIconButton
                 callOnClick={() => closeDialog(onDiscard)}
-                icon={faRotateLeft}
+                icon={faTrash}
                 variant="danger"
                 text="Discard"
                 title="Discard changes"

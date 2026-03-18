@@ -25,10 +25,7 @@
     import { mapReactivePackageToPackageDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactivePackage } from "$lib/models/reactive/reactive-package.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import { getNamespaces } from "./classEditor/fetch-class-editor-context.js";
 
@@ -91,8 +88,6 @@
         if (res.ok) {
             console.log("Successfully saved package");
             pkg.save();
-            editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
             forceReloadTrigger.trigger();
         } else {
             const errorText = await res.text();
@@ -115,7 +110,7 @@
         ? "Create Package"
         : readonly
           ? `View Package "${pkg.label.value}"`
-          : `Edit Package "${pkg.label.value}"`}
+          : `Edit Package "${pkg.label.backup}"`}
 >
     {#if pkg}
         <div class="mx-2 flex h-full flex-col">

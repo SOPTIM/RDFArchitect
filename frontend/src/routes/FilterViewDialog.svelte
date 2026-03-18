@@ -47,7 +47,6 @@
     ]);
 
     function submit() {
-        graphViewState.showGraphFilter.updateValue(false);
         graphViewState.filter.updateValue({
             includeEnumEntries: options[0].value,
             includeAttributes: options[1].value,

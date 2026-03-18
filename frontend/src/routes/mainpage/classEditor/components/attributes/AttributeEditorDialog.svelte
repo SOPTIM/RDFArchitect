@@ -90,8 +90,8 @@
     hasChanges={isNewAttribute || attribute?.isModified}
     isValid={attribute?.isValid}
     title={isNewAttribute
-        ? "Creating new attribute"
-        : `Editing attribute '${attribute.label.backup}'`}
+        ? "Create new attribute"
+        : `Edit attribute '${attribute.label.backup}'`}
     {readonly}
 >
     {#if attribute && classEditorContext && datatypes && readonly !== undefined}

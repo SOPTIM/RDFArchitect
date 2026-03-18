@@ -17,7 +17,6 @@
 
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-import { editorState } from "$lib/sharedState.svelte.js";
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 export function saveApiAssociationToBackend(
@@ -44,24 +43,18 @@ export function saveApiAssociationToBackend(
         );
     }
 
-    return saveAssociationPairCall
-        .then(async res => {
-            if (res.ok) {
-                const associationPairUUIDs = await res.json();
-                console.log(
-                    "Successfully saved association:",
-                    associationPairUUIDs.fromUUID,
-                    associationPairUUIDs.toUUID,
-                );
-            } else {
-                const errorText = await res.text();
-                console.error("Could not save association:", errorText);
-            }
-            return res;
-        })
-        .finally(res => {
-            editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
-            return res;
-        });
+    return saveAssociationPairCall.then(async res => {
+        if (res.ok) {
+            const associationPairUUIDs = await res.json();
+            console.log(
+                "Successfully saved association:",
+                associationPairUUIDs.fromUUID,
+                associationPairUUIDs.toUUID,
+            );
+        } else {
+            const errorText = await res.text();
+            console.error("Could not save association:", errorText);
+        }
+        return res;
+    });
 }

@@ -16,9 +16,7 @@
   -->
 
 <script>
-    import {
-                getNamespaces,
-    } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -58,10 +56,10 @@
 
     let disableSubmit = $derived(
         !selectedDatasetName ||
-        !selectedGraphURI ||
-        !packageURINamespace ||
-        !packageLabel ||
-        packages?.some(pkg => pkg.label.values === packageLabel),
+            !selectedGraphURI ||
+            !packageURINamespace ||
+            !packageLabel ||
+            packages?.some(pkg => pkg.label.values === packageLabel),
     );
 
     $effect(async () => {
@@ -127,11 +125,11 @@
     ) {
         let promise = fetch(
             PUBLIC_BACKEND_URL +
-            "/datasets/" +
-            encodeURIComponent(ds) +
-            "/graphs/" +
-            encodeURIComponent(graph) +
-            "/packages",
+                "/datasets/" +
+                encodeURIComponent(ds) +
+                "/graphs/" +
+                encodeURIComponent(graph) +
+                "/packages",
             {
                 method: "POST",
                 headers: {
@@ -175,12 +173,12 @@
 </script>
 
 <ActionDialog
-        bind:showDialog
-        {onOpen}
-        {onClose}
-        primaryLabel="Add Package"
-        onCloseButton={onClose}
-        onPrimary={() =>
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Add Package"
+    onCloseButton={onClose}
+    onPrimary={() =>
         newPackage(
             selectedDatasetName,
             selectedGraphURI,
@@ -188,32 +186,32 @@
             packageComment,
             packageURINamespace,
         )}
-        disablePrimary={disableSubmit}
-        title="Add Package"
+    disablePrimary={disableSubmit}
+    title="Add Package"
 >
     <div class="mx-2 flex h-full flex-col">
         <DatasetAndGraphSelection
-                bind:dataset={selectedDatasetName}
-                bind:graph={selectedGraphURI}
-                {lockedDatasetName}
-                {lockedGraphUri}
-                allowSelectionOfReadonlyDatasets={false}
-                displayAsCard={false}
+            bind:dataset={selectedDatasetName}
+            bind:graph={selectedGraphURI}
+            {lockedDatasetName}
+            {lockedGraphUri}
+            allowSelectionOfReadonlyDatasets={false}
+            displayAsCard={false}
         />
 
         <label for={domIds.packageURINamespace} class="mt-3 mb-1 block text-sm">
             Namespace
         </label>
         <SelectEditControl
-                id={domIds.packageURINamespace}
-                bind:value={packageURINamespace}
-                options={namespaces}
-                disabled={!selectedDatasetName}
-                placeholder={selectedDatasetName
+            id={domIds.packageURINamespace}
+            bind:value={packageURINamespace}
+            options={namespaces}
+            disabled={!selectedDatasetName}
+            placeholder={selectedDatasetName
                 ? "Select namespace"
                 : "Select a dataset first"}
-                getOptionValue={namespace => namespace.substitutedPrefix}
-                getOptionLabel={namespace =>
+            getOptionValue={namespace => namespace.substitutedPrefix}
+            getOptionLabel={namespace =>
                 `${namespace.substitutedPrefix} (${namespace.prefix})`}
         />
 
@@ -221,18 +219,18 @@
             Package Label
         </label>
         <TextEditControl
-                id={domIds.packageLabel}
-                placeholder="Add a label"
-                bind:value={packageLabel}
+            id={domIds.packageLabel}
+            placeholder="Add a label"
+            bind:value={packageLabel}
         />
 
         <label for={domIds.packageComment} class="mt-3 mb-1 block text-sm">
             Package Comment
         </label>
         <TextAreaControl
-                id={domIds.packageComment}
-                placeholder="Add a comment"
-                bind:value={packageComment}
+            id={domIds.packageComment}
+            placeholder="Add a comment"
+            bind:value={packageComment}
         />
     </div>
 </ActionDialog>
