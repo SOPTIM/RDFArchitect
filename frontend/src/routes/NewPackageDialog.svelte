@@ -17,10 +17,11 @@
 
 <script>
     import {
-        getDatasetNames,
-        getNamespaces,
+                getNamespaces,
     } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -40,37 +41,37 @@
 
     const uuid = crypto.randomUUID();
     const domIds = {
-        datasetName: "datasetNameNewPackage" + uuid,
-        graphURI: "graphUriNewPackage" + uuid,
-        cimPackage: "cimPackageNewPackage" + uuid,
-        classURINamespace: "packageURINamespaceNewPackage" + uuid,
+        packageURINamespace: "packageURINamespaceNewPackage" + uuid,
         packageLabel: "packageNameNewPackage" + uuid,
         packageComment: "packageCommentNewPackage" + uuid,
     };
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let selectedDatasetName = $state();
-    let selectedGraphURI = $state();
+    let selectedDatasetName = $state(null);
+    let selectedGraphURI = $state(null);
     let packageLabel = $state(null);
     let packageComment = $state(null);
-    let packageURINamespace = $state();
+    let packageURINamespace = $state(null);
 
-    let modifiableDatasets = $state([]);
-    let readOnlyDatasets = $state([]);
-    let graphURIs = $state([]);
     let namespaces = $state([]);
     let packages = $state([]);
 
     let disableSubmit = $derived(
         !selectedDatasetName ||
-            !selectedGraphURI ||
-            !packageURINamespace ||
-            !packageLabel ||
-            packages?.some(pkg => pkg.label.values === packageLabel),
+        !selectedGraphURI ||
+        !packageURINamespace ||
+        !packageLabel ||
+        packages?.some(pkg => pkg.label.values === packageLabel),
     );
 
-    const datasetSelectionLocked = $derived(!!lockedDatasetName);
-    const graphSelectionLocked = $derived(!!lockedGraphUri);
+    $effect(async () => {
+        namespaces = await getNamespaces(selectedDatasetName);
+        packageURINamespace = null;
+    });
+
+    $effect(async () => {
+        await getPackages(selectedDatasetName, selectedGraphURI);
+    });
 
     async function onOpen() {
         selectedDatasetName =
@@ -78,56 +79,37 @@
         selectedGraphURI =
             lockedGraphUri ?? editorState.selectedGraph.getValue();
 
-        if (!datasetSelectionLocked) {
-            const datasetNames = await getDatasetNames();
-            modifiableDatasets = datasetNames.modifiable;
-            readOnlyDatasets = datasetNames.readonly;
-        }
+        packageURINamespace = null;
+        packageLabel = null;
+        packageComment = null;
 
-        if (
-            !selectedDatasetName ||
-            readOnlyDatasets.includes(selectedDatasetName)
-        ) {
+        if (!selectedDatasetName) {
             return;
         }
-
-        await getGraphNames(selectedDatasetName);
         namespaces = await getNamespaces(selectedDatasetName);
+
         if (selectedGraphURI) {
             await getPackages(selectedDatasetName, selectedGraphURI);
+        } else {
+            packages = [];
         }
     }
 
     function onClose() {
         selectedDatasetName = null;
-        modifiableDatasets = [];
-        readOnlyDatasets = [];
-        clearOnDatasetChange();
+        selectedGraphURI = null;
+        namespaces = [];
+        packageURINamespace = null;
+        packages = [];
         packageLabel = null;
         packageComment = null;
     }
 
-    // Clear variables that depend on a dataset
-    function clearOnDatasetChange() {
-        namespaces = [];
-        packageURINamespace = null;
-        if (!graphSelectionLocked) {
-            selectedGraphURI = null;
-        }
-        graphURIs = [];
-        packages = [];
-    }
-
-    async function getGraphNames(datasetName) {
-        if (!modifiableDatasets.includes(datasetName)) {
-            graphURIs = [];
+    async function getPackages(datasetName, graphURI) {
+        if (!datasetName || !graphURI) {
+            packages = [];
             return;
         }
-        const res = await bec.getGraphNames(datasetName);
-        graphURIs = await res.json();
-    }
-
-    async function getPackages(datasetName, graphURI) {
         const res = await bec.getPackages(datasetName, graphURI);
         const packagesJSON = await res.json();
         packages = [
@@ -145,11 +127,11 @@
     ) {
         let promise = fetch(
             PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(ds) +
-                "/graphs/" +
-                encodeURIComponent(graph) +
-                "/packages",
+            "/datasets/" +
+            encodeURIComponent(ds) +
+            "/graphs/" +
+            encodeURIComponent(graph) +
+            "/packages",
             {
                 method: "POST",
                 headers: {
@@ -193,12 +175,12 @@
 </script>
 
 <ActionDialog
-    bind:showDialog
-    {onOpen}
-    {onClose}
-    primaryLabel="Add Package"
-    onCloseButton={onClose}
-    onPrimary={() =>
+        bind:showDialog
+        {onOpen}
+        {onClose}
+        primaryLabel="Add Package"
+        onCloseButton={onClose}
+        onPrimary={() =>
         newPackage(
             selectedDatasetName,
             selectedGraphURI,
@@ -206,109 +188,51 @@
             packageComment,
             packageURINamespace,
         )}
-    disablePrimary={disableSubmit}
-    title="Add Package"
+        disablePrimary={disableSubmit}
+        title="Add Package"
 >
     <div class="mx-2 flex h-full flex-col">
-        {#if !datasetSelectionLocked}
-            <label for={domIds.datasetName} class="mb-1">Dataset</label>
-            {#key modifiableDatasets}
-                <select
-                    class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
-                    id={domIds.datasetName}
-                    bind:value={selectedDatasetName}
-                    onchange={async () => {
-                        clearOnDatasetChange();
-                        await getGraphNames(selectedDatasetName);
-                        namespaces = await getNamespaces(selectedDatasetName);
-                    }}
-                >
-                    {#each modifiableDatasets as datasetName}
-                        <option
-                            selected={datasetName === selectedDatasetName}
-                            value={datasetName}
-                        >
-                            {datasetName}
-                        </option>
-                    {/each}
-                    {#each readOnlyDatasets as datasetName}
-                        <option disabled value={datasetName}>
-                            {datasetName}
-                        </option>
-                    {/each}
-                </select>
-            {/key}
-        {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {selectedDatasetName}
-            </div>
-        {/if}
+        <DatasetAndGraphSelection
+                bind:dataset={selectedDatasetName}
+                bind:graph={selectedGraphURI}
+                {lockedDatasetName}
+                {lockedGraphUri}
+                allowSelectionOfReadonlyDatasets={false}
+                displayAsCard={false}
+        />
 
-        {#if graphSelectionLocked}
-            <p class="mt-2 mb-1 font-semibold">Graph</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {selectedGraphURI ?? "No graph selected"}
-            </div>
-        {:else}
-            <label for={domIds.graphURI} class="mt-2 mb-1">Graph</label>
-            {#key graphURIs}
-                <select
-                    class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
-                    id={domIds.graphURI}
-                    bind:value={selectedGraphURI}
-                    disabled={graphURIs.length === 0}
-                    onchange={() => {
-                        getPackages(selectedDatasetName, selectedGraphURI);
-                    }}
-                >
-                    {#each graphURIs as graph_uri}
-                        <option
-                            selected={graph_uri.suffix ===
-                                editorState.selectedGraph.getValue()}
-                            value={(graph_uri.prefix == null
-                                ? ""
-                                : graph_uri.prefix) + graph_uri.suffix}
-                        >
-                            {graph_uri.suffix}
-                        </option>
-                    {/each}
-                </select>
-            {/key}{/if}
-        <label for={domIds.classURINamespace} class="mt-2 mb-1">
+        <label for={domIds.packageURINamespace} class="mt-3 mb-1 block text-sm">
             Namespace
         </label>
-        {#key namespaces}
-            <select
-                class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
-                id={domIds.classURINamespace}
+        <SelectEditControl
+                id={domIds.packageURINamespace}
                 bind:value={packageURINamespace}
-                disabled={namespaces.length === 0}
-            >
-                {#each namespaces as namespace}
-                    <option value={namespace.substitutedPrefix}>
-                        {`${namespace.substitutedPrefix} (${namespace.prefix})`}
-                    </option>
-                {/each}
-            </select>
-        {/key}
-        <label for={domIds.packageLabel} class="mt-2 mb-1">Package Label</label>
-        <TextEditControl
-            id={domIds.packageLabel}
-            placeholder="Add a label"
-            bind:value={packageLabel}
+                options={namespaces}
+                disabled={!selectedDatasetName}
+                placeholder={selectedDatasetName
+                ? "Select namespace"
+                : "Select a dataset first"}
+                getOptionValue={namespace => namespace.substitutedPrefix}
+                getOptionLabel={namespace =>
+                `${namespace.substitutedPrefix} (${namespace.prefix})`}
         />
-        <label for={domIds.packageComment} class="mt-2 mb-1">
+
+        <label for={domIds.packageLabel} class="mt-3 mb-1 block text-sm">
+            Package Label
+        </label>
+        <TextEditControl
+                id={domIds.packageLabel}
+                placeholder="Add a label"
+                bind:value={packageLabel}
+        />
+
+        <label for={domIds.packageComment} class="mt-3 mb-1 block text-sm">
             Package Comment
         </label>
         <TextAreaControl
-            id={domIds.packageComment}
-            placeholder="Add a comment"
-            bind:value={packageComment}
+                id={domIds.packageComment}
+                placeholder="Add a comment"
+                bind:value={packageComment}
         />
     </div>
 </ActionDialog>
