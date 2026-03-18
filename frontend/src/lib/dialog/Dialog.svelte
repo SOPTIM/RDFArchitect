@@ -15,6 +15,7 @@
   -
   -->
 <script>
+    import { Dialog as BitsUiDialog } from "bits-ui";
     import { onDestroy } from "svelte";
     import { untrack } from "svelte";
 
@@ -29,15 +30,18 @@
         children,
     } = $props();
 
-    let dialogElement = $state();
+    let dialogWasOpen = false;
 
     $effect(() => {
         if (showDialog) {
-            eventStack.addEvent(closeDialog);
-            untrack(onOpen);
-            dialogElement?.focus();
-        } else {
+            if (!dialogWasOpen) {
+                eventStack.addEvent(closeDialog);
+                untrack(onOpen);
+                dialogWasOpen = true;
+            }
+        } else if (dialogWasOpen) {
             eventStack.removeEvent(closeDialog);
+            dialogWasOpen = false;
         }
     });
 
@@ -53,23 +57,28 @@
             showDialog = !onCloseReturn;
         }
     }
+
+    function handleEscapeKeydown(event) {
+        event.preventDefault();
+        closeDialog();
+    }
+
+    function handleInteractOutside(event) {
+        event.preventDefault();
+        closeDialog();
+    }
 </script>
 
-{#if showDialog}
-    <div
-        bind:this={dialogElement}
-        class="bg-dialog-backlight fixed top-0 left-0 z-40 flex h-screen w-screen items-center justify-center"
-        role="dialog"
-        aria-modal="true"
-        tabindex="-1"
-        {onkeydown}
-    >
-        <div class="flex size-full items-center justify-center">
-            <div
-                class="border-border bg-window-background rounded border border-solid p-2 shadow {size}"
-            >
-                {@render children?.()}
-            </div>
-        </div>
-    </div>
-{/if}
+<BitsUiDialog.Root bind:open={showDialog}>
+    <BitsUiDialog.Portal>
+        <BitsUiDialog.Overlay class="bg-dialog-backlight fixed inset-0 z-40" />
+        <BitsUiDialog.Content
+            class="border-border bg-window-background fixed top-1/2 left-1/2 z-40 -translate-x-1/2 -translate-y-1/2 rounded border border-solid p-2 shadow outline-none {size}"
+            {onkeydown}
+            onEscapeKeydown={handleEscapeKeydown}
+            onInteractOutside={handleInteractOutside}
+        >
+            {@render children?.()}
+        </BitsUiDialog.Content>
+    </BitsUiDialog.Portal>
+</BitsUiDialog.Root>
