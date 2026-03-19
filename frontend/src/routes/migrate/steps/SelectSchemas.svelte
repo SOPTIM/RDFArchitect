@@ -19,12 +19,11 @@
     import { onMount } from "svelte";
     import { get } from "svelte/store";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     let { disableNext = $bindable() } = $props();

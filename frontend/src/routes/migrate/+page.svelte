@@ -18,9 +18,8 @@
 <script>
     import { onDestroy } from "svelte";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
-
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     import ConfirmClassRenames from "./steps/ConfirmClassRenames.svelte";

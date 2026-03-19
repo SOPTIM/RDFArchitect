@@ -18,7 +18,7 @@
 <script>
     import { onMount } from "svelte";
 
-    import { PUBLIC_BACKEND_URL } from "$env/static/public";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 
     let { substeps = [], currentSubstepIndex = 0 } = $props();
 
