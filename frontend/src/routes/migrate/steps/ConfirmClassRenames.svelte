@@ -17,7 +17,7 @@
 
 <script>
     import { onMount } from "svelte";
-    
+
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
