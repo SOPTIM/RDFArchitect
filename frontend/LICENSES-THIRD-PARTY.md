@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.53.4
+- **Version:** 2.55.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -68,7 +68,7 @@
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.2.1
+- **Version:** 4.2.2
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.56.1
+- **Version:** 8.57.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -144,7 +144,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.15.0
+- **Version:** 3.15.2
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -167,7 +167,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.12.3
+- **Version:** 11.13.0
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
@@ -197,7 +197,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.53.7
+- **Version:** 5.54.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -227,13 +227,13 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.2.1
+- **Version:** 4.2.2
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.56.1
+- **Version:** 8.57.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -257,7 +257,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.0.18
+- **Version:** 4.1.0
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
