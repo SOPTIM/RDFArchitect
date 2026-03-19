@@ -60,9 +60,13 @@
         classes: [],
     };
 
+    let previousContext = $state();
+
     let isDatasetReadOnly = $state(false);
 
     let reactiveClass = $state();
+
+    let previousReactiveClass = $state();
 
     let loadingContext = $state(true);
 
@@ -82,12 +86,20 @@
     );
 
     onMount(async () => {
+        console.log("mounting class editor for class with uuid " + classUuid);
         isDatasetReadOnly = await isReadOnly(datasetName);
         await loadContext();
         await loadReactiveClass();
     });
 
-    onMount(() => eventStack.addEvent(closeClassEditor));
+    onMount(() => {
+        eventStack.addEvent(closeClassEditor);
+        previousReactiveClass = editorState.previousSelectedClass.getValue();
+        isDatasetReadOnly = editorState.previousSelectedDatasetReadOnly.getValue();
+        previousContext = editorState.previousContext.getValue();
+        console.log({ previousReactiveClass });
+        console.log({ previousContext });
+    })
 
     onDestroy(() => eventStack.removeEvent(closeClassEditor));
 
@@ -108,6 +120,10 @@
         editorState.selectedClassDataset.updateValue(datasetName);
         editorState.selectedClassGraph.updateValue(graphUri);
         editorState.selectedClassUUID.updateValue(classUuid);
+        editorState.previousSelectedClass.updateValue(reactiveClass);
+        editorState.previousSelectedDatasetReadOnly.updateValue(isDatasetReadOnly);
+        editorState.previousContext.updateValue(console);
+        console.log("closing class editor");
     }
 
     async function loadContext() {
@@ -125,9 +141,11 @@
             getNamespaces(datasetName),
         ]);
         loadingContext = false;
+        console.log("loading context");
     }
 
     async function loadReactiveClass() {
+        console.log("loading reactive class");
         const classDto = await (
             await bec.getClassInfo(datasetName, graphUri, classUuid)
         ).json();
@@ -176,9 +194,16 @@
         },
         get getSubstitutedNamespace() {
             return function (namespace) {
-                const namespaceObj = context.namespaces.find(
-                    p => p.prefix === namespace,
-                );
+                let namespaceObj;
+                //if (loadingContext) {
+                //    namespaceObj = previousContext.namespaces.find(
+                //        p => p.prefix === namespace,
+                //    );
+                //} else {
+                    namespaceObj = context.namespaces.find(
+                        p => p.prefix === namespace,
+                    );
+                //}
                 let returnValue = namespaceObj
                     ? namespaceObj.substitutedPrefix
                     : namespace;
@@ -281,9 +306,86 @@
             bind:showDialog={propertyShaclRulesDialog.showDialog}
             property={propertyShaclRulesDialog.property}
         />
+    {:else if previousReactiveClass}
+        <Pane
+            size={75}
+            class="bg-window-background z-2 size-full rounded-xs border-none"
+        >
+            <div class="flex size-full flex-col p-2">
+                <ClassEditorButtons
+                    reactiveClass={previousReactiveClass}
+                    bind:showDiscardSaveConfirmDialog
+                    {datasetOfClassToOpenNext}
+                    {graphOfClassToOpenNext}
+                    {classToOpenNext}
+                />
+                <div
+                    class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
+                >
+                    <div class="mt-1 flex max-h-max flex-col justify-between">
+                        <table
+                            class="border-separate border-spacing-x-1.5 border-spacing-y-1"
+                        >
+                            <tbody>
+                            <Uuid uuid={previousReactiveClass.uuid} />
+                            <Label label={previousReactiveClass.label} />
+                            <Namespace
+                                namespace={previousReactiveClass.namespace}
+                            />
+                            <Package pack={previousReactiveClass.package} />
+                            <SuperClass
+                                superClass={previousReactiveClass.superClass}
+                            />
+                            <Stereotypes
+                                classStereotypes={previousReactiveClass.stereotypes}
+                            />
+                            <tr>
+                                <td colspan="2">
+                                    <div
+                                        class="flex size-full flex-col space-y-1.5"
+                                    >
+                                        {#if isEnum}
+                                            <EnumEntries
+                                                enumEntries={previousReactiveClass.enumEntries}
+                                                cls={previousReactiveClass}
+                                            />
+                                        {:else}
+                                            <Attributes
+                                                attributes={previousReactiveClass.attributes}
+                                                {openPropertySHACLRulesDialog}
+                                            />
+                                            <Associations
+                                                associations={previousReactiveClass.associations}
+                                                {openPropertySHACLRulesDialog}
+                                            />
+                                        {/if}
+                                    </div>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </Pane>
+
+        <Pane
+            size={25}
+            class="bg-window-background flex h-full flex-col space-y-1 rounded-xs border-none px-2 pb-2"
+        >
+            <Comment comment={previousReactiveClass.comment} />
+        </Pane>
+        <ShaclPropertySpecificDialog
+            bind:showDialog={propertyShaclRulesDialog.showDialog}
+            property={propertyShaclRulesDialog.property}
+        />
+        <Pane class="bg-white/50 z-2 h-full rounded-xs border-none">
+            Loading class details...
+        </Pane>
     {:else}
         <Pane class="bg-window-background z-2 h-full rounded-xs border-none">
             Loading...
+            {previousReactiveClass}
         </Pane>
     {/if}
 </Splitpanes>

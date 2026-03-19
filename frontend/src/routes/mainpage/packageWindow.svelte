@@ -54,7 +54,7 @@
         </div>
     {/key}
 
-    {#key editorState.selectedClassUUID.subscribe()}
+    <!--{#key editorState.selectedClassUUID.subscribe()}-->
         {#if editorState.selectedClassUUID.getValue()}
             <Splitpanes
                 theme="opencgmes-theme"
@@ -78,5 +78,5 @@
                 </Pane>
             </Splitpanes>
         {/if}
-    {/key}
+    <!--{/key}-->
 </div>
