@@ -43,9 +43,6 @@ export const editorState = {
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
-    previousSelectedClass: new StateValuePair(),
-    previousSelectedDatasetReadOnly: new StateValuePair(),
-    previousContext: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -54,9 +51,6 @@ export const editorState = {
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
         this.selectedClassUUID.updateValue(null);
-        this.previousSelectedClass.updateValue(null);
-        this.previousSelectedDatasetReadOnly.updateValue(null);
-        this.previousContext.updateValue(null);
     },
 };
 
