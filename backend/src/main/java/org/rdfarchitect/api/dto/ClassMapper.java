@@ -20,11 +20,11 @@ package org.rdfarchitect.api.dto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSSubClassOf;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.search.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
 
 import java.util.Collections;
 import java.util.List;

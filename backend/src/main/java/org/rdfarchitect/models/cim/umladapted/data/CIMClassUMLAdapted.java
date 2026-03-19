@@ -22,10 +22,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAssociationPair;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAttribute;
-import org.rdfarchitect.models.cim.search.data.dto.CIMClass;
-import org.rdfarchitect.models.cim.search.data.dto.CIMEnumEntry;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 
 import java.util.ArrayList;
 import java.util.List;

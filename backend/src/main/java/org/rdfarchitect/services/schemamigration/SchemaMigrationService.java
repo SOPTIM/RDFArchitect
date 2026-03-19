@@ -77,7 +77,7 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
                   .graph();
 
         Graph updatedGraph;
-        GraphRewindableWithUUIDs loadedGraph = databasePort.getGraph(updatedSchema);
+        GraphRewindableWithUUIDs loadedGraph = databasePort.getGraphWithContext(updatedSchema).getRdfGraph();
         try {
             loadedGraph.begin(TxnType.READ);
             updatedGraph = GraphUtils.deepCopy(loadedGraph);
@@ -91,7 +91,7 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
     @Override
     public void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema) {
         Graph originalGraph;
-        GraphRewindableWithUUIDs loadedGraph = databasePort.getGraph(originalSchema);
+        GraphRewindableWithUUIDs loadedGraph = databasePort.getGraphWithContext(originalSchema).getRdfGraph();
         try {
             loadedGraph.begin(TxnType.READ);
             originalGraph = GraphUtils.deepCopy(loadedGraph);
@@ -100,7 +100,7 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
         }
 
         Graph updatedGraph;
-        loadedGraph = databasePort.getGraph(updatedSchema);
+        loadedGraph = databasePort.getGraphWithContext(updatedSchema).getRdfGraph();
         try {
             loadedGraph.begin(TxnType.READ);
             updatedGraph = GraphUtils.deepCopy(loadedGraph);

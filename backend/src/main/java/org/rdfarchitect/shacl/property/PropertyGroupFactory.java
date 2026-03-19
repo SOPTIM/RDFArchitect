@@ -22,7 +22,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.shacl.property.shapebuilder.PropertyGroupBuilder;
 
 import java.util.ArrayList;

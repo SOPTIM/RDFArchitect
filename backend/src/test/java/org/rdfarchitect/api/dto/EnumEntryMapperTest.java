@@ -23,12 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
-import org.rdfarchitect.models.cim.search.data.dto.CIMEnumEntry;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFType;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFType;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.UUID;
 

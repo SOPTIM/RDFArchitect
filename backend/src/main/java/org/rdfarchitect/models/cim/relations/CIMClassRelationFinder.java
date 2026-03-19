@@ -22,8 +22,8 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
-import org.rdfarchitect.models.cim.search.data.CIMObjectFetcher;
-import org.rdfarchitect.models.cim.search.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 

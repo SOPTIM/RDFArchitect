@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.models.cim.rendering.mermaid.builder;
 
-import org.rdfarchitect.models.cim.search.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 
 import java.util.List;
 

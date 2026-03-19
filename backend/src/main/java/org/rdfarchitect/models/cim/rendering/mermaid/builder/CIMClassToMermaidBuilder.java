@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.models.cim.rendering.mermaid.builder;
 
-import org.rdfarchitect.models.cim.search.data.dto.CIMClass;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.springframework.util.CollectionUtils;
 

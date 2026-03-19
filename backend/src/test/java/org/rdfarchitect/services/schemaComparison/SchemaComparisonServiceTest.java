@@ -27,7 +27,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.SchemaComparisonService;
 import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;

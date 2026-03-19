@@ -105,7 +105,7 @@ public class SingletonPrimitiveSHACLStoringService implements SHACLInsertUseCase
     @Override
     public ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format) {
         var ontologyModel = ModelFactory.createModelForGraph(graph);
-        var generatedShacl = new SHACLFromCIMGenerator(ontologyModel, SHACL_PREFIX, true).generate();
+        var generatedShacl = new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
         try (var outStream = new ByteArrayOutputStream()) {
             generatedShacl.write(outStream, format.getLang().getName());
             return outStream;

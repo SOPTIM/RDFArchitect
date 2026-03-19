@@ -24,10 +24,10 @@ import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSSubClassOf;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 
 import java.util.Collections;

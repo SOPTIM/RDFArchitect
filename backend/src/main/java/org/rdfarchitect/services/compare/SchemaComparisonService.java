@@ -38,7 +38,7 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
 
     @Override
     public List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, MultipartFile file) {
-        var currentGraph = databasePort.getGraph(graphIdentifier);
+        var currentGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         var uploadedGraph = new GraphFileSourceBuilderImpl()
                   .setFile(file)
                   .setGraphName(GRAPH_URI)
@@ -73,8 +73,8 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
 
     @Override
     public List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, GraphIdentifier otherGraphIdentifier) {
-        var graph = databasePort.getGraph(graphIdentifier);
-        var otherGraph = databasePort.getGraph(otherGraphIdentifier);
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        var otherGraph = databasePort.getGraphWithContext(otherGraphIdentifier).getRdfGraph();
         List<TriplePackageChange> result;
 
         if (graphIdentifier.equals(otherGraphIdentifier)) {

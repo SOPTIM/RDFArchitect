@@ -25,7 +25,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.attributes.CreateAttributeUseCase;

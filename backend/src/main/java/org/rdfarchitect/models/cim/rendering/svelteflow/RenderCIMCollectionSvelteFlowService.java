@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.cim.rendering.svelteflow;
+package org.rdfarchitect.models.cim.rendering.svelteflow;
 
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
@@ -27,17 +27,17 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
-import org.rdfarchitect.cim.data.dto.CIMAssociation;
-import org.rdfarchitect.cim.data.dto.CIMClass;
-import org.rdfarchitect.cim.data.dto.CIMCollection;
-import org.rdfarchitect.cim.data.dto.relations.CIMSAssociationUsed;
-import org.rdfarchitect.cim.data.dto.relations.CIMSMultiplicity;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.cim.rendering.RenderCIMCollectionUseCase;
-import org.rdfarchitect.cim.rendering.RenderingUtils;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.models.cim.rendering.RenderingUtils;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 import org.springframework.util.CollectionUtils;

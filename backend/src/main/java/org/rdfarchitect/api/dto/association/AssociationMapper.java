@@ -22,14 +22,14 @@ import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.DataTypeDTO;
 import org.rdfarchitect.api.dto.MappingUtils;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAssociation;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSAssociationUsed;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSInverseRoleName;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSMultiplicity;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSDomain;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.datatype.RDFSRange;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 @Mapper(componentModel = "spring", uses = {MappingUtils.class})
 public interface AssociationMapper {

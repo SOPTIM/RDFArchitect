@@ -19,8 +19,8 @@ package org.rdfarchitect.models.search.data;
 
 import lombok.Builder;
 import lombok.Value;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.UUID;
 

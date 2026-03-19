@@ -18,8 +18,8 @@
 package org.rdfarchitect.models.cim.rendering;
 
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
 import java.util.UUID;
 

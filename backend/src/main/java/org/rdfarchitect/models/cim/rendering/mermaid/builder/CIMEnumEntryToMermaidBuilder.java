@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.models.cim.rendering.mermaid.builder;
 
-import org.rdfarchitect.models.cim.search.data.dto.CIMEnumEntry;
+import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 
 public class CIMEnumEntryToMermaidBuilder {
 

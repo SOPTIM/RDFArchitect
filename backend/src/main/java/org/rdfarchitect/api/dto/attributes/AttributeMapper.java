@@ -22,15 +22,15 @@ import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.DataTypeDTO;
 import org.rdfarchitect.api.dto.MappingUtils;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAttribute;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSIsDefault;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSIsFixed;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSMultiplicity;
-import org.rdfarchitect.models.cim.search.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSDomain;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.datatype.CIMSDataType;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsDefault;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsFixed;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 

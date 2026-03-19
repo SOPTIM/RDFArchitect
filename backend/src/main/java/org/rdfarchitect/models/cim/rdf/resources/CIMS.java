@@ -23,7 +23,7 @@ import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 
 /**
  * Class containing CIM RDF-predicates as {@link Property properties}.

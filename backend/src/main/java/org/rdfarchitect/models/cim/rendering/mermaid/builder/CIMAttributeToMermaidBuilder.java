@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.models.cim.rendering.mermaid.builder;
 
-import org.rdfarchitect.models.cim.search.data.dto.CIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 
 public class CIMAttributeToMermaidBuilder {
 

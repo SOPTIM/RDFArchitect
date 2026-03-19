@@ -20,10 +20,10 @@ package org.rdfarchitect.cim.rendering.mermaid;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAttribute;
-import org.rdfarchitect.models.cim.search.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.search.data.dto.relations.datatype.CIMSDataType;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
 
 import static org.assertj.core.api.Assertions.*;

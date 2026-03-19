@@ -20,7 +20,7 @@ package org.rdfarchitect.models.cim.relations;
 import lombok.Data;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
-import org.rdfarchitect.models.cim.search.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
 
 import java.util.Collection;
 import java.util.Map;

@@ -21,26 +21,26 @@ import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.cim.data.dto.CIMAssociation;
-import org.rdfarchitect.cim.data.dto.CIMAttribute;
-import org.rdfarchitect.cim.data.dto.CIMClass;
-import org.rdfarchitect.cim.data.dto.CIMCollection;
-import org.rdfarchitect.cim.data.dto.CIMEnumEntry;
-import org.rdfarchitect.cim.data.dto.CIMPackage;
-import org.rdfarchitect.cim.data.dto.relations.CIMSAssociationUsed;
-import org.rdfarchitect.cim.data.dto.relations.CIMSBelongsToCategory;
-import org.rdfarchitect.cim.data.dto.relations.CIMSInverseRoleName;
-import org.rdfarchitect.cim.data.dto.relations.CIMSMultiplicity;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.RDFSDomain;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.RDFType;
-import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSPrimitiveDataType;
-import org.rdfarchitect.cim.data.dto.relations.datatype.RDFSRange;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
-import org.rdfarchitect.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFType;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSPrimitiveDataType;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
+import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.XYPosition;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
@@ -53,7 +53,7 @@ import java.util.UUID;
 
 import static org.mockito.Mockito.*;
 
-public class RenderCIMCollectionTestBase {
+class RenderCIMCollectionTestBase {
 
     protected static final String URI_PREFIX = "http://example.com#";
     protected static CIMCollection cimCollection;

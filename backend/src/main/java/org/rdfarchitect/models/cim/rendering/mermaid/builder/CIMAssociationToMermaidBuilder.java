@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.models.cim.rendering.mermaid.builder;
 
-import org.rdfarchitect.models.cim.search.data.dto.CIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 
 import java.util.Map;
 import java.util.UUID;

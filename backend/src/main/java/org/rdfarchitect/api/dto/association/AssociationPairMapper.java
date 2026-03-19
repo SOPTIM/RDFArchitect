@@ -19,9 +19,9 @@ package org.rdfarchitect.api.dto.association;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAssociation;
-import org.rdfarchitect.models.cim.search.data.dto.CIMAssociationPair;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 

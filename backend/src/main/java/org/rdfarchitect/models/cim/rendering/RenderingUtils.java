@@ -15,10 +15,10 @@
  *
  */
 
-package org.rdfarchitect.cim.rendering;
+package org.rdfarchitect.models.cim.rendering;
 
 import lombok.experimental.UtilityClass;
-import org.rdfarchitect.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
 import java.util.HashMap;
 import java.util.Map;

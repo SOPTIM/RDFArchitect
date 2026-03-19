@@ -29,7 +29,7 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.vocabulary.RDF;
-import org.rdfarchitect.models.cim.search.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.Collection;
 
