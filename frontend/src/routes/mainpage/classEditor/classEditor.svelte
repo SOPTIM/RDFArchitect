@@ -21,6 +21,7 @@
 
     import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
@@ -66,6 +67,8 @@
 
     let loadingContext = $state(true);
 
+    let loadingClass = $state(true);
+
     const propertyShaclRulesDialog = $state({
         showDialog: false,
         property: null,
@@ -80,6 +83,21 @@
     let isEnum = $derived(
         reactiveClass?.stereotypes.contains(enumerationStereotype),
     );
+
+    $effect(async () => {
+        editorState.selectedClassUUID.subscribe();
+        loadingContext = true;
+        loadingClass = true;
+
+        isDatasetReadOnly = await isReadOnly(datasetName);
+        await loadContext();
+        await loadReactiveClass();
+    });
+
+    $effect(async () => {
+        editorState.selectedPackageUUID.subscribe();
+        isDatasetReadOnly = await isReadOnly(datasetName);
+    });
 
     onMount(async () => {
         isDatasetReadOnly = await isReadOnly(datasetName);
@@ -125,6 +143,7 @@
             getNamespaces(datasetName),
         ]);
         loadingContext = false;
+        editorState.selectedContext.trigger();
     }
 
     async function loadReactiveClass() {
@@ -132,6 +151,7 @@
             await bec.getClassInfo(datasetName, graphUri, classUuid)
         ).json();
         reactiveClass = mapClassDtoToReactiveClass(classDto, context.classes);
+        loadingClass = false;
         console.log({ reactiveClass });
     }
 
@@ -203,87 +223,94 @@
     });
 </script>
 
-<Splitpanes
-    theme="opencgmes-theme"
-    horizontal
-    class="bg-window-background h-screen"
->
-    {#if !loadingContext && reactiveClass}
-        <Pane
-            size={75}
-            class="bg-window-background z-2 size-full rounded-xs border-none"
-        >
-            <div class="flex size-full flex-col p-2">
-                <ClassEditorButtons
-                    {reactiveClass}
-                    bind:showDiscardSaveConfirmDialog
-                    {datasetOfClassToOpenNext}
-                    {graphOfClassToOpenNext}
-                    {classToOpenNext}
-                />
-                <div
-                    class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
-                >
-                    <div class="mt-1 flex max-h-max flex-col justify-between">
-                        <table
-                            class="border-separate border-spacing-x-1.5 border-spacing-y-1"
+<div class="relative h-screen w-full">
+    <Splitpanes
+        theme="opencgmes-theme"
+        horizontal
+        class="bg-window-background h-screen"
+    >
+        {#if reactiveClass}
+            <Pane
+                size={75}
+                class="bg-window-background z-2 size-full rounded-xs border-none"
+            >
+                <div class="flex size-full flex-col p-2">
+                    <ClassEditorButtons
+                        {reactiveClass}
+                        bind:showDiscardSaveConfirmDialog
+                        {datasetOfClassToOpenNext}
+                        {graphOfClassToOpenNext}
+                        {classToOpenNext}
+                    />
+                    <div
+                        class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
+                    >
+                        <div
+                            class="mt-1 flex max-h-max flex-col justify-between"
                         >
-                            <tbody>
-                                <Uuid uuid={reactiveClass.uuid} />
-                                <Label label={reactiveClass.label} />
-                                <Namespace
-                                    namespace={reactiveClass.namespace}
-                                />
-                                <Package pack={reactiveClass.package} />
-                                <SuperClass
-                                    superClass={reactiveClass.superClass}
-                                />
-                                <Stereotypes
-                                    classStereotypes={reactiveClass.stereotypes}
-                                />
-                                <tr>
-                                    <td colspan="2">
-                                        <div
-                                            class="flex size-full flex-col space-y-1.5"
-                                        >
-                                            {#if isEnum}
-                                                <EnumEntries
-                                                    enumEntries={reactiveClass.enumEntries}
-                                                    cls={reactiveClass}
-                                                />
-                                            {:else}
-                                                <Attributes
-                                                    attributes={reactiveClass.attributes}
-                                                    {openPropertySHACLRulesDialog}
-                                                />
-                                                <Associations
-                                                    associations={reactiveClass.associations}
-                                                    {openPropertySHACLRulesDialog}
-                                                />
-                                            {/if}
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                            <table
+                                class="border-separate border-spacing-x-1.5 border-spacing-y-1"
+                            >
+                                <tbody>
+                                    <Uuid uuid={reactiveClass.uuid} />
+                                    <Label label={reactiveClass.label} />
+                                    <Namespace
+                                        namespace={reactiveClass.namespace}
+                                    />
+                                    <Package pack={reactiveClass.package} />
+                                    <SuperClass
+                                        superClass={reactiveClass.superClass}
+                                    />
+                                    <Stereotypes
+                                        classStereotypes={reactiveClass.stereotypes}
+                                    />
+                                    <tr>
+                                        <td colspan="2">
+                                            <div
+                                                class="flex size-full flex-col space-y-1.5"
+                                            >
+                                                {#if isEnum}
+                                                    <EnumEntries
+                                                        enumEntries={reactiveClass.enumEntries}
+                                                        cls={reactiveClass}
+                                                    />
+                                                {:else}
+                                                    <Attributes
+                                                        attributes={reactiveClass.attributes}
+                                                        {openPropertySHACLRulesDialog}
+                                                    />
+                                                    <Associations
+                                                        associations={reactiveClass.associations}
+                                                        {openPropertySHACLRulesDialog}
+                                                    />
+                                                {/if}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </Pane>
+            </Pane>
 
-        <Pane
-            size={25}
-            class="bg-window-background flex h-full flex-col space-y-1 rounded-xs border-none px-2 pb-2"
+            <Pane
+                size={25}
+                class="bg-window-background flex h-full flex-col space-y-1 rounded-xs border-none px-2 pb-2"
+            >
+                <Comment comment={reactiveClass.comment} />
+            </Pane>
+            <ShaclPropertySpecificDialog
+                bind:showDialog={propertyShaclRulesDialog.showDialog}
+                property={propertyShaclRulesDialog.property}
+            />
+        {/if}
+    </Splitpanes>
+    {#if loadingClass || loadingContext}
+        <div
+            class="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
         >
-            <Comment comment={reactiveClass.comment} />
-        </Pane>
-        <ShaclPropertySpecificDialog
-            bind:showDialog={propertyShaclRulesDialog.showDialog}
-            property={propertyShaclRulesDialog.property}
-        />
-    {:else}
-        <Pane class="bg-window-background z-2 h-full rounded-xs border-none">
-            Loading...
-        </Pane>
+            <LoadingSpinner />
+        </div>
     {/if}
-</Splitpanes>
+</div>

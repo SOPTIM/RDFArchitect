@@ -17,19 +17,35 @@
 
 <script>
     import { faMinus } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     let { classStereotypes, stereotype } = $props();
 
-    const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
-    const suggestedStereotypes = classEditorContext.stereotypes;
+    const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
+    let suggestedStereotypes = $state();
+    let readonly = $state(false);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    $effect(() => {
+        editorState.selectedContext.subscribe();
+        suggestedStereotypes = classEditorContext.stereotypes;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
+        suggestedStereotypes = classEditorContext.stereotypes;
+    });
 </script>
 
 {#if stereotype.value !== concreteStereotype}

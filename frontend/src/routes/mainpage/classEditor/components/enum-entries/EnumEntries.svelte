@@ -17,24 +17,32 @@
 
 <script>
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import EnumEntry from "./EnumEntry.svelte";
     import EnumEntryEditorDialog from "./EnumEntryEditorDialog.svelte";
 
     const { enumEntries } = $props();
 
-    const readonly = getContext("classEditor").readonly;
-
+    const classEditorContext = getContext("classEditor");
     const enumEntryEditorDialog = $state({
         showDialog: false,
         enumEntry: null,
     });
+    let readonly = $state(false);
 
     let expandStereotypes = $state(true);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function openEnumEntryEditor(enumEntry) {
         enumEntryEditorDialog.enumEntry = enumEntry;

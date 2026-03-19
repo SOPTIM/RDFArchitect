@@ -21,7 +21,7 @@
         faRotateLeft,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
@@ -47,12 +47,25 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
-    const datasetName = classEditorContext.datasetName;
-    const graphUri = classEditorContext.graphUri;
+    let readonly = $state(false);
+    let datasetName = $state();
+    let graphUri = $state();
 
     let showClassDeleteDialog = $state(false);
     let showSHACLClassDialog = $state(false);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+        datasetName = classEditorContext.datasetName;
+        graphUri = classEditorContext.graphUri;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
+        datasetName = classEditorContext.datasetName;
+        graphUri = classEditorContext.graphUri;
+    });
 
     function saveChanges() {
         console.log("Saving changes for class");

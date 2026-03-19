@@ -15,19 +15,27 @@
   -
   -->
 <script>
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { v4 as uuid } from "uuid";
 
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     let { pack } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
     const packages = classEditorContext.packages;
     const id = uuid();
+    let readonly = $state(false);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function getPackageLabel(packageUUID) {
         const pkg = classEditorContext.getPackageByUuid(packageUUID);
