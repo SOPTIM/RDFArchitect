@@ -42,6 +42,7 @@
         datasetOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
+        closeClassEditor,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -146,19 +147,7 @@
     {/if}
     <div class="ml-auto w-1/5">
         <FaIconButton
-            callOnClick={() => {
-                if (reactiveClass.isModified) {
-                    showDiscardSaveConfirmDialog = true;
-                } else {
-                    editorState.selectedClassDataset.updateValue(
-                        datasetOfClassToOpenNext,
-                    );
-                    editorState.selectedClassGraph.updateValue(
-                        graphOfClassToOpenNext,
-                    );
-                    editorState.selectedClassUUID.updateValue(classToOpenNext);
-                }
-            }}
+            callOnClick={closeClassEditor}
             icon={faXmark}
             variant="danger"
             text="Close"

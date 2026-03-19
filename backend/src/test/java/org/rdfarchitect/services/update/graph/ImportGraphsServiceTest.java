@@ -78,11 +78,11 @@ class ImportGraphsServiceTest {
 
         var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
 
-        assertThat(result).containsExactly(
-                  "",
+        assertThat(result.failedFileNames()).isEmpty();
+        assertThat(result.importedGraphUris()).containsExactly(
                   RDFA.GRAPH_URI + "graph",
                   RDFA.GRAPH_URI + "graph_1"
-                                          );
+                                                              );
 
         var captor = ArgumentCaptor.forClass(GraphIdentifier.class);
 

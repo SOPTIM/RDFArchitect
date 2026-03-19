@@ -44,7 +44,6 @@ import java.io.InputStream;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -70,21 +69,20 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public List<String> importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris) {
+    public ImportResult importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris) {
         var reservedGraphUris = loadExistingGraphUris(datasetName);
-        var importedGraphUris = new ArrayList<String>();
-        importedGraphUris.add(""); // index 0 holds failed filenames
+        var result = new ImportResult();
 
         for (int i = 0; i < files.size(); i++) {
             var file = files.get(i);
             if (isZipFile(file)) {
-                importZipFile(importedGraphUris, datasetName, file, reservedGraphUris);
+                importZipFile(result, datasetName, file, reservedGraphUris);
             } else {
                 var requestedUri = getRequestedGraphUri(graphUris, i);
-                importSingleFile(importedGraphUris, datasetName, file, requestedUri, reservedGraphUris);
+                importSingleFile(result, datasetName, file, requestedUri, reservedGraphUris);
             }
         }
-        return importedGraphUris;
+        return result;
     }
 
     private String getRequestedGraphUri(List<String> graphUris, int index) {
@@ -98,7 +96,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         return null;
     }
 
-    private void importSingleFile(List<String> importedGraphUris,
+    private void importSingleFile(ImportResult result,
                                   String datasetName,
                                   MultipartFile file,
                                   String requestedUri,
@@ -107,17 +105,18 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             var graphUri = normalizeGraphUri(requestedUri, file.getOriginalFilename());
             graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
             var graphIdentifier = replaceGraph(datasetName, graphUri, file);
-            importedGraphUris.add(graphUri);
+            result.importedGraphUris().add(graphUri);
             recordChange(graphIdentifier, datasetName);
         } catch (Exception _) {
-            recordFailedImport(importedGraphUris, file.getOriginalFilename());
+            result.failedFileNames().add(file.getOriginalFilename());
         }
     }
 
     private GraphIdentifier replaceGraph(String datasetName, String graphUri, MultipartFile file) {
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+        var graph = parseGraph(file, graphUri);
         databasePort.deleteGraph(graphIdentifier);
-        databasePort.createGraph(graphIdentifier, parseGraph(file, graphUri));
+        databasePort.createGraph(graphIdentifier, graph);
         return graphIdentifier;
     }
 
@@ -133,13 +132,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                                      );
     }
 
-    private void recordFailedImport(List<String> importedGraphUris, String fileName) {
-        var current = importedGraphUris.getFirst();
-        var separator = current.isEmpty() ? "" : ", ";
-        importedGraphUris.set(0, current + separator + fileName);
-    }
-
-    private void importZipFile(List<String> importedGraphUris, String datasetName,
+    private void importZipFile(ImportResult result, String datasetName,
                                MultipartFile file, Set<String> reservedGraphUris) {
         try (var zipInputStream = new ZipInputStream(file.getInputStream())) {
             ZipEntry entry;
@@ -153,7 +146,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                     throw new DataAccessException("ZIP entry exceeds maximum allowed size: " + entry.getName());
                 }
                 try {
-                    extractAndImportZipEntry(importedGraphUris, datasetName, entry, zipInputStream, reservedGraphUris);
+                    extractAndImportZipEntry(result, datasetName, entry, zipInputStream, reservedGraphUris);
                 } finally {
                     zipInputStream.closeEntry();
                 }
@@ -163,7 +156,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
     }
 
-    private void extractAndImportZipEntry(List<String> importedGraphUris, String datasetName,
+    private void extractAndImportZipEntry(ImportResult result, String datasetName,
                                           ZipEntry entry, ZipInputStream zipInputStream,
                                           Set<String> reservedGraphUris) throws IOException {
         if (entry.isDirectory()) {
@@ -176,7 +169,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             return;
         }
         var extractedFile = toMultipartFile(entryName, zipInputStream);
-        importSingleFile(importedGraphUris, datasetName, extractedFile, null, reservedGraphUris);
+        importSingleFile(result, datasetName, extractedFile, null, reservedGraphUris);
     }
 
     private Set<String> loadExistingGraphUris(String datasetName) {
