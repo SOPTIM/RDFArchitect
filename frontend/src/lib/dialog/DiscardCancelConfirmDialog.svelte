@@ -13,14 +13,13 @@
   -    See the License for the specific language governing permissions and
   -    limitations under the License.
   -->
+
 <script>
     import {
-        faExclamation,
         faFloppyDisk,
         faTrash,
         faXmark,
     } from "@fortawesome/free-solid-svg-icons";
-    import { Fa } from "svelte-fa";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import AlertDialog from "$lib/dialog/AlertDialog.svelte";
@@ -53,36 +52,24 @@
     size="w-full max-w-md"
     onkeydown={handleKeyDown}
 >
-    <div class="flex items-start gap-3 p-2">
-        <div
-            class="bg-red flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white"
-        >
-            <Fa icon={faExclamation} />
-        </div>
+    {#snippet title()}
+        <span class="text-default-text text-lg leading-9 font-semibold">
+            Unsaved changes
+        </span>
+    {/snippet}
 
-        <div class="min-w-0">
-            <BitsUiAlertDialog.Title
-                class="text-default-text text-lg leading-9 font-semibold"
-            >
-                Unsaved changes
-            </BitsUiAlertDialog.Title>
-
-            <BitsUiAlertDialog.Description
-                class="text-text-subtle space-y-1 pt-2 pb-1"
-            >
-                <p class="text-sm leading-relaxed">
-                    Unsaved changes will be lost.
-                </p>
-                <p class="text-sm leading-relaxed">
-                    {#if disableSave}
-                        Cannot save because the changes are invalid.
-                    {:else}
-                        Do you want to save before continuing?
-                    {/if}
-                </p>
-            </BitsUiAlertDialog.Description>
+    {#snippet description()}
+        <div class="text-text-subtle space-y-1 pt-2 pb-1">
+            <p class="text-sm leading-relaxed">Unsaved changes will be lost.</p>
+            <p class="text-sm leading-relaxed">
+                {#if disableSave}
+                    Cannot save because the changes are invalid.
+                {:else}
+                    Do you want to save before continuing?
+                {/if}
+            </p>
         </div>
-    </div>
+    {/snippet}
     <div class="flex flex-row justify-end gap-2 px-2 pb-2">
         <div>
             <FaIconButton
