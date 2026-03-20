@@ -30,21 +30,14 @@
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
-
-    const defaultDatasetName = "default";
-    const defaultGraphUri = "default";
     const fileInputId = `actual-file-input-shacl-upload-${crypto.randomUUID()}`;
     let datasetName = $state("");
     let graphURI = $state("");
     let file = $state(null);
-    let readOnlyDatasets = $state([]);
 
     const lockedDatasetNameValue = $derived(lockedDatasetName);
     const lockedGraphUriValue = $derived(lockedGraphUri);
-    const isReadOnlySelected = $derived(
-        readOnlyDatasets.includes(datasetName || defaultDatasetName),
-    );
-    let disableSubmit = $derived(!file || isReadOnlySelected);
+    let disableSubmit = $derived(!file || !datasetName || !graphURI);
 
     async function onOpen() {
         if (showDialog) {
@@ -57,17 +50,7 @@
         }
     }
 
-    function setDefaultIfNotSet() {
-        if (datasetName === "") {
-            datasetName = defaultDatasetName;
-        }
-        if (graphURI === "") {
-            graphURI = defaultGraphUri;
-        }
-    }
-
     async function importGraph() {
-        setDefaultIfNotSet();
         let formData = new FormData();
         formData.append("file", file);
         fetch(
@@ -103,7 +86,7 @@
 <ActionDialog
     bind:showDialog
     {onOpen}
-    submitLabel="Import"
+    primaryLabel="Import"
     disablePrimary={disableSubmit}
     onPrimary={importGraph}
     title="Import SHACL Shapes"

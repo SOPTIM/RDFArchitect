@@ -30,15 +30,16 @@
     let graphExportComponent = $state(null);
     let onPrimary = $derived(
         graphExportComponent
-            ? graphExportComponent.handleExport(
-                  (datasetName, graphURI) =>
-                      PUBLIC_BACKEND_URL +
-                      "/datasets/" +
-                      encodeURIComponent(datasetName) +
-                      "/graphs/" +
-                      encodeURIComponent(graphURI) +
-                      "/content",
-              )
+            ? () =>
+                  graphExportComponent.handleExport(
+                      (datasetName, graphURI) =>
+                          PUBLIC_BACKEND_URL +
+                          "/datasets/" +
+                          encodeURIComponent(datasetName) +
+                          "/graphs/" +
+                          encodeURIComponent(graphURI) +
+                          "/content",
+                  )
             : null,
     );
 </script>
@@ -56,13 +57,6 @@
         bind:disablePrimary
         {lockedDatasetName}
         {lockedGraphUri}
-        getAPIRoute={(datasetName, graphURI) =>
-            PUBLIC_BACKEND_URL +
-            "/datasets/" +
-            encodeURIComponent(datasetName) +
-            "/graphs/" +
-            encodeURIComponent(graphURI) +
-            "/content"}
         generateOntologyEntries={true}
     />
 </ActionDialog>

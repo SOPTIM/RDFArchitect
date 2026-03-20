@@ -151,7 +151,6 @@
     {onClose}
     primaryLabel="Add graph"
     onPrimary={addGraph}
-    disabledPrimary={disableSubmit}
     title="Add graph"
     disablePrimary={disableSubmit}
 >

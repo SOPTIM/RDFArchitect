@@ -37,17 +37,18 @@
     let shaclExportDialog = $state(null);
     let onPrimary = $derived(
         shaclExportDialog
-            ? shaclExportDialog.handleExport(
-                  (datasetName, graphURI) =>
-                      PUBLIC_BACKEND_URL +
-                      "/datasets/" +
-                      encodeURIComponent(datasetName) +
-                      "/graphs/" +
-                      encodeURIComponent(graphURI) +
-                      "/shacl/" +
-                      exportMode +
-                      "/file",
-              )
+            ? () =>
+                  shaclExportDialog.handleExport(
+                      (datasetName, graphURI) =>
+                          PUBLIC_BACKEND_URL +
+                          "/datasets/" +
+                          encodeURIComponent(datasetName) +
+                          "/graphs/" +
+                          encodeURIComponent(graphURI) +
+                          "/shacl/" +
+                          exportMode +
+                          "/file",
+                  )
             : null,
     );
 
@@ -81,15 +82,6 @@
             bind:showDialog
             bind:disablePrimary
             bind:onSubmit={onPrimary}
-            getAPIRoute={(datasetName, graphURI) =>
-                PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetName) +
-                "/graphs/" +
-                encodeURIComponent(graphURI) +
-                "/shacl/" +
-                exportMode +
-                "/file"}
             {lockedDatasetName}
             {lockedGraphUri}
             supportedMediaTypes={reorderedSupportedRDFMediaTypes}

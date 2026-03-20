@@ -38,7 +38,6 @@
     function closeDialog(triggerConfirmDialog) {
         if (triggerConfirmDialog && hasChanges) {
             showDiscardSaveConfirmDialog = true;
-            console.warn("Unsaved changes, showing confirm dialog");
             return false;
         }
         if (hasChanges) {

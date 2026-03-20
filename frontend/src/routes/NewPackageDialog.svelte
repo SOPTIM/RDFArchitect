@@ -177,7 +177,6 @@
     {onOpen}
     {onClose}
     primaryLabel="Add Package"
-    onCloseButton={onClose}
     onPrimary={() =>
         newPackage(
             selectedDatasetName,

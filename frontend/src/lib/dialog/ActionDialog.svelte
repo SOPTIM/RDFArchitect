@@ -93,7 +93,9 @@
         if (onPrimary instanceof Function) {
             onPrimary();
         }
-        closeDialog();
+        if (closeOnPrimary) {
+            closeDialog();
+        }
     }
 </script>
 
