@@ -59,7 +59,7 @@
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
     <ContextMenu.TriggerArea
         bind:ref={triggerRef}
-        class="pointer-events-none fixed h-px w-px opacity-0"
+        class="fixed h-px w-px opacity-0"
         style={triggerStyle}
         {disabled}
     />
