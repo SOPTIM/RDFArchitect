@@ -28,7 +28,6 @@
     import {
         editorState,
         forceReloadTrigger,
-        diagramFocusState,
     } from "$lib/sharedState.svelte.js";
 
     const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -57,10 +56,10 @@
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
             editorState.selectedClassUUID.updateValue(searchResult.uuid);
-            diagramFocusState.classUUID.updateValue(searchResult.uuid);
+            editorState.focusedClassUUID.updateValue(searchResult.uuid);
         } else if (searchResult.type === "PACKAGE") {
             editorState.selectedClassUUID.updateValue(null);
-            diagramFocusState.classUUID.updateValue(null);
+            editorState.focusedClassUUID.updateValue(null);
             editorState.selectedPackageUUID.updateValue(searchResult.uuid);
         } else {
             editorState.selectedClassDataset.updateValue(
@@ -70,7 +69,7 @@
             editorState.selectedClassUUID.updateValue(
                 searchResult.parentClassUUID,
             );
-            diagramFocusState.classUUID.updateValue(
+            editorState.focusedClassUUID.updateValue(
                 searchResult.parentClassUUID,
             );
         }

@@ -34,7 +34,6 @@
     import {
         editorState,
         forceReloadTrigger,
-        diagramFocusState,
     } from "$lib/sharedState.svelte.js";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
@@ -85,6 +84,36 @@
     );
 
     $effect(() => {
+        syncDiagramElements();
+    });
+
+    $effect(async () => {
+        forceReloadTrigger.subscribe();
+        if (applyLayout) {
+            await applyELKLayout();
+        } else if (!hasDefaultLayout) {
+            isLoading = false;
+        }
+    });
+
+    $effect(async () => {
+        const dataset = editorState.selectedDataset.getValue();
+        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+    });
+
+    $effect(() => {
+        editorState.focusedClassUUID.subscribe();
+        focusRequestedClassInDiagram();
+    });
+
+    onMount(() => {
+        svelteFlowAPI = {
+            svelteFlow: useSvelteFlow(),
+            nodes: useNodes(),
+        };
+    });
+
+    function syncDiagramElements() {
         let nextNodes = [...inputNodes];
         const nextHasDefaultLayout =
             nextNodes.length > 0 &&
@@ -185,25 +214,10 @@
         if (!nextHasDefaultLayout) {
             isLoading = false;
         }
-    });
+    }
 
-    $effect(async () => {
-        forceReloadTrigger.subscribe();
-        if (applyLayout) {
-            await applyELKLayout();
-        } else if (!hasDefaultLayout) {
-            isLoading = false;
-        }
-    });
-
-    $effect(async () => {
-        const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
-    });
-
-    $effect(() => {
-        diagramFocusState.classUUID.subscribe();
-        const focusClassUUID = diagramFocusState.classUUID.getValue();
+    function focusRequestedClassInDiagram() {
+        const focusClassUUID = editorState.focusedClassUUID.getValue();
         if (!focusClassUUID || !nodesInit.current) {
             return;
         }
@@ -224,16 +238,9 @@
                 duration: 400,
                 maxZoom: 1.6,
             });
-            diagramFocusState.classUUID.updateValue(null);
+            editorState.focusedClassUUID.updateValue(null);
         });
-    });
-
-    onMount(() => {
-        svelteFlowAPI = {
-            svelteFlow: useSvelteFlow(),
-            nodes: useNodes(),
-        };
-    });
+    }
 
     async function isReadOnly(datasetName) {
         const res = await bec.isReadOnly(datasetName);

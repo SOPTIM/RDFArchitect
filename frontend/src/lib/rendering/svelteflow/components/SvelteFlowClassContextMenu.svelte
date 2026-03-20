@@ -20,6 +20,12 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
 
+    import {
+        getContextMenuTriggerStyle,
+        handleContextMenuOpenChange,
+        syncContextMenuTrigger,
+    } from "./contextMenuUtils.js";
+
     let {
         request = null,
         disabled = false,
@@ -30,45 +36,19 @@
     let triggerRef = $state(null);
     let open = $state(false);
 
-    let triggerStyle = $derived(
-        request
-            ? `position: fixed; left: ${request.x}px; top: ${request.y}px; width: 1px; height: 1px; opacity: 0; pointer-events: none;`
-            : "position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none;",
-    );
+    let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
     $effect(() => {
-        if (disabled) {
-            open = false;
-            return;
-        }
-        if (!request) {
-            open = false;
-            return;
-        }
-        if (!triggerRef) {
-            return;
-        }
-
-        queueMicrotask(() => {
-            triggerRef.dispatchEvent(
-                new MouseEvent("contextmenu", {
-                    bubbles: true,
-                    cancelable: true,
-                    button: 2,
-                    buttons: 2,
-                    clientX: request.x,
-                    clientY: request.y,
-                    view: window,
-                }),
-            );
+        syncContextMenuTrigger({
+            disabled,
+            request,
+            triggerRef,
+            setOpen: nextOpen => (open = nextOpen),
         });
     });
 
     function handleOpenChange(nextOpen) {
-        open = nextOpen;
-        if (!nextOpen) {
-            onClose();
-        }
+        handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
     }
 
     function handleDeleteClass() {
@@ -79,11 +59,11 @@
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
     <ContextMenu.TriggerArea
         bind:ref={triggerRef}
-        class="fixed h-px w-px opacity-0"
+        class="pointer-events-none fixed h-px w-px opacity-0"
         style={triggerStyle}
         {disabled}
     />
-    <ContextMenu.Content style="z-index: 1200;">
+    <ContextMenu.Content>
         <ContextMenu.Item.Button
             onSelect={handleDeleteClass}
             {disabled}

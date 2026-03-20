@@ -161,8 +161,7 @@
                 </div>
                 {#if isLoading}
                     <div
-                        class="bg-window-background absolute inset-0 z-10 flex items-center justify-center"
-                        style="width: 100%;"
+                        class="bg-window-background absolute inset-0 z-10 flex w-full items-center justify-center"
                     >
                         <LoadingSpinner ariaLabel="Loading diagram" />
                     </div>
@@ -190,8 +189,7 @@
                 {/if}
             {:else}
                 <div
-                    class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                    style="width: 100%;"
+                    class="absolute top-0 bottom-0 left-0 flex w-full items-center justify-center"
                 >
                     <EmptyStateCard
                         title="No classes in this package"
@@ -206,8 +204,7 @@
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             <div
-                class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                style="width: 100%;"
+                class="absolute top-0 bottom-0 left-0 flex w-full items-center justify-center"
             >
                 <EmptyStateCard
                     title="No diagram requested yet"

@@ -33,6 +33,7 @@ import { SimpleTrigger, StateValuePair } from "./statePrimitives.svelte.js";
  *  selectedClassDataset: StateValuePair<string | null>,
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClassUUID: StateValuePair<string | null>,
+ *  focusedClassUUID: StateValuePair<string | null>,
  *  reset: () => void
  * }}
  */
@@ -43,6 +44,7 @@ export const editorState = {
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
+    focusedClassUUID: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -51,6 +53,7 @@ export const editorState = {
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
         this.selectedClassUUID.updateValue(null);
+        this.focusedClassUUID.updateValue(null);
     },
 };
 
@@ -86,12 +89,4 @@ export const forceReloadTrigger = new SimpleTrigger();
  */
 export const compareState = {
     changeList: new StateValuePair(null),
-};
-
-/**
- * The diagramFocusState contains focus requests for the diagram view.
- * @type {{ classUUID: StateValuePair<string | null> }}
- */
-export const diagramFocusState = {
-    classUUID: new StateValuePair(null),
 };

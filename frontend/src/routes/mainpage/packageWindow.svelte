@@ -69,6 +69,7 @@
             if (!editorState.selectedClassUUID.getValue()) {
                 return;
             }
+            // event.detail[1] holds the size of the class editor pane.
             classEditorPaneWidth = event.detail[1].size;
             const packageKey = getPackageKey();
             if (packageKey) {

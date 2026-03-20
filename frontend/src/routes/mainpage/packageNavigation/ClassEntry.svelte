@@ -26,7 +26,7 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { editorState, diagramFocusState } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import {
@@ -82,11 +82,11 @@
     }
 
     function focusClassInDiagram() {
-        if (diagramFocusState.classUUID.getValue() === cls.uuid) {
-            diagramFocusState.classUUID.trigger();
+        if (editorState.focusedClassUUID.getValue() === cls.uuid) {
+            editorState.focusedClassUUID.trigger();
             return;
         }
-        diagramFocusState.classUUID.updateValue(cls.uuid);
+        editorState.focusedClassUUID.updateValue(cls.uuid);
     }
 
     function showClassInPackage() {
