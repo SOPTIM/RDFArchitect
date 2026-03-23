@@ -19,9 +19,9 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
+    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
