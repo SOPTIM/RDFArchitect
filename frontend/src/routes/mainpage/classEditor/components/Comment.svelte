@@ -33,13 +33,12 @@
     let editClassComment = $state(false);
     let readonly = $state(false);
 
-    onMount(() => readonly = classEditorContext.readonly);
+    onMount(() => (readonly = classEditorContext.readonly));
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-    })
-
+    });
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">

@@ -56,7 +56,7 @@
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-    })
+    });
 
     onDestroy(() => {
         resizeObserver?.disconnect();

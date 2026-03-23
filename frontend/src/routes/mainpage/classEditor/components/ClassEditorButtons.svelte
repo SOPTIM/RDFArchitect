@@ -65,7 +65,7 @@
         readonly = classEditorContext.readonly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
-    })
+    });
 
     function saveChanges() {
         console.log("Saving changes for class");

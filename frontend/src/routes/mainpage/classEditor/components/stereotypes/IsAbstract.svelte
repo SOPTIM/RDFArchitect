@@ -32,13 +32,12 @@
 
     onMount(() => {
         readonly = classEditorContext.readonly;
-    })
+    });
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-    })
-
+    });
 </script>
 
 <tr>

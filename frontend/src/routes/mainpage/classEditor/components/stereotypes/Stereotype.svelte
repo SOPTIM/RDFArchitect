@@ -40,13 +40,12 @@
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-    })
+    });
 
     $effect(() => {
         editorState.selectedContext.subscribe();
         suggestedStereotypes = classEditorContext.stereotypes;
-    })
-
+    });
 </script>
 
 {#if stereotype.value !== concreteStereotype}

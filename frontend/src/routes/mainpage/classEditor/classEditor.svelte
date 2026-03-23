@@ -24,14 +24,17 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
-    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import {
         getClasses,
         getDataTypes,
         getNamespaces,
         getPackages,
-        getStereotypes
+        getStereotypes,
     } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
@@ -58,7 +61,7 @@
         stereotypes: [],
         datatypes: [],
         packages: [],
-        classes: []
+        classes: [],
     };
 
     let isDatasetReadOnly = $state(false);
@@ -71,7 +74,7 @@
 
     const propertyShaclRulesDialog = $state({
         showDialog: false,
-        property: null
+        property: null,
     });
 
     let showDiscardSaveConfirmDialog = $state(false);
@@ -81,7 +84,7 @@
     let classToOpenNext = $state(null);
 
     let isEnum = $derived(
-        reactiveClass?.stereotypes.contains(enumerationStereotype)
+        reactiveClass?.stereotypes.contains(enumerationStereotype),
     );
 
     onMount(async () => {
@@ -104,19 +107,17 @@
         await loadReactiveClass();
     });
 
-
     $effect(async () => {
         editorState.selectedPackageUUID.subscribe();
         isDatasetReadOnly = await isReadOnly(datasetName);
-    })
-
+    });
 
     function closeClassEditor(
         { datasetName = null, graphUri = null, classUuid = null } = {
             datasetName: null,
             graphUri: null,
-            classUuid: null
-        }
+            classUuid: null,
+        },
     ) {
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
@@ -192,14 +193,14 @@
         },
         // get Objects by identifier functions
         get getClassByUuid() {
-            return function(uuid) {
+            return function (uuid) {
                 return context.classes.find(cls => cls.uuid === uuid);
             };
         },
         get getSubstitutedNamespace() {
-            return function(namespace) {
+            return function (namespace) {
                 const namespaceObj = context.namespaces.find(
-                    p => p.prefix === namespace
+                    p => p.prefix === namespace,
                 );
                 let returnValue = namespaceObj
                     ? namespaceObj.substitutedPrefix
@@ -211,17 +212,17 @@
             };
         },
         get getDatatypeByUri() {
-            return function(uri) {
+            return function (uri) {
                 return context.datatypes.find(
-                    dt => dt.prefix + dt.label === uri
+                    dt => dt.prefix + dt.label === uri,
                 );
             };
         },
         get getPackageByUuid() {
-            return function(uuid) {
+            return function (uuid) {
                 return context.packages.find(pkg => pkg.uuid === uuid);
             };
-        }
+        },
     });
 </script>
 
@@ -231,7 +232,6 @@
         horizontal
         class="bg-window-background h-screen"
     >
-
         {#if reactiveClass}
             <Pane
                 size={75}
@@ -248,46 +248,48 @@
                     <div
                         class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
                     >
-                        <div class="mt-1 flex max-h-max flex-col justify-between">
+                        <div
+                            class="mt-1 flex max-h-max flex-col justify-between"
+                        >
                             <table
                                 class="border-separate border-spacing-x-1.5 border-spacing-y-1"
                             >
                                 <tbody>
-                                <Uuid uuid={reactiveClass.uuid} />
-                                <Label label={reactiveClass.label} />
-                                <Namespace
-                                    namespace={reactiveClass.namespace}
-                                />
-                                <Package pack={reactiveClass.package} />
-                                <SuperClass
-                                    superClass={reactiveClass.superClass}
-                                />
-                                <Stereotypes
-                                    classStereotypes={reactiveClass.stereotypes}
-                                />
-                                <tr>
-                                    <td colspan="2">
-                                        <div
-                                            class="flex size-full flex-col space-y-1.5"
-                                        >
-                                            {#if isEnum}
-                                                <EnumEntries
-                                                    enumEntries={reactiveClass.enumEntries}
-                                                    cls={reactiveClass}
-                                                />
-                                            {:else}
-                                                <Attributes
-                                                    attributes={reactiveClass.attributes}
-                                                    {openPropertySHACLRulesDialog}
-                                                />
-                                                <Associations
-                                                    associations={reactiveClass.associations}
-                                                    {openPropertySHACLRulesDialog}
-                                                />
-                                            {/if}
-                                        </div>
-                                    </td>
-                                </tr>
+                                    <Uuid uuid={reactiveClass.uuid} />
+                                    <Label label={reactiveClass.label} />
+                                    <Namespace
+                                        namespace={reactiveClass.namespace}
+                                    />
+                                    <Package pack={reactiveClass.package} />
+                                    <SuperClass
+                                        superClass={reactiveClass.superClass}
+                                    />
+                                    <Stereotypes
+                                        classStereotypes={reactiveClass.stereotypes}
+                                    />
+                                    <tr>
+                                        <td colspan="2">
+                                            <div
+                                                class="flex size-full flex-col space-y-1.5"
+                                            >
+                                                {#if isEnum}
+                                                    <EnumEntries
+                                                        enumEntries={reactiveClass.enumEntries}
+                                                        cls={reactiveClass}
+                                                    />
+                                                {:else}
+                                                    <Attributes
+                                                        attributes={reactiveClass.attributes}
+                                                        {openPropertySHACLRulesDialog}
+                                                    />
+                                                    <Associations
+                                                        associations={reactiveClass.associations}
+                                                        {openPropertySHACLRulesDialog}
+                                                    />
+                                                {/if}
+                                            </div>
+                                        </td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -308,7 +310,9 @@
         {/if}
     </Splitpanes>
     {#if loadingClass || loadingContext}
-        <div class="absolute inset-0 z-50 flex items-center justify-center bg-white/50">
+        <div
+            class="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
+        >
             <LoadingSpinner />
         </div>
     {/if}

@@ -37,12 +37,12 @@
 
     let expandStereotypes = $state(true);
 
-    onMount(() => readonly = classEditorContext.readonly);
+    onMount(() => (readonly = classEditorContext.readonly));
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = getContext("classEditor").readonly;
-    })
+    });
 
     function openAttributeEditor(attribute) {
         attributeEditorDialog.attribute = attribute;

@@ -50,13 +50,13 @@
     onMount(() => {
         readonly = classEditorContext.readonly;
         classes = classEditorContext.classes;
-    })
+    });
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
         classes = classEditorContext.classes;
-    })
+    });
 
     function getButtons(multiplicityObject) {
         const buttons = getControlButtonsForReactiveObject(

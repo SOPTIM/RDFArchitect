@@ -26,11 +26,11 @@
     let classEditorPaneWidth = 30;
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
-        editorState.selectedDataset.getValue()
+            editorState.selectedDataset.getValue(),
     );
     let classGraphUri = $derived(
         editorState.selectedClassGraph.getValue() ??
-        editorState.selectedGraph.getValue()
+            editorState.selectedGraph.getValue(),
     );
 
     function handleSplitPaneResize(event) {

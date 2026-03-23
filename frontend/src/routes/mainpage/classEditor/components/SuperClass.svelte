@@ -39,12 +39,12 @@
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-    })
+    });
 
     $effect(() => {
         editorState.selectedContext.subscribe();
         classes = classEditorContext.classes;
-    })
+    });
 
     function getSuperClassLabel(superClassUuid) {
         const cls = classEditorContext.getClassByUuid(superClassUuid);

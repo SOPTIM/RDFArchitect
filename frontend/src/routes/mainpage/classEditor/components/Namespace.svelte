@@ -36,18 +36,18 @@
         readonly = classEditorContext.readonly;
         namespaces = classEditorContext.namespaces;
         reactiveClass = classEditorContext.reactiveClass;
-    })
+    });
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-    })
+    });
 
     $effect(() => {
         editorState.selectedContext.subscribe();
         namespaces = classEditorContext.namespaces;
         reactiveClass = classEditorContext.reactiveClass;
-    })
+    });
 
     function trickleDownNamespaceChange(newNamespaceUri) {
         const oldNamespaceUri = namespace.value;
