@@ -54,14 +54,14 @@
     let showClassDeleteDialog = $state(false);
     let showSHACLClassDialog = $state(false);
 
-    onMount(() => {
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
     });
 
-    $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+    onMount(() => {
         readonly = classEditorContext.readonly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;

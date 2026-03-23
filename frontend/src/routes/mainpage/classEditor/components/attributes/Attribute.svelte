@@ -40,12 +40,12 @@
     const classEditorContext = getContext("classEditor");
     let readonly = $state(false);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function getDatatypeLabelByUri(uri) {
         const datatype = classEditorContext.getDatatypeByUri(uri);

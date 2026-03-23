@@ -27,8 +27,9 @@
     const classEditorContext = getContext("classEditor");
     let id = uuidv4();
 
-    let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
     let readonly = $state(false);
+
+    let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
 
     onMount(() => {
         readonly = classEditorContext.readonly;

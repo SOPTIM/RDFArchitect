@@ -30,12 +30,12 @@
     const classEditorContext = getContext("classEditor");
     let readonly = $state(false);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 </script>
 
 <tr>

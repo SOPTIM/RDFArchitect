@@ -22,21 +22,22 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
 
+    import { editorState } from "$lib/sharedState.svelte.js";
+
     import EnumEntry from "./EnumEntry.svelte";
     import EnumEntryEditorDialog from "./EnumEntryEditorDialog.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { enumEntries } = $props();
 
     const classEditorContext = getContext("classEditor");
     let readonly = $state(false);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     const enumEntryEditorDialog = $state({
         showDialog: false,

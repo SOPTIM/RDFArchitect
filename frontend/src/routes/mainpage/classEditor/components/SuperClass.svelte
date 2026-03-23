@@ -27,14 +27,10 @@
     let { superClass } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let classes = $state();
     const id = uuid();
-    let readonly = $state(false);
 
-    onMount(() => {
-        readonly = classEditorContext.readonly;
-        classes = classEditorContext.classes;
-    });
+    let classes = $state();
+    let readonly = $state(false);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
@@ -43,6 +39,11 @@
 
     $effect(() => {
         editorState.selectedContext.subscribe();
+        classes = classEditorContext.classes;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
         classes = classEditorContext.classes;
     });
 

@@ -30,12 +30,12 @@
     const id = uuid();
     let readonly = $state(false);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function getPackageLabel(packageUUID) {
         const pkg = classEditorContext.getPackageByUuid(packageUUID);

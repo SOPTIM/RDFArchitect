@@ -23,8 +23,9 @@
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
 
-    import AsciidocComment from "../asciidocComment.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
+
+    import AsciidocComment from "../asciidocComment.svelte";
 
     const { comment } = $props();
 
@@ -33,12 +34,12 @@
     let editClassComment = $state(false);
     let readonly = $state(false);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">

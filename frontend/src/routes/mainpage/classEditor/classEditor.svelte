@@ -19,15 +19,14 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+
     import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import {
         getClasses,
@@ -36,6 +35,7 @@
         getPackages,
         getStereotypes,
     } from "./fetch-class-editor-context.js";
+
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
     import Attributes from "./components/attributes/Attributes.svelte";
@@ -48,7 +48,6 @@
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
     import Uuid from "./components/Uuid.svelte";
-    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
 
     const { datasetName, graphUri, classUuid } = $props();
 
@@ -87,16 +86,6 @@
         reactiveClass?.stereotypes.contains(enumerationStereotype),
     );
 
-    onMount(async () => {
-        isDatasetReadOnly = await isReadOnly(datasetName);
-        await loadContext();
-        await loadReactiveClass();
-    });
-
-    onMount(() => eventStack.addEvent(closeClassEditor));
-
-    onDestroy(() => eventStack.removeEvent(closeClassEditor));
-
     $effect(async () => {
         editorState.selectedClassUUID.subscribe();
         loadingContext = true;
@@ -111,6 +100,16 @@
         editorState.selectedPackageUUID.subscribe();
         isDatasetReadOnly = await isReadOnly(datasetName);
     });
+
+    onMount(async () => {
+        isDatasetReadOnly = await isReadOnly(datasetName);
+        await loadContext();
+        await loadReactiveClass();
+    });
+
+    onMount(() => eventStack.addEvent(closeClassEditor));
+
+    onDestroy(() => eventStack.removeEvent(closeClassEditor));
 
     function closeClassEditor(
         { datasetName = null, graphUri = null, classUuid = null } = {

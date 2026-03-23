@@ -32,11 +32,6 @@
     let suggestedStereotypes = $state();
     let readonly = $state(false);
 
-    onMount(() => {
-        readonly = classEditorContext.readonly;
-        suggestedStereotypes = classEditorContext.stereotypes;
-    });
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
@@ -44,6 +39,11 @@
 
     $effect(() => {
         editorState.selectedContext.subscribe();
+        suggestedStereotypes = classEditorContext.stereotypes;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
         suggestedStereotypes = classEditorContext.stereotypes;
     });
 </script>

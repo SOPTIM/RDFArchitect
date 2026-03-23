@@ -22,21 +22,22 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
 
+    import { editorState } from "$lib/sharedState.svelte.js";
+
     import IsAbstract from "./IsAbstract.svelte";
     import Stereotype from "./Stereotype.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { classStereotypes } = $props();
 
     const classEditorContext = getContext("classEditor");
     let readonly = $state(false);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     let expandStereotypes = $state(true);
 </script>

@@ -22,9 +22,10 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
 
+    import { editorState } from "$lib/sharedState.svelte.js";
+
     import Association from "./Association.svelte";
     import AssociationEditorDialog from "./associationEditorDialog/AssociationEditorDialog.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { associations, openPropertySHACLRulesDialog } = $props();
 
@@ -46,15 +47,15 @@
     let resizeObserver;
     let readonly = $state(false);
 
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
     onMount(() => {
         updateWidth();
         resizeObserver = new ResizeObserver(updateWidth);
         resizeObserver.observe(container);
-        readonly = classEditorContext.readonly;
-    });
-
-    $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
 

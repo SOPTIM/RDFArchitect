@@ -44,16 +44,15 @@
     let classes = $state();
 
     let lowerButtons = $derived(getButtons(association.multiplicityLowerBound));
-
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));
 
-    onMount(() => {
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
         classes = classEditorContext.classes;
     });
 
-    $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+    onMount(() => {
         readonly = classEditorContext.readonly;
         classes = classEditorContext.classes;
     });

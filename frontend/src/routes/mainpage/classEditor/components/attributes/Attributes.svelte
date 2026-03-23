@@ -21,9 +21,10 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
 
+    import { editorState } from "$lib/sharedState.svelte.js";
+
     import Attribute from "./Attribute.svelte";
     import AttributeEditorDialog from "./AttributeEditorDialog.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { attributes, openPropertySHACLRulesDialog } = $props();
 
@@ -37,12 +38,12 @@
 
     let expandStereotypes = $state(true);
 
-    onMount(() => (readonly = classEditorContext.readonly));
-
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = getContext("classEditor").readonly;
     });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function openAttributeEditor(attribute) {
         attributeEditorDialog.attribute = attribute;
