@@ -84,6 +84,15 @@
             }
         }
         datasets = newDatasets;
+
+        if (!datasetLocked && dataset && !allowSelectionOfReadonlyDatasets) {
+            const selectedDataset = newDatasets.find(
+                option => option.label === dataset,
+            );
+            if (!selectedDataset || selectedDataset.readonly) {
+                dataset = null;
+            }
+        }
     }
 
     async function loadGraphsFor(dataset) {
