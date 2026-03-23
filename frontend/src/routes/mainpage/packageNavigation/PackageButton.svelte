@@ -232,7 +232,7 @@
     graphUri={getUri(graph)}
     {packages}
     {pack}
-    {readOnly}
+    readonly={readOnly}
 />
 
 <PackageDeleteDialog
