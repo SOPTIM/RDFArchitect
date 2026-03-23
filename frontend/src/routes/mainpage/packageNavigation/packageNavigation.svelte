@@ -84,11 +84,9 @@
                             <div
                                 class="flex w-full flex-col items-stretch justify-start gap-[0.1rem] px-2"
                             >
-                                {#key datasetList}
-                                    {#each datasetList as dataset}
-                                        <DatasetSection {dataset} />
-                                    {/each}
-                                {/key}
+                                {#each datasetList as dataset}
+                                    <DatasetSection {dataset} />
+                                {/each}
                             </div>
                         {:else if initialDatasetsLoaded}
                             <div class="text-default-text px-4 py-2 text-sm">
