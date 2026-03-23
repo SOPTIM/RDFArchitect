@@ -20,7 +20,6 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
-
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import Attribute from "./Attribute.svelte";

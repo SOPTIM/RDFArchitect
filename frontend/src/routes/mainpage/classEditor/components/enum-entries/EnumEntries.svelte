@@ -21,7 +21,6 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
-
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import EnumEntry from "./EnumEntry.svelte";
@@ -30,7 +29,13 @@
     const { enumEntries } = $props();
 
     const classEditorContext = getContext("classEditor");
+    const enumEntryEditorDialog = $state({
+        showDialog: false,
+        enumEntry: null,
+    });
     let readonly = $state(false);
+
+    let expandStereotypes = $state(true);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
@@ -38,13 +43,6 @@
     });
 
     onMount(() => (readonly = classEditorContext.readonly));
-
-    const enumEntryEditorDialog = $state({
-        showDialog: false,
-        enumEntry: null,
-    });
-
-    let expandStereotypes = $state(true);
 
     function openEnumEntryEditor(enumEntry) {
         enumEntryEditorDialog.enumEntry = enumEntry;

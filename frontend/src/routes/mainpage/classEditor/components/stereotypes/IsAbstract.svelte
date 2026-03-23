@@ -31,12 +31,12 @@
 
     let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
 
-    onMount(() => {
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
     });
 
-    $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+    onMount(() => {
         readonly = classEditorContext.readonly;
     });
 </script>

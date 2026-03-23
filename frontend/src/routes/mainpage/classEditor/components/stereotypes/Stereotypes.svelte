@@ -21,7 +21,6 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
-
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import IsAbstract from "./IsAbstract.svelte";
@@ -31,6 +30,7 @@
 
     const classEditorContext = getContext("classEditor");
     let readonly = $state(false);
+    let expandStereotypes = $state(true);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
@@ -38,8 +38,6 @@
     });
 
     onMount(() => (readonly = classEditorContext.readonly));
-
-    let expandStereotypes = $state(true);
 </script>
 
 <IsAbstract {classStereotypes} />

@@ -22,7 +22,6 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
-
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import AsciidocComment from "../asciidocComment.svelte";

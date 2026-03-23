@@ -27,9 +27,9 @@
     let { namespace } = $props();
 
     const classEditorContext = getContext("classEditor");
+    const id = uuid();
     let namespaces = $state();
     let reactiveClass = $state();
-    const id = uuid();
     let readonly = $state(false);
 
     $effect(() => {
