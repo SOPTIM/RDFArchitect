@@ -41,6 +41,9 @@
     const isClassSelected = $derived(
         selectionTrigger && !!editorState.selectedClassUUID.getValue(),
     );
+    const classEditorKey = $derived(
+        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClassUUID.getValue() ?? ""}::${editorState.selectedClassUUID.subscribe()}`,
+    );
 
     $effect(() => {
         editorState.selectedDataset.subscribe();
@@ -100,7 +103,7 @@
             class={`h-full ${isClassSelected ? "overflow-auto" : "pointer-events-none hidden overflow-hidden"}`}
         >
             {#if isClassSelected}
-                {#key editorState.selectedClassUUID.getValue()}
+                {#key classEditorKey}
                     <ClassEditor
                         datasetName={classDatasetName}
                         graphUri={classGraphUri}

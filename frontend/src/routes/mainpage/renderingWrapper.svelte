@@ -53,6 +53,8 @@
     let displayDiagram = $derived(true);
 
     $effect(async () => {
+        forceReloadTrigger.subscribe();
+        editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
         isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
     });
