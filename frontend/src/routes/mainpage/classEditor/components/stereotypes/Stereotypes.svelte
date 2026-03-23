@@ -17,17 +17,26 @@
 
 <script>
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
 
     import IsAbstract from "./IsAbstract.svelte";
     import Stereotype from "./Stereotype.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { classStereotypes } = $props();
 
-    const readonly = getContext("classEditor").readonly;
+    const classEditorContext = getContext("classEditor");
+    let readonly = $state(false);
+
+    onMount(() => readonly = classEditorContext.readonly);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    })
 
     let expandStereotypes = $state(true);
 </script>

@@ -24,6 +24,7 @@
 
     import Association from "./Association.svelte";
     import AssociationEditorDialog from "./associationEditorDialog/AssociationEditorDialog.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { associations, openPropertySHACLRulesDialog } = $props();
 
@@ -31,7 +32,7 @@
     const MAX_W = 20;
     const REM_PER_W = 0.25;
 
-    const readonly = getContext("classEditor").readonly;
+    const classEditorContext = getContext("classEditor");
 
     const associationEditorDialog = $state({
         showDialog: false,
@@ -43,12 +44,19 @@
     let container;
     let w = $state(MIN_W);
     let resizeObserver;
+    let readonly = $state(false);
 
     onMount(() => {
         updateWidth();
         resizeObserver = new ResizeObserver(updateWidth);
         resizeObserver.observe(container);
+        readonly = classEditorContext.readonly;
     });
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    })
 
     onDestroy(() => {
         resizeObserver?.disconnect();

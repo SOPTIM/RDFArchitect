@@ -26,11 +26,11 @@
     let classEditorPaneWidth = 30;
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
-            editorState.selectedDataset.getValue(),
+        editorState.selectedDataset.getValue()
     );
     let classGraphUri = $derived(
         editorState.selectedClassGraph.getValue() ??
-            editorState.selectedGraph.getValue(),
+        editorState.selectedGraph.getValue()
     );
 
     function handleSplitPaneResize(event) {
@@ -54,29 +54,27 @@
         </div>
     {/key}
 
-    {#key editorState.selectedClassUUID.subscribe()}
-        {#if editorState.selectedClassUUID.getValue()}
-            <Splitpanes
-                theme="opencgmes-theme"
-                class="pointer-events-none absolute top-0 right-0 h-screen w-screen"
-                onresize={handleSplitPaneResize}
+    {#if editorState.selectedClassUUID.getValue()}
+        <Splitpanes
+            theme="opencgmes-theme"
+            class="pointer-events-none absolute top-0 right-0 h-screen w-screen"
+            onresize={handleSplitPaneResize}
+        >
+            <Pane
+                size={100 - classEditorPaneWidth}
+                class="pointer-events-none bg-transparent"
+            ></Pane>
+            <Pane
+                size={classEditorPaneWidth}
+                minSize={25}
+                class="pointer-events-auto h-full overflow-auto"
             >
-                <Pane
-                    size={100 - classEditorPaneWidth}
-                    class="pointer-events-none bg-transparent"
-                ></Pane>
-                <Pane
-                    size={classEditorPaneWidth}
-                    minSize={25}
-                    class="pointer-events-auto h-full overflow-auto"
-                >
-                    <ClassEditor
-                        datasetName={classDatasetName}
-                        graphUri={classGraphUri}
-                        classUuid={editorState.selectedClassUUID.getValue()}
-                    />
-                </Pane>
-            </Splitpanes>
-        {/if}
-    {/key}
+                <ClassEditor
+                    datasetName={classDatasetName}
+                    graphUri={classGraphUri}
+                    classUuid={editorState.selectedClassUUID.getValue()}
+                />
+            </Pane>
+        </Splitpanes>
+    {/if}
 </div>

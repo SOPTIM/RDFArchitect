@@ -24,14 +24,14 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import {
         getClasses,
         getDataTypes,
         getNamespaces,
         getPackages,
-        getStereotypes,
+        getStereotypes
     } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
@@ -45,6 +45,7 @@
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
     import Uuid from "./components/Uuid.svelte";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
 
     const { datasetName, graphUri, classUuid } = $props();
 
@@ -57,7 +58,7 @@
         stereotypes: [],
         datatypes: [],
         packages: [],
-        classes: [],
+        classes: []
     };
 
     let isDatasetReadOnly = $state(false);
@@ -66,9 +67,11 @@
 
     let loadingContext = $state(true);
 
+    let loadingClass = $state(true);
+
     const propertyShaclRulesDialog = $state({
         showDialog: false,
-        property: null,
+        property: null
     });
 
     let showDiscardSaveConfirmDialog = $state(false);
@@ -78,7 +81,7 @@
     let classToOpenNext = $state(null);
 
     let isEnum = $derived(
-        reactiveClass?.stereotypes.contains(enumerationStereotype),
+        reactiveClass?.stereotypes.contains(enumerationStereotype)
     );
 
     onMount(async () => {
@@ -91,12 +94,29 @@
 
     onDestroy(() => eventStack.removeEvent(closeClassEditor));
 
+    $effect(async () => {
+        editorState.selectedClassUUID.subscribe();
+        loadingContext = true;
+        loadingClass = true;
+
+        isDatasetReadOnly = await isReadOnly(datasetName);
+        await loadContext();
+        await loadReactiveClass();
+    });
+
+
+    $effect(async () => {
+        editorState.selectedPackageUUID.subscribe();
+        isDatasetReadOnly = await isReadOnly(datasetName);
+    })
+
+
     function closeClassEditor(
         { datasetName = null, graphUri = null, classUuid = null } = {
             datasetName: null,
             graphUri: null,
-            classUuid: null,
-        },
+            classUuid: null
+        }
     ) {
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
@@ -125,6 +145,7 @@
             getNamespaces(datasetName),
         ]);
         loadingContext = false;
+        editorState.selectedContext.trigger();
     }
 
     async function loadReactiveClass() {
@@ -132,6 +153,7 @@
             await bec.getClassInfo(datasetName, graphUri, classUuid)
         ).json();
         reactiveClass = mapClassDtoToReactiveClass(classDto, context.classes);
+        loadingClass = false;
         console.log({ reactiveClass });
     }
 
@@ -170,14 +192,14 @@
         },
         // get Objects by identifier functions
         get getClassByUuid() {
-            return function (uuid) {
+            return function(uuid) {
                 return context.classes.find(cls => cls.uuid === uuid);
             };
         },
         get getSubstitutedNamespace() {
-            return function (namespace) {
+            return function(namespace) {
                 const namespaceObj = context.namespaces.find(
-                    p => p.prefix === namespace,
+                    p => p.prefix === namespace
                 );
                 let returnValue = namespaceObj
                     ? namespaceObj.substitutedPrefix
@@ -189,46 +211,48 @@
             };
         },
         get getDatatypeByUri() {
-            return function (uri) {
+            return function(uri) {
                 return context.datatypes.find(
-                    dt => dt.prefix + dt.label === uri,
+                    dt => dt.prefix + dt.label === uri
                 );
             };
         },
         get getPackageByUuid() {
-            return function (uuid) {
+            return function(uuid) {
                 return context.packages.find(pkg => pkg.uuid === uuid);
             };
-        },
+        }
     });
 </script>
 
-<Splitpanes
-    theme="opencgmes-theme"
-    horizontal
-    class="bg-window-background h-screen"
->
-    {#if !loadingContext && reactiveClass}
-        <Pane
-            size={75}
-            class="bg-window-background z-2 size-full rounded-xs border-none"
-        >
-            <div class="flex size-full flex-col p-2">
-                <ClassEditorButtons
-                    {reactiveClass}
-                    bind:showDiscardSaveConfirmDialog
-                    {datasetOfClassToOpenNext}
-                    {graphOfClassToOpenNext}
-                    {classToOpenNext}
-                />
-                <div
-                    class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
-                >
-                    <div class="mt-1 flex max-h-max flex-col justify-between">
-                        <table
-                            class="border-separate border-spacing-x-1.5 border-spacing-y-1"
-                        >
-                            <tbody>
+<div class="relative h-screen w-full">
+    <Splitpanes
+        theme="opencgmes-theme"
+        horizontal
+        class="bg-window-background h-screen"
+    >
+
+        {#if reactiveClass}
+            <Pane
+                size={75}
+                class="bg-window-background z-2 size-full rounded-xs border-none"
+            >
+                <div class="flex size-full flex-col p-2">
+                    <ClassEditorButtons
+                        {reactiveClass}
+                        bind:showDiscardSaveConfirmDialog
+                        {datasetOfClassToOpenNext}
+                        {graphOfClassToOpenNext}
+                        {classToOpenNext}
+                    />
+                    <div
+                        class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
+                    >
+                        <div class="mt-1 flex max-h-max flex-col justify-between">
+                            <table
+                                class="border-separate border-spacing-x-1.5 border-spacing-y-1"
+                            >
+                                <tbody>
                                 <Uuid uuid={reactiveClass.uuid} />
                                 <Label label={reactiveClass.label} />
                                 <Namespace
@@ -264,26 +288,28 @@
                                         </div>
                                     </td>
                                 </tr>
-                            </tbody>
-                        </table>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </Pane>
+            </Pane>
 
-        <Pane
-            size={25}
-            class="bg-window-background flex h-full flex-col space-y-1 rounded-xs border-none px-2 pb-2"
-        >
-            <Comment comment={reactiveClass.comment} />
-        </Pane>
-        <ShaclPropertySpecificDialog
-            bind:showDialog={propertyShaclRulesDialog.showDialog}
-            property={propertyShaclRulesDialog.property}
-        />
-    {:else}
-        <Pane class="bg-window-background z-2 h-full rounded-xs border-none">
-            Loading...
-        </Pane>
+            <Pane
+                size={25}
+                class="bg-window-background flex h-full flex-col space-y-1 rounded-xs border-none px-2 pb-2"
+            >
+                <Comment comment={reactiveClass.comment} />
+            </Pane>
+            <ShaclPropertySpecificDialog
+                bind:showDialog={propertyShaclRulesDialog.showDialog}
+                property={propertyShaclRulesDialog.property}
+            />
+        {/if}
+    </Splitpanes>
+    {#if loadingClass || loadingContext}
+        <div class="absolute inset-0 z-50 flex items-center justify-center bg-white/50">
+            <LoadingSpinner />
+        </div>
     {/if}
-</Splitpanes>
+</div>

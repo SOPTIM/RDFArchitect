@@ -16,7 +16,7 @@
   -->
 <script>
     import { faEye, faGear } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
@@ -24,12 +24,22 @@
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
 
     import AsciidocComment from "../asciidocComment.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { comment } = $props();
 
-    const readonly = getContext("classEditor").readonly;
+    const classEditorContext = getContext("classEditor");
     const id = uuidv4();
     let editClassComment = $state(false);
+    let readonly = $state(false);
+
+    onMount(() => readonly = classEditorContext.readonly);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    })
+
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col">

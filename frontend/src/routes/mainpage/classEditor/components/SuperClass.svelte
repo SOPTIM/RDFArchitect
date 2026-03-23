@@ -16,19 +16,35 @@
   -->
 
 <script>
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { v4 as uuid } from "uuid";
 
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     let { superClass } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const classes = classEditorContext.classes;
-    const readonly = classEditorContext.readonly;
+    let classes = $state();
     const id = uuid();
+    let readonly = $state(false);
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
+        classes = classEditorContext.classes;
+    });
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    })
+
+    $effect(() => {
+        editorState.selectedContext.subscribe();
+        classes = classEditorContext.classes;
+    })
 
     function getSuperClassLabel(superClassUuid) {
         const cls = classEditorContext.getClassByUuid(superClassUuid);
