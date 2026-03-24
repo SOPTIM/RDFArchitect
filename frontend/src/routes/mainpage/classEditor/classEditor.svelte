@@ -220,6 +220,7 @@
                     {datasetOfClassToOpenNext}
                     {graphOfClassToOpenNext}
                     {classToOpenNext}
+                    {closeClassEditor}
                 />
                 <div
                     class="border-border mt-2 size-full overflow-y-scroll rounded-sm border-t"
