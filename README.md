@@ -1,13 +1,32 @@
 # RDFArchitect
 
-The RDFArchitect is a tool for visualizing and editing RDFGraphs that model UML classes using the CIM standard. 
+[![Backend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml)
+[![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)
+[![Version](https://img.shields.io/badge/version-0.15.0-blue.svg)](https://github.com/SOPTIM/RDFArchitect/releases)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-## Features
-The project is still in development. Currently, the following features are available:
-- Import and export RDFGraphs
-- Visualize RDFGraphs using Mermaid
-- Edit classes, properties, and relationships
-- Create new classes and delete existing ones
+RDFArchitect is a web-based tool for visualizing and editing RDF graphs that model UML classes using the CIM standard.
+
+## Overview
+
+RDFArchitect combines a Java/Spring backend and a Svelte frontend to provide a practical modeling workflow for CIM-based RDF data. The application supports importing, editing, comparing, validating, and exporting graph data with an interactive UI.
+
+## Key Features
+
+- Import and export RDF graph content
+- Visualize class structures via UML diagrams
+- Edit classes, attributes, associations, and enum entries
+- Manage datasets, graphs, packages, and namespaces
+- Compare graphs and inspect change history
+- Generate and inspect SHACL content
+
+## Architecture
+
+- Backend: Spring Boot service in `backend/` (default runtime port `8080`)
+- Frontend: SvelteKit app in `frontend/` (dev server on `1407`)
+- Gateway (local Docker): Nginx proxy in `docker-compose.yaml` exposed on `3000`
+  - `/` routes to frontend
+  - `/api` routes to backend
 
 ## Prerequisites
 
@@ -15,87 +34,93 @@ The project is still in development. Currently, the following features are avail
 - Maven 3.9.9 or higher
 - Node.js 24 or higher
 - npm 11 or higher
+- Docker and Docker Compose (optional, for containerized local setup)
 
-## Installation
+## Quickstart
 
-1. Clone the repository:
-    ```sh
-    git clone https://github.com/yourusername/rdfarchitect-backend.git
-    cd rdfarchitect-backend
-    ```
+### Run Locally (Dev)
 
-2. Install the Maven dependencies:
-    ```sh
-    cd backend
-    mvn clean install
-    ```
-   
-3. Install the frontend dependencies:
-    ```sh
-    cd frontend
-    npm install
-    ```
+1. Start backend:
 
-## Running the Application
-
-### Local Dev-Server 
-For development you can start the application locally using the command line or your IDE like this.
-
-To start the backend server, use these commands:
-```sh
+```bash
 cd backend
 mvn spring-boot:run
 ```
-or simply run the `Launcher.java` class.
 
-The application will start on http://localhost:3030/ by default.
+2. Start frontend in a separate terminal:
 
-To start a development server for the web-interface, use the following commands:
-```sh
+```bash
 cd frontend
+npm install
 npm run dev
 ```
 
-Optionally, you can connect a local fuseki server to the application, which automatically imports the contents of the fuseki server on startup. 
-To do this you need a dataset called `test` on the fuseki server and need to enable the connection by adding
+3. Open the frontend at `http://localhost:1407`.
+
+### Run with Docker Compose
+
+```bash
+docker compose up --build
 ```
-fuseki:endpoint [  
-        fuseki:operation fuseki:prefixes-r ;
-        fuseki:name "prefixes"
-        ] ;    
-    fuseki:endpoint [  
-        fuseki:operation fuseki:prefixes-rw ;
-        fuseki:name "prefixes-rw"
-        ] ;
-    .
-```
-to the Service in the template configuration of the dataset profile you are using. 
 
-**Note**: If you want to use the snapshot functionality, you must have the Fuseki server running, as snapshots are persisted and fetched using the server.
+Open `http://localhost:3000`.
 
-### Docker Container
-When starting the containers requests to the frontend container should be forwarded to port 80 and requests to the backend specifically from 8080 to 8080. This ensures that frontend and backend can properly communicate. 
+## Configuration Highlights
 
-New images are automatically pushed for every commit on dev or by adding --deploy to the commit message on another branch.
-The image will then be tagged either by the current branch name or the git commit tag if present.
+Backend config (`backend/src/main/resources`):
+
+- `frontend.url` (default: `http://localhost:1407`)
+- `frontend.accessRoute` (default: `/api`)
+- `database.http.endpoint` (default: `http://localhost:3030`)
+- `database.defaultDataset` (default: `default`)
+
+Frontend runtime config:
+
+- `PUBLIC_BACKEND_URL` controls API base URL (Docker default: `/api`)
+- In container deployments, this is injected via `frontend/docker-entrypoint.sh`
 
 ## API Documentation
-The API documentation is available via Swagger at:
-```
-http://localhost:3030/swagger-ui.html
-```
-When loading the frontend it is possible to preselect a model via the URL-encoded query-parameters "dataset", "graph" and "package".
-```
-.../mainpage?dataset=datasetName&graph=http%3A%2F%example%23graphName&package=packageIri
-```
-## Contributing
-We welcome contributions to the project. Please follow these steps to contribute:
 
-1. Fork the repository.
-2. Create a new branch (git checkout -b feature/YourFeature).
-3. Commit your changes (git commit -m 'Add some feature').
-4. Push to the branch (git push origin feature/YourFeature).
-5. Open a pull request.
+When the backend is running, Swagger UI is available at:
+
+- `http://localhost:8080/swagger-ui.html`
+
+## Development Workflows
+
+### Backend
+
+```bash
+cd backend
+mvn -B test
+mvn -B verify
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm run clean-install
+npm run test
+npm run lint
+npm run build
+```
+
+## Contributing
+
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidelines.
+
+## Security
+
+Please see [SECURITY.md](SECURITY.md) for responsible vulnerability reporting.
+
+## Support
+
+Please see [SUPPORT.md](SUPPORT.md) for usage help, issue routing, and support options.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for release history.
 
 ## License
-This project is licensed under the Apache License 2.0 - see the LICENSE file for details.
+
+This project is licensed under the Apache License 2.0. See [LICENSE](LICENSE).

@@ -86,7 +86,7 @@
 
 ### springdoc-openapi-starter-webmvc-ui
 - **Package:** org.springdoc
-- **Version:** 3.0.1
+- **Version:** 3.0.2
 - **License:** Apache License 2.0
 - **URL:** [https://springdoc.org/springdoc-openapi-starter-webmvc-ui/](https://springdoc.org/springdoc-openapi-starter-webmvc-ui/)
 

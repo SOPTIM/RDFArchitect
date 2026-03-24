@@ -1,22 +1,21 @@
-name: Frontend CI
+name: Publish Test Images
 
 on:
-  push:
-    branches:
-      - "**"
-    tags:
-      - "v*.*.*"
-  pull_request:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Branch, tag, or commit SHA to publish as :test"
+        required: true
+        default: main
+        type: string
 
 permissions:
   contents: read
+  packages: write
 
 jobs:
   frontend:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
     defaults:
       run:
         working-directory: frontend
@@ -24,7 +23,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
-          ref: ${{ github.head_ref || github.ref }}
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
@@ -38,30 +37,6 @@ jobs:
           echo "PUBLIC_REPOSITORY_URL=https://github.com/${GITHUB_REPOSITORY}" >> "$GITHUB_ENV"
       - name: Clean install
         run: npm run clean-install
-      - name: Update third party licenses (Renovate PRs only)
-        if: >
-          github.event_name == 'pull_request' &&
-          github.actor == 'renovate[bot]' &&
-          github.event.pull_request.head.repo.full_name == github.repository
-        run: |
-          npm run licenses:generate
-
-          if git diff --exit-code -- LICENSES-THIRD-PARTY.md; then
-            echo "No changes in LICENSES-THIRD-PARTY.md";
-            exit 0;
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          git add LICENSES-THIRD-PARTY.md
-          git commit -m "chore: update frontend LICENSES-THIRD-PARTY.md"
-
-          git push
-      - name: Test
-        run: npm run test
-      - name: Lint
-        run: npm run lint
       - name: Build
         env:
           PUBLIC_APP_VERSION: ${{ env.APP_VERSION }}
@@ -69,32 +44,21 @@ jobs:
           PUBLIC_REPOSITORY_URL: ${{ env.PUBLIC_REPOSITORY_URL }}
         run: npm run build
       - name: Set up Docker Buildx
-        if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
       - name: Log in to GHCR
-        if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
         uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Extract Docker metadata
-        if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
         id: meta
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
         with:
           images: ghcr.io/${{ github.repository }}-frontend
           tags: |
-            # output X.Y.Z
-            type=semver,pattern={{version}}
-            # output X.Y
-            type=semver,pattern={{major}}.{{minor}}
-            # output X (disabled if major zero)
-            type=semver,pattern={{major}},enable=${{ !startsWith(github.ref, 'refs/tags/v0.') }}
-            # output main on default branch
-            type=raw,value=main,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+            type=raw,value=test
       - name: Build and push image
-        if: github.event_name == 'push' && (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) || startsWith(github.ref, 'refs/tags/'))
         uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
         with:
           context: frontend
@@ -104,5 +68,53 @@ jobs:
             PUBLIC_APP_VERSION=${{ env.APP_VERSION }}
             PUBLIC_COMMIT_SHA=${{ env.COMMIT_SHA }}
             PUBLIC_REPOSITORY_URL=${{ env.PUBLIC_REPOSITORY_URL }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - name: Setup Java
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+          cache: maven
+      - name: Resolve build metadata
+        run: |
+          bash ../.github/scripts/resolve_version.sh >> "$GITHUB_ENV"
+      - name: Package
+        run: mvn -B -DskipTests package
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+      - name: Log in to GHCR
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf # v6.0.0
+        with:
+          images: ghcr.io/${{ github.repository }}-backend
+          tags: |
+            type=raw,value=test
+      - name: Build and push image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: true
+          build-args: |
+            APP_VERSION=${{ env.APP_VERSION }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

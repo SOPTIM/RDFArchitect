@@ -21,7 +21,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,13 +71,14 @@ public class GraphBulkContentRESTController {
               List<String> graphUris) {
         logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/content\" from \"{}\".", datasetName, originURL);
 
-        var importedGraphUris = importGraphsUseCase.importGraphs(datasetName, files, graphUris);
+        var result = importGraphsUseCase.importGraphs(datasetName, files, graphUris);
 
         logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/content\" to \"{}\".", datasetName, originURL);
-        return ResponseEntity.ok(new GraphBulkImportResponse(Response.SUCCESS, importedGraphUris));
+        var msg = result.failedFileNames().isEmpty() ? "success" : "failed imports";
+        return ResponseEntity.ok(new GraphBulkImportResponse(msg, result.failedFileNames(), result.importedGraphUris()));
     }
 
-    public record GraphBulkImportResponse(String message, List<String> importedGraphUris) {
+    public record GraphBulkImportResponse(String message, List<String> failedImports, List<String> importedGraphUris) {
 
     }
 }

@@ -1,6 +1,6 @@
 {
-    "name": "rdf-architect-frontend",
-    "version": "0.14.0",
+    "name": "@soptim/rdfarchitect-frontend",
+    "version": "0.0.0",
     "scripts": {
         "dev": "vite dev --port 1407",
         "build": "vite build",
@@ -28,7 +28,7 @@
         "eslint-plugin-svelte": "^3.0.0",
         "espree": "^11.0.0",
         "globals": "^17.0.0",
-        "jsdom": "^28.0.0",
+        "jsdom": "^29.0.0",
         "postcss": "^8.4.47",
         "prettier": "^3.5.0",
         "prettier-plugin-svelte": "^3.3.3",
