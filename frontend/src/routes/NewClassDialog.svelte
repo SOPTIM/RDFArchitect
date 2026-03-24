@@ -111,8 +111,8 @@
         }
 
         if (packageSelectionLocked) {
-            classPackage = lockedPackage;
-            packages = [lockedPackage];
+            classPackage = lockedPackage ?? null;
+            packages = lockedPackage ? [lockedPackage] : [];
             return;
         }
         await getPackages(datasetName, graphURI);
@@ -120,7 +120,8 @@
             editorState.selectedPackageUUID.getValue() === "default"
                 ? null
                 : editorState.selectedPackageUUID.getValue();
-        classPackage = packages.find(pkg => pkg.uuid === selectedPackageUUID);
+        classPackage =
+            packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
     }
 
     function onClose() {
