@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-03-25
+
+### Fixed
+
+- RDFA-438: Use UUIDs for every resource ([#50](https://github.com/SOPTIM/RDFArchitect/pull/50))
+
 ## [0.15.0] - 2026-03-17
 
 ### Breaking Changes

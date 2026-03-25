@@ -20,6 +20,8 @@ package org.rdfarchitect.cim.data.queries.update.cimupdates.classes;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeAll;
@@ -37,6 +39,7 @@ import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.cim.umladapted.data.CIMClassUMLAdapted;
 
 import java.util.List;
@@ -281,8 +284,8 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
         }
 
         @Test
-        @DisplayName("Deletes class and subClassOf reference to it in other class")
-        void deleteClass_classAndReferenceExists_deletesClassAndReference() {
+        @DisplayName("Deletes class but keeps subClassOf reference and UUID")
+        void deleteClass_classAndReferenceExists_deletesClassAndKeepsReference() {
             //Arrange
             addGraphFromFile(CLASS_AND_SUBCLASS_FILE_PATH);
             addTriple(NodeFactory.createURI(SUB_CLASS_URI), RDFS.subClassOf.asNode(), NodeFactory.createURI(EXISTING_CLASS_URI));
@@ -297,11 +300,16 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                    );
 
             //Assert
+            var model = ModelFactory.createModelForGraph(testGraph);
+            var classResource = model.createResource(EXISTING_CLASS_URI);
             try {
                 testGraph.begin(TxnType.READ);
-                //isFalse
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_CLASS_URI), Node.ANY, Node.ANY)).isFalse();
-                assertThat(testGraph.contains(NodeFactory.createURI(SUB_CLASS_URI), RDFS.subClassOf.asNode(), NodeFactory.createURI(EXISTING_CLASS_URI))).isFalse();
+                //only the uuid triple remains for the deleted class
+                assertThat(model.listStatements(classResource, null, (RDFNode) null).toList())
+                          .hasSize(1)
+                          .allMatch(stmt -> stmt.getPredicate().equals(RDFA.uuid));
+                //subClassOf reference is kept
+                assertThat(testGraph.contains(NodeFactory.createURI(SUB_CLASS_URI), RDFS.subClassOf.asNode(), NodeFactory.createURI(EXISTING_CLASS_URI))).isTrue();
             } finally {
                 testGraph.end();
             }
@@ -322,7 +330,7 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           MY_UUID.toString()
-                                                )
+                                           )
                                 .build()
                                     );
 
@@ -348,7 +356,7 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                           databasePort.getPrefixMapping(DATASET_NAME),
                                           GRAPH_URI,
                                           MY_UUID.toString()
-                                                )
+                                           )
                                 .build()
                                     );
 
@@ -356,7 +364,12 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             try {
                 testGraph.begin(TxnType.READ);
                 //isFalse
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_CLASS_URI), Node.ANY, Node.ANY)).isFalse();
+                var model = ModelFactory.createModelForGraph(testGraph);
+                var classResource = model.createResource(EXISTING_CLASS_URI);
+
+                assertThat(model.listStatements(classResource, null, (RDFNode) null)
+                                .filterKeep(stmt -> !stmt.getPredicate().equals(RDFA.uuid))
+                                .hasNext()).isFalse();
                 //isTrue
                 assertThat(testGraph.contains(NodeFactory.createURI(OTHER_CLASS_URI), RDF.type.asNode(), RDFS.Class.asNode())).isTrue();
                 assertThat(testGraph.contains(NodeFactory.createURI(OTHER_CLASS_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(OTHER_CLASS_LABEL, "en"))).isTrue();
