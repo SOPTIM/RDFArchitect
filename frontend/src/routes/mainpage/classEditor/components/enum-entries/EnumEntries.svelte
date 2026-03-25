@@ -33,9 +33,9 @@
         showDialog: false,
         enumEntry: null,
     });
-    let readonly = $derived(classEditorContext.readonly);
 
     let expandStereotypes = $state(true);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();

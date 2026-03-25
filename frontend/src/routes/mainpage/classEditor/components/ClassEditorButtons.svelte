@@ -48,12 +48,12 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $derived(classEditorContext.readonly);
-    let datasetName = $derived(classEditorContext.datasetName);
-    let graphUri = $derived(classEditorContext.graphUri);
 
     let showClassDeleteDialog = $state(false);
     let showSHACLClassDialog = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
+    let datasetName = $derived(classEditorContext.datasetName);
+    let graphUri = $derived(classEditorContext.graphUri);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();

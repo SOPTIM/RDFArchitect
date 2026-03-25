@@ -28,7 +28,6 @@
     const { attributes, openPropertySHACLRulesDialog } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $derived(classEditorContext.readonly);
 
     const attributeEditorDialog = $state({
         showDialog: false,
@@ -36,6 +35,7 @@
     });
 
     let expandStereotypes = $state(true);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
