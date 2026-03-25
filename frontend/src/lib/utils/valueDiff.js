@@ -226,7 +226,7 @@ function buildDiffBlocks(fromItems, toItems, lcsProductLimit) {
  */
 function appendBlockItem(blocks, type, item) {
     const previous = blocks.at(-1);
-    if (previous && previous.type === type) {
+    if (previous?.type === type) {
         previous.items.push(item);
         return;
     }
@@ -304,7 +304,7 @@ function appendSegment(segments, text, kind) {
     }
 
     const previous = segments.at(-1);
-    if (previous && previous.kind === kind) {
+    if (previous?.kind === kind) {
         previous.text += text;
         return;
     }
