@@ -29,8 +29,8 @@
     const classEditorContext = getContext("classEditor");
     const id = uuid();
 
-    let classes = $state();
-    let readonly = $state(false);
+    let classes = $derived(classEditorContext.classes);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();

@@ -28,7 +28,7 @@
     const { attributes, openPropertySHACLRulesDialog } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
 
     const attributeEditorDialog = $state({
         showDialog: false,

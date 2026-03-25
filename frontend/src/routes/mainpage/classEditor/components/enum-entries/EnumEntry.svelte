@@ -28,7 +28,7 @@
     const { enumEntries, enumEntry, openEnumEntryEditor } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();

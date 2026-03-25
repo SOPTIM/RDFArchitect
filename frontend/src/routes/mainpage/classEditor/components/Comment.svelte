@@ -31,7 +31,7 @@
     const classEditorContext = getContext("classEditor");
     const id = uuidv4();
     let editClassComment = $state(false);
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();

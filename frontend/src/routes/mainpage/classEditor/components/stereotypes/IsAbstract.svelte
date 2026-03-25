@@ -25,9 +25,9 @@
 
     const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
     const classEditorContext = getContext("classEditor");
-    let id = uuidv4();
+    const id = uuidv4();
 
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
 
     let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
 

@@ -29,8 +29,8 @@
 
     const classEditorContext = getContext("classEditor");
     const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
-    let suggestedStereotypes = $state();
-    let readonly = $state(false);
+    let suggestedStereotypes = $derived(classEditorContext.stereotypes);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();

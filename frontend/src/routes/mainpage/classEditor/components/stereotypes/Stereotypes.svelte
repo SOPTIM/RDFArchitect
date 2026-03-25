@@ -29,7 +29,7 @@
     const { classStereotypes } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
     let expandStereotypes = $state(true);
 
     $effect(() => {

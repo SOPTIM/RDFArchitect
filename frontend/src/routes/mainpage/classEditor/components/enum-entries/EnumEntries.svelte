@@ -33,7 +33,7 @@
         showDialog: false,
         enumEntry: null,
     });
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
 
     let expandStereotypes = $state(true);
 

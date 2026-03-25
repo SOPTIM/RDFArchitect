@@ -40,8 +40,8 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $state(false);
-    let classes = $state();
+    let readonly = $derived(classEditorContext.readonly);
+    let classes = $derived(classEditorContext.classes);
 
     let lowerButtons = $derived(getButtons(association.multiplicityLowerBound));
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));

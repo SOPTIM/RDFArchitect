@@ -44,7 +44,7 @@
     let container;
     let w = $state(MIN_W);
     let resizeObserver;
-    let readonly = $state(false);
+    let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
