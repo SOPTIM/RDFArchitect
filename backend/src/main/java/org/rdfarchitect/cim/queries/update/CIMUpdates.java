@@ -18,9 +18,12 @@
 package org.rdfarchitect.cim.queries.update;
 
 import lombok.experimental.UtilityClass;
+import org.apache.jena.arq.querybuilder.ExprFactory;
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -72,16 +75,27 @@ public class CIMUpdates {
         var updateEnumEntries = replaceEnumEntries(prefixMapping, null, newClass.getUuid().toString(), newClass.getEnumEntries());
         UpdateExecutionFactory.create(updateEnumEntries.build(), dataset).execute();
         //update other references to this class
-        updateReferences(graph, prefixMapping, newClass.getUuid(),  newClass.getUri());
+        updateReferences(graph, prefixMapping, newClass.getUuid(), newClass.getUri());
         //replace classObject in database
         var updateClassBase = replaceClassBase(prefixMapping, null, newClass);
         UpdateExecutionFactory.create(updateClassBase.build(), dataset).execute();
     }
 
-    public void insertClass(Graph graph, PrefixMapping prefixMapping, CIMClass newClass) {
+    public UUID insertClass(Graph graph, PrefixMapping prefixMapping, CIMClass newClass) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
+        var uuid = UUID.randomUUID();
+        var model = ModelFactory.createModelForGraph(graph);
+        var existingResource = model.getResource(newClass.getUri().toString());
+        if (existingResource != null && existingResource.hasProperty(RDFA.uuid)) {
+            var existingUUIDLiteral = existingResource.getProperty(RDFA.uuid).getObject();
+            if (existingUUIDLiteral != null) {
+                uuid = UUID.fromString(existingUUIDLiteral.asLiteral().getString());
+            }
+        }
+        newClass.setUuid(uuid);
         var insertClass = insertClass(prefixMapping, null, newClass);
         UpdateExecutionFactory.create(insertClass.build(), dataset).execute();
+        return uuid;
     }
 
     private UpdateBuilder insertClass(PrefixMapping prefixMapping, String graphURI, CIMClass newClass) {
@@ -115,25 +129,12 @@ public class CIMUpdates {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         var deleteAttributes = deleteAttributes(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteAttributes.build(), dataset).execute();
-        var deleteAssociations = deleteAssociations(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAssociations.build(), dataset).execute();
-        var deleteAttributesOfType = deleteAttributesOfType(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAttributesOfType.build(), dataset).execute();
-
         var deleteEnumEntries = deleteEnumEntries(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteEnumEntries.build(), dataset).execute();
-
-        var deleteReferencesToThis = new CIMBaseUpdateBuilder()
-                  .addPrefixes(prefixMapping)
-                  .setGraph(null)
-                  .build()
-                  .addDelete(CIMQueryVars.URI, "?pre", "?ref")
-                  .addWhere("?ref", RDFA.uuid, classUUID)
-                  .addWhere(CIMQueryVars.URI, "?pre", "?ref");
-        UpdateExecutionFactory.create(deleteReferencesToThis.build(), dataset).execute();
-
         var classBaseDelete = deleteBase(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(classBaseDelete.build(), dataset).execute();
+
+        deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(classUUID));
     }
 
     public UpdateBuilder deleteAttribute(PrefixMapping prefixMapping, String graphURI, UUID attributeUUID) {
@@ -317,7 +318,8 @@ public class CIMUpdates {
         classBaseUpdate
                   .addDelete(CIMQueryVars.URI, "?pre", "?obj")
                   .addWhere(CIMQueryVars.URI, RDFA.uuid, classUUID)
-                  .addOptional(CIMQueryVars.URI, "?pre", "?obj");
+                  .addOptional(CIMQueryVars.URI, "?pre", "?obj")
+                  .addFilter(new ExprFactory().ne("?pre", RDFA.uuid));
 
         return classBaseUpdate;
     }
@@ -358,6 +360,7 @@ public class CIMUpdates {
 
         var deleteEnumEntry = deleteBase(prefixMapping, null, enumEntryUUID);
         UpdateExecutionFactory.create(deleteEnumEntry.build(), dataset).execute();
+        deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(enumEntryUUID));
     }
 
     private UpdateBuilder deleteEnumEntries(PrefixMapping prefixMapping, String graphURI, String classUUID) {
@@ -421,6 +424,7 @@ public class CIMUpdates {
 
         var packageBaseDelete = deleteBase(prefixMapping, null, packageUUID);
         UpdateExecutionFactory.create(packageBaseDelete.build(), dataset).execute();
+        deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(packageUUID));
     }
 
     private void updateReferences(Graph graph, PrefixMapping prefixMapping, UUID uuid, URI newURI) {
@@ -435,5 +439,25 @@ public class CIMUpdates {
                   .addWhere(CIMQueryVars.URI, "?pre", "?ref")
                   .addInsert(CIMQueryVars.URI, "?pre", newURI.toNode());
         UpdateExecutionFactory.create(updateReferencesToThis.build(), dataset).execute();
+    }
+
+    private void deleteUuidIfNotReferencedAnyWhereElse(Graph graph, UUID uuid) {
+        var model = ModelFactory.createModelForGraph(graph);
+        var uuidLiteral = model.createLiteral(uuid.toString());
+
+        var resource = model.listStatements(null, RDFA.uuid, uuidLiteral)
+                            .nextOptional()
+                            .map(Statement::getSubject)
+                            .orElse(null);
+
+        if (resource == null) {
+            return;
+        }
+
+        var isReferencedElsewhere = model.listStatements(null, null, resource).hasNext();
+
+        if (!isReferencedElsewhere) {
+            model.removeAll(resource, RDFA.uuid, uuidLiteral);
+        }
     }
 }

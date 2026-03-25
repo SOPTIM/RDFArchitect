@@ -78,14 +78,13 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
     public void addClass(GraphIdentifier graphIdentifier, PackageDTO packageDTO, String classURIPrefix, String className) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         GraphRewindableWithUUIDs graph = null;
-        UUID newClassUUID = UUID.randomUUID();
+        UUID newClassUUID;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
 
             var newClass = constructClass(cimPackage, classURIPrefix, className);
-            newClass.setUuid(newClassUUID);
-            CIMUpdates.insertClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newClass);
+            newClassUUID = CIMUpdates.insertClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newClass);
             graph.commit();
         } finally {
             if (graph != null) {

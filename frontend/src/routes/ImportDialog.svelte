@@ -33,7 +33,7 @@
 
     let { showDialog = $bindable(), lockedDatasetName } = $props();
 
-    const defaultDatasetName = "default";
+    const DEFAULT_DATASET_NAME = "default";
     const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
@@ -80,14 +80,8 @@
         rejectedFiles = [];
     }
 
-    function setDefaultIfNotSet() {
-        if (!datasetNameUserInput) {
-            datasetNameUserInput = defaultDatasetName;
-        }
-    }
-
     function isDatasetReadOnly(datasetName) {
-        const targetDataset = datasetName || defaultDatasetName;
+        const targetDataset = datasetName || DEFAULT_DATASET_NAME;
         return readOnlyDatasets.includes(targetDataset);
     }
 
@@ -179,14 +173,13 @@
         }
     }
 
-    async function importGraphs() {
-        setDefaultIfNotSet();
-        let datasetNameLocal = datasetNameUserInput;
-        const datasetNameEncoded = encodeURIComponent(datasetNameUserInput);
-        const filesLocal = files;
+    function getUserInputDatasetName() {
+        return datasetNameUserInput || DEFAULT_DATASET_NAME;
+    }
 
+    function buildRequestBody(files) {
         let formData = new FormData();
-        filesLocal.forEach(fileEntry => {
+        files.forEach(fileEntry => {
             formData.append("files", fileEntry.file);
             formData.append(
                 "graphUris",
@@ -198,57 +191,58 @@
                       ),
             );
         });
+        return formData;
+    }
 
+    function putFiles(files, datasetname) {
+        return fetch(
+            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetname)}/graphs/content`,
+            {
+                method: "PUT",
+                body: buildRequestBody(files),
+                credentials: "include",
+            },
+        );
+    }
+    async function parseResponse(response, datasetName) {
+        if (!response.ok) {
+            console.log("failed to insert data");
+            return;
+        }
+
+        const body = await response.json();
+        console.log(body.message);
+
+        const failedImports = body.failedImports;
+        if (failedImports.length > 0) {
+            console.warn("failed imports:", failedImports);
+        }
+
+        //only update the selected dataset and graph if at least one import was successful, otherwise keep the old selection
+        const importedGraphUris = body.importedGraphUris;
+        if (importedGraphUris.length === 0) {
+            return;
+        }
+        console.log("imported graphs:", importedGraphUris);
+
+        editorState.selectedDataset.updateValue(datasetName);
+        editorState.selectedGraph.updateValue(importedGraphUris[0]);
+        editorState.selectedPackageUUID.updateValue(null);
+        editorState.selectedClassDataset.updateValue(null);
+        editorState.selectedClassGraph.updateValue(null);
+        editorState.selectedClassUUID.updateValue(null);
+    }
+
+    async function importGraphs() {
+        const datasetNameUserInputLocal = getUserInputDatasetName();
+        const filesLocal = files;
+        console.warn(
+            "Importing files into dataset:",
+            datasetNameUserInputLocal,
+        );
         try {
-            const res = await fetch(
-                `${PUBLIC_BACKEND_URL}/datasets/${datasetNameEncoded}/graphs/content`,
-                {
-                    method: "PUT",
-                    body: formData,
-                    credentials: "include",
-                },
-            );
-            if (res.ok) {
-                console.log("successfully inserted data");
-
-                let importedGraphUris = null;
-                try {
-                    const body = await res.json();
-                    importedGraphUris = body?.importedGraphUris ?? null;
-                } catch {
-                    importedGraphUris = null;
-                }
-
-                editorState.selectedDataset.updateValue(datasetNameLocal);
-
-                if (
-                    Array.isArray(importedGraphUris) &&
-                    importedGraphUris.length === 1
-                ) {
-                    editorState.selectedGraph.updateValue(importedGraphUris[0]);
-                } else {
-                    const nonZipFiles = filesLocal.filter(
-                        entry => !entry.isZip,
-                    );
-                    if (nonZipFiles.length === 1) {
-                        editorState.selectedGraph.updateValue(
-                            ensureGraphNamespaceUri(
-                                nonZipFiles[0].graphUri,
-                                nonZipFiles[0].file.name,
-                            ),
-                        );
-                    } else {
-                        editorState.selectedGraph.updateValue(null);
-                    }
-                }
-
-                editorState.selectedPackageUUID.updateValue(null);
-                editorState.selectedClassDataset.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClassUUID.updateValue(null);
-            } else {
-                console.log("failed to insert data");
-            }
+            const res = await putFiles(filesLocal, datasetNameUserInputLocal);
+            await parseResponse(res, datasetNameUserInputLocal);
         } catch (e) {
             console.log("failed to insert data:");
             console.log(e);
@@ -275,7 +269,7 @@
                 type="text"
                 id={datasetInputId}
                 list={datasetListId}
-                placeholder={defaultDatasetName}
+                placeholder={DEFAULT_DATASET_NAME}
                 bind:value={datasetNameUserInput}
             />
             <datalist id={datasetListId}>
@@ -285,7 +279,7 @@
             </datalist>
 
             {#if isDatasetReadOnly(datasetNameUserInput)}
-                <div class="mt-1 mb-1 h-6 text-sm">
+                <div class="text-red mt-1 mb-1 h-6 text-sm">
                     Cannot import into read-only dataset
                 </div>
             {/if}

@@ -22,7 +22,7 @@ import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -48,25 +48,25 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
+class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
 
     private static final String ATTRIBUTE_FILE_PATH = "attributes/attribute.ttl";
     private static final String ATTRIBUTE_OPTIONAL_FILE_PATH = "attributes/attribute_optional.ttl";
     private static final String MULTIPLE_ATTRIBUTES_FILE_PATH = "attributes/multiple_attributes.ttl";
     private static final String MULTIPLE_CLASSES_FILE_PATH = "attributes/multiple_classes.ttl";
 
-    private static CIMAttribute attributeRequired;
+    private CIMAttribute attributeRequired;
     /**
      * New attribute but with all optionals, meaning comment, isFixed and isDefault
      */
-    private static CIMAttribute attributeOptional;
+    private CIMAttribute attributeOptional;
     /**
      * New attribute with only requireds like newAttributeRequired, but with a primitive datatype instead of an unknown one.
      */
-    private static CIMAttribute attributePrimitive;
+    private CIMAttribute attributePrimitive;
 
-    @BeforeAll
-    static void setUpAttributeEnvironment() {
+    @BeforeEach
+    void setUpAttributeEnvironment() {
         CIMAttribute baseAttribute = CIMAttribute.builder()
                                                  .uuid(MY_UUID)
                                                  .uri(new URI(ATTRIBUTE_URI))
