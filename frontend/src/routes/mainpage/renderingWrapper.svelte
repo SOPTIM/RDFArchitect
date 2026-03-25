@@ -50,7 +50,7 @@
     let mermaidWrapper = $state();
     let svelteFlowWrapper = $state();
 
-    let displayDiagram = $derived(true);
+    let displayDiagram = $state(true);
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -69,6 +69,7 @@
         if (!editorState.selectedPackageUUID.getValue()) {
             response = null;
             renderingFormat = null;
+            displayDiagram = false;
             isLoading = false;
             return;
         }
@@ -97,17 +98,21 @@
 
             const responseText = await res.text();
             if (!responseText) {
+                response = null;
+                renderingFormat = null;
                 displayDiagram = false;
                 isLoading = false;
             } else {
-                response = JSON.parse(responseText);
-                renderingFormat = response.format;
+                const parsedResponse = JSON.parse(responseText);
+                response = parsedResponse;
+                renderingFormat = parsedResponse.format;
                 displayDiagram = true;
             }
         } catch (error) {
             console.error("Error fetching diagram data:", error);
             response = null;
             renderingFormat = null;
+            displayDiagram = false;
             isLoading = false;
         }
     });

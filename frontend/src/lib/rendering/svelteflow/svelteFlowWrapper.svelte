@@ -75,10 +75,7 @@
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
-    let hasDefaultLayout = $derived(
-        nodes.length > 0 &&
-            nodes.every(node => node.position.x === 0 && node.position.y === 0),
-    );
+    let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
     );
@@ -115,13 +112,17 @@
         };
     });
 
+    function hasDefaultNodeLayout(diagramNodes) {
+        return (
+            diagramNodes.length > 0 &&
+            diagramNodes.every(
+                node => node.position.x === 0 && node.position.y === 0,
+            )
+        );
+    }
+
     function syncDiagramElements() {
         let nextNodes = [...inputNodes];
-        const nextHasDefaultLayout =
-            nextNodes.length > 0 &&
-            nextNodes.every(
-                node => node.position.x === 0 && node.position.y === 0,
-            );
 
         if (
             pendingNewClassPlacement &&
@@ -177,6 +178,8 @@
                 pendingNewClassPlacement = null;
             }
         }
+
+        const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
         nodes = nextNodes;
         edges = inputEdges.map(edge => {

@@ -24,9 +24,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.cim.rendering.GraphFilter;
 import org.rdfarchitect.cim.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
@@ -40,6 +42,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -95,9 +98,16 @@ public class RenderingRESTController {
 
         CIMCollection cimCollection = converter.convert(graphIdentifier, filter);
 
+        var hasRenderableClasses = !cimCollection.getClasses().isEmpty() || !cimCollection.getEnums().isEmpty();
+
         RenderingDataDTO renderingData = null;
-        if (!cimCollection.getClasses().isEmpty() || !cimCollection.getEnums().isEmpty()) {
+        if (hasRenderableClasses) {
             renderingData = renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
+        } else if (renderer instanceof RenderCIMCollectionSvelteFlowService) {
+            renderingData = SvelteFlowDTO.builder()
+                                         .nodes(List.of())
+                                         .edges(List.of())
+                                         .build();
         }
 
         logger.info("Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".", datasetName, graphURI, originURL);
