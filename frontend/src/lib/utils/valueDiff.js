@@ -26,9 +26,10 @@ const CHAR_LCS_LIMIT = 10_000;
 /**
  * Build a git-like inline diff between two strings.
  *
- * @param {string} fromValue
- * @param {string} toValue
- * @returns {{ fromSegments: FromSegment[], toSegments: ToSegment[] }}
+ * @param {string} fromValue The original value shown on the left side.
+ * @param {string} toValue The updated value shown on the right side.
+ * @returns {{ fromSegments: FromSegment[], toSegments: ToSegment[] }} Matching
+ * segment lists for the removed/original and added/updated views.
  */
 export function buildInlineValueDiff(fromValue, toValue) {
     const fromText = String(fromValue ?? "");
@@ -95,10 +96,12 @@ export function buildInlineValueDiff(fromValue, toValue) {
 }
 
 /**
- * @param {string} fromText
- * @param {string} toText
- * @param {FromSegment[]} fromSegments
- * @param {ToSegment[]} toSegments
+ * Refine a token-level replacement with a character-level diff.
+ *
+ * @param {string} fromText The original replacement text.
+ * @param {string} toText The updated replacement text.
+ * @param {FromSegment[]} fromSegments The left-side segment accumulator.
+ * @param {ToSegment[]} toSegments The right-side segment accumulator.
  */
 function appendReplacementDiff(fromText, toText, fromSegments, toSegments) {
     const charBlocks = buildDiffBlocks(
@@ -126,39 +129,76 @@ function appendReplacementDiff(fromText, toText, fromSegments, toSegments) {
 }
 
 /**
- * @param {string} text
- * @returns {string[]}
+ * Split a string into diff-friendly tokens while preserving whitespace and
+ * punctuation as standalone entries.
+ *
+ * @param {string} text The text to split into tokens.
+ * @returns {string[]} Tokenized text segments.
  */
 function tokenize(text) {
     return text.match(/(\s+|[\p{L}\p{N}_]+|[^\s\p{L}\p{N}_]+)/gu) ?? [];
 }
 
 /**
+ * Create contiguous diff blocks from two item sequences.
+ *
  * @template T
- * @param {T[]} fromItems
- * @param {T[]} toItems
- * @param {number} lcsProductLimit
- * @returns {{ type: "equal" | "delete" | "insert", items: T[] }[]}
+ * @param {T[]} fromItems Items from the original value.
+ * @param {T[]} toItems Items from the updated value.
+ * @param {number} lcsProductLimit Maximum matrix size before using the
+ * cheaper prefix/suffix fallback.
+ * @returns {{ type: "equal" | "delete" | "insert", items: T[] }[]} Diff
+ * blocks describing unchanged, removed, and added runs.
  */
 function buildDiffBlocks(fromItems, toItems, lcsProductLimit) {
-    const fromLength = fromItems.length;
-    const toLength = toItems.length;
+    const trivialBlocks = buildTrivialDiffBlocks(fromItems, toItems);
+    if (trivialBlocks) {
+        return trivialBlocks;
+    }
 
-    if (fromLength === 0 && toLength === 0) {
+    if (fromItems.length * toItems.length > lcsProductLimit) {
+        return buildPrefixSuffixDiffBlocks(fromItems, toItems);
+    }
+
+    return buildLcsDiffBlocks(fromItems, toItems);
+}
+
+/**
+ * Handle degenerate diff inputs without building a comparison matrix.
+ *
+ * @template T
+ * @param {T[]} fromItems Items from the original value.
+ * @param {T[]} toItems Items from the updated value.
+ * @returns {{ type: "equal" | "delete" | "insert", items: T[] }[] | null}
+ * Ready-made diff blocks, or `null` when full diffing is still needed.
+ */
+function buildTrivialDiffBlocks(fromItems, toItems) {
+    if (fromItems.length === 0 && toItems.length === 0) {
         return [];
     }
 
-    if (fromLength === 0) {
+    if (fromItems.length === 0) {
         return [{ type: "insert", items: [...toItems] }];
     }
 
-    if (toLength === 0) {
+    if (toItems.length === 0) {
         return [{ type: "delete", items: [...fromItems] }];
     }
 
-    if (fromLength * toLength > lcsProductLimit) {
-        return buildPrefixSuffixDiffBlocks(fromItems, toItems);
-    }
+    return null;
+}
+
+/**
+ * Build a full longest-common-subsequence matrix for two item sequences.
+ *
+ * @template T
+ * @param {T[]} fromItems Items from the original value.
+ * @param {T[]} toItems Items from the updated value.
+ * @returns {Uint32Array[]} LCS lengths for each source/target position pair.
+ */
+function buildLcsLengths(fromItems, toItems) {
+    const fromLength = fromItems.length;
+    const toLength = toItems.length;
 
     const lcsLengths = Array.from(
         { length: fromLength + 1 },
@@ -170,15 +210,32 @@ function buildDiffBlocks(fromItems, toItems, lcsProductLimit) {
             if (fromItems[fromIndex] === toItems[toIndex]) {
                 lcsLengths[fromIndex][toIndex] =
                     lcsLengths[fromIndex + 1][toIndex + 1] + 1;
-            } else {
-                lcsLengths[fromIndex][toIndex] = Math.max(
-                    lcsLengths[fromIndex + 1][toIndex],
-                    lcsLengths[fromIndex][toIndex + 1],
-                );
+                continue;
             }
+
+            lcsLengths[fromIndex][toIndex] = Math.max(
+                lcsLengths[fromIndex + 1][toIndex],
+                lcsLengths[fromIndex][toIndex + 1],
+            );
         }
     }
 
+    return lcsLengths;
+}
+
+/**
+ * Use an LCS matrix to produce grouped diff blocks for two item sequences.
+ *
+ * @template T
+ * @param {T[]} fromItems Items from the original value.
+ * @param {T[]} toItems Items from the updated value.
+ * @returns {{ type: "equal" | "delete" | "insert", items: T[] }[]} Diff
+ * blocks produced from the LCS walk.
+ */
+function buildLcsDiffBlocks(fromItems, toItems) {
+    const fromLength = fromItems.length;
+    const toLength = toItems.length;
+    const lcsLengths = buildLcsLengths(fromItems, toItems);
     const blocks = [];
 
     let fromIndex = 0;
@@ -219,10 +276,14 @@ function buildDiffBlocks(fromItems, toItems, lcsProductLimit) {
 }
 
 /**
+ * Append a single item to the current diff block, creating a new block when
+ * the diff operation changes.
+ *
  * @template T
- * @param {{ type: "equal" | "delete" | "insert", items: T[] }[]} blocks
- * @param {"equal" | "delete" | "insert"} type
- * @param {T} item
+ * @param {{ type: "equal" | "delete" | "insert", items: T[] }[]} blocks Diff
+ * blocks built so far.
+ * @param {"equal" | "delete" | "insert"} type The diff operation to append.
+ * @param {T} item The item to append.
  */
 function appendBlockItem(blocks, type, item) {
     const previous = blocks.at(-1);
@@ -235,9 +296,13 @@ function appendBlockItem(blocks, type, item) {
 
 /**
  * @template T
- * @param {T[]} fromItems
- * @param {T[]} toItems
- * @returns {{ type: "equal" | "delete" | "insert", items: T[] }[]}
+ * Build a coarse diff by preserving the shared prefix and suffix and marking
+ * the middle spans as a delete/insert pair.
+ *
+ * @param {T[]} fromItems Items from the original value.
+ * @param {T[]} toItems Items from the updated value.
+ * @returns {{ type: "equal" | "delete" | "insert", items: T[] }[]} Diff
+ * blocks using the prefix/suffix fallback strategy.
  */
 function buildPrefixSuffixDiffBlocks(fromItems, toItems) {
     let prefixLength = 0;
@@ -294,9 +359,13 @@ function buildPrefixSuffixDiffBlocks(fromItems, toItems) {
 }
 
 /**
- * @param {Array<{ text: string, kind: string }>} segments
- * @param {string} text
- * @param {string} kind
+ * Append text to the current segment list while merging adjacent segments of
+ * the same kind.
+ *
+ * @param {Array<{ text: string, kind: string }>} segments Diff segments built
+ * so far.
+ * @param {string} text The text content to append.
+ * @param {string} kind The segment kind for the appended text.
  */
 function appendSegment(segments, text, kind) {
     if (!text) {
