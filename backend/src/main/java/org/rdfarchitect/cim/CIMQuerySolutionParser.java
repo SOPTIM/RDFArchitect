@@ -75,6 +75,9 @@ public class CIMQuerySolutionParser {
             var labelNode = qs.get(labelVar).asNode();
             label = new RDFSLabel(labelNode.getLiteralLexicalForm(), labelNode.getLiteralLanguage());
         }
+        if (label == null) {
+            label = new RDFSLabel(uri.getSuffix());
+        }
         return new URILabelPair(uri, label);
     }
 

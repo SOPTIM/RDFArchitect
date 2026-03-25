@@ -20,6 +20,8 @@ package org.rdfarchitect.services.update;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +31,7 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -127,14 +130,20 @@ class UpdateClassServiceTest {
     }
 
     @Test
-    void deleteClass_removesClassFromGraph() {
+    void deleteClass_removesClassResourceFromGraph() {
         updateClassService.deleteClass(graphIdentifier, CLASS_UUID);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        var model = ModelFactory.createModelForGraph(graph);
+        var classResource = model.createResource(PREFIX + "class");
+
         try {
             graph.begin(TxnType.READ);
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "class"), Node.ANY, Node.ANY)).isFalse();
-            assertThat(graph.contains(Node.ANY, NodeFactory.createURI(PREFIX + "class"), Node.ANY)).isFalse();
-            assertThat(graph.contains(Node.ANY, Node.ANY, NodeFactory.createURI(PREFIX + "class"))).isFalse();
+            var statements = model.listStatements(classResource, null, (RDFNode) null).toList();
+            assertThat(statements).hasSize(1);
+            assertThat(statements.getFirst().getSubject()).hasToString(PREFIX + "class");
+            assertThat(statements.getFirst().getPredicate()).hasToString(RDFA.uuid.getURI());
+            assertThat(statements.getFirst().getObject()).hasToString("43836908-c7f7-4749-bb8b-3ac9250de655");
+            assertThat(model.listStatements(null, model.createProperty(PREFIX + "class"), (RDFNode) null).hasNext()).isFalse();
         } finally {
             graph.end();
         }

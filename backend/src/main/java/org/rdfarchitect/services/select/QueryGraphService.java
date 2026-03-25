@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.select;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -57,6 +58,7 @@ import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static org.rdfarchitect.cim.queries.select.CIMQueryBuilder.Mode.*;
 import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.*;
@@ -85,7 +87,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
         var query = new CIMQueryBuilder(baseQuery)
                   .appendUUIDQuery(OPTIONAL)
-                  .appendLabelQuery(REQUIRED)
+                  .appendLabelQuery(OPTIONAL)
                   .appendPackageQuery(OPTIONAL)
                   .appendCommentQuery(OPTIONAL)
                   .appendSuperClassQuery(OPTIONAL)
@@ -96,9 +98,38 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
-        cimClassList.forEach(CIMClassUMLAdapted::nullEmptyLists);
+        var referencedClassList = getReferencedClassList(graphIdentifier);
+        var existingUuids = cimClassList.stream()
+                                        .map(CIMClassUMLAdapted::getUuid)
+                                        .collect(Collectors.toSet());
 
+        for (var referencedClass : referencedClassList) {
+            if (!existingUuids.contains(referencedClass.getUuid())) {
+                cimClassList.add(referencedClass);
+            }
+        }
+
+        cimClassList.forEach(CIMClassUMLAdapted::nullEmptyLists);
         return classMapper.toDTOList(cimClassList);
+    }
+
+    private  List<CIMClassUMLAdapted> getReferencedClassList(GraphIdentifier graphIdentifier) {
+        var query = new SelectBuilder()
+                  .setDistinct(true)
+                  .addVar("?uri")
+                  .addVar("?uuid")
+                  .addUnion(new SelectBuilder()
+                                      .addWhere("?subject", RDFS.domain, "?uri"))
+                  .addUnion(new SelectBuilder()
+                                      .addWhere("?subject", CIMS.datatype, "?uri"))
+                  .addOptional("?uri", RDFA.uuid, "?uuid")
+                  .build();
+
+        //execute query
+        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+
+        //format results
+        return CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
     }
 
     @Override
