@@ -69,6 +69,7 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
         var isNewDataset = !database.listDatasets().contains(datasetName);
         database.create(graphIdentifier, GraphFactory.createDefaultGraph());
         if (isNewDataset) {
+            database.enableEditing(datasetName);
             var prefixMapping = new PrefixMappingImpl()
                       .setNsPrefixes(PrefixMapping.Standard)
                       .setNsPrefix(CIM_PREFIX, CIM.namespace)
