@@ -51,6 +51,10 @@
     let svelteFlowWrapper = $state();
 
     let displayDiagram = $state(true);
+    let showSvelteFlowEmptyState = $derived(
+        renderingFormat === SVELTEFLOW_FORMAT &&
+            (response?.nodes?.length ?? 0) === 0,
+    );
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
@@ -193,6 +197,17 @@
                             )}
                         />
                     </SvelteFlowProvider>
+                    {#if showSvelteFlowEmptyState}
+                        <div
+                            class="pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
+                        >
+                            <EmptyStateCard
+                                title="No classes in this package"
+                                description="Select another package to load a different diagram."
+                                icon={faBoxOpen}
+                            />
+                        </div>
+                    {/if}
                 {/if}
             {:else}
                 <div
