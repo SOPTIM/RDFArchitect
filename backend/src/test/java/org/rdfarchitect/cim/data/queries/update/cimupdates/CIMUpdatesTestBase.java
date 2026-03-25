@@ -21,13 +21,13 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.update.Update;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
-import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -99,8 +99,8 @@ public class CIMUpdatesTestBase {
     protected static final String EXISTING_ENUM_ENTRY_LABEL = "existing_" + ENUM_ENTRY_LABEL;
     protected static final String EXISTING_ENUM_ENTRY_URI = EXISTING_CLASS_URI + "." + EXISTING_ENUM_ENTRY_LABEL;
 
-    @BeforeAll
-    static void setUpEnvironment() {
+    @BeforeEach
+    void setUpEnvironment() {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
         addGraphFromFile(BASE_FILENAME);
     }
@@ -114,10 +114,10 @@ public class CIMUpdatesTestBase {
         }
         var file = new MockMultipartFile(fileName, fileName, "text/turtle", content);
         var graph = new GraphFileSourceBuilderImpl()
-                        .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
-                        .build()
-                        .graph();
+                  .setFile(file)
+                  .setGraphName(graphIdentifier.getGraphUri())
+                  .build()
+                  .graph();
         databasePort.createGraph(graphIdentifier, graph);
         testGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
     }

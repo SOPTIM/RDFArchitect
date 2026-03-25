@@ -19,9 +19,23 @@ package org.rdfarchitect.services.update.graph;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public interface ImportGraphsUseCase {
+
+    /**
+     * Result of a graph import operation, separating successfully imported graph URIs
+     * from the filenames of files that failed to import.
+     *
+     * @param importedGraphUris the URIs of successfully imported graphs
+     * @param failedFileNames   the original filenames of files that could not be imported
+     */
+    record ImportResult(List<String> importedGraphUris, List<String> failedFileNames) {
+        public ImportResult() {
+            this(new ArrayList<>(), new ArrayList<>());
+        }
+    }
 
     /**
      * Imports multiple graphs into the specified dataset.
@@ -30,7 +44,7 @@ public interface ImportGraphsUseCase {
      * @param files       The list of files containing the graph data to be imported.
      * @param graphUris   The list of graph URIs corresponding to each file.
      *
-     * @return A list of graph URIs that were successfully imported.
+     * @return A record storing both the successfully imported graph URIs and the filenames of files that failed to import.
      */
-    List<String> importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris);
+    ImportResult importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris);
 }

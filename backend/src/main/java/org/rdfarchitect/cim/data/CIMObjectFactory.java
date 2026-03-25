@@ -69,10 +69,13 @@ public class CIMObjectFactory {
      */
     public static CIMClass createCIMClass(QuerySolution classQuerySolution) {
         var parser = new CIMQuerySolutionParser(classQuerySolution);
+        var uri = parser.getURI(CIMQueryVars.URI);
+        var label = parser.getLabel(CIMQueryVars.LABEL);
+        label = label != null ? label : new RDFSLabel(uri.getSuffix());
         return CIMClass.builder()
                        .uuid(parser.getUUID(CIMQueryVars.UUID))
-                       .uri(parser.getURI(CIMQueryVars.URI))
-                       .label(parser.getLabel(CIMQueryVars.LABEL))
+                       .uri(uri)
+                       .label(label)
                        .superClass(parser.getSubClassOf(CIMQueryVars.SUPER_CLASS_URI, CIMQueryVars.SUPER_CLASS_LABEL))
                        .comment(parser.getComment(CIMQueryVars.COMMENT))
                        .belongsToCategory(parser.getBelongsToCategory(CIMQueryVars.PACKAGE_URI, CIMQueryVars.PACKAGE_LABEL, CIMQueryVars.PACKAGE_UUID))

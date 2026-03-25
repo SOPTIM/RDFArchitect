@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-03-17
+
+### Breaking Changes
+- RDFA-318: Added SvelteFlow Rendering and Layouting ([20361482](https://github.com/SOPTIM/RDFArchitect/commit/20361482), [#27](https://github.com/SOPTIM/RDFArchitect/pull/27))
+
 ### Added
 
-- RDFA-318: Added SvelteFlow renderer and Layouting ([20361482](https://github.com/SOPTIM/RDFArchitect/commit/20361482), [#27](https://github.com/SOPTIM/RDFArchitect/pull/27))
 - RDFA-350: Export puts Ontology as the first resource ([830b5da7](https://github.com/SOPTIM/RDFArchitect/commit/830b5da7), [#42](https://github.com/SOPTIM/RDFArchitect/pull/42))
 - RDFA-337: Clear reset for package editor ([d0cf78bd](https://github.com/SOPTIM/RDFArchitect/commit/d0cf78bd), [#11](https://github.com/SOPTIM/RDFArchitect/pull/11))
-- RDFA-404: Added documentation and issue templates ([#32](https://github.com/SOPTIM/RDFArchitect/pull/32))
+- RDFA-261: Manage Property prefixes ([2611293](https://github.com/SOPTIM/RDFArchitect/commit/2611293), [#8](https://github.com/SOPTIM/RDFArchitect/pull/8))
+- RDFA-404: Added documentation and git tag based versioning ([19cd133](https://github.com/SOPTIM/RDFArchitect/commit/19cd133), [#32](https://github.com/SOPTIM/RDFArchitect/pull/32))
 
 ### Changed
 
@@ -22,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Ignore GitHub Actions bot in Renovate pull requests ([3d958240](https://github.com/SOPTIM/RDFArchitect/commit/3d958240))
 - RDFA-333: Added exception handling for failed property shape generation ([94082045](https://github.com/SOPTIM/RDFArchitect/commit/94082045), [#6](https://github.com/SOPTIM/RDFArchitect/pull/6))
+- RDFA-281: Fixed SonarQube Code Quality issues ([298723a](https://github.com/SOPTIM/RDFArchitect/commit/298723a), [#35](https://github.com/SOPTIM/RDFArchitect/pull/35))
 
 ## [0.14.0] - 2026-02-24
 

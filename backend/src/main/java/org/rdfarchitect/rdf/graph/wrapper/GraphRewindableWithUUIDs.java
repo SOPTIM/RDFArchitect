@@ -20,18 +20,26 @@ package org.rdfarchitect.rdf.graph.wrapper;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.ResourceFactory;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class GraphRewindableWithUUIDs extends GraphRewindable {
+
+    private static final Set<String> RELEVANT_TYPES = Set.of(RDF.Property.toString(), RDFS.Class.toString());
 
     /**
      * Accepts a {@link Graph} that serves as a base version of the {@link GraphRewindableWithUUIDs}.
@@ -68,33 +76,53 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
     }
 
     static Graph enhanceWithUUIDs(Graph graph) {
-        var typeTriples = graph.find(Node.ANY, RDF.type.asNode(), Node.ANY);
-        while (typeTriples.hasNext()) {
-            var triple = typeTriples.next();
-            var subject = triple.getSubject();
-
-            if (graph.contains(subject, RDFA.uuid.asNode(), Node.ANY) || subject.isBlank()) {
-                continue;
-            }
-
-            var uuid = ResourceFactory.createPlainLiteral(UUID.randomUUID().toString()).asNode();
-            graph.add(subject, RDFA.uuid.asNode(), uuid);
-        }
-
-        var belongsToCategoryTriples = graph.find(Node.ANY, CIMS.belongsToCategory.asNode(), Node.ANY);
-        while (belongsToCategoryTriples.hasNext()) {
-            var triple = belongsToCategoryTriples.next();
-            var object = triple.getObject();
-
-            if (graph.contains(object, RDF.type.asNode(), CIMS.classCategory.asNode()) ||
-                      graph.contains(object, RDFA.uuid.asNode(), Node.ANY)) {
-                continue;
-            }
-
-            var uuid = ResourceFactory.createPlainLiteral(UUID.randomUUID().toString()).asNode();
-            graph.add(object, RDFA.uuid.asNode(), uuid);
-        }
+        var model = ModelFactory.createModelForGraph(graph);
+        addUUIDsToTypedResources(model);
+        addUUIDsToReferencedOnlyResources(model);
         return graph;
+    }
+
+    private static void addUUIDsToTypedResources(Model model) {
+        var subjects = model.listResourcesWithProperty(RDF.type)
+                            .filterKeep(r -> r.isURIResource() && !r.hasProperty(RDFA.uuid))
+                            .toSet();
+
+        for (var subject : subjects) {
+            subject.addProperty(RDFA.uuid, createUUID());
+        }
+    }
+
+    private static void addUUIDsToReferencedOnlyResources(Model model) {
+        var objects = new HashSet<Resource>();
+
+        model.listResourcesWithProperty(RDF.type)
+             .filterKeep(r -> r.isURIResource() && hasAnyType(r))
+             .forEachRemaining(subject ->
+                                         subject.listProperties()
+                                                .mapWith(Statement::getObject)
+                                                .filterKeep(GraphRewindableWithUUIDs::isReferencedOnlyURI)
+                                                .mapWith(RDFNode::asResource)
+                                                .forEachRemaining(objects::add));
+
+        objects.forEach(o -> o.addProperty(RDFA.uuid, createUUID()));
+    }
+
+    private static boolean hasAnyType(Resource resource) {
+        return resource.listProperties(RDF.type)
+                       .mapWith(Statement::getObject)
+                       .filterKeep(o -> RELEVANT_TYPES.contains(o.asResource().getURI()))
+                       .hasNext();
+    }
+
+    private static boolean isReferencedOnlyURI(RDFNode node) {
+        return node.isURIResource()
+                  && !RELEVANT_TYPES.contains(node.asResource().getURI())
+                  && !node.asResource().hasProperty(RDFA.uuid)
+                  && !node.asResource().listProperties().hasNext();
+    }
+
+    private static String createUUID() {
+        return UUID.randomUUID().toString();
     }
 
     public static void removeUUIDs(Graph graph) {
