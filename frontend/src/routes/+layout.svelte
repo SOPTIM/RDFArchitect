@@ -120,6 +120,9 @@
 
     async function handleKeydown(event) {
         if (event.key === "Escape") {
+            if (event.defaultPrevented) {
+                return;
+            }
             eventStack.executeNewestEvent();
             return;
         }

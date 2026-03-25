@@ -20,10 +20,11 @@
         faRotateLeft,
         faXmark,
     } from "@fortawesome/free-solid-svg-icons";
+    import { AlertDialog as BitsUiAlertDialog } from "bits-ui";
     import { Fa } from "svelte-fa";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import AlertDialog from "$lib/dialog/AlertDialog.svelte";
 
     let {
         showDialog = $bindable(),
@@ -47,11 +48,11 @@
     }
 </script>
 
-<Dialog
+<AlertDialog
     bind:showDialog
-    onkeydown={handleKeyDown}
     {...restProps}
     size="w-full max-w-md"
+    onkeydown={handleKeyDown}
 >
     <div class="flex items-start gap-3 p-2">
         <div
@@ -61,11 +62,15 @@
         </div>
 
         <div class="min-w-0">
-            <h2 class="text-default-text text-lg leading-9 font-semibold">
+            <BitsUiAlertDialog.Title
+                class="text-default-text text-lg leading-9 font-semibold"
+            >
                 Unsaved changes
-            </h2>
+            </BitsUiAlertDialog.Title>
 
-            <div class="text-text-subtle space-y-1 pt-2 pb-1">
+            <BitsUiAlertDialog.Description
+                class="text-text-subtle space-y-1 pt-2 pb-1"
+            >
                 <p class="text-sm leading-relaxed">
                     Unsaved changes will be lost.
                 </p>
@@ -76,7 +81,7 @@
                         Do you want to save before continuing?
                     {/if}
                 </p>
-            </div>
+            </BitsUiAlertDialog.Description>
         </div>
     </div>
     <div class="flex flex-row justify-end gap-2 px-2 pb-2">
@@ -108,4 +113,4 @@
             />
         </div>
     </div>
-</Dialog>
+</AlertDialog>
