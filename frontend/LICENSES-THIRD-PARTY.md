@@ -14,7 +14,7 @@
 
 ### @faker-js/faker
 - **Package:** @faker-js/faker
-- **Version:** 10.3.0
+- **Version:** 10.4.0
 - **License:** MIT
 - **URL:** [https://fakerjs.dev](https://fakerjs.dev)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.57.1
+- **Version:** 8.57.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -144,7 +144,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.15.2
+- **Version:** 3.16.0
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -161,7 +161,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 29.0.0
+- **Version:** 29.0.1
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -197,7 +197,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.54.0
+- **Version:** 5.55.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -233,7 +233,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.57.1
+- **Version:** 8.57.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -257,7 +257,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
