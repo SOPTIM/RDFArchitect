@@ -23,10 +23,8 @@
 
     import { goto } from "$app/navigation";
 
-    let { disableNext = $bindable() } = $props();
-
     export async function onNext() {
-        await goto("/");
+        await goto("/mainpage");
     }
 
     async function generateMigrationScript() {

@@ -21,6 +21,7 @@ import lombok.Data;
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 
 import java.util.List;
@@ -35,7 +36,7 @@ public class SchemaMigrationContext {
     private Graph updatedSchema;
 
     // original diff as triples
-    private List<TriplePackageChange> tripleDiff;
+    private List<TripleClassChange> tripleDiff;
 
     // original diff as semantic changes
     private List<SemanticClassChange> semanticDiff;

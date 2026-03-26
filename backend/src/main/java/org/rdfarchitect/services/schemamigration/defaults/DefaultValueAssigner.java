@@ -38,7 +38,7 @@ public class DefaultValueAssigner {
 
     public void assignDefaultValues(List<SemanticClassChange> classes, Model model, List<DefaultValueView> result) {
         for (var cls : classes) {
-            if (cls.getAttributes().isEmpty() && cls.getAssociations().isEmpty() && cls.getEnumEntries().isEmpty()) {
+            if (!hasPropertyChanges(cls) || cls.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE) {
                 continue;
             }
 
@@ -49,9 +49,14 @@ public class DefaultValueAssigner {
         }
     }
 
+    private boolean hasPropertyChanges(SemanticClassChange cls) {
+        return !cls.getAttributes().isEmpty() || !cls.getAssociations().isEmpty() || !cls.getEnumEntries().isEmpty();
+    }
+
     public void assignDefaultValueToAttributes(List<SemanticAttributeChange> attributes, Model model) {
         for (var attributeChange : attributes) {
-            if (attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE) {
+            if (attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE ||
+                      attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
                 continue;
             }
 
@@ -62,7 +67,8 @@ public class DefaultValueAssigner {
 
     public void assignDefaultsToAssociations(List<SemanticAssociationChange> associations, Model model) {
         for (var associationChange : associations) {
-            if (associationChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE) {
+            if (associationChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE ||
+                      associationChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
                 continue;
             }
 
@@ -91,7 +97,7 @@ public class DefaultValueAssigner {
 
         attributeChange.setOptional(CIMAttributeUtils.isOptional(attributeResource));
 
-        if (CIMAttributeUtils.hasPrimitiveDatatype(attributeResource) || CIMAttributeUtils.hasCIMDatatype(attributeResource)) {
+        if (CIMAttributeUtils.hasPrimitiveDatatype(attributeResource) || CIMAttributeUtils.hasCIMDatatype(attributeResource) || CIMAttributeUtils.hasXSDDatatype(attributeResource)) {
             attributeChange.setPrimitiveDataType(CIMAttributeUtils.getPrimitiveDatatype(attributeResource).getURI());
             attributeChange.setDataType(attributeResource.getProperty(CIMS.datatype).getResource().getURI());
         } else if (CIMAttributeUtils.hasEnumAttribute(attributeResource)) {

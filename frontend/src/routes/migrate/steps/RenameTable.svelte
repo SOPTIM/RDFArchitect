@@ -25,9 +25,11 @@
     } = $props();
 
     function handleSelectionChange(rename, event) {
-        if (event.target.value === "") {
+        if (rename.newResource) {
             onDissolveMapping(rename);
-        } else {
+        }
+
+        if (event.target.value !== "") {
             const selectedItem = unlinkedNewItems.find(
                 item => item.label === event.target.value,
             );

@@ -84,8 +84,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             result.add(generateUpdateForAssociation(association));
         }
 
-        for (var enumEntry : classChange.getEnumEntries()) {
-            result.add(generateUpdateForEnumEntry(enumEntry));
+        if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
+            for (var enumEntry : classChange.getEnumEntries()) {
+                result.add(generateUpdateForEnumEntry(enumEntry));
+            }
         }
     }
 

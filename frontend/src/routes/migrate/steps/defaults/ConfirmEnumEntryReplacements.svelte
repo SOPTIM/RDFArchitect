@@ -40,6 +40,7 @@
 
     function hasDeletedEntries(enumClass) {
         return (
+            enumClass.semanticResourceChangeType !== "DELETE" &&
             enumClass.enumEntries &&
             enumClass.enumEntries.some(
                 e => e.semanticResourceChangeType === "DELETE",

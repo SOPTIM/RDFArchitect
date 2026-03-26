@@ -40,7 +40,6 @@ import java.util.List;
 public class SparqlUpdateGenerator {
 
     private final MigrationSessionStore migrationSessionStore;
-    private final DatabasePort databasePort;
 
     public String generateDeleteClassUpdate(SemanticClassChange classChange) {
         var pss = SparqlTemplateLoader.loadTemplate("migration/class-deleted");

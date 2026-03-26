@@ -26,7 +26,6 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
-import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
 
@@ -36,18 +35,9 @@ import java.util.List;
 @UtilityClass
 public class SemanticChangeAnalyser {
 
-    public List<SemanticClassChange> getSemanticChanges(List<TriplePackageChange> packageChanges) {
+    public List<SemanticClassChange> getSemanticChanges(List<TripleClassChange> classChanges) {
         List<SemanticClassChange> semanticChanges = new ArrayList<>();
-        for (TriplePackageChange packageChange : packageChanges) {
-            semanticChanges.addAll(getSemanticChangesForPackage(packageChange));
-        }
-
-        return semanticChanges;
-    }
-
-    private List<SemanticClassChange> getSemanticChangesForPackage(TriplePackageChange triplePackageChange) {
-        var semanticChanges = new ArrayList<SemanticClassChange>();
-        for (var classChange : triplePackageChange.getClasses()) {
+        for (var classChange : classChanges) {
             semanticChanges.add(getSemanticChangesForClass(classChange));
         }
 

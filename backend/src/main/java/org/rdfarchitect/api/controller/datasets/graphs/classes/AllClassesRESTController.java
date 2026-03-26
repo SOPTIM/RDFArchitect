@@ -60,9 +60,9 @@ public class AllClassesRESTController {
      *
      * @param packageDTO     PackageDTO object of the package to which the new class is going to be added
      * @param classURIPrefix URI Prefix of the new class
-     * @param classLabel     Name of the new class
+     * @param className      Label of the new class
      */
-    public record AddNewClassRequest(PackageDTO packageDTO, String classURIPrefix, String classLabel) {
+    public record AddNewClassRequest(PackageDTO packageDTO, String classURIPrefix, String className) {
 
     }
 
@@ -94,7 +94,7 @@ public class AllClassesRESTController {
         var extendedClassURIPrefix = expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        addClassUseCase.addClass(graphIdentifier, addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.classLabel);
+        addClassUseCase.addClass(graphIdentifier, addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.className);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".", datasetName, graphURI, originURL);
 

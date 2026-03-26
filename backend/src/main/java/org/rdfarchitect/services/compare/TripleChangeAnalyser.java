@@ -42,18 +42,18 @@ import java.util.stream.Collectors;
 @UtilityClass
 public class TripleChangeAnalyser {
 
-    public List<TriplePackageChange> compareGraphs(Graph currentGraph, Graph updatedGraph) {
+    public List<TriplePackageChange> compareGraphs(Graph originalGraph, Graph updatedGraph) {
         var result = new ArrayList<TriplePackageChange>();
 
-        var packages = getPackages(currentGraph, updatedGraph);
+        var packages = getPackages(originalGraph, updatedGraph);
         for (var packageURI : packages) {
-            var packageChange = comparePackage(currentGraph, updatedGraph, packageURI);
+            var packageChange = comparePackage(originalGraph, updatedGraph, packageURI);
             if (packageChange != null) {
                 result.add(packageChange);
             }
         }
 
-        var defaultPackageChange = compareDefaultPackage(currentGraph, updatedGraph);
+        var defaultPackageChange = compareDefaultPackage(originalGraph, updatedGraph);
         if (defaultPackageChange != null) {
             result.add(defaultPackageChange);
         }
@@ -61,36 +61,48 @@ public class TripleChangeAnalyser {
         return result;
     }
 
+    public List<TripleClassChange> compareGraphsDisregardingPackages(Graph originalGraph, Graph updatedGraph) {
+        var classChanges = new ArrayList<TripleClassChange>();
+        var classes = getAllClasses(originalGraph, updatedGraph);
+        for (var classURI : classes) {
+            var classChange = compareClass(originalGraph, updatedGraph, classURI);
+            if (classChange != null) {
+                classChanges.add(classChange);
+            }
+        }
+        return classChanges;
+    }
+
     /**
-     * Compares a package in the current graph with the same package in the updated graph.
+     * Compares a package in the original graph with the same package in the updated graph.
      * If the package is not defined in either graph, it is considered external.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
-     * @param packageURI   The URI of the package to compare.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
+     * @param packageURI    The URI of the package to compare.
      *
      * @return A TriplePackageChange object representing the differences in the package, or null if there are no changes.
      */
-    private TriplePackageChange comparePackage(Graph currentGraph, Graph updatedGraph, String packageURI) {
+    private TriplePackageChange comparePackage(Graph originalGraph, Graph updatedGraph, String packageURI) {
         var label = packageURI.split("#")[1];
         var packageChange = TriplePackageChange.builder()
                                                .uri(packageURI)
                                                .label(label)
                                                .build();
-        if (!currentGraph.contains(NodeFactory.createURI(packageURI), RDF.type.asNode(), CIMS.classCategory.asNode())
+        if (!originalGraph.contains(NodeFactory.createURI(packageURI), RDF.type.asNode(), CIMS.classCategory.asNode())
                   && !updatedGraph.contains(NodeFactory.createURI(packageURI), RDF.type.asNode(), CIMS.classCategory.asNode())) {
             packageChange.setExternal(true);
         }
 
-        var packageChanges = compareResource(currentGraph, updatedGraph, packageURI);
+        var packageChanges = compareResource(originalGraph, updatedGraph, packageURI);
         if (!packageChanges.isEmpty()) {
             packageChange.setChanges(packageChanges);
         }
 
         var classChanges = new ArrayList<TripleClassChange>();
-        var classes = getClassesInPackage(currentGraph, updatedGraph, packageURI);
+        var classes = getClassesInPackage(originalGraph, updatedGraph, packageURI);
         for (var classURI : classes) {
-            var classChange = compareClass(currentGraph, updatedGraph, classURI);
+            var classChange = compareClass(originalGraph, updatedGraph, classURI);
             if (classChange != null) {
                 classChanges.add(classChange);
             }
@@ -107,20 +119,20 @@ public class TripleChangeAnalyser {
      * Compares all classes without a package and groups them in a default package.
      * Since the default package is not defined in the graph, it can have no changes in the package definition.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
      *
      * @return A TriplePackageChange object representing the differences between the classes, or null if there are no changes.
      */
-    private TriplePackageChange compareDefaultPackage(Graph currentGraph, Graph updatedGraph) {
+    private TriplePackageChange compareDefaultPackage(Graph originalGraph, Graph updatedGraph) {
         var packageChange = TriplePackageChange.builder()
                                                .label("default")
                                                .build();
 
         var classChanges = new ArrayList<TripleClassChange>();
-        var classes = getClassesWithoutPackage(currentGraph, updatedGraph);
+        var classes = getClassesWithoutPackage(originalGraph, updatedGraph);
         for (var classURI : classes) {
-            var classChange = compareClass(currentGraph, updatedGraph, classURI);
+            var classChange = compareClass(originalGraph, updatedGraph, classURI);
             if (classChange != null) {
                 classChanges.add(classChange);
             }
@@ -134,36 +146,36 @@ public class TripleChangeAnalyser {
     }
 
     /**
-     * Compares a class in the current graph with the same class in the updated graph.
+     * Compares a class in the original graph with the same class in the updated graph.
      * It compares the properties, attributes, associations, and enum entries of the class.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
-     * @param classURI     The URI of the class to compare.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
+     * @param classURI      The URI of the class to compare.
      *
      * @return A ClassChange object representing the differences in the class, or null if there are no changes.
      */
-    private TripleClassChange compareClass(Graph currentGraph, Graph updatedGraph, String classURI) {
+    private TripleClassChange compareClass(Graph originalGraph, Graph updatedGraph, String classURI) {
         var label = classURI.split("#")[1];
         var classChange = TripleClassChange.builder()
                                            .label(label)
                                            .uri(classURI)
                                            .build();
 
-        var classChanges = compareResource(currentGraph, updatedGraph, classURI);
+        var classChanges = compareResource(originalGraph, updatedGraph, classURI);
         if (!classChanges.isEmpty()) {
             classChange.setChanges(classChanges);
         }
 
-        var attributeChanges = new ArrayList<>(compareAttributes(currentGraph, updatedGraph, classURI));
+        var attributeChanges = new ArrayList<>(compareAttributes(originalGraph, updatedGraph, classURI));
         if (!attributeChanges.isEmpty()) {
             classChange.setAttributes(attributeChanges);
         }
-        var associationsChanges = new ArrayList<>(compareAssociations(currentGraph, updatedGraph, classURI));
+        var associationsChanges = new ArrayList<>(compareAssociations(originalGraph, updatedGraph, classURI));
         if (!associationsChanges.isEmpty()) {
             classChange.setAssociations(associationsChanges);
         }
-        var enumEntriesChanges = new ArrayList<>(compareEnumEntries(currentGraph, updatedGraph, classURI));
+        var enumEntriesChanges = new ArrayList<>(compareEnumEntries(originalGraph, updatedGraph, classURI));
         if (!enumEntriesChanges.isEmpty()) {
             classChange.setEnumEntries(enumEntriesChanges);
         }
@@ -175,31 +187,31 @@ public class TripleChangeAnalyser {
     }
 
     /**
-     * Compares the properties of a resource in the current graph with the properties of the same resource in the updated graph.
-     * Triples with the predicate RDFA.uuid are ignored, as they are currently only present in the InMemoryGraph.
+     * Compares the properties of a resource in the original graph with the properties of the same resource in the updated graph.
+     * Triples with the predicate RDFA.uuid are ignored, as they are originally only present in the InMemoryGraph.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
-     * @param uri          The URI of the resource to compare.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
+     * @param uri           The URI of the resource to compare.
      *
      * @return A map of property URIs to TriplePropertyChange objects representing the differences in properties.
      */
-    private List<TriplePropertyChange> compareResource(Graph currentGraph, Graph updatedGraph, String uri) {
-        var currentTriples = currentGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
-        var uploadedTriples = updatedGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
+    private List<TriplePropertyChange> compareResource(Graph originalGraph, Graph updatedGraph, String uri) {
+        var originalTriples = originalGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
+        var updatedTriples = updatedGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
         var propertyChanges = new ArrayList<TriplePropertyChange>();
 
-        var currentValues = currentTriples.stream()
-                                                      .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
-                                                      .collect(Collectors.toMap(Triple::getPredicate, Triple::getObject, (a, b) -> a));
+        var originalValues = originalTriples.stream()
+                                            .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
+                                            .collect(Collectors.toMap(Triple::getPredicate, Triple::getObject, (a, b) -> a));
 
-        var uploadedValues = uploadedTriples.stream()
-                                                        .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
-                                                        .collect(Collectors.toMap(Triple::getPredicate, Triple::getObject, (a, b) -> a));
+        var updatedValues = updatedTriples.stream()
+                                          .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
+                                          .collect(Collectors.toMap(Triple::getPredicate, Triple::getObject, (a, b) -> a));
 
         Set<Node> allPredicates = new HashSet<>();
-        allPredicates.addAll(currentValues.keySet());
-        allPredicates.addAll(uploadedValues.keySet());
+        allPredicates.addAll(originalValues.keySet());
+        allPredicates.addAll(updatedValues.keySet());
 
         for (Node predicate : allPredicates) {
             // ignore uuid predicates, stereotypes are handled separately
@@ -207,8 +219,8 @@ public class TripleChangeAnalyser {
                 continue;
             }
 
-            var from = uploadedValues.get(predicate);
-            var to = currentValues.get(predicate);
+            var from = originalValues.get(predicate);
+            var to = updatedValues.get(predicate);
 
             if (!Objects.equals(from, to)) {
                 var change = new TriplePropertyChange();
@@ -220,30 +232,30 @@ public class TripleChangeAnalyser {
         }
 
         // handle stereotypes separately
-        var currentStereotypes = currentTriples.stream()
-                                               .filter(triple -> triple.getPredicate().equals(CIMS.stereotype.asNode()))
-                                               .map(triple -> triple.getObject().toString())
-                                               .collect(Collectors.toSet());
-        var uploadedStereotypes = uploadedTriples.stream()
+        var originalStereotypes = originalTriples.stream()
+                                                 .filter(triple -> triple.getPredicate().equals(CIMS.stereotype.asNode()))
+                                                 .map(triple -> triple.getObject().toString())
+                                                 .collect(Collectors.toSet());
+        var updatedStereotypes = updatedTriples.stream()
                                                .filter(triple -> triple.getPredicate().equals(CIMS.stereotype.asNode()))
                                                .map(triple -> triple.getObject().toString())
                                                .collect(Collectors.toSet());
 
-        for (var currentStereotype : currentStereotypes) {
-            if(!uploadedStereotypes.contains(currentStereotype)) {
-                var change =  new TriplePropertyChange();
+        for (var originalStereotype : originalStereotypes) {
+            if (!updatedStereotypes.contains(originalStereotype)) {
+                var change = new TriplePropertyChange();
                 change.setPredicate(CIMS.stereotype.toString());
-                change.setTo(currentStereotype);
+                change.setFrom(originalStereotype);
                 propertyChanges.add(change);
             } else {
-                uploadedStereotypes.remove(currentStereotype);
+                updatedStereotypes.remove(originalStereotype);
             }
         }
 
-        for (var uploadedStereotype : uploadedStereotypes) {
+        for (var updatedStereotype : updatedStereotypes) {
             var change = new TriplePropertyChange();
             change.setPredicate(CIMS.stereotype.toString());
-            change.setFrom(uploadedStereotype);
+            change.setTo(updatedStereotype);
             propertyChanges.add(change);
         }
 
@@ -251,25 +263,25 @@ public class TripleChangeAnalyser {
     }
 
     /**
-     * Compares the attributes, associations, and enum entries of a class in the current graph with the same class in the updated graph.
+     * Compares the attributes, associations, and enum entries of a class in the original graph with the same class in the updated graph.
      * The prefix and class name are excluded from the label of the NestedObjectChange objects.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
-     * @param classURI     The URI of the class to compare.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
+     * @param classURI      The URI of the class to compare.
      *
      * @return A list of NestedObjectChange objects representing the differences in attributes, associations, or enum entries.
      */
-    private List<TripleResourceChange> compareAttributes(Graph currentGraph, Graph updatedGraph, String classURI) {
+    private List<TripleResourceChange> compareAttributes(Graph originalGraph, Graph updatedGraph, String classURI) {
         var attributesChanges = new ArrayList<TripleResourceChange>();
-        var attributes = getAttributes(currentGraph, updatedGraph, classURI);
+        var attributes = getAttributes(originalGraph, updatedGraph, classURI);
 
         for (String attributeURI : attributes) {
             var nestedChange = new TripleResourceChange();
             nestedChange.setUri(attributeURI);
             nestedChange.setLabel(attributeURI.split("#")[1].split("\\.", 2)[1]);
 
-            var attrChanges = compareResource(currentGraph, updatedGraph, attributeURI);
+            var attrChanges = compareResource(originalGraph, updatedGraph, attributeURI);
             if (!attrChanges.isEmpty()) {
                 nestedChange.setChanges(attrChanges);
                 attributesChanges.add(nestedChange);
@@ -280,25 +292,25 @@ public class TripleChangeAnalyser {
     }
 
     /**
-     * Compares the associations of a class in the current graph with the associations of the same class in the updated graph.
+     * Compares the associations of a class in the original graph with the associations of the same class in the updated graph.
      * The prefix is excluded from the label of the NestObjectChange objects.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
-     * @param classURI     The URI of the class to compare.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
+     * @param classURI      The URI of the class to compare.
      *
      * @return A list of NestedObjectChange objects representing the differences in associations.
      */
-    private List<TripleResourceChange> compareAssociations(Graph currentGraph, Graph updatedGraph, String classURI) {
+    private List<TripleResourceChange> compareAssociations(Graph originalGraph, Graph updatedGraph, String classURI) {
         var associationsChanges = new ArrayList<TripleResourceChange>();
-        var associations = getAssociations(currentGraph, updatedGraph, classURI);
+        var associations = getAssociations(originalGraph, updatedGraph, classURI);
 
         for (String associationURI : associations) {
             TripleResourceChange nestedChange = new TripleResourceChange();
             nestedChange.setUri(associationURI);
             nestedChange.setLabel(associationURI.split("#")[1]);
 
-            var assocChanges = compareResource(currentGraph, updatedGraph, associationURI);
+            var assocChanges = compareResource(originalGraph, updatedGraph, associationURI);
             if (!assocChanges.isEmpty()) {
                 nestedChange.setChanges(assocChanges);
                 associationsChanges.add(nestedChange);
@@ -309,25 +321,25 @@ public class TripleChangeAnalyser {
     }
 
     /**
-     * Compares the enum entries of a class in the current graph with the enum entries of the same class in the updatedgraph.
+     * Compares the enum entries of a class in the original graph with the enum entries of the same class in the updatedgraph.
      * The prefix and class name are excluded from the label of the NestedObjectChange objects.
      *
-     * @param currentGraph The original version to compare to.
-     * @param updatedGraph The Graph which is compared to the original graph.
-     * @param classURI     The URI of the class to compare.
+     * @param originalGraph The original version to compare to.
+     * @param updatedGraph  The Graph which is compared to the original graph.
+     * @param classURI      The URI of the class to compare.
      *
      * @return A list of NestedObjectChange objects representing the differences in enum entries.
      */
-    private List<TripleResourceChange> compareEnumEntries(Graph currentGraph, Graph updatedGraph, String classURI) {
+    private List<TripleResourceChange> compareEnumEntries(Graph originalGraph, Graph updatedGraph, String classURI) {
         var enumEntriesChanges = new ArrayList<TripleResourceChange>();
 
-        var enumEntries = getEnumEntries(currentGraph, updatedGraph, classURI);
+        var enumEntries = getEnumEntries(originalGraph, updatedGraph, classURI);
         for (String enumEntryURI : enumEntries) {
             var nestedChange = new TripleResourceChange();
             nestedChange.setUri(enumEntryURI);
             nestedChange.setLabel(enumEntryURI.split("#")[1].split("\\.", 2)[1]);
 
-            var enumEntryChanges = compareResource(currentGraph, updatedGraph, enumEntryURI);
+            var enumEntryChanges = compareResource(originalGraph, updatedGraph, enumEntryURI);
             if (!enumEntryChanges.isEmpty()) {
                 nestedChange.setChanges(enumEntryChanges);
                 enumEntriesChanges.add(nestedChange);
@@ -353,6 +365,13 @@ public class TripleChangeAnalyser {
         graph1.find(Node.ANY, CIMS.belongsToCategory.asNode(), Node.ANY).forEachRemaining(triple -> packages.add(triple.getObject().toString()));
         graph2.find(Node.ANY, CIMS.belongsToCategory.asNode(), Node.ANY).forEachRemaining(triple -> packages.add(triple.getObject().toString()));
         return packages;
+    }
+
+    private HashSet<String> getAllClasses(Graph graph1, Graph graph2) {
+        var classes = new HashSet<String>();
+        graph1.find(Node.ANY, RDF.type.asNode(), RDFS.Class.asNode()).forEachRemaining(triple -> classes.add(triple.getSubject().toString()));
+        graph2.find(Node.ANY, RDF.type.asNode(), RDFS.Class.asNode()).forEachRemaining(triple -> classes.add(triple.getSubject().toString()));
+        return classes;
     }
 
     /**

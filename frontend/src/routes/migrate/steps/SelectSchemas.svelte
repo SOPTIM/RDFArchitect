@@ -111,7 +111,7 @@
             body.append("fileA", fileA);
             body.append("datasetB", datasetB);
             body.append("graphB", graphB);
-        }  else if (compareMode === CompareMode.FILE_TO_FILE) {
+        } else if (compareMode === CompareMode.FILE_TO_FILE) {
             body.append("fileA", fileA);
             body.append("fileB", fileB);
         }
@@ -152,7 +152,7 @@
         </p>
     </InfoBox>
 
-    <div class="mx-2 flex h-full flex-col space-y-4">
+    <div class="flex h-full flex-col space-y-4">
         <div class="border-border bg-background-subtle rounded border p-3">
             <label for="compareMode" class="mb-1 block text-sm">
                 Comparison type

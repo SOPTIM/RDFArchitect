@@ -43,7 +43,9 @@
         })
             .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
             .then(data => {
-                deletedAndRenamed = data.deletedAndRenamed;
+                deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
+                    a.oldResource.label.localeCompare(b.oldResource.label),
+                );
                 added = data.added;
                 modified = data.modified;
 
@@ -86,7 +88,7 @@
     }
 </script>
 
-<div class="text-default-text flex flex-col space-y-8 p-2">
+<div class="text-default-text flex flex-col space-y-8 p-2 pr-4">
     <InfoBox type="info">
         <p>
             This step gives an overview of all added and deleted classes, as

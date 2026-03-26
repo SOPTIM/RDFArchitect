@@ -77,15 +77,20 @@ public class MigrationContextRESTController {
               String graphB) {
         logger.info("Received POST request: \"/api/migrations/context\" from \"{}\".", originURL);
 
+        // file to file
         if(fileA != null && fileB != null) {
             setMigrationContextUseCase.setMigrationContext(fileA, fileB);
-        } else if (datasetA != null && datasetB != null && graphA != null && graphB != null) {
+        }
+        // stored to stored
+        else if (datasetA != null && datasetB != null && graphA != null && graphB != null) {
             var extendedGraphURIA = expandURIUseCase.expandUri(datasetA, graphA);
             var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(new GraphIdentifier(datasetA, extendedGraphURIA), new GraphIdentifier(datasetB, extendedGraphURIB));
-        } else if (fileA != null && datasetB != null && graphB != null) {
+        }
+        // file to stored
+        else if (fileA != null && datasetB != null && graphB != null) {
             var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
-            setMigrationContextUseCase.setMigrationContext(fileA, new GraphIdentifier(datasetA, extendedGraphURIB));
+            setMigrationContextUseCase.setMigrationContext(fileA, new GraphIdentifier(datasetB, extendedGraphURIB));
         } else {
             logger.warn("Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.", originURL);
             throw new IllegalArgumentException("Invalid request. Graphs must be provided either as files, GraphIdentifiers or a file and a GraphIdentifier.");

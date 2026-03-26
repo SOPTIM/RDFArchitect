@@ -87,7 +87,7 @@
             (attribute.semanticResourceChangeType ===
                 "ADDED_FROM_INHERITANCE" &&
                 !attribute.optional) ||
-            (attribute.semanticResourceChangeType == "CHANGE" &&
+            (attribute.semanticResourceChangeType === "CHANGE" &&
                 (attribute.changes?.some(
                     c => c.semanticFieldChangeType === "MADE_REQUIRED",
                 ) ||
@@ -98,7 +98,7 @@
     }
 
     function isDisabled(attribute) {
-        return !(!attribute.optional || attribute.forceDefaultValue);
+        return !(requiresInput(attribute) || attribute.forceDefaultValue);
     }
 
     function hasAttributes(cls) {

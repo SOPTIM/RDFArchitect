@@ -132,7 +132,7 @@
             {/each}
         </div>
 
-        <div class="no-scrollbar h-full overflow-y-scroll">
+        <div class="h-full overflow-y-scroll">
             <currentStep.component
                 bind:this={stepInstance}
                 substeps={currentStep.substeps}

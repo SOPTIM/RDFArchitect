@@ -49,6 +49,7 @@ import org.rdfarchitect.services.schemamigration.renamings.RenameDetector;
 import org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder;
 import org.rdfarchitect.services.schemamigration.scriptgeneration.GenerateMigrationScriptUseCase;
 import org.rdfarchitect.services.schemamigration.scriptgeneration.MigrationScriptBuilder;
+import org.rdfarchitect.services.update.classes.enumentries.ReplaceOrCreateEnumEntryUseCase;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -67,6 +68,7 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
     private final MigrationScriptBuilder migrationScriptBuilder;
 
     private static final String GRAPH_URI = "http://example.org/graph";
+    private final ReplaceOrCreateEnumEntryUseCase replaceOrCreateEnumEntryUseCase;
 
     @Override
     public void setMigrationContext(MultipartFile originalSchema, GraphIdentifier updatedSchema) {
@@ -129,9 +131,10 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
 
     private void initContext(Graph originalGraph, Graph updatedGraph) {
         var context = migrationSessionStore.getContext();
+        context.clear();
         context.setOriginalSchema(originalGraph);
         context.setUpdatedSchema(updatedGraph);
-        var tripleChanges = TripleChangeAnalyser.compareGraphs(originalGraph, updatedGraph);
+        var tripleChanges = TripleChangeAnalyser.compareGraphsDisregardingPackages(originalGraph, updatedGraph);
         context.setTripleDiff(tripleChanges);
         var semanticChanges = SemanticChangeAnalyser.getSemanticChanges(tripleChanges);
         context.setSemanticDiff(semanticChanges);
@@ -139,8 +142,13 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
 
     @Override
     public ResourceRenameOverview<SemanticClassChange> getClassRenamings() {
-        var changes = migrationSessionStore.getContext().getSemanticDiff();
-        var renames = RenameDetector.detectClassRenames(changes);
+        var context = migrationSessionStore.getContext();
+        var changes = context.getSemanticDiff();
+
+        var renames = context.getRenameCandidates();
+        if (renames == null) {
+            renames = RenameDetector.detectClassRenames(changes);
+        }
 
         return new ResourceRenameOverview<>(changes, renames);
     }
