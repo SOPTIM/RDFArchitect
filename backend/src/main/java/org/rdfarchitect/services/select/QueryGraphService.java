@@ -126,7 +126,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         return CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);

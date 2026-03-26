@@ -39,6 +39,7 @@ import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 
 import java.util.List;

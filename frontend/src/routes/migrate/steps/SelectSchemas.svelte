@@ -30,11 +30,11 @@
 
     const CompareMode = Object.freeze({
         STORED_TO_STORED: 0,
-        UPLOADED_TO_STORED: 1,
+        FILE_TO_STORED: 1,
         FILE_TO_FILE: 2,
     });
 
-    let compareMode = $state(CompareMode.STORED_TO_STORED);
+    let compareMode = $state(CompareMode.FILE_TO_STORED);
 
     let datasetA = $state(null);
     let graphA = $state(null);
@@ -52,8 +52,8 @@
             disabled: false,
         },
         {
-            value: CompareMode.STORED_TO_UPLOADED,
-            label: "Stored → Uploaded",
+            value: CompareMode.FILE_TO_STORED,
+            label: "Uploaded → Stored",
             disabled: false,
         },
         {
@@ -68,8 +68,8 @@
             disableNext = !fileA || !fileB;
         }
 
-        if (compareMode === CompareMode.UPLOADED_TO_STORED) {
-            disableNext = !datasetA || !graphA || !fileA;
+        if (compareMode === CompareMode.FILE_TO_STORED) {
+            disableNext = !fileA || !datasetB || !graphB;
         }
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
@@ -80,7 +80,7 @@
     onMount(async () => {
         let storedState = get(migrationState);
 
-        compareMode = storedState.compareMode ?? CompareMode.UPLOADED_TO_STORED;
+        compareMode = storedState.compareMode ?? CompareMode.FILE_TO_STORED;
         datasetA = storedState.datasetA;
         graphA = storedState.graphA;
         datasetB = storedState.datasetB;
@@ -107,13 +107,13 @@
             body.append("graphA", graphA);
             body.append("datasetB", datasetB);
             body.append("graphB", graphB);
-        } else if (compareMode === CompareMode.FILE_TO_FILE) {
-            body.append("fileA", fileA);
-            body.append("fileB", fileB);
-        } else if (compareMode === CompareMode.UPLOADED_TO_STORED) {
+        } else if (compareMode === CompareMode.FILE_TO_STORED) {
             body.append("fileA", fileA);
             body.append("datasetB", datasetB);
             body.append("graphB", graphB);
+        }  else if (compareMode === CompareMode.FILE_TO_FILE) {
+            body.append("fileA", fileA);
+            body.append("fileB", fileB);
         }
 
         let url = `${PUBLIC_BACKEND_URL}/migrations/context`;
@@ -187,11 +187,10 @@
             />
         {/if}
 
-        {#if compareMode === CompareMode.STORED_TO_UPLOADED}
-            <DatasetAndGraphSelection
-                bind:dataset={datasetA}
-                bind:graph={graphA}
-            />
+        {#if compareMode === CompareMode.FILE_TO_STORED}
+            <div class="border-border bg-background-subtle rounded border p-3">
+                <FileSelectButton bind:file={fileA} />
+            </div>
 
             <div class="flex items-center gap-3">
                 <div class="bg-border h-px w-full"></div>
@@ -201,9 +200,10 @@
                 <div class="bg-border h-px w-full"></div>
             </div>
 
-            <div class="border-border bg-background-subtle rounded border p-3">
-                <FileSelectButton bind:file={fileA} />
-            </div>
+            <DatasetAndGraphSelection
+                bind:dataset={datasetB}
+                bind:graph={graphB}
+            />
         {/if}
 
         {#if compareMode === CompareMode.FILE_TO_FILE}
