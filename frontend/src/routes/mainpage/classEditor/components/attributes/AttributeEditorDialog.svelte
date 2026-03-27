@@ -45,6 +45,7 @@
             attribute = new ReactiveAttribute({
                 namespace: classEditorContext.reactiveClass.namespace.value,
             });
+            attributes.appendClass(attribute);
         } else {
             isNewAttribute = false;
         }
@@ -73,12 +74,17 @@
             isNewAttribute,
         ).then(res => {
             if (res.ok) {
-                if (isNewAttribute) {
-                    attributes.append(attribute);
-                }
                 attribute.save();
             }
         });
+    }
+
+    function discardChanges() {
+        if (isNewAttribute) {
+            attributes.remove(attribute);
+        } else {
+            attribute.reset();
+        }
     }
 </script>
 
@@ -86,7 +92,7 @@
     bind:showDialog
     {onOpen}
     saveChanges={saveAttribute}
-    discardChanges={() => attribute.reset()}
+    discardChanges={() => discardChanges()}
     hasChanges={isNewAttribute || attribute?.isModified}
     isValid={attribute?.isValid}
     {readonly}
