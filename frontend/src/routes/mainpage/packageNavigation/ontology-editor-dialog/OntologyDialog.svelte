@@ -37,6 +37,7 @@
         showDialog = $bindable(),
         dataset,
         graphUri,
+        namespaces,
         ontology = $bindable(),
         readonly,
     } = $props();
@@ -46,7 +47,6 @@
     let showAddKnownEntriesPopUp = $state(false);
     let showDiscardSaveConfirmDialog = $state(false);
 
-    let namespaces = $state([]);
     let tableContainerRef = $state(null);
 
     let ontologyObject = $state();
@@ -58,7 +58,9 @@
     let disableSubmit = $derived(!hasChanges || !isValid);
 
     async function onOpen() {
-        namespaces = await getNamespaces(dataset);
+        if (!namespaces) {
+            namespaces = await getNamespaces(dataset);
+        }
         if (!ontology) {
             ontologyObject = new ReactiveOntology();
         } else {
@@ -125,7 +127,7 @@
     }
 
     function getSubstitutedNamespace(namespace) {
-        const namespaceObj = namespaces.find(p => p?.prefix === namespace);
+        const namespaceObj = namespaces?.find(p => p?.prefix === namespace);
         return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
     }
 </script>

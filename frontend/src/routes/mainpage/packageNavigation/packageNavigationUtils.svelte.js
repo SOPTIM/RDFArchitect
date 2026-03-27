@@ -39,6 +39,9 @@ export function isSelectedPackage(dataset, graph, pack) {
 }
 
 export function isSelectedClass(dataset, graph, cls) {
+    if (typeof cls === "string") {
+        cls = { uuid: cls };
+    }
     const datasetLabel = dataset?.label ?? dataset;
     const graphUri = getUri(graph);
     return (
@@ -49,10 +52,16 @@ export function isSelectedClass(dataset, graph, cls) {
 }
 
 export function getUri(resource) {
+    if (typeof resource === "string") {
+        return resource;
+    }
     const uri = resource.uri ? resource.uri : resource;
     return uri.prefix ? uri.prefix + uri.suffix : uri.suffix;
 }
 
 export function getPackageId(pack) {
+    if (typeof pack === "string") {
+        return pack;
+    }
     return pack?.uuid ?? "default";
 }
