@@ -23,14 +23,18 @@
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
     import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import { ReactiveValueCompareWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
+    import { isInvalidLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
     import {
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
+    import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
 
     let {
         showDialog = $bindable(),
@@ -54,17 +58,20 @@
 
     let classPackage = $state(null);
     let classURINamespace = $state(null);
-    let className = $state(null);
 
+    let className = $state(null);
     let packages = $state([]);
     let namespaces = $state([]);
+
+    let compareClasses = $state([]);
 
     let disableSubmit = $derived(
         !datasetName ||
             !graphURI ||
             !classPackage ||
             !classURINamespace ||
-            !className,
+            !className.value ||
+            className.violations.length > 0,
     );
 
     const packageSelectionLocked = $derived(!!lockedPackage);
@@ -86,13 +93,25 @@
         classPackage = null;
     });
 
+    $effect(async () => {
+        if (datasetName && graphURI && className) {
+            className.compareValues = await getClasses(datasetName, graphURI);
+        }
+    });
+
     async function onOpen() {
         datasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
         classURINamespace = null;
-        className = null;
+
+        className = new ReactiveValueCompareWrapper(
+            "",
+            compareClasses,
+            isInvalidLabel,
+        );
+        console.log("classNameWrapper", className);
         if (!datasetName) {
             return;
         }
@@ -105,6 +124,7 @@
 
         if (graphURI) {
             await getPackages(datasetName, graphURI);
+            compareClasses = await getClasses(datasetName, graphURI);
         } else {
             packages = [];
         }
@@ -167,7 +187,7 @@
                 body: JSON.stringify({
                     packageDTO,
                     classURIPrefix: classURINamespace,
-                    className: className,
+                    className: className.value,
                 }),
                 credentials: "include",
             },
@@ -242,11 +262,15 @@
         <label for={domIds.className} class="mt-3 mb-1 block text-sm">
             Name
         </label>
-        <TextEditControl
-            id={domIds.className}
-            placeholder="..."
-            bind:value={className}
-        />
+        {#if className}
+            <TextEditControl
+                id={domIds.className}
+                placeholder="..."
+                bind:value={className.value}
+                warn={!className.isValid}
+            />
+            <ViolationMessages violations={className.violations} />
+        {/if}
     </div>
     <DialogLeaveButtons
         bind:showDialog

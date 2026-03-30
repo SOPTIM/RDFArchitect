@@ -28,10 +28,16 @@ export function isInvalidUuid(uuid) {
     return violations;
 }
 
-export function isInvalidLabel(label) {
+export function isInvalidLabel(label, compareClasses) {
     const violations = [];
     if (!label || label.trim() === "") {
         violations.push("must not be empty");
+    }
+    if (
+        compareClasses &&
+        compareClasses.filter(c => c.label === label).length > 0
+    ) {
+        violations.push("must be unique");
     }
     return violations;
 }

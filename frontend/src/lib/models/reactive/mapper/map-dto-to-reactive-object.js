@@ -55,6 +55,7 @@ export function mapClassDtoToReactiveClass(classDto, classes) {
         attributes,
         associations,
         enumEntries,
+        classes,
     );
 }
 

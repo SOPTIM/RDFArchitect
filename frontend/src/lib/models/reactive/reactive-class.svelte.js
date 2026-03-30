@@ -19,6 +19,7 @@ import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.s
 import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
 import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
 import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
+import { ReactiveValueCompareWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
     hasUniqueLabel,
@@ -33,6 +34,7 @@ function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
         isInvalidStereotype(stereotype, stereotypesArray),
     );
 }
+
 function initializeUniqueLabelChecks(reactiveObject, enumEntriesArray) {
     reactiveObject.label.violationChecks.push(label =>
         hasUniqueLabel(label, enumEntriesArray),
@@ -51,13 +53,19 @@ export class ReactiveClass {
         attributes = [],
         associations = [],
         enumEntries = [],
+        compareClasses = [],
     ) {
+        compareClasses = compareClasses.filter(c => c.uuid !== uuid);
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.namespace = new ReactiveValueWrapper(
             namespace,
             isInvalidNamespace,
         );
-        this.label = new ReactiveValueWrapper(label, isInvalidLabel);
+        this.label = new ReactiveValueCompareWrapper(
+            label,
+            compareClasses,
+            isInvalidLabel,
+        );
         this.package = new ReactiveValueWrapper(pack);
         this.superClass = new ReactiveValueWrapper(superClass);
         this.comment = new ReactiveValueWrapper(comment);
@@ -97,7 +105,7 @@ export class ReactiveClass {
 
     /**
      * The label of the class
-     * @type {ReactiveValueWrapper<string>}
+     * @type {ReactiveValueCompareWrapper}
      */
     label;
 
