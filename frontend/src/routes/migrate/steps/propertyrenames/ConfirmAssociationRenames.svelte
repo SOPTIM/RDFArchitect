@@ -71,6 +71,9 @@
     }
 
     function addRenameMapping(classLabel, renameCandidate, newAssociation) {
+        if (!renamedFrom.has(classLabel)) {
+            renamedFrom.set(classLabel, new Map());
+        }
         renamedFrom
             .get(classLabel)
             .set(newAssociation.label, renameCandidate.oldResource.label);

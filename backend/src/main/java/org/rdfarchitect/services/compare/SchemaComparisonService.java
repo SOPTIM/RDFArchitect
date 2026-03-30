@@ -38,8 +38,8 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
 
     @Override
     public List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, MultipartFile file) {
-        var currentGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        var uploadedGraph = new GraphFileSourceBuilderImpl()
+        var updatedGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        var originalGraph = new GraphFileSourceBuilderImpl()
                   .setFile(file)
                   .setGraphName(GRAPH_URI)
                   .build()
@@ -47,10 +47,10 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
         List<TriplePackageChange> result;
 
         try {
-            currentGraph.begin(TxnType.READ);
-            result = TripleChangeAnalyser.compareGraphs(currentGraph, uploadedGraph);
+            updatedGraph.begin(TxnType.READ);
+            result = TripleChangeAnalyser.compareGraphs(originalGraph, updatedGraph);
         } finally {
-            currentGraph.end();
+            updatedGraph.end();
         }
         return result;
     }
@@ -72,24 +72,24 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
     }
 
     @Override
-    public List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, GraphIdentifier otherGraphIdentifier) {
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        var otherGraph = databasePort.getGraphWithContext(otherGraphIdentifier).getRdfGraph();
+    public List<TriplePackageChange> compareSchemas(GraphIdentifier originalGraphIdentifier, GraphIdentifier updatedGraphIdentifier) {
+        var originalGraph = databasePort.getGraphWithContext(originalGraphIdentifier).getRdfGraph();
+        var updatedGraph = databasePort.getGraphWithContext(updatedGraphIdentifier).getRdfGraph();
         List<TriplePackageChange> result;
 
-        if (graphIdentifier.equals(otherGraphIdentifier)) {
+        if (originalGraphIdentifier.equals(updatedGraphIdentifier)) {
             return new ArrayList<>();
         }
         try {
-            graph.begin(TxnType.READ);
+            originalGraph.begin(TxnType.READ);
             try {
-                otherGraph.begin(TxnType.READ);
-                result = TripleChangeAnalyser.compareGraphs(graph, otherGraph);
+                updatedGraph.begin(TxnType.READ);
+                result = TripleChangeAnalyser.compareGraphs(originalGraph, updatedGraph);
             } finally {
-                otherGraph.end();
+                updatedGraph.end();
             }
         } finally {
-            graph.end();
+            originalGraph.end();
         }
         return result;
     }

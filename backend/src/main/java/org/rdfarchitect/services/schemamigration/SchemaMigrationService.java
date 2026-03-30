@@ -33,6 +33,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
@@ -164,7 +165,34 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
             classChanges.remove(rename.getOldResource());
             classChanges.add((SemanticClassChange) RenameObjectBuilder.createRenameObject(rename));
         }
+        // reclassify DATATYPE_CHANGE to DATATYPE_RENAMED where the change is simply
+        // a consequence of an enum class rename
+        reclassifyEnumDatatypeChanges(classChanges, renames);
+
         migrationSessionStore.getContext().setDiffAfterClassConfirm(classChanges);
+    }
+
+    private void reclassifyEnumDatatypeChanges(
+              List<SemanticClassChange> classChanges,
+              List<RenameCandidate<SemanticClassChange>> enumRenames) {
+
+        var renameMap = enumRenames.stream()
+                                         .collect(Collectors.toMap(
+                                                   r -> r.getOldResource().getIri(),
+                                                   r -> r.getNewResource().getIri()
+                                                                  ));
+
+        for (var classChange : classChanges) {
+            for (var attribute : classChange.getAttributes()) {
+                for (var fieldChange : attribute.getChanges()) {
+                    if (fieldChange.getSemanticFieldChangeType() == SemanticFieldChangeType.DATATYPE_CHANGE
+                              && renameMap.containsKey(fieldChange.getFrom())
+                              && renameMap.get(fieldChange.getFrom()).equals(fieldChange.getTo())) {
+                        fieldChange.setSemanticFieldChangeType(SemanticFieldChangeType.DATATYPE_RENAME);
+                    }
+                }
+            }
+        }
     }
 
     @Override

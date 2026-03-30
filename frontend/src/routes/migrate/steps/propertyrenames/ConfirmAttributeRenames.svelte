@@ -70,6 +70,9 @@
     }
 
     function addRenameMapping(classLabel, renameCandidate, newAttribute) {
+        if (!renamedFrom.has(classLabel)) {
+            renamedFrom.set(classLabel, new Map());
+        }
         renamedFrom
             .get(classLabel)
             .set(newAttribute, renameCandidate.oldResource.label);

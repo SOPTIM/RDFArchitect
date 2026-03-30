@@ -71,6 +71,9 @@
     }
 
     function addRenameMapping(classLabel, renameCandidate, newEnumEntry) {
+        if (!renamedFrom.has(classLabel)) {
+            renamedFrom.set(classLabel, new Map());
+        }
         renamedFrom
             .get(classLabel)
             .set(newEnumEntry, renameCandidate.oldResource.label);

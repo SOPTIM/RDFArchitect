@@ -89,9 +89,7 @@
         fileB = storedState.fileB;
     });
 
-    function onCompareModeChange(mode) {
-        compareMode = mode;
-
+    function onCompareModeChange() {
         datasetB = null;
         graphB = null;
 
@@ -163,7 +161,7 @@
                 bind:value={compareMode}
                 getOptionValue={o => o.value}
                 getOptionLabel={o => o.label}
-                onchange={value => onCompareModeChange(Number(value))}
+                onchange={onCompareModeChange}
             />
         </div>
 

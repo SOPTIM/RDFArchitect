@@ -40,7 +40,7 @@
 
     const CompareMode = Object.freeze({
         STORED_TO_STORED: 0,
-        STORED_TO_UPLOADED: 1,
+        FILE_TO_STORED: 1,
         FILE_TO_FILE: 2,
     });
 
@@ -62,8 +62,8 @@
             disabled: false,
         },
         {
-            value: CompareMode.STORED_TO_UPLOADED,
-            label: "Stored graph → Uploaded graph",
+            value: CompareMode.FILE_TO_STORED,
+            label: "Uploaded graph → Stored graph",
             disabled: false,
         },
         {
@@ -78,8 +78,8 @@
             return !fileA || !fileB;
         }
 
-        if (compareMode === CompareMode.STORED_TO_UPLOADED) {
-            return !datasetA || !graphA || !fileA;
+        if (compareMode === CompareMode.FILE_TO_STORED) {
+            return !datasetB || !graphB || !fileA;
         }
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
@@ -129,8 +129,8 @@
             case CompareMode.FILE_TO_FILE:
                 response = await bec.compareSchemasFromFiles(fileA, fileB);
                 break;
-            case CompareMode.STORED_TO_UPLOADED:
-                response = await bec.compareSchemas(datasetA, graphA, fileA);
+            case CompareMode.FILE_TO_STORED:
+                response = await bec.compareSchemas(datasetB, graphB, fileA);
                 break;
             case CompareMode.STORED_TO_STORED:
                 response = await bec.compareDatasetSchemas(
@@ -217,13 +217,12 @@
                 />
             {/if}
 
-            {#if compareMode === CompareMode.STORED_TO_UPLOADED}
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetA}
-                    bind:graph={graphA}
-                    {lockedDatasetName}
-                    {lockedGraphUri}
-                />
+            {#if compareMode === CompareMode.FILE_TO_STORED}
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <FileSelectButton bind:file={fileA} />
+                </div>
 
                 <div class="flex items-center gap-3">
                     <div class="bg-border h-px w-full"></div>
@@ -235,11 +234,12 @@
                     <div class="bg-border h-px w-full"></div>
                 </div>
 
-                <div
-                    class="border-border bg-background-subtle rounded border p-3"
-                >
-                    <FileSelectButton bind:file={fileA} />
-                </div>
+                <DatasetAndGraphSelection
+                    bind:dataset={datasetB}
+                    bind:graph={graphB}
+                    {lockedDatasetName}
+                    {lockedGraphUri}
+                />
             {/if}
 
             {#if compareMode === CompareMode.FILE_TO_FILE}

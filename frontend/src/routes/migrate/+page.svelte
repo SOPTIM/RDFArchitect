@@ -78,9 +78,13 @@
 
     onDestroy(() => {
         migrationState.set({
-            datasetName: null,
-            graphURI: null,
-            uploadedFile: null,
+            compareMode: null,
+            datasetA: null,
+            graphA: null,
+            datasetB: null,
+            graphB: null,
+            fileA: null,
+            fileB: null,
         });
 
         fetch(PUBLIC_BACKEND_URL + "/migrations/context", {

@@ -48,7 +48,7 @@ public class MigrationContextRESTController {
 
     @Operation(
               summary = "compute migration context",
-              description = "Computes the diff of two given graphs and stores it in the session for later usage in migration endpoints." +
+              description = "Computes the diff of two given graphs and stores it in the session for later usage in migration endpoints. " +
                         "Accepts the graphs either as file uploads, GraphIdentifiers or a combination of both.",
               tags = {"migration"}
     )
