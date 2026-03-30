@@ -77,7 +77,7 @@ class SchemaComparisonServiceTest {
         assertThat(result.getFirst().getLabel()).isEqualTo("package");
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEmpty();
         assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                                  .contains(new TriplePropertyChange(RDFS.comment.toString(), null, "\"This is a new comment\""));
+                                                  .contains(new TriplePropertyChange(RDFS.comment.toString(), "\"This is a new comment\"", null));
     }
 
     @Test
@@ -89,28 +89,28 @@ class SchemaComparisonServiceTest {
         package1.setUri("http://example.org#package");
         package1.setLabel("package");
         package1.setChanges(List.of(
-                  new TriplePropertyChange(RDF.type.getURI(), CIMS.classCategory.toString(), null),
-                  new TriplePropertyChange(RDFS.label.getURI(), "\"package\"@en", null)));
+                  new TriplePropertyChange(RDF.type.getURI(), null, CIMS.classCategory.toString()),
+                  new TriplePropertyChange(RDFS.label.getURI(), null, "\"package\"@en")));
 
         var class1 = new TripleClassChange();
         class1.setUri("http://example.org#class");
         class1.setLabel("class");
         class1.setChanges(List.of(
-                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#package", "http://example.org#newPackage")));
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#newPackage", "http://example.org#package")));
         package1.setClasses(List.of(class1));
 
         var package2 = new TriplePackageChange();
         package2.setUri("http://example.org#newPackage");
         package2.setLabel("newPackage");
         package2.setChanges(List.of(
-                  new TriplePropertyChange(RDF.type.getURI(), null, CIMS.classCategory.toString()),
-                  new TriplePropertyChange(RDFS.label.getURI(),null, "\"newPackage\"@en")));
+                  new TriplePropertyChange(RDF.type.getURI(), CIMS.classCategory.toString(), null),
+                  new TriplePropertyChange(RDFS.label.getURI(), "\"newPackage\"@en", null)));
 
         var class2 = new TripleClassChange();
         class2.setUri("http://example.org#class");
         class2.setLabel("class");
         class2.setChanges(List.of(
-                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#package", "http://example.org#newPackage")));
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#newPackage", "http://example.org#package")));
         package2.setClasses(List.of(class2));
 
         var expected = List.of(package1, package2);
@@ -133,8 +133,8 @@ class SchemaComparisonServiceTest {
         assertThat(result.getFirst().getLabel()).isEqualTo("newPackage");
         assertThat(result.getFirst().getChanges()).isEqualTo(
                   List.of(
-                            new TriplePropertyChange(RDF.type.toString(), null, CIMS.classCategory.toString()),
-                            new TriplePropertyChange(RDFS.label.toString(), null, "\"newPackage\"@en")
+                            new TriplePropertyChange(RDF.type.toString(), CIMS.classCategory.toString(), null),
+                            new TriplePropertyChange(RDFS.label.toString(), "\"newPackage\"@en", null)
                          )
                                                         );
 
@@ -142,9 +142,9 @@ class SchemaComparisonServiceTest {
         expectedClass.setUri("http://example.org#newClass");
         expectedClass.setLabel("newClass");
         expectedClass.setChanges(List.of(
-                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), null, "http://example.org#newPackage"),
-                  new TriplePropertyChange(RDF.type.toString(), null, RDFS.Class.toString()),
-                  new TriplePropertyChange(RDFS.label.toString(), null, "\"newClass\"@en")));
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#newPackage", null),
+                  new TriplePropertyChange(RDF.type.toString(), RDFS.Class.toString(), null),
+                  new TriplePropertyChange(RDFS.label.toString(), "\"newClass\"@en", null)));
 
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
                                               .hasSize(1)
@@ -165,21 +165,29 @@ class SchemaComparisonServiceTest {
         assertThat(result.getFirst().getUri()).isEqualTo("http://example.org#package");
         assertThat(result.getFirst().getLabel()).isEqualTo("package");
         assertThat(result.getFirst().getChanges()).asInstanceOf(InstanceOfAssertFactories.LIST)
-                                              .contains(new TriplePropertyChange(RDFS.label.toString(), "\"package\"@en", null))
-                                              .contains(new TriplePropertyChange(RDF.type.toString(), CIMS.classCategory.toString(), null));
-        assertThat(result.get(1).getLabel()).isEqualTo("default");
-        assertThat(result.get(1).getChanges()).isNull();
+                                              .contains(new TriplePropertyChange(RDFS.label.toString(), null, "\"package\"@en"))
+                                              .contains(new TriplePropertyChange(RDF.type.toString(), null, CIMS.classCategory.toString()));
 
         var expectedClass1 = new TripleClassChange();
         expectedClass1.setUri("http://example.org#class");
         expectedClass1.setLabel("class");
         expectedClass1.setChanges(List.of(
-                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), "http://example.org#package", null)));
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), null, "http://example.org#package")));
 
         assertThat(result.get(0).getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
                   List.of(expectedClass1));
+
+        assertThat(result.get(1).getLabel()).isEqualTo("default");
+        assertThat(result.get(1).getChanges()).isNull();
+
+        var expectedClass2 = new TripleClassChange();
+        expectedClass2.setUri("http://example.org#class");
+        expectedClass2.setLabel("class");
+        expectedClass2.setChanges(List.of(
+                  new TriplePropertyChange(CIMS.belongsToCategory.toString(), null, "http://example.org#package")));
+
         assertThat(result.get(1).getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST).isEqualTo(
-                  List.of(expectedClass1));
+                  List.of(expectedClass2));
     }
 
     @Test
@@ -198,17 +206,17 @@ class SchemaComparisonServiceTest {
         class1.setUri("http://example.org#subClass");
         class1.setLabel("subClass");
         class1.setChanges(List.of(
-                  new TriplePropertyChange(RDFS.subClassOf.toString(), "http://example.org#class", null),
-                  new TriplePropertyChange(RDF.type.toString(), RDFS.Class.toString(), null),
-                  new TriplePropertyChange(RDFS.label.toString(), "\"subClass\"@en", null)));
+                  new TriplePropertyChange(RDFS.subClassOf.toString(), null, "http://example.org#class"),
+                  new TriplePropertyChange(RDF.type.toString(), null, RDFS.Class.toString()),
+                  new TriplePropertyChange(RDFS.label.toString(), null, "\"subClass\"@en")));
 
         var class2 = new TripleClassChange();
         class2.setUri("http://example.org#newSubClass");
         class2.setLabel("newSubClass");
         class2.setChanges(List.of(
-                  new TriplePropertyChange(RDFS.subClassOf.toString(), null, "http://example.org#class"),
-                  new TriplePropertyChange(RDF.type.toString(), null, RDFS.Class.toString()),
-                  new TriplePropertyChange(RDFS.label.toString(), null,"\"newSubClass\"@en")));
+                  new TriplePropertyChange(RDFS.subClassOf.toString(), "http://example.org#class", null),
+                  new TriplePropertyChange(RDF.type.toString(), RDFS.Class.toString(), null),
+                  new TriplePropertyChange(RDFS.label.toString(), "\"newSubClass\"@en", null)));
 
         assertThat(result.getFirst().getClasses()).asInstanceOf(InstanceOfAssertFactories.LIST)
                                               .hasSize(2)
@@ -237,8 +245,8 @@ class SchemaComparisonServiceTest {
         attributeChange.setLabel("attribute");
         attributeChange.setChanges(List.of(
                   new TriplePropertyChange(RDFS.range.toString(),
-                                           "http://www.w3.org/2001/XMLSchema#string",
-                                           "http://www.w3.org/2001/XMLSchema#int")));
+                                           "http://www.w3.org/2001/XMLSchema#int",
+                                           "http://www.w3.org/2001/XMLSchema#string")));
 
         expectedClass.setAttributes(List.of(attributeChange));
 
@@ -270,8 +278,8 @@ class SchemaComparisonServiceTest {
         associationChange.setLabel("class.associatedClass");
         associationChange.setChanges(List.of(
                   new TriplePropertyChange(CIMS.multiplicity.toString(),
-                                           "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..n",
-                                           "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1")));
+                                           "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1",
+                                           "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..n")));
 
         expectedClass.setAssociations(List.of(associationChange));
 
@@ -301,7 +309,7 @@ class SchemaComparisonServiceTest {
         enumEntryChange.setUri("http://example.org#enum.enumEntry");
         enumEntryChange.setLabel("enumEntry");
         enumEntryChange.setChanges(List.of(
-                  new TriplePropertyChange(CIMS.stereotype.toString(), "\"enum\"", null)));
+                  new TriplePropertyChange(CIMS.stereotype.toString(), null, "\"enum\"")));
 
         expectedClass.setEnumEntries(List.of(enumEntryChange));
 
