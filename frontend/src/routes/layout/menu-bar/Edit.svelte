@@ -124,7 +124,7 @@
         }
         await enableEditing(selectedDataset);
         await reload();
-        editorState.selectedPackageUUID.trigger();
+        forceReloadTrigger.trigger();
     }
 
     async function requestDisableEditing() {

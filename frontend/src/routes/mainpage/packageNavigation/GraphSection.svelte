@@ -53,7 +53,6 @@
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
-    import DeleteGraphDialog from "../../DeleteGraphDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";

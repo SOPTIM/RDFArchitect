@@ -26,18 +26,18 @@
         faLock,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount } from "svelte";
 
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import GraphSection from "./GraphSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
-    import DeleteDatasetDialog from "../../DeleteDatasetDialog.svelte";
+    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
@@ -55,7 +55,8 @@
     let readonly = $state(false);
     let namespaces = $state([]);
 
-    onMount(async () => {
+    $effect(async () => {
+        forceReloadTrigger.subscribe();
         readonly = await isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
@@ -99,6 +100,7 @@
 
         await bec.enableEditing(datasetNavEntry.id).then(() => {
             readonly = false;
+            forceReloadTrigger.trigger();
         });
     }
 
@@ -108,6 +110,7 @@
         }
         await bec.disableEditing(datasetNavEntry.id).then(() => {
             readonly = true;
+            forceReloadTrigger.trigger();
         });
     }
 </script>
@@ -231,7 +234,7 @@
     lockedDatasetName={datasetNavEntry.label}
 />
 <NamespacesDialog bind:showDialog={showNamespacesDialog} />
-<DeleteDatasetDialog
+<DatasetDeleteDialog
     bind:showDialog={showDatasetDeleteDialog}
     datasetName={datasetNavEntry.label}
 />

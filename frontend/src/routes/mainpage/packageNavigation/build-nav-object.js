@@ -25,32 +25,51 @@ import { getUri } from "./packageNavigationUtils.svelte.js";
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 /**
- * Hier werden alle datasets geladen.
- * Falls bereits ein Dataset bereits existiert, werden beinhaltete flags übernommen, damit die Navigation im gleichen openstate bleibt
- * @param existingDatasetNavList
+ * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
+ * @param {NavEntry[]} existingList
+ * @param {object} props
+ * @returns {NavEntry}
+ */
+function reuseOrCreate(existingList, props) {
+    const existing = existingList?.find(e => e.id === props.id);
+    if (existing) {
+        existing.label = props.label;
+        if (props.tooltip !== undefined) existing.tooltip = props.tooltip;
+        if (props.data !== undefined) existing.data = props.data;
+        return existing;
+    }
+    return new NavEntry(props);
+}
+
+/**
+ * @description Replaces the contents of targetArray in place, keeping the array reference.
+ * @param {NavEntry[]} targetArray
+ * @param {NavEntry[]} freshEntries
+ */
+function syncList(targetArray, freshEntries) {
+    targetArray.length = 0;
+    targetArray.push(...freshEntries);
+}
+
+/**
+ * @description Loads all datasets and populates their children. Reuses existing NavEntries to preserve UI state.
+ * @param {NavEntry[]} existingDatasetNavList
  * @returns {Promise<NavEntry[]>}
  */
 export async function getNavEntryList(existingDatasetNavList) {
-    console.log(
-        "started Building navObj with existingNavObj: ",
-        existingDatasetNavList,
-    );
-
-    const newDatasetNavList = (await getDatasetNames())
+    const freshEntries = (await getDatasetNames())
         .sort((a, b) => a.localeCompare(b))
-        .map(label => new NavEntry({ label, id: label }));
-    for (const newDatasetNavEntry of newDatasetNavList) {
-        const existingDatasetNavEntry = existingDatasetNavList?.find(
-            existingNavEntry => existingNavEntry.id === newDatasetNavEntry.id,
+        .map(label =>
+            reuseOrCreate(existingDatasetNavList, { label, id: label }),
         );
-        newDatasetNavEntry.isOpen = existingDatasetNavEntry?.isOpen ?? false;
-        await populateDataset(
-            newDatasetNavEntry,
-            existingDatasetNavEntry?.children,
-        );
+
+    const result = existingDatasetNavList ?? [];
+    syncList(result, freshEntries);
+
+    for (const datasetNavEntry of result) {
+        await populateDataset(datasetNavEntry);
     }
-    console.log("finished Building navObj: ", newDatasetNavList);
-    return newDatasetNavList;
+    return result;
 }
 
 async function getDatasetNames() {
@@ -63,29 +82,28 @@ async function getDatasetNames() {
     }
 }
 
-async function populateDataset(datasetNavEntry, existingGraphNavList) {
-    datasetNavEntry.children = (await getGraphNames(datasetNavEntry.id))
-        .sort((a, b) => getUri(a).localeCompare(getUri(b))) // change this to sort by suffix if wanted
+async function populateDataset(datasetNavEntry) {
+    const existingGraphNavList = datasetNavEntry.children;
+
+    const freshEntries = (await getGraphNames(datasetNavEntry.id))
+        .sort((a, b) => getUri(a).localeCompare(getUri(b)))
         .map(uri => {
             const fullUri = getUri(uri);
-            const newUri = new URI(fullUri);
-            const argumentObject = {
-                label: newUri.suffix,
+            return reuseOrCreate(existingGraphNavList, {
+                label: new URI(fullUri).suffix,
                 tooltip: fullUri,
                 id: fullUri,
-            };
-            return new NavEntry(argumentObject);
+            });
         });
+
+    if (datasetNavEntry.children) {
+        syncList(datasetNavEntry.children, freshEntries);
+    } else {
+        datasetNavEntry.children = freshEntries;
+    }
+
     for (const graphNavEntry of datasetNavEntry.children) {
-        const existingGraph = existingGraphNavList?.find(
-            g => g.id === graphNavEntry.id,
-        );
-        graphNavEntry.isOpen = existingGraph?.isOpen ?? false;
-        await populateGraph(
-            datasetNavEntry,
-            graphNavEntry,
-            existingGraph?.children,
-        );
+        await populateGraph(datasetNavEntry, graphNavEntry);
     }
 }
 
@@ -102,38 +120,60 @@ async function getGraphNames(datasetName) {
     }
 }
 
-export async function populateGraph(
-    datasetNavObject,
-    graphNavObject,
-    existingPackageList,
-) {
+export async function populateGraph(datasetNavObject, graphNavObject) {
+    const existingPackageList = graphNavObject.children;
     const packageApiObject = await getPackages(
         datasetNavObject.id,
         graphNavObject.id,
     );
     const allClasses = await getClasses(datasetNavObject.id, graphNavObject.id);
 
-    graphNavObject.children = packageApiObject.internalPackageList
-        .map(pack => buildPackageNavEntry(pack, false))
-        .concat(
-            packageApiObject.externalPackageList.map(pack =>
-                buildPackageNavEntry(pack, true),
-            ),
-        )
-        .sort((a, b) => {
-            if (!a || !a.label || a.label === "default") return 1;
-            if (!b || !b.label || b.label === "default") return -1;
-            return a.label.localeCompare(b.label);
-        });
+    const freshEntries = [
+        ...packageApiObject.internalPackageList.map(pack =>
+            reuseOrCreatePackage(existingPackageList, pack, false),
+        ),
+        ...packageApiObject.externalPackageList.map(pack =>
+            reuseOrCreatePackage(existingPackageList, pack, true),
+        ),
+    ].sort((a, b) => {
+        if (!a?.label || a.label === "default") return 1;
+        if (!b?.label || b.label === "default") return -1;
+        return a.label.localeCompare(b.label);
+    });
+
+    if (graphNavObject.children) {
+        syncList(graphNavObject.children, freshEntries);
+    } else {
+        graphNavObject.children = freshEntries;
+    }
 
     for (const packageNavEntry of graphNavObject.children) {
-        const prev = existingPackageList?.find(
-            p => p.id === packageNavEntry.id,
-        );
-        packageNavEntry.isOpen = prev?.isOpen ?? false;
         populatePackage(packageNavEntry, allClasses);
     }
     return graphNavObject;
+}
+
+/**
+ * @description Reuses or creates a package NavEntry.
+ * @param {NavEntry[]} existingPackageList
+ * @param {object} packObj
+ * @param {boolean} isExternal
+ * @returns {NavEntry}
+ */
+function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
+    const id = packObj.uuid ?? "default";
+    return reuseOrCreate(existingPackageList, {
+        id,
+        tooltip: packObj.prefix + packObj.label,
+        label: packObj.label,
+        data: {
+            uuid: id,
+            prefix: packObj.prefix,
+            label: packObj.label,
+            comment: packObj.comment,
+            external: isExternal,
+        },
+    });
 }
 
 async function getPackages(datasetName, graphURI) {
@@ -148,50 +188,37 @@ async function getPackages(datasetName, graphURI) {
                 graphURI,
             err,
         );
-        return {
-            internalPackageList: [],
-            externalPackageList: [],
-        };
+        return { internalPackageList: [], externalPackageList: [] };
     }
 }
 
-function buildPackageNavEntry(packObj, isExternal) {
-    const dataObj = {
-        uuid: packObj.uuid ? packObj.uuid : "default",
-        prefix: packObj.prefix,
-        label: packObj.label,
-        comment: packObj.comment,
-        external: isExternal,
-    };
-    return new NavEntry({
-        id: packObj.uuid ? packObj.uuid : "default",
-        tooltip: packObj.prefix + packObj.label,
-        label: packObj.label,
-        data: dataObj,
-    });
-}
-
 function populatePackage(packageNavObject, allClasses) {
-    packageNavObject.children = allClasses
+    const existingClassList = packageNavObject.children;
+
+    const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
-        .map(cls => buildClassNavEntry(cls))
-        .sort((a, b) => a.label.localeCompare(b.label));
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(cls =>
+            reuseOrCreate(existingClassList, {
+                id: cls.uuid,
+                tooltip: cls.package?.prefix + cls.label,
+                label: cls.label,
+                data: {
+                    uuid: cls.uuid,
+                    prefix: cls.package?.prefix,
+                    label: cls.label,
+                    comment: cls.comment,
+                },
+            }),
+        );
+
+    if (packageNavObject.children) {
+        syncList(packageNavObject.children, freshEntries);
+    } else {
+        packageNavObject.children = freshEntries;
+    }
 
     return packageNavObject;
-}
-
-function buildClassNavEntry(cls) {
-    return new NavEntry({
-        id: cls.uuid,
-        tooltip: cls.package?.prefix + cls.label,
-        label: cls.label,
-        data: {
-            uuid: cls.uuid,
-            prefix: cls.package?.prefix,
-            label: cls.label,
-            comment: cls.comment,
-        },
-    });
 }
 
 async function getClasses(datasetName, graphURI) {

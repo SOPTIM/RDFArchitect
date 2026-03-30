@@ -57,7 +57,6 @@
     let isProtectedPackage = $derived(
         packageNavEntry?.id === "default" || packageNavEntry?.data.external,
     );
-
     // Ensure selection-dependent UI updates without remounting the component.
     const selectionTrigger = $derived([
         editorState.selectedDataset.subscribe(),
@@ -84,6 +83,13 @@
         readonly ? false : isProtectedPackage,
     );
     const hasClasses = $derived(packageNavEntry?.children?.length > 0);
+
+    $effect(() => {
+        if (selectionTrigger) {
+            packageNavEntry.isOpen =
+                packageNavEntry.isOpen || isPackageSelected;
+        }
+    });
 
     function copyDatasetUrl() {
         const params = new URLSearchParams({

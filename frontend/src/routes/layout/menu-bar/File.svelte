@@ -28,6 +28,7 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
