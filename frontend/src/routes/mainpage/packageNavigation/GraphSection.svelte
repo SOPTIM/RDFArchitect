@@ -52,6 +52,7 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import { populateGraph } from "./build-nav-object.js";
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
@@ -93,11 +94,14 @@
     );
 
     onMount(async () => {
+        await initialize();
+    });
+
+    async function initialize() {
         ontology = await getOntology();
         canUndo = await fetchCanUndo(datasetNavEntry.id, graphNavEntry.id);
         canRedo = await fetchCanRedo(datasetNavEntry.id, graphNavEntry.id);
-    });
-
+    }
     async function getOntology() {
         const res = await bec.getOntology(
             datasetNavEntry.label,
@@ -136,12 +140,13 @@
         }
     }
 
-    function triggerReload() {
-        editorState.selectedDataset.trigger();
-        editorState.selectedGraph.trigger();
-        editorState.selectedClassUUID.trigger();
-        forceReloadTrigger.trigger();
-        console.log("triggered reload from graph section");
+    async function hotReload() {
+        await populateGraph(
+            datasetNavEntry,
+            graphNavEntry,
+            graphNavEntry.children,
+        );
+        await initialize();
     }
 </script>
 
@@ -180,7 +185,7 @@
                 onSelect={() => {
                     focusGraphContext();
                     undo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) triggerReload(); //TODO: Hier könnte ich doch lokal reloaden, weil ich weiß, dass die aktion sich nur auf graph und drunter auswirkt
+                        if (success) hotReload();
                     });
                 }}
                 disabled={readonly || !canUndo}
@@ -192,7 +197,7 @@
                 onSelect={() => {
                     focusGraphContext();
                     redo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) triggerReload();
+                        if (success) hotReload();
                     });
                 }}
                 disabled={readonly || !canRedo}

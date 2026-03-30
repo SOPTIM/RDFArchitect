@@ -59,7 +59,7 @@ export function getUri(resource) {
     return uri.prefix ? uri.prefix + uri.suffix : uri.suffix;
 }
 
-export function getPackageId(pack) {
+function getPackageId(pack) {
     if (typeof pack === "string") {
         return pack;
     }

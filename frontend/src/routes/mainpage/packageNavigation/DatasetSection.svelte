@@ -93,21 +93,21 @@
     }
 
     async function enableEditing() {
-        if (!datasetNavEntry?.label || !readonly) {
+        if (!datasetNavEntry?.id || !readonly) {
             return;
         }
 
-        await bec.enableEditing(datasetNavEntry.label).then(() => {
-            readonly = true;
+        await bec.enableEditing(datasetNavEntry.id).then(() => {
+            readonly = false;
         });
     }
 
     async function disableEditing() {
-        if (!datasetNavEntry?.label || readonly) {
+        if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        await bec.disableEditing(datasetNavEntry.label).then(() => {
-            readonly = false;
+        await bec.disableEditing(datasetNavEntry.id).then(() => {
+            readonly = true;
         });
     }
 </script>

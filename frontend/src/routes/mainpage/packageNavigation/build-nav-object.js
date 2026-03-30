@@ -20,7 +20,7 @@ import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 
-import { getUri } from "./new/packageNavigationUtils.svelte.js";
+import { getUri } from "./packageNavigationUtils.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -63,20 +63,16 @@ async function getDatasetNames() {
     }
 }
 
-/**
- * Hier wird das angegebe Dataset mit Graphen gefüllt
- * Falls bereits Graphen existieren, werden beinhaltete flags übernommen, damit die Navigation im gleichen openstate bleibt
- * @returns {Promise<void>}
- */
-export async function populateDataset(datasetNavEntry, existingGraphNavList) {
+async function populateDataset(datasetNavEntry, existingGraphNavList) {
     datasetNavEntry.children = (await getGraphNames(datasetNavEntry.id))
         .sort((a, b) => getUri(a).localeCompare(getUri(b))) // change this to sort by suffix if wanted
         .map(uri => {
-            const newUri = new URI(getUri(uri));
+            const fullUri = getUri(uri);
+            const newUri = new URI(fullUri);
             const argumentObject = {
                 label: newUri.suffix,
-                tooltip: newUri.prefix + newUri.suffix,
-                id: newUri.prefix + newUri.suffix,
+                tooltip: fullUri,
+                id: fullUri,
             };
             return new NavEntry(argumentObject);
         });
@@ -106,12 +102,6 @@ async function getGraphNames(datasetName) {
     }
 }
 
-/**
- * hier werden graphen des angegeben datasets mit Packages gefüllt.
- * Falls bereits Packages existieren, werden beinhaltete flags übernommen, damit die Navigation im gleichen openstate bleibt
- * @param graph
- * @returns {Promise<void>}
- */
 export async function populateGraph(
     datasetNavObject,
     graphNavObject,
@@ -167,32 +157,23 @@ async function getPackages(datasetName, graphURI) {
 
 function buildPackageNavEntry(packObj, isExternal) {
     const dataObj = {
-        uuid: packObj.uuid,
+        uuid: packObj.uuid ? packObj.uuid : "default",
         prefix: packObj.prefix,
         label: packObj.label,
         comment: packObj.comment,
         external: isExternal,
     };
     return new NavEntry({
-        id: packObj.uuid,
+        id: packObj.uuid ? packObj.uuid : "default",
         tooltip: packObj.prefix + packObj.label,
         label: packObj.label,
         data: dataObj,
     });
 }
 
-/**
- * Hier wird ein Package mit seinen Klassen gefüllt
- * @param datasetNavObject
- * @param GraphNavObject
- * @param packageNavObject
- * @returns
- */
 function populatePackage(packageNavObject, allClasses) {
-    //TODO: contents of the default package are currently not loaded
-    const packageUuid = packageNavObject.data?.uuid ?? packageNavObject.id;
     packageNavObject.children = allClasses
-        .filter(cls => cls.package?.uuid === packageUuid)
+        .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
         .map(cls => buildClassNavEntry(cls))
         .sort((a, b) => a.label.localeCompare(b.label));
 
