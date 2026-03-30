@@ -40,6 +40,7 @@
         namespaces,
         ontology = $bindable(),
         readonly,
+        onSubmit,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -93,10 +94,14 @@
         ontologyObject.reset();
     }
 
-    function save() {
-        saveOntology(dataset, graphUri, ontologyObject);
+    async function save() {
+        await saveOntology(dataset, graphUri, ontologyObject);
         ontologyObject.save();
-        forceReloadTrigger.trigger();
+        if (onSubmit) {
+            onSubmit();
+        } else {
+            forceReloadTrigger.trigger();
+        }
     }
 
     function discard() {

@@ -46,10 +46,7 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import { populateGraph } from "./build-nav-object.js";
@@ -222,7 +219,7 @@
                                 datasetNavEntry.id,
                                 graphNavEntry.id,
                             );
-                            forceReloadTrigger.trigger();
+                            initialize();
                         }}
                         variant="danger"
                         faIcon={faTrash}
@@ -388,4 +385,5 @@
     {namespaces}
     bind:ontology
     {readonly}
+    onSubmit={initialize}
 />

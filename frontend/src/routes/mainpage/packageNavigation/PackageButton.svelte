@@ -193,12 +193,11 @@
 
 <PackageEditorDialog
     bind:showDialog={showPackageEditorDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
     pack={packageNavEntry.data}
     {readonly}
 />
-<!--{packages} TODO: wahrscheinlich muss man im pack editor die packages nochmal neu fetchen -->
 
 <PackageDeleteDialog
     bind:showDialog={showDeletePackageDialog}
