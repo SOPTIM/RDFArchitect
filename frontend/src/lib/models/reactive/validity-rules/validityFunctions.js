@@ -57,24 +57,6 @@ export function isInvalidClassLabel(label, namespace, compareClasses) {
     return violations;
 }
 
-export function isInvalidClassLabel(label, namespace, compareClasses) {
-    const violations = [];
-    if (!label || label.trim() === "") {
-        violations.push("must not be empty");
-    }
-    if (typeof namespace === "string" && namespace.trim() !== "") {
-        if (
-            compareClasses &&
-            compareClasses.filter(
-                c => c.label === label && c.prefix === namespace,
-            ).length > 0
-        ) {
-            violations.push("must be unique");
-        }
-    }
-    return violations;
-}
-
 export function isInvalidNamespace(namespace) {
     return isNotEmptyValidation(namespace);
 }

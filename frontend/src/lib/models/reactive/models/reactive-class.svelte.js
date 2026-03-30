@@ -19,6 +19,7 @@ import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-associ
 import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
 import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
 import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
+import { ReactiveValueCompareWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
     hasUniqueIRI,

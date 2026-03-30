@@ -29,6 +29,10 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import Dialog from "$lib/dialog/Dialog.svelte";
+    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import { ReactiveValueCompareWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
+    import { isInvalidLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
     import {
         editorState,
