@@ -26,6 +26,7 @@
         faLock,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
+    import { getContext } from "svelte";
 
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
@@ -55,10 +56,22 @@
     let readonly = $state(false);
     let namespaces = $state([]);
 
+    let wasDatasetSelected = false;
+
+    const isDatasetSelected = $derived(
+        isSelectedDataset(datasetNavEntry.label),
+    );
+
     $effect(async () => {
-        forceReloadTrigger.subscribe();
+        getContext("packageNavigation").reloadTrigger?.subscribe();
         readonly = await isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
+    });
+    $effect(() => {
+        if (isDatasetSelected && !wasDatasetSelected) {
+            datasetNavEntry.parent?.open();
+        }
+        wasDatasetSelected = isDatasetSelected;
     });
 
     async function fetchNamespaces() {
@@ -81,16 +94,6 @@
         editorState.selectedGraph.updateValue(null);
         editorState.selectedPackageUUID.updateValue(null);
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
-    }
-
-    function toggleDatasetContentsVisibility() {
-        datasetNavEntry.isOpen = !datasetNavEntry.isOpen;
-    }
-
-    function ensureDatasetExpanded() {
-        if (!datasetNavEntry?.isOpen) {
-            datasetNavEntry.isOpen = true;
-        }
     }
 
     async function enableEditing() {
@@ -124,12 +127,12 @@
                 icon={faDatabase}
                 hasChildren={datasetNavEntry.children?.length > 0}
                 expanded={datasetNavEntry.isOpen}
-                isSelected={isSelectedDataset(datasetNavEntry.label)}
+                isSelected={isDatasetSelected}
                 title={datasetNavEntry.tooltip}
                 badgeText={readonly ? "Read-only" : ""}
                 badgeVariant="readonly"
                 onclick={selectDataset}
-                onToggle={toggleDatasetContentsVisibility}
+                onToggle={() => datasetNavEntry.toggle()}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -212,7 +215,6 @@
                 <GraphSection
                     {datasetNavEntry}
                     {graphNavEntry}
-                    onExpandDataset={ensureDatasetExpanded}
                     {namespaces}
                     {readonly}
                 />

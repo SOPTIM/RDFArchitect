@@ -20,7 +20,12 @@ import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 
-import { getUri } from "./packageNavigationUtils.svelte.js";
+import {
+    getUri,
+    isSelectedGraph,
+    isSelectedPackage,
+    isSelectedClass,
+} from "./packageNavigationUtils.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -42,13 +47,15 @@ function reuseOrCreate(existingList, props) {
 }
 
 /**
- * @description Replaces the contents of targetArray in place, keeping the array reference.
+ * @description Replaces the contents of targetArray in place, keeping the array reference. Sets parent on each entry.
  * @param {NavEntry[]} targetArray
  * @param {NavEntry[]} freshEntries
+ * @param {NavEntry|null} parent
  */
-function syncList(targetArray, freshEntries) {
+function syncList(targetArray, freshEntries, parent = null) {
     targetArray.length = 0;
     targetArray.push(...freshEntries);
+    freshEntries.forEach(entry => (entry.parent = parent));
 }
 
 /**
@@ -57,6 +64,11 @@ function syncList(targetArray, freshEntries) {
  * @returns {Promise<NavEntry[]>}
  */
 export async function getNavEntryList(existingDatasetNavList) {
+    console.log(
+        "started Building navObj with existingNavObj: ",
+        existingDatasetNavList,
+    );
+
     const freshEntries = (await getDatasetNames())
         .sort((a, b) => a.localeCompare(b))
         .map(label =>
@@ -64,11 +76,13 @@ export async function getNavEntryList(existingDatasetNavList) {
         );
 
     const result = existingDatasetNavList ?? [];
-    syncList(result, freshEntries);
+    syncList(result, freshEntries, null);
 
     for (const datasetNavEntry of result) {
         await populateDataset(datasetNavEntry);
     }
+
+    console.log("finished Building navObj: ", result);
     return result;
 }
 
@@ -97,12 +111,16 @@ async function populateDataset(datasetNavEntry) {
         });
 
     if (datasetNavEntry.children) {
-        syncList(datasetNavEntry.children, freshEntries);
+        syncList(datasetNavEntry.children, freshEntries, datasetNavEntry);
     } else {
         datasetNavEntry.children = freshEntries;
+        freshEntries.forEach(entry => (entry.parent = datasetNavEntry));
     }
 
     for (const graphNavEntry of datasetNavEntry.children) {
+        if (isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)) {
+            graphNavEntry.parent?.open();
+        }
         await populateGraph(datasetNavEntry, graphNavEntry);
     }
 }
@@ -142,13 +160,28 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
     });
 
     if (graphNavObject.children) {
-        syncList(graphNavObject.children, freshEntries);
+        syncList(graphNavObject.children, freshEntries, graphNavObject);
     } else {
         graphNavObject.children = freshEntries;
+        freshEntries.forEach(entry => (entry.parent = graphNavObject));
     }
 
     for (const packageNavEntry of graphNavObject.children) {
-        populatePackage(packageNavEntry, allClasses);
+        if (
+            isSelectedPackage(
+                datasetNavObject.id,
+                graphNavObject.id,
+                packageNavEntry.id,
+            )
+        ) {
+            packageNavEntry.parent?.open();
+        }
+        populatePackage(
+            packageNavEntry,
+            allClasses,
+            datasetNavObject.id,
+            graphNavObject.id,
+        );
     }
     return graphNavObject;
 }
@@ -192,7 +225,7 @@ async function getPackages(datasetName, graphURI) {
     }
 }
 
-function populatePackage(packageNavObject, allClasses) {
+function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
     const freshEntries = allClasses
@@ -213,9 +246,16 @@ function populatePackage(packageNavObject, allClasses) {
         );
 
     if (packageNavObject.children) {
-        syncList(packageNavObject.children, freshEntries);
+        syncList(packageNavObject.children, freshEntries, packageNavObject);
     } else {
         packageNavObject.children = freshEntries;
+        freshEntries.forEach(entry => (entry.parent = packageNavObject));
+    }
+
+    for (const classNavEntry of packageNavObject.children) {
+        if (isSelectedClass(datasetId, graphId, classNavEntry.id)) {
+            classNavEntry.parent?.open();
+        }
     }
 
     return packageNavObject;

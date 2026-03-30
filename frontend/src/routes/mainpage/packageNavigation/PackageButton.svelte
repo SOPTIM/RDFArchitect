@@ -26,13 +26,11 @@
         faTrash,
         faEye,
     } from "@fortawesome/free-solid-svg-icons";
+    import { getContext } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -47,12 +45,13 @@
         packageNavEntry,
         namespaces = [],
         readonly,
-        onPackChange = () => {},
     } = $props();
 
     let showNewClassDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeletePackageDialog = $state(false);
+
+    let wasPackageSelected = false;
 
     let isProtectedPackage = $derived(
         packageNavEntry?.id === "default" || packageNavEntry?.data.external,
@@ -62,7 +61,7 @@
         editorState.selectedDataset.subscribe(),
         editorState.selectedGraph.subscribe(),
         editorState.selectedPackageUUID.subscribe(),
-        forceReloadTrigger.subscribe(),
+        getContext("packageNavigation").reloadTrigger?.subscribe(),
     ]);
 
     let isPackageSelected = $derived(
@@ -83,12 +82,11 @@
         readonly ? false : isProtectedPackage,
     );
     const hasClasses = $derived(packageNavEntry?.children?.length > 0);
-
     $effect(() => {
-        if (selectionTrigger) {
-            packageNavEntry.isOpen =
-                packageNavEntry.isOpen || isPackageSelected;
+        if (selectionTrigger && isPackageSelected && !wasPackageSelected) {
+            packageNavEntry.parent?.open();
         }
+        wasPackageSelected = isPackageSelected;
     });
 
     function copyDatasetUrl() {
@@ -103,10 +101,6 @@
             .catch(err =>
                 console.error("Writing to the clipboard is not allowed: ", err),
             );
-    }
-
-    function togglePackageContentsVisibility() {
-        packageNavEntry.isOpen = !packageNavEntry.isOpen;
     }
 
     function selectPackage() {
@@ -133,7 +127,7 @@
                     ? "external"
                     : "default"}
                 onclick={selectPackage}
-                onToggle={togglePackageContentsVisibility}
+                onToggle={() => packageNavEntry.toggle()}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -183,7 +177,6 @@
                     {classNavEntry}
                     {namespaces}
                     {readonly}
-                    {onPackChange}
                 />
             {/each}
         </div>
@@ -207,7 +200,7 @@
 
 <PackageDeleteDialog
     bind:showDialog={showDeletePackageDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
     pack={packageNavEntry.data}
 />

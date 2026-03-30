@@ -20,16 +20,18 @@
         faDiagramProject,
         faFileImport,
     } from "@fortawesome/free-solid-svg-icons";
-    import { untrack } from "svelte";
+    import { setContext, untrack } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
 
     import { getNavEntryList } from "./build-nav-object.js";
     import DatasetSection from "./DatasetSection.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
 
+    const localReloadTrigger = new SimpleTrigger();
     let initialDatasetsLoaded = $state(false);
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
@@ -43,6 +45,11 @@
                     await getNavEntryList(datasetNavEntryList)),
         );
         initialDatasetsLoaded = true;
+        localReloadTrigger.trigger();
+    });
+
+    setContext("packageNavigation", {
+        reloadTrigger: localReloadTrigger,
     });
 </script>
 

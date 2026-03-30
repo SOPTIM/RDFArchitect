@@ -66,7 +66,6 @@
     let {
         datasetNavEntry,
         graphNavEntry,
-        onExpandDataset = () => {},
         namespaces = [],
         readonly = false,
     } = $props();
@@ -85,9 +84,21 @@
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
 
+    let wasGraphSelected = false;
+
     let graphHighlightLabel = $derived(
         shortenIri(namespaces, graphNavEntry.id),
     );
+
+    const isGraphSelected = $derived(
+        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
+    );
+    $effect(() => {
+        if (isGraphSelected && !wasGraphSelected) {
+            graphNavEntry.parent?.open();
+        }
+        wasGraphSelected = isGraphSelected;
+    });
 
     onMount(async () => {
         await initialize();
@@ -110,17 +121,6 @@
         return JSON.parse(content);
     }
 
-    function toggleGraphContentsVisibility() {
-        graphNavEntry.isOpen = !graphNavEntry.isOpen;
-    }
-
-    function ensureGraphIsExpanded() {
-        if (!graphNavEntry?.isOpen) {
-            graphNavEntry.isOpen = true;
-        }
-        onExpandDataset();
-    }
-
     function focusGraphContext() {
         const nextDataset = datasetNavEntry.label;
         const nextGraph = graphNavEntry.id;
@@ -137,11 +137,7 @@
     }
 
     async function hotReload() {
-        await populateGraph(
-            datasetNavEntry,
-            graphNavEntry,
-            graphNavEntry.children,
-        );
+        await populateGraph(datasetNavEntry, graphNavEntry);
         await initialize();
     }
 </script>
@@ -155,14 +151,11 @@
                 icon={faDiagramProject}
                 hasChildren={graphNavEntry.children.length > 0}
                 expanded={graphNavEntry.isOpen}
-                isSelected={isSelectedGraph(
-                    datasetNavEntry.id,
-                    graphNavEntry.id,
-                )}
+                isSelected={isGraphSelected}
                 title={graphNavEntry.tooltip}
                 highlightLabel={graphHighlightLabel}
                 onclick={focusGraphContext}
-                onToggle={toggleGraphContentsVisibility}
+                onToggle={() => graphNavEntry.toggle()}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -343,7 +336,6 @@
                     {packageNavEntry}
                     {namespaces}
                     {readonly}
-                    onPackChange={ensureGraphIsExpanded}
                 />
             {/each}
         </div>

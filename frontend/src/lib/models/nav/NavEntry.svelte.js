@@ -19,49 +19,40 @@ export class NavEntry {
     label = $state();
     id = $state();
     tooltip = $state();
-    isOpen = $state(false);
+    #isOpen = $state(false);
     children = $state([]);
     data = $state(null);
 
-    /**
-     * @type {NavEntry | null}
-     */
+    /** @type {NavEntry | null} */
     parent = $state(null);
 
-    /**
-     * @param {{ label?: string, id?:string, tooltip?: string, isOpen?: boolean, children?: NavEntry[], data?: any }} config
-     */
+    /** @returns {boolean} */
+    get isOpen() {
+        return this.#isOpen;
+    }
+
+    /** @param {{ label?: string, id?: string, tooltip?: string, isOpen?: boolean, data?: any }} config */
     constructor(config = {}) {
         this.label = config.label ?? "";
         this.tooltip = config.tooltip ?? "";
-        this.isOpen = config.isOpen ?? false;
+        this.#isOpen = config.isOpen ?? false;
         this.id = config.id ?? this.label;
         this.data = config.data ?? null;
-
-        if (config.children?.length) {
-            this.addChildren(config.children);
-        }
     }
 
-    /**
-     * Opens this entry and all parent entries
-     */
+    /** Opens this entry and all ancestors. */
     open() {
-        this.isOpen = true;
+        this.#isOpen = true;
         this.parent?.open();
     }
 
-    /**
-     * Closes this entry and all children recursively
-     */
+    /** Closes this entry and all descendants recursively. */
     close() {
-        this.isOpen = false;
+        this.#isOpen = false;
         this.children.forEach(child => child.close());
     }
 
-    /**
-     * Toggles the open state
-     */
+    /** Toggles the open state. Opening trickles up, closing trickles down. */
     toggle() {
         if (this.isOpen) {
             this.close();
@@ -70,32 +61,6 @@ export class NavEntry {
         }
     }
 
-    /**
-     * @param {NavEntry} child
-     */
-    addChild(child) {
-        child.parent = this;
-        this.children.push(child);
-    }
-
-    /**
-     * @param {NavEntry[]} children
-     */
-    addChildren(children) {
-        children.forEach(child => this.addChild(child));
-    }
-
-    /**
-     * @param {NavEntry} child
-     */
-    removeChild(child) {
-        child.parent = null;
-        this.children = this.children.filter(c => c !== child);
-    }
-
-    /**
-     * Whether this entry has children
-     * @type {boolean}
-     */
+    /** @type {boolean} */
     hasChildren = $derived(this.children.length > 0);
 }
