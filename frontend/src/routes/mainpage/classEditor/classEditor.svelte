@@ -149,12 +149,10 @@
             classDto,
             context.classes,
         );
-        console.log("old reactiveClass", reactiveClass);
         reactiveClass = adoptUnsavedClassChanges(
             newReactiveClass,
             reactiveClass,
         );
-        console.log("new reactiveClass", reactiveClass);
         loadingClass = false;
         console.log({ reactiveClass });
     }
