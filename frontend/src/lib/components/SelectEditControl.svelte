@@ -26,7 +26,7 @@
         placeholder,
         onchange,
         height = 9,
-        placeholderValue = "__NULL__",
+        placeholderValue = EMPTY,
     } = $props();
 
     const EMPTY = "__NULL__";

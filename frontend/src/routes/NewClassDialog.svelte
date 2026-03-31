@@ -35,7 +35,7 @@
 
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
 
@@ -43,7 +43,7 @@
         showDialog = $bindable(),
         lockedDatasetName,
         lockedGraphUri,
-        lockedPackage
+        lockedPackage,
     } = $props();
 
     const uuid = uuidv4();
@@ -52,7 +52,7 @@
         graphURI: "graphUriNewClass" + uuid,
         classPackage: "classPackageNewClass" + uuid,
         classURINamespace: "classURINamespaceNewClass" + uuid,
-        className: "classNameNewClass" + uuid
+        className: "classNameNewClass" + uuid,
     };
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -126,7 +126,6 @@
         className = new ReactiveValueWrapper("", label =>
             isInvalidClassLabel(label, classURINamespace.value, compareClasses),
         );
-        console.log("classNameWrapper", className);
         if (!datasetName) {
             return;
         }
@@ -180,7 +179,7 @@
         const packagesJSON = await res.json();
         packages = [
             ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList
+            ...packagesJSON.externalPackageList,
         ];
     }
 
@@ -191,11 +190,11 @@
         const packageDTO = classPackage?.uuid ? classPackage : null;
         let promise = fetch(
             PUBLIC_BACKEND_URL +
-            "/datasets/" +
-            encodeURIComponent(datasetNameLocal) +
-            "/graphs/" +
-            encodeURIComponent(graphURILocal) +
-            "/classes",
+                "/datasets/" +
+                encodeURIComponent(datasetNameLocal) +
+                "/graphs/" +
+                encodeURIComponent(graphURILocal) +
+                "/classes",
             {
                 method: "POST",
                 headers: new Headers({ "Content-Type": "application/json" }),
@@ -204,8 +203,8 @@
                     classURIPrefix: classURINamespace.value,
                     className: className.value,
                 }),
-                credentials: "include"
-            }
+                credentials: "include",
+            },
         ).then(res => {
             if (res.ok) {
                 console.log("successfully added class");
