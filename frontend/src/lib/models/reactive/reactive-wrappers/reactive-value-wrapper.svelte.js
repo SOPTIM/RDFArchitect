@@ -21,7 +21,9 @@ export class ReactiveValueWrapper {
      * @param {Array<function(*): string[]> | function(*): string[]} violationChecks - An array of functions to validate the value
      */
     constructor(value, violationChecks = []) {
+        let backup = value;
         if (value instanceof ReactiveValueWrapper) {
+            backup = value.backup;
             value = value.value;
         }
         const checks = Array.isArray(violationChecks)
@@ -29,7 +31,7 @@ export class ReactiveValueWrapper {
             : [violationChecks];
         this.violationChecks.push(...checks);
 
-        this.backup = value;
+        this.backup = backup;
         this.value = value;
     }
 

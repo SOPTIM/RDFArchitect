@@ -28,7 +28,7 @@
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     const {

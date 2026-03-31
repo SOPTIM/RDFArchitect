@@ -29,9 +29,9 @@
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapNamespaceDtoToReactiveNamespace } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { mapReactiveNamespaceToNamespaceDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveNamespace } from "$lib/models/reactive/reactive-namespace.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { ReactiveNamespace } from "$lib/models/reactive/models/reactive-namespace.svelte.js";
     import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { namespacePrefixesAreUnique } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         editorState,

@@ -24,8 +24,8 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
@@ -49,6 +49,9 @@
             isNewAttribute = false;
         }
     }
+    function onClose() {
+        isNewAttribute = true;
+    }
 
     function getDatatypeLabelByUri(uri) {
         const datatype = classEditorContext.getDatatypeByUri(uri);
@@ -62,8 +65,8 @@
         const apiAttribute = mapReactiveAttributeToAttributeDto(
             attribute,
             classEditorContext.getDatatypeByUri,
-            classEditorContext.reactiveClass.namespace.value +
-                classEditorContext.reactiveClass.label.value,
+            classEditorContext.reactiveClass.namespace.backup +
+                classEditorContext.reactiveClass.label.backup,
         );
         const result = await saveApiAttributeToBackend(
             classEditorContext.datasetName,
@@ -88,9 +91,10 @@
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveAttribute}
     discardChanges={() => attribute.reset()}
-    hasChanges={isNewAttribute || attribute?.isModified}
+    hasChanges={attribute?.isModified}
     isValid={attribute?.isValid}
     title={isNewAttribute
         ? "Create new attribute"

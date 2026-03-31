@@ -23,8 +23,8 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveEnumEntryToEnumEntryDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
@@ -47,12 +47,15 @@
             isNewEnumEntry = false;
         }
     }
+    function onClose() {
+        isNewEnumEntry = true;
+    }
 
     async function saveEnumEntry() {
         const apiEnumEntry = mapReactiveEnumEntryToEnumEntryDto(
             enumEntry,
-            classEditorContext.reactiveClass.namespace.value +
-                classEditorContext.reactiveClass.label.value,
+            classEditorContext.reactiveClass.namespace.backup +
+                classEditorContext.reactiveClass.label.backup,
         );
         const result = await saveApiEnumEntryToBackend(
             classEditorContext.datasetName,
@@ -77,9 +80,10 @@
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveEnumEntry}
     discardChanges={() => enumEntry.reset()}
-    hasChanges={isNewEnumEntry || enumEntry?.isModified}
+    hasChanges={enumEntry?.isModified}
     isValid={enumEntry?.isValid}
     {readonly}
     title={isNewEnumEntry
