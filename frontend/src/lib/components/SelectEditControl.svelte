@@ -15,8 +15,6 @@
   -->
 
 <script>
-    
-
     let {
         id,
         value = $bindable(null),
@@ -28,8 +26,10 @@
         placeholder,
         onchange,
         height = 9,
-        placeholderValue = EMPTY,
-    } = $props();const EMPTY = "__NULL__";
+        placeholderValue = "__NULL__",
+    } = $props();
+
+    const EMPTY = "__NULL__";
 
     let internalValue = $state(EMPTY);
 
