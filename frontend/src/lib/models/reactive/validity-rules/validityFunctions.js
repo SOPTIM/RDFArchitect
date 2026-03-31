@@ -28,17 +28,27 @@ export function isInvalidUuid(uuid) {
     return violations;
 }
 
-export function isInvalidLabel(label, compareClasses) {
+export function isInvalidLabel(label, namespace, compareClasses) {
     const violations = [];
     if (!label || label.trim() === "") {
         violations.push("must not be empty");
     }
-    if (
-        compareClasses &&
-        compareClasses.filter(c => c.label === label).length > 0
-    ) {
-        violations.push("must be unique");
+    if (namespace !== null && namespace !== undefined) {
+        if (
+            compareClasses &&
+            compareClasses.filter(c => c.label === label && c.prefix === namespace).length > 0
+        ) {
+            violations.push("must be unique");
+        }
+    } else {
+        if (
+            compareClasses &&
+            compareClasses.filter(c => c.label === label).length > 0
+        ) {
+            violations.push("must be unique");
+        }
     }
+
     return violations;
 }
 

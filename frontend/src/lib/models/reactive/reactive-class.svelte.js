@@ -65,6 +65,7 @@ export class ReactiveClass {
             label,
             compareClasses,
             isInvalidLabel,
+            () => this.namespace.value
         );
         this.package = new ReactiveValueWrapper(pack);
         this.superClass = new ReactiveValueWrapper(superClass);
