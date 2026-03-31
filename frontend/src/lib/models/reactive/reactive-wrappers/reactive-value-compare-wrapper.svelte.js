@@ -20,8 +20,9 @@ export class ReactiveValueCompareWrapper {
      * @param {*} value - The initial value to be wrapped
      * @param compareValues - The values to compare with when checking for modifications
      * @param {Array<function(*): string[]> | function(*): string[]} violationChecks - An array of functions to validate the value
+     * @param secondValue - A second optional value that can be used for the violation checks
      */
-    constructor(value, compareValues, violationChecks = []) {
+    constructor(value, compareValues, violationChecks = [], secondValue = null) {
         if (value instanceof ReactiveValueCompareWrapper) {
             value = value.value;
         }
@@ -32,12 +33,15 @@ export class ReactiveValueCompareWrapper {
 
         this.backup = value;
         this.value = value;
+        this.secondValue = secondValue;
         this.compareValues = compareValues;
     }
 
     backup = $state();
 
     value = $state();
+
+    secondValue = $state();
 
     compareValues = $state();
 
@@ -54,9 +58,17 @@ export class ReactiveValueCompareWrapper {
      * @type {string[]}
      */
     violations = $derived(
-        this.violationChecks.flatMap(validationFunction =>
-            validationFunction(this.value, this.compareValues),
-        ),
+        this.violationChecks.flatMap(validationFunction => {
+            console.log("validating");
+            const second = typeof this.secondValue === 'function'
+                ? this.secondValue()
+                : this.secondValue;
+            if (second !== null) {
+                return validationFunction(this.value, second, this.compareValues);
+            } else {
+                validationFunction(this.value, this.compareValues);
+            }
+        })
     );
 
     /**
