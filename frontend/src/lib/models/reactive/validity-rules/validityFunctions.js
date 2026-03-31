@@ -28,15 +28,25 @@ export function isInvalidUuid(uuid) {
     return violations;
 }
 
-export function isInvalidLabel(label, namespace, compareClasses) {
+export function isInvalidLabel(label) {
     const violations = [];
     if (!label || label.trim() === "") {
         violations.push("must not be empty");
     }
-    if (namespace !== null && namespace !== undefined) {
+    return violations;
+}
+
+export function isInvalidClassLabel(label, namespace, compareClasses) {
+    const violations = [];
+    if (!label || label.trim() === "") {
+        violations.push("must not be empty");
+    }
+    if (typeof namespace === "string" && namespace.trim() !== "") {
         if (
             compareClasses &&
-            compareClasses.filter(c => c.label === label && c.prefix === namespace).length > 0
+            compareClasses.filter(
+                c => c.label === label && c.prefix === namespace,
+            ).length > 0
         ) {
             violations.push("must be unique");
         }
@@ -48,7 +58,6 @@ export function isInvalidLabel(label, namespace, compareClasses) {
             violations.push("must be unique");
         }
     }
-
     return violations;
 }
 

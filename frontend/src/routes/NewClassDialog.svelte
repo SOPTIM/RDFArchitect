@@ -17,26 +17,22 @@
 
 <script>
     import { v4 as uuidv4 } from "uuid";
+
     import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
-
-    ;
-
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import Dialog from "$lib/dialog/Dialog.svelte";
     import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
-    import {
-        ReactiveValueCompareWrapper
-    } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
-    import { isInvalidLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
+    import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
 
@@ -44,7 +40,7 @@
         showDialog = $bindable(),
         lockedDatasetName,
         lockedGraphUri,
-        lockedPackage
+        lockedPackage,
     } = $props();
 
     const uuid = uuidv4();
@@ -53,7 +49,7 @@
         graphURI: "graphUriNewClass" + uuid,
         classPackage: "classPackageNewClass" + uuid,
         classURINamespace: "classURINamespaceNewClass" + uuid,
-        className: "classNameNewClass" + uuid
+        className: "classNameNewClass" + uuid,
     };
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -71,18 +67,20 @@
 
     let disableSubmit = $derived(
         !datasetName ||
-        !graphURI ||
-        !classPackage ||
-        !className.secondValue ||
-        !className.value ||
-        className.violations.length > 0
+            !graphURI ||
+            !classPackage ||
+            !classURINamespace?.value ||
+            !className?.value ||
+            (className?.violations.length ?? 0) > 0,
     );
 
     const packageSelectionLocked = $derived(!!lockedPackage);
 
     $effect(async () => {
         namespaces = await getNamespaces(datasetName);
-        classURINamespace = null;
+        if (classURINamespace) {
+            classURINamespace.value = "";
+        }
         if (!packageSelectionLocked) {
             packages = datasetName ? packages : [];
             classPackage = null;
@@ -108,15 +106,14 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
-        classURINamespace = null;
+        classURINamespace = new ReactiveValueWrapper("");
 
-        className = new ReactiveValueCompareWrapper(
+        className = new ReactiveValueWrapper(
             "",
+            isInvalidClassLabel,
             compareClasses,
-            isInvalidLabel,
-            classURINamespace
+            () => classURINamespace.value,
         );
-        console.log("classNameWrapper", className);
         if (!datasetName) {
             return;
         }
@@ -170,7 +167,7 @@
         const packagesJSON = await res.json();
         packages = [
             ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList
+            ...packagesJSON.externalPackageList,
         ];
     }
 
@@ -181,28 +178,28 @@
         const packageDTO = classPackage?.uuid ? classPackage : null;
         let promise = fetch(
             PUBLIC_BACKEND_URL +
-            "/datasets/" +
-            encodeURIComponent(datasetNameLocal) +
-            "/graphs/" +
-            encodeURIComponent(graphURILocal) +
-            "/classes",
+                "/datasets/" +
+                encodeURIComponent(datasetNameLocal) +
+                "/graphs/" +
+                encodeURIComponent(graphURILocal) +
+                "/classes",
             {
                 method: "POST",
                 headers: new Headers({ "Content-Type": "application/json" }),
                 body: JSON.stringify({
                     packageDTO,
-                    classURIPrefix: classURINamespace,
-                    className: className.value
+                    classURIPrefix: classURINamespace.value,
+                    className: className.value,
                 }),
-                credentials: "include"
-            }
+                credentials: "include",
+            },
         ).then(res => {
             if (res.ok) {
                 console.log("successfully added class");
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedPackageUUID.updateValue(
-                    selectedPackageUUID
+                    selectedPackageUUID,
                 );
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
@@ -255,15 +252,16 @@
         {#if className}
             <SelectEditControl
                 id={domIds.classURINamespace}
-                bind:value={className.secondValue}
+                bind:value={classURINamespace.value}
                 options={namespaces}
                 disabled={!datasetName}
                 placeholder={datasetName
-                ? "Select namespace"
-                : "Select a dataset first"}
-                getOptionValue={namespace => namespace.substitutedPrefix}
+                    ? "Select namespace"
+                    : "Select a dataset first"}
+                getOptionValue={namespace => namespace.prefix}
                 getOptionLabel={namespace =>
-                `${namespace.substitutedPrefix} (${namespace.prefix})`}
+                    `${namespace.substitutedPrefix} (${namespace.prefix})`}
+                placeholderValue=""
             />
             <label for={domIds.className} class="mt-3 mb-1 block text-sm">
                 Name

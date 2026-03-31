@@ -15,6 +15,8 @@
   -->
 
 <script>
+    
+
     let {
         id,
         value = $bindable(null),
@@ -26,9 +28,8 @@
         placeholder,
         onchange,
         height = 9,
-    } = $props();
-
-    const EMPTY = "__NULL__";
+        placeholderValue = EMPTY,
+    } = $props();const EMPTY = "__NULL__";
 
     let internalValue = $state(EMPTY);
 
@@ -57,7 +58,10 @@
     onchange={handleChange}
 >
     {#if placeholder !== undefined}
-        <option class="bg-window-background text-default-text" value={EMPTY}>
+        <option
+            class="bg-window-background text-default-text"
+            value={placeholderValue}
+        >
             {placeholder}
         </option>
     {/if}

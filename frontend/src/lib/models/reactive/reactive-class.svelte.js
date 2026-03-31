@@ -19,11 +19,10 @@ import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.s
 import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
 import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
 import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
-import { ReactiveValueCompareWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
     hasUniqueLabel,
-    isInvalidLabel,
+    isInvalidClassLabel,
     isInvalidNamespace,
     isInvalidStereotype,
     isInvalidUuid,
@@ -61,11 +60,11 @@ export class ReactiveClass {
             namespace,
             isInvalidNamespace,
         );
-        this.label = new ReactiveValueCompareWrapper(
+        this.label = new ReactiveValueWrapper(
             label,
+            isInvalidClassLabel,
             compareClasses,
-            isInvalidLabel,
-            () => this.namespace.value
+            () => this.namespace.value,
         );
         this.package = new ReactiveValueWrapper(pack);
         this.superClass = new ReactiveValueWrapper(superClass);
@@ -106,7 +105,7 @@ export class ReactiveClass {
 
     /**
      * The label of the class
-     * @type {ReactiveValueCompareWrapper}
+     * @type {ReactiveValueWrapper}
      */
     label;
 
