@@ -159,6 +159,14 @@ export function isInvalidIri(iri) {
     return violations;
 }
 
+export function isInvalidOntologyValue(value, isIri) {
+    const violations = isNotEmptyValidation(value);
+    if (isIri && validateIri(value, IriValidationStrategy.Pragmatic)) {
+        violations.push("must be a valid IRI");
+    }
+    return violations;
+}
+
 export function isInvalidNamespacePrefix(prefix) {
     const violations = [];
     if (!prefix) prefix = "";

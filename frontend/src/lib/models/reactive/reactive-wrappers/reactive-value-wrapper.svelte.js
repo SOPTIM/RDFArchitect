@@ -76,6 +76,8 @@ export class ReactiveValueWrapper {
                 );
             } else if (this.compareValues !== null) {
                 return validationFunction(this.value, this.compareValues);
+            } else if (second !== null) {
+                return validationFunction(this.value, second);
             } else {
                 return validationFunction(this.value);
             }

@@ -16,19 +16,28 @@
  */
 
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
-import { isNotEmptyValidation } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+import {
+    isInvalidIri,
+    isInvalidOntologyValue,
+    isNotEmptyValidation,
+} from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 export class ReactiveOntologyEntry {
     constructor({
-                    iri = "",
-                    datatypeIri = "",
-                    isIriEntry = false,
-                    value = ""
-                } = {}) {
-        this.iri = new ReactiveValueWrapper(iri);
+        iri = "",
+        datatypeIri = "",
+        isIriEntry = false,
+        value = "",
+    } = {}) {
+        this.iri = new ReactiveValueWrapper(iri, isInvalidIri);
         this.datatypeIri = new ReactiveValueWrapper(datatypeIri);
         this.isIriEntry = new ReactiveValueWrapper(isIriEntry);
-        this.value = new ReactiveValueWrapper(value, isNotEmptyValidation);
+        this.value = new ReactiveValueWrapper(
+            value,
+            isInvalidOntologyValue,
+            null,
+            () => this.isIriEntry.value,
+        );
         this.initializeValidationChecks();
     }
 
@@ -63,9 +72,9 @@ export class ReactiveOntologyEntry {
      */
     isModified = $derived(
         this.iri.isModified ||
-        this.datatypeIri.isModified ||
-        this.isIriEntry.isModified ||
-        this.value.isModified
+            this.datatypeIri.isModified ||
+            this.isIriEntry.isModified ||
+            this.value.isModified,
     );
 
     // noinspection JSUnresolvedFunction
@@ -75,9 +84,9 @@ export class ReactiveOntologyEntry {
      */
     isValid = $derived(
         this.iri.isValid &&
-        this.datatypeIri.isValid &&
-        this.isIriEntry.isValid &&
-        this.value.isValid
+            this.datatypeIri.isValid &&
+            this.isIriEntry.isValid &&
+            this.value.isValid,
     );
 
     /**
@@ -124,7 +133,7 @@ export class ReactiveOntologyEntry {
             iri: this.iri.getPlainObject(),
             datatypeIri: this.datatypeIri.getPlainObject(),
             isIriEntry: this.isIriEntry.getPlainObject(),
-            value: this.value.getPlainObject()
+            value: this.value.getPlainObject(),
         };
     }
 
