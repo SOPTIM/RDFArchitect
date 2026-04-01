@@ -143,7 +143,6 @@
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
-        console.log(serializable);
         if (ontologyObject.uuid.value) {
             await bec.putOntology(datasetName, graphUri, serializable);
         } else {
