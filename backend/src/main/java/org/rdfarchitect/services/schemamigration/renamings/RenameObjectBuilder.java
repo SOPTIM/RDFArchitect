@@ -24,6 +24,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -136,6 +137,15 @@ public class RenameObjectBuilder {
             List<SemanticFieldChange> changes,
             SemanticFieldChange target
     ) {
+        if(target.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
+            return changes.stream()
+                          .filter(change -> change.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_OPTIONAL
+                                    || change.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_REQUIRED
+                                    || change.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE)
+                          .findFirst()
+                          .orElse(null);
+        }
+
         return changes.stream()
                 .filter(change -> target.getSemanticFieldChangeType().equals(change.getSemanticFieldChangeType()))
                 .findFirst()
@@ -152,12 +162,22 @@ public class RenameObjectBuilder {
         remainingAdded.remove(mergedChange);
 
         // Filter out changes with same value after merge
-        if (!Objects.equals(mergedChange.getTo(), deletedChange.getFrom())) {
-            if (mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.DOMAIN_CHANGE) {
-                mergedChange.setFrom(deletedChange.getFrom());
-            }
-            result.add(mergedChange);
+        if (Objects.equals(mergedChange.getTo(), deletedChange.getFrom())) {
+            return;
         }
+
+        if (mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_REQUIRED
+                  || mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_OPTIONAL
+                  || mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
+            var oldMultiplicity = CIMPropertyUtils.resolveMultiplicity(deletedChange.getFrom().split("#")[1]);
+            var newMultiplicity = CIMPropertyUtils.resolveMultiplicity(addedChange.getTo().split("#")[1]);
+            if (oldMultiplicity.equals(newMultiplicity)) {
+                return;
+            }
+        }
+
+        mergedChange.setFrom(deletedChange.getFrom());
+        result.add(mergedChange);
     }
 }
 

@@ -29,6 +29,7 @@ import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Object collecting all relevant information about a change to a class, including its attributes, associations, and enum entries and their renames.
@@ -70,9 +71,15 @@ public final class SemanticClassChange extends SemanticResourceChange {
 
     public SemanticClassChange(SemanticClassChange other) {
         super(other);
-        this.attributes = new ArrayList<>(other.attributes);
-        this.associations = new ArrayList<>(other.associations);
-        this.enumEntries = new ArrayList<>(other.enumEntries);
+        this.attributes = other.attributes.stream()
+                                          .map(SemanticAttributeChange::copy)
+                                          .collect(Collectors.toCollection(ArrayList::new));
+        this.associations = other.associations.stream()
+                                              .map(SemanticAssociationChange::copy)
+                                              .collect(Collectors.toCollection(ArrayList::new));
+        this.enumEntries = other.enumEntries.stream()
+                                            .map(SemanticEnumEntryChange::copy)
+                                            .collect(Collectors.toCollection(ArrayList::new));
         this.attributeRenameCandidates = new ArrayList<>(other.attributeRenameCandidates);
         this.associationRenameCandidates = new ArrayList<>(other.associationRenameCandidates);
         this.enumEntryRenameCandidates = new ArrayList<>(other.enumEntryRenameCandidates);

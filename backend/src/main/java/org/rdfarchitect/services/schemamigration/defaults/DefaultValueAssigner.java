@@ -30,6 +30,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.List;
 
@@ -95,7 +96,7 @@ public class DefaultValueAssigner {
             attributeChange.setDefaultValue(attributeResource.getProperty(CIMS.isFixed).getString());
         }
 
-        attributeChange.setOptional(CIMAttributeUtils.isOptional(attributeResource));
+        attributeChange.setOptional(CIMPropertyUtils.isOptional(attributeResource));
 
         if (CIMAttributeUtils.hasPrimitiveDatatype(attributeResource) || CIMAttributeUtils.hasCIMDatatype(attributeResource) || CIMAttributeUtils.hasXSDDatatype(attributeResource)) {
             attributeChange.setPrimitiveDataType(CIMAttributeUtils.getPrimitiveDatatype(attributeResource).getURI());

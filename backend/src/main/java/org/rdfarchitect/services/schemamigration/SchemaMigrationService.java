@@ -69,7 +69,6 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
     private final MigrationScriptBuilder migrationScriptBuilder;
 
     private static final String GRAPH_URI = "http://example.org/graph";
-    private final ReplaceOrCreateEnumEntryUseCase replaceOrCreateEnumEntryUseCase;
 
     @Override
     public void setMigrationContext(MultipartFile originalSchema, GraphIdentifier updatedSchema) {
@@ -200,9 +199,15 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
         var classes = new ArrayList<>(migrationSessionStore.getContext().getDiffAfterClassConfirm());
         var result = new ArrayList<PropertyOverview>();
         for (var cls : classes) {
-            cls.setAttributeRenameCandidates(RenameDetector.detectPropertyRenames(cls.getAttributes()));
-            cls.setAssociationRenameCandidates(RenameDetector.detectPropertyRenames(cls.getAssociations()));
-            cls.setEnumEntryRenameCandidates(RenameDetector.detectPropertyRenames(cls.getEnumEntries()));
+            if (cls.getAttributeRenameCandidates() == null) {
+                cls.setAttributeRenameCandidates(RenameDetector.detectPropertyRenames(cls.getAttributes()));
+            }
+            if (cls.getAssociationRenameCandidates() == null) {
+                cls.setAssociationRenameCandidates(RenameDetector.detectPropertyRenames(cls.getAssociations()));
+            }
+            if (cls.getEnumEntryRenameCandidates() == null) {
+                cls.setEnumEntryRenameCandidates(RenameDetector.detectPropertyRenames(cls.getEnumEntries()));
+            }
             if (cls.getAttributes().size() + cls.getAssociations().size() + cls.getEnumEntries().size() > 0) {
                 result.add(new PropertyOverview(cls));
             }
@@ -215,7 +220,10 @@ public class SchemaMigrationService implements SetMigrationContextUseCase, GetCl
     public void confirmPropertyRenamings(List<PropertyRenamings> propertyRenames) {
         var context = migrationSessionStore.getContext();
         var oldClassChanges = context.getDiffAfterClassConfirm();
-        var newClassChanges = new ArrayList<>(context.getDiffAfterClassConfirm());
+        var newClassChanges = new ArrayList<SemanticClassChange>();
+        for (var cls : oldClassChanges) {
+            newClassChanges.add(new SemanticClassChange(cls));
+        }
 
         for (var propertyRename : propertyRenames) {
             //update rename candidates in the version after the class confirm, so that the suggested renames reflect the input, when going back to that step

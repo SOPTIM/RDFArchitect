@@ -165,14 +165,4 @@ public class CIMAttributeUtils {
         var enumClass = attribute.getProperty(RDFS.range).getResource();
         return ontology.listResourcesWithProperty(RDF.type, enumClass).toSet();
     }
-
-    /**
-     * Checks whether an attribute is optional or required
-     * @param attribute the attribute
-     * @return true if the attribute is optional, false if required
-     */
-    public boolean isOptional(Resource attribute) {
-        var multiplicity = CIMPropertyUtils.resolveMultiplicity(attribute);
-        return multiplicity.lowerBound() == 0;
-    }
 }

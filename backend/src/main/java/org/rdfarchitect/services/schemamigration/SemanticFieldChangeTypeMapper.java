@@ -23,9 +23,12 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 public class SemanticFieldChangeTypeMapper {
-    private SemanticFieldChangeTypeMapper() {}
+
+    private SemanticFieldChangeTypeMapper() {
+    }
 
     public static SemanticFieldChangeType mapPredicateToChangeType(String resourceType, TriplePropertyChange propertyChange) {
         var predicate = propertyChange.getPredicate();
@@ -71,11 +74,16 @@ public class SemanticFieldChangeTypeMapper {
         } else if (predicate.equals(RDFS.range.toString()) || predicate.equals(CIMS.datatype.toString())) {
             return SemanticFieldChangeType.DATATYPE_CHANGE;
         } else if (predicate.equals(CIMS.multiplicity.toString())) {
-            if(propertyChange.getTo() != null) {
-                var newMultiplicity = propertyChange.getTo().split("#")[1];
-                if(newMultiplicity.equals("M:0..1")) {
+            if (propertyChange.getTo() != null) {
+                var newMultiplicity = CIMPropertyUtils.resolveMultiplicity(propertyChange.getTo().split("#")[1]);
+                // only syntactic change in multiplicity
+                if (propertyChange.getFrom() != null && CIMPropertyUtils.resolveMultiplicity(propertyChange.getFrom()).equals(newMultiplicity)) {
+                    return null;
+                }
+                if (CIMPropertyUtils.isOptional(newMultiplicity)) {
                     return SemanticFieldChangeType.MADE_OPTIONAL;
-                } else if(newMultiplicity.equals("M:1") || newMultiplicity.equals("M:1..1")) {
+                }
+                if (!CIMPropertyUtils.isOptional(newMultiplicity)) {
                     return SemanticFieldChangeType.MADE_REQUIRED;
                 }
             }
@@ -95,6 +103,11 @@ public class SemanticFieldChangeTypeMapper {
         } else if (predicate.equals(RDFS.range.toString())) {
             return SemanticFieldChangeType.TARGET_CHANGE;
         } else if (predicate.equals(CIMS.multiplicity.toString())) {
+            if (propertyChange.getTo() != null && propertyChange.getFrom() != null &&
+                      CIMPropertyUtils.resolveMultiplicity(propertyChange.getFrom().split("#")[1])
+                                      .equals(CIMPropertyUtils.resolveMultiplicity(propertyChange.getTo().split("#")[1]))) {
+                return null;
+            }
             return SemanticFieldChangeType.MULTIPLICITY_CHANGE;
         } else if (predicate.equals(CIMS.associationUsed.toString())) {
             return SemanticFieldChangeType.ASSOCIATION_USED_CHANGE;
