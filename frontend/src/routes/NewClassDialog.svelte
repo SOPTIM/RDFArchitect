@@ -29,6 +29,7 @@
     import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     import {
         editorState,
@@ -222,7 +223,15 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Add Class"
+    onPrimary={newClass}
+    disablePrimary={disableSubmit}
+    title="Add Class"
+>
     <div class="mx-2 flex h-full flex-col">
         <DatasetAndGraphSelection
             bind:dataset={datasetName}
@@ -276,10 +285,4 @@
             <ViolationMessages violations={className.violations} />
         {/if}
     </div>
-    <DialogLeaveButtons
-        bind:showDialog
-        submitLabel="Add Class"
-        onSubmit={newClass}
-        {disableSubmit}
-    />
-</Dialog>
+</ActionDialog>

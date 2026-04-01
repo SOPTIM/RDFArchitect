@@ -165,6 +165,7 @@ export function isInvalidNamespaceIri(iri) {
 
 export function isInvalidNamespacePrefix(prefix) {
     const violations = [];
+    if (!prefix) prefix = "";
     const normalizedNsPrefix = prefix.endsWith(":")
         ? prefix.slice(0, -1)
         : prefix;

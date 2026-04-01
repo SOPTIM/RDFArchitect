@@ -20,8 +20,7 @@
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { editorState, compareState } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
@@ -149,12 +148,17 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose}>
-    <div class="mx-2 mt-4 flex h-full flex-col font-[350]">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Compare"
+    onPrimary={runCompare}
+    disablePrimary={disableSubmit}
+    title="Compare Graphs"
+>
+    <div class="mx-2 flex h-full flex-col font-[350]">
         <div class="mb-3">
-            <h2 class="text-default-text text-xl leading-tight font-semibold">
-                Compare Graphs
-            </h2>
             <p class="text-text-subtle mt-1 text-sm">
                 Select a source and a modified graph to see what changed
             </p>
@@ -251,14 +255,5 @@
                 </div>
             {/if}
         </div>
-
-        <div>
-            <DialogLeaveButtons
-                bind:showDialog
-                submitLabel="Compare"
-                onSubmit={runCompare}
-                {disableSubmit}
-            />
-        </div>
     </div>
-</Dialog>
+</ActionDialog>

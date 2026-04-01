@@ -18,11 +18,12 @@
 <script>
     import { faClipboardList } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
+    import { v4 as uuidv4 } from "uuid";
 
     import { BackendConnection } from "$lib/api/backend.js";
+    import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
@@ -31,8 +32,10 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let datasetName = $state();
-    let datasetNames = $state([]);
+    const datasetSelectId = `datasetSelect-${uuidv4()}`;
+
+    let datasetName = $state(null);
+    let datasets = $state([]);
     let base64Token = $state();
 
     let copySuccess = $state(false);
@@ -42,8 +45,10 @@
     function onOpen() {
         datasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
-        if (!datasetSelectionLocked) {
-            getDatasetNames();
+        if (datasetSelectionLocked) {
+            datasets = [{ label: lockedDatasetName }];
+        } else {
+            loadDatasets();
         }
     }
 
@@ -63,9 +68,10 @@
         }
     }
 
-    async function getDatasetNames() {
+    async function loadDatasets() {
         const res = await bec.getDatasetNames();
-        datasetNames = await res.json();
+        const datasetNames = await res.json();
+        datasets = datasetNames.map(name => ({ label: name }));
     }
 
     async function copyToClipboard() {
@@ -83,35 +89,26 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    primaryLabel="Share Snapshot"
+    onPrimary={snapshotDataset}
+    closeOnPrimary={false}
+    title="Share Snapshot"
+    disablePrimary={!datasetName}
+>
     <div class="mx-2 flex h-full flex-col">
-        {#if !datasetSelectionLocked}
-            <label for="datasetNameDelete" class="mb-1">Dataset</label>
-            {#key datasetNames}
-                <select
-                    class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
-                    id="datasetNameDelete"
-                    bind:value={datasetName}
-                >
-                    {#each datasetNames as availableDatasetName}
-                        <option
-                            value={availableDatasetName}
-                            selected={availableDatasetName ===
-                                editorState.selectedDataset.getValue()}
-                        >
-                            {availableDatasetName}
-                        </option>
-                    {/each}
-                </select>
-            {/key}
-        {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {lockedDatasetName}
-            </div>
-        {/if}
+        <label for={datasetSelectId} class="mb-1">Dataset</label>
+        <SelectEditControl
+            id={datasetSelectId}
+            bind:value={datasetName}
+            options={datasets}
+            getOptionValue={dataset => dataset.label}
+            getOptionLabel={dataset => dataset.label}
+            disabled={datasetSelectionLocked || datasets.length === 0}
+            placeholder="Select dataset"
+        />
 
         <div class="mt-4 flex h-full flex-col">
             <p class="mb-1">Snapshot Link</p>
@@ -128,23 +125,20 @@
                         <ButtonControl
                             callOnClick={copyToClipboard}
                             title="Copy to clipboard"
+                            height={9}
                         >
                             <Fa icon={faClipboardList} />
                         </ButtonControl>
                     </div>
                 {/if}
             </div>
-            {#if copySuccess}
-                <p class="text-green-text mt-1 text-sm">
-                    Link copied to clipboard!
-                </p>
-            {/if}
+            <div class="h-6">
+                {#if copySuccess}
+                    <p class="text-green-text text-sm">
+                        Link copied to clipboard!
+                    </p>
+                {/if}
+            </div>
         </div>
     </div>
-    <DialogLeaveButtons
-        submitLabel="Share Snapshot"
-        onSubmit={snapshotDataset}
-        onCancel={() => (showDialog = false)}
-        cancelLabel="Close"
-    />
-</Dialog>
+</ActionDialog>
