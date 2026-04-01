@@ -251,7 +251,7 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 7.3.1
+- **Version:** 8.0.3
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
