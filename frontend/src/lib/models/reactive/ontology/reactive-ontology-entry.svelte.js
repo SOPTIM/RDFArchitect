@@ -20,15 +20,15 @@ import { isNotEmptyValidation } from "$lib/models/reactive/validity-rules/validi
 
 export class ReactiveOntologyEntry {
     constructor({
-        iri = "",
-        datatypeIri = "",
-        isIriEntry = false,
-        value = "",
-    } = {}) {
+                    iri = "",
+                    datatypeIri = "",
+                    isIriEntry = false,
+                    value = ""
+                } = {}) {
         this.iri = new ReactiveValueWrapper(iri);
         this.datatypeIri = new ReactiveValueWrapper(datatypeIri);
         this.isIriEntry = new ReactiveValueWrapper(isIriEntry);
-        this.value = new ReactiveValueWrapper(value);
+        this.value = new ReactiveValueWrapper(value, isNotEmptyValidation);
         this.initializeValidationChecks();
     }
 
@@ -63,9 +63,9 @@ export class ReactiveOntologyEntry {
      */
     isModified = $derived(
         this.iri.isModified ||
-            this.datatypeIri.isModified ||
-            this.isIriEntry.isModified ||
-            this.value.isModified,
+        this.datatypeIri.isModified ||
+        this.isIriEntry.isModified ||
+        this.value.isModified
     );
 
     // noinspection JSUnresolvedFunction
@@ -75,9 +75,9 @@ export class ReactiveOntologyEntry {
      */
     isValid = $derived(
         this.iri.isValid &&
-            this.datatypeIri.isValid &&
-            this.isIriEntry.isValid &&
-            this.value.isValid,
+        this.datatypeIri.isValid &&
+        this.isIriEntry.isValid &&
+        this.value.isValid
     );
 
     /**
@@ -124,7 +124,7 @@ export class ReactiveOntologyEntry {
             iri: this.iri.getPlainObject(),
             datatypeIri: this.datatypeIri.getPlainObject(),
             isIriEntry: this.isIriEntry.getPlainObject(),
-            value: this.value.getPlainObject(),
+            value: this.value.getPlainObject()
         };
     }
 
