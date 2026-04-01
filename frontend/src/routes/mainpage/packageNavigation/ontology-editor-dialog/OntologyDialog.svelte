@@ -23,6 +23,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -50,6 +51,8 @@
     let tableContainerRef = $state(null);
 
     let ontologyObject = $state();
+
+    let loadingOntology = $state(false);
 
     let hasChanges = $derived(ontologyObject?.isModified ?? false);
 
@@ -92,7 +95,19 @@
     }
 
     function save() {
-        saveOntology(dataset, graphUri, ontologyObject);
+        loadingOntology = true;
+        saveOntology(dataset, graphUri, ontologyObject).then(() => {
+            getOntology().then(ontology => {
+                if (ontology) {
+                    ontologyObject = new ReactiveOntology(
+                        ontology.uuid,
+                        ontology.namespace,
+                        ontology.entries,
+                    );
+                }
+                loadingOntology = false;
+            });
+        });
         ontologyObject.save();
         forceReloadTrigger.trigger();
     }
@@ -105,6 +120,18 @@
     function handleAddEntry() {
         ontologyObject.entries.append();
         scrollEntriesToBottom();
+    }
+
+    async function getOntology() {
+        if (!graphUri) {
+            return null;
+        }
+        const res = await bec.getOntology(dataset, graphUri);
+        let content = await res.text();
+        if (!content) {
+            return null;
+        }
+        return JSON.parse(content);
     }
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {
@@ -148,6 +175,13 @@
     {readonly}
     title={readonly ? "View Ontology" : "Edit Ontology"}
 >
+    {#if loadingOntology}
+        <div
+            class="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
+        >
+            <LoadingSpinner />
+        </div>
+    {/if}
     <div class="mx-2 flex h-full flex-col">
         {#key ontologyObject}
             {#if ontologyObject}
