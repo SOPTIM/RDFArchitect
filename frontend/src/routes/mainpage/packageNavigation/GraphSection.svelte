@@ -16,7 +16,10 @@
   -->
 
 <script>
-    import { faDiagramProject } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faDiagramProject,
+        faRightLeft,
+    } from "@fortawesome/free-solid-svg-icons";
     import {
         faFileExport,
         faTrash,
@@ -475,6 +478,15 @@
                 faIcon={faCodeBranch}
             >
                 Compare...
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
+                    goto("/migrate");
+                }}
+                faIcon={faRightLeft}
+            >
+                Migrate...
             </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>

@@ -22,10 +22,10 @@ import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.BelongsToCategoryDTO;
 import org.rdfarchitect.api.dto.MappingUtils;
-import org.rdfarchitect.cim.data.dto.CIMPackage;
-import org.rdfarchitect.cim.data.dto.relations.CIMSBelongsToCategory;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 

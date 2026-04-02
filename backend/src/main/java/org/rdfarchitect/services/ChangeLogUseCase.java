@@ -18,7 +18,7 @@
 package org.rdfarchitect.services;
 
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.cim.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;

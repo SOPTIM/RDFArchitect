@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.shacl;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
 
@@ -52,6 +53,8 @@ public interface SHACLExportUseCase {
      * @return A ByteArrayOutputStream containing the exported SHACL graph.
      */
     ByteArrayOutputStream exportCombinedSHACLGraph(GraphIdentifier graphIdentifier, RDFFormat format);
+
+    ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
     /**
      * Export the SHACL graph for a given graph identifier with a specific shape URI.

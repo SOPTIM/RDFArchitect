@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.cim.changelog.GraphChangeLog;
+import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;

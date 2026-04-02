@@ -19,15 +19,15 @@ package org.rdfarchitect.services;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.QueryFactory;
-import org.rdfarchitect.cim.queries.CIMQueryVars;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.search.SearchFilter;
-import org.rdfarchitect.cim.search.SearchResultObjectFactory;
-import org.rdfarchitect.cim.search.data.SearchResult;
-import org.rdfarchitect.cim.search.data.SearchResults;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
+import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
+import org.rdfarchitect.models.cim.queries.CIMQueryVars;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.search.SearchFilter;
+import org.rdfarchitect.models.search.SearchResultObjectFactory;
+import org.rdfarchitect.models.search.data.SearchResult;
+import org.rdfarchitect.models.search.data.SearchResults;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -238,9 +238,9 @@ public class SearchService implements SearchUseCase {
         var internalQueryObject = QueryFactory.create(internalQueryWithPackageConstraint);
         var externalQueryObject = QueryFactory.create(externalQueryWithPackageConstraint);
         var internalResultSet =
-                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), internalQueryObject, graphIdentifier.getGraphUri());
+                  InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), internalQueryObject, graphIdentifier.getGraphUri());
         var externalResultSet =
-                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), externalQueryObject, graphIdentifier.getGraphUri());
+                  InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), externalQueryObject, graphIdentifier.getGraphUri());
 
         searchResults.addAll(SearchResultObjectFactory.createSearchResultObjectList(graphIdentifier, internalResultSet));
         externalSearchResults.addAll(SearchResultObjectFactory.createSearchResultObjectList(graphIdentifier, externalResultSet));

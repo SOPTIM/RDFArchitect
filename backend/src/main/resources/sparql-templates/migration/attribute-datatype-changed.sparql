@@ -1,0 +1,11 @@
+DELETE {
+    ?instance ?attribute ?oldValue .
+}
+INSERT {
+    ?instance ?attribute ?newValue .
+}
+WHERE {
+    ?instance a ?class .
+    ?instance ?attribute ?oldValue .
+    BIND(COALESCE(?newDatatype(STR(?oldValue)), ?defaultValue) AS ?newValue)
+}

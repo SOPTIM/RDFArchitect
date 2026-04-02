@@ -23,10 +23,10 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.rdfarchitect.cim.rdf.resources.CIM;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
 import java.util.UUID;

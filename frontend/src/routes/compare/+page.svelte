@@ -18,9 +18,12 @@
 <script>
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { compareState } from "$lib/sharedState.svelte.js";
 
     import PackageView from "./PackageView.svelte";
+
+    import { goto } from "$app/navigation";
 
     let changeList = $state(null);
     let selectedPackage = $state(null);
@@ -33,7 +36,7 @@
 
     function getPackageLabel(pack) {
         if (pack.label === "default") return "default";
-        return pack.label.split("#")[1].replace("Package_", "");
+        return pack.label.replace("Package_", "");
     }
 
     function getPackageChangeType(pack) {
@@ -111,7 +114,7 @@
             {/if}
         </div>
     </Pane>
-    <Pane size={82} class="bg-window-background pb-10">
+    <Pane size={82} class="bg-window-background pb-18">
         <div
             class="flex h-full flex-1 flex-col space-y-8 overflow-y-scroll p-6"
         >
@@ -126,3 +129,15 @@
         </div>
     </Pane>
 </Splitpanes>
+
+{#if changeList && changeList.length > 0}
+    <div class="fixed right-5 bottom-4 w-40 shadow-lg">
+        <ButtonControl
+            callOnClick={() => goto("/migrate")}
+            variant="default"
+            title="Start Migration"
+        >
+            Start Migration
+        </ButtonControl>
+    </div>
+{/if}

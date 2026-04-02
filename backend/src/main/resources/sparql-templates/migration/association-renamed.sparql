@@ -1,0 +1,9 @@
+DELETE {
+    ?instance ?oldAssociation ?value .
+}
+INSERT {
+    ?instance ?newAssociation ?value .
+}
+WHERE {
+    ?instance ?oldAssociation ?value .
+}

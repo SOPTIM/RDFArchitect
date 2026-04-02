@@ -32,10 +32,10 @@ import org.apache.jena.shacl.vocabulary.SHACL;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.cim.rdf.resources.RDFA;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
@@ -99,6 +99,18 @@ public class SingletonPrimitiveSHACLStoringService implements SHACLInsertUseCase
             if (ontologyGraph != null) {
                 ontologyGraph.end();
             }
+        }
+    }
+
+    @Override
+    public ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format) {
+        var ontologyModel = ModelFactory.createModelForGraph(graph);
+        var generatedShacl = new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
+        try (var outStream = new ByteArrayOutputStream()) {
+            generatedShacl.write(outStream, format.getLang().getName());
+            return outStream;
+        } catch (IOException e) {
+            throw new DataAccessException("Error while writing shacl graph to output stream", e);
         }
     }
 

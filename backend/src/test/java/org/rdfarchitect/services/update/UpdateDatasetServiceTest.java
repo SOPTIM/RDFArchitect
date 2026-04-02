@@ -19,7 +19,7 @@ package org.rdfarchitect.services.update;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.data.dto.CIMPrefixPair;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.services.update.dataset.UpdateDatasetService;
 
