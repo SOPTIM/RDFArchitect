@@ -97,11 +97,6 @@
                     to ensure successful migration
                 </li>
             </ol>
-            <p class="mt-4 text-sm">
-                <span class="font-medium">Note:</span>
-                <!-- could link to openCGMES once it's hosted -->
-                These steps can be performed using the OpenCGMES Tool.
-            </p>
         </div>
     </div>
 </div>
