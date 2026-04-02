@@ -82,6 +82,19 @@ function adoptModifiedArrayEntries(newArray, oldArray, matchFn, adoptFn) {
             newArray.append(oldEntry);
         }
     }
+
+    // Remove deleted entries
+    for (const backupEntry of oldArray.backup) {
+        const wasDeleted = !oldArray.values.some(e => matchFn(e, backupEntry));
+        if (wasDeleted) {
+            const entryInNewArray = newArray.values.find(e =>
+                matchFn(e, backupEntry),
+            );
+            if (entryInNewArray) {
+                newArray.remove(entryInNewArray, true);
+            }
+        }
+    }
 }
 
 function adoptUnsavedAssociationChanges(newAssociation, oldAssociation) {

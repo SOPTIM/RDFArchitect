@@ -47,7 +47,9 @@
             isNewEnumEntry = false;
         }
     }
+
     function onClose() {
+        enumEntry = null;
         isNewEnumEntry = true;
     }
 
@@ -69,11 +71,11 @@
         }
 
         enumEntry.uuid.value = result.enumEntryUUID;
+        enumEntry.save();
         if (isNewEnumEntry) {
             enumEntries.append(enumEntry);
             isNewEnumEntry = false;
         }
-        enumEntry.save();
     }
 </script>
 

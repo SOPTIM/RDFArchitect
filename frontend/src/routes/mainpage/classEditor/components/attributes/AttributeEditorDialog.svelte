@@ -49,7 +49,9 @@
             isNewAttribute = false;
         }
     }
+
     function onClose() {
+        attribute = null;
         isNewAttribute = true;
     }
 
@@ -80,11 +82,11 @@
         }
 
         attribute.uuid.value = result.attributeUUID;
+        attribute.save();
         if (isNewAttribute) {
             attributes.append(attribute);
             isNewAttribute = false;
         }
-        attribute.save();
     }
 </script>
 

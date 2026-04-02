@@ -47,9 +47,12 @@
             isNewAssociation = false;
         }
     }
+
     function onClose() {
+        association = null;
         isNewAssociation = true;
     }
+
     async function saveAssociation() {
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
@@ -69,11 +72,11 @@
 
         association.uuid.value = result.associationUUIDs.fromUUID;
         association.inverse.uuid.value = result.associationUUIDs.toUUID;
+        association.save();
         if (isNewAssociation) {
             associations.append(association);
             isNewAssociation = false;
         }
-        association.save();
     }
 </script>
 
