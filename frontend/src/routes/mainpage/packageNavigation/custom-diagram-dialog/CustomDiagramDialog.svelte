@@ -41,14 +41,15 @@
 
     let disableSubmit = $derived(diagramName.trim() === "");
 
-    function onOpen() {
-        createPackageList(lockedDatasetName, lockedGraphUri);
-        fetchClasses();
+    async function onOpen() {
+        await createPackageList(lockedDatasetName, lockedGraphUri);
+        await fetchClasses();
+        updatePackageSelectionState();
     }
 
     function onClose() {
-        packages = null;
-        classesByPackage = null;
+        /*packages = null;
+        classesByPackage = null;*/
     }
 
     async function getPackages(datasetName, graphURI) {
@@ -95,6 +96,9 @@
                 if (!grouped[packageId]) {
                     grouped[packageId] = [];
                 }
+
+                cls.selected = !!selectedClasses.find(selected => selected.uuid === cls.uuid);
+
                 grouped[packageId].push({
                     ...cls,
                     packageUUID: packageId
@@ -123,6 +127,22 @@
                 cls.selected = false;
             });
         })
+    }
+
+    function updatePackageSelectionState() {
+        if (!selectedClasses.length) {
+            return;
+        }
+
+        packages.forEach((pack) => {
+            const packageId = pack.uuid;
+            const classesInPackage = classesByPackage[packageId] ?? [];
+
+            if (classesInPackage.length > 0) {
+                pack.expanded = classesInPackage.find(cls => cls.selected) !== undefined;
+                pack.selected = classesInPackage.every(cls => cls.selected === true);
+            }
+        });
     }
 
     async function submitDiagramClasses() {

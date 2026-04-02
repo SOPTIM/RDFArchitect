@@ -29,7 +29,6 @@
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import {
         editorState,
-        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -124,6 +123,7 @@
     lockedGraphUri={getUri(graph)}
     diagramName={diagram.name}
     diagramId={diagram.diagramId}
+    selectedClasses={diagram.classes}
 />
 
 <CustomDiagramDeleteDialog
