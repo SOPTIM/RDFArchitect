@@ -21,8 +21,8 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
-import org.rdfarchitect.cim.rdf.resources.RDFA;
-import org.rdfarchitect.cim.relations.CIMClassRelationFinder;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 
 import java.util.ArrayList;

@@ -1,0 +1,7 @@
+DELETE {
+    ?instance ?property ?value .
+}
+WHERE {
+    ?instance ?property ?value .
+    ?instance a ?domain .
+}

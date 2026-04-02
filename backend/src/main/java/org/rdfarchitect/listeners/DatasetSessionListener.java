@@ -20,11 +20,11 @@ package org.rdfarchitect.listeners;
 import jakarta.servlet.http.HttpSessionEvent;
 import jakarta.servlet.http.HttpSessionListener;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.cim.changelog.ChangeLogEntry;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Component;
 

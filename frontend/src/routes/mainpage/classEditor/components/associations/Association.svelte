@@ -22,13 +22,14 @@
         faGear,
         faMinus,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     const {
         associations,
@@ -39,12 +40,22 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
-    const classes = classEditorContext.classes;
+    let readonly = $derived(classEditorContext.readonly);
+    let classes = $derived(classEditorContext.classes);
 
     let lowerButtons = $derived(getButtons(association.multiplicityLowerBound));
-
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+        classes = classEditorContext.classes;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
+        classes = classEditorContext.classes;
+    });
 
     function getButtons(multiplicityObject) {
         const buttons = getControlButtonsForReactiveObject(

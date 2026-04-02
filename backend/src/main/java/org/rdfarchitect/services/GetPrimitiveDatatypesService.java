@@ -20,7 +20,7 @@ package org.rdfarchitect.services;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;

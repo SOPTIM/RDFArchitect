@@ -1,0 +1,8 @@
+INSERT {
+    ?instance ?association ?target .
+}
+WHERE {
+    ?instance a ?domain .
+
+    <mapping>
+}

@@ -80,7 +80,7 @@
             <th
                 class="border-default-text bg-window-background w-1/2 border-b p-4"
             >
-                <p class="block text-sm leading-none font-normal">Property</p>
+                <p class="block text-sm leading-none font-normal">Predicate</p>
             </th>
             <th class="border-default-text bg-window-background border-b p-4">
                 <p class="block text-sm leading-none font-normal">From</p>
@@ -91,14 +91,14 @@
         </tr>
     </thead>
     <tbody>
-        {#each Object.entries(changes) as [key, change]}
+        {#each changes as change}
             {@const changeType = getChangeType(change)}
             {@const diff =
                 changeType === "modification" ? getDiff(change) : null}
             <tr class={getRowClasses(change)}>
                 <td class="border-default-text border-b p-4">
                     <p class="text-default-text block text-sm">
-                        {key}
+                        {change.predicate}
                     </p>
                 </td>
                 <td class="border-default-text border-b p-4">

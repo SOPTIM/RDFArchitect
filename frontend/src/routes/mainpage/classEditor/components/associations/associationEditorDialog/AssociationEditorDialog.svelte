@@ -80,6 +80,7 @@
     isValid={association?.isValid}
     size="w-2/3"
     {readonly}
+    title={`${isNewAssociation ? "Create" : "Edit"} Association${association ? `: '${association.label.backup}' to '${association.inverse.label.backup}'` : ""}`}
 >
     {#if association}
         <div

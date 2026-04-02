@@ -21,13 +21,14 @@
         faGear,
         faMinus,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     let {
         attributes,
@@ -37,7 +38,14 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
+    let readonly = $derived(classEditorContext.readonly);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function getDatatypeLabelByUri(uri) {
         const datatype = classEditorContext.getDatatypeByUri(uri);

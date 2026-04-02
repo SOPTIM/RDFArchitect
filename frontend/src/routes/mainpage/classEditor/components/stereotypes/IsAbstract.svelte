@@ -15,18 +15,30 @@
   -
   -->
 <script>
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     const { classStereotypes } = $props();
 
     const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
-    const readonly = getContext("classEditor").readonly;
+    const classEditorContext = getContext("classEditor");
     const id = uuidv4();
 
+    let readonly = $derived(classEditorContext.readonly);
+
     let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
+    });
 </script>
 
 <tr>

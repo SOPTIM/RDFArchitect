@@ -19,7 +19,7 @@ package org.rdfarchitect.services.dl.update;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.rendering.GraphFilter;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 
 class UpdateDiagramLayoutServiceTest extends DiagramLayoutServicesTestBase {

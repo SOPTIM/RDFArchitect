@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.cim.relations.ClassRelationsDTO;
+import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.UUID;

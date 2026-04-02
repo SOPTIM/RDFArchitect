@@ -23,8 +23,7 @@
     import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {
@@ -253,7 +252,15 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Import"
+    onPrimary={importGraphs}
+    disablePrimary={!enableSubmit}
+    title="Import Graphs"
+>
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
         {#if !datasetSelectionLocked}
             <label for={datasetInputId} class="mb-1">Dataset</label>
@@ -399,10 +406,4 @@
             {/if}
         </div>
     </div>
-    <DialogLeaveButtons
-        bind:showDialog
-        submitLabel="Import"
-        onSubmit={importGraphs}
-        disableSubmit={!enableSubmit}
-    />
-</Dialog>
+</ActionDialog>

@@ -13,13 +13,18 @@
   -    See the License for the specific language governing permissions and
   -    limitations under the License.
   -->
+
 <script>
+    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
     import { AlertDialog as BitsUiAlertDialog } from "bits-ui";
+    import { Fa } from "svelte-fa";
 
     let {
         showDialog = $bindable(),
         size = "w-full max-w-md",
         onkeydown,
+        title,
+        description,
         children,
         ...restProps
     } = $props();
@@ -35,6 +40,23 @@
             class="border-border bg-window-background fixed top-1/2 left-1/2 z-40 -translate-x-1/2 -translate-y-1/2 rounded border border-solid p-2 shadow outline-none {size}"
             {onkeydown}
         >
+            <div class="flex items-start gap-3 p-2">
+                <div
+                    class="bg-red flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white"
+                >
+                    <Fa icon={faExclamation} />
+                </div>
+                <div class="min-w-0">
+                    {#if title}
+                        <BitsUiAlertDialog.Title>
+                            {@render title()}
+                        </BitsUiAlertDialog.Title>
+                    {/if}
+                    <BitsUiAlertDialog.Description>
+                        {@render description()}
+                    </BitsUiAlertDialog.Description>
+                </div>
+            </div>
             {@render children?.()}
         </BitsUiAlertDialog.Content>
     </BitsUiAlertDialog.Portal>

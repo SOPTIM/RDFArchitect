@@ -17,8 +17,7 @@
 
 <script>
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphViewState } from "$lib/sharedState.svelte.js";
 
     let { showDialog = $bindable() } = $props();
@@ -48,7 +47,6 @@
     ]);
 
     function submit() {
-        graphViewState.showGraphFilter.updateValue(false);
         graphViewState.filter.updateValue({
             includeEnumEntries: options[0].value,
             includeAttributes: options[1].value,
@@ -60,19 +58,21 @@
     }
 </script>
 
-<Dialog bind:showDialog>
-    <div class="flex flex-col pb-1">
+<ActionDialog
+    bind:showDialog
+    primaryLabel="Save"
+    onPrimary={submit}
+    title="Select filters"
+>
+    <div class="flex flex-col space-y-2">
         {#each options as option}
-            <CheckBoxEditControl
-                label={option.label}
-                labelFirst={false}
-                bind:value={option.value}
-            />
+            <div class="flex items-center space-x-2">
+                <CheckBoxEditControl
+                    label={option.label}
+                    labelFirst={false}
+                    bind:value={option.value}
+                />
+            </div>
         {/each}
     </div>
-    <DialogLeaveButtons
-        bind:showDialog
-        submitLabel="Save Changes"
-        onSubmit={submit}
-    />
-</Dialog>
+</ActionDialog>

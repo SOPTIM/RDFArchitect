@@ -16,7 +16,10 @@
   -->
 
 <script>
-    import { faDiagramProject } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faDiagramProject,
+        faRightLeft,
+    } from "@fortawesome/free-solid-svg-icons";
     import {
         faFileExport,
         faTrash,
@@ -57,8 +60,8 @@
         getPackageId,
     } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
-    import DeleteDatasetDialog from "../../DeleteDatasetDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
+    import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
@@ -476,6 +479,15 @@
             >
                 Compare...
             </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
+                    goto("/migrate");
+                }}
+                faIcon={faRightLeft}
+            >
+                Migrate...
+            </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>
                     SHACL
@@ -558,7 +570,7 @@
     lockedDatasetName={dataset.label}
     lockedGraphUri={getUri(graph)}
 />
-<DeleteDatasetDialog bind:showDialog={showDeleteDialog} />
+<GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
     lockedDatasetName={dataset.label}

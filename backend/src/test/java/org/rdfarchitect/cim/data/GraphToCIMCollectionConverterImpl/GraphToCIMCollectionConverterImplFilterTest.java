@@ -24,7 +24,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.rendering.GraphFilter;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;

@@ -19,8 +19,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     let {
         showDialog = $bindable(),
@@ -154,7 +153,18 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} onClose={scrollToBottom}>
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    onClose={scrollToBottom}
+    primaryLabel="Add Selected Fields"
+    onPrimary={() => {
+        addSelectedFieldsToOntologyEntries();
+        showDialog = false;
+    }}
+    disablePrimary={disableSubmit}
+    title="Select fields to add"
+>
     <div class="flex flex-col pb-1">
         <div
             class="border-border text-default-text mt-1 overflow-y-auto rounded-lg border-2"
@@ -220,7 +230,7 @@
                                     />
                                 </div>
                             </td>
-                            <td class="px-2 py-1 text-left">
+                            <td class="px-2 py-1 text-left text-nowrap">
                                 {getShortenedIRI(namespaces, field.iri)}
                             </td>
 
@@ -258,16 +268,4 @@
             </table>
         </div>
     </div>
-    <DialogLeaveButtons
-        bind:showDialog
-        submitLabel="Add Selected Fields"
-        onSubmit={() => {
-            addSelectedFieldsToOntologyEntries();
-            showDialog = false;
-        }}
-        onCancel={() => {
-            showDialog = false;
-        }}
-        {disableSubmit}
-    />
-</Dialog>
+</ActionDialog>

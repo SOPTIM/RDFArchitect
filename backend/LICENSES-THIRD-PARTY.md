@@ -6,6 +6,12 @@
 - **License:** Apache License 2.0
 - **URL:** [https://commons.apache.org/proper/commons-lang/](https://commons.apache.org/proper/commons-lang/)
 
+### Apache Commons Text
+- **Package:** org.apache.commons
+- **Version:** 1.14.0
+- **License:** Apache License 2.0
+- **URL:** [https://commons.apache.org/proper/commons-text](https://commons.apache.org/proper/commons-text)
+
 ### Apache Jena - Extras - Query Builder
 - **Package:** org.apache.jena
 - **Version:** 5.6.0

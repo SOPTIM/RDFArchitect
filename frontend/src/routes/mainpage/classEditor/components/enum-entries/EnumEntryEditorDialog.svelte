@@ -79,20 +79,12 @@
     hasChanges={isNewEnumEntry || enumEntry?.isModified}
     isValid={enumEntry?.isValid}
     {readonly}
+    title={isNewEnumEntry
+        ? "Create Enum Entry"
+        : `Edit Enum Entry: ${enumEntry.label.backup}`}
 >
     {#if enumEntry && classEditorContext && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
-            <!-- Title -->
-            <div>
-                <span class="text-lg">
-                    {#if isNewEnumEntry}
-                        Creating new enum entry
-                    {:else}
-                        Editing enum entry <b>{enumEntry.label.backup}</b>
-                    {/if}
-                </span>
-            </div>
-
             <!-- UUID -->
             <div>
                 <span class="mb-1">UUID:</span>

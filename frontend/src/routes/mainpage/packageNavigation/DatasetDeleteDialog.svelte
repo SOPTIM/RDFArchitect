@@ -16,11 +16,11 @@
   -->
 
 <script>
+    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
+
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DeleteConfirmationContent from "$lib/dialog/DeleteConfirmationContent.svelte";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         forceReloadTrigger,
         editorState,
@@ -67,13 +67,21 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose} size="w-full max-w-lg">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    size="w-full max-w-lg"
+    primaryLabel="Delete Dataset"
+    onPrimary={deleteDataset}
+    title={datasetName ? `Delete dataset "${datasetName}"?` : "Delete dataset?"}
+    primaryVariant="danger"
+    titleIcon={faExclamation}
+    titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
+>
     <div class="space-y-4 px-3 py-3">
-        <DeleteConfirmationContent
-            title={datasetName
-                ? `Delete dataset "${datasetName}"?`
-                : "Delete dataset?"}
-            description={(() => {
+        <p class="text-default-text w-3/4 text-sm leading-relaxed">
+            {(() => {
                 if (!datasetName || graphs === null) {
                     return baseDeletionDescription;
                 }
@@ -81,11 +89,8 @@
                 const label = graphCount === 1 ? "graph" : "graphs";
                 return `${baseDeletionDescription} ${graphCount} ${label} will be deleted.`;
             })()}
-        />
+            <br />
+            This action is not reversible.
+        </p>
     </div>
-    <DialogLeaveButtons
-        bind:showDialog
-        submitLabel="Delete Dataset"
-        onSubmit={deleteDataset}
-    />
-</Dialog>
+</ActionDialog>
