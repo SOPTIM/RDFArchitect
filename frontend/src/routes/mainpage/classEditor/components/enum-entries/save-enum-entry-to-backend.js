@@ -28,37 +28,23 @@ export async function saveApiEnumEntryToBackend(
     enumEntry,
     isNewEnumEntry,
 ) {
-    let saveEnumEntryCall;
-    if (isNewEnumEntry) {
-        saveEnumEntryCall = bec.postEnumEntry(
-            dataset,
-            graph,
-            classUUID,
-            enumEntry,
-        );
-    } else {
-        saveEnumEntryCall = bec.putEnumEntry(
-            dataset,
-            graph,
-            classUUID,
-            enumEntry,
-        );
-    }
+    const saveEnumEntryCall = isNewEnumEntry
+        ? bec.postEnumEntry(dataset, graph, classUUID, enumEntry)
+        : bec.putEnumEntry(dataset, graph, classUUID, enumEntry);
 
-    return saveEnumEntryCall
-        .then(async res => {
-            if (res.ok) {
-                const enumEntryUUID = await res.json();
-                console.log("Successfully saved enum entry:", enumEntryUUID);
-            } else {
-                const errorText = await res.text();
-                console.error("Could not save enum entry:", errorText);
-            }
-            return res;
-        })
-        .finally(res => {
-            editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
-            return res;
-        });
+    try {
+        const res = await saveEnumEntryCall;
+        if (res.ok) {
+            const enumEntryUUID = await res.json();
+            console.log("Successfully saved enum entry:", enumEntryUUID);
+            return { ok: true, enumEntryUUID };
+        }
+
+        const errorText = await res.text();
+        console.error("Could not save enum entry:", errorText);
+        return { ok: false, errorText };
+    } finally {
+        editorState.selectedClassUUID.trigger();
+        editorState.selectedPackageUUID.trigger();
+    }
 }

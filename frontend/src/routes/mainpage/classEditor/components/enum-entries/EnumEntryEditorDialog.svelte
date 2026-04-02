@@ -54,20 +54,23 @@
             classEditorContext.reactiveClass.namespace.value +
                 classEditorContext.reactiveClass.label.value,
         );
-        saveApiEnumEntryToBackend(
+        const result = await saveApiEnumEntryToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
             classEditorContext.reactiveClass.uuid.value,
             apiEnumEntry,
             isNewEnumEntry,
-        ).then(res => {
-            if (res.ok) {
-                if (isNewEnumEntry) {
-                    enumEntries.append(enumEntry);
-                }
-                enumEntry.save();
-            }
-        });
+        );
+        if (!result.ok) {
+            return;
+        }
+
+        enumEntry.uuid.value = result.enumEntryUUID;
+        if (isNewEnumEntry) {
+            enumEntries.append(enumEntry);
+            isNewEnumEntry = false;
+        }
+        enumEntry.save();
     }
 </script>
 
