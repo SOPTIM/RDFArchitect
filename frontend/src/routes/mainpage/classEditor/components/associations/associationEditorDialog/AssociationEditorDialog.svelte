@@ -29,8 +29,8 @@
     let { showDialog = $bindable(), associations, association } = $props();
 
     let classEditorContext = $state();
+    let isNewAssociation = $state(true);
     let readonly = $derived(classEditorContext?.readonly);
-    let isNewAssociation = $derived(true);
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
@@ -49,25 +49,29 @@
     }
 
     async function saveAssociation() {
-        if (isNewAssociation) {
-            associations.append(association);
-        }
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
             classEditorContext.reactiveClass,
             classEditorContext.getClassByUuid,
         );
-        saveApiAssociationToBackend(
+        const result = await saveApiAssociationToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
             classEditorContext.reactiveClass.uuid.value,
             apiAssociation,
             isNewAssociation,
-        ).then(res => {
-            if (res.ok) {
-                association.save();
-            }
-        });
+        );
+        if (!result.ok) {
+            return;
+        }
+
+        association.uuid.value = result.associationUUIDs.fromUUID;
+        association.inverse.uuid.value = result.associationUUIDs.toUUID;
+        if (isNewAssociation) {
+            associations.append(association);
+            isNewAssociation = false;
+        }
+        association.save();
     }
 </script>
 

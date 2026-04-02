@@ -27,41 +27,28 @@ export function saveApiAssociationToBackend(
     associationDTO,
     isNewAssociation,
 ) {
-    let saveAssociationPairCall;
-    if (isNewAssociation) {
-        saveAssociationPairCall = bec.postAssociationPair(
-            dataset,
-            graph,
-            classUUID,
-            associationDTO,
-        );
-    } else {
-        saveAssociationPairCall = bec.putAssociationPair(
-            dataset,
-            graph,
-            classUUID,
-            associationDTO,
-        );
-    }
+    const saveAssociationPairCall = isNewAssociation
+        ? bec.postAssociationPair(dataset, graph, classUUID, associationDTO)
+        : bec.putAssociationPair(dataset, graph, classUUID, associationDTO);
 
     return saveAssociationPairCall
         .then(async res => {
             if (res.ok) {
-                const associationPairUUIDs = await res.json();
+                const associationUUIDs = await res.json();
                 console.log(
                     "Successfully saved association:",
-                    associationPairUUIDs.fromUUID,
-                    associationPairUUIDs.toUUID,
+                    associationUUIDs.fromUUID,
+                    associationUUIDs.toUUID,
                 );
-            } else {
-                const errorText = await res.text();
-                console.error("Could not save association:", errorText);
+                return { ok: true, associationUUIDs };
             }
-            return res;
+
+            const errorText = await res.text();
+            console.error("Could not save association:", errorText);
+            return { ok: false, errorText };
         })
-        .finally(res => {
+        .finally(() => {
             editorState.selectedClassUUID.trigger();
             editorState.selectedPackageUUID.trigger();
-            return res;
         });
 }
