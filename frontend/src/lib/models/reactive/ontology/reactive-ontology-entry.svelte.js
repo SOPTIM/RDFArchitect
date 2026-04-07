@@ -32,11 +32,8 @@ export class ReactiveOntologyEntry {
         this.iri = new ReactiveValueWrapper(iri, isInvalidIri);
         this.datatypeIri = new ReactiveValueWrapper(datatypeIri);
         this.isIriEntry = new ReactiveValueWrapper(isIriEntry);
-        this.value = new ReactiveValueWrapper(
-            value,
-            isInvalidOntologyValue,
-            null,
-            () => this.isIriEntry.value,
+        this.value = new ReactiveValueWrapper(value, value =>
+            isInvalidOntologyValue(value, this.isIriEntry.value),
         );
         this.initializeValidationChecks();
     }
