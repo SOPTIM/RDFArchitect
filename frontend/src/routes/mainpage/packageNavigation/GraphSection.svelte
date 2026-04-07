@@ -34,7 +34,7 @@
         faRotateRight,
         faGear,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount } from "svelte";
+    import { getContext } from "svelte";
 
     import {
         undo,
@@ -100,7 +100,8 @@
         wasGraphSelected = isGraphSelected;
     });
 
-    onMount(async () => {
+    $effect(async () => {
+        getContext("packageNavigation").reloadTrigger?.subscribe();
         await initialize();
     });
 
