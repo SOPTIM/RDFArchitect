@@ -126,6 +126,7 @@
         className = new ReactiveValueWrapper("", label =>
             isInvalidClassLabel(label, classURINamespace.value, compareClasses),
         );
+
         if (!datasetName) {
             return;
         }
