@@ -22,12 +22,7 @@ export class ReactiveValueWrapper {
      * @param compareValues - Optional values to compare with when checking for modifications
      * @param secondValue - A second optional value that can be used for the violation checks
      */
-    constructor(
-        value,
-        violationChecks = [],
-        compareValues = null,
-        secondValue = null,
-    ) {
+    constructor(value, violationChecks = []) {
         if (value instanceof ReactiveValueWrapper) {
             value = value.value;
         }
@@ -38,17 +33,11 @@ export class ReactiveValueWrapper {
 
         this.backup = value;
         this.value = value;
-        this.secondValue = secondValue;
-        this.compareValues = compareValues;
     }
 
     backup = $state();
 
     value = $state();
-
-    secondValue = $state();
-
-    compareValues = $state();
 
     isModified = $derived(!this.equals(this.backup));
 
@@ -63,25 +52,9 @@ export class ReactiveValueWrapper {
      * @type {string[]}
      */
     violations = $derived(
-        this.violationChecks.flatMap(validationFunction => {
-            const second =
-                typeof this.secondValue === "function"
-                    ? this.secondValue()
-                    : this.secondValue;
-            if (this.compareValues !== null && second !== null) {
-                return validationFunction(
-                    this.value,
-                    second,
-                    this.compareValues,
-                );
-            } else if (this.compareValues !== null) {
-                return validationFunction(this.value, this.compareValues);
-            } else if (second !== null) {
-                return validationFunction(this.value, second);
-            } else {
-                return validationFunction(this.value);
-            }
-        }),
+        this.violationChecks.flatMap(validationFunction =>
+            validationFunction(this.value),
+        ),
     );
 
     /**
