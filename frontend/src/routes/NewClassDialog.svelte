@@ -78,7 +78,7 @@
     $effect(async () => {
         namespaces = await getNamespaces(datasetName);
         if (classURINamespace) {
-            classURINamespace.value = "";
+            classURINamespace.value = null;
         }
         if (!packageSelectionLocked) {
             packages = datasetName ? packages : [];
@@ -105,7 +105,7 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
-        classURINamespace = new ReactiveValueWrapper("");
+        classURINamespace = new ReactiveValueWrapper(null);
 
         className = new ReactiveValueWrapper("", label =>
             isInvalidClassLabel(label, classURINamespace.value, compareClasses),
@@ -266,7 +266,6 @@
                 getOptionValue={namespace => namespace.prefix}
                 getOptionLabel={namespace =>
                     `${namespace.substitutedPrefix} (${namespace.prefix})`}
-                placeholderValue=""
             />
             <label for={domIds.className} class="mt-3 mb-1 block text-sm">
                 Name

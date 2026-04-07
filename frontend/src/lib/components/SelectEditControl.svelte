@@ -26,7 +26,6 @@
         placeholder,
         onchange,
         height = 9,
-        placeholderValue = "__NULL__",
     } = $props();
 
     const EMPTY = "__NULL__";
@@ -58,10 +57,7 @@
     onchange={handleChange}
 >
     {#if placeholder !== undefined}
-        <option
-            class="bg-window-background text-default-text"
-            value={placeholderValue}
-        >
+        <option class="bg-window-background text-default-text" value={EMPTY}>
             {placeholder}
         </option>
     {/if}
