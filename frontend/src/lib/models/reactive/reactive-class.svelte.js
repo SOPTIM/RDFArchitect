@@ -60,12 +60,10 @@ export class ReactiveClass {
             namespace,
             isInvalidNamespace,
         );
-        this.label = new ReactiveValueWrapper(
-            label,
-            isInvalidClassLabel,
-            compareClasses,
-            () => this.namespace.value,
+        this.label = new ReactiveValueWrapper(label, label =>
+            isInvalidClassLabel(label, this.namespace.value, compareClasses),
         );
+
         this.package = new ReactiveValueWrapper(pack);
         this.superClass = new ReactiveValueWrapper(superClass);
         this.comment = new ReactiveValueWrapper(comment);
