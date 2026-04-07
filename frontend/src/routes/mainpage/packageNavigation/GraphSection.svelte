@@ -46,10 +46,12 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
-    import { populateGraph } from "./build-nav-object.js";
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
@@ -136,11 +138,6 @@
             editorState.selectedPackageUUID.updateValue(null);
         }
     }
-
-    async function hotReload() {
-        await populateGraph(datasetNavEntry, graphNavEntry);
-        await initialize();
-    }
 </script>
 
 <div class={`flex w-full flex-col items-stretch gap-[0.1rem]`}>
@@ -175,7 +172,7 @@
                 onSelect={() => {
                     focusGraphContext();
                     undo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) hotReload();
+                        if (success) forceReloadTrigger.trigger();
                     });
                 }}
                 disabled={readonly || !canUndo}
@@ -187,7 +184,7 @@
                 onSelect={() => {
                     focusGraphContext();
                     redo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) hotReload();
+                        if (success) forceReloadTrigger.trigger();
                     });
                 }}
                 disabled={readonly || !canRedo}
