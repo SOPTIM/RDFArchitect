@@ -50,13 +50,6 @@ export function isInvalidClassLabel(label, namespace, compareClasses) {
         ) {
             violations.push("must be unique");
         }
-    } else {
-        if (
-            compareClasses &&
-            compareClasses.filter(c => c.label === label).length > 0
-        ) {
-            violations.push("must be unique");
-        }
     }
     return violations;
 }

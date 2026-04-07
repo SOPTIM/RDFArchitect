@@ -34,6 +34,7 @@
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
+    import { untrack } from "svelte";
 
     let {
         showDialog = $bindable(),
@@ -95,8 +96,11 @@
     });
 
     $effect(async () => {
-        if (datasetName && graphURI && className) {
-            className.compareValues = await getClasses(datasetName, graphURI);
+        if (datasetName && graphURI) {
+            compareClasses = await getClasses(datasetName, graphURI);
+            untrack(() => className = new ReactiveValueWrapper(className.value, label =>
+                isInvalidClassLabel(label, classURINamespace.value, compareClasses),
+            ));
         }
     });
 
