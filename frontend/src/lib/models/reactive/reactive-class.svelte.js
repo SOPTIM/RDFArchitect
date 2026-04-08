@@ -26,7 +26,7 @@ import {
     isInvalidClassLabel,
     isInvalidNamespace,
     isInvalidStereotype,
-    isInvalidUuid
+    isInvalidUuid,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
@@ -77,7 +77,7 @@ export class ReactiveClass {
             attributes,
             ReactiveAttribute,
             (reactiveObject, entriesArray) => {
-                reactiveObject.label.violationChecks.push((label) =>
+                reactiveObject.label.violationChecks.push(label =>
                     hasUniqueIRI(label, this.namespace.value, entriesArray),
                 );
             },

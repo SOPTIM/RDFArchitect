@@ -154,7 +154,6 @@ export function hasUniqueIRI(label, namespace, compareArray) {
     return violations;
 }
 
-
 export function isInvalidNamespaceIri(iri) {
     const violations = [];
     if (!iri || iri.trim() === "") {
