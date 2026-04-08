@@ -15,17 +15,21 @@
  *
  */
 
-package org.rdfarchitect.database.inmemory.diagrams;
+package org.rdfarchitect.services.diagrams;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 
-import java.util.UUID;
+import java.util.List;
 
-@Data
-@AllArgsConstructor
-public class ClassInDiagram {
+public interface AddToDiagramUseCase {
 
-    private UUID uuid;
-    private String graphUri;
+    /**
+     * Adds a list of classes to a specified custom diagram.
+     *
+     * @param graphIdentifier the graph of the custom diagram
+     * @param diagramId       the id of the custom diagram
+     * @param classes         the classes to add to the custom diagram
+     */
+    void addToDiagram(GraphIdentifier graphIdentifier, String diagramId, List<ClassInDiagram> classes);
 }

@@ -162,7 +162,6 @@
             console.error("Error fetching custom diagram data:", error);
             response = null;
             renderingFormat = null;
-            displayDiagram = false;
         } finally {
             isLoading = false;
         }

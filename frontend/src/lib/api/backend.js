@@ -501,4 +501,25 @@ export class BackendConnection {
             credentials: "include",
         })
     }
+
+    async addToCustomDiagram(datasetName, graphURI, diagramId, classes) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+        return await fetch(url, {
+            method: "POST",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(classes),
+            credentials: "include",
+        })
+    }
+
+    async removeFromCustomDiagram(datasetName, graphURI, diagramId, classId) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
+        return await fetch(url, {
+            method: "DELETE",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        })
+    }
 }

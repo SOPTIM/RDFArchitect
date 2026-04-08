@@ -48,8 +48,7 @@
     }
 
     function onClose() {
-        /*packages = null;
-        classesByPackage = null;*/
+        diagramName = null;
     }
 
     async function getPackages(datasetName, graphURI) {

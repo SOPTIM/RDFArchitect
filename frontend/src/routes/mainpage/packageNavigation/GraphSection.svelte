@@ -69,7 +69,6 @@
 
     import { goto } from "$app/navigation";
 
-
     let {
         datasetNavEntry,
         graphNavEntry,
@@ -350,20 +349,35 @@
             {/each}
 
             <div class="h-0.5 bg-border my-1 ml-14"></div>
-            <NavigationEntry
-                level={3}
-                label="Custom Diagrams"
-                icon={faObjectGroup}
-                hasChildren={diagrams.length > 0}
-                expanded={diagramsExpanded}
-                isSelected={
-                    isSelectedGraph(dataset, graph) &&
-                    editorState.selectedCustomDiagramUUID.getValue() !== null
-                }
-                onToggle={() => diagramsExpanded = !diagramsExpanded}
-            />
+            <ContextMenu.Root>
+                <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
+                    <NavigationEntry
+                        level={3}
+                        label="Custom Diagrams"
+                        icon={faObjectGroup}
+                        hasChildren={diagrams.length > 0}
+                        expanded={diagramsExpanded}
+                        isSelected={
+                isSelectedGraph(dataset, graph) &&
+                editorState.selectedCustomDiagramUUID.getValue() !== null
+            }
+                        onToggle={() => diagramsExpanded = !diagramsExpanded}
+                    />
+                </ContextMenu.TriggerArea>
+                <ContextMenu.Content>
+                    <ContextMenu.Item.Button
+                        onSelect={() => {
+                focusGraphContext();
+                showNewDiagramDialog = true;
+            }}
+                        faIcon={faPlus}
+                    >
+                        New Diagram
+                    </ContextMenu.Item.Button>
+                </ContextMenu.Content>
+            </ContextMenu.Root>
             {#if diagramsExpanded && diagrams.length > 0}
-                {#each diagrams as diagram (diagram.id)}
+                {#each diagrams as diagram (diagram.diagramId)}
                     <CustomDiagramButton
                         {dataset}
                         {graph}

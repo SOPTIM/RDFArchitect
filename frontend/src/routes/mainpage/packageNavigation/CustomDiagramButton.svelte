@@ -110,6 +110,7 @@
                     {dataset}
                     {graph}
                     {cls}
+                    diagramId={diagram.diagramId}
                     {readOnly}
                 />
             {/each}

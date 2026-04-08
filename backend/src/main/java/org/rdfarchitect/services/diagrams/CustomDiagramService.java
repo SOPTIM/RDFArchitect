@@ -20,14 +20,16 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class CustomDiagramService implements ReplaceCustomDiagramUseCase, DeleteCustomDiagramUseCase {
+public class CustomDiagramService implements ReplaceCustomDiagramUseCase, DeleteCustomDiagramUseCase, AddToDiagramUseCase, RemoveFromDiagramUseCase {
 
     private final DatabasePort databasePort;
 
@@ -41,5 +43,31 @@ public class CustomDiagramService implements ReplaceCustomDiagramUseCase, Delete
     public void replaceCustomDiagram(GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram) {
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         graphWithContext.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
+    }
+
+    @Override
+    public void addToDiagram(GraphIdentifier graphIdentifier, String diagramId, List<ClassInDiagram> classes) {
+        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
+        var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
+        if (diagram != null) {
+            diagram.getClasses().addAll(classes);
+        }
+    }
+
+    @Override
+    public void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
+        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
+        var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
+        if (diagram != null) {
+            diagram.getClasses().remove(new ClassInDiagram(classId, graphIdentifier.getGraphUri()));
+        }
+    }
+
+    @Override
+    public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
+        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
+        for (var diagram : graphWithContext.getCustomDiagrams().values()) {
+            diagram.getClasses().remove(new ClassInDiagram(classId, graphIdentifier.getGraphUri()));
+        }
     }
 }

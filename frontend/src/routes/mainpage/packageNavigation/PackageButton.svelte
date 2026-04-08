@@ -24,7 +24,7 @@
         faPlus,
         faLink,
         faTrash,
-        faEye,
+        faEye, faObjectGroup
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -38,6 +38,7 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
+    import AddToDiagramDialog from "./custom-diagram-dialog/AddToDiagramDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -47,6 +48,7 @@
         readonly,
     } = $props();
     let showNewClassDialog = $state(false);
+    let showAddToDiagramDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
 
@@ -143,6 +145,15 @@
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
+                    showAddToDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
                     showPackageEditorDialog = true;
                 }}
                 disabled={disablePackageAction}
@@ -188,6 +199,13 @@
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
     lockedPackage={packageNavEntry.data}
+/>
+
+<AddToDiagramDialog
+    bind:showDialog={showAddToDiagramDialog}
+    lockedDatasetName={dataset.label}
+    graph={getUri(graph)}
+    {classes}
 />
 
 <PackageEditorDialog

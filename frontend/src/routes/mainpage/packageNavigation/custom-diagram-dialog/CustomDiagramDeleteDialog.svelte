@@ -16,20 +16,21 @@
   -->
 
 <script>
+    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
+
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import DialogBase from "$lib/dialog/DialogBase.svelte";
-    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { faExclamation } from "@fortawesome/free-solid-svg-icons";
+
 
     let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
 
     async function deletePackage() {
         try {
-            const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/diagrams/${encodeURIComponent(diagram.uuid)}`;
+            const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/diagrams/${encodeURIComponent(diagram.diagramId)}`;
             const res = await fetch(url, {
                 method: "DELETE",
                 credentials: "include",
