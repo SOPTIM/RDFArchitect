@@ -22,9 +22,11 @@ import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.cim.rendering.GraphFilter;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -49,5 +51,46 @@ public class DiagramToCIMCollectionConverterService implements DiagramToCIMColle
         filter.setIncludeRelationsToExternalPackages(false);
         filter.setAllowedUUIDs(classUUIDs);
         return converter.convert(graphIdentifier, filter);
+    }
+
+    @Override
+    public CIMCollection convert(String datasetName, String diagramId) {
+        var diagrams = databasePort.getDatasetDiagrams(datasetName);
+        var diagramUUID = UUID.fromString(diagramId);
+        if (!diagrams.containsKey(diagramUUID)) {
+            throw new IllegalArgumentException("Diagram with ID " + diagramId + " not found in dataset " + datasetName);
+        }
+
+        var diagram = diagrams.get(diagramUUID);
+        // Group ClassInDiagram entries by graphUri
+        var classesByGraph = diagram.getClasses().stream()
+                                    .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri));
+
+        var mergedCollection = new CIMCollection();
+
+        for (var entry : classesByGraph.entrySet()) {
+            var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey());
+            var classUUIDs = entry.getValue().stream()
+                                  .map(c -> c.getUuid().toString())
+                                  .toList();
+
+            var filter = new GraphFilter(true);
+            filter.setIncludeRelationsToExternalPackages(false);
+            filter.setAllowedUUIDs(classUUIDs);
+
+            var partial = converter.convert(graphIdentifier, filter);
+            mergeInto(mergedCollection, partial);
+        }
+
+        return mergedCollection;
+    }
+
+    private void mergeInto(CIMCollection target, CIMCollection source) {
+        target.getPackages().addAll(source.getPackages());
+        target.getClasses().addAll(source.getClasses());
+        target.getEnums().addAll(source.getEnums());
+        target.getAttributes().addAll(source.getAttributes());
+        target.getEnumEntries().addAll(source.getEnumEntries());
+        target.getAssociations().addAll(source.getAssociations());
     }
 }

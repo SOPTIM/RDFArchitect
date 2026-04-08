@@ -15,20 +15,31 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.services.diagrams;
 
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 
 import java.util.List;
 
-public interface ListCustomDiagramsForGraphUseCase {
-        /**
-        * Lists the custom diagrams belonging to a single graph.
-        *
-        * @param graphIdentifier The graph identifier.
-        *
-        * @return The custom diagrams for the graph.
-        */
-        List<CustomDiagram> listCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
+public interface GetCustomDiagramsUseCase {
+
+    /**
+     * Lists the custom diagrams belonging to a single graph.
+     *
+     * @param graphIdentifier The graph identifier.
+     *
+     * @return The custom diagrams for the graph.
+     */
+    List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
+
+     /**
+     * Lists the custom diagrams belonging to a single dataset.
+     *
+     * @param datasetName The name of the dataset.
+     *
+     * @return The custom diagrams for the dataset.
+     */
+    List<CustomDiagram> getCustomDiagramsForDataset(String datasetName);
+
 }

@@ -27,9 +27,18 @@ public interface AddToDiagramUseCase {
     /**
      * Adds a list of classes to a specified custom diagram.
      *
-     * @param graphIdentifier the graph of the custom diagram
-     * @param diagramId       the id of the custom diagram
-     * @param classes         the classes to add to the custom diagram
+     * @param graphIdentifier The graph of the custom diagram
+     * @param diagramId       The id of the custom diagram
+     * @param classes         The classes to add to the custom diagram
      */
     void addToDiagram(GraphIdentifier graphIdentifier, String diagramId, List<ClassInDiagram> classes);
+
+    /**
+     * Adds a list of classes to a specified custom diagram.
+     *
+     * @param datasetName The name of the dataset containing the diagram
+     * @param diagramId   The ID of the custom diagram
+     * @param classes     The classes to add to the diagram
+     */
+    void addToDiagram(String datasetName, String diagramId, List<ClassInDiagram> classes);
 }

@@ -53,7 +53,7 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
-    import CustomDiagramButton from "./CustomDiagramButton.svelte";
+    import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
@@ -61,7 +61,7 @@
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import CustomDiagramDialog from "./custom-diagram-dialog/CustomDiagramDialog.svelte";
+    import CustomDiagramDialog from "./custom-diagram-dialogs/CustomDiagramDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
@@ -348,44 +348,11 @@
                 />
             {/each}
 
-            <div class="h-0.5 bg-border my-1 ml-14"></div>
-            <ContextMenu.Root>
-                <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
-                    <NavigationEntry
-                        level={3}
-                        label="Custom Diagrams"
-                        icon={faObjectGroup}
-                        hasChildren={diagrams.length > 0}
-                        expanded={diagramsExpanded}
-                        isSelected={
-                isSelectedGraph(dataset, graph) &&
-                editorState.selectedCustomDiagramUUID.getValue() !== null
-            }
-                        onToggle={() => diagramsExpanded = !diagramsExpanded}
-                    />
-                </ContextMenu.TriggerArea>
-                <ContextMenu.Content>
-                    <ContextMenu.Item.Button
-                        onSelect={() => {
-                focusGraphContext();
-                showNewDiagramDialog = true;
-            }}
-                        faIcon={faPlus}
-                    >
-                        New Diagram
-                    </ContextMenu.Item.Button>
-                </ContextMenu.Content>
-            </ContextMenu.Root>
-            {#if diagramsExpanded && diagrams.length > 0}
-                {#each diagrams as diagram (diagram.diagramId)}
-                    <CustomDiagramButton
-                        {dataset}
-                        {graph}
-                        {diagram}
-                        {readOnly}
-                    />
-                {/each}
-            {/if}
+            <CustomDiagramsSection
+                {dataset}
+                {graph}
+                {readOnly}
+            />
         </div>
     {/if}
 </div>
@@ -398,11 +365,6 @@
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
-/>
-<CustomDiagramDialog
-    bind:showDialog={showNewDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />

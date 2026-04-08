@@ -31,13 +31,16 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -110,6 +113,26 @@ public class SessionDataStoreImpl implements SessionDataStore {
             return graphCollections
                     .get(graphIdentifier.datasetName())
                     .getGraphWithContext(graphIdentifier.graphUri());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
+        lock.lock();
+        try {
+            return graphCollections.get(datasetName).getCustomDiagrams();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
+        lock.lock();
+        try {
+            return graphCollections.get(datasetName).getDiagramLayout();
         } finally {
             lock.unlock();
         }

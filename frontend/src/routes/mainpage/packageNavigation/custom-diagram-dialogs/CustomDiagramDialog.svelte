@@ -24,7 +24,7 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
-    import PackageSelectSection from "./PackageSelectSection.svelte";
+    import PackageSelectSection from "../PackageSelectSection.svelte";
 
     let {
         showDialog = $bindable(),

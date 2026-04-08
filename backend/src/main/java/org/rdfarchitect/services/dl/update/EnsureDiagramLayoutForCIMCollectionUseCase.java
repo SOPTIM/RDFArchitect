@@ -32,4 +32,6 @@ public interface EnsureDiagramLayoutForCIMCollectionUseCase {
      * @param cimCollection   the CIMCollection containing all packages, classes and enums
      */
     void ensureDiagramLayoutExists(GraphIdentifier graphIdentifier, UUID diagramUUID, CIMCollection cimCollection);
+
+    void ensureDiagramLayoutExists(String datasetName, UUID diagramUUID, CIMCollection cimCollection);
 }

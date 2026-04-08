@@ -78,8 +78,7 @@ public class QueryGraphService
                 ListExternalPackagesUseCase,
                 ListPrimitivesUseCase,
                 ListStereotypesUseCase,
-                ResolveIdentifierUseCase,
-                ListCustomDiagramsForGraphUseCase {
+                ResolveIdentifierUseCase {
 
     private static final String BLANK_PACKAGE_NAME = "default";
     private static final String BLANK_PACKAGE_LANG = "en";
@@ -313,11 +312,6 @@ public class QueryGraphService
                 CIMObjectFactory.createExternalCIMPackageList(externalPackageQueryResultSet);
 
         return packageMapper.toDTOList(cimExternalPackageList);
-    }
-
-    @Override
-    public List<CustomDiagram> listCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
-        return databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values().stream().toList();
     }
 
     @Override

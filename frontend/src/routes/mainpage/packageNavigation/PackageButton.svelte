@@ -38,7 +38,7 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import AddToDiagramDialog from "./custom-diagram-dialog/AddToDiagramDialog.svelte";
+    import AddToDiagramDialog from "./custom-diagram-dialogs/AddToDiagramDialog.svelte";
 
     let {
         datasetNavEntry,

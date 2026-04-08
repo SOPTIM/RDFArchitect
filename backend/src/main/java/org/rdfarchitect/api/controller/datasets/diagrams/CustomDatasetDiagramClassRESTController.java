@@ -15,54 +15,51 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.diagrams;
+package org.rdfarchitect.api.controller.datasets.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
+import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams")
+@RequestMapping("/api/datasets/{datasetName}/diagrams/{diagramId}/classes{classId}")
 @RequiredArgsConstructor
-public class AllCustomDiagramsRESTController {
+public class CustomDatasetDiagramClassRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(AllCustomDiagramsRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(CustomDatasetDiagramClassRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
-    private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
+    private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
 
-    @GetMapping
-    public List<CustomDiagram> getCustomDiagramList(
+    @DeleteMapping
+    public String removeFromDiagram(
               @Parameter(description = "The name/url of the inquirer.")
               @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
               String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @Parameter(description = "The uuid of the diagram.")
               @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"", datasetName, graphURI, originURL);
+              String diagramId,
+              @Parameter(description = "The uuid of the class to be removed from the diagram.")
+              @PathVariable
+              UUID classId) {
+        logger.info("Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"", datasetName, diagramId, classId, originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        removeFromDiagramUseCase.removeFromDiagram(datasetName, diagramId, classId);
 
-        var result = getCustomDiagramsUseCase.getCustomDiagramsForGraph(new GraphIdentifier(datasetName, extendedGraphURI));
-
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"", datasetName, graphURI, originURL);
-        return result;
+        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"", datasetName, diagramId, classId, originURL);
+        return Response.SUCCESS;
     }
-
 }

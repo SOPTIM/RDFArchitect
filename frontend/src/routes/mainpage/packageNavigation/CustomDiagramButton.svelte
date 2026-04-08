@@ -32,8 +32,8 @@
     } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
-    import CustomDiagramDeleteDialog from "./custom-diagram-dialog/CustomDiagramDeleteDialog.svelte";
-    import CustomDiagramDialog from "./custom-diagram-dialog/CustomDiagramDialog.svelte";
+    import CustomDiagramDeleteDialog from "./custom-diagram-dialogs/CustomDiagramDeleteDialog.svelte";
+    import CustomDiagramDialog from "./custom-diagram-dialogs/CustomDiagramDialog.svelte";
     import {
         getUri, isSelectedCustomDiagram
     } from "./packageNavigationUtils.svelte.js";

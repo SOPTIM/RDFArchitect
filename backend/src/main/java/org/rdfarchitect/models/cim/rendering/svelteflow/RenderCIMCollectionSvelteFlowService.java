@@ -71,16 +71,25 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
             return createEmptyDiagram();
         }
 
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
-                graphIdentifier, packageUUID, cimCollection);
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, packageUUID, cimCollection);
+        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(graphIdentifier, packageUUID);
+        return renderUML(cimCollection, renderingLayoutData);
+    }
 
-        // setup
+    @Override
+    public RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID packageUUID) {
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(datasetName, packageUUID, cimCollection);
+        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(datasetName, packageUUID);
+        return renderUML(cimCollection, renderingLayoutData);
+    }
+
+    private RenderingDataDTO renderUML(CIMCollection cimCollection, RenderingLayoutData renderingLayoutData) {
         var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
-        var renderingLayoutData =
-                fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
-                        graphIdentifier, packageUUID);
-
-        var renderContext = new RenderContext(cimCollection, uriToUUIDMap, renderingLayoutData);
+        var renderContext = new RenderContext(
+                  cimCollection,
+                  uriToUUIDMap,
+                  renderingLayoutData
+        );
 
         var nodes = assembleNodeDTOList(renderContext);
         var edges = assembleEdgeDTOList(renderContext);

@@ -57,7 +57,7 @@
     }
 
     async function getCustomDiagrams(graphURI) {
-        const res = await bec.getCustomDiagrams(lockedDatasetName, graphURI);
+        const res = await bec.getCustomDiagramsForGraph(lockedDatasetName, graphURI);
         diagramList = await res.json();
     }
 

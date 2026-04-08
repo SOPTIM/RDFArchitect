@@ -60,7 +60,12 @@ public class GraphWithContextCollection {
 
     // holds graphs
     private final ConcurrentMap<String, GraphWithContext> graphs = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
+
+    @Getter
+    private final ConcurrentMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
+    @Getter
+    @Setter
+    private DiagramLayout diagramLayout;
 
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();

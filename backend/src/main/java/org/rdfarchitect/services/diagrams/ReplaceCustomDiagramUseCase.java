@@ -20,8 +20,23 @@ package org.rdfarchitect.services.diagrams;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 
-public interface ReplaceCustomDiagramUseCase  {
+public interface ReplaceCustomDiagramUseCase {
 
-     void replaceCustomDiagram(GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram);
+    /**
+     * Replaces or creates a custom diagram in the specified graph.
+     *
+     * @param graphIdentifier the graph of the diagram to be replaced
+     * @param diagramId       the id of the diagram to be replaced
+     * @param diagram         the new diagram to replace the old one with
+     */
+    void replaceCustomDiagram(GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram);
 
+    /**
+     * Replaces or creates a custom diagram in the specified dataset.
+     *
+     * @param datasetName the dataset of the diagram to be replaced
+     * @param diagramId   the id of the diagram to be replaced
+     * @param diagram     the new diagram to replace the old one with
+     */
+    void replaceCustomDiagram(String datasetName, String diagramId, CustomDiagram diagram);
 }

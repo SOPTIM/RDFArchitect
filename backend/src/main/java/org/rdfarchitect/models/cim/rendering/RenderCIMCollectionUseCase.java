@@ -28,6 +28,7 @@ import java.util.UUID;
  */
 public interface RenderCIMCollectionUseCase {
 
-    RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID);
+    RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID);
+
+    RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID packageUUID);
 }
