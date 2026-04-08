@@ -139,6 +139,22 @@ export function hasUniqueLabel(label, reactiveObjectsArray) {
     return violations;
 }
 
+export function hasUniqueIRI(label, namespace, compareArray) {
+    const violations = [];
+    if (typeof namespace === "string" && namespace.trim() !== "") {
+        if (
+            compareArray &&
+            compareArray.filter(
+                c => c.label.value === label && c.namespace.value === namespace,
+            ).length > 1
+        ) {
+            violations.push("must be unique");
+        }
+    }
+    return violations;
+}
+
+
 export function isInvalidNamespaceIri(iri) {
     const violations = [];
     if (!iri || iri.trim() === "") {
