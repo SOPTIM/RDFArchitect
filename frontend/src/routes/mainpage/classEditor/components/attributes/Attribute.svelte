@@ -80,6 +80,7 @@
             accessDisplayData={datatype => datatype.label}
             accessIdentifier={datatype =>
                 classEditorContext.getSubstitutedNamespace(datatype.prefix) +
+                ":" +
                 datatype.label}
             callOnValidChange={newDatatype =>
                 (attribute.datatype.value = newDatatype

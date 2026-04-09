@@ -102,6 +102,7 @@
             accessDisplayData={cls => cls.label}
             accessIdentifier={cls =>
                 classEditorContext.getSubstitutedNamespace(cls.prefix) +
+                ":" +
                 cls.label}
             callOnValidChange={newTarget =>
                 (association.target.value = newTarget ? newTarget.uuid : null)}
