@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.rendering.svelteflow;
 
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.dto.dl.AssociationRoleLayoutData;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -28,6 +29,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
@@ -300,14 +302,26 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var sourceUUID = renderContext.uriToUUIDMap.get(from.getDomain().getUri().toString());
         var targetUUID = renderContext.uriToUUIDMap.get(from.getRange().getUri().toString());
 
+        var fromLabel = extractAssociationLabel(from);
         var fromMultiplicity = extractMultiplicityString(from.getMultiplicity());
+        var toLabel = extractAssociationLabel(to);
         var toMultiplicity = extractMultiplicityString(to.getMultiplicity());
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
+        var fromAssociationLayoutData = renderContext.layoutingData().getAssociationLayoutingData().get(from.getUuid());
+        var toAssociationLayoutData = renderContext.layoutingData().getAssociationLayoutingData().get(to.getUuid());
 
         var edgeDataDTO = EdgeDataDTO.builder()
+                                     .fromAssociationUUID(from.getUuid())
+                                     .toAssociationUUID(to.getUuid())
+                                     .fromLabel(fromLabel)
                                      .toMultiplicity(toMultiplicity)
+                                     .toLabel(toLabel)
                                      .fromMultiplicity(fromMultiplicity)
+                                     .fromLabelOffset(extractPositionDTO(fromAssociationLayoutData, true))
+                                     .toMultiplicityOffset(extractPositionDTO(toAssociationLayoutData, false))
+                                     .toLabelOffset(extractPositionDTO(toAssociationLayoutData, true))
+                                     .fromMultiplicityOffset(extractPositionDTO(fromAssociationLayoutData, false))
                                      .useToAssociation(useToAssociation)
                                      .useFromAssociation(useFromAssociation)
                                      .build();
@@ -319,6 +333,30 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                       .target(targetUUID)
                       .data(edgeDataDTO)
                       .build();
+    }
+
+    private String extractAssociationLabel(CIMAssociation association) {
+        return association.getLabel() == null ? null : association.getLabel().getValue();
+    }
+
+    private PositionDTO extractPositionDTO(AssociationRoleLayoutData associationRoleLayoutData, boolean labelPosition) {
+        if (associationRoleLayoutData == null) {
+            return null;
+        }
+
+        var diagramObjectPoint = labelPosition ? associationRoleLayoutData.getLabelLayoutingData() : associationRoleLayoutData.getMultiplicityLayoutingData();
+        return extractPositionDTO(diagramObjectPoint);
+    }
+
+    private PositionDTO extractPositionDTO(DiagramObjectPoint diagramObjectPoint) {
+        if (diagramObjectPoint == null) {
+            return null;
+        }
+
+        return PositionDTO.builder()
+                          .x(diagramObjectPoint.getPosition().getX())
+                          .y(diagramObjectPoint.getPosition().getY())
+                          .build();
     }
 
     /**

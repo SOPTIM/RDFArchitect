@@ -150,6 +150,21 @@ public class CIMQueryBuilder {
     }
 
     /**
+     * Appends query for inverse UUIDs as {@link CIMQueryVars.Inverse#UUID}.
+     *
+     * @param mode Whether the result of this is mode.
+     *
+     * @return {@link CIMQueryBuilder this}
+     */
+    public CIMQueryBuilder appendInverseUUIDQuery(Mode mode) {
+        if (this.inverseSubquery == null) {
+            initInverseSubquery();
+        }
+
+        return appendInverseSingleQuery(RDFA.uuid, CIMQueryVars.Inverse.UUID, mode);
+    }
+
+    /**
      * Appends query for labels as {@link CIMQueryVars LABEL}.
      *
      * @param mode Whether the result of this is mode.

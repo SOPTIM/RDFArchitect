@@ -66,6 +66,7 @@
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedPackageUUID.subscribe();
+        graphViewState.filter.subscribe();
 
         if (!editorState.selectedPackageUUID.getValue()) {
             response = null;
@@ -86,6 +87,8 @@
             includeRelationsToExternalPackages:
                 graphViewState.filter.getValue()
                     .includeRelationsToExternalPackages,
+            includeAssociationLabels:
+                graphViewState.filter.getValue().includeAssociationLabels,
         };
 
         try {

@@ -17,23 +17,25 @@
 
 package org.rdfarchitect.api.dto.dl;
 
-import lombok.Builder;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
-import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import lombok.NoArgsConstructor;
 
-import java.util.Map;
 import java.util.UUID;
 
-/**
- * DTO for backend-interal usage that represents layout data required for creating rendering information
- */
 @Data
-@Builder
-public class RenderingLayoutData {
+@NoArgsConstructor
+public class AssociationDecorationPositionDTO {
 
-    @Builder.Default
-    Map<UUID, DiagramObjectPoint> classLayoutingData = Map.of();
+    @JsonProperty("associationUUID")
+    private UUID associationUUID;
 
-    @Builder.Default
-    Map<UUID, AssociationRoleLayoutData> associationLayoutingData = Map.of();
+    @JsonProperty("decorationType")
+    private String decorationType;
+
+    @JsonProperty("xPosition")
+    private float xPosition;
+
+    @JsonProperty("yPosition")
+    private float yPosition;
 }

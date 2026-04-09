@@ -1,0 +1,42 @@
+PREFIX cim:    <http://iec.ch/TC57/2013/CIM-schema-cim16#>
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX ex:     <http://example.com#>
+
+ex:Package_Infrastruktur
+    <http://example.org#uuid> "123e4567-e89b-12d3-a456-426614174000" ;
+    rdf:type                  cims:ClassCategory ;
+    rdfs:label                "Infrastruktur"@en .
+
+ex:ChildClass
+    <http://example.org#uuid> "623e4567-e89b-12d3-a456-426614174000" ;
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "ChildClass"@en ;
+    cims:belongsToCategory    ex:Package_Infrastruktur .
+
+ex:AssociatedClass
+    <http://example.org#uuid> "723e4567-e89b-12d3-a456-426614174000" ;
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "AssociatedClass"@en ;
+    cims:belongsToCategory    ex:Package_Infrastruktur .
+
+ex:ChildClass.AssociatedClass
+    <http://example.org#uuid> "823e4567-e89b-12d3-a456-426614174000" ;
+    rdf:type                  rdf:Property ;
+    rdfs:domain               ex:ChildClass ;
+    rdfs:label                "AssociatedClass"@en ;
+    rdfs:range                ex:AssociatedClass ;
+    cims:AssociationUsed      "No" ;
+    cims:inverseRoleName      ex:AssociatedClass.ChildClass ;
+    cims:multiplicity         cims:M:1 .
+
+ex:AssociatedClass.ChildClass
+    <http://example.org#uuid> "923e4567-e89b-12d3-a456-426614174000" ;
+    rdf:type                  rdf:Property ;
+    rdfs:domain               ex:AssociatedClass ;
+    rdfs:label                "ChildClass"@en ;
+    rdfs:range                ex:ChildClass ;
+    cims:AssociationUsed      "Yes" ;
+    cims:inverseRoleName      ex:ChildClass.AssociatedClass ;
+    cims:multiplicity         cims:M:0..n .
