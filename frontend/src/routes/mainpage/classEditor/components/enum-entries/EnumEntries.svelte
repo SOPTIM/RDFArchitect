@@ -79,6 +79,6 @@
 </List>
 <EnumEntryEditorDialog
     bind:showDialog={enumEntryEditorDialog.showDialog}
-    enumEntry={enumEntryEditorDialog.enumEntry}
+    bind:enumEntry={enumEntryEditorDialog.enumEntry}
     {enumEntries}
 />

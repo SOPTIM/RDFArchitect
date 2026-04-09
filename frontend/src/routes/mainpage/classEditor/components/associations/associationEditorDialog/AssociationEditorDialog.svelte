@@ -26,7 +26,11 @@
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
     import Inverse from "./Inverse.svelte";
 
-    let { showDialog = $bindable(), associations, association } = $props();
+    let {
+        showDialog = $bindable(),
+        associations,
+        association = $bindable(),
+    } = $props();
 
     let classEditorContext = $state();
     let isNewAssociation = $state(true);
@@ -73,11 +77,17 @@
         }
         association.save();
     }
+
+    function resetDialogState() {
+        association = null;
+        isNewAssociation = true;
+    }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    onClose={resetDialogState}
     saveChanges={saveAssociation}
     discardChanges={() => association.reset()}
     hasChanges={isNewAssociation || association?.isModified}

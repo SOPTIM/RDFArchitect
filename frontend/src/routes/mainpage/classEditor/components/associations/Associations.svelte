@@ -63,8 +63,8 @@
     });
 
     function openAssociationEditor(association) {
-        associationEditorDialog.showDialog = true;
         associationEditorDialog.association = association;
+        associationEditorDialog.showDialog = true;
     }
 
     function updateWidth() {
@@ -136,5 +136,5 @@
 <AssociationEditorDialog
     bind:showDialog={associationEditorDialog.showDialog}
     {associations}
-    association={associationEditorDialog.association}
+    bind:association={associationEditorDialog.association}
 />

@@ -29,7 +29,11 @@
 
     import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
 
-    let { showDialog = $bindable(), enumEntry, enumEntries } = $props();
+    let {
+        showDialog = $bindable(),
+        enumEntry = $bindable(),
+        enumEntries,
+    } = $props();
 
     let classEditorContext = $state();
 
@@ -72,11 +76,17 @@
         }
         enumEntry.save();
     }
+
+    function resetDialogState() {
+        enumEntry = null;
+        isNewEnumEntry = true;
+    }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    onClose={resetDialogState}
     saveChanges={saveEnumEntry}
     discardChanges={() => enumEntry.reset()}
     hasChanges={isNewEnumEntry || enumEntry?.isModified}

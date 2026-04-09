@@ -30,7 +30,11 @@
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
 
-    let { showDialog = $bindable(), attribute, attributes } = $props();
+    let {
+        showDialog = $bindable(),
+        attribute = $bindable(),
+        attributes,
+    } = $props();
 
     let classEditorContext = $state();
 
@@ -83,11 +87,17 @@
         }
         attribute.save();
     }
+
+    function resetDialogState() {
+        attribute = null;
+        isNewAttribute = true;
+    }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    onClose={resetDialogState}
     saveChanges={saveAttribute}
     discardChanges={() => attribute.reset()}
     hasChanges={isNewAttribute || attribute?.isModified}
