@@ -27,6 +27,7 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
+    import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -92,6 +93,20 @@
     </td>
 
     <td>
+        <TextEditControl
+            placeholder="association label..."
+            bind:value={association.label.value}
+            highlight={association.label.isModified}
+            warn={!association.label.isValid}
+            {readonly}
+            buttons={getControlButtonsForReactiveObject(
+                association.label,
+                readonly,
+            )}
+        />
+    </td>
+
+    <td>
         <SearchableSelect
             placeholder="Target"
             value={classEditorContext.getClassByUuid(association.target.value)
@@ -142,7 +157,7 @@
     {/if}
 </tr>
 
-{#if !association.multiplicityUpperBound.isValid || !association.multiplicityLowerBound.isValid || !association.target.isValid}
+{#if !association.multiplicityUpperBound.isValid || !association.multiplicityLowerBound.isValid || !association.label.isValid || !association.target.isValid}
     <tr>
         <td class="align-top">
             <ViolationMessages
@@ -153,6 +168,9 @@
             <ViolationMessages
                 violations={association.multiplicityUpperBound.violations}
             />
+        </td>
+        <td class="align-top">
+            <ViolationMessages violations={association.label.violations} />
         </td>
         <td class="align-top">
             <ViolationMessages violations={association.target.violations} />
