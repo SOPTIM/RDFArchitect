@@ -23,11 +23,11 @@ import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
-import org.rdfarchitect.cim.data.dto.CIMPackage;
-import org.rdfarchitect.cim.data.dto.relations.CIMSBelongsToCategory;
-import org.rdfarchitect.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.UUID;
 

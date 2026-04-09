@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
-import org.rdfarchitect.cim.ontology.OntologyGeneratableEntriesBuilder;
+import org.rdfarchitect.models.cim.ontology.OntologyGeneratableEntriesBuilder;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;

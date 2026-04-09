@@ -26,7 +26,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
-import org.rdfarchitect.cim.queries.select.CIMBaseQueryBuilder;
+import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;

@@ -20,21 +20,15 @@ package org.rdfarchitect.services.rendering;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.mermaid.MermaidDTO;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.RDFSSubClassOf;
-import org.rdfarchitect.cim.data.dto.*;
-import org.rdfarchitect.cim.data.dto.relations.*;
-import org.rdfarchitect.cim.data.dto.relations.datatype.CIMSPrimitiveDataType;
-import org.rdfarchitect.cim.data.dto.relations.datatype.RDFSRange;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assertions.assertThatException;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
@@ -78,7 +72,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
     void renderUML_collectionWithOneAbstractClass_MermaidStringContainingOneClass() {
         //Arrange
         addClass(null, "class1");
-        var class1 = cimCollection.getClasses().iterator().next();
+        var class1 = cimCollection.getClasses().getFirst();
 
         //Act
         var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
@@ -101,7 +95,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
     void renderUML_collectionWithOneConcreteClass_MermaidStringContainingOneClass() {
         //Arrange
         addClass(null, "class1");
-        var class1 = cimCollection.getClasses().iterator().next();
+        var class1 = cimCollection.getClasses().getFirst();
         class1.setStereotypes(new ArrayList<>(List.of(new CIMSStereotype(CIMStereotypes.concrete.getURI()))));
 
         //Act
@@ -125,7 +119,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
     void renderUML_collection_WithOneClassContainingAttributes_MermaidStringContainingOneClassWithAttributes() {
         //Arrange
         addClass(null, "class1");
-        var class1 = cimCollection.getClasses().iterator().next();
+        var class1 = cimCollection.getClasses().getFirst();
         addAttribute("class1", "attribute1", XSDDatatype.XSDstring);
         addAttribute("class1", "attribute2", XSDDatatype.XSDint);
 
@@ -217,7 +211,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
     void renderUML_collectionWithEnum_MermaidStringContainingEnum() {
         //Arrange
         addEnum(null, "enum1");
-        var enum1 = cimCollection.getEnums().iterator().next();
+        var enum1 = cimCollection.getEnums().getFirst();
 
         //Act
         var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();

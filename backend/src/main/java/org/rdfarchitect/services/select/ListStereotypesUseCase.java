@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;

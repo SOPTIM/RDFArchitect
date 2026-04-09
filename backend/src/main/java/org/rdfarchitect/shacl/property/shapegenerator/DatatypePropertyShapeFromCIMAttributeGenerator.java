@@ -21,8 +21,8 @@ import org.apache.jena.datatypes.xsd.impl.XMLLiteralType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
-import org.rdfarchitect.cim.relations.model.properties.CIMAttributeUtils;
-import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.DatatypePropertyShapeBuilder;
 
@@ -68,7 +68,7 @@ public class DatatypePropertyShapeFromCIMAttributeGenerator implements PropertyS
                 .setAttributeUri(attribute.getURI())
                 .setOrder(order)
                 .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL);
-        if (CIMAttributeUtils.hasPrimitiveDatatype(attribute) || CIMAttributeUtils.hasCIMDatatype(attribute)) {
+        if (CIMAttributeUtils.hasPrimitiveDatatype(attribute) || CIMAttributeUtils.hasCIMDatatype(attribute) || CIMAttributeUtils.hasXSDDatatype(attribute)) {
             propertyShapeBuilder.setPrimitiveDatatype(CIMAttributeUtils.getPrimitiveDatatype(attribute));
         } else if (CIMAttributeUtils.hasEnumAttribute(attribute)) {
             propertyShapeBuilder.setDatatypeUris(CIMAttributeUtils.listEnumDatatypeEntries(attribute)

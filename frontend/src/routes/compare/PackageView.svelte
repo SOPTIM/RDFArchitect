@@ -21,12 +21,14 @@
     import { Fa } from "svelte-fa";
 
     import ChangeTable from "./ChangeTable.svelte";
-    import NestedChangeGroup from "./NestedChangeObject.svelte";
+    import NestedChangeGroup from "./NestedChangeGroup.svelte";
 
     let { data = [] } = $props();
 </script>
 
-<h1 class="mb-2 text-2xl font-bold">{data.label}</h1>
+<h1 class="mb-2 text-2xl font-bold">
+    {data.uri}
+</h1>
 <div class="border-default-text bg-window-background rounded border p-6 shadow">
     {#if data.changes}
         <CollapsibleCard>
@@ -54,7 +56,7 @@
     >
         <CollapsibleCard>
             <h2 slot="header" class="mb-2 text-lg font-bold">
-                {classChange.label}
+                {classChange.uri}
                 <Fa class="collapsible-caret" icon={faCaretDown} />
             </h2>
             <div slot="body">
@@ -82,8 +84,8 @@
                     items={classChange.attributes}
                 />
                 <NestedChangeGroup
-                    title="Association Pairs"
-                    items={classChange.associationPairs}
+                    title="Associations"
+                    items={classChange.associations}
                 />
                 <NestedChangeGroup
                     title="Enum Entries"

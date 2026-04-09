@@ -66,17 +66,25 @@
             classEditorContext.reactiveClass.namespace.value +
                 classEditorContext.reactiveClass.label.value,
         );
-        saveApiAttributeToBackend(
+        const result = await saveApiAttributeToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
             classEditorContext.reactiveClass.uuid.value,
             apiAttribute,
             isNewAttribute,
-        ).then(res => {
-            if (res.ok) {
-                attribute.save();
-            }
-        });
+        );
+      
+        if (!result.ok) {
+            return;
+        }
+
+        attribute.uuid.value = result.attributeUUID;
+        if (isNewAttribute) {
+            attributes.append(attribute);
+            isNewAttribute = false;
+        }
+        attribute.save();
+
     }
 
     function discardChanges() {

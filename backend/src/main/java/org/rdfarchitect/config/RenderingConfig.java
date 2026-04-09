@@ -17,9 +17,9 @@
 
 package org.rdfarchitect.config;
 
-import org.rdfarchitect.cim.rendering.RenderCIMCollectionUseCase;
-import org.rdfarchitect.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
-import org.rdfarchitect.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
+import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
+import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 import org.springframework.beans.factory.annotation.Value;

@@ -19,6 +19,7 @@
     import {
         faClockRotateLeft,
         faCodeBranch,
+        faRightLeft,
         faEye,
     } from "@fortawesome/free-solid-svg-icons";
 
@@ -62,6 +63,12 @@
             faIcon={faCodeBranch}
         >
             Compare Graphs
+        </Menubar.Item.Button>
+        <Menubar.Item.Button
+            onSelect={() => goto("/migrate")}
+            faIcon={faRightLeft}
+        >
+            Migrate Schema
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => (showSHACLFullViewDialog = true)}

@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.dl.update;
 
-import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
 import java.util.UUID;
 

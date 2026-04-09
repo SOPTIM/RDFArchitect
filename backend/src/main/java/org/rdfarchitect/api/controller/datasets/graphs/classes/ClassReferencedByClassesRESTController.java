@@ -20,7 +20,7 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.cim.relations.ClassRelationsDTO;
+import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassesReferencingThisClassUseCase;
