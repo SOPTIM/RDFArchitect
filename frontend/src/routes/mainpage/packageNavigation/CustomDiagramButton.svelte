@@ -33,7 +33,7 @@
 
     import ClassEntry from "./ClassEntry.svelte";
     import CustomDiagramDeleteDialog from "./custom-diagram-dialogs/CustomDiagramDeleteDialog.svelte";
-    import CustomDiagramDialog from "./custom-diagram-dialogs/CustomDiagramDialog.svelte";
+    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import {
         getUri, isSelectedCustomDiagram
     } from "./packageNavigationUtils.svelte.js";
@@ -42,7 +42,9 @@
         dataset,
         graph,
         diagram,
-        readOnly
+        classes,
+        readOnly,
+        onToggle,
     } = $props();
 
     let showEditDiagramDialog = $state(false);
@@ -51,7 +53,8 @@
     let packageIcon = $derived(diagram.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(diagram.classes?.length > 0);
 
-    function toggleDiagramContentsVisibility() {
+    async function toggleDiagramContentsVisibility() {
+        await onToggle()
         const next = !diagram.showContents;
 
         diagram.showContents = next;
@@ -105,7 +108,7 @@
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each diagram.classes as cls (cls.uuid)}
+            {#each classes as cls (cls.uuid)}
                 <ClassEntry
                     {dataset}
                     {graph}
@@ -118,7 +121,7 @@
     {/if}
 </div>
 
-<CustomDiagramDialog
+<CustomGraphDiagramDialog
     bind:showDialog={showEditDiagramDialog}
     lockedDatasetName={dataset.label}
     lockedGraphUri={getUri(graph)}

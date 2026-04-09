@@ -17,7 +17,7 @@
 <script>
     import {
         faFolder,
-        faFolderOpen,
+        faFolderOpen
     } from "@fortawesome/free-regular-svg-icons";
     import {
         faPencil,
@@ -38,7 +38,7 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import AddToDiagramDialog from "./custom-diagram-dialogs/AddToDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -48,7 +48,8 @@
         readonly,
     } = $props();
     let showNewClassDialog = $state(false);
-    let showAddToDiagramDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
 
@@ -100,7 +101,7 @@
         navigator.clipboard
             .writeText(url)
             .catch(err =>
-                console.error("Writing to the clipboard is not allowed: ", err),
+                console.error("Writing to the clipboard is not allowed: ", err)
             );
     }
 
@@ -145,11 +146,19 @@
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    showAddToDiagramDialog = true;
+                    showAddToGraphDiagramDialog = true;
                 }}
                 faIcon={faObjectGroup}
             >
-                Add to Diagram
+                Add to Graph Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToDatasetDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -201,11 +210,18 @@
     lockedPackage={packageNavEntry.data}
 />
 
-<AddToDiagramDialog
-    bind:showDialog={showAddToDiagramDialog}
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToGraphDiagramDialog}
+    lockedDatasetName={dataset.label}
+    lockedGraphUri={getUri(graph)}
+    {classes}
+/>
+
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToDatasetDiagramDialog}
     lockedDatasetName={dataset.label}
     graph={getUri(graph)}
-    {classes}
+    classes
 />
 
 <PackageEditorDialog

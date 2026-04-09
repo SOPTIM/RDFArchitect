@@ -24,10 +24,18 @@
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
 
-    let { pack, classes = $bindable([]) } = $props();
+    let {
+        pack,
+        classes,
+        level = 1,
+    } = $props();
 
     let packageIcon = $derived(pack.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(classes?.length > 0);
+
+    $effect(() => {
+        pack.selected = classes?.every(cls => cls.selected === true);
+    });
 
     function togglePackageContentsVisibility() {
         pack.expanded = !pack.expanded;
@@ -48,13 +56,13 @@
 
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
     <NavigationEntry
-        level={1}
+        {level}
         label={pack.label}
         icon={packageIcon}
         title={pack.label}
         selected={pack.selected}
         expanded={pack.expanded}
-        hasChildren={classes.length > 0}
+        hasChildren={hasClasses}
         onToggle={togglePackageContentsVisibility}
         showCheckbox={hasClasses}
         onSelect={toggleClassesInPackage}

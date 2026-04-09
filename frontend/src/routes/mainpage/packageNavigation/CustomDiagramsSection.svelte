@@ -25,23 +25,29 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    import CustomDiagramDialog from "./custom-diagram-dialogs/CustomDiagramDialog.svelte";
+    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import { getUri, isSelectedDataset, isSelectedGraph } from "./packageNavigationUtils.svelte.js";
+    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let {
         dataset,
         graph,
-        readOnly,
+        readOnly
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-    
+
     let diagramsExpanded = $state(false);
     let diagrams = $state([]);
     let classesByDiagram = $state({});
-    
+
     let showNewDiagramDialog = $state(false);
+    let isSelected = $derived(graph ? isSelectedGraph(dataset, graph) &&
+        editorState.selectedCustomDiagramUUID.getValue() !== null : isSelectedDataset(dataset) &&
+        editorState.selectedCustomDiagramUUID.getValue() !== null);
+    let level = $derived(graph ? 3 : 2);
+    let label = $derived(graph ? "Custom Graph Diagrams" : "Custom Dataset Diagrams");
 
     onMount(() => {
         fetchDiagrams();
@@ -71,7 +77,7 @@
                     userCollapsed,
                     showContents: userCollapsed
                         ? false
-                        : keepExpanded || isSelected,
+                        : keepExpanded || isSelected
                 };
             });
         } catch (err) {
@@ -84,12 +90,14 @@
             return;
         }
 
-        const classUuids = diagram.classes.map(c => c.uuid);
-        const loaded = graph
-            ? await bec.getClassesByUuids(dataset.label, getUri(graph), classUuids)
-            : await bec.getGlobalClassesByUuids(dataset.label, classUuids);
+        let classes;
+        if (graph) {
+            classes = bec.getFullClassesForDiagram(dataset, graph, diagram.diagramId);
+        } else {
+            classes = bec.getFullClassesForDatasetDiagram(dataset, diagram.diagramId);
+        }
 
-        classesByDiagram[diagram.diagramId] = loaded;
+        classesByDiagram[diagram.diagramId] = classes;
     }
 
     async function getGraphDiagrams(datasetName, graphURI) {
@@ -107,15 +115,12 @@
 <ContextMenu.Root>
     <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
         <NavigationEntry
-            level={3}
-            label="Custom Diagrams"
+            {level}
+            {label}
             icon={faObjectGroup}
             hasChildren={diagrams.length > 0}
             expanded={diagramsExpanded}
-            isSelected={
-                isSelectedGraph(dataset, graph) &&
-                editorState.selectedCustomDiagramUUID.getValue() !== null
-            }
+            {isSelected}
             onToggle={() => diagramsExpanded = !diagramsExpanded}
         />
     </ContextMenu.TriggerArea>
@@ -136,13 +141,22 @@
             {dataset}
             {graph}
             {diagram}
+            classes={classesByDiagram[diagram.diagramId]}
             {readOnly}
+            onToggle={() => ensureClassesLoaded(diagram)}
         />
     {/each}
 {/if}
 
-<CustomDiagramDialog
-    bind:showDialog={showNewDiagramDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
-/>
+{#if graph}
+    <CustomGraphDiagramDialog
+        bind:showDialog={showNewDiagramDialog}
+        lockedDatasetName={dataset.label}
+        lockedGraphUri={getUri(graph)}
+    />
+{:else }
+    <CustomDatasetDiagramDialog
+        bind:showDialog={showNewDiagramDialog}
+        lockedDatasetName={dataset.label}
+    />
+{/if}

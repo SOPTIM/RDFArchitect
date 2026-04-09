@@ -24,7 +24,8 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
-    import PackageSelectSection from "../PackageSelectSection.svelte";
+    import { createPackageListForGraph, createClassListForGraph } from "./customDiagramDialogUtils.js";
+    import PackageSelectSection from "./PackageSelectSection.svelte";
 
     let {
         showDialog = $bindable(),
@@ -32,7 +33,7 @@
         lockedGraphUri,
         diagramName = "",
         diagramId = crypto.randomUUID(),
-        selectedClasses = [],
+        selectedClasses = []
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -42,81 +43,13 @@
     let disableSubmit = $derived(diagramName.trim() === "");
 
     async function onOpen() {
-        await createPackageList(lockedDatasetName, lockedGraphUri);
-        await fetchClasses();
-        updatePackageSelectionState();
+        packages = await createPackageListForGraph(lockedDatasetName, lockedGraphUri);
+        classesByPackage = await createClassListForGraph(lockedDatasetName, lockedGraphUri, selectedClasses);
+        initlialisePacakgeSelectionState();
     }
 
     function onClose() {
-        diagramName = null;
-    }
-
-    async function getPackages(datasetName, graphURI) {
-        const res = await bec.getPackages(datasetName, graphURI);
-        return await res.json();
-    }
-
-    async function createPackageList(datasetName, graphURI) {
-        const res = await getPackages(datasetName, graphURI);
-
-        packages = [
-            ...res.internalPackageList,
-            ...res.externalPackageList
-        ].map(pack => {
-            const packageId = getPackageId(pack);
-
-            return {
-                uuid: packageId,
-                prefix: pack.prefix,
-                label: pack.label,
-                selected: false,
-                expanded: false
-            };
-        }).sort((a, b) => {
-            if (a.label === "default") return 1;
-            if (b.label === "default") return -1;
-            return a.label.localeCompare(b.label);
-        });
-    }
-
-    async function getClasses(datasetName, graphURI) {
-        const res = await bec.getClasses(datasetName, graphURI);
-        return await res.json();
-    }
-
-    async function fetchClasses() {
-        try {
-            const classList = await getClasses(lockedDatasetName, lockedGraphUri) ?? [];
-
-            const grouped = {};
-
-            for (const cls of classList) {
-                const packageId = getPackageId(cls.package);
-                if (!grouped[packageId]) {
-                    grouped[packageId] = [];
-                }
-
-                cls.selected = !!selectedClasses.find(selected => selected.uuid === cls.uuid);
-
-                grouped[packageId].push({
-                    ...cls,
-                    packageUUID: packageId
-                });
-            }
-
-            for (const key of Object.keys(grouped)) {
-                grouped[key].sort((a, b) =>
-                    (a.label ?? "").localeCompare(b.label ?? "", undefined, {
-                        sensitivity: "base"
-                    })
-                );
-            }
-
-            classesByPackage = grouped;
-        } catch (err) {
-            console.error("Failed to load classes:", err);
-            classesByPackage = {};
-        }
+        diagramName = "";
     }
 
     function deselectAll() {
@@ -125,10 +58,10 @@
             classesByPackage[getPackageId(pack)]?.forEach((cls) => {
                 cls.selected = false;
             });
-        })
+        });
     }
 
-    function updatePackageSelectionState() {
+    function initlialisePacakgeSelectionState() {
         if (!selectedClasses.length) {
             return;
         }
@@ -139,7 +72,6 @@
 
             if (classesInPackage.length > 0) {
                 pack.expanded = classesInPackage.find(cls => cls.selected) !== undefined;
-                pack.selected = classesInPackage.every(cls => cls.selected === true);
             }
         });
     }
@@ -150,13 +82,13 @@
             .filter((cls) => cls.selected === true)
             .map((cls) => ({
                 uuid: cls.uuid,
-                graphUri: lockedGraphUri,
+                graphUri: lockedGraphUri
             }));
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
             classes: selectedClassList
-        }
+        };
 
         try {
             const res = await bec.putCustomDiagram(lockedDatasetName, lockedGraphUri, diagramId, diagramData);
@@ -197,10 +129,10 @@
         <div
             id="class-tree" class="h-full overflow-y-auto max-h-[55vh] items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each packages as pack (getPackageId(pack))}
+            {#each packages as pack (pack.uuid)}
                 <PackageSelectSection
                     {pack}
-                    classes={classesByPackage[getPackageId(pack)] ?? []}
+                    classes={classesByPackage[pack.uuid] ?? []}
                 />
             {/each}
         </div>

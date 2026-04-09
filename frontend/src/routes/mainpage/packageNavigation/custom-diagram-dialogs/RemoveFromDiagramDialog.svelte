@@ -33,7 +33,7 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     async function removeFromDiagram() {
-        await bec.removeFromCustomDiagram(datasetName, graphUri, diagramId, cls.uuid);
+        await bec.removeFromCustomGraphDiagram(datasetName, graphUri, diagramId, cls.uuid);
     }
 </script>
 

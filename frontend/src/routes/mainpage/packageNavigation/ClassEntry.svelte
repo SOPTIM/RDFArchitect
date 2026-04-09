@@ -30,10 +30,11 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
-    import AddToDiagramDialog from "./custom-diagram-dialogs/AddToDiagramDialog.svelte";
+    import AddToDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -47,7 +48,8 @@
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
-    let showAddToDiagramDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
@@ -127,11 +129,19 @@
         {#if !diagramId}
             <ContextMenu.Item.Button
                 onSelect={() => {
-                showAddToDiagramDialog = true;
+                showAddToGraphDiagramDialog = true;
             }}
                 faIcon={faObjectGroup}
             >
-                Add to Diagram
+                Add to Graph Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                showAddToDatasetDiagramDialog = true;
+            }}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
             </ContextMenu.Item.Button>
         {/if}
         <ContextMenu.Separator />
@@ -174,8 +184,14 @@
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
 />
-<AddToDiagramDialog
-    bind:showDialog={showAddToDiagramDialog}
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToGraphDiagramDialog}
+    lockedDatasetName={dataset.label}
+    lockedGraphUri={getUri(graph)}
+    classes={[cls]}
+/>
+<AddToDatasetDiagramDialog
+    bind:showDialog={showAddToDatasetDiagramDialog}
     lockedDatasetName={dataset.label}
     graph={getUri(graph)}
     classes={[cls]}

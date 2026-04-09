@@ -24,7 +24,7 @@
         faDatabase,
         faPenToSquare,
         faLock,
-        faDiagramProject,
+        faDiagramProject, faObjectGroup
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -36,13 +36,15 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
+    import DatasetDeleteDialog from "./DatasetDeleteDialog.svelte";
     import GraphSection from "./GraphSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
-    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
+    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
 
@@ -50,6 +52,7 @@
 
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
+    let showNewDiagramDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
@@ -159,6 +162,15 @@
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
+                    showNewDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                New Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
                     selectDataset();
                     showNamespacesDialog = true;
                 }}
@@ -170,7 +182,6 @@
                     Manage Namespaces
                 {/if}
             </ContextMenu.Item.Button>
-            <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
                     selectDataset();
@@ -221,6 +232,11 @@
                     {readOnly}
                 />
             {/each}
+
+            <CustomDiagramsSection
+                {dataset}
+                {readOnly}
+            />
         </div>
     {/if}
 </div>
@@ -241,4 +257,8 @@
 <DatasetDeleteDialog
     bind:showDialog={showDatasetDeleteDialog}
     datasetName={datasetNavEntry.label}
+/>
+<CustomDatasetDiagramDialog
+    bind:showDialog={showNewDiagramDialog}
+    lockedDatasetName={dataset.label}
 />

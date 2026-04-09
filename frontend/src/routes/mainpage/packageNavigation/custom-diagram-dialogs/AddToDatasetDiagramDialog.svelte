@@ -25,68 +25,42 @@
     let {
         showDialog = $bindable(),
         lockedDatasetName,
-        classes,
-        graph
+        graph,
+        classes
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let graphURI = $state(null);
     let selectedDiagram = $state(null);
-
     let diagramList = $state([]);
-    let graphNames = $state([]);
-
     let disableSubmit = $derived(
-        !graphURI ||
         !selectedDiagram
     );
 
-    $effect(() => {
-        if (!graphURI) {
-            selectedDiagram = null;
-            diagramList = [];
-            return;
-        }
-        getCustomDiagrams(graphURI);
-    });
-
-    async function onOpen() {
-        graphNames = await getGraphNames();
-        graphURI = graph;
-    }
-
-    async function getCustomDiagrams(graphURI) {
-        const res = await bec.getCustomDiagramsForGraph(lockedDatasetName, graphURI);
+    async function getCustomDiagrams() {
+        const res = await bec.getCustomDiagramsForDataset(lockedDatasetName);
         diagramList = await res.json();
     }
 
-    async function getGraphNames() {
-        const res = await bec.getGraphNames(lockedDatasetName);
-        return await res.json();
+    function onOpen() {
+        getCustomDiagrams();
     }
 
     function onClose() {
-        graphURI = null;
         selectedDiagram = null;
     }
 
     async function addToDiagram() {
         const classesToAdd = classes.map(cls => ({
             uuid: cls.uuid,
-            graphUri: graphURI,
+            graphUri: graph,
         }));
-        await bec.addToCustomDiagram(
+        await bec.addToCustomDatasetDiagram(
             lockedDatasetName,
-            graphURI,
             selectedDiagram.diagramId,
             classesToAdd,
         );
         forceReloadTrigger.trigger();
-    }
-
-    function getUri(graph) {
-        return (!graph.prefix ? "" : graph.prefix) + graph.suffix;
     }
 </script>
 
@@ -100,17 +74,6 @@
     title="Add to Diagram"
 >
     <div class="mx-2 flex h-full flex-col">
-        <label for="graph-select" class="mt-3 mb-1 block text-sm">
-            Graph
-        </label>
-        <SelectEditControl
-            id="graph-select"
-            bind:value={graphURI}
-            options={graphNames}
-            placeholder={"Select graph"}
-            getOptionValue={getUri}
-            getOptionLabel={g => g.suffix}
-        />
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">
             Diagram
         </label>
@@ -118,10 +81,7 @@
             id="diagram-select"
             bind:value={selectedDiagram}
             options={diagramList}
-            disabled={!graphURI}
-            placeholder={graphURI
-                ? "Select diagram"
-                : "Select a graph first"}
+            placeholder={"Select diagram"}
             getOptionLabel={diagram => diagram.name}
         />
     </div>
