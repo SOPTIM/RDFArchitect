@@ -73,7 +73,7 @@
             apiAttribute,
             isNewAttribute,
         );
-      
+
         if (!result.ok) {
             return;
         }
@@ -84,7 +84,6 @@
             isNewAttribute = false;
         }
         attribute.save();
-
     }
 
     function discardChanges() {
