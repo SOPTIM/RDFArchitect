@@ -17,6 +17,13 @@
 
 package org.rdfarchitect.api.dto.delete;
 
+import lombok.Data;
+
+import java.util.UUID;
+
+@Data
 public class ResourceDeleteRequest {
+
+    private UUID uuid;
 
 }
