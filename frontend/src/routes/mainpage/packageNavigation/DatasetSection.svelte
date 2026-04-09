@@ -195,7 +195,7 @@
                 disabled={readonly}
                 faIcon={faDiagramProject}
             >
-                Add Graph
+                Add Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -205,7 +205,7 @@
                 disabled={readonly}
                 faIcon={faFileImport}
             >
-                Import Graph
+                Import Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {

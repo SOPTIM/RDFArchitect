@@ -30,7 +30,7 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const baseDeletionDescription =
-        "All graphs and packages inside this dataset will be permanently removed.";
+        "All schemas and packages inside this dataset will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
@@ -86,7 +86,7 @@
                     return baseDeletionDescription;
                 }
                 const graphCount = graphs.length ?? 0;
-                const label = graphCount === 1 ? "graph" : "graphs";
+                const label = graphCount === 1 ? "schema" : "schemas";
                 return `${baseDeletionDescription} ${graphCount} ${label} will be deleted.`;
             })()}
             <br />

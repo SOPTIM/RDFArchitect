@@ -34,7 +34,7 @@
     const filters = [
         { name: "All Datasets", value: "all" },
         { name: "Current Dataset", value: "dataset" },
-        { name: "Current Graph", value: "graph" },
+        { name: "Current Schema", value: "graph" },
         { name: "Current Package", value: "package" },
     ];
 

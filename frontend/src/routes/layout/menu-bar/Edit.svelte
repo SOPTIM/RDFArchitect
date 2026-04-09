@@ -254,7 +254,7 @@
                     onSelect={() => (showNewGraphDialog = true)}
                     faIcon={faDiagramProject}
                 >
-                    Graph
+                    Schema (RDFS)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>

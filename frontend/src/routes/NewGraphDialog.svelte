@@ -149,9 +149,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add graph"
+    primaryLabel="Add schema"
     onPrimary={addGraph}
-    title="Add graph"
+    title="Add schema"
     disablePrimary={disableSubmit}
 >
     <div class="mx-2 flex h-full flex-col">
@@ -174,7 +174,7 @@
 
             {#if datasetIsReadOnly}
                 <div class="mt-1 mb-1 h-6 text-sm">
-                    Cannot add graphs to read-only dataset
+                    Cannot add schemas to read-only dataset
                 </div>
             {/if}
         {:else}
@@ -186,7 +186,7 @@
             </div>
         {/if}
 
-        <label for={graphInputId} class="mt-2 mb-1">Graph</label>
+        <label for={graphInputId} class="mt-2 mb-1">Schema (RDFS)</label>
         <input
             class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
             type="text"
@@ -197,7 +197,7 @@
         />
 
         {#if graphExists}
-            <div class="mt-1 mb-1 h-6 text-sm">Graph already exists</div>
+            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
         {/if}
     </div>
 </ActionDialog>

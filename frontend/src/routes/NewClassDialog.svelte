@@ -227,7 +227,7 @@
             disabled={packageSelectionLocked || !datasetName || !graphURI}
             placeholder={datasetName && graphURI
                 ? "Select package"
-                : "Select a graph first"}
+                : "Select a schema first"}
             getOptionLabel={pkg => pkg.label}
         />
 

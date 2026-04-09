@@ -233,11 +233,12 @@
                 </div>
             {:else}
                 <p class="mt-2 text-sm italic">
-                    No ontology entries can be generated for the selected graph.
+                    No ontology entries can be generated for the selected
+                    schema.
                 </p>
             {/if}
         {:else if graphURI}
-            <p class="mt-2 text-sm italic">This graph has no ontology</p>
+            <p class="mt-2 text-sm italic">This schema has no ontology</p>
         {/if}
     {/if}
     <label for="media-types-Download" class="mt-2 mb-1">Media type</label>

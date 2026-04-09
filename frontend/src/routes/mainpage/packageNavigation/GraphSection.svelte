@@ -490,7 +490,7 @@
             </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>
-                    SHACL
+                    Constrains
                 </ContextMenu.SubMenu.Trigger>
                 <ContextMenu.SubMenu.Content>
                     <ContextMenu.Item.Button
@@ -519,7 +519,7 @@
                         }}
                         faIcon={faEye}
                     >
-                        Full SHACL
+                        Open
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
@@ -530,7 +530,7 @@
                 }}
                 faIcon={faFileExport}
             >
-                Export Graph
+                Export Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -542,7 +542,7 @@
                 faIcon={faTrash}
                 variant="danger"
             >
-                Delete Graph
+                Delete Schema
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
     </ContextMenu.Root>
