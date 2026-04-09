@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.cim.relations.model;
+package org.rdfarchitect.models.cim.relations.model;
 
 import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.Model;
@@ -68,7 +68,7 @@ public class CIMResourceTypeIdentifyingUtils {
                          .orElse(CimResourceType.UNKNOWN);
     }
 
-    private Resource findUniqueSubject(Model model, UUID uuid) {
+    public Resource findUniqueSubject(Model model, UUID uuid) {
         var subjects = model.listSubjectsWithProperty(RDFA.uuid, uuid.toString()).toList();
         if (subjects.size() != 1) {
             throw new IllegalArgumentException("Expected exactly one subject with UUID " + uuid + ", but found " + subjects.size());

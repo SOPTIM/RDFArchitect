@@ -21,7 +21,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.api.dto.delete.DeleteRelations;
+import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.services.delete.FindOnDeleteRelationsUseCase;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -52,7 +52,7 @@ public class DeletionImpactRESTController {
               }
     )
     @GetMapping
-    public DeleteRelations getDeletionImpact(
+    public AffectedResource getDeletionImpact(
               @Parameter(description = "The name/url of the inquirer.")
               @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
               String originURL,
