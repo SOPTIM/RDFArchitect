@@ -17,12 +17,12 @@
 
 package org.rdfarchitect.services.delete;
 
-import org.rdfarchitect.api.dto.delete.DeleteRelations;
+import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.UUID;
 
 public interface FindOnDeleteRelationsUseCase {
 
-    DeleteRelations getDeleteRelations(GraphIdentifier graphIdentifier, UUID uuid);
+    AffectedResource getDeleteRelations(GraphIdentifier graphIdentifier, UUID uuid);
 }
