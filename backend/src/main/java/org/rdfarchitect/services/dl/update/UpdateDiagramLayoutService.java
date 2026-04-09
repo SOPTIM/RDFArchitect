@@ -32,7 +32,6 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;

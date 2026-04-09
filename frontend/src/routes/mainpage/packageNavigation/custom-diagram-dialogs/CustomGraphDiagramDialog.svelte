@@ -21,7 +21,7 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
     import { createPackageListForGraph, createClassListForGraph } from "./customDiagramDialogUtils.js";
@@ -93,7 +93,12 @@
         try {
             const res = await bec.putCustomDiagram(lockedDatasetName, lockedGraphUri, diagramId, diagramData);
 
-            if (!res.ok) {
+            if (res.ok) {
+                editorState.selectedDataset.updateValue(lockedDatasetName);
+                editorState.selectedGraph.updateValue(lockedGraphUri);
+                editorState.selectedPackageUUID.updateValue(null);
+                editorState.selectedCustomDiagramUUID.updateValue(diagramId);
+            } else {
                 console.error("Failed to save diagram");
             }
         } finally {

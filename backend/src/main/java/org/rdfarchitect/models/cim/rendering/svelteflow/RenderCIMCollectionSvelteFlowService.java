@@ -137,17 +137,16 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                         .build();
         nodeDTO.position(positionDTO);
 
-        var nodeDataDTO =
-                NodeDataDTO.builder()
-                        .label(cimClass.getLabel().getValue())
-                        .belongsToCategory(
-                                cimClass.getBelongsToCategory() != null
-                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
-                                        : null)
-                        .stereotypes(stereotypes)
-                        .attributes(attributes)
-                        .enumEntries(enumEntries)
-                        .build();
+        var nodeDataDTO = NodeDataDTO.builder()
+                                     .graphUri(cimClass.getGraphUri())
+                                     .label(cimClass.getLabel().getValue())
+                                     .belongsToCategory(cimClass.getBelongsToCategory() != null
+                                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
+                                                        : null)
+                                     .stereotypes(stereotypes)
+                                     .attributes(attributes)
+                                     .enumEntries(enumEntries)
+                                     .build();
 
         nodeDTO.data(nodeDataDTO);
 

@@ -44,6 +44,7 @@
         diagram,
         classes,
         readOnly,
+        level = 4,
         onToggle,
     } = $props();
 
@@ -63,7 +64,7 @@
 
     function selectDiagram() {
         editorState.selectedDataset.updateValue(dataset.label);
-        editorState.selectedGraph.updateValue(getUri(graph));
+        editorState.selectedGraph.updateValue(graph ? getUri(graph) : null);
         editorState.selectedPackageUUID.updateValue(null);
         editorState.selectedCustomDiagramUUID.updateValue(diagram.diagramId);
     }
@@ -73,7 +74,7 @@
     <ContextMenu.Root>
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
-                level={4}
+                {level}
                 label={diagram.name}
                 icon={packageIcon}
                 isSelected={isSelectedCustomDiagram(dataset, graph, diagram)}
@@ -111,7 +112,7 @@
             {#each classes as cls (cls.uuid)}
                 <ClassEntry
                     {dataset}
-                    {graph}
+                    graph = {graph ? graph : cls.graphUri}
                     {cls}
                     diagramId={diagram.diagramId}
                     {readOnly}

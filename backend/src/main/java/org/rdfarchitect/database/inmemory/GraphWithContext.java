@@ -35,8 +35,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GraphWithContext {
 
     @Getter private final GraphRewindableWithUUIDs rdfGraph;
-    @Getter private final ConcurrentHashMap<UUID, CustomDiagram> customDiagrams = new  ConcurrentHashMap<>();
-    @Getter @Setter private DiagramLayout diagramLayout;
+    @Getter private final ConcurrentHashMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
+    @Getter private final DiagramLayout diagramLayout = new DiagramLayout();
 
     @Getter @Setter private Model customSHACL;
 

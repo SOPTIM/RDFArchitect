@@ -21,7 +21,7 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import { createClassListForGraph, createPackageListForGraph } from "./customDiagramDialogUtils.js";
@@ -32,16 +32,20 @@
         lockedDatasetName,
         diagramName = "",
         diagramId = crypto.randomUUID(),
-        selectedClasses = []
+        selectedClasses = [],
+        allDiagrams = []
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let graphs = $state([]);
     let classesByPackageAndGraph = $state({});
     let packagesByGraph = $state({});
+    let isValidName = $derived(() => {
+        return allDiagrams.some(diagram => diagram.name === diagramName && diagram.uuid !== diagramId) === false;
+    });
 
 
-    let disableSubmit = $derived(diagramName.trim() === "");
+    let disableSubmit = $derived(diagramName.trim() === "" || !isValidName());
 
     async function onOpen() {
         await fetchGraphs();
@@ -146,9 +150,14 @@
         };
 
         try {
-            const res = await bec.putCustomDiagram(lockedDatasetName, diagramId, diagramData);
+            const res = await bec.putCustomDatasetDiagram(lockedDatasetName, diagramId, diagramData);
 
-            if (!res.ok) {
+            if (res.ok) {
+                editorState.selectedDataset.updateValue(lockedDatasetName);
+                editorState.selectedGraph.updateValue(null);
+                editorState.selectedPackageUUID.updateValue(null);
+                editorState.selectedCustomDiagramUUID.updateValue(diagramId);
+            } else {
                 console.error("Failed to save diagram");
             }
         } finally {
@@ -171,7 +180,9 @@
             id="diagram-name-input"
             placeholder="Enter diagram name"
             bind:value={diagramName}
+            warn={!isValidName}
         />
+        <ViolationMessages violations={className.violations} />
 
         <div class="flex justify-between">
             <label for="class-tree" class="mt-2 mb-1">Selected Classes</label>

@@ -30,11 +30,11 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
-    import AddToDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
-    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
 
     let {
         datasetNavEntry,

@@ -64,8 +64,7 @@ public class GraphWithContextCollection {
     @Getter
     private final ConcurrentMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
     @Getter
-    @Setter
-    private DiagramLayout diagramLayout;
+    private final DiagramLayout diagramLayout = new DiagramLayout();
 
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
@@ -82,7 +81,6 @@ public class GraphWithContextCollection {
                         new GraphRewindableWithUUIDs(
                                 dataset.getDefaultModel().getGraph(), maxVersions, compressCount);
                 var graph = new GraphWithContext(rdfGraph);
-                graph.setDiagramLayout(new DiagramLayout());
                 graphs.put(DEFAULT_GRAPH_NAME, graph);
             }
             for (Iterator<Resource> it = dataset.listModelNames(); it.hasNext(); ) {
@@ -93,7 +91,6 @@ public class GraphWithContextCollection {
                                 maxVersions,
                                 compressCount);
                 var graph = new GraphWithContext(rdfGraph);
-                graph.setDiagramLayout(new DiagramLayout());
                 graphs.put(graphURI, graph);
             }
         } finally {
@@ -176,7 +173,6 @@ public class GraphWithContextCollection {
             assertValidGraphName(graphUri);
             var rdfGraph = new GraphRewindableWithUUIDs(newGraph, maxVersions, compressCount);
             var graph = new GraphWithContext(rdfGraph);
-            graph.setDiagramLayout(new DiagramLayout());
             graphs.put(graphUri, graph);
         } finally {
             lock.unlock();

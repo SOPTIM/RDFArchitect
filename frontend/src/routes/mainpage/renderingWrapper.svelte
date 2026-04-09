@@ -92,7 +92,11 @@
         }
 
         if (diagramId) {
-            await fetchDiagramRenderingData(diagramId);
+            if (graph) {
+                await fetchGraphDiagramRenderingData(diagramId);
+            } else {
+                await fetchDatasetDiagramRenderingData(diagramId);
+            }
         } else if (packageUUID) {
             await fetchPackageRenderingData(packageUUID);
         } else {
@@ -142,9 +146,33 @@
         }
     }
 
-    async function fetchDiagramRenderingData(diagramId) {
+    async function fetchDatasetDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomDiagramRenderingData(
+            const res = await bec.getCustomDatasetDiagramRenderingData(
+                editorState.selectedDataset.getValue(),
+                diagramId,
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function fetchGraphDiagramRenderingData(diagramId) {
+        try {
+            const res = await bec.getCustomGraphDiagramRenderingData(
                 editorState.selectedDataset.getValue(),
                 editorState.selectedGraph.getValue(),
                 diagramId,

@@ -24,7 +24,7 @@
         faDatabase,
         faPenToSquare,
         faLock,
-        faDiagramProject, faObjectGroup
+        faDiagramProject
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -44,7 +44,6 @@
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
-    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
 
@@ -52,11 +51,10 @@
 
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
-    let showNewDiagramDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
-    let readOnly = $state(false);
+    let readonly = $state(false);
     let namespaces = $state([]);
 
     let wasDatasetSelected = false;
@@ -67,7 +65,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readOnly = await isReadOnly(datasetNavEntry.label);
+        readonly = await isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {
@@ -101,7 +99,7 @@
     }
 
     async function enableEditing() {
-        if (!datasetNavEntry?.id || !readOnly) {
+        if (!datasetNavEntry?.id || !readonly) {
             return;
         }
 
@@ -112,7 +110,7 @@
     }
 
     async function disableEditing() {
-        if (!datasetNavEntry?.id || readOnly) {
+        if (!datasetNavEntry?.id || readonly) {
             return;
         }
         await bec.disableEditing(datasetNavEntry.id).then(() => {
@@ -133,7 +131,7 @@
                 expanded={datasetNavEntry.isOpen}
                 isSelected={isDatasetSelected}
                 title={datasetNavEntry.tooltip}
-                badgeText={readOnly ? "Read-only" : ""}
+                badgeText={readonly ? "Read-only" : ""}
                 badgeVariant="readonly"
                 onclick={selectDataset}
                 onToggle={() => datasetNavEntry.toggle()}
@@ -145,7 +143,7 @@
                     selectDataset();
                     showNewGraphDialog = true;
                 }}
-                disabled={readOnly}
+                disabled={readonly}
                 faIcon={faDiagramProject}
             >
                 Add Schema
@@ -155,20 +153,11 @@
                     selectDataset();
                     showImportDialog = true;
                 }}
-                disabled={readOnly}
+                disabled={readonly}
                 faIcon={faFileImport}
             >
                 Import Schema
             </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={() => {
-                    showNewDiagramDialog = true;
-                }}
-                faIcon={faObjectGroup}
-            >
-                New Diagram
-            </ContextMenu.Item.Button>
-            <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
                     selectDataset();
@@ -176,7 +165,7 @@
                 }}
                 faIcon={faTags}
             >
-                {#if readOnly}
+                {#if readonly}
                     View Namespaces
                 {:else}
                     Manage Namespaces
@@ -191,7 +180,7 @@
             >
                 Share Snapshot
             </ContextMenu.Item.Button>
-            {#if readOnly}
+            {#if readonly}
                 <ContextMenu.Item.Button
                     onSelect={() => enableEditing()}
                     faIcon={faPenToSquare}
@@ -229,13 +218,13 @@
                     {graphNavEntry}
                     onExpandDataset={ensureDatasetExpanded}
                     {namespaces}
-                    {readOnly}
+                    {readonly}
                 />
             {/each}
 
             <CustomDiagramsSection
                 {dataset}
-                {readOnly}
+                {readonly}
             />
         </div>
     {/if}
@@ -257,8 +246,4 @@
 <DatasetDeleteDialog
     bind:showDialog={showDatasetDeleteDialog}
     datasetName={datasetNavEntry.label}
-/>
-<CustomDatasetDiagramDialog
-    bind:showDialog={showNewDiagramDialog}
-    lockedDatasetName={dataset.label}
 />

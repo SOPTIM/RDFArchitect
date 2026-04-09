@@ -33,7 +33,6 @@
         faRotateLeft,
         faRotateRight,
         faGear,
-        faObjectGroup
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -61,7 +60,6 @@
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
@@ -82,7 +80,6 @@
     let showExportDialog = $state(false);
     let showDeleteDialog = $state(false);
     let showNewPackageDialog = $state(false);
-    let showNewDiagramDialog = $state(false);
     let showCompareDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showSHACLExportDialog = $state(false);
@@ -172,15 +169,6 @@
                 faIcon={faPlus}
             >
                 New Package
-            </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={() => {
-                    focusGraphContext();
-                    showNewDiagramDialog = true;
-                }}
-                faIcon={faObjectGroup}
-            >
-                New Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -392,11 +380,6 @@
     bind:ontology
     {readonly}
     onSubmit={initialize}
-/>
-<CustomGraphDiagramDialog
-    bind:showDialog={showNewDiagramDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
 />
 
 <DeleteDependenciesDialog

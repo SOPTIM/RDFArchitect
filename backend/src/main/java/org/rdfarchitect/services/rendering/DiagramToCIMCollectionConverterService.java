@@ -18,11 +18,11 @@
 package org.rdfarchitect.services.rendering;
 
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.cim.data.dto.CIMCollection;
-import org.rdfarchitect.cim.rendering.GraphFilter;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -69,7 +69,7 @@ public class DiagramToCIMCollectionConverterService implements DiagramToCIMColle
         var mergedCollection = new CIMCollection();
 
         for (var entry : classesByGraph.entrySet()) {
-            var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey());
+            var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey().toString());
             var classUUIDs = entry.getValue().stream()
                                   .map(c -> c.getUuid().toString())
                                   .toList();

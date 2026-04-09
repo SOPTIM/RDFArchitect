@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update.classlayout;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -83,12 +84,23 @@ public class UpdateClassLayoutService
         var resolvedPackageUUID =
                 packageUUID != null ? packageUUID : diagramLayout.getDefaultPackageMRID().getUuid();
 
+        updateDiagramObjects(resolvedPackageUUID, classPositionDTOList, diagramLayoutModel);
+    }
+
+    @Override
+    public void updateClassPositions(String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
+        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+
+        updateDiagramObjects(diagramUUID, classPositionDTOList, diagramLayoutModel);
+    }
+
+    private void updateDiagramObjects(UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList, Model diagramLayoutModel) {
         for (var classPositionDTO : classPositionDTOList) {
-            var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
-                            diagramLayoutModel,
-                            resolvedPackageUUID,
-                            classPositionDTO.getClassUUID());
+            var diagramObject = DLObjectFetcher.fetchDiagramDOForClass(
+                      diagramLayoutModel,
+                      diagramUUID,
+                      classPositionDTO.getClassUUID());
 
             var doMRID = diagramObject.getMRID();
 

@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.rendering;
 
-import org.rdfarchitect.cim.data.dto.CIMCollection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
 /**
  * Converts a Diagram to a {@link CIMCollection}.

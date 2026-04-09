@@ -20,13 +20,14 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
-import org.rdfarchitect.cim.data.CIMObjectFetcher;
-import org.rdfarchitect.cim.data.dto.CIMClass;
-import org.rdfarchitect.cim.queries.select.CIMQueries;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.queries.select.CIMQueries;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
@@ -110,7 +111,7 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
         if (diagram != null) {
-            diagram.getClasses().remove(new ClassInDiagram(classId, graphIdentifier.getGraphUri()));
+            diagram.getClasses().remove(new ClassInDiagram(classId, new URI(graphIdentifier.getGraphUri())));
         }
     }
 
@@ -118,11 +119,11 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         for (var diagram : graphWithContext.getCustomDiagrams().values()) {
-            diagram.getClasses().remove(new ClassInDiagram(classId, graphIdentifier.getGraphUri()));
+            diagram.getClasses().remove(new ClassInDiagram(classId, new URI(graphIdentifier.getGraphUri())));
         }
         var datasetDiagrams = databasePort.getDatasetDiagrams(graphIdentifier.getDatasetName());
         for (var diagram : datasetDiagrams.values()) {
-            diagram.getClasses().remove(new ClassInDiagram(classId, graphIdentifier.getGraphUri()));
+            diagram.getClasses().remove(new ClassInDiagram(classId, new URI(graphIdentifier.getGraphUri())));
         }
     }
 
@@ -148,7 +149,7 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
 
         var mergedClassList = new ArrayList<CIMClass>();
         for (var entry : classesByGraph.entrySet()) {
-            var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey());
+            var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey().toString());
             mergedClassList.addAll(getSpecifiedClassesForGraph(graphIdentifier, diagram));
         }
         return classMapper.toDTOList(mergedClassList);
@@ -158,6 +159,7 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+            graph.begin();
 
             var classUUIDs = diagram.getClasses().stream()
                                     .map(c -> c.getUuid().toString())

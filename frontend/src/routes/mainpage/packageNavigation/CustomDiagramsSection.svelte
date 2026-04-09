@@ -23,12 +23,12 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
+    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import { getUri, isSelectedDataset, isSelectedGraph } from "./packageNavigationUtils.svelte.js";
-    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let {
         dataset,
@@ -44,10 +44,26 @@
 
     let showNewDiagramDialog = $state(false);
     let isSelected = $derived(graph ? isSelectedGraph(dataset, graph) &&
-        editorState.selectedCustomDiagramUUID.getValue() !== null : isSelectedDataset(dataset) &&
-        editorState.selectedCustomDiagramUUID.getValue() !== null);
+        editorState.selectedCustomDiagramUUID.getValue() : isSelectedDataset(dataset) &&
+        editorState.selectedCustomDiagramUUID.getValue());
     let level = $derived(graph ? 3 : 2);
     let label = $derived(graph ? "Custom Graph Diagrams" : "Custom Dataset Diagrams");
+
+    $effect(() => {
+        forceReloadTrigger.subscribe();
+        fetchDiagrams();
+    });
+
+    $effect(() => {
+        editorState.selectedCustomDiagramUUID.subscribe();
+        const selectedDiagramId = editorState.selectedCustomDiagramUUID.getValue();
+
+        if (selectedDiagramId) {
+            if (diagrams.some(d => d.diagramId === selectedDiagramId)) {
+                diagramsExpanded = true;
+            }
+        }
+    });
 
     onMount(() => {
         fetchDiagrams();
@@ -68,8 +84,7 @@
                 const prev = previous.find(p => diagram.diagramId === p.diagramId);
                 const keepExpanded = prev?.showContents ?? false;
                 const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
-                const isSelected =
-                    (isSelectedGraph(dataset, graph) || !graph && isSelectedDataset(dataset)) &&
+                const isSelected = graph ? isSelectedGraph(dataset, graph) && selectedDiagramId === diagram.diagramId : isSelectedDataset(dataset) &&
                     selectedDiagramId === diagram.diagramId;
 
                 return {
@@ -92,12 +107,29 @@
 
         let classes;
         if (graph) {
-            classes = bec.getFullClassesForDiagram(dataset, graph, diagram.diagramId);
+            classes = await getFullClassesForDiagram(dataset.label, getUri(graph), diagram.diagramId);
         } else {
-            classes = bec.getFullClassesForDatasetDiagram(dataset, diagram.diagramId);
+            classes = await getFullClassesForDatasetDiagram(dataset.label, diagram.diagramId);
+            if (diagram.classes) {
+                const classesWithGraphUri = new Map(diagram.classes.map(c => [c.uuid, c.graphUri]));
+                classes = classes.map(cls => ({
+                    ...cls,
+                    graphUri: classesWithGraphUri.get(cls.uuid)
+                }));
+            }
         }
 
         classesByDiagram[diagram.diagramId] = classes;
+    }
+
+    async function getFullClassesForDiagram(datasetName, graphURI, diagramId) {
+        const res = await bec.getFullClassesForDiagram(datasetName, graphURI, diagramId);
+        return await res.json();
+    }
+
+    async function getFullClassesForDatasetDiagram(datasetName, diagramId) {
+        const res = await bec.getFullClassesForDatasetDiagram(datasetName, diagramId);
+        return await res.json();
     }
 
     async function getGraphDiagrams(datasetName, graphURI) {
@@ -143,6 +175,7 @@
             {diagram}
             classes={classesByDiagram[diagram.diagramId]}
             {readOnly}
+            level = {3}
             onToggle={() => ensureClassesLoaded(diagram)}
         />
     {/each}
