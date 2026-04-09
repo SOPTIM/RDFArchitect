@@ -19,6 +19,8 @@ package org.rdfarchitect.services.rendering;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.dl.AssociationRoleLayoutData;
+import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
@@ -26,11 +28,19 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
+import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.XYPosition;
+import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBase {
 
@@ -167,9 +177,67 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         //Assert
         var associationEdgeDTO = result.getEdges().get(0);
         assertThat(result.getEdges()).hasSize(1);
+        assertThat(associationEdgeDTO.getData().getFromLabel()).isEqualTo("class1.class2");
         assertThat(associationEdgeDTO.getData().getFromMultiplicity()).isEqualTo("0...n");
+        assertThat(associationEdgeDTO.getData().getToLabel()).isEqualTo("class2.class1");
         assertThat(associationEdgeDTO.getData().getToMultiplicity()).isEqualTo("1...1");
         assertThat(associationEdgeDTO.getData().isUseFromAssociation()).isFalse();
         assertThat(associationEdgeDTO.getData().isUseToAssociation()).isTrue();
+    }
+
+    @Test
+    void renderUML_twoClassesAndAssociation_includesPersistedAssociationOffsets() {
+        addPackage("package_package1");
+        addClass("package_package1", "class1");
+        addClass("package_package2", "class2");
+        addAssociation("class1", "class2", AssociationUsed.YES, AssociationUsed.NO);
+
+        var associationIterator = cimCollection.getAssociations().iterator();
+        var fromAssoc = associationIterator.next();
+        var toAssoc = associationIterator.next();
+
+        FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
+        EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase = mock(EnsureDiagramLayoutForCIMCollectionUseCase.class);
+        var mockXYPosition = mock(XYPosition.class);
+        when(mockXYPosition.getX()).thenReturn(0f);
+        when(mockXYPosition.getY()).thenReturn(0f);
+
+        var mockDop = mock(DiagramObjectPoint.class);
+        when(mockDop.getPosition()).thenReturn(mockXYPosition);
+
+        var mockClassLayoutingData = mock(Map.class);
+        when(mockClassLayoutingData.get(any(UUID.class))).thenReturn(mockDop);
+
+        var renderingLayoutData = RenderingLayoutData.builder()
+                                                     .classLayoutingData(mockClassLayoutingData)
+                                                     .associationLayoutingData(Map.of(
+                                                               fromAssoc.getUuid(),
+                                                               AssociationRoleLayoutData.builder()
+                                                                                        .labelLayoutingData(DiagramObjectPoint.builder().position(new XYPosition(11.0F, 12.0F)).build())
+                                                                                        .multiplicityLayoutingData(DiagramObjectPoint.builder().position(new XYPosition(13.0F, 14.0F)).build())
+                                                                                        .build(),
+                                                               toAssoc.getUuid(),
+                                                               AssociationRoleLayoutData.builder()
+                                                                                        .labelLayoutingData(DiagramObjectPoint.builder().position(new XYPosition(21.0F, 22.0F)).build())
+                                                                                        .multiplicityLayoutingData(DiagramObjectPoint.builder().position(new XYPosition(23.0F, 24.0F)).build())
+                                                                                        .build()))
+                                                     .build();
+        when(fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(any(), any())).thenReturn(renderingLayoutData);
+
+        var renderer = new RenderCIMCollectionSvelteFlowService(fetchRenderingLayoutDataUseCase, ensureDiagramLayoutForCIMCollectionUseCase);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(cimCollection, null, null);
+
+        var associationEdgeDTO = result.getEdges().get(0);
+        assertThat(associationEdgeDTO.getData().getFromAssociationUUID()).isEqualTo(fromAssoc.getUuid());
+        assertThat(associationEdgeDTO.getData().getToAssociationUUID()).isEqualTo(toAssoc.getUuid());
+        assertThat(associationEdgeDTO.getData().getFromLabelOffset().getX()).isEqualTo(11.0);
+        assertThat(associationEdgeDTO.getData().getFromLabelOffset().getY()).isEqualTo(12.0);
+        assertThat(associationEdgeDTO.getData().getFromMultiplicityOffset().getX()).isEqualTo(13.0);
+        assertThat(associationEdgeDTO.getData().getFromMultiplicityOffset().getY()).isEqualTo(14.0);
+        assertThat(associationEdgeDTO.getData().getToLabelOffset().getX()).isEqualTo(21.0);
+        assertThat(associationEdgeDTO.getData().getToLabelOffset().getY()).isEqualTo(22.0);
+        assertThat(associationEdgeDTO.getData().getToMultiplicityOffset().getX()).isEqualTo(23.0);
+        assertThat(associationEdgeDTO.getData().getToMultiplicityOffset().getY()).isEqualTo(24.0);
     }
 }

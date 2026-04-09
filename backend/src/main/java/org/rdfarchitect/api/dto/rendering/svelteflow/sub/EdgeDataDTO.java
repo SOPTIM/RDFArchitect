@@ -20,6 +20,8 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.UUID;
+
 /**
  * DTO representing the specific data object in a SvelteFlow edge.
  */
@@ -27,8 +29,16 @@ import lombok.Data;
 @Builder
 public class EdgeDataDTO {
 
+    private UUID fromAssociationUUID;
+    private UUID toAssociationUUID;
+    private String fromLabel;
     private String toMultiplicity;
+    private String toLabel;
     private String fromMultiplicity;
+    private PositionDTO fromLabelOffset;
+    private PositionDTO toMultiplicityOffset;
+    private PositionDTO toLabelOffset;
+    private PositionDTO fromMultiplicityOffset;
     private boolean useToAssociation;
     private boolean useFromAssociation;
 }
