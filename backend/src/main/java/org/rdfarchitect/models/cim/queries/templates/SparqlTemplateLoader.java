@@ -19,17 +19,24 @@ package org.rdfarchitect.models.cim.queries.templates;
 
 import org.apache.jena.query.ParameterizedSparqlString;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 
 public class SparqlTemplateLoader {
     public static ParameterizedSparqlString loadTemplate(String path) {
         try {
             var resource = new ClassPathResource("sparql-templates/" + path + ".sparql");
-            return new ParameterizedSparqlString(Files.readString(resource.getFile().toPath(), StandardCharsets.UTF_8));
+            return new ParameterizedSparqlString(readTemplate(resource));
         } catch (Exception e) {
             throw new RuntimeException("Failed to load SPARQL template: " + path, e);
+        }
+    }
+
+    static String readTemplate(Resource resource) throws IOException {
+        try (var inputStream = resource.getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 }
