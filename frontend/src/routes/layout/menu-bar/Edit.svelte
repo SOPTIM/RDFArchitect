@@ -43,10 +43,10 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
-    import PackageDeleteDialog from "../../mainpage/packageNavigation/PackageDeleteDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
@@ -60,7 +60,7 @@
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
     let showFilterViewDialog = $state(false);
-    let showPackageDeleteDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -154,7 +154,7 @@
         packageDialogTarget = { ...selectedPackageDetails };
         packageDialogDataset = selectedDataset;
         packageDialogGraph = selectedGraph;
-        showPackageDeleteDialog = true;
+        showDeleteDependenciesDialog = true;
     }
 
     async function getPackages() {
@@ -376,12 +376,12 @@
         readonly={isDatasetReadOnly}
     />
 {/if}
-{#if packageDialogTarget && showPackageDeleteDialog}
-    <PackageDeleteDialog
-        bind:showDialog={showPackageDeleteDialog}
+{#if packageDialogTarget && showDeleteDependenciesDialog}
+    <DeleteDependenciesDialog
+        bind:showDialog={showDeleteDependenciesDialog}
         datasetName={packageDialogDataset}
         graphUri={packageDialogGraph}
-        pack={packageDialogTarget}
+        resourceUuid={packageDialogTarget.uuid}
     />
 {/if}
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />

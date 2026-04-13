@@ -73,7 +73,7 @@
     <BitsUiDialog.Portal>
         <BitsUiDialog.Overlay class="bg-dialog-backlight fixed inset-0 z-40" />
         <BitsUiDialog.Content
-            class="border-border bg-window-background fixed top-1/2 left-1/2 z-40 -translate-x-1/2 -translate-y-1/2 rounded border border-solid p-2 shadow outline-none {size}"
+            class="border-border bg-window-background fixed top-1/2 left-1/2 z-40 flex -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded border border-solid p-2 shadow outline-none {size}"
             {onkeydown}
             onEscapeKeydown={handleEscapeKeydown}
             onInteractOutside={handleInteractOutside}

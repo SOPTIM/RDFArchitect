@@ -101,8 +101,8 @@
 
 <svelte:window onkeydown|capture={handleConfirmShortcut} />
 <DialogBase bind:showDialog {onOpen} {onClose} {...restProps}>
-    <div class="flex h-full flex-col">
-        <div class="flex h-full w-full flex-col">
+    <div class="flex min-h-0 flex-1 flex-col">
+        <div class="flex min-h-0 w-full flex-1 flex-col">
             <div class="mb-1 ml-2 flex shrink-0 items-center justify-between">
                 <div class="flex items-center space-x-2">
                     <p
@@ -128,7 +128,7 @@
                     />
                 </div>
             </div>
-            <div class="min-h-0 grow overflow-auto">
+            <div class="min-h-0 flex-1">
                 {@render children?.()}
             </div>
             {#if !readonly && (secondaryButtonExists || primaryButtonExists)}
