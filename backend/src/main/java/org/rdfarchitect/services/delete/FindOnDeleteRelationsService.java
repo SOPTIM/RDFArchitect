@@ -111,7 +111,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
         return listAttributesWithClassAsDatatype(classResource).stream()
                                                                .map(attr -> new AffectedOwnedResource(createResourceIdentifier(attr),
                                                                                                       CimResourceType.ATTRIBUTE,
-                                                                                                      AffectedResourceReason.USES_DELETE_CLASS_AS_DATATYPE,
+                                                                                                      AffectedResourceReason.USES_DELETED_CLASS_AS_DATATYPE,
                                                                                                       classResourceId)
                                                                          .setActions(childActions))
                                                                .toList();
