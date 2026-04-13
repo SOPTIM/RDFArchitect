@@ -27,7 +27,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
-    import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
+    import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";

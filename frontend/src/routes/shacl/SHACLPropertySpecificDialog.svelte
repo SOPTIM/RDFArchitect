@@ -19,8 +19,8 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.svelte.js";
-    import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
+    import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
+    import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 

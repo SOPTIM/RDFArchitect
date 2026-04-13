@@ -25,6 +25,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
+    import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import {
@@ -100,12 +101,6 @@
         isDatasetReadOnly = await isReadOnly(datasetName);
     });
 
-    onMount(async () => {
-        isDatasetReadOnly = await isReadOnly(datasetName);
-        await loadContext();
-        await loadReactiveClass();
-    });
-
     onMount(() => eventStack.addEvent(closeClassEditor));
 
     onDestroy(() => eventStack.removeEvent(closeClassEditor));
@@ -151,10 +146,14 @@
         const classDto = await (
             await bec.getClassInfo(datasetName, graphUri, classUuid)
         ).json();
-        reactiveClass = mapClassDtoToReactiveClass(
+        const newReactiveClass = mapClassDtoToReactiveClass(
             classDto,
             context.classes,
             uuid => context.targetClassInfos.find(cls => cls.uuid === uuid),
+        );
+        reactiveClass = adoptUnsavedClassChanges(
+            newReactiveClass,
+            reactiveClass,
         );
         loadingClass = false;
         console.log({ reactiveClass });
