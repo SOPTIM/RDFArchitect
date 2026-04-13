@@ -36,6 +36,23 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+    async function onOpen() {
+        if (!datasetName || !graphUri || !classUuid) {
+            console.error(
+                "Missing required properties to delete class:",
+                datasetName,
+                graphUri,
+                classUuid,
+            );
+            showDialog = false;
+        }
+        let res = await bec.getDeleteRelation(datasetName, graphUri, classUuid);
+        let json = await res.json();
+        console.warn(
+            "Delete class response - check for warnings before confirming deletion:",
+            json,
+        );
+    }
     async function deleteClass() {
         bec.deleteClass(datasetName, graphUri, classUuid).then(
             async response => {
@@ -61,6 +78,7 @@
 </script>
 
 <ActionDialog
+    {onOpen}
     bind:showDialog
     size="w-full max-w-md"
     primaryVariant="danger"
