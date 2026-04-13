@@ -27,11 +27,13 @@
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
-    import { getNamespaces } from "./classEditor/fetch-class-editor-context.js";
+    import {
+        getNamespaces,
+        getPackages,
+    } from "./classEditor/fetch-class-editor-context.js";
 
     let {
         showDialog = $bindable(),
-        packages = [],
         pack,
         readonly = false,
         datasetName = null,
@@ -43,6 +45,7 @@
     let pkg = $state(null);
     let isNewPackage = $state(true);
     let namespaces = $state([]);
+    let packages = $state([]);
 
     function getSubstitutedNamespace(namespace) {
         const namespaceObj = namespaces.find(n => n.prefix === namespace);
@@ -50,6 +53,7 @@
     }
 
     async function onOpen() {
+        await fetchPackages();
         if (pack) {
             isNewPackage = false;
             pkg = new ReactivePackage({
@@ -76,8 +80,26 @@
             namespaces = await getNamespaces(datasetName);
         }
     }
+    async function fetchPackages() {
+        if (!datasetName || !graphUri) {
+            packages = [];
+            return;
+        }
+        try {
+            packages = await getPackages(datasetName, graphUri);
+        } catch (err) {
+            console.error("Failed to load packages:", err);
+            packages = [];
+        }
+    }
 
     async function savePackage() {
+        console.log(
+            "Saving package in dataset",
+            datasetName,
+            "and graph",
+            graphUri,
+        );
         if (!datasetName || !graphUri) {
             return;
         }

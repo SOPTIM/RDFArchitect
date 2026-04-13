@@ -28,10 +28,10 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
-    import DatasetDeleteDialog from "../../mainpage/packageNavigation/DatasetDeleteDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";

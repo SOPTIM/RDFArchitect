@@ -37,8 +37,10 @@
         showDialog = $bindable(),
         dataset,
         graphUri,
+        namespaces,
         ontology = $bindable(),
         readonly,
+        onSubmit,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -46,7 +48,6 @@
     let showAddKnownEntriesPopUp = $state(false);
     let showDiscardSaveConfirmDialog = $state(false);
 
-    let namespaces = $state([]);
     let tableContainerRef = $state(null);
 
     let ontologyObject = $state();
@@ -58,7 +59,9 @@
     let disableSubmit = $derived(!hasChanges || !isValid);
 
     async function onOpen() {
-        namespaces = await getNamespaces(dataset);
+        if (!namespaces) {
+            namespaces = await getNamespaces(dataset);
+        }
         if (!ontology) {
             ontologyObject = new ReactiveOntology();
         } else {
@@ -91,10 +94,14 @@
         ontologyObject.reset();
     }
 
-    function save() {
-        saveOntology(dataset, graphUri, ontologyObject);
+    async function save() {
+        await saveOntology(dataset, graphUri, ontologyObject);
         ontologyObject.save();
-        forceReloadTrigger.trigger();
+        if (onSubmit) {
+            onSubmit();
+        } else {
+            forceReloadTrigger.trigger();
+        }
     }
 
     function discard() {
@@ -125,7 +132,7 @@
     }
 
     function getSubstitutedNamespace(namespace) {
-        const namespaceObj = namespaces.find(p => p?.prefix === namespace);
+        const namespaceObj = namespaces?.find(p => p?.prefix === namespace);
         return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
     }
 </script>
