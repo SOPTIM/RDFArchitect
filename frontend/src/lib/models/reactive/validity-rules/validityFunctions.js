@@ -140,6 +140,7 @@ export function hasUniqueLabel(label, reactiveObjectsArray) {
 }
 
 export function hasUniqueIRI(label, namespace, compareArray) {
+    console.log(label, namespace, compareArray);
     const violations = [];
     if (typeof namespace === "string" && namespace.trim() !== "") {
         if (

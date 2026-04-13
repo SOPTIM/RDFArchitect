@@ -53,7 +53,9 @@
     }
 
     function onClose() {
-        attribute = null;
+        if (isNewAttribute) {
+            attributes.remove(attribute);
+        }
         isNewAttribute = true;
     }
 
@@ -86,7 +88,6 @@
         attribute.uuid.value = result.attributeUUID;
         attribute.save();
         if (isNewAttribute) {
-            attributes.append(attribute);
             isNewAttribute = false;
         }
         forceReloadTrigger.trigger();

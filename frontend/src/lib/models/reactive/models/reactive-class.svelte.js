@@ -78,7 +78,11 @@ export class ReactiveClass {
             ReactiveAttribute,
             (reactiveObject, entriesArray) => {
                 reactiveObject.label.violationChecks.push(label =>
-                    hasUniqueIRI(label, this.namespace.value, entriesArray),
+                    hasUniqueIRI(
+                        label,
+                        reactiveObject.namespace.value,
+                        entriesArray,
+                    ),
                 );
             },
         );
