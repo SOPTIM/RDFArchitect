@@ -56,7 +56,7 @@ public class AffectedResource {
 
     public enum AffectedResourceReason {
         CONTAINED_IN_PACKAGE,
-        USES_DELETE_CLASS_AS_DATATYPE,
+        USES_DELETED_CLASS_AS_DATATYPE,
         REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
         CHILD_OF,
         USES_DELETED_CLASS_AS_DEFAULT_VALUE,
