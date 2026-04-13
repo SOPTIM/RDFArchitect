@@ -91,14 +91,6 @@
         }
         forceReloadTrigger.trigger();
     }
-
-    function discardChanges() {
-        if (isNewAttribute) {
-            attributes.remove(attribute);
-        } else {
-            attribute.reset();
-        }
-    }
 </script>
 
 <ModifyDataDialog
