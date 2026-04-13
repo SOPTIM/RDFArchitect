@@ -26,12 +26,17 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.delete.DeleteActions;
+import org.rdfarchitect.api.dto.delete.ResourceIdentifier;
+import org.rdfarchitect.api.dto.delete.relations.AffectedAssociation;
+import org.rdfarchitect.api.dto.delete.relations.AffectedOwnedResource;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
+import org.rdfarchitect.api.dto.delete.relations.AffectedResource.AffectedResourceReason;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
@@ -52,36 +57,103 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
         var model = ModelFactory.createModelForGraph(getCopyOfDatabaseGraph(graphIdentifier));
         var resourceType = CIMResourceTypeIdentifyingUtils.getType(model, uuid);
         var defaultActions = List.of(DeleteActions.DELETE);
+        var reason = AffectedResourceReason.DELETION_REQUESTED_BY_USER;
         return switch (resourceType) {
-            case PACKAGE -> findAffectedRelationsForPackage(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
-            case CLASS -> findAffectedRelationsForClass(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
-            case ATTRIBUTE -> findAffectedRelationsForAttribute(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
-            case ASSOCIATION -> findAffectedRelationsForAssociation(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
-            case ENUM_ENTRY -> findAffectedRelationsForEnumEntry(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
-            case ONTOLOGY -> findAffectedRelationsForOntology(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
-            case UNKNOWN -> findAffectedRelationsForUnknown(model, uuid, AffectedResource.AffectedResourceReason.DELETION_REQUESTED_BY_USER, defaultActions);
+            case PACKAGE -> findAffectedRelationsForPackage(model, uuid, reason, defaultActions);
+            case CLASS -> findAffectedRelationsForClass(model, uuid, reason, defaultActions);
+            case ATTRIBUTE -> new AffectedResource(createResourceIdentifier(model, uuid), CimResourceType.ATTRIBUTE, reason)
+                      .setActions(defaultActions);
+            case ASSOCIATION -> new AffectedResource(createResourceIdentifier(model, uuid), CimResourceType.ASSOCIATION, reason)
+                      .setActions(defaultActions);
+            case ENUM_ENTRY -> new AffectedResource(createResourceIdentifier(model, uuid), CimResourceType.ENUM_ENTRY, reason)
+                      .setActions(defaultActions);
+            case ONTOLOGY -> new AffectedResource(createResourceIdentifier(model, uuid), CimResourceType.ONTOLOGY, reason)
+                      .setActions(defaultActions);
+            case UNKNOWN -> new AffectedResource(createResourceIdentifier(model, uuid), CimResourceType.UNKNOWN, reason)
+                      .setActions(defaultActions);
         };
     }
 
-    private AffectedResource findAffectedRelationsForPackage(Model model, UUID uuid, AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
+    private AffectedResource findAffectedRelationsForPackage(Model model, UUID uuid, AffectedResourceReason reason, List<DeleteActions> deleteActions) {
         var classesInPackage = listClassesInPackage(model, uuid);
         var affectedResources = new ArrayList<AffectedResource>();
         var clsDeleteActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP, DeleteActions.REMOVE_REFERENCE);
         for (var cls : classesInPackage) {
             var clsUuid = findUuidForResource(cls);
-            var affectedClassResource = findAffectedRelationsForClass(model, clsUuid, AffectedResource.AffectedResourceReason.CONTAINED_IN_PACKAGE, clsDeleteActions);
+            var affectedClassResource = findAffectedRelationsForClass(model, clsUuid, AffectedResourceReason.CONTAINED_IN_PACKAGE, clsDeleteActions);
             affectedResources.add(affectedClassResource);
         }
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.PACKAGE)
-                                     .actions(deleteActions)
-                                     .reason(reason)
-                                     .children(affectedResources);
+        return new AffectedResource(createResourceIdentifier(model, uuid), CimResourceType.PACKAGE, reason)
+                  .setActions(deleteActions)
+                  .setChildren(affectedResources);
+    }
+
+    private AffectedResource findAffectedRelationsForClass(Model model, UUID uuid,
+                                                           AffectedResourceReason reason, List<DeleteActions> deleteActions) {
+        var classResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
+
+        var classResourceId = createResourceIdentifier(model, uuid);
+        var affectedResources = new ArrayList<AffectedResource>();
+        affectedResources.addAll(findAffectedAttributesForClass(classResource, classResourceId));
+        affectedResources.addAll(findAffectedAssociationsForClass(classResource, classResourceId));
+        affectedResources.addAll(findAffectedChildClassesForClass(classResource));
+
+        // Attribute, die Teile der Klasse sind, werden hier nicht abgefragt, da sie immer mitgelöscht werden.
+        // (Vllt. sollte man die aber trotzdem mit anzeigen und keine Option oder so geben?)
+
+        return new AffectedResource(classResourceId, CimResourceType.CLASS, reason)
+                  .setActions(deleteActions)
+                  .setChildren(affectedResources);
+    }
+
+    private List<AffectedResource> findAffectedAttributesForClass(Resource classResource, ResourceIdentifier classResourceId) {
+        var childActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP);
+        return listAttributesWithClassAsDatatype(classResource).stream()
+                                                               .map(attr -> new AffectedOwnedResource(createResourceIdentifier(attr),
+                                                                                                      CimResourceType.ATTRIBUTE,
+                                                                                                      AffectedResourceReason.USES_DELETE_CLASS_AS_DATATYPE,
+                                                                                                      classResourceId)
+                                                                         .setActions(childActions))
+                                                               .toList();
+    }
+
+    private List<AffectedResource> findAffectedAssociationsForClass(Resource classResource, ResourceIdentifier classResourceId) {
+        var childActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP);
+        return listAssociationsReferencingClass(classResource).stream()
+                                                              .map(assoc -> new AffectedAssociation(createResourceIdentifier(assoc),
+                                                                                                    CimResourceType.ASSOCIATION,
+                                                                                                    AffectedResourceReason.REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
+                                                                                                    classResourceId,
+                                                                                                    getAssociationTarget(assoc)
+                                                                                                    )
+                                                                        .setActions(childActions))
+                                                              .toList();
+    }
+
+    private ResourceIdentifier getAssociationTarget(Resource associationResource) {
+        var rangeStatement = associationResource.getProperty(RDFS.range);
+        if(rangeStatement == null){
+            throw new IllegalStateException("Association " + associationResource + " does not have a range.");
+        }
+        if(rangeStatement.getObject().isLiteral()){
+            throw new IllegalStateException("Association " + associationResource + " has a literal as range, which is not supported.");
+        }
+        var rangeResource = rangeStatement.getObject().asResource();
+        return createResourceIdentifier(rangeResource);
+    }
+
+    private List<AffectedResource> findAffectedChildClassesForClass(Resource classResource) {
+        var childClassActions = List.of(DeleteActions.KEEP, DeleteActions.REMOVE_REFERENCE);
+        return listDirectlyDescendingClasses(classResource).stream()
+                                                           .map(childClass -> new AffectedResource(createResourceIdentifier(childClass),
+                                                                                                   CimResourceType.CLASS,
+                                                                                                   AffectedResourceReason.CHILD_OF)
+                                                                     .setActions(childClassActions))
+                                                           .toList();
     }
 
     private UUID findUuidForResource(Resource resource) {
-        if (resource.hasProperty(RDFA.uuid)) {
+        if (!resource.hasProperty(RDFA.uuid)) {
             throw new IllegalStateException("Resource " + resource + " does not have a UUID.");
         }
         return UUID.fromString(resource.getProperty(RDFA.uuid).getString());
@@ -90,104 +162,45 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     private List<Resource> listClassesInPackage(Model model, UUID uuid) {
         var packageResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
         if (!packageResource.hasProperty(RDF.type, CIMS.classCategory)) {
-            throw new IllegalArgumentException("Resource with UUID " + uuid + " is not a package.");
+            throw new IllegalStateException("Resource with UUID " + uuid + " is not a package.");
         }
         return model.listSubjectsWithProperty(CIMS.belongsToCategory, packageResource)
                     .filterKeep(cls -> cls.hasProperty(RDF.type, RDFS.Class))
                     .toList();
     }
 
-    private AffectedResource findAffectedRelationsForClass(Model model, UUID uuid,
-                                                           AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
-
-        var childActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP);
-
-        var affectedResources = new ArrayList<AffectedResource>();
-
-        // attributes
-        listAttributesWithClassAsDatatype(model, uuid).stream()
-                                                      .map(attr -> findAffectedRelationsForAttribute(model,
-                                                                                                     findUuidForResource(attr),
-                                                                                                     AffectedResource.AffectedResourceReason.USES_DELETE_CLASS_AS_DATATYPE,
-                                                                                                     childActions))
-                                                      .forEach(affectedResources::add);
-
-        // associations
-        listAssociationsReferencingClass(model, uuid).stream()
-                                                     .map(assoc -> findAffectedRelationsForAssociation(model,
-                                                                                                       findUuidForResource(assoc),
-                                                                                                       AffectedResource.AffectedResourceReason.REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
-                                                                                                       childActions))
-                                                     .forEach(affectedResources::add);
-
-        // Attribute, die Teile der Klasse sind, werden hier nicht abgefragt, da sie immer mitgelöscht werden.
-        // (Vllt. sollte man die aber trotzdem mit anzeigen und keine Option oder so geben?)
-
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.CLASS)
-                                     .actions(deleteActions)
-                                     .reason(reason)
-                                     .children(affectedResources);
+    private List<Resource> listDirectlyDescendingClasses(Resource classResource) {
+        return classResource.getModel().listSubjectsWithProperty(RDFS.subClassOf, classResource).toList();
     }
 
-    private List<Resource> listAssociationsReferencingClass(Model model, UUID uuid) {
-        var classResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
-        return model.listSubjectsWithProperty(RDFS.domain, classResource)
-                    .filterKeep(CIMPropertyUtils::isAssociation)
-                    .toList();
+    private List<Resource> listAssociationsReferencingClass(Resource classResource) {
+        return classResource.getModel().listSubjectsWithProperty(RDFS.domain, classResource)
+                            .filterKeep(CIMPropertyUtils::isAssociation)
+                            .toList();
     }
 
-    private List<Resource> listAttributesWithClassAsDatatype(Model model, UUID uuid) {
-        var classResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
+    private List<Resource> listAttributesWithClassAsDatatype(Resource classResource) {
+        var model = classResource.getModel();
         var byDatatype = model.listSubjectsWithProperty(CIMS.datatype, classResource);
         var byRange = model.listSubjectsWithProperty(RDFS.range, classResource);
         return byDatatype.andThen(byRange)
                          .filterKeep(CIMPropertyUtils::isAttribute)
-                         .toList();
+                         .toList().stream().distinct().toList();
     }
 
-    private AffectedResource findAffectedRelationsForAttribute(Model model, UUID uuid, AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.ATTRIBUTE)
-                                     .actions(deleteActions)
-                                     .reason(reason);
+    private ResourceIdentifier createResourceIdentifier(Model model, UUID uuid) {
+        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
+        return createResourceIdentifier(resource);
     }
 
-    private AffectedResource findAffectedRelationsForAssociation(Model model, UUID uuid, AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.ASSOCIATION)
-                                     .actions(deleteActions)
-                                     .reason(reason);
-    }
-
-    private AffectedResource findAffectedRelationsForEnumEntry(Model model, UUID uuid, AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
-        //hier evtl einfügen, dass attrbiute die diese als default wert nutzen gesucht werden, aber noch unklar ob das gemacht wird.
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.ENUM_ENTRY)
-                                     .actions(deleteActions)
-                                     .reason(reason);
-    }
-
-    private AffectedResource findAffectedRelationsForOntology(Model model, UUID uuid, AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
-        // sollte nichts geben
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.ONTOLOGY)
-                                     .actions(deleteActions)
-                                     .reason(reason);
-    }
-
-    private AffectedResource findAffectedRelationsForUnknown(Model model, UUID uuid, AffectedResource.AffectedResourceReason reason, List<DeleteActions> deleteActions) {
-        // ich denke hier entweder einen Fehler werfen oder einfach erlauben die Ressource zu löschen
-        return new AffectedResource().uuid(uuid)
-                                     .label(getLabelForUuid(model, uuid))
-                                     .type(CIMResourceTypeIdentifyingUtils.CimResourceType.UNKNOWN)
-                                     .actions(deleteActions)
-                                     .reason(reason);
+    private ResourceIdentifier createResourceIdentifier(Resource resource) {
+        var uuid = findUuidForResource(resource);
+        if (!resource.hasProperty(RDFS.label)) {
+            throw new IllegalStateException("Resource with UUID " + uuid + " does not have a label.");
+        }
+        return new ResourceIdentifier().setUuid(uuid)
+                                       .setLabel(resource.getProperty(RDFS.label).getString())
+                                       .setNamespace(resource.getNameSpace());
     }
 
     private Graph getCopyOfDatabaseGraph(GraphIdentifier graphIdentifier) {
@@ -201,13 +214,5 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
                 graph.end();
             }
         }
-    }
-
-    private String getLabelForUuid(Model model, UUID uuid) {
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
-        if (!resource.hasProperty(RDFS.label)) {
-            throw new IllegalStateException("Resource with UUID " + uuid + " does not have a label.");
-        }
-        return resource.getProperty(RDFS.label).getString();
     }
 }

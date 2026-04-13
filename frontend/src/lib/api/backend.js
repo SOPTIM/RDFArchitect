@@ -190,6 +190,14 @@ export class BackendConnection {
         });
     }
 
+    async getDeleteRelation(datasetName, graphURI, resourceUuid) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/uuid/${encodeURIComponent(resourceUuid)}/deletion-impact`;
+        return await fetch(url, {
+            method: "GET",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
     async deleteClass(datasetName, graphURI, classUUID) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return await fetch(url, {
