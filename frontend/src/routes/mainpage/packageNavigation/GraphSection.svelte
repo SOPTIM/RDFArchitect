@@ -34,7 +34,7 @@
         faRotateRight,
         faGear,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount } from "svelte";
+    import { getContext } from "svelte";
 
     import {
         undo,
@@ -42,7 +42,6 @@
         redo,
         fetchCanRedo,
     } from "$lib/actions/versionControlActions.js";
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
@@ -54,11 +53,7 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import PackageButton from "./PackageButton.svelte";
-    import {
-        getUri,
-        isSelectedGraph,
-        getPackageId,
-    } from "./packageNavigationUtils.svelte.js";
+    import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
@@ -71,22 +66,15 @@
     import { goto } from "$app/navigation";
 
     let {
-        dataset,
-        graph,
-        onExpandDataset = () => {},
-        prefixes = [],
+        datasetNavEntry,
+        graphNavEntry,
+        namespaces = [],
+        readonly = false,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let packages = $state([]);
     let ontology = $state();
-    let packagesLoading = $state(false);
-    let packagesRequestId = 0;
-    let classesByPackage = $state({});
-    let classPackageByUuid = $state({});
-    let selectedClassPackageId = $state(null);
-    let classesRequestId = 0;
     let showExportDialog = $state(false);
     let showDeleteDialog = $state(false);
     let showNewPackageDialog = $state(false);
@@ -94,125 +82,41 @@
     let showSHACLUploadDialog = $state(false);
     let showSHACLExportDialog = $state(false);
     let showSHACLFullViewDialog = $state(false);
-    let readOnly = $state(false);
     let canUndo = $state(false);
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
 
-    let graphHighlightLabel = $derived(shortenIri(prefixes, getUri(graph)));
+    let wasGraphSelected = false;
+
+    let graphHighlightLabel = $derived(
+        shortenIri(namespaces, graphNavEntry.id),
+    );
+
+    const isGraphSelected = $derived(
+        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
+    );
+    $effect(() => {
+        if (isGraphSelected && !wasGraphSelected) {
+            graphNavEntry.parent?.open();
+        }
+        wasGraphSelected = isGraphSelected;
+    });
 
     $effect(async () => {
-        forceReloadTrigger.subscribe();
-        await loadGraphData();
+        getContext("packageNavigation").reloadTrigger?.subscribe();
+        await initialize();
     });
 
-    $effect(() => {
-        editorState.selectedClassUUID.subscribe();
-        editorState.selectedClassDataset.subscribe();
-        editorState.selectedClassGraph.subscribe();
-        updateSelectedClassPackageId();
-        ensureExpandedPackages();
-    });
-
-    $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
-        ensureExpandedPackages();
-    });
-
-    onMount(() => {
-        loadGraphData();
-    });
-
-    async function getPackages(datasetName, graphURI) {
-        const res = await bec.getPackages(datasetName, graphURI);
-        return await res.json();
-    }
-
-    async function getClasses(datasetName, graphURI) {
-        const res = await bec.getClasses(datasetName, graphURI);
-        return await res.json();
-    }
-
-    async function loadGraphData() {
-        await fetchClasses();
+    async function initialize() {
         ontology = await getOntology();
-        await createPackageList();
-        await updateReadOnly();
-        await updateUndoRedo();
-        ensureExpandedPackages();
+        canUndo = await fetchCanUndo(datasetNavEntry.id, graphNavEntry.id);
+        canRedo = await fetchCanRedo(datasetNavEntry.id, graphNavEntry.id);
     }
-
-    async function createPackageList() {
-        const requestId = ++packagesRequestId;
-        packagesLoading = true;
-
-        try {
-            const packageStructure = await getPackages(
-                dataset.label,
-                getUri(graph),
-            );
-            if (requestId !== packagesRequestId) {
-                return;
-            }
-
-            let localPackagesList = [];
-            const previous = packages ?? [];
-            const selectedPackageId =
-                editorState.selectedPackageUUID.getValue();
-            const selectedClassPackageIdSnapshot = selectedClassPackageId;
-
-            packageStructure.internalPackageList.forEach(pack => {
-                localPackagesList.push({
-                    uuid: pack.uuid,
-                    prefix: pack.prefix,
-                    label: pack.label,
-                    comment: pack.comment,
-                    external: false,
-                });
-            });
-            packageStructure.externalPackageList.forEach(pack => {
-                localPackagesList.push({
-                    uuid: pack.uuid,
-                    prefix: pack.prefix,
-                    label: pack.label,
-                    comment: pack.comment,
-                    external: true,
-                });
-            });
-            localPackagesList = localPackagesList.map(pack => {
-                const packageId = getPackageId(pack);
-                const prev = previous.find(p => getPackageId(p) === packageId);
-                const keepExpanded = prev?.showContents ?? false;
-                const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
-                const isSelected =
-                    isSelectedGraph(dataset, graph) &&
-                    selectedPackageId === packageId;
-                const hasSelectedClass =
-                    selectedClassPackageIdSnapshot === packageId;
-                return {
-                    ...pack,
-                    userCollapsed,
-                    showContents: userCollapsed
-                        ? false
-                        : keepExpanded || isSelected || hasSelectedClass,
-                };
-            });
-            packages = localPackagesList.sort((a, b) => {
-                if (!a || !a.label || a.label === "default") return 1;
-                if (!b || !b.label || b.label === "default") return -1;
-                return a.label.localeCompare(b.label);
-            });
-        } catch (err) {
-            console.error("Failed to load packages:", err);
-        } finally {
-            if (requestId === packagesRequestId) {
-                packagesLoading = false;
-            }
-        }
-    }
-
     async function getOntology() {
-        const res = await bec.getOntology(dataset.label, getUri(graph));
+        const res = await bec.getOntology(
+            datasetNavEntry.label,
+            graphNavEntry.id,
+        );
         let content = await res.text();
         if (!content) {
             return null;
@@ -220,128 +124,9 @@
         return JSON.parse(content);
     }
 
-    async function fetchClasses() {
-        const requestId = ++classesRequestId;
-
-        try {
-            const classList =
-                (await getClasses(dataset.label, getUri(graph))) ?? [];
-            if (requestId !== classesRequestId) {
-                return;
-            }
-
-            const grouped = {};
-            const uuidMap = {};
-
-            for (const cls of classList) {
-                const packageId = getPackageId(cls.package);
-                uuidMap[cls.uuid] = packageId;
-                if (!grouped[packageId]) {
-                    grouped[packageId] = [];
-                }
-                grouped[packageId].push({
-                    ...cls,
-                    packageUUID: packageId,
-                });
-            }
-
-            for (const key of Object.keys(grouped)) {
-                grouped[key].sort((a, b) =>
-                    (a.label ?? "").localeCompare(b.label ?? "", undefined, {
-                        sensitivity: "base",
-                    }),
-                );
-            }
-
-            classesByPackage = grouped;
-            classPackageByUuid = uuidMap;
-            updateSelectedClassPackageId();
-        } catch (err) {
-            console.error("Failed to load classes:", err);
-            classesByPackage = {};
-            classPackageByUuid = {};
-            selectedClassPackageId = null;
-        }
-    }
-
-    function updateSelectedClassPackageId() {
-        const selectedClassUUID = editorState.selectedClassUUID.getValue();
-        const selectedClassDataset =
-            editorState.selectedClassDataset.getValue();
-        const selectedClassGraph = editorState.selectedClassGraph.getValue();
-
-        if (
-            !selectedClassUUID ||
-            selectedClassDataset !== dataset.label ||
-            selectedClassGraph !== getUri(graph)
-        ) {
-            selectedClassPackageId = null;
-            return;
-        }
-
-        selectedClassPackageId = classPackageByUuid[selectedClassUUID] ?? null;
-    }
-
-    function ensureExpandedPackages() {
-        const selectedPackageId = editorState.selectedPackageUUID.getValue();
-        const selectedClassPackageIdSnapshot = selectedClassPackageId;
-
-        let updated = false;
-        const nextPackages = packages.map(pack => {
-            const packageId = getPackageId(pack);
-            const shouldBeExpanded = pack.userCollapsed
-                ? false
-                : pack.showContents ||
-                  packageId === selectedPackageId ||
-                  packageId === selectedClassPackageIdSnapshot;
-            if (shouldBeExpanded !== pack.showContents) {
-                updated = true;
-                return { ...pack, showContents: shouldBeExpanded };
-            }
-            return pack;
-        });
-
-        if (updated) {
-            packages = nextPackages;
-        }
-    }
-
-    function toggleGraphContentsVisibility(graph) {
-        graph.showContents = !graph.showContents;
-    }
-
-    async function updateReadOnly() {
-        readOnly = await isReadOnly(dataset.label);
-    }
-
-    function updatePackage(updatedPack) {
-        ensureGraphIsExpanded();
-        if (!updatedPack) {
-            return;
-        }
-        const updatedId = getPackageId(updatedPack);
-        packages = packages.map(existingPack =>
-            getPackageId(existingPack) === updatedId
-                ? updatedPack
-                : existingPack,
-        );
-    }
-
-    function ensureGraphIsExpanded() {
-        if (!graph?.showContents) {
-            graph.showContents = true;
-        }
-        onExpandDataset();
-    }
-
-    async function updateUndoRedo() {
-        canUndo = await fetchCanUndo(dataset.label, getUri(graph));
-        canRedo = await fetchCanRedo(dataset.label, getUri(graph));
-    }
-
     function focusGraphContext() {
-        const nextDataset = dataset.label;
-        const nextGraph = getUri(graph);
+        const nextDataset = datasetNavEntry.label;
+        const nextGraph = graphNavEntry.id;
         const previousDataset = editorState.selectedDataset.getValue();
         const previousGraph = editorState.selectedGraph.getValue();
         const graphChanged =
@@ -353,33 +138,22 @@
             editorState.selectedPackageUUID.updateValue(null);
         }
     }
-
-    function triggerReload() {
-        editorState.selectedDataset.trigger();
-        editorState.selectedGraph.trigger();
-        editorState.selectedClassUUID.trigger();
-        forceReloadTrigger.trigger();
-    }
 </script>
 
-<div
-    class={`flex w-full flex-col items-stretch gap-[0.1rem] ${packagesLoading ? "opacity-70" : ""}`}
->
+<div class={`flex w-full flex-col items-stretch gap-[0.1rem]`}>
     <ContextMenu.Root>
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
                 level={2}
-                label={graph.uri.suffix}
+                label={graphNavEntry.label}
                 icon={faDiagramProject}
-                hasChildren={packages.length > 0}
-                expanded={graph.showContents}
-                isSelected={isSelectedGraph(dataset, graph)}
-                title={graph.uri.suffix}
+                hasChildren={graphNavEntry.children.length > 0}
+                expanded={graphNavEntry.isOpen}
+                isSelected={isGraphSelected}
+                title={graphNavEntry.tooltip}
                 highlightLabel={graphHighlightLabel}
-                onclick={() => {
-                    focusGraphContext();
-                }}
-                onToggle={() => toggleGraphContentsVisibility(graph)}
+                onclick={focusGraphContext}
+                onToggle={() => graphNavEntry.toggle()}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -388,7 +162,7 @@
                     focusGraphContext();
                     showNewPackageDialog = true;
                 }}
-                disabled={readOnly}
+                disabled={readonly}
                 faIcon={faPlus}
             >
                 New Package
@@ -397,11 +171,11 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    undo(dataset.label, getUri(graph)).then(success => {
-                        if (success) triggerReload();
+                    undo(datasetNavEntry.id, graphNavEntry.id).then(success => {
+                        if (success) forceReloadTrigger.trigger();
                     });
                 }}
-                disabled={readOnly || !canUndo}
+                disabled={readonly || !canUndo}
                 faIcon={faRotateLeft}
             >
                 Undo
@@ -409,16 +183,16 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    redo(dataset.label, getUri(graph)).then(success => {
-                        if (success) triggerReload();
+                    redo(datasetNavEntry.id, graphNavEntry.id).then(success => {
+                        if (success) forceReloadTrigger.trigger();
                     });
                 }}
-                disabled={readOnly || !canRedo}
+                disabled={readonly || !canRedo}
                 faIcon={faRotateRight}
             >
                 Redo
             </ContextMenu.Item.Button>
-            {#if !readOnly}
+            {#if !readonly}
                 <ContextMenu.Separator />
                 {#if ontology}
                     <ContextMenu.Item.Button
@@ -431,8 +205,11 @@
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => {
-                            bec.deleteOntology(dataset.label, getUri(graph));
-                            forceReloadTrigger.trigger();
+                            bec.deleteOntology(
+                                datasetNavEntry.id,
+                                graphNavEntry.id,
+                            );
+                            initialize();
                         }}
                         variant="danger"
                         faIcon={faTrash}
@@ -498,7 +275,7 @@
                             focusGraphContext();
                             showSHACLUploadDialog = true;
                         }}
-                        disabled={readOnly}
+                        disabled={readonly}
                         faIcon={faUpload}
                     >
                         Import
@@ -538,7 +315,7 @@
                     focusGraphContext();
                     showDeleteDialog = true;
                 }}
-                disabled={readOnly}
+                disabled={readonly}
                 faIcon={faTrash}
                 variant="danger"
             >
@@ -546,19 +323,17 @@
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
     </ContextMenu.Root>
-    {#if graph.showContents}
+    {#if graphNavEntry.isOpen}
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each packages as pack (getPackageId(pack))}
+            {#each graphNavEntry.children as packageNavEntry (packageNavEntry.id)}
                 <PackageButton
-                    {dataset}
-                    {graph}
-                    {packages}
-                    {pack}
-                    {prefixes}
-                    classes={classesByPackage[getPackageId(pack)] ?? []}
-                    onPackChange={updatePackage}
+                    {datasetNavEntry}
+                    {graphNavEntry}
+                    {packageNavEntry}
+                    {namespaces}
+                    {readonly}
                 />
             {/each}
         </div>
@@ -567,35 +342,37 @@
 
 <ExportDialog
     bind:showDialog={showExportDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
 />
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
 />
 <CompareDialog
     bind:showDialog={showCompareDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
 />
 <SHACLUploadDialog
     bind:showDialog={showSHACLUploadDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
 />
 <SHACLExportDialog
     bind:showDialog={showSHACLExportDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
 />
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <OntologyDialog
     bind:showDialog={showEditOntologyDialog}
-    graphUri={getUri(graph)}
-    dataset={dataset.label}
+    graphUri={graphNavEntry.id}
+    dataset={datasetNavEntry.id}
+    {namespaces}
     bind:ontology
-    readonly={readOnly}
+    {readonly}
+    onSubmit={initialize}
 />

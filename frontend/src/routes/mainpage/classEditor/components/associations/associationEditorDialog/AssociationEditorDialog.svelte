@@ -21,6 +21,7 @@
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveAssociationToAssociationDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import Direct from "./Direct.svelte";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
@@ -77,6 +78,8 @@
             associations.append(association);
             isNewAssociation = false;
         }
+        association.save();
+        forceReloadTrigger.trigger();
     }
 </script>
 

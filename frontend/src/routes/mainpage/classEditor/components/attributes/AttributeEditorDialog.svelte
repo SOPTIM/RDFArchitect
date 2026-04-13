@@ -26,6 +26,7 @@
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
@@ -88,6 +89,7 @@
             attributes.append(attribute);
             isNewAttribute = false;
         }
+        forceReloadTrigger.trigger();
     }
 </script>
 

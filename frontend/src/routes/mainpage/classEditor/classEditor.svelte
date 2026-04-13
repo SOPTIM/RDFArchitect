@@ -26,7 +26,10 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import {
         getClasses,
@@ -87,6 +90,7 @@
 
     $effect(async () => {
         editorState.selectedClassUUID.subscribe();
+        forceReloadTrigger.subscribe();
         loadingContext = true;
         loadingClass = true;
 
@@ -97,6 +101,7 @@
 
     $effect(async () => {
         editorState.selectedPackageUUID.subscribe();
+        forceReloadTrigger.subscribe();
         isDatasetReadOnly = await isReadOnly(datasetName);
     });
 

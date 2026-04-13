@@ -40,6 +40,7 @@
         graphUri,
         ontology = $bindable(),
         readonly,
+        onSubmit,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -61,7 +62,9 @@
     let disableSubmit = $derived(!hasChanges || !isValid);
 
     async function onOpen() {
-        namespaces = await getNamespaces(dataset);
+        if (!namespaces) {
+            namespaces = await getNamespaces(dataset);
+        }
         if (!ontology) {
             ontologyObject = new ReactiveOntology();
         } else {
@@ -109,7 +112,11 @@
             });
         });
         ontologyObject.save();
-        forceReloadTrigger.trigger();
+        if (onSubmit) {
+            onSubmit();
+        } else {
+            forceReloadTrigger.trigger();
+        }
     }
 
     function discard() {
@@ -152,7 +159,7 @@
     }
 
     function getSubstitutedNamespace(namespace) {
-        const namespaceObj = namespaces.find(p => p?.prefix === namespace);
+        const namespaceObj = namespaces?.find(p => p?.prefix === namespace);
         return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
     }
 </script>

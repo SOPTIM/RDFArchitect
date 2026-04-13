@@ -83,9 +83,6 @@
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
         await bec.replaceNamespaces(datasetName, namespaceDTOs);
-        editorState.selectedDataset.trigger();
-        editorState.selectedGraph.trigger();
-        editorState.selectedClassUUID.trigger();
         forceReloadTrigger.trigger();
     }
 
