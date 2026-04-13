@@ -20,7 +20,7 @@
 
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveAssociationToAssociationDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.svelte.js";
+    import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
 
     import Direct from "./Direct.svelte";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
@@ -48,6 +48,11 @@
         }
     }
 
+    function onClose() {
+        association = null;
+        isNewAssociation = true;
+    }
+
     async function saveAssociation() {
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
@@ -67,20 +72,21 @@
 
         association.uuid.value = result.associationUUIDs.fromUUID;
         association.inverse.uuid.value = result.associationUUIDs.toUUID;
+        association.save();
         if (isNewAssociation) {
             associations.append(association);
             isNewAssociation = false;
         }
-        association.save();
     }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveAssociation}
     discardChanges={() => association.reset()}
-    hasChanges={isNewAssociation || association?.isModified}
+    hasChanges={association?.isModified}
     isValid={association?.isValid}
     size="w-2/3"
     {readonly}

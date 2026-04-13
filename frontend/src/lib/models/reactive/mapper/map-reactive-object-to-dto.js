@@ -14,12 +14,12 @@
  *    limitations under the License.
  *
  */
-import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.svelte.js";
-import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
-import { ReactiveClass } from "$lib/models/reactive/reactive-class.svelte.js";
-import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
-import { ReactiveNamespace } from "$lib/models/reactive/reactive-namespace.svelte.js";
-import { ReactivePackage } from "$lib/models/reactive/reactive-package.svelte.js";
+import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
+import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
+import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
+import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
+import { ReactiveNamespace } from "$lib/models/reactive/models/reactive-namespace.svelte.js";
+import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
 
 /**
  * Maps a ReactiveClass to a class DTO for API submission
@@ -170,7 +170,11 @@ export function mapReactiveAssociationToAssociationDto(
     getClassByUuid,
 ) {
     if (cls instanceof ReactiveClass) {
+        const labelBackup = cls.label.backup;
+        const namespaceBackup = cls.namespace.backup;
         cls = cls.getPlainObject();
+        cls.label = labelBackup;
+        cls.namespace = namespaceBackup;
     }
     if (association instanceof ReactiveAssociation) {
         association = association.getPlainObject();

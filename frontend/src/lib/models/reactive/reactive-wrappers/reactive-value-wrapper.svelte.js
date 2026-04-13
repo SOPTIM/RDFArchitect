@@ -23,7 +23,9 @@ export class ReactiveValueWrapper {
      * @param secondValue - A second optional value that can be used for the violation checks
      */
     constructor(value, violationChecks = []) {
+        let backup = value;
         if (value instanceof ReactiveValueWrapper) {
+            backup = value.backup;
             value = value.value;
         }
         const checks = Array.isArray(violationChecks)
@@ -31,7 +33,7 @@ export class ReactiveValueWrapper {
             : [violationChecks];
         this.violationChecks.push(...checks);
 
-        this.backup = value;
+        this.backup = backup;
         this.value = value;
     }
 
