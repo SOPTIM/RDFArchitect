@@ -26,144 +26,95 @@
         faLock,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount } from "svelte";
+    import { getContext } from "svelte";
 
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { URI } from "$lib/models/dto";
-    import {
-        forceReloadTrigger,
-        editorState,
-    } from "$lib/sharedState.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
-    import DatasetDeleteDialog from "./DatasetDeleteDialog.svelte";
     import GraphSection from "./GraphSection.svelte";
-    import {
-        isSelectedDataset,
-        isSelectedGraph,
-        getUri,
-    } from "./packageNavigationUtils.svelte.js";
+    import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
+    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
 
-    let { dataset } = $props();
+    let { datasetNavEntry } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let graphs = $state([]);
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
     let readonly = $state(false);
-    let prefixes = $state([]);
+    let namespaces = $state([]);
+
+    let wasDatasetSelected = false;
+
+    const isDatasetSelected = $derived(
+        isSelectedDataset(datasetNavEntry.label),
+    );
 
     $effect(async () => {
-        forceReloadTrigger.subscribe();
-        readonly = dataset ? await isReadOnly(dataset.label) : false;
-        await fetchGraphs();
-        await updateReadonly();
+        getContext("packageNavigation").reloadTrigger?.subscribe();
+        readonly = await isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
-
-    onMount(() => {
-        updateReadonly();
-        fetchNamespaces();
-        fetchGraphs();
+    $effect(() => {
+        if (isDatasetSelected && !wasDatasetSelected) {
+            datasetNavEntry.parent?.open();
+        }
+        wasDatasetSelected = isDatasetSelected;
     });
 
-    async function getGraphNames(datasetName) {
-        const res = await bec.getGraphNames(datasetName);
-        return await res.json();
-    }
-
-    async function fetchGraphs() {
-        let graphUris = await getGraphNames(dataset.label);
-        let newGraphs = [];
-        const previous = graphs ?? [];
-
-        for (let graphUri of graphUris) {
-            const uriString = getUri(graphUri);
-            const prev = previous.find(g => getUri(g.uri) === uriString);
-            const keepExpanded = prev?.showContents ?? false;
-
-            newGraphs.push({
-                uri: new URI(graphUri),
-                showContents:
-                    keepExpanded || isSelectedGraph(dataset.label, graphUri),
-            });
-        }
-        newGraphs = newGraphs.sort((a, b) =>
-            a.uri.suffix.localeCompare(b.uri.suffix),
-        );
-        graphs = newGraphs;
-    }
-
     async function fetchNamespaces() {
-        if (!dataset?.label) {
-            prefixes = [];
+        if (!datasetNavEntry?.label) {
+            namespaces = [];
             return;
         }
         try {
-            prefixes = await getNamespaces(dataset.label);
+            namespaces = await getNamespaces(datasetNavEntry.label);
         } catch (err) {
-            console.error("Failed to load prefixes:", err);
-            prefixes = [];
+            console.error("Failed to load namespaces:", err);
+            namespaces = [];
         }
     }
 
     function selectDataset() {
-        const nextDataset = dataset.label;
-        const previousDataset = editorState.selectedDataset.getValue();
-        const datasetChanged = previousDataset !== nextDataset;
-
-        editorState.selectedDataset.updateValue(nextDataset);
-        if (datasetChanged) {
-            editorState.selectedGraph.updateValue(null);
-            editorState.selectedPackageUUID.updateValue(null);
+        if (editorState.selectedDataset.getValue() === datasetNavEntry.label) {
+            return;
         }
-    }
-
-    function toggleDatasetContentsVisibility(dataset) {
-        dataset.showContents = !dataset.showContents;
-    }
-
-    function ensureDatasetExpanded() {
-        if (!dataset?.showContents) {
-            dataset.showContents = true;
-        }
-    }
-
-    async function updateReadonly() {
-        readonly = await isReadOnly(dataset.label);
+        editorState.selectedGraph.updateValue(null);
+        editorState.selectedPackageUUID.updateValue(null);
+        editorState.selectedDataset.updateValue(datasetNavEntry.label);
     }
 
     async function enableEditing() {
-        if (!dataset?.label || !readonly) {
+        if (!datasetNavEntry?.id || !readonly) {
             return;
         }
-        await bec.enableEditing(dataset.label);
-        await updateReadonly();
-        forceReloadTrigger.trigger();
-        editorState.selectedPackageUUID.trigger();
-        editorState.selectedClassUUID.trigger();
+
+        await bec.enableEditing(datasetNavEntry.id).then(() => {
+            readonly = false;
+            forceReloadTrigger.trigger();
+        });
     }
 
     async function disableEditing() {
-        if (!dataset?.label || readonly) {
+        if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        await bec.disableEditing(dataset.label);
-        await updateReadonly();
-        forceReloadTrigger.trigger();
-        editorState.selectedPackageUUID.trigger();
-        editorState.selectedClassUUID.trigger();
+        await bec.disableEditing(datasetNavEntry.id).then(() => {
+            readonly = true;
+            forceReloadTrigger.trigger();
+        });
     }
 </script>
 
@@ -172,18 +123,16 @@
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
                 level={1}
-                label={dataset.label}
+                label={datasetNavEntry.label}
                 icon={faDatabase}
-                hasChildren={graphs.length > 0}
-                expanded={dataset.showContents}
-                isSelected={isSelectedDataset(dataset)}
-                title={dataset.label}
+                hasChildren={datasetNavEntry.children?.length > 0}
+                expanded={datasetNavEntry.isOpen}
+                isSelected={isDatasetSelected}
+                title={datasetNavEntry.tooltip}
                 badgeText={readonly ? "Read-only" : ""}
                 badgeVariant="readonly"
-                onclick={() => {
-                    selectDataset();
-                }}
-                onToggle={() => toggleDatasetContentsVisibility(dataset)}
+                onclick={selectDataset}
+                onToggle={() => datasetNavEntry.toggle()}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -258,16 +207,16 @@
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
     </ContextMenu.Root>
-    {#if dataset.showContents}
+    {#if datasetNavEntry.isOpen}
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each graphs as graph}
+            {#each datasetNavEntry.children as graphNavEntry}
                 <GraphSection
-                    {dataset}
-                    {graph}
-                    onExpandDataset={ensureDatasetExpanded}
-                    {prefixes}
+                    {datasetNavEntry}
+                    {graphNavEntry}
+                    {namespaces}
+                    {readonly}
                 />
             {/each}
         </div>
@@ -276,18 +225,18 @@
 
 <ImportDialog
     bind:showDialog={showImportDialog}
-    lockedDatasetName={dataset.label}
+    lockedDatasetName={datasetNavEntry.label}
 />
 <NewGraphDialog
     bind:showDialog={showNewGraphDialog}
-    lockedDatasetName={dataset.label}
+    lockedDatasetName={datasetNavEntry.label}
 />
 <SnapshotDialog
     bind:showDialog={showSnapshotDialog}
-    lockedDatasetName={dataset.label}
+    lockedDatasetName={datasetNavEntry.label}
 />
 <NamespacesDialog bind:showDialog={showNamespacesDialog} />
 <DatasetDeleteDialog
     bind:showDialog={showDatasetDeleteDialog}
-    datasetName={dataset.label}
+    datasetName={datasetNavEntry.label}
 />

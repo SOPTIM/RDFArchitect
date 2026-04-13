@@ -24,8 +24,9 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
@@ -51,6 +52,11 @@
         }
     }
 
+    function onClose() {
+        attribute = null;
+        isNewAttribute = true;
+    }
+
     function getDatatypeLabelByUri(uri) {
         const datatype = classEditorContext.getDatatypeByUri(uri);
         if (!datatype) {
@@ -63,8 +69,8 @@
         const apiAttribute = mapReactiveAttributeToAttributeDto(
             attribute,
             classEditorContext.getDatatypeByUri,
-            classEditorContext.reactiveClass.namespace.value +
-                classEditorContext.reactiveClass.label.value,
+            classEditorContext.reactiveClass.namespace.backup +
+                classEditorContext.reactiveClass.label.backup,
         );
         const result = await saveApiAttributeToBackend(
             classEditorContext.datasetName,
@@ -73,17 +79,17 @@
             apiAttribute,
             isNewAttribute,
         );
-
         if (!result.ok) {
             return;
         }
 
         attribute.uuid.value = result.attributeUUID;
+        attribute.save();
         if (isNewAttribute) {
             attributes.append(attribute);
             isNewAttribute = false;
         }
-        attribute.save();
+        forceReloadTrigger.trigger();
     }
 
     function discardChanges() {
@@ -98,9 +104,10 @@
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveAttribute}
-    discardChanges={() => discardChanges()}
-    hasChanges={isNewAttribute || attribute?.isModified}
+    discardChanges={() => attribute.reset()}
+    hasChanges={attribute?.isModified}
     isValid={attribute?.isValid}
     title={isNewAttribute
         ? "Create new attribute"
