@@ -20,7 +20,7 @@ package org.rdfarchitect.api.dto.delete.relations;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-import org.rdfarchitect.api.dto.delete.DeleteActions;
+import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceIdentifier;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
 
@@ -40,7 +40,7 @@ public class AffectedResource {
 
     private AffectedResourceReason reason;
 
-    private List<DeleteActions> actions = new ArrayList<>();
+    private List<DeleteAction> actions = new ArrayList<>();
 
     private List<AffectedResource> children = new ArrayList<>();
 

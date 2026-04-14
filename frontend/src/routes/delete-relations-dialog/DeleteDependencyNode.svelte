@@ -34,7 +34,12 @@
         node,
         selectedActions,
         onSelectAction,
-        availableActions = ["DELETE", "KEEP", "REMOVE_REFERENCE"],
+        availableActions = [
+            "DELETE",
+            "KEEP",
+            "REMOVE_PACKAGE_REFERENCE",
+            "REMOVE_SUBCLASS_REFERENCE",
+        ],
         depth = 0,
         isRoot = false,
         disabled = false,
@@ -64,21 +69,28 @@
             tooltip:
                 "Keep this resource and its reference, even if the referenced target is deleted",
         },
-        REMOVE_REFERENCE: {
+        REMOVE_PACKAGE_REFERENCE: {
             icon: faLinkSlash,
             text: "Remove ref",
             variant: "default",
             width: "w-30",
-            tooltip:
-                "Keep this resource but remove its reference to the deleted target",
+            tooltip: "Keep this resource but remove its package reference",
+        },
+        REMOVE_SUBCLASS_REFERENCE: {
+            icon: faLinkSlash,
+            text: "Remove ref",
+            variant: "default",
+            width: "w-30",
+            tooltip: "Keep this resource but remove its inheritance reference",
         },
     };
 
     let expanded = $state(isRoot);
 
     let hasChildren = $derived(node.children?.length > 0);
+    let actionKey = $derived(`${node.resourceIdentifier.uuid}::${node.reason}`);
     let currentAction = $derived(
-        selectedActions.get(node.resourceIdentifier.uuid) ?? node.actions[0],
+        selectedActions.get(actionKey) ?? node.actions[0],
     );
     let typeBadge = $derived(node.type);
     let isAssociation = $derived(typeBadge === "ASSOCIATION");
@@ -93,7 +105,7 @@
     }
 
     function selectAction(action) {
-        onSelectAction(node.resourceIdentifier.uuid, action);
+        onSelectAction(actionKey, action);
     }
 </script>
 

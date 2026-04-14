@@ -38,7 +38,7 @@
 
     let deleteDependencies = $state(null);
 
-    /** @type {Map<string, string>} uuid -> selected action */
+    /** @type {Map<string, string>} "uuid::reason" -> selected action */
     let selectedActions = $state(new Map());
 
     let type = $derived(deleteDependencies?.type.toLowerCase());
@@ -46,9 +46,12 @@
     /** Ordered list of actions that exist anywhere in the tree */
     let availableActions = $derived(
         deleteDependencies
-            ? ["DELETE", "KEEP", "REMOVE_REFERENCE"].filter(a =>
-                  collectActions(deleteDependencies).has(a),
-              )
+            ? [
+                  "DELETE",
+                  "KEEP",
+                  "REMOVE_PACKAGE_REFERENCE",
+                  "REMOVE_SUBCLASS_REFERENCE",
+              ].filter(a => collectActions(deleteDependencies).has(a))
             : [],
     );
 
@@ -80,8 +83,9 @@
      * @param {object} node
      */
     function initSelectedActions(node) {
+        const key = `${node.resourceIdentifier.uuid}::${node.reason}`;
         const defaultAction = getDefaultAction(node);
-        selectedActions.set(node.resourceIdentifier.uuid, defaultAction);
+        selectedActions.set(key, defaultAction);
         if (node.children) {
             for (const child of node.children) {
                 initSelectedActions(child);
@@ -124,9 +128,8 @@
      */
     function buildPayload(node, parentActive = true, result = []) {
         if (!parentActive) return result;
-        const action =
-            selectedActions.get(node.resourceIdentifier.uuid) ??
-            node.actions[0];
+        const key = `${node.resourceIdentifier.uuid}::${node.reason}`;
+        const action = selectedActions.get(key) ?? node.actions[0];
         result.push({ uuid: node.resourceIdentifier.uuid, action });
         if (node.children) {
             for (const child of node.children) {
@@ -140,11 +143,16 @@
         if (!deleteDependencies) return;
         const payload = buildPayload(deleteDependencies);
         console.log("Submit delete with selections:", payload);
-        // TODO: await bec.submitDelete(datasetName, graphUri, payload);
+        let res = await bec.deleteResources(datasetName, graphUri, payload);
+        if (!res.ok) {
+            console.error("Failed to delete resources:", await res.text());
+        } else {
+            console.log("Successfully submitted delete request");
+        }
     }
 
-    function onSelectAction(uuid, action) {
-        selectedActions.set(uuid, action);
+    function onSelectAction(key, action) {
+        selectedActions.set(key, action);
         selectedActions = new Map(selectedActions);
     }
 

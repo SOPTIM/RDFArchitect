@@ -18,10 +18,11 @@
 package org.rdfarchitect.services.delete;
 
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
+import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;
 
 public interface DeleteResourcesUseCase {
 
-    void deleteResources(String graphIdentifier, List<ResourceDeleteRequest> deleteRequests);
+    void deleteResources(GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests);
 }

@@ -26,4 +26,5 @@ public class ResourceDeleteRequest {
 
     private UUID uuid;
 
+    private DeleteAction action;
 }

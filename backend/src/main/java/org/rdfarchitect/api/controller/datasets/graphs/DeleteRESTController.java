@@ -21,26 +21,36 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
+import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
-import org.rdfarchitect.services.delete.FindOnDeleteRelationsUseCase;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.services.delete.DeleteResourcesUseCase;
+import org.rdfarchitect.services.delete.FindOnDeleteRelationsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/uuid/{uuid}/deletion-impact")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}")
 @RequiredArgsConstructor
-public class DeletionImpactRESTController {
+public class DeleteRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(DeletionImpactRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(DeleteRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final FindOnDeleteRelationsUseCase findOnDeleteRelationsUseCase;
+    private final DeleteResourcesUseCase deleteResourcesUseCase;
 
     //TODO: anpassen der beschreibung
     @Operation(
@@ -51,7 +61,7 @@ public class DeletionImpactRESTController {
                         @ApiResponse(responseCode = "200")
               }
     )
-    @GetMapping
+    @GetMapping("/uuid/{uuid}/deletion-impact")
     public AffectedResource getDeletionImpact(
               @Parameter(description = "The name/url of the inquirer.")
               @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
@@ -73,5 +83,38 @@ public class DeletionImpactRESTController {
 
         logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".", datasetName, graphURI, uuid, originURL);
         return resultObj;
+    }
+
+    @Operation(
+              summary = "Deletes resources",
+              description = "Delete a list of resources.",
+              tags = {"graph"},
+              responses = {
+                        @ApiResponse(responseCode = "200")
+              }
+    )
+    @PostMapping("/delete-requests")
+    public String deleteResources(
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @PathVariable
+              String graphURI,
+              @Parameter(description = "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")
+              @RequestBody
+              List<ResourceDeleteRequest> deleteRequests
+                                 ) {
+        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".", datasetName, graphURI, originURL);
+
+        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+
+        deleteResourcesUseCase.deleteResources(new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
+
+        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".", datasetName, graphURI, originURL);
+        return "success";
     }
 }

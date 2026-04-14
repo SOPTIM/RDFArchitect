@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.api.dto.delete;
 
-public enum DeleteActions {
+public enum DeleteAction {
 
     /**
      * Delete the affected resource entirely.
@@ -34,23 +34,14 @@ public enum DeleteActions {
     KEEP,
 
     /**
-     * Remove the reference to the deleted resource without
-     * deleting the affected resource itself.
-     * E.g. a class extends a deleted class — remove the
-     * inheritance relationship but keep the class.
+     * Remove the {@code cims:belongsToCategory} triple from a class
+     * whose package is being deleted.
      */
-    REMOVE_REFERENCE,
-
-    //nur falls delete von enum entries implementiert wird, aber eher unwahrscheinlich
-    /**
-     * Unset the default value of an attribute when the
-     * enum entry used as its default value is deleted.
-     */
-    UNSET_DEFAULT_VALUE,
+    REMOVE_PACKAGE_REFERENCE,
 
     /**
-     * Unset the fixed value of an attribute when the
-     * enum entry used as its fixed value is deleted.
+     * Remove the {@code rdfs:subClassOf} triple from a class
+     * whose parent class is being deleted.
      */
-    UNSET_FIXED_VALUE
+    REMOVE_SUBCLASS_REFERENCE;
 }
