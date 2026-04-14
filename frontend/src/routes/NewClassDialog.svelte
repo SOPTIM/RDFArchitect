@@ -98,19 +98,19 @@
     $effect(async () => {
         if (datasetName && graphURI) {
             compareClasses = await getClasses(datasetName, graphURI);
-            untrack(
-                () =>
-                    (className = new ReactiveValueWrapper(
-                        className.value,
-                        label =>
-                            isInvalidClassLabel(
-                                label,
-                                classURINamespace.value,
-                                compareClasses,
-                            ),
-                    )),
-            );
+        } else {
+            compareClasses = [];
         }
+        untrack(
+            () =>
+                (className = new ReactiveValueWrapper(className.value, label =>
+                    isInvalidClassLabel(
+                        label,
+                        classURINamespace.value,
+                        compareClasses,
+                    ),
+                )),
+        );
     });
 
     async function onOpen() {

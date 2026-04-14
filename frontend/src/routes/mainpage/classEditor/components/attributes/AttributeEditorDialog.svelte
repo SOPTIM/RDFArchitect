@@ -57,6 +57,7 @@
             attributes.remove(attribute);
         }
         isNewAttribute = true;
+        attribute = null;
     }
 
     function getDatatypeLabelByUri(uri) {
