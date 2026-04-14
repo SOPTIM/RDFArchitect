@@ -207,6 +207,16 @@ export class BackendConnection {
         });
     }
 
+    async deleteResources(datasetName, graphURI, deleteRequests) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/delete-requests`;
+        return await fetch(url, {
+            method: "POST",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(deleteRequests),
+            credentials: "include",
+        });
+    }
+
     async postEnumEntry(datasetName, graphURI, classUUID, enumEntry) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries`;
         return await fetch(url, {

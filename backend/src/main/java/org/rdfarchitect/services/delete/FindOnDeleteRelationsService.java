@@ -25,7 +25,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.api.dto.delete.DeleteActions;
+import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceIdentifier;
 import org.rdfarchitect.api.dto.delete.relations.AffectedAssociation;
 import org.rdfarchitect.api.dto.delete.relations.AffectedOwnedResource;
@@ -56,7 +56,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     public AffectedResource getDeleteRelations(GraphIdentifier graphIdentifier, UUID uuid) {
         var model = ModelFactory.createModelForGraph(getCopyOfDatabaseGraph(graphIdentifier));
         var resourceType = CIMResourceTypeIdentifyingUtils.getType(model, uuid);
-        var defaultActions = List.of(DeleteActions.DELETE);
+        var defaultActions = List.of(DeleteAction.DELETE);
         var reason = AffectedResourceReason.DELETION_REQUESTED_BY_USER;
         return switch (resourceType) {
             case PACKAGE -> findAffectedRelationsForPackage(model, uuid, reason, defaultActions);
@@ -74,10 +74,10 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
         };
     }
 
-    private AffectedResource findAffectedRelationsForPackage(Model model, UUID uuid, AffectedResourceReason reason, List<DeleteActions> deleteActions) {
+    private AffectedResource findAffectedRelationsForPackage(Model model, UUID uuid, AffectedResourceReason reason, List<DeleteAction> deleteActions) {
         var classesInPackage = listClassesInPackage(model, uuid);
         var affectedResources = new ArrayList<AffectedResource>();
-        var clsDeleteActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP, DeleteActions.REMOVE_REFERENCE);
+        var clsDeleteActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP, DeleteAction.REMOVE_PACKAGE_REFERENCE);
         for (var cls : classesInPackage) {
             var clsUuid = findUuidForResource(cls);
             var affectedClassResource = findAffectedRelationsForClass(model, clsUuid, AffectedResourceReason.CONTAINED_IN_PACKAGE, clsDeleteActions);
@@ -89,7 +89,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     }
 
     private AffectedResource findAffectedRelationsForClass(Model model, UUID uuid,
-                                                           AffectedResourceReason reason, List<DeleteActions> deleteActions) {
+                                                           AffectedResourceReason reason, List<DeleteAction> deleteActions) {
         var classResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
 
         var classResourceId = createResourceIdentifier(model, uuid);
@@ -107,7 +107,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     }
 
     private List<AffectedResource> findAffectedAttributesForClass(Resource classResource, ResourceIdentifier classResourceId) {
-        var childActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP);
+        var childActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP);
         return listAttributesWithClassAsDatatype(classResource).stream()
                                                                .map(attr -> new AffectedOwnedResource(createResourceIdentifier(attr),
                                                                                                       CimResourceType.ATTRIBUTE,
@@ -118,24 +118,24 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     }
 
     private List<AffectedResource> findAffectedAssociationsForClass(Resource classResource, ResourceIdentifier classResourceId) {
-        var childActions = List.of(DeleteActions.DELETE, DeleteActions.KEEP);
+        var childActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP);
         return listAssociationsReferencingClass(classResource).stream()
                                                               .map(assoc -> new AffectedAssociation(createResourceIdentifier(assoc),
                                                                                                     CimResourceType.ASSOCIATION,
                                                                                                     AffectedResourceReason.REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
                                                                                                     classResourceId,
                                                                                                     getAssociationTarget(assoc)
-                                                                                                    )
+                                                              )
                                                                         .setActions(childActions))
                                                               .toList();
     }
 
     private ResourceIdentifier getAssociationTarget(Resource associationResource) {
         var rangeStatement = associationResource.getProperty(RDFS.range);
-        if(rangeStatement == null){
+        if (rangeStatement == null) {
             throw new IllegalStateException("Association " + associationResource + " does not have a range.");
         }
-        if(rangeStatement.getObject().isLiteral()){
+        if (rangeStatement.getObject().isLiteral()) {
             throw new IllegalStateException("Association " + associationResource + " has a literal as range, which is not supported.");
         }
         var rangeResource = rangeStatement.getObject().asResource();
@@ -143,7 +143,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     }
 
     private List<AffectedResource> findAffectedChildClassesForClass(Resource classResource) {
-        var childClassActions = List.of(DeleteActions.KEEP, DeleteActions.REMOVE_REFERENCE);
+        var childClassActions = List.of(DeleteAction.KEEP, DeleteAction.REMOVE_SUBCLASS_REFERENCE);
         return listDirectlyDescendingClasses(classResource).stream()
                                                            .map(childClass -> new AffectedResource(createResourceIdentifier(childClass),
                                                                                                    CimResourceType.CLASS,
