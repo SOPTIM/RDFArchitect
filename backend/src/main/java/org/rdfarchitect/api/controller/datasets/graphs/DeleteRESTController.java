@@ -52,10 +52,9 @@ public class DeleteRESTController {
     private final FindOnDeleteRelationsUseCase findOnDeleteRelationsUseCase;
     private final DeleteResourcesUseCase deleteResourcesUseCase;
 
-    //TODO: anpassen der beschreibung
     @Operation(
-              summary = "resolve iri identifier",
-              description = "Resolve iri identifier of a cim resource to its uuid.",
+              summary = "Get deletion impact",
+              description = "Returns a tree of affected resources for deleting the resource with the given UUID.",
               tags = {"graph"},
               responses = {
                         @ApiResponse(responseCode = "200")
@@ -86,8 +85,8 @@ public class DeleteRESTController {
     }
 
     @Operation(
-              summary = "Deletes resources",
-              description = "Delete a list of resources.",
+              summary = "Delete resources",
+              description = "Processes a list of delete requests, each specifying a resource UUID and the desired action.",
               tags = {"graph"},
               responses = {
                         @ApiResponse(responseCode = "200")

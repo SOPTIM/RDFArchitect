@@ -24,6 +24,7 @@
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
@@ -148,6 +149,7 @@
             console.error("Failed to delete resources:", await res.text());
         } else {
             console.log("Successfully submitted delete request");
+            forceReloadTrigger.trigger();
         }
     }
 
