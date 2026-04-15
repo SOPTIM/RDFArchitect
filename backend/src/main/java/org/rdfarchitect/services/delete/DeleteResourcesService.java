@@ -162,7 +162,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
 
     /**
      * Deletes a class and all its owned resources (attributes, associations, and enum entries).
-     * If the action is {@link DeleteAction#REMOVE_REFERENCE}, only the {@code rdfs:subClassOf}
+     * If the action is {@link DeleteAction#REMOVE_SUBCLASS_REFERENCE}, only the {@code rdfs:subClassOf}
      * triple is removed, leaving the class itself intact.
      */
     private void deleteClass(Model model, ResourceDeleteRequest deleteRequest) {
