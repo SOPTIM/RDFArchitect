@@ -15,17 +15,27 @@
   -
   -->
 <script>
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { v4 as uuid } from "uuid";
 
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     let { label } = $props();
 
-    const readonly = getContext("classEditor").readonly;
     const id = uuid();
+
+    const classEditorContext = getContext("classEditor");
+    let readonly = $derived(classEditorContext.readonly);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 </script>
 
 <tr>

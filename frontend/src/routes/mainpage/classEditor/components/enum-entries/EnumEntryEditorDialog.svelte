@@ -23,8 +23,9 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveEnumEntryToEnumEntryDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
@@ -48,51 +49,54 @@
         }
     }
 
+    function onClose() {
+        enumEntry = null;
+        isNewEnumEntry = true;
+    }
+
     async function saveEnumEntry() {
         const apiEnumEntry = mapReactiveEnumEntryToEnumEntryDto(
             enumEntry,
-            classEditorContext.reactiveClass.namespace.value +
-                classEditorContext.reactiveClass.label.value,
+            classEditorContext.reactiveClass.namespace.backup +
+                classEditorContext.reactiveClass.label.backup,
         );
-        saveApiEnumEntryToBackend(
+        const result = await saveApiEnumEntryToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
             classEditorContext.reactiveClass.uuid.value,
             apiEnumEntry,
             isNewEnumEntry,
-        ).then(res => {
-            if (res.ok) {
-                if (isNewEnumEntry) {
-                    enumEntries.append(enumEntry);
-                }
-                enumEntry.save();
-            }
-        });
+        );
+        if (!result.ok) {
+            return;
+        }
+
+        enumEntry.uuid.value = result.enumEntryUUID;
+        enumEntry.save();
+        if (isNewEnumEntry) {
+            enumEntries.append(enumEntry);
+            isNewEnumEntry = false;
+        }
+        enumEntry.save();
+        forceReloadTrigger.trigger();
     }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveEnumEntry}
     discardChanges={() => enumEntry.reset()}
-    hasChanges={isNewEnumEntry || enumEntry?.isModified}
+    hasChanges={enumEntry?.isModified}
     isValid={enumEntry?.isValid}
     {readonly}
+    title={isNewEnumEntry
+        ? "Create Enum Entry"
+        : `Edit Enum Entry: ${enumEntry.label.backup}`}
 >
     {#if enumEntry && classEditorContext && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
-            <!-- Title -->
-            <div>
-                <span class="text-lg">
-                    {#if isNewEnumEntry}
-                        Creating new enum entry
-                    {:else}
-                        Editing enum entry <b>{enumEntry.label.backup}</b>
-                    {/if}
-                </span>
-            </div>
-
             <!-- UUID -->
             <div>
                 <span class="mb-1">UUID:</span>

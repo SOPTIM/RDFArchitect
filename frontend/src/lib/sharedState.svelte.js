@@ -15,6 +15,8 @@
  *
  */
 
+import { writable } from "svelte/store";
+
 /**
  * StateValuePair allows us to create a state with a value and a trigger,
  * we can subscribe to the trigger or alternatively subscribe to only value changes.
@@ -34,6 +36,7 @@ import { SimpleTrigger, StateValuePair } from "./statePrimitives.svelte.js";
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClassUUID: StateValuePair<string | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
+ *  selectedContext: StateValuePair<string | null>,
  *  reset: () => void
  * }}
  */
@@ -45,6 +48,7 @@ export const editorState = {
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
     focusedClassUUID: new StateValuePair(),
+    selectedContext: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -54,6 +58,7 @@ export const editorState = {
         this.selectedClassGraph.updateValue(null);
         this.selectedClassUUID.updateValue(null);
         this.focusedClassUUID.updateValue(null);
+        this.selectedContext.updateValue(null);
     },
 };
 
@@ -90,3 +95,13 @@ export const forceReloadTrigger = new SimpleTrigger();
 export const compareState = {
     changeList: new StateValuePair(null),
 };
+
+export const migrationState = writable({
+    compareMode: null,
+    datasetA: null,
+    graphA: null,
+    graphB: null,
+    datasetB: null,
+    fileA: null,
+    fileB: null,
+});

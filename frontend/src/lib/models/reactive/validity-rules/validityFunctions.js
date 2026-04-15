@@ -36,6 +36,24 @@ export function isInvalidLabel(label) {
     return violations;
 }
 
+export function isInvalidClassLabel(label, namespace, compareClasses) {
+    const violations = [];
+    if (!label || label.trim() === "") {
+        violations.push("must not be empty");
+    }
+    if (typeof namespace === "string" && namespace.trim() !== "") {
+        if (
+            compareClasses &&
+            compareClasses.filter(
+                c => c.label === label && c.prefix === namespace,
+            ).length > 0
+        ) {
+            violations.push("must be unique");
+        }
+    }
+    return violations;
+}
+
 export function isInvalidNamespace(namespace) {
     const violations = [];
     if (!namespace || namespace.trim() === "") {
@@ -121,6 +139,21 @@ export function hasUniqueLabel(label, reactiveObjectsArray) {
     return violations;
 }
 
+export function hasUniqueIRI(label, namespace, compareArray) {
+    const violations = [];
+    if (typeof namespace === "string" && namespace.trim() !== "") {
+        if (
+            compareArray &&
+            compareArray.filter(
+                c => c.label.value === label && c.namespace.value === namespace,
+            ).length > 1
+        ) {
+            violations.push("must be unique");
+        }
+    }
+    return violations;
+}
+
 export function isInvalidNamespaceIri(iri) {
     const violations = [];
     if (!iri || iri.trim() === "") {
@@ -140,6 +173,7 @@ export function isInvalidNamespaceIri(iri) {
 
 export function isInvalidNamespacePrefix(prefix) {
     const violations = [];
+    if (!prefix) prefix = "";
     const normalizedNsPrefix = prefix.endsWith(":")
         ? prefix.slice(0, -1)
         : prefix;

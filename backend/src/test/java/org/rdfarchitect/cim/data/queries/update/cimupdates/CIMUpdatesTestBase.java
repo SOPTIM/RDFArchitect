@@ -26,7 +26,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
+import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.mock.web.MockMultipartFile;
@@ -137,7 +137,7 @@ public class CIMUpdatesTestBase {
      * Use this method to execute write actions per Update class by bulding the UpdateBuilder
      */
     protected void executeUpdateOnTestGraph(Update update) {
-        InMemorySparqlExecutioner.executeSingleUpdate(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), update, graphIdentifier.getGraphUri());
+        InMemorySparqlExecutor.executeSingleUpdate(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), update, graphIdentifier.getGraphUri());
     }
 
     /**

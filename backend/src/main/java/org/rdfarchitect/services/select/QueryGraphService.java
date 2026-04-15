@@ -29,24 +29,24 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
-import org.rdfarchitect.cim.CIMQuerySolutionParser;
-import org.rdfarchitect.cim.data.CIMObjectFactory;
-import org.rdfarchitect.cim.data.dto.CIMPackage;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.queries.CIMQueryVars;
-import org.rdfarchitect.cim.queries.select.CIMBaseQueryBuilder;
-import org.rdfarchitect.cim.queries.select.CIMQueryBuilder;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.cim.rdf.resources.RDFA;
-import org.rdfarchitect.cim.umladapted.CIMUMLObjectFactory;
-import org.rdfarchitect.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutioner;
+import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
+import org.rdfarchitect.models.cim.data.CIMObjectFactory;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.queries.CIMQueryVars;
+import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
+import org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
+import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.rdf.model.wrapper.CimSortedModel;
@@ -60,7 +60,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.rdfarchitect.cim.queries.select.CIMQueryBuilder.Mode.*;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.*;
 import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.*;
 
 @Service
@@ -94,7 +94,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -126,7 +126,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         return CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -151,7 +151,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -200,7 +200,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
         //execute package query
         var internalPackageQueryResultSet =
-                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier)
+                  InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier)
                                                                            .getRdfGraph(), internalPackageQuery, graphIdentifier.getGraphUri());
 
         //format results
@@ -234,7 +234,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
         //execute external package query
         var externalPackageQueryResultSet =
-                  InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier)
+                  InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier)
                                                                            .getRdfGraph(), externalPackageQuery, graphIdentifier.getGraphUri());
 
         var cimExternalPackageList = CIMObjectFactory.createExternalCIMPackageList(externalPackageQueryResultSet);
@@ -260,7 +260,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
                   .build();
 
         //execute query
-        var queryResultSet = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+        var queryResultSet = InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -284,7 +284,7 @@ public class QueryGraphService implements GetClassListUseCase, ListDatatypesUseC
 
 
         //execute query
-        var queryResult = InMemorySparqlExecutioner.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
+        var queryResult = InMemorySparqlExecutor.executeSingleQuery(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), query, graphIdentifier.getGraphUri());
 
         //format results
         List<CIMSStereotype> resultList = new ArrayList<>();

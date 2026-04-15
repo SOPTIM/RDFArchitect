@@ -26,86 +26,73 @@
         faTrash,
         faEye,
     } from "@fortawesome/free-solid-svg-icons";
-    import { onMount } from "svelte";
+    import { getContext } from "svelte";
 
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
     import PackageDeleteDialog from "./PackageDeleteDialog.svelte";
-    import {
-        isSelectedPackage,
-        getUri,
-        getPackageId,
-    } from "./packageNavigationUtils.svelte.js";
+    import { isSelectedPackage } from "./packageNavigationUtils.svelte.js";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
 
     let {
-        dataset,
-        graph,
-        pack,
-        packages = [],
-        classes = [],
-        prefixes = [],
-        onPackChange = () => {},
+        datasetNavEntry,
+        graphNavEntry,
+        packageNavEntry,
+        namespaces = [],
+        readonly,
     } = $props();
-    let readOnly = $state(false);
     let showNewClassDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeletePackageDialog = $state(false);
 
+    let wasPackageSelected = false;
+
+    let isProtectedPackage = $derived(
+        packageNavEntry?.id === "default" || packageNavEntry?.data.external,
+    );
     // Ensure selection-dependent UI updates without remounting the component.
     const selectionTrigger = $derived([
         editorState.selectedDataset.subscribe(),
         editorState.selectedGraph.subscribe(),
         editorState.selectedPackageUUID.subscribe(),
-        forceReloadTrigger.subscribe(),
+        getContext("packageNavigation").reloadTrigger?.subscribe(),
     ]);
 
-    let disablePackageEditing = $derived(
-        pack?.label === "default" || pack?.external,
-    );
-    let disablePackageDelete = $derived(
-        pack?.label === "default" || pack?.external,
-    );
     let isPackageSelected = $derived(
-        selectionTrigger && isSelectedPackage(dataset, graph, pack),
+        selectionTrigger &&
+            isSelectedPackage(
+                datasetNavEntry.id,
+                graphNavEntry.id,
+                packageNavEntry.id,
+            ),
     );
-    let packageIcon = $derived(pack.showContents ? faFolderOpen : faFolder);
+
     let packageHighlightLabel = $derived(
-        shortenIri(
-            prefixes,
-            pack?.prefix ? `${pack.prefix}${pack.label}` : pack?.label,
-        ),
+        shortenIri(namespaces, packageNavEntry.tooltip),
     );
-    const packageActionLabel = $derived(readOnly ? "View" : "Edit");
-    const packageActionIcon = $derived(readOnly ? faEye : faPencil);
+    const packageActionLabel = $derived(readonly ? "View" : "Edit");
+    const packageActionIcon = $derived(readonly ? faEye : faPencil);
     const disablePackageAction = $derived(
-        readOnly ? false : disablePackageEditing,
+        readonly ? false : isProtectedPackage,
     );
-    const hasClasses = $derived(classes?.length > 0);
-
-    $effect(async () => {
-        forceReloadTrigger.subscribe();
-        await updateReadOnly();
-    });
-
-    onMount(async () => {
-        await updateReadOnly();
+    const hasClasses = $derived(packageNavEntry?.children?.length > 0);
+    $effect(() => {
+        if (selectionTrigger && isPackageSelected && !wasPackageSelected) {
+            packageNavEntry.parent?.open();
+        }
+        wasPackageSelected = isPackageSelected;
     });
 
     function copyDatasetUrl() {
         const params = new URLSearchParams({
-            dataset: dataset.label,
-            graph: getUri(graph),
-            package: getPackageId(pack),
+            dataset: datasetNavEntry.id,
+            graph: graphNavEntry.id,
+            package: packageNavEntry.id,
         });
         const url = `${window.location.origin}/mainpage?${params}`;
         navigator.clipboard
@@ -115,34 +102,10 @@
             );
     }
 
-    async function updateReadOnly() {
-        readOnly = await isReadOnly(dataset.label);
-    }
-
-    function updatePackState(updates) {
-        if (!pack) return;
-        onPackChange({
-            ...pack,
-            ...updates,
-        });
-    }
-
-    function togglePackageContentsVisibility() {
-        const next = !pack.showContents;
-        updatePackState({
-            showContents: next,
-            userCollapsed: !next,
-        });
-    }
-
     function selectPackage() {
-        const nextDataset = dataset.label;
-        const nextGraph = getUri(graph);
-        const nextPackage = getPackageId(pack);
-
-        editorState.selectedDataset.updateValue(nextDataset);
-        editorState.selectedGraph.updateValue(nextGraph);
-        editorState.selectedPackageUUID.updateValue(nextPackage);
+        editorState.selectedDataset.updateValue(datasetNavEntry.id);
+        editorState.selectedGraph.updateValue(graphNavEntry.id);
+        editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
     }
 </script>
 
@@ -151,17 +114,19 @@
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
                 level={3}
-                label={pack.label}
-                icon={packageIcon}
+                label={packageNavEntry.label}
+                icon={packageNavEntry?.isOpen ? faFolderOpen : faFolder}
                 isSelected={isPackageSelected}
                 hasChildren={hasClasses}
-                expanded={pack.showContents}
-                title={pack.label}
+                expanded={packageNavEntry.isOpen}
+                title={packageNavEntry.tooltip}
                 highlightLabel={packageHighlightLabel}
-                badgeText={pack.external ? "External" : ""}
-                badgeVariant={pack.external ? "external" : "default"}
+                badgeText={packageNavEntry.data.external ? "External" : ""}
+                badgeVariant={packageNavEntry.data.external
+                    ? "external"
+                    : "default"}
                 onclick={selectPackage}
-                onToggle={togglePackageContentsVisibility}
+                onToggle={() => packageNavEntry.toggle()}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -169,7 +134,7 @@
                 onSelect={() => {
                     showNewClassDialog = true;
                 }}
-                disabled={readOnly}
+                disabled={readonly}
                 faIcon={faPlus}
             >
                 New Class
@@ -192,7 +157,7 @@
                 onSelect={() => {
                     showDeletePackageDialog = true;
                 }}
-                disabled={readOnly || disablePackageDelete}
+                disabled={readonly || isProtectedPackage}
                 faIcon={faTrash}
                 variant="danger"
             >
@@ -200,19 +165,17 @@
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
     </ContextMenu.Root>
-    {#if pack.showContents && hasClasses}
+    {#if packageNavEntry.isOpen && hasClasses}
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each classes as cls (cls.uuid)}
+            {#each packageNavEntry.children as classNavEntry (classNavEntry.id)}
                 <ClassEntry
-                    {dataset}
-                    {graph}
-                    {pack}
-                    {cls}
-                    {prefixes}
-                    {readOnly}
-                    {onPackChange}
+                    {datasetNavEntry}
+                    {graphNavEntry}
+                    {classNavEntry}
+                    {namespaces}
+                    {readonly}
                 />
             {/each}
         </div>
@@ -221,23 +184,24 @@
 
 <NewClassDialog
     bind:showDialog={showNewClassDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
-    lockedPackage={pack}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    lockedPackage={packageNavEntry.data?.uuid === "default"
+        ? null
+        : packageNavEntry.data}
 />
 
 <PackageEditorDialog
     bind:showDialog={showPackageEditorDialog}
-    datasetName={dataset.label}
-    graphUri={getUri(graph)}
-    {packages}
-    {pack}
-    readonly={readOnly}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    pack={packageNavEntry.data}
+    {readonly}
 />
 
 <PackageDeleteDialog
     bind:showDialog={showDeletePackageDialog}
-    datasetName={dataset.label}
-    graphUri={getUri(graph)}
-    {pack}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    pack={packageNavEntry.data}
 />

@@ -1,0 +1,10 @@
+DELETE {
+    ?instance ?oldIRI ?value .
+}
+INSERT {
+    ?instance ?newIRI ?value .
+}
+WHERE {
+    ?instance a ?class .
+    ?instance ?oldIRI ?value .
+}

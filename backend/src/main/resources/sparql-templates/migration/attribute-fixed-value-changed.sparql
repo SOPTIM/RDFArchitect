@@ -1,0 +1,10 @@
+DELETE {
+    ?instance ?attribute ?oldValue .
+}
+INSERT {
+    ?instance ?attribute ?newValue .
+}
+WHERE {
+    ?instance a ?class .
+    OPTIONAL { ?instance ?attr ?oldValue . }
+}

@@ -16,8 +16,7 @@
 <script>
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
 
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
 
     let {
@@ -30,6 +29,7 @@
         hasChanges = false,
         isValid = true,
         readonly,
+        title,
         children,
     } = $props();
 
@@ -50,38 +50,41 @@
 
     ///////// confirm dialog  /////////
 
-    function discard() {
+    function discardAndClose() {
         showDialog = false;
         discardChanges();
+        onClose();
     }
 
-    function save() {
+    async function saveAndClose() {
         showDialog = false;
-        saveChanges();
+        await saveChanges();
+        onClose();
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} onClose={() => closeDialog(true)} {size}>
-    <div>
-        {@render children?.()}
-        <DialogLeaveButtons
-            bind:showDialog
-            cancelLabel={hasChanges ? "Discard" : "Close"}
-            cancelVariant={hasChanges ? "danger" : "contrast"}
-            onCancel={() => closeDialog(false)}
-            submitLabel={hasChanges ? "Save" : "No Changes"}
-            onSubmit={save}
-            disableSubmit={!hasChanges || !isValid}
-            submitIcon={faSave}
-            cancelIcon={hasChanges ? faRotateLeft : null}
-            {readonly}
-        />
-    </div>
-</Dialog>
-
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    onClose={() => closeDialog(true)}
+    {size}
+    secondaryLabel={"Discard"}
+    secondaryIcon={faRotateLeft}
+    secondaryVariant={"danger"}
+    onSecondary={() => discardChanges()}
+    disableSecondary={!hasChanges}
+    primaryLabel={hasChanges ? "Save" : "No Changes"}
+    onPrimary={saveChanges}
+    closeOnPrimary={false}
+    disablePrimary={!hasChanges || !isValid}
+    primaryIcon={faSave}
+    {readonly}
+    {children}
+    {title}
+/>
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}
-    onDiscard={discard}
-    onSave={save}
+    onDiscard={discardAndClose}
+    onSave={saveAndClose}
     disableSave={!hasChanges || !isValid}
 />

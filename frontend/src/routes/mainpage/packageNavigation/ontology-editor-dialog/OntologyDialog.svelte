@@ -16,6 +16,7 @@
   -->
 <script>
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
     import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
@@ -24,9 +25,9 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
-    import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
@@ -36,27 +37,31 @@
         showDialog = $bindable(),
         dataset,
         graphUri,
+        namespaces,
         ontology = $bindable(),
         readonly,
+        onSubmit,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let showAddKnownEntriesPopUp = $state(false);
+    let showDiscardSaveConfirmDialog = $state(false);
 
-    let namespaces = $state([]);
     let tableContainerRef = $state(null);
 
     let ontologyObject = $state();
 
-    let disableSubmit = $derived(
-        !ontologyObject ||
-            !ontologyObject.isValid ||
-            !ontologyObject.isModified,
-    );
+    let hasChanges = $derived(ontologyObject?.isModified ?? false);
+
+    let isValid = $derived(ontologyObject?.isValid ?? false);
+
+    let disableSubmit = $derived(!hasChanges || !isValid);
 
     async function onOpen() {
-        namespaces = await getNamespaces(dataset);
+        if (!namespaces) {
+            namespaces = await getNamespaces(dataset);
+        }
         if (!ontology) {
             ontologyObject = new ReactiveOntology();
         } else {
@@ -70,6 +75,38 @@
 
     function onClose() {
         ontologyObject = null;
+    }
+
+    function closeDialog(triggerConfirmDialog) {
+        if (triggerConfirmDialog && hasChanges) {
+            showDiscardSaveConfirmDialog = true;
+            return false;
+        }
+        if (hasChanges) {
+            discardChanges();
+        }
+        showDialog = false;
+        onClose();
+        return true;
+    }
+
+    function discardChanges() {
+        ontologyObject.reset();
+    }
+
+    async function save() {
+        await saveOntology(dataset, graphUri, ontologyObject);
+        ontologyObject.save();
+        if (onSubmit) {
+            onSubmit();
+        } else {
+            forceReloadTrigger.trigger();
+        }
+    }
+
+    function discard() {
+        showDialog = false;
+        discardChanges();
     }
 
     function handleAddEntry() {
@@ -87,7 +124,6 @@
     }
 
     function scrollEntriesToBottom() {
-        // Scroll to bottom after the DOM updates
         setTimeout(() => {
             if (tableContainerRef) {
                 tableContainerRef.scrollTop = tableContainerRef.scrollHeight;
@@ -96,16 +132,33 @@
     }
 
     function getSubstitutedNamespace(namespace) {
-        const namespaceObj = namespaces.find(p => p?.prefix === namespace);
+        const namespaceObj = namespaces?.find(p => p?.prefix === namespace);
         return namespaceObj ? namespaceObj.substitutedPrefix : namespace;
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} {onClose} size="w-2/3 h-3/4">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    onClose={() => closeDialog(true)}
+    size="w-2/3 h-3/4"
+    secondaryLabel={readonly ? null : "Discard"}
+    secondaryIcon={faRotateLeft}
+    secondaryVariant={"danger"}
+    onSecondary={discardChanges}
+    disableSecondary={!hasChanges}
+    primaryLabel={readonly ? null : hasChanges ? "Save" : "No Changes"}
+    primaryIcon={faSave}
+    onPrimary={save}
+    closeOnPrimary={false}
+    disablePrimary={disableSubmit}
+    {readonly}
+    title={readonly ? "View Ontology" : "Edit Ontology"}
+>
     <div class="mx-2 flex h-full flex-col">
         {#key ontologyObject}
             {#if ontologyObject}
-                <p>Ontology UUID:</p>
+                <p>UUID:</p>
                 <span class="mb-2">
                     {#if !ontologyObject.uuid.value}
                         <em class="text-muted-text">not assigned yet</em>
@@ -133,10 +186,10 @@
                     />
                 </div>
 
-                <span class="">Ontology entries:</span>
+                <span class="">Entries:</span>
                 <div
                     bind:this={tableContainerRef}
-                    class="border-border text-default-text mt-1 overflow-y-auto rounded-lg border-2"
+                    class="border-border text-default-text mt-1 max-h-full overflow-scroll rounded-lg border-2"
                 >
                     <table class="w-full border-collapse text-sm">
                         <thead
@@ -211,32 +264,14 @@
                 <p>Loading...</p>
             {/if}
         {/key}
-        <!-- Submit and Cancel buttons -->
-        <div class="flex justify-end">
-            {#if readonly}
-                <div class="h-9">
-                    <ButtonControl
-                        variant="white"
-                        callOnClick={() => (showDialog = false)}
-                    >
-                        close
-                    </ButtonControl>
-                </div>
-            {:else}
-                <DialogLeaveButtons
-                    bind:showDialog
-                    submitLabel="save"
-                    onSubmit={() => {
-                        saveOntology(dataset, graphUri, ontologyObject);
-                        forceReloadTrigger.trigger();
-                    }}
-                    {disableSubmit}
-                />
-            {/if}
-        </div>
     </div>
-</Dialog>
-
+</ActionDialog>
+<DiscardCancelConfirmDialog
+    bind:showDialog={showDiscardSaveConfirmDialog}
+    onDiscard={discard}
+    onSave={save}
+    disableSave={disableSubmit}
+/>
 <AddKnownFieldsDialog
     bind:showDialog={showAddKnownEntriesPopUp}
     existingEntries={ontologyObject.entries}

@@ -25,16 +25,15 @@
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
-    import { ReactiveOntology } from "$lib/models/reactive/ontology/reactive-ontology.svelte.js";
+    import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
 
     let {
-        getAPIRoute,
         showDialog = $bindable(),
+        disablePrimary = $bindable(),
         lockedDatasetName,
         lockedGraphUri,
         generateOntologyEntries = false,
@@ -60,6 +59,12 @@
     );
     let someSelected = $derived(
         generatedOntologyEntries.some(entry => entry.generate),
+    );
+
+    $effect(
+        () =>
+            (disablePrimary =
+                !selectedDatasetName || !graphURI || !selectedMediaType),
     );
 
     $effect(async () => {
@@ -112,7 +117,7 @@
         generatedOntologyEntries.forEach(entry => (entry.generate = newValue));
     }
 
-    async function fetchGraphFile() {
+    async function fetchGraphFile(getAPIRoute) {
         return fetch(getAPIRoute(selectedDatasetName, graphURI), {
             method: "GET",
             headers: new Headers({ Accept: selectedMediaType.mimeType }),
@@ -129,7 +134,16 @@
         return JSON.parse(content);
     }
 
-    async function handleExport() {
+    // This function is called from the parent component when the user clicks the export button
+    export async function handleExport(getAPIRoute) {
+        if (
+            !getAPIRoute ||
+            !selectedDatasetName ||
+            !graphURI ||
+            !selectedMediaType
+        ) {
+            return;
+        }
         if (generateOntologyEntries && someSelected) {
             for (const entry of generatedOntologyEntries) {
                 if (entry.generate) {
@@ -144,7 +158,7 @@
             forceReloadTrigger.trigger();
         }
         try {
-            const response = await fetchGraphFile();
+            const response = await fetchGraphFile(getAPIRoute);
             const blob = await response.blob();
             const suggestedFilename = response.headers.get(
                 "content-disposition",
@@ -237,9 +251,3 @@
         {/each}
     </select>
 </div>
-<DialogLeaveButtons
-    bind:showDialog
-    submitLabel="Export"
-    disableSubmit={!selectedDatasetName || !graphURI || !selectedMediaType}
-    onSubmit={handleExport}
-/>

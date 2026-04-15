@@ -20,7 +20,8 @@
 
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveAssociationToAssociationDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.svelte.js";
+    import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import Direct from "./Direct.svelte";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
@@ -29,8 +30,8 @@
     let { showDialog = $bindable(), associations, association } = $props();
 
     let classEditorContext = $state();
+    let isNewAssociation = $state(true);
     let readonly = $derived(classEditorContext?.readonly);
-    let isNewAssociation = $derived(true);
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
@@ -48,38 +49,51 @@
         }
     }
 
+    function onClose() {
+        association = null;
+        isNewAssociation = true;
+    }
+
     async function saveAssociation() {
-        if (isNewAssociation) {
-            associations.append(association);
-        }
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
             classEditorContext.reactiveClass,
             classEditorContext.getClassByUuid,
         );
-        saveApiAssociationToBackend(
+        const result = await saveApiAssociationToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
             classEditorContext.reactiveClass.uuid.value,
             apiAssociation,
             isNewAssociation,
-        ).then(res => {
-            if (res.ok) {
-                association.save();
-            }
-        });
+        );
+        if (!result.ok) {
+            return;
+        }
+
+        association.uuid.value = result.associationUUIDs.fromUUID;
+        association.inverse.uuid.value = result.associationUUIDs.toUUID;
+        association.save();
+        if (isNewAssociation) {
+            associations.append(association);
+            isNewAssociation = false;
+        }
+        association.save();
+        forceReloadTrigger.trigger();
     }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveAssociation}
     discardChanges={() => association.reset()}
-    hasChanges={isNewAssociation || association?.isModified}
+    hasChanges={association?.isModified}
     isValid={association?.isValid}
     size="w-2/3"
     {readonly}
+    title={`${isNewAssociation ? "Create" : "Edit"} Association${association ? `: '${association.label.backup}' to '${association.inverse.label.backup}'` : ""}`}
 >
     {#if association}
         <div

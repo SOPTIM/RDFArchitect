@@ -21,10 +21,10 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.relations.model.CIMClassUtils;
-import org.rdfarchitect.cim.relations.model.properties.CIMAssociationUtils;
-import org.rdfarchitect.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMAssociationUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.InverseCardinalityPropertyShapeBuilder;
 

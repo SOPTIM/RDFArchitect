@@ -23,18 +23,17 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactivePackageToPackageDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactivePackage } from "$lib/models/reactive/reactive-package.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
-    import { getNamespaces } from "./classEditor/fetch-class-editor-context.js";
+    import {
+        getNamespaces,
+        getPackages,
+    } from "./classEditor/fetch-class-editor-context.js";
 
     let {
         showDialog = $bindable(),
-        packages = [],
         pack,
         readonly = false,
         datasetName = null,
@@ -46,6 +45,7 @@
     let pkg = $state(null);
     let isNewPackage = $state(true);
     let namespaces = $state([]);
+    let packages = $state([]);
 
     function getSubstitutedNamespace(namespace) {
         const namespaceObj = namespaces.find(n => n.prefix === namespace);
@@ -53,6 +53,7 @@
     }
 
     async function onOpen() {
+        await fetchPackages();
         if (pack) {
             isNewPackage = false;
             pkg = new ReactivePackage({
@@ -79,8 +80,26 @@
             namespaces = await getNamespaces(datasetName);
         }
     }
+    async function fetchPackages() {
+        if (!datasetName || !graphUri) {
+            packages = [];
+            return;
+        }
+        try {
+            packages = await getPackages(datasetName, graphUri);
+        } catch (err) {
+            console.error("Failed to load packages:", err);
+            packages = [];
+        }
+    }
 
     async function savePackage() {
+        console.log(
+            "Saving package in dataset",
+            datasetName,
+            "and graph",
+            graphUri,
+        );
         if (!datasetName || !graphUri) {
             return;
         }
@@ -91,8 +110,6 @@
         if (res.ok) {
             console.log("Successfully saved package");
             pkg.save();
-            editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
             forceReloadTrigger.trigger();
         } else {
             const errorText = await res.text();
@@ -111,19 +128,14 @@
     hasChanges={isNewPackage || pkg?.isModified}
     isValid={pkg?.isValid}
     {readonly}
+    title={isNewPackage
+        ? "Create Package"
+        : readonly
+          ? `View Package "${pkg.label.value}"`
+          : `Edit Package "${pkg.label.backup}"`}
 >
     {#if pkg}
         <div class="mx-2 flex h-full flex-col">
-            <span class="mb-2 text-lg">
-                {#if isNewPackage}
-                    Creating new package
-                {:else if readonly}
-                    Viewing package <b>{pkg.label.backup}</b>
-                {:else}
-                    Editing package <b>{pkg.label.backup}</b>
-                {/if}
-            </span>
-
             <span class="mb-1 font-semibold">UUID:</span>
             <p class="mb-2 w-full">
                 {#if pkg.uuid.value}

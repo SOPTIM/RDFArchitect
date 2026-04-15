@@ -1,0 +1,7 @@
+DELETE {
+    ?instance ?p ?o .
+}
+WHERE {
+    ?instance a ?deletedClass .
+    ?instance ?p ?o .
+}

@@ -15,21 +15,39 @@
   -
   -->
 <script>
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { v4 as uuid } from "uuid";
 
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     let { namespace } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
-    const namespaces = classEditorContext.namespaces;
-    const reactiveClass = classEditorContext.reactiveClass;
     const id = uuid();
+    let namespaces = $derived(classEditorContext.namespaces);
+    let reactiveClass = $derived(classEditorContext.reactiveClass);
+    let readonly = $derived(classEditorContext.readonly);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = classEditorContext.readonly;
+    });
+
+    $effect(() => {
+        editorState.selectedContext.subscribe();
+        namespaces = classEditorContext.namespaces;
+        reactiveClass = classEditorContext.reactiveClass;
+    });
+
+    onMount(() => {
+        readonly = classEditorContext.readonly;
+        namespaces = classEditorContext.namespaces;
+        reactiveClass = classEditorContext.reactiveClass;
+    });
 
     function trickleDownNamespaceChange(newNamespaceUri) {
         const oldNamespaceUri = namespace.value;

@@ -18,7 +18,7 @@
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import Dialog from "$lib/dialog/Dialog.svelte";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
@@ -115,35 +115,29 @@
     }
 </script>
 
-<Dialog bind:showDialog {onOpen} size="w-2/3 h-4/5">
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    size="w-2/3 h-4/5"
+    title={`SHACL shapes validating: "${editorState.selectedDataset.getValue()}/${editorState.selectedGraph.getValue()}"`}
+    primaryLabel={null}
+>
     <div class="flex h-full flex-col space-y-2">
-        <!-- Header -->
-        <div class="flex flex-shrink-0">
-            <div class="mx-2 grow">
-                <p class="m-1 font-bold">
-                    SHACL Rules validating: "{editorState.selectedDataset.getValue()}/{editorState.selectedGraph.getValue()}"
-                </p>
-            </div>
-            <div class="m-1 w-fit">
-                <ButtonControl
-                    callOnClick={() => {
-                        showDialog = false;
-                    }}
-                >
-                    Close Dialog
-                </ButtonControl>
-            </div>
-        </div>
-
         <!-- Button controls -->
-        <div class="flex h-9 w-full flex-shrink-0 space-x-2">
+        <div class="flex h-9 w-full shrink-0 space-x-2">
             <div class="text-nowrap">
-                <ButtonControl callOnClick={() => (showGeneratedShacl = true)}>
+                <ButtonControl
+                    callOnClick={() => (showGeneratedShacl = true)}
+                    variant={showGeneratedShacl ? "" : "inline"}
+                >
                     Generated SHACL
                 </ButtonControl>
             </div>
             <div class="text-nowrap">
-                <ButtonControl callOnClick={() => (showGeneratedShacl = false)}>
+                <ButtonControl
+                    callOnClick={() => (showGeneratedShacl = false)}
+                    variant={showGeneratedShacl ? "inline" : ""}
+                >
                     Custom SHACL
                 </ButtonControl>
             </div>
@@ -172,4 +166,4 @@
             {/if}
         </div>
     </div>
-</Dialog>
+</ActionDialog>

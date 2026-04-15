@@ -20,19 +20,19 @@ package org.rdfarchitect.services.rendering;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
-import org.rdfarchitect.cim.data.dto.relations.CIMSBelongsToCategory;
-import org.rdfarchitect.cim.data.dto.relations.CIMSMultiplicity;
-import org.rdfarchitect.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.cim.data.dto.relations.RDFSSubClassOf;
-import org.rdfarchitect.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.*;
 
-public class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBase {
+class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBase {
 
     @Test
     void renderUML_emptyCollection_emptyArrays() {

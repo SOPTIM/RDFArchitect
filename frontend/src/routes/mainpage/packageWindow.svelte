@@ -86,23 +86,29 @@
 </script>
 
 <div class="relative h-full w-full overflow-hidden">
-    <Splitpanes
-        theme="opencgmes-theme"
-        class={`h-full w-full ${isClassSelected ? "" : "editor-closed"}`}
-        onresize={handleSplitPaneResize}
-    >
-        <Pane
-            size={isClassSelected ? 100 - classEditorPaneWidth : 100}
-            minSize={50}
+    {#key editorState.selectedPackageUUID.subscribe()}
+        <div class="h-full">
+            <RenderingWrapper
+                rightInsetPercent={isClassSelected ? classEditorPaneWidth : 0}
+            />
+        </div>
+    {/key}
+
+    {#if isClassSelected}
+        <Splitpanes
+            theme="opencgmes-theme"
+            class="pointer-events-none absolute top-0 right-0 h-screen w-screen"
+            onresize={handleSplitPaneResize}
         >
-            <RenderingWrapper />
-        </Pane>
-        <Pane
-            size={isClassSelected ? classEditorPaneWidth : 0}
-            minSize={isClassSelected ? 25 : 0}
-            class={`h-full ${isClassSelected ? "overflow-auto" : "pointer-events-none hidden overflow-hidden"}`}
-        >
-            {#if isClassSelected}
+            <Pane
+                size={100 - classEditorPaneWidth}
+                class="pointer-events-none bg-transparent"
+            ></Pane>
+            <Pane
+                size={classEditorPaneWidth}
+                minSize={25}
+                class="pointer-events-auto h-full overflow-auto"
+            >
                 {#key classEditorKey}
                     <ClassEditor
                         datasetName={classDatasetName}
@@ -110,13 +116,7 @@
                         classUuid={editorState.selectedClassUUID.getValue()}
                     />
                 {/key}
-            {/if}
-        </Pane>
-    </Splitpanes>
+            </Pane>
+        </Splitpanes>
+    {/if}
 </div>
-
-<style>
-    :global(.editor-closed .splitpanes__splitter) {
-        display: none;
-    }
-</style>

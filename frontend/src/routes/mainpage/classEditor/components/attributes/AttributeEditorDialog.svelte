@@ -24,8 +24,9 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
-    import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
-    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/reactive-utils.js";
+    import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
+    import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
@@ -45,9 +46,18 @@
             attribute = new ReactiveAttribute({
                 namespace: classEditorContext.reactiveClass.namespace.value,
             });
+            attributes.appendClass(attribute);
         } else {
             isNewAttribute = false;
         }
+    }
+
+    function onClose() {
+        if (isNewAttribute) {
+            attributes.remove(attribute);
+        }
+        isNewAttribute = true;
+        attribute = null;
     }
 
     function getDatatypeLabelByUri(uri) {
@@ -62,48 +72,44 @@
         const apiAttribute = mapReactiveAttributeToAttributeDto(
             attribute,
             classEditorContext.getDatatypeByUri,
-            classEditorContext.reactiveClass.namespace.value +
-                classEditorContext.reactiveClass.label.value,
+            classEditorContext.reactiveClass.namespace.backup +
+                classEditorContext.reactiveClass.label.backup,
         );
-        saveApiAttributeToBackend(
+        const result = await saveApiAttributeToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
             classEditorContext.reactiveClass.uuid.value,
             apiAttribute,
             isNewAttribute,
-        ).then(res => {
-            if (res.ok) {
-                if (isNewAttribute) {
-                    attributes.append(attribute);
-                }
-                attribute.save();
-            }
-        });
+        );
+        if (!result.ok) {
+            return;
+        }
+
+        attribute.uuid.value = result.attributeUUID;
+        attribute.save();
+        if (isNewAttribute) {
+            isNewAttribute = false;
+        }
+        forceReloadTrigger.trigger();
     }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     saveChanges={saveAttribute}
     discardChanges={() => attribute.reset()}
-    hasChanges={isNewAttribute || attribute?.isModified}
+    hasChanges={attribute?.isModified}
     isValid={attribute?.isValid}
+    title={isNewAttribute
+        ? "Create new attribute"
+        : `Edit attribute '${attribute.label.backup}'`}
     {readonly}
 >
     {#if attribute && classEditorContext && datatypes && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
-            <!-- Title -->
-            <div>
-                <span class="text-lg">
-                    {#if isNewAttribute}
-                        Creating new attribute
-                    {:else}
-                        Editing attribute <b>{attribute.label.backup}</b>
-                    {/if}
-                </span>
-            </div>
-
             <!-- UUID -->
             <div>
                 <span class="mb-1">UUID:</span>

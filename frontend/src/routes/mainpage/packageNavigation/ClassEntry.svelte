@@ -29,70 +29,60 @@
     import { editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
-    import {
-        getUri,
-        getPackageId,
-        isSelectedClass,
-    } from "./packageNavigationUtils.svelte.js";
+    import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteClassConfirmDialog from "../../DeleteClassConfirmDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
-        dataset,
-        graph,
-        pack,
-        cls,
-        prefixes = [],
-        readOnly = false,
+        datasetNavEntry,
+        graphNavEntry,
+        classNavEntry,
+        namespaces = [],
+        readonly = false,
         onPackChange = () => {},
     } = $props();
 
     let showDeleteDialog = $state(false);
     let showSHACLDialog = $state(false);
 
-    const highlightLabel = $derived(
-        shortenIri(
-            prefixes,
-            cls?.prefix ? `${cls.prefix}${cls.label}` : (cls?.label ?? ""),
-        ),
-    );
+    const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
     const shaclClass = $derived({
-        uuid: { value: cls?.uuid },
-        label: { value: cls?.label ?? "" },
+        uuid: { value: classNavEntry?.id },
+        label: { value: classNavEntry?.label ?? "" },
     });
 
     function selectClass() {
-        onPackChange({
-            ...pack,
-            showContents: true,
-            userCollapsed: false,
-        });
+        classNavEntry.parent?.open();
+        onPackChange();
         if (!editorState.selectedClassUUID.getValue()) {
-            eventStack.executeNewestEvent(cls.uuid);
-            editorState.selectedClassDataset.updateValue(dataset.label);
-            editorState.selectedClassGraph.updateValue(getUri(graph));
-            editorState.selectedClassUUID.updateValue(cls.uuid);
+            eventStack.executeNewestEvent(classNavEntry.id);
+            editorState.selectedClassDataset.updateValue(datasetNavEntry.id);
+            editorState.selectedClassGraph.updateValue(graphNavEntry.id);
+            editorState.selectedClassUUID.updateValue(classNavEntry.id);
             return;
         }
+        //The event executed to open the discard confirm delete dialog
         eventStack.executeNewestEvent({
-            datasetName: dataset.label,
-            graphUri: getUri(graph),
-            classUuid: cls.uuid,
+            datasetName: datasetNavEntry.id,
+            graphUri: graphNavEntry.id,
+            classUuid: classNavEntry.id,
         });
     }
 
     function focusClassInDiagram() {
-        if (editorState.focusedClassUUID.getValue() === cls.uuid) {
+        if (editorState.focusedClassUUID.getValue() === classNavEntry.id) {
             editorState.focusedClassUUID.trigger();
             return;
         }
-        editorState.focusedClassUUID.updateValue(cls.uuid);
+        editorState.focusedClassUUID.updateValue(classNavEntry.id);
     }
 
     function showClassInPackage() {
-        editorState.selectedDataset.updateValue(dataset.label);
-        editorState.selectedGraph.updateValue(getUri(graph));
-        editorState.selectedPackageUUID.updateValue(getPackageId(pack));
+        editorState.selectedDataset.updateValue(datasetNavEntry.id);
+        editorState.selectedGraph.updateValue(graphNavEntry.id);
+        editorState.selectedPackageUUID.updateValue(
+            classNavEntry.parent?.id ?? "default",
+        );
         selectClass();
         focusClassInDiagram();
     }
@@ -102,10 +92,14 @@
     <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
         <NavigationEntry
             level={4}
-            label={cls.label}
+            label={classNavEntry.label}
             icon={faFileLines}
-            isSelected={isSelectedClass(dataset, graph, cls)}
-            title={cls.label}
+            isSelected={isSelectedClass(
+                datasetNavEntry.id,
+                graphNavEntry.id,
+                classNavEntry.id,
+            )}
+            title={classNavEntry.tooltip}
             {highlightLabel}
             onclick={selectClass}
         />
@@ -131,7 +125,7 @@
                 selectClass();
                 showDeleteDialog = true;
             }}
-            disabled={readOnly}
+            disabled={readonly}
             faIcon={faTrash}
             variant="danger"
         >
@@ -142,15 +136,14 @@
 
 <DeleteClassConfirmDialog
     bind:showDialog={showDeleteDialog}
-    datasetName={dataset.label}
-    graphUri={getUri(graph)}
-    classUuid={cls.uuid}
-    classLabel={cls.label}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    classUuid={classNavEntry.id}
+    classLabel={classNavEntry.label}
 />
 <SHACLClassSpecificPopUp
-    datasetName={dataset.label}
-    graphUri={getUri(graph)}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
-    class={shaclClass}
 />

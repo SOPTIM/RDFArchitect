@@ -31,6 +31,12 @@ export const supportedRDFMediaTypes: MediaType[] = [
     },
 ];
 
+export const sparqlMediaType: MediaType = {
+    mimeType: "application/sparql-query",
+    name: "SPARQL",
+    fileExtension: ".sparql",
+};
+
 export function saveFile(
     blob: Blob,
     suggestedFilename: string,

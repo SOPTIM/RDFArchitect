@@ -28,37 +28,23 @@ export async function saveApiAttributeToBackend(
     attribute,
     isNewAttribute,
 ) {
-    let saveAttributeCall;
-    if (isNewAttribute) {
-        saveAttributeCall = bec.postAttribute(
-            dataset,
-            graph,
-            classUUID,
-            attribute,
-        );
-    } else {
-        saveAttributeCall = bec.putAttribute(
-            dataset,
-            graph,
-            classUUID,
-            attribute,
-        );
-    }
+    const saveAttributeCall = isNewAttribute
+        ? bec.postAttribute(dataset, graph, classUUID, attribute)
+        : bec.putAttribute(dataset, graph, classUUID, attribute);
 
-    return saveAttributeCall
-        .then(async res => {
-            if (res.ok) {
-                const attributeUUID = await res.json();
-                console.log("Successfully saved attribute:", attributeUUID);
-            } else {
-                const errorText = await res.text();
-                console.error("Could not save attribute:", errorText);
-            }
-            return res;
-        })
-        .finally(res => {
-            editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
-            return res;
-        });
+    try {
+        const res = await saveAttributeCall;
+        if (res.ok) {
+            const attributeUUID = await res.json();
+            console.log("Successfully saved attribute:", attributeUUID);
+            return { ok: true, attributeUUID };
+        }
+
+        const errorText = await res.text();
+        console.error("Could not save attribute:", errorText);
+        return { ok: false, errorText };
+    } finally {
+        editorState.selectedClassUUID.trigger();
+        editorState.selectedPackageUUID.trigger();
+    }
 }

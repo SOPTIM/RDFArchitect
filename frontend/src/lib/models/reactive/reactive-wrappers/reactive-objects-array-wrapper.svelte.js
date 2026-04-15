@@ -96,6 +96,15 @@ export class ReactiveObjectsArrayWrapper {
     }
 
     /**
+     * Adds a value without wrapping into a new class to the end of the array
+     * @param value - The value to be added
+     */
+    appendClass(value) {
+        this.values.push(value);
+        this.#entryClassViolationChecksInit(value, this.values);
+    }
+
+    /**
      * Adds a value to the beginning of the array
      * @param value - The value to be added
      */

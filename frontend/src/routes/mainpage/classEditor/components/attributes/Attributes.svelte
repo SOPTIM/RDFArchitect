@@ -16,17 +16,18 @@
   -->
 <script>
     import { faPlus } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import Attribute from "./Attribute.svelte";
     import AttributeEditorDialog from "./AttributeEditorDialog.svelte";
 
     const { attributes, openPropertySHACLRulesDialog } = $props();
 
-    const readonly = getContext("classEditor").readonly;
+    const classEditorContext = getContext("classEditor");
 
     const attributeEditorDialog = $state({
         showDialog: false,
@@ -34,6 +35,14 @@
     });
 
     let expandStereotypes = $state(true);
+    let readonly = $derived(classEditorContext.readonly);
+
+    $effect(() => {
+        editorState.selectedPackageUUID.subscribe();
+        readonly = getContext("classEditor").readonly;
+    });
+
+    onMount(() => (readonly = classEditorContext.readonly));
 
     function openAttributeEditor(attribute) {
         attributeEditorDialog.attribute = attribute;

@@ -1,0 +1,9 @@
+DELETE {
+    ?instance ?oldAttribute ?value .
+}
+INSERT {
+    ?instance ?newAttribute ?value .
+}
+WHERE {
+    ?instance ?oldAttribute ?value .
+}

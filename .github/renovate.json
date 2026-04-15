@@ -6,11 +6,6 @@
   ],
   "dependencyDashboard": true,
   "labels": ["dependencies"],
-  "packageRules": [
-    {
-      "matchDatasources": ["npm"],
-      "minimumReleaseAge": "12 hours"
-    }
-  ],
+  "minimumReleaseAge": "7 days",
   "gitIgnoredAuthors": ["41898282+github-actions[bot]@users.noreply.github.com"]
 }

@@ -26,8 +26,8 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.rdf.resources.CIMS;
-import org.rdfarchitect.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.util.UUID;
 
