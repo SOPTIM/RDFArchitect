@@ -86,7 +86,7 @@ public class CIMResourceTypeIdentifyingUtils {
     }
 
     public boolean isExternalResource(Resource resource) {
-        return resource.listProperties()
+        return !resource.listProperties()
                     .filterDrop(stmt -> stmt.getPredicate().equals(RDFA.uuid))
                     .hasNext();
     }
