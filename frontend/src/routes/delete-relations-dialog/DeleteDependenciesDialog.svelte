@@ -21,10 +21,10 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
