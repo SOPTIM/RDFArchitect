@@ -16,6 +16,7 @@
   -->
 
 <script>
+    import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
     import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
@@ -78,7 +79,7 @@
     $effect(async () => {
         namespaces = await getNamespaces(datasetName);
         if (classURINamespace) {
-            classURINamespace.value = "";
+            classURINamespace.value = null;
         }
         if (!packageSelectionLocked) {
             packages = datasetName ? packages : [];
@@ -95,9 +96,21 @@
     });
 
     $effect(async () => {
-        if (datasetName && graphURI && className) {
-            className.compareValues = await getClasses(datasetName, graphURI);
+        if (datasetName && graphURI) {
+            compareClasses = await getClasses(datasetName, graphURI);
+        } else {
+            compareClasses = [];
         }
+        untrack(
+            () =>
+                (className = new ReactiveValueWrapper(className.value, label =>
+                    isInvalidClassLabel(
+                        label,
+                        classURINamespace.value,
+                        compareClasses,
+                    ),
+                )),
+        );
     });
 
     async function onOpen() {
@@ -105,7 +118,7 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
-        classURINamespace = new ReactiveValueWrapper("");
+        classURINamespace = new ReactiveValueWrapper(null);
 
         className = new ReactiveValueWrapper("", label =>
             isInvalidClassLabel(label, classURINamespace.value, compareClasses),
@@ -266,7 +279,6 @@
                 getOptionValue={namespace => namespace.prefix}
                 getOptionLabel={namespace =>
                     `${namespace.substitutedPrefix} (${namespace.prefix})`}
-                placeholderValue=""
             />
             <label for={domIds.className} class="mt-3 mb-1 block text-sm">
                 Name

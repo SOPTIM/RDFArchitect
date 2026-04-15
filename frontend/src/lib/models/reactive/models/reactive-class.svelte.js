@@ -21,6 +21,7 @@ import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-ent
 import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
+    hasUniqueIRI,
     hasUniqueLabel,
     isInvalidClassLabel,
     isInvalidNamespace,
@@ -75,8 +76,17 @@ export class ReactiveClass {
         this.attributes = new ReactiveObjectsArrayWrapper(
             attributes,
             ReactiveAttribute,
-            initializeUniqueLabelChecks,
+            (reactiveObject, entriesArray) => {
+                reactiveObject.label.violationChecks.push(label =>
+                    hasUniqueIRI(
+                        label,
+                        reactiveObject.namespace.value,
+                        entriesArray,
+                    ),
+                );
+            },
         );
+
         this.associations = new ReactiveObjectsArrayWrapper(
             associations,
             ReactiveAssociation,
