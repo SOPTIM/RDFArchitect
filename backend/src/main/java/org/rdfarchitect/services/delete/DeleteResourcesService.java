@@ -134,6 +134,14 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
                    .filter(stmt -> stmt.getObject().isAnon())
                    .forEach(stmt -> queue.add(stmt.getObject().asResource()));
 
+            // Delete inverse association
+            var inverseStmt = current.getProperty(CIMS.inverseRoleName);
+            if (inverseStmt != null && inverseStmt.getObject().isResource()) {
+                var inverse = inverseStmt.getObject().asResource();
+                model.remove(inverse, CIMS.inverseRoleName, current);
+                queue.add(inverse);
+            }
+
             if (isReferencedElsewhere(model, current)) {
                 var uuidStmt = current.getProperty(RDFA.uuid);
                 model.removeAll(current, null, null);
@@ -190,7 +198,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
         //delete associations only if it references an external resource
         model.listSubjectsWithProperty(RDFS.domain, resource)
              .filterKeep(CIMPropertyUtils::isAssociation)
-             .filterKeep(assoc -> CIMResourceTypeIdentifyingUtils.isExternalResource(assoc.getProperty(RDFS.domain).getObject().asResource()))
+             .filterKeep(assoc -> CIMResourceTypeIdentifyingUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource()))
              .toList()
              .forEach(this::removeResource);
 
