@@ -22,6 +22,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
@@ -150,6 +151,9 @@
         } else {
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();
+            editorState.selectedClassDataset.updateValue(null);
+            editorState.selectedClassGraph.updateValue(null);
+            editorState.selectedClassUUID.updateValue(null);
         }
     }
 
