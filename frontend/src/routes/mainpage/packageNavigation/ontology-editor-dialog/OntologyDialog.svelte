@@ -97,25 +97,26 @@
         ontologyObject.reset();
     }
 
-    function save() {
+    async function save() {
         loadingOntology = true;
-        saveOntology(dataset, graphUri, ontologyObject).then(() => {
-            getOntology().then(ontology => {
-                if (ontology) {
-                    ontologyObject = new ReactiveOntology(
-                        ontology.uuid,
-                        ontology.namespace,
-                        ontology.entries,
-                    );
-                }
-                loadingOntology = false;
-            });
-        });
-        ontologyObject.save();
-        if (onSubmit) {
-            onSubmit();
-        } else {
-            forceReloadTrigger.trigger();
+        try {
+            await saveOntology(dataset, graphUri, ontologyObject);
+            const ontology = await getOntology();
+            if (ontology) {
+                ontologyObject = new ReactiveOntology(
+                    ontology.uuid,
+                    ontology.namespace,
+                    ontology.entries,
+                );
+            }
+            ontologyObject.save();
+            if (onSubmit) {
+                onSubmit();
+            } else {
+                forceReloadTrigger.trigger();
+            }
+        } finally {
+            loadingOntology = false;
         }
     }
 

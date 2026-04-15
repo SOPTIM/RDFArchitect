@@ -169,7 +169,11 @@ export function isInvalidIri(iri) {
 
 export function isInvalidOntologyValue(value, isIri) {
     const violations = isNotEmptyValidation(value);
-    if (isIri && validateIri(value, IriValidationStrategy.Pragmatic)) {
+    if (
+        violations.length === 0 &&
+        isIri &&
+        validateIri(value, IriValidationStrategy.Pragmatic)
+    ) {
         violations.push("must be a valid IRI");
     }
     return violations;
