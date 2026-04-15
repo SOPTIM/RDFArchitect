@@ -23,9 +23,7 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
 import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -41,6 +39,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -57,122 +56,84 @@ public class AllClassesRESTController {
     private final AddClassUseCase addClassUseCase;
 
     /**
-     * Helper record, functions as DTO for accepting the necessary information for adding a new
-     * class
+     * Helper record, functions as DTO for accepting the necessary information for adding a new class
      *
-     * @param packageDTO PackageDTO object of the package to which the new class is going to be
-     *     added
+     * @param packageDTO     PackageDTO object of the package to which the new class is going to be added
      * @param classURIPrefix URI Prefix of the new class
-     * @param className Label of the new class
+     * @param className      Label of the new class
      */
-    public record AddNewClassRequest(
-            PackageDTO packageDTO, String classURIPrefix, String className) {}
+    public record AddNewClassRequest(PackageDTO packageDTO, String classURIPrefix, String className) {
+
+    }
 
     @Operation(
-            summary = "create new class",
-            description =
-                    "Create a new class with default name and no attributes, stereotypes or associations. Because no concrete stereotype is added the class is abstract "
-                            + "by default.",
-            tags = {"graph"})
+              summary = "create new class",
+              description = "Create a new class with default name and no attributes, stereotypes or associations. Because no concrete stereotype is added the class is abstract " +
+                        "by default.",
+              tags = {"graph"}
+    )
     @PostMapping
     public String addClass(
-            @Parameter(description = "The name/url of the inquirer.")
-                    @RequestHeader(
-                            value = HttpHeaders.ORIGIN,
-                            required = false,
-                            defaultValue = "unknown")
-                    String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                            required = true,
-                            description =
-                                    "Helper record, functions as DTO for accepting the necessary information for adding a new class")
-                    @RequestBody
-                    AddNewClassRequest addNewClassRequest) {
-        logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
-                datasetName,
-                graphURI,
-                originURL);
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @PathVariable
+              String graphURI,
+              @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                        required = true,
+                        description = "Helper record, functions as DTO for accepting the necessary information for adding a new class"
+              )
+              @RequestBody AddNewClassRequest addNewClassRequest) {
+        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".", datasetName, graphURI, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedClassURIPrefix =
-                expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
+        var extendedClassURIPrefix = expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var classUUID =
-                addClassUseCase.addClass(
-                        graphIdentifier,
-                        addNewClassRequest.packageDTO,
-                        extendedClassURIPrefix,
-                        addNewClassRequest.className);
+        var classUUID =addClassUseCase.addClass(graphIdentifier, addNewClassRequest.packageDTO, extendedClassURIPrefix, addNewClassRequest.className);
 
-        logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
-                datasetName,
-                graphURI,
-                originURL);
+        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".", datasetName, graphURI, originURL);
 
         return classUUID.toString();
     }
 
     @Operation(
-            summary = "list classes",
-            description =
-                    "Get a list containing all classes. Doesn't include: stereotypes, attributes and associations.",
-            tags = {"graph"},
-            responses = {
-                @ApiResponse(
+              summary = "list classes",
+              description = "Get a list containing all classes. Doesn't include: stereotypes, attributes and associations.",
+              tags = {"graph"},
+              responses = {@ApiResponse(
                         responseCode = "200",
-                        content =
-                                @Content(
-                                        mediaType = "application/json",
-                                        array =
-                                                @ArraySchema(
-                                                        schema =
-                                                                @Schema(
-                                                                        implementation =
-                                                                                ClassUMLAdaptedDTO
-                                                                                        .class))))
-            })
+                        content = @Content(
+                                  mediaType = "application/json",
+                                  array = @ArraySchema(schema = @Schema(implementation = ClassUMLAdaptedDTO.class))
+                        ))
+              }
+    )
     @GetMapping
     public List<ClassUMLAdaptedDTO> getClassList(
-            @Parameter(description = "The name/url of the inquirer.")
-                    @RequestHeader(
-                            value = HttpHeaders.ORIGIN,
-                            required = false,
-                            defaultValue = "unknown")
-                    String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
-        logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
-                datasetName,
-                graphURI,
-                originURL);
+              @Parameter(description = "The name/url of the inquirer.")
+              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
+              String originURL,
+              @Parameter(description = "The literal name of the dataset.")
+              @PathVariable
+              String datasetName,
+              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @PathVariable
+              String graphURI,
+              @Parameter(description = "Whether to include external classes.")
+              @RequestParam(required = false, defaultValue = "false")
+              boolean includeExternalClasses){
+        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".", datasetName, graphURI, originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var cimClassList =
-                getClassListUseCase.getClassList(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+        var cimClassList = getClassListUseCase.getClassList(new GraphIdentifier(datasetName, extendedGraphURI), includeExternalClasses);
 
-        logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
-                datasetName,
-                graphURI,
-                originURL);
+        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".", datasetName, graphURI, originURL);
         return cimClassList;
     }
 }

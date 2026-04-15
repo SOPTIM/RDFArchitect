@@ -95,8 +95,8 @@ export class BackendConnection {
         });
     }
 
-    async getClasses(datasetName, graphURI) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
+    async getClasses(datasetName, graphURI, includeExternalClasses = false) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes?includeExternalClasses=${includeExternalClasses}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
