@@ -104,12 +104,14 @@
         if (className) {
             untrack(
                 () =>
-                    (className = new ReactiveValueWrapper(className.value, label =>
-                        isInvalidClassLabel(
-                            label,
-                            classURINamespace.value,
-                            compareClasses,
-                        ),
+                    (className = new ReactiveValueWrapper(
+                        className.value,
+                        label =>
+                            isInvalidClassLabel(
+                                label,
+                                classURINamespace.value,
+                                compareClasses,
+                            ),
                     )),
             );
         }
