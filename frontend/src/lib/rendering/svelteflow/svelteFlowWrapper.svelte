@@ -122,101 +122,138 @@
     }
 
     function syncDiagramElements() {
-        let nextNodes = [...inputNodes];
-
-        if (
-            pendingNewClassPlacement &&
-            editorState.selectedPackageUUID.getValue() ===
-                pendingNewClassPlacement.packageUUID
-        ) {
-            const addedNodes = nextNodes.filter(
-                node => !pendingNewClassPlacement.existingNodeIds.has(node.id),
-            );
-            const addedNode =
-                addedNodes.find(
-                    node =>
-                        node.data?.label ===
-                            pendingNewClassPlacement.className &&
-                        node.position.x === 0 &&
-                        node.position.y === 0,
-                ) ??
-                addedNodes.find(
-                    node =>
-                        node.data?.label === pendingNewClassPlacement.className,
-                ) ??
-                (addedNodes.length === 1 ? addedNodes[0] : null);
-
-            if (addedNode) {
-                const { x, y } = pendingNewClassPlacement.position;
-                nextNodes = nextNodes.map(node =>
-                    node.id === addedNode.id
-                        ? {
-                              ...node,
-                              position: { x, y },
-                          }
-                        : node,
-                );
-
-                bec.updateClassPositions(
-                    pendingNewClassPlacement.datasetName,
-                    pendingNewClassPlacement.graphURI,
-                    pendingNewClassPlacement.packageUUID,
-                    [
-                        {
-                            classUUID: addedNode.id,
-                            xPosition: x,
-                            yPosition: y,
-                        },
-                    ],
-                ).catch(error => {
-                    console.error(
-                        "Could not persist newly created class position:",
-                        error,
-                    );
-                });
-
-                pendingNewClassPlacement = null;
-            }
-        }
-
+        const nextNodes = syncDiagramNodes();
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
         nodes = nextNodes;
-        edges = inputEdges.map(edge => {
-            //applies offset to inheritance edge if an association edge already exists between the same two nodes
-            if (edge.type === "inheritance") {
-                const hasAssociationEdgeBetweenSameNodes = inputEdges.some(
-                    otherEdge => {
-                        if (otherEdge.type !== "association") return false;
+        edges = buildDiagramEdges();
+        resetDiagramSyncState(nextHasDefaultLayout);
+    }
 
-                        const sameDirection =
-                            otherEdge.source === edge.source &&
-                            otherEdge.target === edge.target;
-                        const reverseDirection =
-                            otherEdge.source === edge.target &&
-                            otherEdge.target === edge.source;
+    function syncDiagramNodes() {
+        const nextNodes = [...inputNodes];
+        if (!shouldApplyPendingNewClassPlacement()) {
+            return nextNodes;
+        }
 
-                        return sameDirection || reverseDirection;
-                    },
-                );
+        const addedNode = findAddedNodeForPlacement(nextNodes);
+        if (!addedNode) {
+            return nextNodes;
+        }
 
-                if (hasAssociationEdgeBetweenSameNodes) {
-                    return {
-                        ...edge,
-                        data: {
-                            ...(edge.data || {}),
-                            offsetEdge: true,
-                        },
-                    };
-                }
-            }
+        persistPendingNewClassPosition(addedNode);
+        const syncedNodes = placePendingNewClassNode(nextNodes, addedNode);
+        pendingNewClassPlacement = null;
+        return syncedNodes;
+    }
 
-            return edge;
+    function shouldApplyPendingNewClassPlacement() {
+        return (
+            !!pendingNewClassPlacement &&
+            editorState.selectedPackageUUID.getValue() ===
+                pendingNewClassPlacement.packageUUID
+        );
+    }
+
+    function findAddedNodeForPlacement(diagramNodes) {
+        const addedNodes = diagramNodes.filter(
+            node => !pendingNewClassPlacement.existingNodeIds.has(node.id),
+        );
+
+        return (
+            addedNodes.find(
+                node =>
+                    node.data?.label === pendingNewClassPlacement.className &&
+                    node.position.x === 0 &&
+                    node.position.y === 0,
+            ) ??
+            addedNodes.find(
+                node => node.data?.label === pendingNewClassPlacement.className,
+            ) ??
+            (addedNodes.length === 1 ? addedNodes[0] : null)
+        );
+    }
+
+    function placePendingNewClassNode(diagramNodes, addedNode) {
+        const { x, y } = pendingNewClassPlacement.position;
+        return diagramNodes.map(node =>
+            node.id === addedNode.id
+                ? {
+                      ...node,
+                      position: { x, y },
+                  }
+                : node,
+        );
+    }
+
+    function persistPendingNewClassPosition(addedNode) {
+        const { x, y } = pendingNewClassPlacement.position;
+        bec.updateClassPositions(
+            pendingNewClassPlacement.datasetName,
+            pendingNewClassPlacement.graphURI,
+            pendingNewClassPlacement.packageUUID,
+            [
+                {
+                    classUUID: addedNode.id,
+                    xPosition: x,
+                    yPosition: y,
+                },
+            ],
+        ).catch(error => {
+            console.error(
+                "Could not persist newly created class position:",
+                error,
+            );
         });
+    }
+
+    function buildDiagramEdges() {
+        return inputEdges.map(decorateEdgeForDiagram);
+    }
+
+    function decorateEdgeForDiagram(edge) {
+        if (!shouldOffsetInheritanceEdge(edge)) {
+            return edge;
+        }
+
+        return {
+            ...edge,
+            data: {
+                ...(edge.data || {}),
+                offsetEdge: true,
+            },
+        };
+    }
+
+    function shouldOffsetInheritanceEdge(edge) {
+        return (
+            edge.type === "inheritance" &&
+            inputEdges.some(otherEdge =>
+                isAssociationEdgeBetweenSameNodes(edge, otherEdge),
+            )
+        );
+    }
+
+    function isAssociationEdgeBetweenSameNodes(edge, otherEdge) {
+        if (otherEdge.type !== "association") {
+            return false;
+        }
+
+        const sameDirection =
+            otherEdge.source === edge.source &&
+            otherEdge.target === edge.target;
+        const reverseDirection =
+            otherEdge.source === edge.target &&
+            otherEdge.target === edge.source;
+
+        return sameDirection || reverseDirection;
+    }
+
+    function resetDiagramSyncState(hasDefaultLayoutAfterSync) {
         layouted = false;
 
         // Keep the loading state active until persisted positions or ELK layout
-        if (!nextHasDefaultLayout) {
+        if (!hasDefaultLayoutAfterSync) {
             isLoading = false;
         }
     }

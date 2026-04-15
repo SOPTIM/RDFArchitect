@@ -24,12 +24,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
-import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
 import org.slf4j.Logger;
@@ -42,7 +40,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -97,18 +94,7 @@ public class RenderingRESTController {
                           null;
 
         CIMCollection cimCollection = converter.convert(graphIdentifier, filter);
-
-        var hasRenderableClasses = !cimCollection.getClasses().isEmpty() || !cimCollection.getEnums().isEmpty();
-
-        RenderingDataDTO renderingData = null;
-        if (hasRenderableClasses) {
-            renderingData = renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
-        } else if (renderer instanceof RenderCIMCollectionSvelteFlowService) {
-            renderingData = SvelteFlowDTO.builder()
-                                         .nodes(List.of())
-                                         .edges(List.of())
-                                         .build();
-        }
+        RenderingDataDTO renderingData = renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
 
         logger.info("Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".", datasetName, graphURI, originURL);
         return renderingData;
