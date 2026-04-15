@@ -63,7 +63,7 @@
         },
         KEEP: {
             icon: faShieldHalved,
-            text: "Keep ref",
+            text: "Keep",
             variant: "default",
             width: "w-24",
             tooltip:
@@ -71,16 +71,16 @@
         },
         REMOVE_PACKAGE_REFERENCE: {
             icon: faLinkSlash,
-            text: "Remove ref",
+            text: "Move to default",
             variant: "default",
-            width: "w-30",
+            width: "w-36",
             tooltip: "Keep this resource but remove its package reference",
         },
         REMOVE_SUBCLASS_REFERENCE: {
             icon: faLinkSlash,
-            text: "Remove ref",
+            text: "Remove parent",
             variant: "default",
-            width: "w-30",
+            width: "w-36",
             tooltip: "Keep this resource but remove its inheritance reference",
         },
     };
@@ -163,6 +163,11 @@
             {:else}
                 <span class="text-default-text truncate text-sm font-medium">
                     {node.resourceIdentifier.label}
+                    {#if typeBadge === "ATTRIBUTE" && node.domain}
+                        <span class="text-text-subtle text-xs font-normal">
+                            ({node.domain.label})
+                        </span>
+                    {/if}
                 </span>
             {/if}
             {#if node.reason && !isRoot}
@@ -176,28 +181,62 @@
         <div class="ml-auto flex shrink-0 gap-1.5">
             {#each availableActions as action}
                 {@const config = actionConfig[action]}
-                <div class={config.width}>
-                    {#if node.actions.includes(action)}
-                        <div
-                            class="transition-opacity"
-                            class:opacity-40={currentAction !== action &&
-                                !disabled}
-                            class:hover:opacity-70={currentAction !== action &&
-                                !disabled}
-                        >
-                            <FaIconButton
-                                callOnClick={() => selectAction(action)}
-                                icon={config.icon}
-                                text={config.text}
-                                variant={currentAction === action
-                                    ? config.variant
-                                    : "default"}
-                                title={config.tooltip}
-                                disabled={disabled || isRoot}
-                            />
-                        </div>
-                    {/if}
-                </div>
+                {#if action === "REMOVE_SUBCLASS_REFERENCE" && availableActions.includes("REMOVE_PACKAGE_REFERENCE")}
+                    <!-- Skip, already rendered in REMOVE_PACKAGE_REFERENCE slot -->
+                {:else if action === "REMOVE_PACKAGE_REFERENCE"}
+                    <!-- Shared slot for both reference removal actions -->
+                    {@const refAction = node.actions.find(
+                        a =>
+                            a === "REMOVE_PACKAGE_REFERENCE" ||
+                            a === "REMOVE_SUBCLASS_REFERENCE",
+                    )}
+                    <div class="w-36">
+                        {#if refAction}
+                            {@const refConfig = actionConfig[refAction]}
+                            <div
+                                class="transition-opacity"
+                                class:opacity-40={currentAction !== refAction &&
+                                    !disabled}
+                                class:hover:opacity-70={currentAction !==
+                                    refAction && !disabled}
+                            >
+                                <FaIconButton
+                                    callOnClick={() => selectAction(refAction)}
+                                    icon={refConfig.icon}
+                                    text={refConfig.text}
+                                    variant={currentAction === refAction
+                                        ? refConfig.variant
+                                        : "default"}
+                                    title={refConfig.tooltip}
+                                    disabled={disabled || isRoot}
+                                />
+                            </div>
+                        {/if}
+                    </div>
+                {:else}
+                    <div class={config.width}>
+                        {#if node.actions.includes(action)}
+                            <div
+                                class="transition-opacity"
+                                class:opacity-40={currentAction !== action &&
+                                    !disabled}
+                                class:hover:opacity-70={currentAction !==
+                                    action && !disabled}
+                            >
+                                <FaIconButton
+                                    callOnClick={() => selectAction(action)}
+                                    icon={config.icon}
+                                    text={config.text}
+                                    variant={currentAction === action
+                                        ? config.variant
+                                        : "default"}
+                                    title={config.tooltip}
+                                    disabled={disabled || isRoot}
+                                />
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
             {/each}
         </div>
     </div>
