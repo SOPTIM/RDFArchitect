@@ -38,6 +38,7 @@
         showDialog = $bindable(),
         dataset,
         graphUri,
+        namespaces,
         ontology = $bindable(),
         readonly,
         onSubmit,
@@ -48,7 +49,6 @@
     let showAddKnownEntriesPopUp = $state(false);
     let showDiscardSaveConfirmDialog = $state(false);
 
-    let namespaces = $state([]);
     let tableContainerRef = $state(null);
 
     let ontologyObject = $state();

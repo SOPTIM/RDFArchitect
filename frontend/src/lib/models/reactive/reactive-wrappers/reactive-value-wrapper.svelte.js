@@ -19,6 +19,8 @@ export class ReactiveValueWrapper {
     /**
      * @param {*} value - The initial value to be wrapped
      * @param {Array<function(*): string[]> | function(*): string[]} violationChecks - An array of functions to validate the value
+     * @param compareValues - Optional values to compare with when checking for modifications
+     * @param secondValue - A second optional value that can be used for the violation checks
      */
     constructor(value, violationChecks = []) {
         let backup = value;
