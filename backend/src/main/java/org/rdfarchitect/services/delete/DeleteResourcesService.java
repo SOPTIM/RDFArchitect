@@ -32,6 +32,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -118,12 +119,12 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
      * Nodes that are still referenced by other resources are not fully deleted;
      * instead, only their {@code rdfa:uuid} triple is preserved to maintain referential integrity.
      *
-     * @param model    the RDF model to remove statements from
      * @param resource the root resource to delete
      */
-    private void removeResource(Model model, Resource resource) {
+    private void removeResource(Resource resource) {
         var queue = new ArrayDeque<Resource>();
         queue.add(resource);
+        var model = resource.getModel();
 
         while (!queue.isEmpty()) {
             var current = queue.poll();
@@ -156,7 +157,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return;
         }
         var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
-        removeResource(model, resource);
+        removeResource(resource);
     }
 
     /**
@@ -165,7 +166,8 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
      * triple is removed, leaving the class itself intact.
      */
     private void deleteClass(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.CLASS, DeleteAction.DELETE, DeleteAction.REMOVE_SUBCLASS_REFERENCE, DeleteAction.REMOVE_PACKAGE_REFERENCE)) {
+        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.CLASS, DeleteAction.DELETE, DeleteAction.REMOVE_SUBCLASS_REFERENCE,
+                              DeleteAction.REMOVE_PACKAGE_REFERENCE)) {
             return;
         }
         var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
@@ -179,17 +181,26 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return;
         }
 
-        // Delete attributes and associations (linked via rdfs:domain)
+        // Delete attributes
         model.listSubjectsWithProperty(RDFS.domain, resource)
+             .filterKeep(CIMPropertyUtils::isAttribute)
              .toList()
-             .forEach(owned -> removeResource(model, owned));
+             .forEach(this::removeResource);
 
-        // Delete enum entries (linked via rdf:type)
+        //delete associations only if it references an external resource
+        model.listSubjectsWithProperty(RDFS.domain, resource)
+             .filterKeep(CIMPropertyUtils::isAssociation)
+             .filterKeep(assoc -> CIMResourceTypeIdentifyingUtils.isExternalResource(assoc.getProperty(RDFS.domain).getObject().asResource()))
+             .toList()
+             .forEach(this::removeResource);
+
+        // Delete enum entries
         model.listSubjectsWithProperty(RDF.type, resource)
+             .filterKeep(CIMResourceTypeIdentifyingUtils::isEnumEntry)
              .toList()
-             .forEach(entry -> removeResource(model, entry));
+             .forEach(this::removeResource);
 
-        removeResource(model, resource);
+        removeResource(resource);
     }
 
     private void deleteAttribute(Model model, ResourceDeleteRequest deleteRequest) {
@@ -197,7 +208,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return;
         }
         var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
-        removeResource(model, resource);
+        removeResource(resource);
     }
 
     /**
@@ -218,10 +229,10 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             // Break circular reference before deleting
             model.remove(inverse, CIMS.inverseRoleName, resource);
             model.remove(resource, CIMS.inverseRoleName, inverse);
-            removeResource(model, inverse);
+            removeResource(inverse);
         }
 
-        removeResource(model, resource);
+        removeResource(resource);
     }
 
     private void deleteEnumEntry(Model model, ResourceDeleteRequest deleteRequest) {
@@ -229,7 +240,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return;
         }
         var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
-        removeResource(model, resource);
+        removeResource(resource);
     }
 
     private void deleteOntology(Model model, ResourceDeleteRequest deleteRequest) {
@@ -237,6 +248,6 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return;
         }
         var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
-        removeResource(model, resource);
+        removeResource(resource);
     }
 }

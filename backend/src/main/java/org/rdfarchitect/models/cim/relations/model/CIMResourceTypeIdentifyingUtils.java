@@ -76,12 +76,18 @@ public class CIMResourceTypeIdentifyingUtils {
         return subjects.getFirst();
     }
 
-    private boolean isEnumEntry(Resource subject) {
+    public boolean isEnumEntry(Resource subject) {
         var types = subject.listProperties(RDF.type).toList();
         if (types.size() != 1 || !types.getFirst().getObject().isURIResource()) {
             return false;
         }
         return types.getFirst().getObject().asResource()
                     .hasProperty(CIMS.stereotype, CIMStereotypes.enumeration);
+    }
+
+    public boolean isExternalResource(Resource resource) {
+        return resource.listProperties()
+                    .filterDrop(stmt -> stmt.getPredicate().equals(RDFA.uuid))
+                    .hasNext();
     }
 }
