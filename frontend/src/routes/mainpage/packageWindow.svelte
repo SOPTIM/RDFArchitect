@@ -85,29 +85,28 @@
     }
 </script>
 
-<div class="relative h-full w-full overflow-hidden">
-    {#key editorState.selectedPackageUUID.subscribe()}
-        <div class="h-full">
-            <RenderingWrapper
-                rightInsetPercent={isClassSelected ? classEditorPaneWidth : 0}
-            />
-        </div>
-    {/key}
-
-    {#if isClassSelected}
-        <Splitpanes
-            theme="opencgmes-theme"
-            class="pointer-events-none absolute top-0 right-0 h-screen w-screen"
-            onresize={handleSplitPaneResize}
+<div class="h-full w-full overflow-hidden">
+    <Splitpanes
+        theme="opencgmes-theme"
+        class="flex h-full"
+        onresize={handleSplitPaneResize}
+    >
+        <Pane
+            size={isClassSelected ? 100 - classEditorPaneWidth : 100}
+            class="bg-window-background h-full overflow-hidden"
         >
-            <Pane
-                size={100 - classEditorPaneWidth}
-                class="pointer-events-none bg-transparent"
-            ></Pane>
+            {#key editorState.selectedPackageUUID.subscribe()}
+                <div class="h-full">
+                    <RenderingWrapper />
+                </div>
+            {/key}
+        </Pane>
+
+        {#if isClassSelected}
             <Pane
                 size={classEditorPaneWidth}
                 minSize={25}
-                class="pointer-events-auto h-full overflow-auto"
+                class="h-full overflow-auto"
             >
                 {#key classEditorKey}
                     <ClassEditor
@@ -117,6 +116,6 @@
                     />
                 {/key}
             </Pane>
-        </Splitpanes>
-    {/if}
+        {/if}
+    </Splitpanes>
 </div>

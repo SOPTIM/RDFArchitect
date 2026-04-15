@@ -137,7 +137,7 @@
 
 {#if editorState.selectedPackageUUID.getValue()}
     <div class="bg-window-background flex h-full flex-col justify-between">
-        <div class="relative h-full">
+        <div class="relative h-full overflow-hidden">
             {#if displayDiagram}
                 <div
                     class="absolute top-1 left-1 z-1 flex flex-col space-y-0.5"
