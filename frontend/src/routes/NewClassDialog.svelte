@@ -18,6 +18,7 @@
 <script>
     import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
+
     import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
@@ -28,10 +29,6 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
-    import Dialog from "$lib/dialog/Dialog.svelte";
-    import DialogLeaveButtons from "$lib/dialog/DialogLeaveButtons.svelte";
-    import { ReactiveValueCompareWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-compare-wrapper.svelte.js";
-    import { isInvalidLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
     import {
         editorState,
