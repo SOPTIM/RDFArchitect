@@ -94,7 +94,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
 
         var classResourceId = createResourceIdentifier(model, uuid);
         var affectedResources = new ArrayList<AffectedResource>();
-        affectedResources.addAll(findAffectedAttributesForClass(classResource, classResourceId));
+        affectedResources.addAll(findAffectedAttributesForClass(classResource));
         affectedResources.addAll(findAffectedAssociationsForClass(classResource, classResourceId));
         affectedResources.addAll(findAffectedChildClassesForClass(classResource));
 
@@ -106,27 +106,33 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
                   .setChildren(affectedResources);
     }
 
-    private List<AffectedResource> findAffectedAttributesForClass(Resource classResource, ResourceIdentifier classResourceId) {
+    private List<AffectedResource> findAffectedAttributesForClass(Resource classResource) {
         var childActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP);
         return listAttributesWithClassAsDatatype(classResource).stream()
                                                                .map(attr -> new AffectedOwnedResource(createResourceIdentifier(attr),
                                                                                                       CimResourceType.ATTRIBUTE,
                                                                                                       AffectedResourceReason.USES_DELETED_CLASS_AS_DATATYPE,
-                                                                                                      classResourceId)
+                                                                                                      createResourceIdentifier(attr.getProperty(RDFS.domain).getObject().asResource()))
                                                                          .setActions(childActions))
                                                                .toList();
     }
 
     private List<AffectedResource> findAffectedAssociationsForClass(Resource classResource, ResourceIdentifier classResourceId) {
-        var childActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP);
         return listAssociationsReferencingClass(classResource).stream()
-                                                              .map(assoc -> new AffectedAssociation(createResourceIdentifier(assoc),
-                                                                                                    CimResourceType.ASSOCIATION,
-                                                                                                    AffectedResourceReason.REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
-                                                                                                    classResourceId,
-                                                                                                    getAssociationTarget(assoc)
-                                                              )
-                                                                        .setActions(childActions))
+                                                              .map(assoc -> {
+                                                                  var childActions = new ArrayList<DeleteAction>();
+                                                                  childActions.add(DeleteAction.DELETE);
+                                                                  if(!CIMResourceTypeIdentifyingUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource())){
+                                                                      childActions.add(DeleteAction.KEEP);
+                                                                  }
+                                                                  return new AffectedAssociation(createResourceIdentifier(assoc),
+                                                                                          CimResourceType.ASSOCIATION,
+                                                                                          AffectedResourceReason.REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
+                                                                                          classResourceId,
+                                                                                          getAssociationTarget(assoc)
+                                                                  )
+                                                                            .setActions(childActions);
+                                                              })
                                                               .toList();
     }
 
@@ -195,11 +201,12 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
 
     private ResourceIdentifier createResourceIdentifier(Resource resource) {
         var uuid = findUuidForResource(resource);
-        if (!resource.hasProperty(RDFS.label)) {
-            throw new IllegalStateException("Resource with UUID " + uuid + " does not have a label.");
+        var label = resource.getLocalName();
+        if (resource.hasProperty(RDFS.label)) {
+            label = resource.getProperty(RDFS.label).getString();
         }
         return new ResourceIdentifier().setUuid(uuid)
-                                       .setLabel(resource.getProperty(RDFS.label).getString())
+                                       .setLabel(label)
                                        .setNamespace(resource.getNameSpace());
     }
 

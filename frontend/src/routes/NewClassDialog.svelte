@@ -107,7 +107,7 @@
         }
         untrack(
             () =>
-                (className = new ReactiveValueWrapper(className.value, label =>
+                (className = new ReactiveValueWrapper(className?.value, label =>
                     isInvalidClassLabel(
                         label,
                         classURINamespace.value,
