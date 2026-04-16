@@ -34,9 +34,9 @@ import org.rdfarchitect.api.dto.delete.relations.AffectedResource.AffectedResour
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
@@ -48,12 +48,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCase {
+public class FindDeleteDependenciesService implements FindDeleteDependenciesUseCase {
 
     private final DatabasePort databasePort;
 
     @Override
-    public AffectedResource getDeleteRelations(GraphIdentifier graphIdentifier, UUID uuid) {
+    public AffectedResource getDeleteDependencies(GraphIdentifier graphIdentifier, UUID uuid) {
         var model = ModelFactory.createModelForGraph(getCopyOfDatabaseGraph(graphIdentifier));
         var resourceType = CIMResourceTypeIdentifyingUtils.getType(model, uuid);
         var defaultActions = List.of(DeleteAction.DELETE);
@@ -79,7 +79,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
         var affectedResources = new ArrayList<AffectedResource>();
         var clsDeleteActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP, DeleteAction.REMOVE_PACKAGE_REFERENCE);
         for (var cls : classesInPackage) {
-            var clsUuid = findUuidForResource(cls);
+            var clsUuid = CIMResourceUtils.findUuidForResource(cls);
             var affectedClassResource = findAffectedRelationsForClass(model, clsUuid, AffectedResourceReason.CONTAINED_IN_PACKAGE, clsDeleteActions);
             affectedResources.add(affectedClassResource);
         }
@@ -97,9 +97,6 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
         affectedResources.addAll(findAffectedAttributesForClass(classResource));
         affectedResources.addAll(findAffectedAssociationsForClass(classResource, classResourceId));
         affectedResources.addAll(findAffectedChildClassesForClass(classResource));
-
-        // Attribute, die Teile der Klasse sind, werden hier nicht abgefragt, da sie immer mitgelöscht werden.
-        // (Vllt. sollte man die aber trotzdem mit anzeigen und keine Option oder so geben?)
 
         return new AffectedResource(classResourceId, CimResourceType.CLASS, reason)
                   .setActions(deleteActions)
@@ -122,7 +119,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
                                                               .map(assoc -> {
                                                                   var childActions = new ArrayList<DeleteAction>();
                                                                   childActions.add(DeleteAction.DELETE);
-                                                                  if(!CIMResourceTypeIdentifyingUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource())){
+                                                                  if(!CIMResourceUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource())){
                                                                       childActions.add(DeleteAction.KEEP);
                                                                   }
                                                                   return new AffectedAssociation(createResourceIdentifier(assoc),
@@ -158,12 +155,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
                                                            .toList();
     }
 
-    private UUID findUuidForResource(Resource resource) {
-        if (!resource.hasProperty(RDFA.uuid)) {
-            throw new IllegalStateException("Resource " + resource + " does not have a UUID.");
-        }
-        return UUID.fromString(resource.getProperty(RDFA.uuid).getString());
-    }
+
 
     private List<Resource> listClassesInPackage(Model model, UUID uuid) {
         var packageResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
@@ -200,7 +192,7 @@ public class FindOnDeleteRelationsService implements FindOnDeleteRelationsUseCas
     }
 
     private ResourceIdentifier createResourceIdentifier(Resource resource) {
-        var uuid = findUuidForResource(resource);
+        var uuid = CIMResourceUtils.findUuidForResource(resource);
         var label = resource.getLocalName();
         if (resource.hasProperty(RDFS.label)) {
             label = resource.getProperty(RDFS.label).getString();

@@ -26,7 +26,7 @@ import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.delete.DeleteResourcesUseCase;
-import org.rdfarchitect.services.delete.FindOnDeleteRelationsUseCase;
+import org.rdfarchitect.services.delete.FindDeleteDependenciesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -49,7 +49,7 @@ public class DeleteRESTController {
     private static final Logger logger = LoggerFactory.getLogger(DeleteRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
-    private final FindOnDeleteRelationsUseCase findOnDeleteRelationsUseCase;
+    private final FindDeleteDependenciesUseCase findDeleteDependenciesUseCase;
     private final DeleteResourcesUseCase deleteResourcesUseCase;
 
     @Operation(
@@ -78,7 +78,7 @@ public class DeleteRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var resultObj = findOnDeleteRelationsUseCase.getDeleteRelations(new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(uuid));
+        var resultObj = findDeleteDependenciesUseCase.getDeleteDependencies(new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(uuid));
 
         logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".", datasetName, graphURI, uuid, originURL);
         return resultObj;
@@ -111,7 +111,7 @@ public class DeleteRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        deleteResourcesUseCase.deleteResources(new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
+        deleteResourcesUseCase.executeDeleteRequests(new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
 
         logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".", datasetName, graphURI, originURL);
         return "success";
