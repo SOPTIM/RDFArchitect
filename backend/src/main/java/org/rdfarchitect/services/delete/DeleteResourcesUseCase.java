@@ -24,5 +24,10 @@ import java.util.List;
 
 public interface DeleteResourcesUseCase {
 
-    void deleteResources(GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests);
+    /**
+     * Executes a list of delete requests on a specified graph.
+     * @param graphIdentifier The identifier of the graph where the change occurred.
+     * @param deleteRequests The List of deleteRequests.
+     */
+    void executeDeleteRequests(GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests);
 }
