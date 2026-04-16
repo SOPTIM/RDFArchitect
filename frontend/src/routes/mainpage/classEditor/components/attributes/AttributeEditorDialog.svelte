@@ -31,16 +31,21 @@
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
 
-    let { showDialog = $bindable(), attribute, attributes } = $props();
-
+    let {
+        showDialog = $bindable(),
+        attribute: attributeProp,
+        attributes,
+    } = $props();
     let classEditorContext = $state();
 
     let isNewAttribute = $state(true);
+    let attribute = $derived(attributeProp);
     let readonly = $derived(classEditorContext?.readonly);
     let datatypes = $derived(classEditorContext?.datatypes);
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        attribute = attributeProp;
         if (!attributes.contains(attribute)) {
             isNewAttribute = true;
             attribute = new ReactiveAttribute({
