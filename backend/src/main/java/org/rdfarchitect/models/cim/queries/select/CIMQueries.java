@@ -120,7 +120,6 @@ public class CIMQueries {
                   .appendRangeQuery(REQUIRED)
                   .appendAssociationUsedQuery(REQUIRED)
                   .appendInverseRoleNameQuery(REQUIRED)
-                  .appendInverseUUIDQuery(REQUIRED)
                   .appendMultiplicityQuery(REQUIRED)
                   .appendDomainQuery(REQUIRED)
                   .appendCommentQuery(OPTIONAL)
@@ -154,7 +153,6 @@ public class CIMQueries {
         var builder = new CIMQueryBuilder(baseQuery);
 
         return builder
-                  .appendUUIDQuery(REQUIRED)
                   .appendLabelQuery(REQUIRED)
                   .appendRangeQuery(REQUIRED)
                   .appendAssociationUsedQuery(REQUIRED)

@@ -16,155 +16,63 @@
   -->
 
 <script>
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { graphViewState } from "$lib/sharedState.svelte.js";
 
     let { showDialog = $bindable() } = $props();
 
-    const FILTER_GROUPS = [
+    let options = $state([
         {
-            title: "Class Content",
-            description:
-                "Control which class members are rendered inside the package view.",
-            options: [
-                {
-                    key: "includeAttributes",
-                    title: "Attributes",
-                    description: "Show attributes inside class boxes.",
-                },
-                {
-                    key: "includeEnumEntries",
-                    title: "Enum Entries",
-                    description: "Show enum members inside enum classes.",
-                },
-            ],
+            label: "include enum entries",
+            value: graphViewState.filter.getValue().includeEnumEntries,
         },
         {
-            title: "Relationships",
-            description:
-                "Decide which connections are rendered between classes in the diagram.",
-            options: [
-                {
-                    key: "includeAssociations",
-                    title: "Associations",
-                    description: "Show association edges between classes.",
-                },
-                {
-                    key: "includeAssociationLabels",
-                    title: "Association Role Labels",
-                    description:
-                        "Show association role labels on edges in the SvelteFlow diagram.",
-                },
-                {
-                    key: "includeInheritance",
-                    title: "Inheritance",
-                    description: "Show superclass relationships.",
-                },
-            ],
+            label: "include attributes",
+            value: graphViewState.filter.getValue().includeAttributes,
         },
         {
-            title: "Package Scope",
-            description:
-                "Choose whether links beyond the selected package stay visible.",
-            options: [
-                {
-                    key: "includeRelationsToExternalPackages",
-                    title: "External Package Relations",
-                    description:
-                        "Keep edges to classes outside the selected package visible.",
-                },
-            ],
+            label: "include associations",
+            value: graphViewState.filter.getValue().includeAssociations,
         },
-    ];
-
-    let options = $state([]);
-
-    function syncOptions() {
-        const currentFilter = graphViewState.filter.getValue();
-
-        options = FILTER_GROUPS.map(group => ({
-            ...group,
-            options: group.options.map(option => ({
-                ...option,
-                value: currentFilter[option.key],
-            })),
-        }));
-    }
+        {
+            label: "include inheritance",
+            value: graphViewState.filter.getValue().includeInheritance,
+        },
+        {
+            label: "include relations to external packages",
+            value: graphViewState.filter.getValue()
+                .includeRelationsToExternalPackages,
+        },
+    ]);
 
     function submit() {
-        const nextFilter = options.reduce((filter, group) => {
-            for (const option of group.options) {
-                filter[option.key] = option.value;
-            }
-
-            return filter;
-        }, {});
-
-        graphViewState.filter.updateValue(nextFilter);
+        graphViewState.filter.updateValue({
+            includeEnumEntries: options[0].value,
+            includeAttributes: options[1].value,
+            includeAssociations: options[2].value,
+            includeInheritance: options[3].value,
+            includeRelationsToExternalPackages: options[4].value,
+        });
         showDialog = false;
     }
-
-    syncOptions();
 </script>
 
 <ActionDialog
     bind:showDialog
-    primaryLabel="Apply"
+    primaryLabel="Save"
     onPrimary={submit}
-    onOpen={syncOptions}
-    title="Filter Diagram"
-    size="w-[34rem] max-w-[calc(100vw-2rem)]"
+    title="Select filters"
 >
-    <div class="flex flex-col gap-4 px-2 py-1">
-        <div class="border-border bg-default-background rounded border p-3">
-            <p class="text-default-text text-sm font-medium">
-                Choose what should stay visible in the current diagram.
-            </p>
-            <p class="text-default-text mt-1 text-sm opacity-75">
-                These filters affect the package view only and can be changed at
-                any time.
-            </p>
-        </div>
-
-        {#each options as group}
-            <section class="border-border rounded border">
-                <div
-                    class="bg-default-background border-border border-b px-4 py-3"
-                >
-                    <h3 class="text-default-text text-sm font-semibold">
-                        {group.title}
-                    </h3>
-                    <p class="text-default-text mt-1 text-sm opacity-75">
-                        {group.description}
-                    </p>
-                </div>
-
-                <div class="flex flex-col gap-3 p-3">
-                    {#each group.options as option}
-                        <label
-                            class="border-border bg-window-background hover:bg-default-background flex cursor-pointer items-start gap-3 rounded border px-3 py-3 transition-colors"
-                        >
-                            <input
-                                type="checkbox"
-                                class="text-button-default-text bg-default-background checked:bg-button-default-background mt-0.5 h-4 w-4 rounded border-none"
-                                bind:checked={option.value}
-                            />
-                            <span class="min-w-0">
-                                <span
-                                    class="text-default-text block text-sm font-medium"
-                                >
-                                    {option.title}
-                                </span>
-                                <span
-                                    class="text-default-text mt-1 block text-sm opacity-75"
-                                >
-                                    {option.description}
-                                </span>
-                            </span>
-                        </label>
-                    {/each}
-                </div>
-            </section>
+    <div class="flex flex-col space-y-2">
+        {#each options as option}
+            <div class="flex items-center space-x-2">
+                <CheckBoxEditControl
+                    label={option.label}
+                    labelFirst={false}
+                    bind:value={option.value}
+                />
+            </div>
         {/each}
     </div>
 </ActionDialog>

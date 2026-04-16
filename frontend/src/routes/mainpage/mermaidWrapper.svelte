@@ -49,7 +49,6 @@
         editorState.selectedGraph.subscribe();
         editorState.selectedPackageUUID.subscribe();
         forceReloadTrigger.subscribe();
-        graphViewState.filter.subscribe();
 
         if (!editorState.selectedPackageUUID.getValue()) return;
 
@@ -66,8 +65,6 @@
             includeRelationsToExternalPackages:
                 graphViewState.filter.getValue()
                     .includeRelationsToExternalPackages,
-            includeAssociationLabels:
-                graphViewState.filter.getValue().includeAssociationLabels,
         };
         new BackendConnection(fetch, PUBLIC_BACKEND_URL)
             .fetchMermaidUMLFiltered(

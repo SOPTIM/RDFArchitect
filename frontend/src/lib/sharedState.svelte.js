@@ -67,8 +67,7 @@ export const editorState = {
  *      includeAttributes: boolean,
  *      includeAssociations: boolean,
  *      includeInheritance: boolean,
- *      includeRelationsToExternalPackages: boolean,
- *      includeAssociationLabels: boolean
+ *      includeRelationsToExternalPackages: boolean
  *  }>
  * }}
  */
@@ -80,7 +79,6 @@ export const graphViewState = {
         includeAssociations: true,
         includeInheritance: true,
         includeRelationsToExternalPackages: true,
-        includeAssociationLabels: true,
     }),
 };
 

@@ -18,18 +18,13 @@
 package org.rdfarchitect.services.dl.select;
 
 import lombok.RequiredArgsConstructor;
-import org.apache.jena.rdf.model.Model;
-import org.rdfarchitect.api.dto.dl.AssociationRoleLayoutData;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
-import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.services.dl.AssociationLayoutConstants;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -43,7 +38,6 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     public RenderingLayoutData fetchRenderingLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        var resolvedPackageUUID = packageUUID == null ? diagramLayout.getDefaultPackageMRID().getUuid() : packageUUID;
 
         Map<UUID, DiagramObjectPoint> classLayoutingData;
         if (packageUUID == null) {
@@ -54,38 +48,6 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
 
         return RenderingLayoutData.builder()
                                   .classLayoutingData(classLayoutingData)
-                                  .associationLayoutingData(fetchAssociationLayoutingData(diagramLayoutModel, resolvedPackageUUID))
                                   .build();
-    }
-
-    private Map<UUID, AssociationRoleLayoutData> fetchAssociationLayoutingData(Model diagramLayoutModel, UUID packageUUID) {
-        Map<UUID, AssociationRoleLayoutData> associationLayoutingData = new HashMap<>();
-
-        for (var diagramObject : DLObjectFetcher.fetchDiagramDOs(diagramLayoutModel, new MRID(packageUUID))) {
-            var decorationType = AssociationLayoutConstants.getDecorationTypeForDiagramObjectName(diagramObject.getName());
-            if (decorationType == null) {
-                continue;
-            }
-
-            var diagramObjectPoint = DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
-            if (diagramObjectPoint == null) {
-                continue;
-            }
-
-            var associationUUID = diagramObject.getBelongsToIdentifiedObject().getUuid();
-            var associationRoleLayoutData = associationLayoutingData.getOrDefault(associationUUID, new AssociationRoleLayoutData());
-
-            switch (decorationType) {
-                case AssociationLayoutConstants.LABEL_DECORATION_TYPE ->
-                      associationRoleLayoutData.setLabelLayoutingData(diagramObjectPoint);
-                case AssociationLayoutConstants.MULTIPLICITY_DECORATION_TYPE ->
-                      associationRoleLayoutData.setMultiplicityLayoutingData(diagramObjectPoint);
-                default -> throw new IllegalArgumentException("Unexpected association decoration type: " + decorationType);
-            }
-
-            associationLayoutingData.put(associationUUID, associationRoleLayoutData);
-        }
-
-        return associationLayoutingData;
     }
 }

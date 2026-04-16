@@ -321,20 +321,4 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
 
     }
 
-    @Test
-    void convert_associatedClassesWithAssociationUuids_preservesBothAssociationUuids() throws IOException {
-        addFileGraphToDatabase(PATH + "associationWithUuids.ttl");
-        var filter = new GraphFilter(true);
-        filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
-
-        var cimCollection = converter.convert(graphIdentifier, filter);
-
-        assertThat(cimCollection.getAssociations())
-                .extracting(association -> association.getUuid())
-                .containsExactlyInAnyOrder(
-                        UUID.fromString("823e4567-e89b-12d3-a456-426614174000"),
-                        UUID.fromString("923e4567-e89b-12d3-a456-426614174000")
-                );
-    }
-
 }

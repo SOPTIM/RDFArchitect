@@ -31,9 +31,5 @@ import java.util.UUID;
 @Builder
 public class RenderingLayoutData {
 
-    @Builder.Default
-    Map<UUID, DiagramObjectPoint> classLayoutingData = Map.of();
-
-    @Builder.Default
-    Map<UUID, AssociationRoleLayoutData> associationLayoutingData = Map.of();
+    Map<UUID, DiagramObjectPoint> classLayoutingData;
 }

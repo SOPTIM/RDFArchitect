@@ -391,22 +391,6 @@ export class BackendConnection {
         });
     }
 
-    async updateAssociationDecorationPositions(
-        datasetName,
-        graphURI,
-        packageUUID,
-        associationDecorationPositionDTOList,
-    ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}/layout/associations`;
-        return await fetch(url, {
-            method: "PUT",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            mode: "cors",
-            body: JSON.stringify(associationDecorationPositionDTOList),
-            credentials: "include",
-        });
-    }
-
     async getKnownOntologyFields() {
         let url = `${PUBLIC_BACKEND_URL}/ontology-fields`;
         return await fetch(url, {
