@@ -273,7 +273,7 @@
                             : faPen
                         : faPlus}
                 >
-                    Ontology
+                    Profile header
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={launchPackageEditor}
@@ -348,7 +348,7 @@
                     faIcon={faTrash}
                     variant="danger"
                 >
-                    Ontology
+                    Profile header
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={launchPackageDeleteDialog}

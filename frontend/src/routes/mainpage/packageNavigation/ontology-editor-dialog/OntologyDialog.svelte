@@ -181,7 +181,9 @@
     closeOnPrimary={false}
     disablePrimary={disableSubmit}
     {readonly}
-    title={readonly ? "View Ontology" : "Edit Ontology"}
+    title={readonly
+        ? "View profile header meta data"
+        : "Edit profile header meta data"}
 >
     {#if loadingOntology}
         <div
