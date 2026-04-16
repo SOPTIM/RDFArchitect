@@ -86,7 +86,6 @@ export class ReactiveClass {
                 );
             },
         );
-
         this.associations = new ReactiveObjectsArrayWrapper(
             associations,
             ReactiveAssociation,

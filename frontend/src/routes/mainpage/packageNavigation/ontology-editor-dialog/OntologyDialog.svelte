@@ -23,6 +23,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -51,6 +52,8 @@
     let tableContainerRef = $state(null);
 
     let ontologyObject = $state();
+
+    let loadingOntology = $state(false);
 
     let hasChanges = $derived(ontologyObject?.isModified ?? false);
 
@@ -95,12 +98,25 @@
     }
 
     async function save() {
-        await saveOntology(dataset, graphUri, ontologyObject);
-        ontologyObject.save();
-        if (onSubmit) {
-            onSubmit();
-        } else {
-            forceReloadTrigger.trigger();
+        loadingOntology = true;
+        try {
+            await saveOntology(dataset, graphUri, ontologyObject);
+            const ontology = await getOntology();
+            if (ontology) {
+                ontologyObject = new ReactiveOntology(
+                    ontology.uuid,
+                    ontology.namespace,
+                    ontology.entries,
+                );
+            }
+            ontologyObject.save();
+            if (onSubmit) {
+                onSubmit();
+            } else {
+                forceReloadTrigger.trigger();
+            }
+        } finally {
+            loadingOntology = false;
         }
     }
 
@@ -112,6 +128,18 @@
     function handleAddEntry() {
         ontologyObject.entries.append();
         scrollEntriesToBottom();
+    }
+
+    async function getOntology() {
+        if (!graphUri) {
+            return null;
+        }
+        const res = await bec.getOntology(dataset, graphUri);
+        let content = await res.text();
+        if (!content) {
+            return null;
+        }
+        return JSON.parse(content);
     }
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {
@@ -153,8 +181,17 @@
     closeOnPrimary={false}
     disablePrimary={disableSubmit}
     {readonly}
-    title={readonly ? "View Ontology" : "Edit Ontology"}
+    title={readonly
+        ? "View profile header meta data"
+        : "Edit profile header meta data"}
 >
+    {#if loadingOntology}
+        <div
+            class="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
+        >
+            <LoadingSpinner />
+        </div>
+    {/if}
     <div class="mx-2 flex h-full flex-col">
         {#key ontologyObject}
             {#if ontologyObject}
