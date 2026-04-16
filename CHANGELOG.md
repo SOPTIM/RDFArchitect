@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-04-16
+
+### Added
+
+- RDFA-424: Multiple improvements to class editor: added close button, fixed file upload handling, improved import error visibility ([5e19b215](https://github.com/SOPTIM/RDFArchitect/commit/5e19b215), [#48](https://github.com/SOPTIM/RDFArchitect/pull/48))
+- RDFA-408: Schema Migration ([f7d3edcf](https://github.com/SOPTIM/RDFArchitect/commit/f7d3edcf), [#57](https://github.com/SOPTIM/RDFArchitect/pull/57))
+- RDFA-403: New closing buttons for dialogs ([b6009866](https://github.com/SOPTIM/RDFArchitect/commit/b6009866), [#55](https://github.com/SOPTIM/RDFArchitect/pull/55))
+- RDFA-447: Enhanced Class Editor loading animation ([79436945](https://github.com/SOPTIM/RDFArchitect/commit/79436945), [#60](https://github.com/SOPTIM/RDFArchitect/pull/60))
+- RDFA-343: Implement inline diff functionality for change comparison ([5c17f24e](https://github.com/SOPTIM/RDFArchitect/commit/5c17f24e), [#34](https://github.com/SOPTIM/RDFArchitect/pull/34))
+- RDFA-305: Add class focus and diagram context menus ([af150a5a](https://github.com/SOPTIM/RDFArchitect/commit/af150a5a), [#36](https://github.com/SOPTIM/RDFArchitect/pull/36))
+
+### Fixed
+
+- RDFA-366: Refactor shared dialogs to bits-ui modal primitives ([00463562](https://github.com/SOPTIM/RDFArchitect/commit/00463562), [#56](https://github.com/SOPTIM/RDFArchitect/pull/56))
+- RDFA-473: Fixed a number of issues ([805d29d3](https://github.com/SOPTIM/RDFArchitect/commit/805d29d3), [#77](https://github.com/SOPTIM/RDFArchitect/pull/77))
+- RDFA-445: Added violation checks to ontology dialog ([93c59b21](https://github.com/SOPTIM/RDFArchitect/commit/93c59b21), [#68](https://github.com/SOPTIM/RDFArchitect/pull/68))
+- RDFA-370: Added checks for class and attribute labels to have a unique IRI ([489a53b6](https://github.com/SOPTIM/RDFArchitect/commit/489a53b6), [#66](https://github.com/SOPTIM/RDFArchitect/pull/66))
+- RDFA-433: Fixed faulty navigation API calls ([04858dd6](https://github.com/SOPTIM/RDFArchitect/commit/04858dd6), [#64](https://github.com/SOPTIM/RDFArchitect/pull/64))
+- RDFA-371: Added unsaved changes adoption when saving a class property ([b1efffe2](https://github.com/SOPTIM/RDFArchitect/commit/b1efffe2), [#65](https://github.com/SOPTIM/RDFArchitect/pull/65))
+- Fixed loading SPARQL templates from classpath in packaged backend ([9f6938d2](https://github.com/SOPTIM/RDFArchitect/commit/9f6938d2), [#73](https://github.com/SOPTIM/RDFArchitect/pull/73))
+- Reset new item save state in class editor dialogs ([cbc2c912](https://github.com/SOPTIM/RDFArchitect/commit/cbc2c912), [#69](https://github.com/SOPTIM/RDFArchitect/pull/69))
+
 ## [0.15.1] - 2026-03-25
 
 ### Fixed
