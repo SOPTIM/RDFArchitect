@@ -15,7 +15,7 @@
  *
  */
 
-import { ReactiveOntologyEntry } from "$lib/models/reactive/ontology/reactive-ontology-entry.svelte.js";
+import { ReactiveOntologyEntry } from "$lib/models/reactive/models/ontology/reactive-ontology-entry.svelte.js";
 import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {

@@ -102,6 +102,7 @@
                 responseText,
             );
         }
+        forceReloadTrigger.trigger();
     }
 </script>
 

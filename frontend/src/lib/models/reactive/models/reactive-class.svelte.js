@@ -15,14 +15,15 @@
  *
  */
 
-import { ReactiveAssociation } from "$lib/models/reactive/reactive-association.svelte.js";
-import { ReactiveAttribute } from "$lib/models/reactive/reactive-attribute.svelte.js";
-import { ReactiveEnumEntry } from "$lib/models/reactive/reactive-enum-entry.svelte.js";
+import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
+import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
+import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
 import { ReactiveObjectsArrayWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-objects-array-wrapper.svelte.js";
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
+    hasUniqueIRI,
     hasUniqueLabel,
-    isInvalidLabel,
+    isInvalidClassLabel,
     isInvalidNamespace,
     isInvalidStereotype,
     isInvalidUuid,
@@ -33,6 +34,7 @@ function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
         isInvalidStereotype(stereotype, stereotypesArray),
     );
 }
+
 function initializeUniqueLabelChecks(reactiveObject, enumEntriesArray) {
     reactiveObject.label.violationChecks.push(label =>
         hasUniqueLabel(label, enumEntriesArray),
@@ -51,13 +53,18 @@ export class ReactiveClass {
         attributes = [],
         associations = [],
         enumEntries = [],
+        compareClasses = [],
     ) {
+        compareClasses = compareClasses.filter(c => c.uuid !== uuid);
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.namespace = new ReactiveValueWrapper(
             namespace,
             isInvalidNamespace,
         );
-        this.label = new ReactiveValueWrapper(label, isInvalidLabel);
+        this.label = new ReactiveValueWrapper(label, label =>
+            isInvalidClassLabel(label, this.namespace.value, compareClasses),
+        );
+
         this.package = new ReactiveValueWrapper(pack);
         this.superClass = new ReactiveValueWrapper(superClass);
         this.comment = new ReactiveValueWrapper(comment);
@@ -69,8 +76,17 @@ export class ReactiveClass {
         this.attributes = new ReactiveObjectsArrayWrapper(
             attributes,
             ReactiveAttribute,
-            initializeUniqueLabelChecks,
+            (reactiveObject, entriesArray) => {
+                reactiveObject.label.violationChecks.push(label =>
+                    hasUniqueIRI(
+                        label,
+                        reactiveObject.namespace.value,
+                        entriesArray,
+                    ),
+                );
+            },
         );
+
         this.associations = new ReactiveObjectsArrayWrapper(
             associations,
             ReactiveAssociation,
@@ -97,7 +113,7 @@ export class ReactiveClass {
 
     /**
      * The label of the class
-     * @type {ReactiveValueWrapper<string>}
+     * @type {ReactiveValueWrapper}
      */
     label;
 

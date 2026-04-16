@@ -53,11 +53,13 @@
     function discardAndClose() {
         showDialog = false;
         discardChanges();
+        onClose();
     }
 
-    function saveAndClose() {
+    async function saveAndClose() {
         showDialog = false;
-        saveChanges();
+        await saveChanges();
+        onClose();
     }
 </script>
 

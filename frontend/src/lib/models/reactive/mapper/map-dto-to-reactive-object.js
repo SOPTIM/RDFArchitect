@@ -15,7 +15,7 @@
  *
  */
 
-import { ReactiveClass } from "$lib/models/reactive/reactive-class.svelte.js";
+import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
 
 /**
  * Maps a class DTO to a ReactiveClass instance
@@ -55,6 +55,7 @@ export function mapClassDtoToReactiveClass(classDto, classes) {
         attributes,
         associations,
         enumEntries,
+        classes,
     );
 }
 
