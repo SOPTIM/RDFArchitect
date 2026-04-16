@@ -61,6 +61,7 @@
             callOnInput={newIri => {
                 entry.iri.value = getSubstitutedNamespace(newIri);
             }}
+            warn={!entry.iri.isValid}
         />
     </td>
 
@@ -74,6 +75,7 @@
                 callOnInput={newLabel => {
                     entry.value.value = getSubstitutedNamespace(newLabel);
                 }}
+                warn={!entry.value.isValid}
             />
         </td>
     {:else}
@@ -83,6 +85,7 @@
                 {readonly}
                 placeholder="*literal value"
                 bind:value={entry.value.value}
+                warn={!entry.value.isValid}
             />
         </td>
 

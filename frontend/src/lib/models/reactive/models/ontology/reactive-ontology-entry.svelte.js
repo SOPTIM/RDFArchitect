@@ -16,7 +16,11 @@
  */
 
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
-import { isNotEmptyValidation } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+import {
+    isInvalidIri,
+    isInvalidOntologyValue,
+    isNotEmptyValidation,
+} from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 export class ReactiveOntologyEntry {
     constructor({
@@ -25,10 +29,12 @@ export class ReactiveOntologyEntry {
         isIriEntry = false,
         value = "",
     } = {}) {
-        this.iri = new ReactiveValueWrapper(iri);
+        this.iri = new ReactiveValueWrapper(iri, isInvalidIri);
         this.datatypeIri = new ReactiveValueWrapper(datatypeIri);
         this.isIriEntry = new ReactiveValueWrapper(isIriEntry);
-        this.value = new ReactiveValueWrapper(value);
+        this.value = new ReactiveValueWrapper(value, value =>
+            isInvalidOntologyValue(value, this.isIriEntry.value),
+        );
         this.initializeValidationChecks();
     }
 

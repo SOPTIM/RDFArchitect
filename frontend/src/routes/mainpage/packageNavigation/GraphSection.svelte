@@ -201,7 +201,7 @@
                         }}
                         faIcon={faGear}
                     >
-                        Edit Ontology
+                        Edit profile header
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => {
@@ -214,7 +214,7 @@
                         variant="danger"
                         faIcon={faTrash}
                     >
-                        Delete Ontology
+                        Delete profile header
                     </ContextMenu.Item.Button>
                 {:else}
                     <ContextMenu.Item.Button
@@ -223,7 +223,7 @@
                         }}
                         faIcon={faPlus}
                     >
-                        Create Ontology
+                        Create profile header
                     </ContextMenu.Item.Button>
                 {/if}
                 <ContextMenu.Separator />
@@ -234,7 +234,7 @@
                     }}
                     faIcon={faEye}
                 >
-                    View Ontology
+                    View profile header
                 </ContextMenu.Item.Button>
                 <ContextMenu.Separator />
             {/if}
