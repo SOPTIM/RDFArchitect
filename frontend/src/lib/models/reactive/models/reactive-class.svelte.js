@@ -25,7 +25,6 @@ import {
     hasUniqueLabel,
     isInvalidAssociationLabel,
     isInvalidInverseAssociationLabel,
-    isInvalidLabel,
     isInvalidClassLabel,
     isInvalidNamespace,
     isInvalidStereotype,
