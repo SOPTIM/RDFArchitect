@@ -2,7 +2,7 @@
 
 [![Backend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)
-[![Version](https://img.shields.io/badge/version-0.15.1-blue.svg)](https://github.com/SOPTIM/RDFArchitect/releases)
+[![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](https://github.com/SOPTIM/RDFArchitect/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 RDFArchitect is a web-based tool for visualizing and editing RDF graphs that model UML classes using the CIM standard.
