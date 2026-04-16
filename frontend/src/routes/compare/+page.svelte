@@ -123,7 +123,9 @@
             {/if}
             {#if changeList?.length === 0}
                 <div class="bg-window-background rounded-xl border p-6 shadow">
-                    <p class="text-default-text italic">No changes in graph.</p>
+                    <p class="text-default-text italic">
+                        No changes in schema.
+                    </p>
                 </div>
             {/if}
         </div>

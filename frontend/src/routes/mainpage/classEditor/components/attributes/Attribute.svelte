@@ -80,6 +80,7 @@
             accessDisplayData={datatype => datatype.label}
             accessIdentifier={datatype =>
                 classEditorContext.getSubstitutedNamespace(datatype.prefix) +
+                ":" +
                 datatype.label}
             callOnValidChange={newDatatype =>
                 (attribute.datatype.value = newDatatype
@@ -96,7 +97,7 @@
     <td>
         <FaIconButton
             callOnClick={() => openPropertySHACLRulesDialog(attribute)}
-            title={readonly ? "View" : "Edit" + " SHACL shapes"}
+            title={readonly ? "View" : "Edit" + " Constrains (SHACL)"}
             icon={faDiagramProject}
         />
     </td>

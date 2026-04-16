@@ -84,18 +84,18 @@
     {onOpen}
     {onClose}
     size="w-full max-w-lg"
-    primaryLabel="Delete Graph"
+    primaryLabel="Delete Schema"
     onPrimary={deleteGraph}
     disablePrimary={disableSubmit}
-    title={graphURI ? `Delete graph "${graphURI}"?` : "Delete graph?"}
+    title={graphURI ? `Delete schema "${graphURI}"?` : "Delete schema?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-3/4 text-sm leading-relaxed">
             {datasetName
-                ? `The graph will be removed from dataset "${datasetName}".`
-                : "Select a dataset and graph to delete."}
+                ? `The schema will be removed from dataset "${datasetName}".`
+                : "Select a dataset and schema to delete."}
             <br />
             This action is not reversible.
         </p>

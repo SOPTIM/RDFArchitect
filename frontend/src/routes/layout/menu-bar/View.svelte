@@ -62,7 +62,7 @@
             onSelect={() => (showCompareDialog = true)}
             faIcon={faCodeBranch}
         >
-            Compare Graphs
+            Compare Schemas
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => goto("/migrate")}
@@ -75,7 +75,7 @@
             disabled={!hasGraphSelected}
             faIcon={faEye}
         >
-            Full SHACL
+            Constrains (SHACL)
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>

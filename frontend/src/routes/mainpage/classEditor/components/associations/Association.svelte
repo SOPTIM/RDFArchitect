@@ -26,7 +26,7 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
-    import SearchableSelect from "$lib/components/SearchableSelect.svelte";
+    import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -41,7 +41,6 @@
 
     const classEditorContext = getContext("classEditor");
     let readonly = $derived(classEditorContext.readonly);
-    let classes = $derived(classEditorContext.classes);
 
     let lowerButtons = $derived(getButtons(association.multiplicityLowerBound));
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));
@@ -49,12 +48,10 @@
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-        classes = classEditorContext.classes;
     });
 
     onMount(() => {
         readonly = classEditorContext.readonly;
-        classes = classEditorContext.classes;
     });
 
     function getButtons(multiplicityObject) {
@@ -92,23 +89,14 @@
     </td>
 
     <td>
-        <SearchableSelect
-            placeholder="Target"
-            value={classEditorContext.getClassByUuid(association.target.value)
-                ?.label}
-            highlight={association.target.isModified}
-            warn={!association.target.isValid}
-            optionObjectList={classes}
-            accessDisplayData={cls => cls.label}
-            accessIdentifier={cls =>
-                classEditorContext.getSubstitutedNamespace(cls.prefix) +
-                cls.label}
-            callOnValidChange={newTarget =>
-                (association.target.value = newTarget ? newTarget.uuid : null)}
+        <TextEditControl
+            placeholder="association label..."
+            bind:value={association.label.value}
+            highlight={association.label.isModified}
+            warn={!association.label.isValid}
             {readonly}
-            tooltip={association.target.value}
             buttons={getControlButtonsForReactiveObject(
-                association.target,
+                association.label,
                 readonly,
             )}
         />
@@ -117,7 +105,7 @@
     <td>
         <FaIconButton
             callOnClick={() => openPropertySHACLRulesDialog(association)}
-            title={readonly ? "View" : "Edit" + " SHACL shapes"}
+            title={readonly ? "View" : "Edit" + " Constrains (SHACL)"}
             icon={faDiagramProject}
         />
     </td>
@@ -141,7 +129,7 @@
     {/if}
 </tr>
 
-{#if !association.multiplicityUpperBound.isValid || !association.multiplicityLowerBound.isValid || !association.target.isValid}
+{#if !association.multiplicityUpperBound.isValid || !association.multiplicityLowerBound.isValid || !association.label.isValid || !association.target.isValid}
     <tr>
         <td class="align-top">
             <ViolationMessages
@@ -152,6 +140,9 @@
             <ViolationMessages
                 violations={association.multiplicityUpperBound.violations}
             />
+        </td>
+        <td class="align-top">
+            <ViolationMessages violations={association.label.violations} />
         </td>
         <td class="align-top">
             <ViolationMessages violations={association.target.violations} />

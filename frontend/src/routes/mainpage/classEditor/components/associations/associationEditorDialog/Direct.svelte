@@ -114,6 +114,7 @@
             }}
             accessIdentifier={cls =>
                 classEditorContext.getSubstitutedNamespace(cls.prefix) +
+                ":" +
                 cls.label}
             callOnValidChange={newTarget =>
                 (association.target.value = newTarget.uuid)}

@@ -89,13 +89,13 @@
                 onSelect={() => (showNewGraphDialog = true)}
                 faIcon={faDiagramProject}
             >
-                Add graph
+                Add schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => (showImportDialog = true)}
                 faIcon={faFileImport}
             >
-                Import Graph
+                Import Schema
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
         <ImportDialog bind:showDialog={showImportDialog} />

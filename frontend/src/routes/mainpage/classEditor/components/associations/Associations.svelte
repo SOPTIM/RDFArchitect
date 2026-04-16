@@ -63,8 +63,8 @@
     });
 
     function openAssociationEditor(association) {
-        associationEditorDialog.showDialog = true;
         associationEditorDialog.association = association;
+        associationEditorDialog.showDialog = true;
     }
 
     function updateWidth() {
@@ -109,7 +109,7 @@
                         class="pl-1 text-left font-normal"
                     ></th>
 
-                    <th class="text-blue pl-1 text-left font-normal">Target</th>
+                    <th class="text-blue pl-1 text-left font-normal">Label</th>
                     <th class="size-8"></th>
                     <th class="size-8"></th>
                     {#if !readonly}
@@ -136,5 +136,5 @@
 <AssociationEditorDialog
     bind:showDialog={associationEditorDialog.showDialog}
     {associations}
-    association={associationEditorDialog.association}
+    bind:association={associationEditorDialog.association}
 />

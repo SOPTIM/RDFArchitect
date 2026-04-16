@@ -69,13 +69,13 @@
                     onSelect={() => (showImportDialog = true)}
                     faIcon={faFileImport}
                 >
-                    Graph
+                    Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLUploadDialog = true)}
                     faIcon={faUpload}
                 >
-                    SHACL
+                    Constrains (SHACL)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -88,13 +88,13 @@
                     onSelect={() => (showExportDialog = true)}
                     faIcon={faFileExport}
                 >
-                    Graph
+                    Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLExportDialog = true)}
                     faIcon={faDownload}
                 >
-                    SHACL
+                    Constrains (SHACL)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -117,7 +117,7 @@
                     faIcon={faTrash}
                     variant="danger"
                 >
-                    Graph
+                    Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showDatasetDeleteDialog = true)}

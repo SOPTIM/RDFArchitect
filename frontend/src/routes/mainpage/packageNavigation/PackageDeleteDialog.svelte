@@ -61,7 +61,7 @@
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-2/3 text-sm leading-relaxed">
-            This removes the package from the current graph.
+            This removes the package from the current schema.
             <br />
             References to this package will remain.
         </p>

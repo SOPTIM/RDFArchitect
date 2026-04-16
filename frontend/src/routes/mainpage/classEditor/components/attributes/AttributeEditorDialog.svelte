@@ -31,7 +31,11 @@
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
 
-    let { showDialog = $bindable(), attribute, attributes } = $props();
+    let {
+        showDialog = $bindable(),
+        attribute = $bindable(),
+        attributes,
+    } = $props();
 
     let classEditorContext = $state();
 
