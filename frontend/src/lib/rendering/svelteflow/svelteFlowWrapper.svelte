@@ -27,6 +27,7 @@
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
     import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
     import { onMount } from "svelte";
+    import { untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -34,6 +35,7 @@
     import {
         editorState,
         forceReloadTrigger,
+        graphViewState,
     } from "$lib/sharedState.svelte.js";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
@@ -59,7 +61,7 @@
 
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
-    let isDatasetReadOnly = $state();
+    let isDatasetReadOnly = $state(true);
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
@@ -72,7 +74,59 @@
 
     $effect(() => {
         nodes = [...inputNodes];
+        const associationEdgeGroups = inputEdges.reduce((groups, edge) => {
+            if (edge.type !== "association") {
+                return groups;
+            }
+
+            const groupKey = getAssociationGroupKey(edge);
+            const group = groups.get(groupKey) ?? [];
+            group.push(edge);
+            groups.set(groupKey, group);
+
+            return groups;
+        }, new Map());
+
+        for (const group of associationEdgeGroups.values()) {
+            group.sort((a, b) =>
+                getAssociationOrderKey(a).localeCompare(
+                    getAssociationOrderKey(b),
+                ),
+            );
+        }
+
         edges = inputEdges.map(edge => {
+            let renderedEdge =
+                edge.type === "association"
+                    ? (() => {
+                          const groupKey = getAssociationGroupKey(edge);
+                          const group = associationEdgeGroups.get(groupKey) ?? [
+                              edge,
+                          ];
+                          const edgeIndex = group.findIndex(
+                              groupedEdge => groupedEdge.id === edge.id,
+                          );
+                          const canonicalOffset =
+                              (edgeIndex - (group.length - 1) / 2) * 34;
+                          const [canonicalSource] = [
+                              String(edge.source),
+                              String(edge.target),
+                          ].sort();
+                          const orientationMatchesCanonical =
+                              String(edge.source) === canonicalSource;
+
+                          return {
+                              ...edge,
+                              data: {
+                                  ...decorateAssociationEdgeData(edge.data),
+                                  parallelOffset: orientationMatchesCanonical
+                                      ? canonicalOffset
+                                      : -canonicalOffset,
+                              },
+                          };
+                      })()
+                    : edge;
+
             //applies offset to inheritance edge if an association edge already exists between the same two nodes
             if (edge.type === "inheritance") {
                 const hasAssociationEdgeBetweenSameNodes = inputEdges.some(
@@ -92,16 +146,16 @@
 
                 if (hasAssociationEdgeBetweenSameNodes) {
                     return {
-                        ...edge,
+                        ...renderedEdge,
                         data: {
-                            ...(edge.data || {}),
+                            ...(renderedEdge.data || {}),
                             offsetEdge: true,
                         },
                     };
                 }
             }
 
-            return edge;
+            return renderedEdge;
         });
         layouted = false;
         isLoading = false;
@@ -121,12 +175,50 @@
         isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
     });
 
+    $effect(() => {
+        graphViewState.filter.subscribe();
+        const canMoveAssociationDecoration = !isDatasetReadOnly;
+        const showAssociationLabels =
+            graphViewState.filter.getValue().includeAssociationLabels;
+
+        edges = untrack(() =>
+            edges.map(edge =>
+                edge.type === "association"
+                    ? {
+                          ...edge,
+                          data: {
+                              ...(edge.data || {}),
+                              canMoveAssociationDecoration,
+                              showAssociationLabels,
+                          },
+                      }
+                    : edge,
+            ),
+        );
+    });
+
     onMount(() => {
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
             nodes: useNodes(),
         };
     });
+
+    function getAssociationGroupKey(edge) {
+        const sortedNodeIds = [String(edge.source), String(edge.target)].sort();
+
+        return `${sortedNodeIds[0]}::${sortedNodeIds[1]}`;
+    }
+
+    function getAssociationOrderKey(edge) {
+        return [
+            String(edge.source),
+            String(edge.target),
+            edge.data?.fromLabel ?? "",
+            edge.data?.toLabel ?? "",
+            edge.id ?? "",
+        ].join("::");
+    }
 
     async function isReadOnly(datasetName) {
         const res = await bec.isReadOnly(datasetName);
@@ -161,6 +253,16 @@
 
     function handleNodeMove(nodeMoveEvent) {
         updateNodePositions(nodeMoveEvent.nodes);
+    }
+
+    function decorateAssociationEdgeData(data = {}, overrideData = {}) {
+        return {
+            ...(data || {}),
+            ...overrideData,
+            showAssociationLabels:
+                graphViewState.filter.getValue().includeAssociationLabels,
+            canMoveAssociationDecoration: !isDatasetReadOnly,
+        };
     }
 
     function updateNodePositions(movedNodes) {

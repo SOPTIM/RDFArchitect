@@ -15,25 +15,15 @@
  *
  */
 
-package org.rdfarchitect.api.dto.dl;
+package org.rdfarchitect.services.dl.update.associationlayout;
 
-import lombok.Builder;
-import lombok.Data;
-import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.api.dto.dl.AssociationDecorationPositionDTO;
+import org.rdfarchitect.database.GraphIdentifier;
 
-import java.util.Map;
+import java.util.List;
 import java.util.UUID;
 
-/**
- * DTO for backend-interal usage that represents layout data required for creating rendering information
- */
-@Data
-@Builder
-public class RenderingLayoutData {
+public interface UpdateAssociationDecorationPositionsUseCase {
 
-    @Builder.Default
-    Map<UUID, DiagramObjectPoint> classLayoutingData = Map.of();
-
-    @Builder.Default
-    Map<UUID, AssociationRoleLayoutData> associationLayoutingData = Map.of();
+    void updateAssociationDecorationPositions(GraphIdentifier graphIdentifier, UUID packageUUID, List<AssociationDecorationPositionDTO> associationDecorationPositionDTOList);
 }

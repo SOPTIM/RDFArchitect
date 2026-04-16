@@ -17,23 +17,18 @@
 
 package org.rdfarchitect.api.dto.dl;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 
-import java.util.Map;
-import java.util.UUID;
-
-/**
- * DTO for backend-interal usage that represents layout data required for creating rendering information
- */
 @Data
 @Builder
-public class RenderingLayoutData {
+@NoArgsConstructor
+@AllArgsConstructor
+public class AssociationRoleLayoutData {
 
-    @Builder.Default
-    Map<UUID, DiagramObjectPoint> classLayoutingData = Map.of();
-
-    @Builder.Default
-    Map<UUID, AssociationRoleLayoutData> associationLayoutingData = Map.of();
+    private DiagramObjectPoint labelLayoutingData;
+    private DiagramObjectPoint multiplicityLayoutingData;
 }

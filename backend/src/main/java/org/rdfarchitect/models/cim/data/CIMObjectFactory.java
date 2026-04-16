@@ -152,7 +152,7 @@ public class CIMObjectFactory {
     public static CIMAssociation createInverseCIMAssociation(QuerySolution associationQuerySolution) {
         var parser = new CIMQuerySolutionParser(associationQuerySolution);
         return CIMAssociation.builder()
-                             .uuid(parser.getUUID(CIMQueryVars.UUID))
+                             .uuid(parser.getUUID(CIMQueryVars.Inverse.UUID))
                              .uri(parser.getURI(CIMQueryVars.INVERSE_ROLE_NAME))
                              .label(parser.getLabel(CIMQueryVars.Inverse.LABEL))
                              .multiplicity(parser.getMultiplicity(CIMQueryVars.Inverse.MULTIPLICITY))
