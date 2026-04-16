@@ -41,6 +41,7 @@
         lockedDatasetName,
         lockedGraphUri,
         lockedPackage,
+        onClassCreated = () => {},
     } = $props();
 
     const uuid = uuidv4();
@@ -101,20 +102,19 @@
         } else {
             compareClasses = [];
         }
-        if (className) {
-            untrack(
-                () =>
-                    (className = new ReactiveValueWrapper(
-                        className.value,
-                        label =>
-                            isInvalidClassLabel(
-                                label,
-                                classURINamespace.value,
-                                compareClasses,
-                            ),
-                    )),
-            );
+        if (!className || !classURINamespace) {
+            return;
         }
+        untrack(
+            () =>
+                (className = new ReactiveValueWrapper(className.value, label =>
+                    isInvalidClassLabel(
+                        label,
+                        classURINamespace.value,
+                        compareClasses,
+                    ),
+                )),
+        );
     });
 
     async function onOpen() {
@@ -146,8 +146,8 @@
         }
 
         if (packageSelectionLocked) {
-            classPackage = lockedPackage;
-            packages = [lockedPackage];
+            classPackage = lockedPackage ?? null;
+            packages = lockedPackage ? [lockedPackage] : [];
             return;
         }
         await getPackages(datasetName, graphURI);
@@ -155,7 +155,8 @@
             editorState.selectedPackageUUID.getValue() === "default"
                 ? null
                 : editorState.selectedPackageUUID.getValue();
-        classPackage = packages.find(pkg => pkg.uuid === selectedPackageUUID);
+        classPackage =
+            packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
     }
 
     function onClose() {
@@ -188,6 +189,8 @@
     async function newClass() {
         const datasetNameLocal = datasetName;
         const graphURILocal = graphURI;
+        const classNameLocal = className;
+        const classURINamespaceLocal = classURINamespace;
         const selectedPackageUUID = classPackage?.uuid ?? "default";
         const packageDTO = classPackage?.uuid ? classPackage : null;
         let promise = fetch(
@@ -202,14 +205,20 @@
                 headers: new Headers({ "Content-Type": "application/json" }),
                 body: JSON.stringify({
                     packageDTO,
-                    classURIPrefix: classURINamespace.value,
-                    className: className.value,
+                    classURIPrefix: classURINamespaceLocal.value,
+                    className: classNameLocal.value,
                 }),
                 credentials: "include",
             },
         ).then(res => {
             if (res.ok) {
                 console.log("successfully added class");
+                onClassCreated({
+                    datasetName: datasetNameLocal,
+                    graphURI: graphURILocal,
+                    packageUUID: selectedPackageUUID,
+                    className: classNameLocal.value,
+                });
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedPackageUUID.updateValue(

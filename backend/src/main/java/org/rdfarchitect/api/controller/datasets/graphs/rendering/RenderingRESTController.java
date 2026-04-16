@@ -94,11 +94,7 @@ public class RenderingRESTController {
                           null;
 
         CIMCollection cimCollection = converter.convert(graphIdentifier, filter);
-
-        RenderingDataDTO renderingData = null;
-        if (!cimCollection.getClasses().isEmpty() || !cimCollection.getEnums().isEmpty()) {
-            renderingData = renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
-        }
+        RenderingDataDTO renderingData = renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
 
         logger.info("Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".", datasetName, graphURI, originURL);
         return renderingData;

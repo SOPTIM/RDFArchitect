@@ -63,6 +63,10 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
 
     @Override
     public RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
+        if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
+            return createEmptyDiagram();
+        }
+
         ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, packageUUID, cimCollection);
 
         //setup
@@ -81,6 +85,13 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         return SvelteFlowDTO.builder()
                             .nodes(nodes)
                             .edges(edges)
+                            .build();
+    }
+
+    private SvelteFlowDTO createEmptyDiagram() {
+        return SvelteFlowDTO.builder()
+                            .nodes(List.of())
+                            .edges(List.of())
                             .build();
     }
 

@@ -40,6 +40,10 @@
     import ClassNode from "./components/ClassNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
+    import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
+    import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import DeleteClassConfirmDialog from "../../../routes/DeleteClassConfirmDialog.svelte";
+    import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
         nodes: inputNodes,
@@ -60,51 +64,24 @@
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
+    let contextMenuFlowPosition = $state({ x: 0, y: 0 });
+    let paneContextMenuRequest = $state(null);
+    let classContextMenuRequest = $state(null);
+    let contextMenuClass = $state(null);
+    let deleteClassTarget = $state(null);
+    let showDeleteClassDialog = $state(false);
+    let showNewClassDialog = $state(false);
+    let pendingNewClassPlacement = null;
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
-    let hasDefaultLayout = $derived(
-        nodes.every(node => node.position.x === 0 && node.position.y === 0),
-    );
+    let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
     );
 
     $effect(() => {
-        nodes = [...inputNodes];
-        edges = inputEdges.map(edge => {
-            //applies offset to inheritance edge if an association edge already exists between the same two nodes
-            if (edge.type === "inheritance") {
-                const hasAssociationEdgeBetweenSameNodes = inputEdges.some(
-                    otherEdge => {
-                        if (otherEdge.type !== "association") return false;
-
-                        const sameDirection =
-                            otherEdge.source === edge.source &&
-                            otherEdge.target === edge.target;
-                        const reverseDirection =
-                            otherEdge.source === edge.target &&
-                            otherEdge.target === edge.source;
-
-                        return sameDirection || reverseDirection;
-                    },
-                );
-
-                if (hasAssociationEdgeBetweenSameNodes) {
-                    return {
-                        ...edge,
-                        data: {
-                            ...(edge.data || {}),
-                            offsetEdge: true,
-                        },
-                    };
-                }
-            }
-
-            return edge;
-        });
-        layouted = false;
-        isLoading = false;
+        syncDiagramElements();
     });
 
     $effect(async () => {
@@ -117,8 +94,15 @@
     });
 
     $effect(async () => {
+        forceReloadTrigger.subscribe();
+        editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
         isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+    });
+
+    $effect(() => {
+        editorState.focusedClassUUID.subscribe();
+        focusRequestedClassInDiagram();
     });
 
     onMount(() => {
@@ -128,12 +112,185 @@
         };
     });
 
+    function hasDefaultNodeLayout(diagramNodes) {
+        return (
+            diagramNodes.length > 0 &&
+            diagramNodes.every(
+                node => node.position.x === 0 && node.position.y === 0,
+            )
+        );
+    }
+
+    function syncDiagramElements() {
+        const nextNodes = syncDiagramNodes();
+        const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
+
+        nodes = nextNodes;
+        edges = buildDiagramEdges();
+        resetDiagramSyncState(nextHasDefaultLayout);
+    }
+
+    function syncDiagramNodes() {
+        const nextNodes = [...inputNodes];
+        if (!shouldApplyPendingNewClassPlacement()) {
+            return nextNodes;
+        }
+
+        const addedNode = findAddedNodeForPlacement(nextNodes);
+        if (!addedNode) {
+            return nextNodes;
+        }
+
+        persistPendingNewClassPosition(addedNode);
+        const syncedNodes = placePendingNewClassNode(nextNodes, addedNode);
+        pendingNewClassPlacement = null;
+        return syncedNodes;
+    }
+
+    function shouldApplyPendingNewClassPlacement() {
+        return (
+            !!pendingNewClassPlacement &&
+            editorState.selectedPackageUUID.getValue() ===
+                pendingNewClassPlacement.packageUUID
+        );
+    }
+
+    function findAddedNodeForPlacement(diagramNodes) {
+        const addedNodes = diagramNodes.filter(
+            node => !pendingNewClassPlacement.existingNodeIds.has(node.id),
+        );
+
+        return (
+            addedNodes.find(
+                node =>
+                    node.data?.label === pendingNewClassPlacement.className &&
+                    node.position.x === 0 &&
+                    node.position.y === 0,
+            ) ??
+            addedNodes.find(
+                node => node.data?.label === pendingNewClassPlacement.className,
+            ) ??
+            (addedNodes.length === 1 ? addedNodes[0] : null)
+        );
+    }
+
+    function placePendingNewClassNode(diagramNodes, addedNode) {
+        const { x, y } = pendingNewClassPlacement.position;
+        return diagramNodes.map(node =>
+            node.id === addedNode.id
+                ? {
+                      ...node,
+                      position: { x, y },
+                  }
+                : node,
+        );
+    }
+
+    function persistPendingNewClassPosition(addedNode) {
+        const { x, y } = pendingNewClassPlacement.position;
+        bec.updateClassPositions(
+            pendingNewClassPlacement.datasetName,
+            pendingNewClassPlacement.graphURI,
+            pendingNewClassPlacement.packageUUID,
+            [
+                {
+                    classUUID: addedNode.id,
+                    xPosition: x,
+                    yPosition: y,
+                },
+            ],
+        ).catch(error => {
+            console.error(
+                "Could not persist newly created class position:",
+                error,
+            );
+        });
+    }
+
+    function buildDiagramEdges() {
+        return inputEdges.map(decorateEdgeForDiagram);
+    }
+
+    function decorateEdgeForDiagram(edge) {
+        if (!shouldOffsetInheritanceEdge(edge)) {
+            return edge;
+        }
+
+        return {
+            ...edge,
+            data: {
+                ...(edge.data || {}),
+                offsetEdge: true,
+            },
+        };
+    }
+
+    function shouldOffsetInheritanceEdge(edge) {
+        return (
+            edge.type === "inheritance" &&
+            inputEdges.some(otherEdge =>
+                isAssociationEdgeBetweenSameNodes(edge, otherEdge),
+            )
+        );
+    }
+
+    function isAssociationEdgeBetweenSameNodes(edge, otherEdge) {
+        if (otherEdge.type !== "association") {
+            return false;
+        }
+
+        const sameDirection =
+            otherEdge.source === edge.source &&
+            otherEdge.target === edge.target;
+        const reverseDirection =
+            otherEdge.source === edge.target &&
+            otherEdge.target === edge.source;
+
+        return sameDirection || reverseDirection;
+    }
+
+    function resetDiagramSyncState(hasDefaultLayoutAfterSync) {
+        layouted = false;
+
+        // Keep the loading state active until persisted positions or ELK layout
+        if (!hasDefaultLayoutAfterSync) {
+            isLoading = false;
+        }
+    }
+
+    function focusRequestedClassInDiagram() {
+        const focusClassUUID = editorState.focusedClassUUID.getValue();
+        if (!focusClassUUID || !nodesInit.current) {
+            return;
+        }
+
+        if (!svelteFlowAPI?.svelteFlow) {
+            return;
+        }
+
+        const focusNode = nodes.find(node => node.id === focusClassUUID);
+        if (!focusNode) {
+            return;
+        }
+
+        queueMicrotask(() => {
+            svelteFlowAPI.svelteFlow.fitView({
+                nodes: [focusNode],
+                padding: 0.4,
+                duration: 400,
+                maxZoom: 1.6,
+            });
+            editorState.focusedClassUUID.updateValue(null);
+        });
+    }
+
     async function isReadOnly(datasetName) {
         const res = await bec.isReadOnly(datasetName);
         return await res.json();
     }
 
     function handleNodeClick(nodeClickEvent) {
+        closeContextMenus();
         if (nodeClickEvent.node.type === "class") {
             const id = nodeClickEvent.node.id;
             console.log("selecting class: ", id);
@@ -161,6 +318,105 @@
 
     function handleNodeMove(nodeMoveEvent) {
         updateNodePositions(nodeMoveEvent.nodes);
+    }
+
+    function closeContextMenus() {
+        paneContextMenuRequest = null;
+        classContextMenuRequest = null;
+    }
+
+    function handlePaneContextMenu({ event }) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeContextMenus();
+        if (
+            event.target instanceof Element &&
+            event.target.closest(".svelte-flow__node")
+        ) {
+            return;
+        }
+        if (isDatasetReadOnly) {
+            return;
+        }
+
+        contextMenuClass = null;
+        if (!svelteFlowAPI?.svelteFlow) {
+            contextMenuFlowPosition = { x: 0, y: 0 };
+            paneContextMenuRequest = {
+                x: event.clientX,
+                y: event.clientY,
+            };
+            return;
+        }
+
+        contextMenuFlowPosition = svelteFlowAPI.svelteFlow.screenToFlowPosition(
+            {
+                x: event.clientX,
+                y: event.clientY,
+            },
+            { snapToGrid: false },
+        );
+        paneContextMenuRequest = {
+            x: event.clientX,
+            y: event.clientY,
+        };
+    }
+
+    function handleEdgeContextMenu({ event }) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeContextMenus();
+    }
+
+    function handleNodeContextMenu({ event, node }) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeContextMenus();
+        if (isDatasetReadOnly) {
+            return;
+        }
+        contextMenuClass = {
+            uuid: node.id,
+            label: node.data?.label ?? node.id,
+        };
+        classContextMenuRequest = {
+            x: event.clientX,
+            y: event.clientY,
+        };
+        editorState.selectedClassUUID.updateValue(node.id);
+    }
+
+    function openNewClassDialog() {
+        showNewClassDialog = true;
+        closeContextMenus();
+    }
+
+    function handleClassCreated({
+        datasetName,
+        graphURI,
+        packageUUID,
+        className,
+    }) {
+        pendingNewClassPlacement = {
+            datasetName,
+            graphURI,
+            packageUUID,
+            className,
+            existingNodeIds: new Set(nodes.map(node => node.id)),
+            position: {
+                x: contextMenuFlowPosition.x,
+                y: contextMenuFlowPosition.y,
+            },
+        };
+    }
+
+    function openDeleteClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        deleteClassTarget = contextMenuClass;
+        showDeleteClassDialog = true;
+        closeContextMenus();
     }
 
     function updateNodePositions(movedNodes) {
@@ -272,23 +528,57 @@
     }
 </script>
 
-<SvelteFlow
-    bind:nodes
-    bind:edges
-    {nodeTypes}
-    {edgeTypes}
-    nodesDraggable={!isDatasetReadOnly}
-    fitView
-    elementsSelectable={false}
-    nodesFocusable={false}
-    onnodeclick={handleNodeClick}
-    onnodedragstop={handleNodeMove}
-    selectionMode={"full"}
-    connectionMode={"loose"}
-    multiSelectionKey={null}
-    minZoom={0.1}
-    maxZoom={5}
->
-    <EdgeMarkers />
-    <Background patternColor="#aaa" gap={16} />
-</SvelteFlow>
+<div class="relative h-full w-full">
+    <SvelteFlow
+        bind:nodes
+        bind:edges
+        {nodeTypes}
+        {edgeTypes}
+        nodesDraggable={!isDatasetReadOnly}
+        fitView
+        elementsSelectable={false}
+        nodesFocusable={false}
+        onnodeclick={handleNodeClick}
+        onnodecontextmenu={handleNodeContextMenu}
+        onpaneclick={closeContextMenus}
+        onpanecontextmenu={handlePaneContextMenu}
+        onedgecontextmenu={handleEdgeContextMenu}
+        onnodedragstop={handleNodeMove}
+        selectionMode={"full"}
+        connectionMode={"loose"}
+        multiSelectionKey={null}
+        minZoom={0.1}
+        maxZoom={5}
+    >
+        <EdgeMarkers />
+        <Background patternColor="#aaa" gap={16} />
+    </SvelteFlow>
+
+    <SvelteFlowPaneContextMenu
+        request={paneContextMenuRequest}
+        disabled={isDatasetReadOnly}
+        onAddClass={openNewClassDialog}
+        onClose={closeContextMenus}
+    />
+    <SvelteFlowClassContextMenu
+        request={classContextMenuRequest}
+        disabled={isDatasetReadOnly || !contextMenuClass}
+        onDeleteClass={openDeleteClassDialog}
+        onClose={closeContextMenus}
+    />
+</div>
+
+<NewClassDialog
+    bind:showDialog={showNewClassDialog}
+    lockedDatasetName={editorState.selectedDataset.getValue()}
+    lockedGraphUri={editorState.selectedGraph.getValue()}
+    onClassCreated={handleClassCreated}
+/>
+
+<DeleteClassConfirmDialog
+    bind:showDialog={showDeleteClassDialog}
+    datasetName={editorState.selectedDataset.getValue()}
+    graphUri={editorState.selectedGraph.getValue()}
+    classUuid={deleteClassTarget?.uuid}
+    classLabel={deleteClassTarget?.label}
+/>

@@ -48,4 +48,9 @@ public class RenderingUtils {
 
         return uriToUUIDMap;
     }
+
+    public static boolean hasRenderableClasses(CIMCollection cimCollection) {
+        return !cimCollection.getClasses().isEmpty() ||
+               !cimCollection.getEnums().isEmpty();
+    }
 }

@@ -34,9 +34,6 @@
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
 
-    /** @type {{ rightInsetPercent?: number }} */
-    let { rightInsetPercent = 0 } = $props();
-
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const MERMAID_FORMAT = "MERMAID";
@@ -53,9 +50,15 @@
     let mermaidWrapper = $state();
     let svelteFlowWrapper = $state();
 
-    let displayDiagram = $derived(true);
+    let displayDiagram = $state(true);
+    let showSvelteFlowEmptyState = $derived(
+        renderingFormat === SVELTEFLOW_FORMAT &&
+            (response?.nodes?.length ?? 0) === 0,
+    );
 
     $effect(async () => {
+        forceReloadTrigger.subscribe();
+        editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
         isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
     });
@@ -70,6 +73,8 @@
         if (!editorState.selectedPackageUUID.getValue()) {
             response = null;
             renderingFormat = null;
+            displayDiagram = false;
+            isLoading = false;
             return;
         }
 
@@ -97,16 +102,22 @@
 
             const responseText = await res.text();
             if (!responseText) {
+                response = null;
+                renderingFormat = null;
                 displayDiagram = false;
+                isLoading = false;
             } else {
-                response = JSON.parse(responseText);
-                renderingFormat = response.format;
+                const parsedResponse = JSON.parse(responseText);
+                response = parsedResponse;
+                renderingFormat = parsedResponse.format;
                 displayDiagram = true;
             }
         } catch (error) {
             console.error("Error fetching diagram data:", error);
             response = null;
             renderingFormat = null;
+            displayDiagram = false;
+            isLoading = false;
         }
     });
 
@@ -126,7 +137,7 @@
 
 {#if editorState.selectedPackageUUID.getValue()}
     <div class="bg-window-background flex h-full flex-col justify-between">
-        <div class="relative h-full">
+        <div class="relative h-full overflow-hidden">
             {#if displayDiagram}
                 <div
                     class="absolute top-1 left-1 z-1 flex flex-col space-y-0.5"
@@ -161,8 +172,7 @@
                 </div>
                 {#if isLoading}
                     <div
-                        class="bg-window-background absolute inset-0 z-10 flex items-center justify-center"
-                        style="width: calc(100% - {rightInsetPercent}%);"
+                        class="bg-window-background absolute inset-0 z-10 flex w-full items-center justify-center"
                     >
                         <LoadingSpinner ariaLabel="Loading diagram" />
                     </div>
@@ -187,11 +197,21 @@
                             )}
                         />
                     </SvelteFlowProvider>
+                    {#if showSvelteFlowEmptyState}
+                        <div
+                            class="pointer-events-none absolute inset-0 z-0 flex items-center justify-center"
+                        >
+                            <EmptyStateCard
+                                title="No classes in this package"
+                                description="Select another package to load a different diagram."
+                                icon={faBoxOpen}
+                            />
+                        </div>
+                    {/if}
                 {/if}
             {:else}
                 <div
-                    class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                    style="width: calc(100% - {rightInsetPercent}%);"
+                    class="absolute top-0 bottom-0 left-0 flex w-full items-center justify-center"
                 >
                     <EmptyStateCard
                         title="No classes in this package"
@@ -206,8 +226,7 @@
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             <div
-                class="absolute top-0 bottom-0 left-0 flex items-center justify-center"
-                style="width: calc(100% - {rightInsetPercent}%);"
+                class="absolute top-0 bottom-0 left-0 flex w-full items-center justify-center"
             >
                 <EmptyStateCard
                     title="No diagram requested yet"

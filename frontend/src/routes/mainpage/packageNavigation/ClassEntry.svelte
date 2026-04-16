@@ -52,6 +52,7 @@
     });
 
     function selectClass() {
+        classNavEntry.parent?.open();
         onPackChange();
         if (!editorState.selectedClassUUID.getValue()) {
             eventStack.executeNewestEvent(classNavEntry.id);
@@ -67,6 +68,24 @@
             classUuid: classNavEntry.id,
         });
     }
+
+    function focusClassInDiagram() {
+        if (editorState.focusedClassUUID.getValue() === classNavEntry.id) {
+            editorState.focusedClassUUID.trigger();
+            return;
+        }
+        editorState.focusedClassUUID.updateValue(classNavEntry.id);
+    }
+
+    function showClassInPackage() {
+        editorState.selectedDataset.updateValue(datasetNavEntry.id);
+        editorState.selectedGraph.updateValue(graphNavEntry.id);
+        editorState.selectedPackageUUID.updateValue(
+            classNavEntry.parent?.id ?? "default",
+        );
+        selectClass();
+        focusClassInDiagram();
+    }
 </script>
 
 <ContextMenu.Root>
@@ -80,17 +99,17 @@
                 graphNavEntry.id,
                 classNavEntry.id,
             )}
-            title={datasetNavEntry.tooltip}
+            title={classNavEntry.tooltip}
             {highlightLabel}
             onclick={selectClass}
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
         <ContextMenu.Item.Button
-            onSelect={selectClass}
+            onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}
         >
-            Open Class
+            Show in diagram
         </ContextMenu.Item.Button>
         <ContextMenu.Item.Button
             onSelect={() => {

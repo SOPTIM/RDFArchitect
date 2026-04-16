@@ -43,10 +43,10 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         //Arrange
 
         //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = mermaidRenderer.renderUML(cimCollection, null, null);
 
         //Assert
-        assertThat(result).endsWith("classDiagram\n");
+        assertThat(result).isNull();
     }
 
     @Test
@@ -62,10 +62,10 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         addPackage("package_package2");
 
         //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = mermaidRenderer.renderUML(cimCollection, null, null);
 
         //Assert
-        assertThat(result).endsWith("classDiagram\n");
+        assertThat(result).isNull();
     }
 
     @Test

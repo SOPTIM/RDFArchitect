@@ -48,6 +48,7 @@ class InMemoryDatabaseAdapterTest {
         adapter.createEmptyGraph(graphIdentifier);
 
         verify(database).create(eq(graphIdentifier), any());
+        verify(database).enableEditing("new-dataset");
         verify(database).setPrefixMapping(eq("new-dataset"), argThat(prefixMapping ->
                 prefixMapping.getNsPrefixMap().entrySet().containsAll(PrefixMapping.Standard.getNsPrefixMap().entrySet())
                         && CIM.namespace.equals(prefixMapping.getNsPrefixURI("cim"))
@@ -62,6 +63,7 @@ class InMemoryDatabaseAdapterTest {
         adapter.createEmptyGraph(graphIdentifier);
 
         verify(database).create(eq(graphIdentifier), any());
+        verify(database, never()).enableEditing(anyString());
         verify(database, never()).setPrefixMapping(anyString(), any(PrefixMapping.class));
     }
 }
