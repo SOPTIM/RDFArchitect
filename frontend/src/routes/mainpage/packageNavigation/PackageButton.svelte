@@ -17,14 +17,15 @@
 <script>
     import {
         faFolder,
-        faFolderOpen
+        faFolderOpen,
     } from "@fortawesome/free-regular-svg-icons";
     import {
         faPencil,
         faPlus,
         faLink,
         faTrash,
-        faEye, faObjectGroup
+        faEye,
+        faObjectGroup,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -101,7 +102,7 @@
         navigator.clipboard
             .writeText(url)
             .catch(err =>
-                console.error("Writing to the clipboard is not allowed: ", err)
+                console.error("Writing to the clipboard is not allowed: ", err),
             );
     }
 
@@ -212,15 +213,15 @@
 
 <AddToGraphDiagramDialog
     bind:showDialog={showAddToGraphDiagramDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
-    {classes}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={packageNavEntry.children}
 />
 
 <AddToGraphDiagramDialog
     bind:showDialog={showAddToDatasetDiagramDialog}
-    lockedDatasetName={dataset.label}
-    graph={getUri(graph)}
+    lockedDatasetName={datasetNavEntry.id}
+    graph={graphNavEntry.id}
     classes
 />
 

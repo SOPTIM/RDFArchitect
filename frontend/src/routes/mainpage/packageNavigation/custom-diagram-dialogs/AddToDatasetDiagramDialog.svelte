@@ -26,16 +26,14 @@
         showDialog = $bindable(),
         lockedDatasetName,
         graph,
-        classes
+        classes,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedDiagram = $state(null);
     let diagramList = $state([]);
-    let disableSubmit = $derived(
-        !selectedDiagram
-    );
+    let disableSubmit = $derived(!selectedDiagram);
 
     async function getCustomDiagrams() {
         const res = await bec.getCustomDiagramsForDataset(lockedDatasetName);

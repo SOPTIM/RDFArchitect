@@ -19,12 +19,20 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
-    import { createClassListForGraph, createPackageListForGraph } from "./customDiagramDialogUtils.js";
+    import {
+        createClassListForGraph,
+        createPackageListForGraph,
+    } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
 
     let {
@@ -33,19 +41,16 @@
         diagramName = "",
         diagramId = crypto.randomUUID(),
         selectedClasses = [],
-        allDiagrams = []
+        allDiagrams = [],
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let graphs = $state([]);
     let classesByPackageAndGraph = $state({});
     let packagesByGraph = $state({});
-    let isValidName = $derived(() => {
-        return allDiagrams.some(diagram => diagram.name === diagramName && diagram.uuid !== diagramId) === false;
-    });
 
-
-    let disableSubmit = $derived(diagramName.trim() === "" || !isValidName());
+    let violations = $derived(isValidDiagramName(diagramName, allDiagrams));
+    let disableSubmit = $derived(violations.length > 0);
 
     async function onOpen() {
         await fetchGraphs();
@@ -66,13 +71,15 @@
     async function fetchGraphs() {
         try {
             const res = await getGraphs(lockedDatasetName);
-            graphs = res.map(graph => {
-                return {
-                    ...graph,
-                    selected: false,
-                    expanded: false
-                };
-            }).sort((a, b) => getUri(a).localeCompare(getUri(b)));
+            graphs = res
+                .map(graph => {
+                    return {
+                        ...graph,
+                        selected: false,
+                        expanded: false,
+                    };
+                })
+                .sort((a, b) => getUri(a).localeCompare(getUri(b)));
         } catch (err) {
             console.error("Failed to load graphs:", err);
             graphs = [];
@@ -82,7 +89,10 @@
     async function createPackageMap() {
         for (const graph of graphs) {
             const graphUri = getUri(graph);
-            packagesByGraph[graphUri] = await createPackageListForGraph(lockedDatasetName, graphUri);
+            packagesByGraph[graphUri] = await createPackageListForGraph(
+                lockedDatasetName,
+                graphUri,
+            );
         }
     }
 
@@ -90,25 +100,33 @@
         const graphURIs = graphs.map(graph => getUri(graph));
         const result = {};
 
-        await Promise.all(graphURIs.map(async graphUri => {
-            result[graphUri] = await createClassListForGraph(lockedDatasetName, graphUri, selectedClasses);
-        }));
+        await Promise.all(
+            graphURIs.map(async graphUri => {
+                result[graphUri] = await createClassListForGraph(
+                    lockedDatasetName,
+                    graphUri,
+                    selectedClasses,
+                );
+            }),
+        );
 
         classesByPackageAndGraph = result;
     }
 
     function deselectAll() {
-        graphs.forEach(g => g.selected = false);
+        graphs.forEach(g => (g.selected = false));
 
-        Object.entries(classesByPackageAndGraph).forEach(([graphUri, packages]) => {
-            const graphPackages = packagesByGraph[graphUri] ?? [];
+        Object.entries(classesByPackageAndGraph).forEach(
+            ([graphUri, packages]) => {
+                const graphPackages = packagesByGraph[graphUri] ?? [];
 
-            graphPackages.forEach(pack => pack.selected = false);
+                graphPackages.forEach(pack => (pack.selected = false));
 
-            Object.values(packages).forEach(classes =>
-                classes.forEach(cls => cls.selected = false)
-            );
-        });
+                Object.values(packages).forEach(classes =>
+                    classes.forEach(cls => (cls.selected = false)),
+                );
+            },
+        );
     }
 
     function initialiseSelectionState() {
@@ -116,15 +134,18 @@
             return;
         }
 
-        graphs.forEach((graph) => {
+        graphs.forEach(graph => {
             const graphURI = getUri(graph);
             const packages = packagesByGraph[graphURI];
-            packages.forEach((pack) => {
+            packages.forEach(pack => {
                 const packageId = pack.uuid;
-                const classesInPackage = classesByPackageAndGraph[graphURI][packageId] ?? [];
+                const classesInPackage =
+                    classesByPackageAndGraph[graphURI][packageId] ?? [];
 
                 if (classesInPackage.length > 0) {
-                    pack.expanded = classesInPackage.find(cls => cls.selected) !== undefined;
+                    pack.expanded =
+                        classesInPackage.find(cls => cls.selected) !==
+                        undefined;
                 }
             });
             graph.expanded = packages.find(pack => pack.selected) !== undefined;
@@ -132,25 +153,30 @@
     }
 
     async function submitDiagramClasses() {
-        const selectedClassList = Object.entries(classesByPackageAndGraph)
-            .flatMap(([graphUri, packages]) =>
-                Object.values(packages)
-                    .flat()
-                    .filter(cls => cls.selected === true)
-                    .map(cls => ({
-                        uuid: cls.uuid,
-                        graphUri: graphUri
-                    }))
-            );
+        const selectedClassList = Object.entries(
+            classesByPackageAndGraph,
+        ).flatMap(([graphUri, packages]) =>
+            Object.values(packages)
+                .flat()
+                .filter(cls => cls.selected === true)
+                .map(cls => ({
+                    uuid: cls.uuid,
+                    graphUri: graphUri,
+                })),
+        );
 
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
-            classes: selectedClassList
+            classes: selectedClassList,
         };
 
         try {
-            const res = await bec.putCustomDatasetDiagram(lockedDatasetName, diagramId, diagramData);
+            const res = await bec.putCustomDatasetDiagram(
+                lockedDatasetName,
+                diagramId,
+                diagramData,
+            );
 
             if (res.ok) {
                 editorState.selectedDataset.updateValue(lockedDatasetName);
@@ -180,9 +206,9 @@
             id="diagram-name-input"
             placeholder="Enter diagram name"
             bind:value={diagramName}
-            warn={!isValidName}
+            warn={violations.length > 0}
         />
-        <ViolationMessages violations={className.violations} />
+        <ViolationMessages {violations} />
 
         <div class="flex justify-between">
             <label for="class-tree" class="mt-2 mb-1">Selected Classes</label>
@@ -193,13 +219,15 @@
             </div>
         </div>
         <div
-            id="class-tree" class="h-full overflow-y-auto max-h-[55vh] items-stretch gap-[0.1rem] empty:hidden"
+            id="class-tree"
+            class="h-full max-h-[55vh] items-stretch gap-[0.1rem] overflow-y-auto empty:hidden"
         >
             {#each graphs as graph (getUri(graph))}
                 <GraphSelectSection
                     {graph}
                     packages={packagesByGraph[getUri(graph)] ?? []}
-                    classesByPackage={classesByPackageAndGraph[getUri(graph)] ?? []}
+                    classesByPackage={classesByPackageAndGraph[getUri(graph)] ??
+                        []}
                 />
             {/each}
         </div>

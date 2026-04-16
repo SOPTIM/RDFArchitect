@@ -20,27 +20,22 @@
         faFolder,
         faFolderOpen
     } from "@fortawesome/free-regular-svg-icons";
-    import {
-        faPencil,
-        faTrash
-    } from "@fortawesome/free-solid-svg-icons";
+    import { faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import {
-        editorState,
-    } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
+    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
     import CustomDiagramDeleteDialog from "./custom-diagram-dialogs/CustomDiagramDeleteDialog.svelte";
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
-    import {
-        getUri, isSelectedCustomDiagram
-    } from "./packageNavigationUtils.svelte.js";
+    import { isSelectedCustomDiagram } from "./packageNavigationUtils.svelte.js";
 
     let {
-        dataset,
-        graph,
+        datasetNavEntry,
+        graphNavEntry,
+        allGraphNavEntries,
         diagram,
         classes,
         readOnly,
@@ -50,6 +45,23 @@
 
     let showEditDiagramDialog = $state(false);
     let showDeleteDiagramDialog = $state(false);
+    let graphNavEntryByClass = $derived.by(() => {
+        const map = {};
+
+        classes?.forEach(diagramClass => {
+            const graph = allGraphNavEntries.find(g =>
+                g.children.some(pack =>
+                    pack.children.some(cls => cls.id === diagramClass.id)
+                )
+            );
+            if (graph) {
+                map[diagramClass.id] = graph;
+            } else {
+                console.warn("Could not find graph for class ", diagramClass.id)
+            }
+        });
+        return map;
+    });
 
     let packageIcon = $derived(diagram.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(diagram.classes?.length > 0);
@@ -62,9 +74,21 @@
         diagram.userCollapsed = !next;
     }
 
+    function getGraphNavEntryForClass(classUUID) {
+        if (graphNavEntry) {
+            return graphNavEntry;
+        }
+        const navEntry = graphNavEntryByClass[classUUID];
+        if (navEntry) {
+            return navEntry;
+        }
+    }
+
     function selectDiagram() {
-        editorState.selectedDataset.updateValue(dataset.label);
-        editorState.selectedGraph.updateValue(graph ? getUri(graph) : null);
+        editorState.selectedDataset.updateValue(datasetNavEntry.label);
+        editorState.selectedGraph.updateValue(
+            graphNavEntry ? graphNavEntry.id : null
+        );
         editorState.selectedPackageUUID.updateValue(null);
         editorState.selectedCustomDiagramUUID.updateValue(diagram.diagramId);
     }
@@ -77,7 +101,11 @@
                 {level}
                 label={diagram.name}
                 icon={packageIcon}
-                isSelected={isSelectedCustomDiagram(dataset, graph, diagram)}
+                isSelected={isSelectedCustomDiagram(
+                    datasetNavEntry.id,
+                    graphNavEntry?.id,
+                    diagram,
+                )}
                 hasChildren={hasClasses}
                 expanded={diagram.showContents}
                 title={diagram.name}
@@ -109,11 +137,11 @@
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each classes as cls (cls.uuid)}
+            {#each classes as cls (cls.id)}
                 <ClassEntry
-                    {dataset}
-                    graph = {graph ? graph : cls.graphUri}
-                    {cls}
+                    {datasetNavEntry}
+                    graphNavEntry={getGraphNavEntryForClass(cls.id)}
+                    classNavEntry={cls}
                     diagramId={diagram.diagramId}
                     {readOnly}
                 />
@@ -122,18 +150,28 @@
     {/if}
 </div>
 
-<CustomGraphDiagramDialog
-    bind:showDialog={showEditDiagramDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
-    diagramName={diagram.name}
-    diagramId={diagram.diagramId}
-    selectedClasses={diagram.classes}
-/>
+{#if graphNavEntry}
+    <CustomGraphDiagramDialog
+        bind:showDialog={showEditDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
+        diagramName={diagram.name}
+        diagramId={diagram.diagramId}
+        selectedClasses={diagram.classes}
+    />
+{:else}
+    <CustomDatasetDiagramDialog
+        bind:showDialog={showEditDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        diagramName={diagram.name}
+        diagramId={diagram.diagramId}
+        selectedClasses={diagram.classes}
+    />
+{/if}
 
 <CustomDiagramDeleteDialog
     bind:showDialog={showDeleteDiagramDialog}
-    datasetName={dataset.label}
-    graphUri={getUri(graph)}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry ? graphNavEntry.id : null}
     {diagram}
 />

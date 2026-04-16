@@ -20,16 +20,13 @@ package org.rdfarchitect.api.controller.datasets.graphs.diagrams;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.AddToDiagramUseCase;
-import org.rdfarchitect.services.diagrams.GetFullClassesForDiagramUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -49,31 +46,6 @@ public class CustomDiagramAllClassesRESTController {
     private final ExpandURIUseCase expandURIUseCase;
 
     private final AddToDiagramUseCase addToDiagramUseCase;
-
-    private final GetFullClassesForDiagramUseCase getFullClassesForDiagramUseCase;
-
-    @GetMapping
-    public List<ClassDTO> getFullClassesForDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"", datasetName, graphURI, diagramId, originURL);
-
-        var extendedGraphUri = expandURIUseCase.expandUri(datasetName, graphURI);
-        var classes = getFullClassesForDiagramUseCase.getFullClasses(new GraphIdentifier(datasetName, extendedGraphUri), diagramId);
-
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"", datasetName, graphURI, diagramId, originURL);
-        return classes;
-    }
 
     @PostMapping
     public String addToDiagram(

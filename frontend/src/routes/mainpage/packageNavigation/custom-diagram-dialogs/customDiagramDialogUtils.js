@@ -54,7 +54,11 @@ async function getClasses(datasetName, graphURI) {
     return await res.json();
 }
 
-export async function createClassListForGraph(datasetName, graphURI, selectedClasses) {
+export async function createClassListForGraph(
+    datasetName,
+    graphURI,
+    selectedClasses,
+) {
     try {
         const classList = (await getClasses(datasetName, graphURI)) ?? [];
 
@@ -89,4 +93,3 @@ export async function createClassListForGraph(datasetName, graphURI, selectedCla
         console.error("Failed to load classes:", err);
     }
 }
-

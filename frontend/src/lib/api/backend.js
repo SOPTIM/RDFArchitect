@@ -594,24 +594,4 @@ export class BackendConnection {
             credentials: "include",
         });
     }
-
-    async getFullClassesForDiagram(datasetName, graphURI, diagramId) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
-        return await fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async getFullClassesForDatasetDiagram(datasetName, diagramId) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
-        return await fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
 }

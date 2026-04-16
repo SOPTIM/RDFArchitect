@@ -25,7 +25,6 @@
         editorState,
     } from "$lib/sharedState.svelte.js";
 
-
     let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
 
     async function deletePackage() {
@@ -56,14 +55,17 @@
     primaryLabel="Delete Custom Diagram"
     onPrimary={deletePackage}
     primaryVariant="danger"
-    title={diagram?.label ? `Delete custom Diagram "${diagram.label}"?` : "Delete custom diagram?"}
+    title={diagram?.label
+        ? `Delete custom Diagram "${diagram.label}"?`
+        : "Delete custom diagram?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-2/3 text-sm leading-relaxed">
-            This removes the diagram. <br>
-            All classes contained in the diagram will not be deleted and will still be accessible through their respective packages.
+            This removes the diagram. <br />
+            All classes contained in the diagram will not be deleted and will still
+            be accessible through their respective packages.
         </p>
     </div>
 </ActionDialog>

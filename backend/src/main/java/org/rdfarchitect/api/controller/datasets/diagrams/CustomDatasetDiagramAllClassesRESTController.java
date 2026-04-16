@@ -20,14 +20,11 @@ package org.rdfarchitect.api.controller.datasets.diagrams;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.services.diagrams.AddToDiagramUseCase;
-import org.rdfarchitect.services.diagrams.GetFullClassesForDiagramUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -45,27 +42,6 @@ public class CustomDatasetDiagramAllClassesRESTController {
     private static final Logger logger = LoggerFactory.getLogger(CustomDatasetDiagramAllClassesRESTController.class);
 
     private final AddToDiagramUseCase addToDiagramUseCase;
-
-    private final GetFullClassesForDiagramUseCase getFullClassesForDiagramUseCase;
-
-    @GetMapping
-    public List<ClassDTO> getFullClassesForDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"", datasetName, diagramId, originURL);
-
-        var classes = getFullClassesForDiagramUseCase.getFullClasses(datasetName, diagramId);
-
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"", datasetName, diagramId, originURL);
-        return classes;
-    }
 
     @PostMapping
     public String addToDiagram(

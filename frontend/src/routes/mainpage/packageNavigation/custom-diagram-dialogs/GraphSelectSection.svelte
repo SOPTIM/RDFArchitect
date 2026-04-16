@@ -16,19 +16,17 @@
   -->
 
 <script>
-    import { faFolder, faFolderOpen } from "@fortawesome/free-regular-svg-icons";
+    import {
+        faFolder,
+        faFolderOpen,
+    } from "@fortawesome/free-regular-svg-icons";
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import PackageSelectSection from "./PackageSelectSection.svelte";
 
-
-    let {
-        graph,
-        packages,
-        classesByPackage
-    } = $props();
+    let { graph, packages, classesByPackage } = $props();
 
     let graphIcon = $derived(graph.showContents ? faFolderOpen : faFolder);
     const hasPackages = $derived(packages?.length > 0);
@@ -44,14 +42,13 @@
     function togglePackagesInGraph() {
         const newGraphState = !graph.selected;
         graph.selected = newGraphState;
-        packages.forEach((pack) => {
+        packages.forEach(pack => {
             pack.selected = newGraphState;
-            classesByPackage[pack.uuid]?.forEach((cls) => {
+            classesByPackage[pack.uuid]?.forEach(cls => {
                 cls.selected = newGraphState;
             });
         });
     }
-
 </script>
 
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">

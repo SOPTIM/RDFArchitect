@@ -21,10 +21,17 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
-    import { createPackageListForGraph, createClassListForGraph } from "./customDiagramDialogUtils.js";
+    import {
+        createPackageListForGraph,
+        createClassListForGraph,
+    } from "./customDiagramDialogUtils.js";
     import PackageSelectSection from "./PackageSelectSection.svelte";
 
     let {
@@ -33,19 +40,28 @@
         lockedGraphUri,
         diagramName = "",
         diagramId = crypto.randomUUID(),
-        selectedClasses = []
+        selectedClasses = [],
+        allDiagrams,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let packages = $state([]);
     let classesByPackage = $state({});
 
-    let disableSubmit = $derived(diagramName.trim() === "");
+    let violations = $derived(isValidDiagramName(diagramName, allDiagrams));
+    let disableSubmit = $derived(violations.length > 0);
 
     async function onOpen() {
-        packages = await createPackageListForGraph(lockedDatasetName, lockedGraphUri);
-        classesByPackage = await createClassListForGraph(lockedDatasetName, lockedGraphUri, selectedClasses);
-        initlialisePacakgeSelectionState();
+        packages = await createPackageListForGraph(
+            lockedDatasetName,
+            lockedGraphUri,
+        );
+        classesByPackage = await createClassListForGraph(
+            lockedDatasetName,
+            lockedGraphUri,
+            selectedClasses,
+        );
+        initializePackageSelectionState();
     }
 
     function onClose() {
@@ -53,25 +69,26 @@
     }
 
     function deselectAll() {
-        packages.forEach((pack) => {
+        packages.forEach(pack => {
             pack.selected = false;
-            classesByPackage[getPackageId(pack)]?.forEach((cls) => {
+            classesByPackage[getPackageId(pack)]?.forEach(cls => {
                 cls.selected = false;
             });
         });
     }
 
-    function initlialisePacakgeSelectionState() {
+    function initializePackageSelectionState() {
         if (!selectedClasses.length) {
             return;
         }
 
-        packages.forEach((pack) => {
+        packages.forEach(pack => {
             const packageId = pack.uuid;
             const classesInPackage = classesByPackage[packageId] ?? [];
 
             if (classesInPackage.length > 0) {
-                pack.expanded = classesInPackage.find(cls => cls.selected) !== undefined;
+                pack.expanded =
+                    classesInPackage.find(cls => cls.selected) !== undefined;
             }
         });
     }
@@ -79,19 +96,24 @@
     async function submitDiagramClasses() {
         const selectedClassList = Object.values(classesByPackage)
             .flat()
-            .filter((cls) => cls.selected === true)
-            .map((cls) => ({
+            .filter(cls => cls.selected === true)
+            .map(cls => ({
                 uuid: cls.uuid,
-                graphUri: lockedGraphUri
+                graphUri: lockedGraphUri,
             }));
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
-            classes: selectedClassList
+            classes: selectedClassList,
         };
 
         try {
-            const res = await bec.putCustomDiagram(lockedDatasetName, lockedGraphUri, diagramId, diagramData);
+            const res = await bec.putCustomDiagram(
+                lockedDatasetName,
+                lockedGraphUri,
+                diagramId,
+                diagramData,
+            );
 
             if (res.ok) {
                 editorState.selectedDataset.updateValue(lockedDatasetName);
@@ -132,7 +154,8 @@
             </div>
         </div>
         <div
-            id="class-tree" class="h-full overflow-y-auto max-h-[55vh] items-stretch gap-[0.1rem] empty:hidden"
+            id="class-tree"
+            class="h-full max-h-[55vh] items-stretch gap-[0.1rem] overflow-y-auto empty:hidden"
         >
             {#each packages as pack (pack.uuid)}
                 <PackageSelectSection

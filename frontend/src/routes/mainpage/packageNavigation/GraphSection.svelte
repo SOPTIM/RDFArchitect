@@ -40,7 +40,7 @@
         undo,
         fetchCanUndo,
         redo,
-        fetchCanRedo
+        fetchCanRedo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -48,7 +48,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -337,9 +337,9 @@
             {/each}
 
             <CustomDiagramsSection
-                {dataset}
-                {graph}
-                {readOnly}
+                {datasetNavEntry}
+                {graphNavEntry}
+                {readonly}
             />
         </div>
     {/if}

@@ -117,7 +117,7 @@
         </span>
     {/if}
     {#if showCheckbox}
-        <input type="checkbox" checked={selected} onchange={handleCheckbox}/>
+        <input type="checkbox" checked={selected} onchange={handleCheckbox} />
     {/if}
 </button>
 

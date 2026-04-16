@@ -24,7 +24,7 @@
         faDatabase,
         faPenToSquare,
         faLock,
-        faDiagramProject
+        faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -37,9 +37,9 @@
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
-    import DatasetDeleteDialog from "./DatasetDeleteDialog.svelte";
     import GraphSection from "./GraphSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
+    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
@@ -216,14 +216,14 @@
                 <GraphSection
                     {datasetNavEntry}
                     {graphNavEntry}
-                    onExpandDataset={ensureDatasetExpanded}
                     {namespaces}
                     {readonly}
                 />
             {/each}
 
             <CustomDiagramsSection
-                {dataset}
+                {datasetNavEntry}
+                allGraphNavEntries={datasetNavEntry.children}
                 {readonly}
             />
         </div>

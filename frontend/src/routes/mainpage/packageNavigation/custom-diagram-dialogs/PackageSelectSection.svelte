@@ -18,17 +18,13 @@
 <script>
     import {
         faFolder,
-        faFolderOpen
+        faFolderOpen,
     } from "@fortawesome/free-regular-svg-icons";
     import { faCube } from "@fortawesome/free-solid-svg-icons";
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
 
-    let {
-        pack,
-        classes,
-        level = 1,
-    } = $props();
+    let { pack, classes, level = 1 } = $props();
 
     let packageIcon = $derived(pack.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(classes?.length > 0);
@@ -44,7 +40,7 @@
     function toggleClassesInPackage() {
         const newPackState = !pack.selected;
         pack.selected = newPackState;
-        classes.forEach((cls) => {
+        classes.forEach(cls => {
             cls.selected = newPackState;
         });
     }

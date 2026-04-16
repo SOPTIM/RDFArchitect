@@ -21,19 +21,34 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
         datasetName,
         graphUri,
         diagramId,
-        cls
+        cls,
     } = $props();
-    
+
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     async function removeFromDiagram() {
-        await bec.removeFromCustomGraphDiagram(datasetName, graphUri, diagramId, cls.uuid);
+        if (editorState.selectedGraph.getValue()){
+            await bec.removeFromCustomGraphDiagram(
+                datasetName,
+                graphUri,
+                diagramId,
+                cls.uuid,
+            );
+        } else {
+            await bec.removeFromCustomDatasetDiagram(
+                datasetName,
+                diagramId,
+                cls.uuid,
+            );
+        }
+        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -49,7 +64,8 @@
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-2/3 text-sm leading-relaxed">
-            This removes the class from this custom diagram. It will still be accessible from its package.
+            This removes the class from this custom diagram. It will still be
+            accessible from its package.
         </p>
     </div>
 </ActionDialog>

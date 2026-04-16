@@ -19,8 +19,10 @@
     import { faFileLines } from "@fortawesome/free-regular-svg-icons";
     import {
         faArrowUpRightFromSquare,
-        faDiagramProject, faMinus, faObjectGroup,
-        faTrash
+        faDiagramProject,
+        faMinus,
+        faObjectGroup,
+        faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -129,16 +131,16 @@
         {#if !diagramId}
             <ContextMenu.Item.Button
                 onSelect={() => {
-                showAddToGraphDiagramDialog = true;
-            }}
+                    showAddToGraphDiagramDialog = true;
+                }}
                 faIcon={faObjectGroup}
             >
                 Add to Graph Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
-                showAddToDatasetDiagramDialog = true;
-            }}
+                    showAddToDatasetDiagramDialog = true;
+                }}
                 faIcon={faObjectGroup}
             >
                 Add to Dataset Diagram
@@ -186,20 +188,20 @@
 />
 <AddToGraphDiagramDialog
     bind:showDialog={showAddToGraphDiagramDialog}
-    lockedDatasetName={dataset.label}
-    lockedGraphUri={getUri(graph)}
-    classes={[cls]}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={[classNavEntry]}
 />
 <AddToDatasetDiagramDialog
     bind:showDialog={showAddToDatasetDiagramDialog}
-    lockedDatasetName={dataset.label}
-    graph={getUri(graph)}
-    classes={[cls]}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={[classNavEntry]}
 />
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
-    lockedDatasetName={dataset.label}
-    graph={getUri(graph)}
-    diagramId={diagramId}
-    cls={cls}
+    lockedDatasetName={datasetNavEntry.id}
+    graph={graphNavEntry.id}
+    {diagramId}
+    cls={classNavEntry}
 />
