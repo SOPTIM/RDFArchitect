@@ -162,6 +162,23 @@
         selectedActions = new Map(selectedActions);
     }
 
+    /**
+     * Applies the given action to all direct children of parentNode that
+     * actually support it. Used by the root's bulk-apply controls.
+     * @param {object} parentNode
+     * @param {string} action
+     */
+    function onBulkApplyToChildren(parentNode, action) {
+        if (!parentNode.children) return;
+        for (const child of parentNode.children) {
+            if (child.actions.includes(action)) {
+                const key = `${child.resourceIdentifier.uuid}::${child.reason}`;
+                selectedActions.set(key, action);
+            }
+        }
+        selectedActions = new Map(selectedActions);
+    }
+
     function getDialogTitle() {
         if (deleteDependencies) {
             return `Delete ${type} "${deleteDependencies.resourceIdentifier.label}"?`;
@@ -174,7 +191,7 @@
     bind:showDialog
     onOpen={onOpenInternal}
     {onClose}
-    size="w-full max-w-1/3 max-h-3/4"
+    size="w-1/3 max-w-1/2 max-h-3/4"
     primaryLabel="Delete"
     onPrimary={submitDeleteRequest}
     title={getDialogTitle()}
@@ -197,6 +214,7 @@
                     node={deleteDependencies}
                     {selectedActions}
                     {onSelectAction}
+                    {onBulkApplyToChildren}
                     {availableActions}
                     depth={0}
                     isRoot={true}
