@@ -221,11 +221,14 @@ public class TripleChangeAnalyser {
 
             var from = originalValues.get(predicate);
             var to = updatedValues.get(predicate);
+            var valuesDiffer = !Objects.equals(from, to);
+            if (RDFS.comment.asNode().equals(predicate)) {
+                var normalizedFrom = normalizeCommentValue(from);
+                var normalizedTo = normalizeCommentValue(to);
+                valuesDiffer = !Objects.equals(normalizedFrom, normalizedTo);
+            }
 
-            var normalizedFrom = normalizeValueForComparison(predicate, from);
-            var normalizedTo = normalizeValueForComparison(predicate, to);
-
-            if (!Objects.equals(normalizedFrom, normalizedTo)) {
+            if (valuesDiffer) {
                 var change = new TriplePropertyChange();
                 change.setPredicate(predicate.toString());
                 change.setFrom(from != null ? from.toString() : null);
@@ -265,11 +268,11 @@ public class TripleChangeAnalyser {
         return propertyChanges;
     }
 
-    private String normalizeValueForComparison(Node predicate, Node value) {
+    private String normalizeCommentValue(Node value) {
         if (value == null) {
             return null;
         }
-        if (RDFS.comment.asNode().equals(predicate) && value.isLiteral()) {
+        if (value.isLiteral()) {
             var language = value.getLiteralLanguage() == null ? "" : value.getLiteralLanguage();
             var datatype = value.getLiteralDatatypeURI() == null ? "" : value.getLiteralDatatypeURI();
             return value.getLiteralLexicalForm().strip() + "|" + language + "|" + datatype;
