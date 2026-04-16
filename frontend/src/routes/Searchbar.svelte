@@ -29,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const filters = [
@@ -136,7 +137,9 @@
                 if (!("label" in a) || !("label" in b)) {
                     return 0;
                 }
-                return a.label.value.localeCompare(b.label.value);
+                return getSearchResultLabel(a).localeCompare(
+                    getSearchResultLabel(b),
+                );
             });
             searchResults = tempSearchResults;
         } else {
@@ -151,7 +154,7 @@
         let path = `${result.datasetName}/${getSuffix(result.graphUri)}/`;
         if (result.type !== "PACKAGE") {
             if (result.packageLabel) {
-                path += `${result.packageLabel.value}/`;
+                path += `${getPackageDisplayLabel(result.packageLabel.value)}/`;
             } else {
                 path += `default/`;
             }
@@ -160,6 +163,13 @@
             path += `${result.parentClassUri.suffix}/`;
         }
         return path;
+    }
+
+    function getSearchResultLabel(result) {
+        if (result.type === "PACKAGE") {
+            return getPackageDisplayLabel(result.label.value);
+        }
+        return result.label.value;
     }
 
     function getSuffix(uri) {
@@ -278,7 +288,7 @@
                                     {formatSearchResult(result)}
                                 </p>
                                 <p
-                                    title={result.label.value}
+                                    title={getSearchResultLabel(result)}
                                     class="flex items-center gap-2"
                                 >
                                     {#if result.external}
@@ -286,7 +296,7 @@
                                             [external]
                                         </span>
                                     {/if}
-                                    {result.label.value}
+                                    {getSearchResultLabel(result)}
                                 </p>
                             </div>
                             <div class="ml-5 flex items-center">

@@ -19,6 +19,7 @@ import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
+import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
     getUri,
@@ -195,10 +196,11 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
  */
 function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
     const id = packObj.uuid ?? "default";
+    const displayLabel = getPackageDisplayLabel(packObj.label);
     return reuseOrCreate(existingPackageList, {
         id,
         tooltip: packObj.prefix + packObj.label,
-        label: packObj.label,
+        label: displayLabel,
         data: {
             uuid: id,
             prefix: packObj.prefix,

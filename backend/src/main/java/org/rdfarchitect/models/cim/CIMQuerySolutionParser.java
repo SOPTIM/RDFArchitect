@@ -142,8 +142,7 @@ public class CIMQuerySolutionParser {
         var uriLabelPair = getURILabelPair(packageUriVar, packageLabelVar);
         var uriLabel = uriLabelPair.label;
         if (uriLabel == null) {
-            String uriLabelString = uriLabelPair.uri.getSuffix().replace("Package_", "");
-            uriLabel = new RDFSLabel(uriLabelString);
+            uriLabel = new RDFSLabel(uriLabelPair.uri.getSuffix());
         }
         return new CIMSBelongsToCategory(uriLabelPair.uri, uriLabel, getUUID(packageUUIDVar));
     }
