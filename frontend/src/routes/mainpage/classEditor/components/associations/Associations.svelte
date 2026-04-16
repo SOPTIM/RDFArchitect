@@ -110,7 +110,6 @@
                     ></th>
 
                     <th class="text-blue pl-1 text-left font-normal">Label</th>
-                    <th class="text-blue pl-1 text-left font-normal">Target</th>
                     <th class="size-8"></th>
                     <th class="size-8"></th>
                     {#if !readonly}

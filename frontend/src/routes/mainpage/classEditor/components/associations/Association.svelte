@@ -26,7 +26,6 @@
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import NumberInputControl from "$lib/components/NumberInputControl.svelte";
-    import SearchableSelect from "$lib/components/SearchableSelect.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
@@ -42,7 +41,6 @@
 
     const classEditorContext = getContext("classEditor");
     let readonly = $derived(classEditorContext.readonly);
-    let classes = $derived(classEditorContext.classes);
 
     let lowerButtons = $derived(getButtons(association.multiplicityLowerBound));
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));
@@ -50,12 +48,10 @@
     $effect(() => {
         editorState.selectedPackageUUID.subscribe();
         readonly = classEditorContext.readonly;
-        classes = classEditorContext.classes;
     });
 
     onMount(() => {
         readonly = classEditorContext.readonly;
-        classes = classEditorContext.classes;
     });
 
     function getButtons(multiplicityObject) {
@@ -101,30 +97,6 @@
             {readonly}
             buttons={getControlButtonsForReactiveObject(
                 association.label,
-                readonly,
-            )}
-        />
-    </td>
-
-    <td>
-        <SearchableSelect
-            placeholder="Target"
-            value={classEditorContext.getClassByUuid(association.target.value)
-                ?.label}
-            highlight={association.target.isModified}
-            warn={!association.target.isValid}
-            optionObjectList={classes}
-            accessDisplayData={cls => cls.label}
-            accessIdentifier={cls =>
-                classEditorContext.getSubstitutedNamespace(cls.prefix) +
-                ":" +
-                cls.label}
-            callOnValidChange={newTarget =>
-                (association.target.value = newTarget ? newTarget.uuid : null)}
-            {readonly}
-            tooltip={association.target.value}
-            buttons={getControlButtonsForReactiveObject(
-                association.target,
                 readonly,
             )}
         />
