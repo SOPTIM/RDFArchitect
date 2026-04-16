@@ -56,7 +56,10 @@
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
             editorState.selectedClassUUID.updateValue(searchResult.uuid);
+            editorState.focusedClassUUID.updateValue(searchResult.uuid);
         } else if (searchResult.type === "PACKAGE") {
+            editorState.selectedClassUUID.updateValue(null);
+            editorState.focusedClassUUID.updateValue(null);
             editorState.selectedPackageUUID.updateValue(searchResult.uuid);
         } else {
             editorState.selectedClassDataset.updateValue(
@@ -64,6 +67,9 @@
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
             editorState.selectedClassUUID.updateValue(
+                searchResult.parentClassUUID,
+            );
+            editorState.focusedClassUUID.updateValue(
                 searchResult.parentClassUUID,
             );
         }

@@ -46,7 +46,6 @@
         namespaces = [],
         readonly,
     } = $props();
-
     let showNewClassDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeletePackageDialog = $state(false);

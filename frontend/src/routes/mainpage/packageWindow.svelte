@@ -23,7 +23,8 @@
     import ClassEditor from "./classEditor/classEditor.svelte";
     import RenderingWrapper from "./renderingWrapper.svelte";
 
-    let classEditorPaneWidth = 30;
+    let classEditorPaneWidth = $state(30);
+    let paneSizeByPackage = $state({});
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
             editorState.selectedDataset.getValue(),
@@ -33,48 +34,88 @@
             editorState.selectedGraph.getValue(),
     );
 
+    const selectionTrigger = $derived([
+        editorState.selectedPackageUUID.subscribe(),
+        editorState.selectedClassUUID.subscribe(),
+    ]);
+    const isClassSelected = $derived(
+        selectionTrigger && !!editorState.selectedClassUUID.getValue(),
+    );
+    const classEditorKey = $derived(
+        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClassUUID.getValue() ?? ""}::${editorState.selectedClassUUID.subscribe()}`,
+    );
+
+    $effect(() => {
+        editorState.selectedDataset.subscribe();
+        editorState.selectedGraph.subscribe();
+        editorState.selectedPackageUUID.subscribe();
+        const packageKey = getPackageKey();
+        if (packageKey && paneSizeByPackage[packageKey]) {
+            classEditorPaneWidth = paneSizeByPackage[packageKey];
+        } else {
+            classEditorPaneWidth = 30;
+        }
+    });
+
+    function getPackageKey() {
+        const dataset = editorState.selectedDataset.getValue();
+        const graph = editorState.selectedGraph.getValue();
+        const pack = editorState.selectedPackageUUID.getValue();
+        if (!dataset || !graph || !pack) {
+            return null;
+        }
+        return `${dataset}::${graph}::${pack}`;
+    }
+
     function handleSplitPaneResize(event) {
-        /* event.detail is an array holding size information about each pane.
-         Since this Splitpane has two panes, event.detail has two entries
-         the second entry (index 1) holds the size information about the class editor pane */
         if (event.detail && event.detail.length > 1) {
+            if (!editorState.selectedClassUUID.getValue()) {
+                return;
+            }
+            // event.detail[1] holds the size of the class editor pane.
             classEditorPaneWidth = event.detail[1].size;
+            const packageKey = getPackageKey();
+            if (packageKey) {
+                paneSizeByPackage = {
+                    ...paneSizeByPackage,
+                    [packageKey]: classEditorPaneWidth,
+                };
+            }
         }
     }
 </script>
 
-<div class="relative h-full w-full overflow-hidden">
-    {#key editorState.selectedPackageUUID.subscribe()}
-        <div class="h-full">
-            <RenderingWrapper
-                rightInsetPercent={editorState.selectedClassUUID.getValue()
-                    ? classEditorPaneWidth
-                    : 0}
-            />
-        </div>
-    {/key}
-
-    {#if editorState.selectedClassUUID.getValue()}
-        <Splitpanes
-            theme="opencgmes-theme"
-            class="pointer-events-none absolute top-0 right-0 h-screen w-screen"
-            onresize={handleSplitPaneResize}
+<div class="h-full w-full overflow-hidden">
+    <Splitpanes
+        theme="opencgmes-theme"
+        class="flex h-full"
+        onresize={handleSplitPaneResize}
+    >
+        <Pane
+            size={isClassSelected ? 100 - classEditorPaneWidth : 100}
+            class="bg-window-background h-full overflow-hidden"
         >
-            <Pane
-                size={100 - classEditorPaneWidth}
-                class="pointer-events-none bg-transparent"
-            ></Pane>
+            {#key editorState.selectedPackageUUID.subscribe()}
+                <div class="h-full">
+                    <RenderingWrapper />
+                </div>
+            {/key}
+        </Pane>
+
+        {#if isClassSelected}
             <Pane
                 size={classEditorPaneWidth}
                 minSize={25}
-                class="pointer-events-auto h-full overflow-auto"
+                class="h-full overflow-auto"
             >
-                <ClassEditor
-                    datasetName={classDatasetName}
-                    graphUri={classGraphUri}
-                    classUuid={editorState.selectedClassUUID.getValue()}
-                />
+                {#key classEditorKey}
+                    <ClassEditor
+                        datasetName={classDatasetName}
+                        graphUri={classGraphUri}
+                        classUuid={editorState.selectedClassUUID.getValue()}
+                    />
+                {/key}
             </Pane>
-        </Splitpanes>
-    {/if}
+        {/if}
+    </Splitpanes>
 </div>

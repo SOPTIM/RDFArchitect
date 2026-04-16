@@ -35,6 +35,8 @@ import { SimpleTrigger, StateValuePair } from "./statePrimitives.svelte.js";
  *  selectedClassDataset: StateValuePair<string | null>,
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClassUUID: StateValuePair<string | null>,
+ *  focusedClassUUID: StateValuePair<string | null>,
+ *  selectedContext: StateValuePair<string | null>,
  *  reset: () => void
  * }}
  */
@@ -45,6 +47,7 @@ export const editorState = {
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
+    focusedClassUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
 
     reset() {
@@ -54,6 +57,7 @@ export const editorState = {
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
         this.selectedClassUUID.updateValue(null);
+        this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);
     },
 };

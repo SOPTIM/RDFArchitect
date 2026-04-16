@@ -16,13 +16,15 @@
   -->
 <script>
     import { ContextMenu as BitsUiContextMenu } from "bits-ui";
-    let { children } = $props();
+
+    let { children, class: cls = "", ...other } = $props();
 </script>
 
 <BitsUiContextMenu.Portal>
     <BitsUiContextMenu.Content
-        class="menu-surface menu-surface--context"
+        class={`menu-surface menu-surface--context ${cls}`}
         preventScroll={false}
+        {...other}
     >
         {@render children?.()}
     </BitsUiContextMenu.Content>
