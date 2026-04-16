@@ -32,6 +32,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.slf4j.Logger;
@@ -51,7 +52,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public void deleteResources(GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
+    public void executeDeleteRequests(GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
         GraphRewindable graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
@@ -198,7 +199,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
         //delete associations only if it references an external resource
         model.listSubjectsWithProperty(RDFS.domain, resource)
              .filterKeep(CIMPropertyUtils::isAssociation)
-             .filterKeep(assoc -> CIMResourceTypeIdentifyingUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource()))
+             .filterKeep(assoc -> CIMResourceUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource()))
              .toList()
              .forEach(this::removeResource);
 
