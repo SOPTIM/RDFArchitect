@@ -89,15 +89,22 @@
         reactiveClass?.stereotypes.contains(enumerationStereotype),
     );
 
-    $effect(async () => {
+    $effect(() => {
         editorState.selectedClassUUID.subscribe();
         forceReloadTrigger.subscribe();
+
+        const cancellation = { cancelled: false };
         loadingContext = true;
         loadingClass = true;
+        (async () => {
+            isDatasetReadOnly = await isReadOnly(datasetName);
+            await loadContext();
+            await loadReactiveClass(cancellation);
+        })();
 
-        isDatasetReadOnly = await isReadOnly(datasetName);
-        await loadContext();
-        await loadReactiveClass();
+        return () => {
+            cancellation.cancelled = true;
+        };
     });
 
     $effect(async () => {
@@ -147,10 +154,11 @@
         editorState.selectedContext.trigger();
     }
 
-    async function loadReactiveClass() {
+    async function loadReactiveClass(cancelled) {
         const classDto = await (
             await bec.getClassInfo(datasetName, graphUri, classUuid)
         ).json();
+        if (cancelled.cancelled) return;
         const newReactiveClass = mapClassDtoToReactiveClass(
             classDto,
             context.classes,
@@ -161,7 +169,6 @@
             reactiveClass,
         );
         loadingClass = false;
-        console.log({ reactiveClass });
 
         const targetUuids = [
             ...new Set(
@@ -171,12 +178,14 @@
             ),
         ];
 
-        context.targetClassInfos = await Promise.all(
+        let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
                 const res = await bec.getClassInfo(datasetName, graphUri, uuid);
                 return res.json();
             }),
         );
+        if (cancelled.cancelled) return;
+        context.targetClassInfos = targetClassInfos;
     }
 
     function openPropertySHACLRulesDialog(property) {
@@ -214,6 +223,9 @@
         },
         get targetClassInfos() {
             return context.targetClassInfos;
+        },
+        get backendConnection() {
+            return bec;
         },
         // get Objects by identifier functions
         get getClassByUuid() {

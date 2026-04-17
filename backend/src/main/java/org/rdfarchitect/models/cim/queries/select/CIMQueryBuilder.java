@@ -310,7 +310,7 @@ public class CIMQueryBuilder {
     //inverse
 
     /**
-     * Appends query for the uuid of objects connected via "cims:inverseRoleName" as {@link CIMQueryVars Inverse.LABEL}.
+     * Appends query for the uuid of objects connected via "cims:inverseRoleName" as {@link CIMQueryVars Inverse.UUID}.
      *
      * @param mode Whether the result of this is mode.
      *

@@ -61,7 +61,7 @@ export function isInvalidAssociationLabel(association, associations) {
                 a =>
                     a.label.value === association?.label?.value &&
                     a.namespace.value === association.namespace?.value &&
-                    a.uuid.value !== association?.uuid?.value,
+                    a !== association,
             ).length > 0
         ) {
             violations.push("must be unique");
@@ -83,11 +83,7 @@ export function isInvalidAssociationLabel(association, associations) {
     return violations;
 }
 
-export function isInvalidInverseAssociationLabel(
-    association,
-    associations,
-    getClassByUuid,
-) {
+export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
     const violations = isNotEmptyValidation(association?.inverse?.label?.value);
     const targetClassDto = getClassByUuid(association.target?.value);
     const assocList = targetClassDto?.associationPairs?.map(pair => pair) ?? [];

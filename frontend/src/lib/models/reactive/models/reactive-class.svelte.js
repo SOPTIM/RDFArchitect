@@ -46,11 +46,7 @@ function initializeAssociationViolationChecks(
         isInvalidAssociationLabel(association, associationsArray),
     );
     association.inverse.label.violationChecks.push(() =>
-        isInvalidInverseAssociationLabel(
-            association,
-            associationsArray,
-            getClassByUuid,
-        ),
+        isInvalidInverseAssociationLabel(association, getClassByUuid),
     );
 }
 
