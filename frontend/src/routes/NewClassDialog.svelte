@@ -110,7 +110,7 @@
                 (className = new ReactiveValueWrapper(className?.value, label =>
                     isInvalidClassLabel(
                         label,
-                        classURINamespace.value,
+                        classURINamespace?.value,
                         compareClasses,
                     ),
                 )),
@@ -125,7 +125,11 @@
         classURINamespace = new ReactiveValueWrapper(null);
 
         className = new ReactiveValueWrapper("", label =>
-            isInvalidClassLabel(label, classURINamespace.value, compareClasses),
+            isInvalidClassLabel(
+                label,
+                classURINamespace?.value,
+                compareClasses,
+            ),
         );
 
         if (!datasetName) {
@@ -209,13 +213,12 @@
                     }),
                     body: JSON.stringify({
                         packageDTO,
-                        classURIPrefix: classURINamespaceLocal.value,
-                        className: classNameLocal.value,
+                        classURIPrefix: classURINamespaceLocal?.value,
+                        className: classNameLocal?.value,
                     }),
                     credentials: "include",
                 },
             );
-
             if (res.ok) {
                 const uuid = await res.text();
                 console.log("successfully added class");
@@ -283,7 +286,7 @@
         <label for={domIds.classURINamespace} class="mt-3 mb-1 block text-sm">
             Namespace
         </label>
-        {#if className}
+        {#if className && classURINamespace}
             <SelectEditControl
                 id={domIds.classURINamespace}
                 bind:value={classURINamespace.value}

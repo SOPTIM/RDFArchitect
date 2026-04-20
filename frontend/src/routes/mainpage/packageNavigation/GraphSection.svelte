@@ -55,6 +55,7 @@
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
@@ -82,6 +83,7 @@
     let showSHACLUploadDialog = $state(false);
     let showSHACLExportDialog = $state(false);
     let showSHACLFullViewDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
     let canUndo = $state(false);
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -205,11 +207,7 @@
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => {
-                            bec.deleteOntology(
-                                datasetNavEntry.id,
-                                graphNavEntry.id,
-                            );
-                            initialize();
+                            showDeleteDependenciesDialog = true;
                         }}
                         variant="danger"
                         faIcon={faTrash}
@@ -375,4 +373,12 @@
     bind:ontology
     {readonly}
     onSubmit={initialize}
+/>
+
+<DeleteDependenciesDialog
+    bind:showDialog={showDeleteDependenciesDialog}
+    onClose={initialize}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    resourceUuid={ontology.uuid}
 />

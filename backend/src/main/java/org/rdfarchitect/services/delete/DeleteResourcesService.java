@@ -145,12 +145,12 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
 
             if (isReferencedElsewhere(model, current)) {
                 var uuidStmt = current.getProperty(RDFA.uuid);
-                model.removeAll(current, null, null);
+                current.listProperties().forEach(model::remove);
                 if (uuidStmt != null) {
                     model.add(uuidStmt);
                 }
             } else {
-                model.removeAll(current, null, null);
+                current.listProperties().forEach(model::remove);
             }
         }
     }
@@ -181,12 +181,12 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
         }
         var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
         if (deleteRequest.getAction() == DeleteAction.REMOVE_SUBCLASS_REFERENCE) {
-            model.remove(resource, RDFS.subClassOf, null);
+            resource.listProperties(RDFS.subClassOf).forEach(model::remove);
             return;
         }
 
         if (deleteRequest.getAction() == DeleteAction.REMOVE_PACKAGE_REFERENCE) {
-            model.remove(resource, CIMS.belongsToCategory, null);
+            resource.listProperties(CIMS.belongsToCategory).forEach(model::remove);
             return;
         }
 
