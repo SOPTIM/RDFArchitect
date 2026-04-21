@@ -42,7 +42,7 @@
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
-    import DeleteClassConfirmDialog from "../../../routes/DeleteClassConfirmDialog.svelte";
+    import DeleteDependenciesDialog from "../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
@@ -69,7 +69,7 @@
     let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
     let deleteClassTarget = $state(null);
-    let showDeleteClassDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
     let showNewClassDialog = $state(false);
     let pendingNewClassPlacement = null;
 
@@ -415,7 +415,7 @@
             return;
         }
         deleteClassTarget = contextMenuClass;
-        showDeleteClassDialog = true;
+        showDeleteDependenciesDialog = true;
         closeContextMenus();
     }
 
@@ -575,10 +575,9 @@
     onClassCreated={handleClassCreated}
 />
 
-<DeleteClassConfirmDialog
-    bind:showDialog={showDeleteClassDialog}
+<DeleteDependenciesDialog
     datasetName={editorState.selectedDataset.getValue()}
     graphUri={editorState.selectedGraph.getValue()}
-    classUuid={deleteClassTarget?.uuid}
-    classLabel={deleteClassTarget?.label}
+    resourceUuid={deleteClassTarget?.uuid}
+    bind:showDialog={showDeleteDependenciesDialog}
 />
