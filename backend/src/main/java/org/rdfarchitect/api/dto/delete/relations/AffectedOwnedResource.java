@@ -26,10 +26,11 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUti
 
 @Data
 @Accessors(chain = true)
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 public class AffectedOwnedResource extends AffectedResource {
 
+    @EqualsAndHashCode.Include
     private ResourceIdentifier domain;
 
     public AffectedOwnedResource(ResourceIdentifier resourceIdentifier,
@@ -38,5 +39,10 @@ public class AffectedOwnedResource extends AffectedResource {
                                  ResourceIdentifier domain) {
         this.domain = domain;
         super(resourceIdentifier, type, reason);
+    }
+
+    @Override
+    public boolean canEqual(Object other) {
+        return other instanceof AffectedOwnedResource;
     }
 }
