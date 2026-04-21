@@ -1,0 +1,153 @@
+<http://iec.ch/TC57/CIM100#Package_Datatypes>
+        a                          <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#ClassCategory>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "Datatypes"@en;
+        <http://example.org#uuid>  "a5ede240-396a-44a6-91c6-4fbd588df864" .
+
+<http://iec.ch/TC57/CIM100#Package_Package>
+        a                          <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#ClassCategory>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "Package"@en;
+        <http://example.org#uuid>  "0351f9b6-5e91-4059-9d8b-169d28f1b2c8" .
+
+<http://iec.ch/TC57/CIM100#Ontology>
+        a                          <http://www.w3.org/2002/07/owl#Ontology>;
+        <http://example.org#uuid>  "dba8f8e3-bfb3-4e62-9ca5-b0136ed186b2";
+        <http://purl.org/dc/terms/issued>
+                "2026-04-20T14:19:03.9589539"^^<http://purl.org/dc/terms/issued>;
+        <http://purl.org/dc/terms/modified>
+                "2026-04-20"^^<http://purl.org/dc/terms/modified> .
+
+<http://iec.ch/TC57/CIM100#AssociatedClass.NonExisting>
+        a                          <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>;
+        <http://www.w3.org/2000/01/rdf-schema#domain>
+                <http://iec.ch/TC57/CIM100#AssociatedClass>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "NonExisting"@en;
+        <http://www.w3.org/2000/01/rdf-schema#range>
+                <http://iec.ch/TC57/CIM100#Temp>;
+        <http://example.org#uuid>  "b2a306f1-4789-4a12-b045-04a014e7a937";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#AssociationUsed>
+                "No";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#inverseRoleName>
+                <http://iec.ch/TC57/CIM100#Temp.AssociatedClass>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#multiplicity>
+                <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:n> .
+
+<http://iec.ch/TC57/CIM100#Temp.AssociatedClass>
+        a                          <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>;
+        <http://www.w3.org/2000/01/rdf-schema#domain>
+                <http://iec.ch/TC57/CIM100#Temp>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "AssociatedClass"@en;
+        <http://www.w3.org/2000/01/rdf-schema#range>
+                <http://iec.ch/TC57/CIM100#AssociatedClass>;
+        <http://example.org#uuid>  "c3b417f2-5890-5b23-c156-15b015e8b048";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#AssociationUsed>
+                "No";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#inverseRoleName>
+                <http://iec.ch/TC57/CIM100#AssociatedClass.NonExisting>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#multiplicity>
+                <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:n> .
+
+<http://iec.ch/TC57/CIM100#Temp>
+        <http://example.org#uuid>  "45168d29-0a45-42f1-bb51-1a8efc03bac1" .
+
+<http://iec.ch/TC57/CIM100#AssociatedClass.ChildClass>
+        a                          <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>;
+        <http://www.w3.org/2000/01/rdf-schema#domain>
+                <http://iec.ch/TC57/CIM100#AssociatedClass>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "ChildClass"@en;
+        <http://www.w3.org/2000/01/rdf-schema#range>
+                <http://iec.ch/TC57/CIM100#ChildClass>;
+        <http://example.org#uuid>  "abfab117-e4bc-4814-9b5a-3aed72de8a2d";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#AssociationUsed>
+                "No";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#inverseRoleName>
+                <http://iec.ch/TC57/CIM100#ChildClass.AssociatedClass>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#multiplicity>
+                <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:n> .
+
+<http://iec.ch/TC57/CIM100#ChildClass.AssociatedClass>
+        a                          <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>;
+        <http://www.w3.org/2000/01/rdf-schema#domain>
+                <http://iec.ch/TC57/CIM100#ChildClass>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "AssociatedClass"@en;
+        <http://www.w3.org/2000/01/rdf-schema#range>
+                <http://iec.ch/TC57/CIM100#AssociatedClass>;
+        <http://example.org#uuid>  "bc0bc228-f5cd-5925-ab6b-4bfe83ef9b3e";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#AssociationUsed>
+                "No";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#inverseRoleName>
+                <http://iec.ch/TC57/CIM100#AssociatedClass.ChildClass>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#multiplicity>
+                <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:n> .
+
+<http://iec.ch/TC57/CIM100#AssociatedClass>
+        a                          <http://www.w3.org/2000/01/rdf-schema#Class>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "AssociatedClass"@en;
+        <http://www.w3.org/2000/01/rdf-schema#subClassOf>
+                <http://iec.ch/TC57/CIM100#ChildClass>;
+        <http://example.org#uuid>  "f6d92056-c469-40d4-add1-1d6adf2fa7a6";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory>
+                <http://iec.ch/TC57/CIM100#Package_Package> .
+
+<http://iec.ch/TC57/CIM100#ParentClass.attr1>
+        a                          <http://www.w3.org/1999/02/22-rdf-syntax-ns#Property>;
+        <http://www.w3.org/2000/01/rdf-schema#domain>
+                <http://iec.ch/TC57/CIM100#ParentClass>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "attr1"@en;
+        <http://example.org#uuid>  "dc934c7b-6c4d-4177-9832-bcb955f25414";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#dataType>
+                <http://iec.ch/TC57/CIM100#DatatypeClass>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#multiplicity>
+                <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:n>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#stereotype>
+                <http://iec.ch/TC57/NonStandard/UML#attribute> .
+
+<http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:n>
+        <http://example.org#uuid>  "3b04c3fc-44bf-46fc-a0b2-fd3e799ac35e" .
+
+<http://iec.ch/TC57/NonStandard/UML#attribute>
+        <http://example.org#uuid>  "0998527c-7e84-4442-ac48-02cad69e1342" .
+
+<http://iec.ch/TC57/NonStandard/UML#concrete>
+        <http://example.org#uuid>  "569fb7d4-0e27-4ef8-8465-65bb9358b7be" .
+
+<http://iec.ch/TC57/CIM100#DatatypeClass>
+        a                          <http://www.w3.org/2000/01/rdf-schema#Class>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "DatatypeClass"@en;
+        <http://example.org#uuid>  "db520255-95ef-40d4-b328-e1631e4683a4";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory>
+                <http://iec.ch/TC57/CIM100#Package_Datatypes>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#stereotype>
+                "Primitive" .
+
+<http://iec.ch/TC57/CIM100#ChildClass>
+        a                          <http://www.w3.org/2000/01/rdf-schema#Class>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "ChildClass"@en;
+        <http://www.w3.org/2000/01/rdf-schema#subClassOf>
+                <http://iec.ch/TC57/CIM100#ParentClass>;
+        <http://example.org#uuid>  "93ee2f31-5ddd-4b25-b119-e90a5ed327b0";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory>
+                <http://iec.ch/TC57/CIM100#Package_Package>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#stereotype>
+                <http://iec.ch/TC57/NonStandard/UML#concrete> .
+
+<http://iec.ch/TC57/CIM100#ParentClass>
+        a                          <http://www.w3.org/2000/01/rdf-schema#Class>;
+        <http://www.w3.org/2000/01/rdf-schema#label>
+                "ParentClass"@en;
+        <http://www.w3.org/2000/01/rdf-schema#subClassOf>
+                <http://iec.ch/TC57/CIM100#AssociatedClass>;
+        <http://example.org#uuid>  "05131eaf-a7dd-4ac4-8624-9665990985ab";
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory>
+                <http://iec.ch/TC57/CIM100#Package_Package>;
+        <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#stereotype>
+                <http://iec.ch/TC57/NonStandard/UML#concrete> .

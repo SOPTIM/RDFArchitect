@@ -28,7 +28,6 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;

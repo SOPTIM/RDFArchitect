@@ -43,10 +43,10 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
-    import PackageDeleteDialog from "../../mainpage/packageNavigation/PackageDeleteDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
@@ -60,7 +60,8 @@
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
     let showFilterViewDialog = $state(false);
-    let showPackageDeleteDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
+    let showOntologyDeleteDependenciesDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -154,7 +155,7 @@
         packageDialogTarget = { ...selectedPackageDetails };
         packageDialogDataset = selectedDataset;
         packageDialogGraph = selectedGraph;
-        showPackageDeleteDialog = true;
+        showDeleteDependenciesDialog = true;
     }
 
     async function getPackages() {
@@ -337,12 +338,8 @@
             </Menubar.SubMenu.Trigger>
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
-                    onSelect={async () => {
-                        await bec.deleteOntology(
-                            selectedDataset,
-                            selectedGraph,
-                        );
-                        reload();
+                    onSelect={() => {
+                        showOntologyDeleteDependenciesDialog = true;
                     }}
                     disabled={!hasGraphSelected || !graphHasOntology}
                     faIcon={faTrash}
@@ -376,16 +373,26 @@
         readonly={isDatasetReadOnly}
     />
 {/if}
-{#if packageDialogTarget && showPackageDeleteDialog}
-    <PackageDeleteDialog
-        bind:showDialog={showPackageDeleteDialog}
+{#if packageDialogTarget && showDeleteDependenciesDialog}
+    <DeleteDependenciesDialog
+        bind:showDialog={showDeleteDependenciesDialog}
         datasetName={packageDialogDataset}
         graphUri={packageDialogGraph}
-        pack={packageDialogTarget}
+        resourceUuid={packageDialogTarget.uuid}
     />
 {/if}
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 <FilterViewDialog bind:showDialog={showFilterViewDialog} />
+{#if ontology}
+    <DeleteDependenciesDialog
+        bind:showDialog={showOntologyDeleteDependenciesDialog}
+        onClose={reload}
+        datasetName={editorState.selectedDataset.getValue()}
+        graphUri={editorState.selectedGraph.getValue()}
+        resourceUuid={ontology.uuid}
+    />
+{/if}
+
 {#if showEditOntologyDialog}
     <OntologyDialog
         bind:showDialog={showEditOntologyDialog}

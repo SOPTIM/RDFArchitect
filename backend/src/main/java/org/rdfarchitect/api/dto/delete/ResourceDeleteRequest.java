@@ -15,22 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.api.dto.delete;
 
-import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
-import org.rdfarchitect.database.GraphIdentifier;
+import lombok.Data;
 
-import java.util.List;
+import java.util.UUID;
 
-public interface GetClassListUseCase {
+@Data
+public class ResourceDeleteRequest {
 
-    /**
-     * Gets the list of classes in the graph.
-     *
-     * @param graphIdentifier The graph to getClassDefinition.
-     * @param includeExternalClasses Whether to include external classes in the result.
-     *
-     * @return The list of classes in the graph.
-     */
-    List<ClassUMLAdaptedDTO> getClassList(GraphIdentifier graphIdentifier,boolean includeExternalClasses);
+    private UUID uuid;
+
+    private DeleteAction action;
 }

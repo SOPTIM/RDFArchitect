@@ -33,7 +33,7 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
-    import DeleteClassConfirmDialog from "../../../DeleteClassConfirmDialog.svelte";
+    import DeleteDependenciesDialog from "../../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
@@ -49,7 +49,7 @@
 
     const classEditorContext = getContext("classEditor");
 
-    let showClassDeleteDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
     let showSHACLClassDialog = $state(false);
     let readonly = $derived(classEditorContext.readonly);
     let datasetName = $derived(classEditorContext.datasetName);
@@ -144,18 +144,17 @@
         </div>
         <div class="w-1/5">
             <FaIconButton
-                callOnClick={() => (showClassDeleteDialog = true)}
+                callOnClick={() => (showDeleteDependenciesDialog = true)}
                 icon={faTrash}
                 variant="danger"
                 text="Delete"
                 title="Delete class"
             />
-            <DeleteClassConfirmDialog
+            <DeleteDependenciesDialog
                 {datasetName}
                 {graphUri}
-                classUuid={reactiveClass.uuid.value}
-                classLabel={reactiveClass.label.value}
-                bind:showDialog={showClassDeleteDialog}
+                resourceUuid={reactiveClass.uuid.value}
+                bind:showDialog={showDeleteDependenciesDialog}
             />
         </div>
     {/if}
