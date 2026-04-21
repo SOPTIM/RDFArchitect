@@ -25,7 +25,7 @@
         useSvelteFlow,
     } from "@xyflow/svelte";
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
-    import ELK from "elkjs/lib/elk.bundled.js";
+    import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
     import { onMount, untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
@@ -42,6 +42,8 @@
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import DeleteDependenciesDialog from "../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
         nodes: inputNodes,
@@ -68,6 +70,9 @@
     let paneContextMenuRequest = $state(null);
     let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
+    let deleteClassTarget = $state(null);
+    let showDeleteDependenciesDialog = $state(false);
+    let showNewClassDialog = $state(false);
     let pendingNewClassPlacement = null;
 
     // Ordered list of node IDs from back (index 0) to front (index n-1).
@@ -500,6 +505,9 @@
             // All indices up to and including original idx shifted
             changedIds = next.slice(0, idx + 1);
         }
+        deleteClassTarget = contextMenuClass;
+        showDeleteDependenciesDialog = true;
+        closeContextMenus();
 
         nodeOrder = next;
         nodes = applyZIndicesFromOrder(nodes);
@@ -697,16 +705,31 @@
         onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
-        request={classContextMenuRequest}
-        disabled={isDatasetReadOnly || !contextMenuClass}
-        {contextMenuClass}
-        datasetName={editorState.selectedDataset.getValue()}
-        graphUri={editorState.selectedGraph.getValue()}
-        {nodeOrder}
-        nodeCount={nodes.length}
-        onClose={closeContextMenus}
-        onMoveClass={handleMoveClass}
-        onSetLayer={handleSetLayer}
-        onPersistLayer={handlePersistLayer}
+            request={classContextMenuRequest}
+            disabled={isDatasetReadOnly || !contextMenuClass}
+            {contextMenuClass}
+            datasetName={editorState.selectedDataset.getValue()}
+            graphUri={editorState.selectedGraph.getValue()}
+            {nodeOrder}
+            nodeCount={nodes.length}
+            onClose={closeContextMenus}
+            onMoveClass={handleMoveClass}
+            onSetLayer={handleSetLayer}
+            onPersistLayer={handlePersistLayer}
     />
 </div>
+
+<NewClassDialog
+    bind:showDialog={showNewClassDialog}
+    lockedDatasetName={editorState.selectedDataset.getValue()}
+    lockedGraphUri={editorState.selectedGraph.getValue()}
+    onClassCreated={handleClassCreated}
+/>
+
+<DeleteDependenciesDialog
+    datasetName={editorState.selectedDataset.getValue()}
+    graphUri={editorState.selectedGraph.getValue()}
+    resourceUuid={deleteClassTarget?.uuid}
+    bind:showDialog={showDeleteDependenciesDialog}
+/>
+
