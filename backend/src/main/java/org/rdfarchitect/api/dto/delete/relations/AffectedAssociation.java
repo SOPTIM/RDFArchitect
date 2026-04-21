@@ -26,11 +26,17 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUti
 
 @Data
 @Accessors(chain = true)
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onlyExplicitlyIncluded = true)
 @NoArgsConstructor
 public class AffectedAssociation extends AffectedOwnedResource {
 
+    @EqualsAndHashCode.Include
     private ResourceIdentifier target;
+
+    @Override
+    public boolean canEqual(Object other) {
+        return other instanceof AffectedAssociation;
+    }
 
     public AffectedAssociation(ResourceIdentifier resourceIdentifier,
                                CIMResourceTypeIdentifyingUtils.CimResourceType type,
