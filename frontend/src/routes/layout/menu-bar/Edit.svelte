@@ -61,6 +61,7 @@
     let showNewPackageDialog = $state(false);
     let showFilterViewDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
+    let showOntologyDeleteDependenciesDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -337,12 +338,8 @@
             </Menubar.SubMenu.Trigger>
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
-                    onSelect={async () => {
-                        await bec.deleteOntology(
-                            selectedDataset,
-                            selectedGraph,
-                        );
-                        reload();
+                    onSelect={() => {
+                        showOntologyDeleteDependenciesDialog = true;
                     }}
                     disabled={!hasGraphSelected || !graphHasOntology}
                     faIcon={faTrash}
@@ -386,6 +383,16 @@
 {/if}
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 <FilterViewDialog bind:showDialog={showFilterViewDialog} />
+{#if ontology}
+    <DeleteDependenciesDialog
+        bind:showDialog={showOntologyDeleteDependenciesDialog}
+        onClose={reload}
+        datasetName={editorState.selectedDataset.getValue()}
+        graphUri={editorState.selectedGraph.getValue()}
+        resourceUuid={ontology.uuid}
+    />
+{/if}
+
 {#if showEditOntologyDialog}
     <OntologyDialog
         bind:showDialog={showEditOntologyDialog}
