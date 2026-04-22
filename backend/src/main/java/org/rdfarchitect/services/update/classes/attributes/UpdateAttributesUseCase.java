@@ -25,8 +25,8 @@ import java.util.UUID;
 
 public interface UpdateAttributesUseCase {
 
-    void replaceAllAttributes(GraphIdentifier graphIdentifier, String classURI, List<AttributeDTO> attributeList);
+    void replaceAllAttributes(
+            GraphIdentifier graphIdentifier, String classURI, List<AttributeDTO> attributeList);
 
     UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attribute);
-
 }

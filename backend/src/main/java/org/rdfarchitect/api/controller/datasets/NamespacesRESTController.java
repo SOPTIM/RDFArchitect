@@ -23,9 +23,11 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
+
 import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.services.select.ListPrefixesUseCase;
 import org.rdfarchitect.services.update.dataset.ReplaceNamespacesUseCase;
 import org.slf4j.Logger;
@@ -52,78 +54,105 @@ public class NamespacesRESTController {
     private final ReplaceNamespacesUseCase replaceNamespacesUseCase;
 
     @Operation(
-              summary = "List namespaces",
-              description = "Get a list of namespaces stored in a specified dataset.",
-              tags = {"dataset"},
-              responses = {@ApiResponse(
+            summary = "List namespaces",
+            description = "Get a list of namespaces stored in a specified dataset.",
+            tags = {"dataset"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = CIMPrefixPair.class))
-                        ))
-              }
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                CIMPrefixPair
+                                                                                        .class))))
+            })
     @GetMapping
     public List<CIMPrefixPair> listNamespaces(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/namespaces\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
+                datasetName,
+                originURL);
 
         var result = listNamespaceUseCase.listPrefixes(datasetName);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/namespaces\" from \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
+                datasetName,
+                originURL);
         return result;
     }
 
     @Operation(
-              summary = "List formatted namespaces",
-              description = "Get a list of namespaces stored in a specified dataset formatted in a specified format.",
-              tags = {"dataset"}
-    )
+            summary = "List formatted namespaces",
+            description =
+                    "Get a list of namespaces stored in a specified dataset formatted in a specified format.",
+            tags = {"dataset"})
     @GetMapping("/{format:ttl}")
     public String listFormattedNamespaces(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The format of the namespaces.")
-              @PathVariable
-              String format) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/namespaces?format=ttl\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The format of the namespaces.") @PathVariable String format) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/namespaces?format=ttl\" from \"{}\".",
+                datasetName,
+                originURL);
 
         var result = listNamespaceUseCase.listFormattedPrefixes(datasetName, format);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/namespaces?format=ttl\" from \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/namespaces?format=ttl\" from \"{}\".",
+                datasetName,
+                originURL);
         return result;
     }
 
     @Operation(
-              summary = "Replace namespaces",
-              description = "Replace all namespaces of a specified dataset.",
-              tags = {"dataset"},
-              responses = {@ApiResponse(responseCode = "200")
-              }
-    )
+            summary = "Replace namespaces",
+            description = "Replace all namespaces of a specified dataset.",
+            tags = {"dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PutMapping
     public String replaceNamespaces(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.") @PathVariable
-              String datasetName,
-              @Parameter(description = "The new Namespaces.") @RequestBody
-              List<CIMPrefixPair> namespaces) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/namespaces\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The new Namespaces.") @RequestBody
+                    List<CIMPrefixPair> namespaces) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
+                datasetName,
+                originURL);
 
         replaceNamespacesUseCase.replaceNamespaces(datasetName, namespaces);
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/namespaces\" from \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/namespaces\" from \"{}\".",
+                datasetName,
+                originURL);
         return Response.SUCCESS;
     }
 }

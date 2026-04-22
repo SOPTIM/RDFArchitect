@@ -31,6 +31,7 @@ public interface PropertyShapeFromCIMPropertyGenerator {
 
     /**
      * Creates a property shape for a specified property. Returns null if no shape is created.
+     *
      * @param property the property to create the property shape for
      * @return a {@link Resource} representing the property shape, or null if no shape is created
      */

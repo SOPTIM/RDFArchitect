@@ -25,7 +25,8 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.HasTypePropertyShapeBuilder;
 
-public class CIMAssociationToHasTypePropertyShapeConverter implements PropertyShapeFromCIMPropertyGenerator {
+public class CIMAssociationToHasTypePropertyShapeConverter
+        implements PropertyShapeFromCIMPropertyGenerator {
 
     private static final String PROPERTY_GROUP_LABEL = "HasTypeGroup";
 
@@ -56,9 +57,11 @@ public class CIMAssociationToHasTypePropertyShapeConverter implements PropertySh
     @Override
     public Resource createPropertyShape(Resource association) {
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
-            throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
+            throw new IllegalStateException(
+                    "Models and prefix must be set before creating property shapes.");
         }
-        if (!CIMPropertyUtils.isAssociation(association) || !CIMAssociationUtils.isUsedAssociation(association)) {
+        if (!CIMPropertyUtils.isAssociation(association)
+                || !CIMAssociationUtils.isUsedAssociation(association)) {
             return null; // This converter only creates shapes for used associations
         }
 

@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.schemamigration;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
@@ -51,10 +52,12 @@ public class SemanticChangeAnalyser {
         if (classChanges != null) {
             semanticChangeObject.setSemanticResourceChangeType(getResourceChangeType(classChanges));
 
-            //parse properties for individual changes
+            // parse properties for individual changes
             for (var propertyChange : classChanges) {
                 var change = new SemanticFieldChange(propertyChange);
-                var mappedType = SemanticFieldChangeTypeMapper.mapPredicateToChangeType("Class", propertyChange);
+                var mappedType =
+                        SemanticFieldChangeTypeMapper.mapPredicateToChangeType(
+                                "Class", propertyChange);
                 if (mappedType != null) {
                     change.setSemanticFieldChangeType(mappedType);
                     semanticChangeObject.getChanges().add(change);
@@ -71,12 +74,16 @@ public class SemanticChangeAnalyser {
         }
         if (tripleClassChange.getAssociations() != null) {
             for (var association : tripleClassChange.getAssociations()) {
-                semanticChangeObject.getAssociations().add(getSemanticChangesForAssociation(association));
+                semanticChangeObject
+                        .getAssociations()
+                        .add(getSemanticChangesForAssociation(association));
             }
         }
         if (tripleClassChange.getEnumEntries() != null) {
             for (var enumEntry : tripleClassChange.getEnumEntries()) {
-                semanticChangeObject.getEnumEntries().add(getSemanticChangesForEnumEntry(enumEntry));
+                semanticChangeObject
+                        .getEnumEntries()
+                        .add(getSemanticChangesForEnumEntry(enumEntry));
             }
         }
 
@@ -90,10 +97,12 @@ public class SemanticChangeAnalyser {
         semanticChangeObject.setSemanticResourceChangeType(getResourceChangeType(attributeChanges));
 
         var changes = semanticChangeObject.getChanges();
-        //parse properties for individual changes
+        // parse properties for individual changes
         for (var propertyChange : attributeChanges) {
             var action = new SemanticFieldChange(propertyChange);
-            var mappedType = SemanticFieldChangeTypeMapper.mapPredicateToChangeType("Attribute", propertyChange);
+            var mappedType =
+                    SemanticFieldChangeTypeMapper.mapPredicateToChangeType(
+                            "Attribute", propertyChange);
             if (mappedType != null) {
                 action.setSemanticFieldChangeType(mappedType);
                 changes.add(action);
@@ -103,16 +112,20 @@ public class SemanticChangeAnalyser {
         return semanticChangeObject;
     }
 
-    private SemanticAssociationChange getSemanticChangesForAssociation(TripleResourceChange association) {
+    private SemanticAssociationChange getSemanticChangesForAssociation(
+            TripleResourceChange association) {
         var semanticChangeObject = new SemanticAssociationChange(association);
         var associationChanges = association.getChanges();
 
-        semanticChangeObject.setSemanticResourceChangeType(getResourceChangeType(associationChanges));
+        semanticChangeObject.setSemanticResourceChangeType(
+                getResourceChangeType(associationChanges));
 
-        //parse properties for individual changes
+        // parse properties for individual changes
         for (var propertyChange : associationChanges) {
             var action = new SemanticFieldChange(propertyChange);
-            var mappedType = SemanticFieldChangeTypeMapper.mapPredicateToChangeType("Association", propertyChange);
+            var mappedType =
+                    SemanticFieldChangeTypeMapper.mapPredicateToChangeType(
+                            "Association", propertyChange);
             if (mappedType != null) {
                 action.setSemanticFieldChangeType(mappedType);
                 semanticChangeObject.getChanges().add(action);
@@ -128,10 +141,12 @@ public class SemanticChangeAnalyser {
 
         semanticChangeObject.setSemanticResourceChangeType(getResourceChangeType(enumEntryChanges));
 
-        //parse properties for individual changes
+        // parse properties for individual changes
         for (var propertyChange : enumEntryChanges) {
             var action = new SemanticFieldChange(propertyChange);
-            var mappedType = SemanticFieldChangeTypeMapper.mapPredicateToChangeType("EnumEntry", propertyChange);
+            var mappedType =
+                    SemanticFieldChangeTypeMapper.mapPredicateToChangeType(
+                            "EnumEntry", propertyChange);
             if (mappedType != null) {
                 action.setSemanticFieldChangeType(mappedType);
                 semanticChangeObject.getChanges().add(action);
@@ -142,10 +157,11 @@ public class SemanticChangeAnalyser {
     }
 
     private SemanticResourceChangeType getResourceChangeType(List<TriplePropertyChange> changes) {
-        var typeChange = changes.stream()
-                                .filter(c -> c.getPredicate().equals(RDF.type.toString()))
-                                .findFirst()
-                                .orElse(null);
+        var typeChange =
+                changes.stream()
+                        .filter(c -> c.getPredicate().equals(RDF.type.toString()))
+                        .findFirst()
+                        .orElse(null);
         if (typeChange != null) {
             if (typeChange.getFrom() == null) {
                 return SemanticResourceChangeType.ADD;

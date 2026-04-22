@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -45,32 +47,40 @@ public class PersistRESTController {
     private final PersistUseCase persistUseCase;
 
     @Operation(
-              summary = "Write to database",
-              description = "Write a graph to a database to persist it.",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200")
-              }
-    )
+            summary = "Write to database",
+            description = "Write a graph to a database to persist it.",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public String writeToDatabase(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         persistUseCase.persist(new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/redo\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return Response.SUCCESS;
     }
 }

@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.schemamigration.renamings;
 
 import lombok.experimental.UtilityClass;
+
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
@@ -42,21 +43,31 @@ public class RenameObjectBuilder {
         result.setChanges(mergeChanges(addedResource.getChanges(), deletedResource.getChanges()));
 
         if (result instanceof SemanticClassChange) {
-            return createRenameClassChange((SemanticClassChange) addedResource, (SemanticClassChange) deletedResource, result);
+            return createRenameClassChange(
+                    (SemanticClassChange) addedResource,
+                    (SemanticClassChange) deletedResource,
+                    result);
         }
 
         return result;
     }
 
-    private SemanticClassChange createRenameClassChange(SemanticClassChange added, SemanticClassChange deleted, SemanticResourceChange baseResult) {
+    private SemanticClassChange createRenameClassChange(
+            SemanticClassChange added,
+            SemanticClassChange deleted,
+            SemanticResourceChange baseResult) {
         var classChange = (SemanticClassChange) baseResult;
-        classChange.setAttributes(mergePropertyList(added.getAttributes(), deleted.getAttributes(), classChange));
-        classChange.setAssociations(mergePropertyList(added.getAssociations(), deleted.getAssociations(), classChange));
-        classChange.setEnumEntries(mergePropertyList(added.getEnumEntries(), deleted.getEnumEntries(), classChange));
+        classChange.setAttributes(
+                mergePropertyList(added.getAttributes(), deleted.getAttributes(), classChange));
+        classChange.setAssociations(
+                mergePropertyList(added.getAssociations(), deleted.getAssociations(), classChange));
+        classChange.setEnumEntries(
+                mergePropertyList(added.getEnumEntries(), deleted.getEnumEntries(), classChange));
         return classChange;
     }
 
-    public <T extends SemanticResourceChange> List<T> mergePropertyList(List<T> added, List<T> deleted, SemanticClassChange domain) {
+    public <T extends SemanticResourceChange> List<T> mergePropertyList(
+            List<T> added, List<T> deleted, SemanticClassChange domain) {
         var result = new ArrayList<T>();
         var remainingAdded = new ArrayList<>(added);
 
@@ -82,7 +93,8 @@ public class RenameObjectBuilder {
         return result;
     }
 
-    public List<SemanticFieldChange> mergeChanges(List<SemanticFieldChange> added, List<SemanticFieldChange> deleted) {
+    public List<SemanticFieldChange> mergeChanges(
+            List<SemanticFieldChange> added, List<SemanticFieldChange> deleted) {
         var result = new ArrayList<SemanticFieldChange>();
         var remainingAdded = new ArrayList<>(added);
 
@@ -100,7 +112,8 @@ public class RenameObjectBuilder {
         return result;
     }
 
-    private <T extends SemanticResourceChange> T findMatchingProperty(List<T> properties, T target) {
+    private <T extends SemanticResourceChange> T findMatchingProperty(
+            List<T> properties, T target) {
         return properties.stream()
                 .filter(member -> member.getLabel().equals(target.getLabel()))
                 .findFirst()
@@ -108,10 +121,7 @@ public class RenameObjectBuilder {
     }
 
     private <T extends SemanticResourceChange> SemanticResourceChange createMergedProperty(
-            T added,
-            T deleted,
-            SemanticClassChange domain
-    ) {
+            T added, T deleted, SemanticClassChange domain) {
         var mergedMember = added.copy();
         mergedMember.setSemanticResourceChangeType(SemanticResourceChangeType.CHANGE);
         mergedMember.setChanges(mergeChanges(added.getChanges(), deleted.getChanges()));
@@ -122,11 +132,16 @@ public class RenameObjectBuilder {
         return mergedMember;
     }
 
-    private void updateDomainChangeType(SemanticResourceChange mergedMember, SemanticClassChange domain) {
-        var domainChange = mergedMember.getChanges().stream()
-                .filter(change -> change.getSemanticFieldChangeType().equals(SemanticFieldChangeType.DOMAIN_CHANGE))
-                .findFirst()
-                .orElse(null);
+    private void updateDomainChangeType(
+            SemanticResourceChange mergedMember, SemanticClassChange domain) {
+        var domainChange =
+                mergedMember.getChanges().stream()
+                        .filter(
+                                change ->
+                                        change.getSemanticFieldChangeType()
+                                                .equals(SemanticFieldChangeType.DOMAIN_CHANGE))
+                        .findFirst()
+                        .orElse(null);
 
         if (domainChange != null && domainChange.getFrom().equals(domain.getOldIRI())) {
             domainChange.setSemanticFieldChangeType(SemanticFieldChangeType.DOMAIN_RENAME);
@@ -134,20 +149,26 @@ public class RenameObjectBuilder {
     }
 
     private SemanticFieldChange findMatchingChange(
-            List<SemanticFieldChange> changes,
-            SemanticFieldChange target
-    ) {
-        if(target.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
+            List<SemanticFieldChange> changes, SemanticFieldChange target) {
+        if (target.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
             return changes.stream()
-                          .filter(change -> change.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_OPTIONAL
-                                    || change.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_REQUIRED
-                                    || change.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE)
-                          .findFirst()
-                          .orElse(null);
+                    .filter(
+                            change ->
+                                    change.getSemanticFieldChangeType()
+                                                    == SemanticFieldChangeType.MADE_OPTIONAL
+                                            || change.getSemanticFieldChangeType()
+                                                    == SemanticFieldChangeType.MADE_REQUIRED
+                                            || change.getSemanticFieldChangeType()
+                                                    == SemanticFieldChangeType.MULTIPLICITY_CHANGE)
+                    .findFirst()
+                    .orElse(null);
         }
 
         return changes.stream()
-                .filter(change -> target.getSemanticFieldChangeType().equals(change.getSemanticFieldChangeType()))
+                .filter(
+                        change ->
+                                target.getSemanticFieldChangeType()
+                                        .equals(change.getSemanticFieldChangeType()))
                 .findFirst()
                 .orElse(null);
     }
@@ -156,8 +177,7 @@ public class RenameObjectBuilder {
             List<SemanticFieldChange> result,
             SemanticFieldChange addedChange,
             SemanticFieldChange deletedChange,
-            List<SemanticFieldChange> remainingAdded
-    ) {
+            List<SemanticFieldChange> remainingAdded) {
         var mergedChange = new SemanticFieldChange(addedChange);
         remainingAdded.remove(mergedChange);
 
@@ -167,10 +187,14 @@ public class RenameObjectBuilder {
         }
 
         if (mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_REQUIRED
-                  || mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_OPTIONAL
-                  || mergedChange.getSemanticFieldChangeType() == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
-            var oldMultiplicity = CIMPropertyUtils.resolveMultiplicity(deletedChange.getFrom().split("#")[1]);
-            var newMultiplicity = CIMPropertyUtils.resolveMultiplicity(addedChange.getTo().split("#")[1]);
+                || mergedChange.getSemanticFieldChangeType()
+                        == SemanticFieldChangeType.MADE_OPTIONAL
+                || mergedChange.getSemanticFieldChangeType()
+                        == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
+            var oldMultiplicity =
+                    CIMPropertyUtils.resolveMultiplicity(deletedChange.getFrom().split("#")[1]);
+            var newMultiplicity =
+                    CIMPropertyUtils.resolveMultiplicity(addedChange.getTo().split("#")[1]);
             if (oldMultiplicity.equals(newMultiplicity)) {
                 return;
             }
@@ -180,4 +204,3 @@ public class RenameObjectBuilder {
         result.add(mergedChange);
     }
 }
-

@@ -41,18 +41,20 @@ public interface SHACLExportUseCase {
      * @param format The format to export the SHACL graph in.
      * @return A ByteArrayOutputStream containing the exported SHACL graph.
      */
-    ByteArrayOutputStream exportGeneratedSHACLGraph(GraphIdentifier graphIdentifier, RDFFormat format);
+    ByteArrayOutputStream exportGeneratedSHACLGraph(
+            GraphIdentifier graphIdentifier, RDFFormat format);
 
     /**
-     * Export the combined SHACL graph for a given graph identifier with a specific shape URI.
-     * This includes both custom and generated SHACL shapes.
-     * If a ressource exists in both custom and generated SHACL, the custom SHACL will be used.
+     * Export the combined SHACL graph for a given graph identifier with a specific shape URI. This
+     * includes both custom and generated SHACL shapes. If a ressource exists in both custom and
+     * generated SHACL, the custom SHACL will be used.
      *
      * @param graphIdentifier The identifier of the graph to export SHACL for.
      * @param format The format to export the SHACL graph in.
      * @return A ByteArrayOutputStream containing the exported SHACL graph.
      */
-    ByteArrayOutputStream exportCombinedSHACLGraph(GraphIdentifier graphIdentifier, RDFFormat format);
+    ByteArrayOutputStream exportCombinedSHACLGraph(
+            GraphIdentifier graphIdentifier, RDFFormat format);
 
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
@@ -62,7 +64,8 @@ public interface SHACLExportUseCase {
      * @param graphIdentifier The identifier of the graph to export SHACL for.
      * @return A ByteArrayOutputStream containing the exported SHACL graph.
      */
-    ByteArrayOutputStream exportCustomSHACLPrefixes(GraphIdentifier graphIdentifier, RDFFormat format);
+    ByteArrayOutputStream exportCustomSHACLPrefixes(
+            GraphIdentifier graphIdentifier, RDFFormat format);
 
     /**
      * Export the generated SHACL prefixes for a given graph identifier.
@@ -71,5 +74,6 @@ public interface SHACLExportUseCase {
      * @param format The format to export the SHACL prefixes in.
      * @return A ByteArrayOutputStream containing the exported SHACL prefixes.
      */
-    ByteArrayOutputStream exportGeneratedSHACLPrefixes(GraphIdentifier graphIdentifier, RDFFormat format);
+    ByteArrayOutputStream exportGeneratedSHACLPrefixes(
+            GraphIdentifier graphIdentifier, RDFFormat format);
 }

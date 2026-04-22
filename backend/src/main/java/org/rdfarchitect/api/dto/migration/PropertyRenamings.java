@@ -18,6 +18,7 @@
 package org.rdfarchitect.api.dto.migration;
 
 import lombok.Data;
+
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;

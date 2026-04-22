@@ -21,11 +21,13 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
 import org.apache.jena.rdf.model.Resource;
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
 
 /**
- * Object collecting all relevant information about a change to an association. Includes fields for mapping information, that can be provided by the user for data migration.
+ * Object collecting all relevant information about a change to an association. Includes fields for
+ * mapping information, that can be provided by the user for data migration.
  */
 @Data
 @SuperBuilder

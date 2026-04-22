@@ -22,13 +22,15 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Object collecting all relevant information about a change to an enum entry. Allows setting a replacement value in case the enum entry was deleted.
+ * Object collecting all relevant information about a change to an enum entry. Allows setting a
+ * replacement value in case the enum entry was deleted.
  */
 @Data
 @SuperBuilder
@@ -39,8 +41,7 @@ public final class SemanticEnumEntryChange extends SemanticResourceChange {
     private String replacementValue;
 
     // list of other enum entries that are still available in the enum after this one was removed
-    @Builder.Default
-    private List<String> allowedValues = new ArrayList<>();
+    @Builder.Default private List<String> allowedValues = new ArrayList<>();
 
     public SemanticEnumEntryChange(TripleResourceChange tripleChange) {
         super(tripleChange);

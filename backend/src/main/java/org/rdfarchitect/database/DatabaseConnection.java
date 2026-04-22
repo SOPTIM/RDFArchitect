@@ -27,12 +27,10 @@ import org.rdfarchitect.rdf.graph.source.GraphSource;
 
 import java.util.List;
 
-/**
- * Defines how this application communicates with a database.
- */
+/** Defines how this application communicates with a database. */
 public interface DatabaseConnection {
 
-    //insert
+    // insert
 
     /**
      * Executes an {@link Update insertUpdate} against the default dataset of the database.
@@ -45,7 +43,7 @@ public interface DatabaseConnection {
      * Executes an {@link Update insertUpdate} against a specific dataset in the database.
      *
      * @param insertUpdate {@link Update Insert update} to be executed
-     * @param datasetName  Name of the dataset
+     * @param datasetName Name of the dataset
      */
     void sendInsert(Update insertUpdate, String datasetName) throws DataAccessException;
 
@@ -64,8 +62,7 @@ public interface DatabaseConnection {
      */
     void insertGraph(GraphSource graphSource, String datasetName) throws DataAccessException;
 
-
-    //delete
+    // delete
 
     /**
      * Executes a {@link Update deleteUpdate} against the default dataset of the database.
@@ -78,7 +75,7 @@ public interface DatabaseConnection {
      * Executes a {@link Update deleteUpdate} against a specific dataset of the database.
      *
      * @param deleteUpdate {@link Update DeleteUpdate} to be executed
-     * @param datasetName  Name of the dataset
+     * @param datasetName Name of the dataset
      */
     void sendDelete(Update deleteUpdate, String datasetName) throws DataAccessException;
 
@@ -92,14 +89,12 @@ public interface DatabaseConnection {
     /**
      * Deletes a specific graph from a specific dataset of the database.
      *
-     * @param graphName   Name of the graph to be deleted
+     * @param graphName Name of the graph to be deleted
      * @param datasetName Name of the dataset
      */
     void deleteGraph(String datasetName, String graphName) throws DataAccessException;
 
-    /**
-     * Deletes the default graph from the default dataset of the database.
-     */
+    /** Deletes the default graph from the default dataset of the database. */
     void deleteDefaultGraph() throws DataAccessException;
 
     /**
@@ -109,9 +104,7 @@ public interface DatabaseConnection {
      */
     void deleteDefaultGraph(String datasetName) throws DataAccessException;
 
-    /**
-     * Deletes the default dataset from a database.
-     */
+    /** Deletes the default dataset from a database. */
     void deleteDataset();
 
     /**
@@ -121,31 +114,29 @@ public interface DatabaseConnection {
      */
     void deleteDataset(String datasetName);
 
-    //update
+    // update
 
     /**
      * Executes an {@link Update update} against the default dataset of the database.
      *
      * @param update {@link Update} to be executed
      */
-
     void sendUpdate(Update update) throws DataAccessException;
 
     /**
      * Executes an {@link Update update} against a specific dataset of the database.
      *
-     * @param update      {@link Update} to be executed
+     * @param update {@link Update} to be executed
      * @param datasetName Name of the dataset
      */
     void sendUpdate(Update update, String datasetName) throws DataAccessException;
 
-    //select
+    // select
 
     /**
      * Executes a {@link Query} against the default dataset of the database.
      *
      * @param query {@link Query} to be executed
-     *
      * @return {@link ResultFormatter} for formatted query results
      */
     ResultFormatter sendSelect(Query query) throws DataAccessException;
@@ -153,9 +144,8 @@ public interface DatabaseConnection {
     /**
      * Executes a {@link Query} against a specific dataset of the database.
      *
-     * @param query       {@link Query} to be executed
+     * @param query {@link Query} to be executed
      * @param datasetName Name of the dataset
-     *
      * @return {@link ResultFormatter} for formatted query results
      */
     ResultFormatter sendSelect(Query query, String datasetName) throws DataAccessException;
@@ -164,17 +154,17 @@ public interface DatabaseConnection {
      * Get the {@link PrefixMapping} of a specified dataset from the database.
      *
      * @param datasetName Name of the dataset.
-     *
      * @return {@link PrefixMappingReadOnly}
      */
     PrefixMappingReadOnly getPrefixMapping(String datasetName);
 
     /**
-     * Appends a new prefix substitution to a datasets current prefixes. If a prefix with the same substitute already exist, it will be replaced.
+     * Appends a new prefix substitution to a datasets current prefixes. If a prefix with the same
+     * substitute already exist, it will be replaced.
      *
      * @param datasetName Name of the dataset.
-     * @param prefix      the substituted prefix
-     * @param uri         the extended prefix
+     * @param prefix the substituted prefix
+     * @param uri the extended prefix
      */
     void addPrefix(String datasetName, String prefix, String uri);
 
@@ -182,7 +172,7 @@ public interface DatabaseConnection {
      * Delete a prefix from a specified dataset.
      *
      * @param datasetName Name of the dataset.
-     * @param prefix      The substituted prefix.
+     * @param prefix The substituted prefix.
      */
     void deletePrefix(String datasetName, String prefix);
 

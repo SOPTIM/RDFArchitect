@@ -26,10 +26,11 @@ import org.rdfarchitect.rdf.graph.GraphUtils;
 public class ModelResourceExclusiveMerge implements ModelMerger {
 
     /**
-     * Merges two RDF models into one, ensuring that if a ressource exists in both models,
-     * only the triples from the primary model are retained. Even if the secondary model contains different triples for the same resource.
+     * Merges two RDF models into one, ensuring that if a ressource exists in both models, only the
+     * triples from the primary model are retained. Even if the secondary model contains different
+     * triples for the same resource.
      *
-     * @param primary   the Model to merge from, which takes precedence
+     * @param primary the Model to merge from, which takes precedence
      * @param secondary the Model to merge into, which is merged into the primary
      * @return a new Model containing the merged results
      */
@@ -37,35 +38,37 @@ public class ModelResourceExclusiveMerge implements ModelMerger {
     public Model merge(Model primary, Model secondary) {
         var resultModel = ModelFactory.createModelForGraph(GraphUtils.deepCopy(primary.getGraph()));
         var primaryPrefixes = primary.getNsPrefixMap();
-        secondary.getNsPrefixMap()
-                .entrySet()
-                .stream()
+        secondary.getNsPrefixMap().entrySet().stream()
                 .filter(entry -> !primaryPrefixes.containsKey(entry.getKey()))
                 .forEach(entry -> primaryPrefixes.put(entry.getKey(), entry.getValue()));
         resultModel.setNsPrefixes(primaryPrefixes);
 
-        secondary.listStatements()
-                .toSet()
-                .stream()
-                .filter(statement -> !primary.containsResource(primary.createResource(statement.getSubject().getURI())))
-                .filter(statement -> !statement.getSubject().isAnon()) // Exclude anonymous resources
+        secondary.listStatements().toSet().stream()
+                .filter(
+                        statement ->
+                                !primary.containsResource(
+                                        primary.createResource(statement.getSubject().getURI())))
+                .filter(
+                        statement ->
+                                !statement.getSubject().isAnon()) // Exclude anonymous resources
                 .forEach(statement -> copyStatementToModel(secondary, resultModel, statement));
         return resultModel;
     }
 
-
     /**
-     * Copies a statement from the original model to the new model, including all statements related to anonymous resources.
+     * Copies a statement from the original model to the new model, including all statements related
+     * to anonymous resources.
      *
      * @param originalModel the original model containing the statement
-     * @param newModel      the new model to which the statement will be copied
-     * @param statement     the statement to copy
+     * @param newModel the new model to which the statement will be copied
+     * @param statement the statement to copy
      */
     private void copyStatementToModel(Model originalModel, Model newModel, Statement statement) {
         newModel.add(statement);
         var object = statement.getObject();
         if (object.isAnon()) {
-            originalModel.listStatements(object.asResource(), null, (RDFNode) null)
+            originalModel
+                    .listStatements(object.asResource(), null, (RDFNode) null)
                     .forEach(stmt -> copyStatementToModel(originalModel, newModel, stmt));
         }
     }

@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.rendering;
 
 import lombok.experimental.UtilityClass;
+
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
 import java.util.HashMap;
@@ -28,29 +29,41 @@ import java.util.UUID;
 public class RenderingUtils {
 
     /**
-     * Assigns a {@link UUID} to each uri in the cimCollection.
-     * The UUIDs are used as ids for each object in the mermaid String since uris can contain chars that are not allowed in the mermaid syntax
+     * Assigns a {@link UUID} to each uri in the cimCollection. The UUIDs are used as ids for each
+     * object in the mermaid String since uris can contain chars that are not allowed in the mermaid
+     * syntax
      */
     public static Map<String, UUID> createUUIDUriPairs(CIMCollection cimCollection) {
         Map<String, UUID> uriToUUIDMap = new HashMap<>();
 
-        cimCollection.getPackages().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
+        cimCollection
+                .getPackages()
+                .forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
 
-        cimCollection.getClasses().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
+        cimCollection
+                .getClasses()
+                .forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
 
-        cimCollection.getAttributes().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
+        cimCollection
+                .getAttributes()
+                .forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
 
-        cimCollection.getAssociations().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
+        cimCollection
+                .getAssociations()
+                .forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
 
-        cimCollection.getEnums().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
+        cimCollection
+                .getEnums()
+                .forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
 
-        cimCollection.getEnumEntries().forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
+        cimCollection
+                .getEnumEntries()
+                .forEach(value -> uriToUUIDMap.put(value.getUri().toString(), value.getUuid()));
 
         return uriToUUIDMap;
     }
 
     public static boolean hasRenderableClasses(CIMCollection cimCollection) {
-        return !cimCollection.getClasses().isEmpty() ||
-               !cimCollection.getEnums().isEmpty();
+        return !cimCollection.getClasses().isEmpty() || !cimCollection.getEnums().isEmpty();
     }
 }

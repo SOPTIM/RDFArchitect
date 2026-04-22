@@ -19,9 +19,7 @@ package org.rdfarchitect.exception.database;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Exception is thrown when there is an issue with a query.
- */
+/** Exception is thrown when there is an issue with a query. */
 public class QueryException extends DatabaseException {
 
     public QueryException() {

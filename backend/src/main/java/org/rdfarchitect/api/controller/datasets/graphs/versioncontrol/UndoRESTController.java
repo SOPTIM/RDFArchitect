@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -45,32 +47,40 @@ public class UndoRESTController {
     private final UndoUseCase undoUseCase;
 
     @Operation(
-              summary = "undo ",
-              description = "Undo the last change",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200")
-              }
-    )
+            summary = "undo ",
+            description = "Undo the last change",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public String undo(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         undoUseCase.undo(new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/undo\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return Response.SUCCESS;
     }
 }

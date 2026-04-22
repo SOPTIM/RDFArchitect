@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.services.update;
 
+import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.mockito.Mockito.*;
+
 import org.apache.jena.shared.PrefixMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,13 +30,13 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
@@ -41,9 +44,6 @@ import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutServ
 import org.rdfarchitect.services.update.packages.UpdatePackageService;
 
 import java.util.UUID;
-
-import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.mockito.Mockito.*;
 
 class UpdatePackageServiceTest {
 
@@ -57,7 +57,14 @@ class UpdatePackageServiceTest {
         DatabasePort databasePort = mock(DatabasePort.class);
         changeLogUseCase = mock(ChangeLogUseCase.class);
         var mockUpdatePackageLayoutService = mock(UpdatePackageLayoutService.class);
-        service = new UpdatePackageService(databasePort, mapper, changeLogUseCase, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService, mockUpdatePackageLayoutService);
+        service =
+                new UpdatePackageService(
+                        databasePort,
+                        mapper,
+                        changeLogUseCase,
+                        mockUpdatePackageLayoutService,
+                        mockUpdatePackageLayoutService,
+                        mockUpdatePackageLayoutService);
         mockGraph = mock(GraphRewindableWithUUIDs.class);
         var mockGraphWithContext = mock(GraphWithContext.class);
         when(databasePort.getGraphWithContext(any())).thenReturn(mockGraphWithContext);
@@ -69,16 +76,13 @@ class UpdatePackageServiceTest {
 
     @Test
     void addPackage_packageWithoutComment_addsPackage() {
-        var dto = PackageDTO.builder()
-                            .prefix("http://example.com#")
-                            .label("TestPackage")
-                            .build();
+        var dto = PackageDTO.builder().prefix("http://example.com#").label("TestPackage").build();
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             ArgumentCaptor<CIMPackage> captor = ArgumentCaptor.forClass(CIMPackage.class);
-            mockedStatic.when(() ->
-                                        CIMUpdates.insertPackage(eq(mockGraph), any(), captor.capture())
-                             ).thenAnswer(invocation -> null);
+            mockedStatic
+                    .when(() -> CIMUpdates.insertPackage(eq(mockGraph), any(), captor.capture()))
+                    .thenAnswer(invocation -> null);
 
             service.addPackage(new GraphIdentifier("default", "test"), dto);
 
@@ -86,7 +90,8 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#Package_TestPackage"));
+            assertThat(captured.getUri())
+                    .isEqualTo(new URI("http://example.com#Package_TestPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("TestPackage", "en"));
             assertThat(captured.getComment()).isNull();
             assertThat(captured.getBelongsToCategory()).isNull();
@@ -95,17 +100,18 @@ class UpdatePackageServiceTest {
 
     @Test
     void addPackage_packageWithComment_addsPackage() {
-        var dto = PackageDTO.builder()
-                            .prefix("http://example.com#")
-                            .label("TestPackage")
-                            .comment("This is a test package")
-                            .build();
+        var dto =
+                PackageDTO.builder()
+                        .prefix("http://example.com#")
+                        .label("TestPackage")
+                        .comment("This is a test package")
+                        .build();
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             ArgumentCaptor<CIMPackage> captor = ArgumentCaptor.forClass(CIMPackage.class);
-            mockedStatic.when(() ->
-                                        CIMUpdates.insertPackage(eq(mockGraph), any(), captor.capture())
-                             ).thenAnswer(invocation -> null);
+            mockedStatic
+                    .when(() -> CIMUpdates.insertPackage(eq(mockGraph), any(), captor.capture()))
+                    .thenAnswer(invocation -> null);
 
             service.addPackage(new GraphIdentifier("default", "test"), dto);
 
@@ -113,28 +119,27 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#Package_TestPackage"));
+            assertThat(captured.getUri())
+                    .isEqualTo(new URI("http://example.com#Package_TestPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("TestPackage", "en"));
             assertThat(captured.getBelongsToCategory()).isNull();
             assertThat(captured.getUuid()).isNotNull();
-            assertThat(captured.getComment()).isEqualTo(new RDFSComment(
-                      "This is a test package",
-                      new URI("http://www.w3.org/2001/XMLSchema#String")
-            ));
+            assertThat(captured.getComment())
+                    .isEqualTo(
+                            new RDFSComment(
+                                    "This is a test package",
+                                    new URI("http://www.w3.org/2001/XMLSchema#String")));
         }
     }
 
     @Test
     void addPackage_exceptionDuringTransaction_closesGraph() {
-        var dto = PackageDTO.builder()
-                            .prefix("http://example.com#")
-                            .label("TestPackage")
-                            .build();
+        var dto = PackageDTO.builder().prefix("http://example.com#").label("TestPackage").build();
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
-            mockedStatic.when(() ->
-                                        CIMUpdates.insertPackage(any(), any(), any())
-                             ).thenThrow(new RuntimeException("Simulated failure"));
+            mockedStatic
+                    .when(() -> CIMUpdates.insertPackage(any(), any(), any()))
+                    .thenThrow(new RuntimeException("Simulated failure"));
 
             try {
                 service.addPackage(new GraphIdentifier("default", "test"), dto);
@@ -148,17 +153,18 @@ class UpdatePackageServiceTest {
 
     @Test
     void replacePackage_validPackage_replacesPackage() {
-        var dto = PackageDTO.builder()
-                            .prefix("http://other.org#")
-                            .label("otherPackage")
-                            .uuid(UUID.randomUUID())
-                            .build();
+        var dto =
+                PackageDTO.builder()
+                        .prefix("http://other.org#")
+                        .label("otherPackage")
+                        .uuid(UUID.randomUUID())
+                        .build();
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             ArgumentCaptor<CIMPackage> captor = ArgumentCaptor.forClass(CIMPackage.class);
-            mockedStatic.when(() ->
-                                        CIMUpdates.replacePackage(eq(mockGraph), any(), captor.capture())
-                             ).thenAnswer(invocation -> null);
+            mockedStatic
+                    .when(() -> CIMUpdates.replacePackage(eq(mockGraph), any(), captor.capture()))
+                    .thenAnswer(invocation -> null);
 
             service.replacePackage(new GraphIdentifier("default", "test"), dto);
 
@@ -166,7 +172,8 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri()).isEqualTo(new URI("http://other.org#Package_otherPackage"));
+            assertThat(captured.getUri())
+                    .isEqualTo(new URI("http://other.org#Package_otherPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("otherPackage", "en"));
             assertThat(captured.getUuid()).isEqualTo(dto.getUuid());
         }
@@ -180,9 +187,10 @@ class UpdatePackageServiceTest {
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             service.deletePackage(graphIdentifier, packageUuid);
 
-            mockedStatic.verify(() ->
-                                          CIMUpdates.deletePackage(eq(mockGraph), any(), eq(packageUuid.toString()))
-                               );
+            mockedStatic.verify(
+                    () ->
+                            CIMUpdates.deletePackage(
+                                    eq(mockGraph), any(), eq(packageUuid.toString())));
         }
 
         verify(mockGraph).commit();
@@ -199,12 +207,12 @@ class UpdatePackageServiceTest {
         UUID packageUuid = UUID.randomUUID();
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
-            mockedStatic.when(() ->
-                                        CIMUpdates.deletePackage(any(), any(), anyString())
-                             ).thenThrow(new RuntimeException("boom"));
+            mockedStatic
+                    .when(() -> CIMUpdates.deletePackage(any(), any(), anyString()))
+                    .thenThrow(new RuntimeException("boom"));
 
             assertThatThrownBy(() -> service.deletePackage(graphIdentifier, packageUuid))
-                      .isInstanceOf(RuntimeException.class);
+                    .isInstanceOf(RuntimeException.class);
 
             verify(mockGraph).end();
         }

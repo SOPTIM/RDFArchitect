@@ -31,12 +31,14 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Singleton class that provides {@link SessionDataStore SessionStores}.
- * Forwards all calls to the {@link SessionDataStore} of the current session. The session is extracted from the {@link SessionContext}.
+ * Singleton class that provides {@link SessionDataStore SessionStores}. Forwards all calls to the
+ * {@link SessionDataStore} of the current session. The session is extracted from the {@link
+ * SessionContext}.
  */
 public class InMemoryDatabaseImpl implements InMemoryDatabase {
 
-    private final ConcurrentHashMap<String, SessionDataStore> sessionStores = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, SessionDataStore> sessionStores =
+            new ConcurrentHashMap<>();
 
     @Override
     public void deleteDataset(String datasetName) {
@@ -89,7 +91,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public void writeToDatabase(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
+    public void writeToDatabase(
+            DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         getOrCreateSessionDataStore().writeToDatabase(databaseConnection, graphIdentifier);
     }
 
@@ -143,10 +146,9 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         getOrCreateSessionDataStore().restore(graphIdentifier, versionId);
     }
 
-    /**
-     * Returns the SessionDataStore for the current session, creating one if necessary.
-     */
+    /** Returns the SessionDataStore for the current session, creating one if necessary. */
     private SessionDataStore getOrCreateSessionDataStore() {
-        return sessionStores.computeIfAbsent(SessionContext.getSessionId(), k -> new SessionDataStoreImpl());
+        return sessionStores.computeIfAbsent(
+                SessionContext.getSessionId(), k -> new SessionDataStoreImpl());
     }
 }

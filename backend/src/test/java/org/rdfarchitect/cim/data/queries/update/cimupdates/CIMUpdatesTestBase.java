@@ -39,14 +39,16 @@ import java.util.function.Consumer;
 
 public class CIMUpdatesTestBase {
 
-    private static final String PATH = "src/test/java/org/rdfarchitect/cim/data/queries/update/cimupdates/";
+    private static final String PATH =
+            "src/test/java/org/rdfarchitect/cim/data/queries/update/cimupdates/";
     private static final String BASE_FILENAME = "base.ttl";
     protected static final String GRAPH_URI = "http://graph";
-    protected static final GraphIdentifier graphIdentifier = new GraphIdentifier("default", GRAPH_URI);
+    protected static final GraphIdentifier graphIdentifier =
+            new GraphIdentifier("default", GRAPH_URI);
     protected static GraphRewindableWithUUIDs testGraph;
     protected static DatabasePort databasePort;
 
-    //base test constants
+    // base test constants
     protected static final String DATASET_NAME = "default";
     protected static final String URI_PREFIX = "http://example.com#";
     protected static final String OTHER_URI_PREFIX = "http://other.org#";
@@ -60,9 +62,10 @@ public class CIMUpdatesTestBase {
     protected static final String COMMENT = "This is a comment";
     protected static final String IS_FIXED_VALUE = "isFixed";
     protected static final String IS_DEFAULT_VALUE = "isDefault";
-    protected static final String MULTIPLICITY_URI = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1";
+    protected static final String MULTIPLICITY_URI =
+            "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1";
 
-    //classes
+    // classes
     protected static final String CLASS_URI = URI_PREFIX + CLASS_LABEL;
     protected static final String EXISTING_CLASS_LABEL = "existing_" + CLASS_LABEL;
     protected static final String EXISTING_CLASS_URI = URI_PREFIX + EXISTING_CLASS_LABEL;
@@ -73,20 +76,25 @@ public class CIMUpdatesTestBase {
     protected static final String OTHER_CLASS_LABEL = "other_" + CLASS_LABEL;
     protected static final String OTHER_CLASS_URI = URI_PREFIX + OTHER_CLASS_LABEL;
 
-    //attributes
+    // attributes
     protected static final String ATTRIBUTE_URI = CLASS_URI + "." + ATTRIBUTE_LABEL;
     protected static final String EXISTING_ATTRIBUTE_LABEL = "existing_" + ATTRIBUTE_LABEL;
-    protected static final String EXISTING_ATTRIBUTE_URI = URI_PREFIX + CLASS_LABEL + "." + EXISTING_ATTRIBUTE_LABEL;
+    protected static final String EXISTING_ATTRIBUTE_URI =
+            URI_PREFIX + CLASS_LABEL + "." + EXISTING_ATTRIBUTE_LABEL;
     protected static final String OTHER_ATTRIBUTE_LABEL = "other_" + ATTRIBUTE_LABEL;
-    protected static final String OTHER_ATTRIBUTE_URI = OTHER_CLASS_URI + "." + OTHER_ATTRIBUTE_LABEL;
+    protected static final String OTHER_ATTRIBUTE_URI =
+            OTHER_CLASS_URI + "." + OTHER_ATTRIBUTE_LABEL;
 
-    //packages
+    // packages
     protected static final String PACKAGE_URI = URI_PREFIX + "Package_" + PACKAGE_LABEL;
-    protected static final String OTHER_PACKAGE_URI = OTHER_URI_PREFIX + "Package_" + OTHER_PACKAGE_LABEL;
+    protected static final String OTHER_PACKAGE_URI =
+            OTHER_URI_PREFIX + "Package_" + OTHER_PACKAGE_LABEL;
 
-    //associations
-    protected static final UUID ASSOC_UUID = UUID.fromString("43236908-a7f7-4749-bb8b-3ac9250de656");
-    protected static final UUID INVERSE_ASSOC_UUID = UUID.fromString("43836908-b7f7-4749-bb8b-3ac9250de657");
+    // associations
+    protected static final UUID ASSOC_UUID =
+            UUID.fromString("43236908-a7f7-4749-bb8b-3ac9250de656");
+    protected static final UUID INVERSE_ASSOC_UUID =
+            UUID.fromString("43836908-b7f7-4749-bb8b-3ac9250de657");
     protected static final String EXISTING_ASSOC_URI = CLASS_URI + "." + OTHER_CLASS_LABEL;
     protected static final String EXISTING_INVERSE_ASSOC_URI = OTHER_CLASS_URI + "." + CLASS_LABEL;
     protected static final String INVERSE_LABEL = CLASS_LABEL + "Inverse";
@@ -94,10 +102,11 @@ public class CIMUpdatesTestBase {
     protected static final String ASSOC_URI = CLASS_URI + "." + INVERSE_LABEL;
     protected static final String INVERSE_ASSOC_URI = INVERSE_URI + "." + CLASS_LABEL;
 
-    //enum entries
+    // enum entries
     protected static final String ENUM_ENTRY_URI = CLASS_URI + "." + ENUM_ENTRY_LABEL;
     protected static final String EXISTING_ENUM_ENTRY_LABEL = "existing_" + ENUM_ENTRY_LABEL;
-    protected static final String EXISTING_ENUM_ENTRY_URI = EXISTING_CLASS_URI + "." + EXISTING_ENUM_ENTRY_LABEL;
+    protected static final String EXISTING_ENUM_ENTRY_URI =
+            EXISTING_CLASS_URI + "." + EXISTING_ENUM_ENTRY_LABEL;
 
     @BeforeEach
     void setUpEnvironment() {
@@ -113,11 +122,12 @@ public class CIMUpdatesTestBase {
             throw new RuntimeException(e);
         }
         var file = new MockMultipartFile(fileName, fileName, "text/turtle", content);
-        var graph = new GraphFileSourceBuilderImpl()
-                  .setFile(file)
-                  .setGraphName(graphIdentifier.getGraphUri())
-                  .build()
-                  .graph();
+        var graph =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(file)
+                        .setGraphName(graphIdentifier.getGraphUri())
+                        .build()
+                        .graph();
         databasePort.createGraph(graphIdentifier, graph);
         testGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
     }
@@ -133,16 +143,15 @@ public class CIMUpdatesTestBase {
         }
     }
 
-    /**
-     * Use this method to execute write actions per Update class by bulding the UpdateBuilder
-     */
+    /** Use this method to execute write actions per Update class by bulding the UpdateBuilder */
     protected void executeUpdateOnTestGraph(Update update) {
-        InMemorySparqlExecutor.executeSingleUpdate(databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(), update, graphIdentifier.getGraphUri());
+        InMemorySparqlExecutor.executeSingleUpdate(
+                databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                update,
+                graphIdentifier.getGraphUri());
     }
 
-    /**
-     * Use this method to execute write actions in a transaction using lambda expression
-     */
+    /** Use this method to execute write actions in a transaction using lambda expression */
     protected void executeWriteTransaction(Consumer<Graph> graphOperation) {
         try {
             testGraph.begin(TxnType.WRITE);

@@ -18,12 +18,14 @@
 package org.rdfarchitect.dl.rdf.resources;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 
 /**
- * Class containing CIM {@link Resource resources}, {@link Property properties} and namespace prefixes and strings
+ * Class containing CIM {@link Resource resources}, {@link Property properties} and namespace
+ * prefixes and strings
  */
 @UtilityClass
 public class CIM {
@@ -31,18 +33,21 @@ public class CIM {
     public final String PREFIX = "cim";
     public final String NAMESPACE = "http://iec.ch/TC57/CIM100#";
 
-    //PROPERTIES
-    public final Property ioName = ResourceFactory.createProperty(constructCIMNamespacedTerm("IdentifiedObject.name"));
+    // PROPERTIES
+    public final Property ioName =
+            ResourceFactory.createProperty(constructCIMNamespacedTerm("IdentifiedObject.name"));
 
-    public final Property ioDescription = ResourceFactory.createProperty(constructCIMNamespacedTerm("IdentifiedObject.description"));
+    public final Property ioDescription =
+            ResourceFactory.createProperty(
+                    constructCIMNamespacedTerm("IdentifiedObject.description"));
 
-    public final Property iomRID = ResourceFactory.createProperty(constructCIMNamespacedTerm("IdentifiedObject.mRID"));
+    public final Property iomRID =
+            ResourceFactory.createProperty(constructCIMNamespacedTerm("IdentifiedObject.mRID"));
 
     /**
      * Prepends the namespace URL to a given term, constructing a namespaced term
      *
      * @param term the term to be put into the namespace
-     *
      * @return the namespaced term
      */
     private static String constructCIMNamespacedTerm(String term) {

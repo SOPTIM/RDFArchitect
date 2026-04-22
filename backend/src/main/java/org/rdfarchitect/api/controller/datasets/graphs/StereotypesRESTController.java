@@ -23,9 +23,11 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListStereotypesUseCase;
 import org.slf4j.Logger;
@@ -50,35 +52,55 @@ public class StereotypesRESTController {
     private final ListStereotypesUseCase listStereotypesUseCase;
 
     @Operation(
-              summary = "list stereotypes",
-              description = "Get a list of all occurring stereotypes in the graph.",
-              tags = {"graph"},
-              responses = {@ApiResponse(
+            summary = "list stereotypes",
+            description = "Get a list of all occurring stereotypes in the graph.",
+            tags = {"graph"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = CIMSStereotype.class))
-                        ))
-              }
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                CIMSStereotype
+                                                                                        .class))))
+            })
     @GetMapping
     public List<CIMSStereotype> listStereotypes(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/stereotypes\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/stereotypes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var resultList = listStereotypesUseCase.listStereotypes(new GraphIdentifier(datasetName, extendedGraphURI));
+        var resultList =
+                listStereotypesUseCase.listStereotypes(
+                        new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/stereotypes\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/stereotypes\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return resultList;
     }
 }

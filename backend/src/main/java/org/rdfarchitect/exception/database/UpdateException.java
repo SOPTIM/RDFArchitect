@@ -19,9 +19,7 @@ package org.rdfarchitect.exception.database;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Exception is thrown when there is an issue with an update.
- */
+/** Exception is thrown when there is an issue with an update. */
 public class UpdateException extends DatabaseException {
 
     public UpdateException() {

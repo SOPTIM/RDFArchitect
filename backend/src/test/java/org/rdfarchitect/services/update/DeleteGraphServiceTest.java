@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.update;
 
+import static org.mockito.Mockito.*;
+
 import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,8 +30,6 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import java.nio.charset.StandardCharsets;
 
-import static org.mockito.Mockito.*;
-
 class DeleteGraphServiceTest {
 
     private DeleteGraphService deleteGraphService;
@@ -39,7 +39,8 @@ class DeleteGraphServiceTest {
     void setUp() {
         mockDatabasePort = mock(DatabasePort.class);
         var mockCreateDiagramLayoutUseCase = mock(CreateDiagramLayoutUseCase.class);
-        deleteGraphService = new DeleteGraphService(mockDatabasePort, mockCreateDiagramLayoutUseCase);
+        deleteGraphService =
+                new DeleteGraphService(mockDatabasePort, mockCreateDiagramLayoutUseCase);
     }
 
     @Test
@@ -52,13 +53,13 @@ class DeleteGraphServiceTest {
     @Test
     void replaceGraph_callsDeleteAndCreateGraph() {
         var graphIdentifier = new GraphIdentifier("default", "http://example.com/graph");
-        var mockFile = new MockMultipartFile(
-                "graph.ttl",
-                "graph.ttl",
-                "text/turtle",
-                "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
-                        .getBytes(StandardCharsets.UTF_8)
-        );
+        var mockFile =
+                new MockMultipartFile(
+                        "graph.ttl",
+                        "graph.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
 
         deleteGraphService.replaceGraph(graphIdentifier, mockFile);
 

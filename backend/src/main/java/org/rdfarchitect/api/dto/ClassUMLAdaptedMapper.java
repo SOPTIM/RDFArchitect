@@ -33,13 +33,15 @@ import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import java.util.Collections;
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {
-          AttributeMapper.class,
-          EnumEntryMapper.class,
-          AssociationPairMapper.class,
-          PackageMapper.class,
-          MappingUtils.class
-})
+@Mapper(
+        componentModel = "spring",
+        uses = {
+            AttributeMapper.class,
+            EnumEntryMapper.class,
+            AssociationPairMapper.class,
+            PackageMapper.class,
+            MappingUtils.class
+        })
 public interface ClassUMLAdaptedMapper {
 
     ClassUMLAdaptedMapper INSTANCE = Mappers.getMapper(ClassUMLAdaptedMapper.class);
@@ -60,9 +62,7 @@ public interface ClassUMLAdaptedMapper {
         if (stereotypes == null || stereotypes.isEmpty()) {
             return Collections.emptyList();
         }
-        return stereotypes.stream()
-                          .map(CIMSStereotype::getStereotype)
-                          .toList();
+        return stereotypes.stream().map(CIMSStereotype::getStereotype).toList();
     }
 
     default SuperClassDTO mapSuperClass(RDFSSubClassOf superClass) {
@@ -80,15 +80,14 @@ public interface ClassUMLAdaptedMapper {
         if (dto == null) {
             return null;
         }
-        return new RDFSSubClassOf(new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
+        return new RDFSSubClassOf(
+                new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
     }
 
     default List<CIMSStereotype> buildStereotypes(List<String> stereotypes) {
         if (stereotypes == null || stereotypes.isEmpty()) {
             return Collections.emptyList();
         }
-        return stereotypes.stream()
-                          .map(CIMSStereotype::new)
-                          .toList();
+        return stereotypes.stream().map(CIMSStereotype::new).toList();
     }
 }

@@ -18,6 +18,7 @@
 package org.rdfarchitect.config;
 
 import jakarta.servlet.http.HttpSessionListener;
+
 import org.rdfarchitect.listeners.DatasetSessionListener;
 import org.springframework.boot.web.servlet.ServletListenerRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -39,9 +40,10 @@ public class WebConfig implements WebMvcConfigurer {
     }
 
     @Bean
-    public ServletListenerRegistrationBean<HttpSessionListener> sessionListener(DatasetSessionListener datasetSessionListener) {
+    public ServletListenerRegistrationBean<HttpSessionListener> sessionListener(
+            DatasetSessionListener datasetSessionListener) {
         ServletListenerRegistrationBean<HttpSessionListener> listenerRegBean =
-                  new ServletListenerRegistrationBean<>();
+                new ServletListenerRegistrationBean<>();
         listenerRegBean.setListener(datasetSessionListener);
         return listenerRegBean;
     }

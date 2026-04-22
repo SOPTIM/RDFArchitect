@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.migration.PropertyOverview;
 import org.rdfarchitect.api.dto.migration.PropertyRenamings;
 import org.rdfarchitect.services.schemamigration.renamings.ConfirmPropertyRenamingsUseCase;
@@ -44,53 +46,69 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PropertyRenamingsRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(PropertyRenamingsRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(PropertyRenamingsRESTController.class);
 
     private final GetPropertyRenamingsUseCase getPropertyRenamingsUseCase;
     private final ConfirmPropertyRenamingsUseCase confirmPropertyRenamingsUseCase;
 
     @Operation(
-              summary = "migration class property overview",
-              description = "Provides an overview of the properties on migration classes including added, modified, deleted and potentially renamed properties.",
-              tags = {"migration"},
-              responses = {@ApiResponse(
+            summary = "migration class property overview",
+            description =
+                    "Provides an overview of the properties on migration classes including added, modified, deleted and potentially renamed properties.",
+            tags = {"migration"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = PropertyOverview.class))
-                        ))
-              }
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                PropertyOverview
+                                                                                        .class))))
+            })
     @GetMapping
     public List<PropertyOverview> migrationPropertiesOverview(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL) {
-        logger.info("Received GET request: \"/api/migrations/property-renames\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL) {
+        logger.info(
+                "Received GET request: \"/api/migrations/property-renames\" from \"{}\".",
+                originURL);
 
         var result = getPropertyRenamingsUseCase.getPropertyRenamings();
 
-        logger.info("Sending response to GET request: \"/api/datasets/migrations/property-renames\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/migrations/property-renames\" from \"{}\".",
+                originURL);
 
         return result;
     }
+
     @Operation(
-              summary = "confirm renamed properties",
-              description = "Confirms the previously suggested renamed properties and updates the migration context accordingly.",
-              tags = {"migration"}
-    )
+            summary = "confirm renamed properties",
+            description =
+                    "Confirms the previously suggested renamed properties and updates the migration context accordingly.",
+            tags = {"migration"})
     @PostMapping
     public void confirmRenamedProperties(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The updated property renames")
-              @RequestBody
-              List<PropertyRenamings> propertyRenamings) {
-        logger.info("Received POST request: \"/api/migrations/property-renames\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The updated property renames") @RequestBody
+                    List<PropertyRenamings> propertyRenamings) {
+        logger.info(
+                "Received POST request: \"/api/migrations/property-renames\" from \"{}\".",
+                originURL);
 
         confirmPropertyRenamingsUseCase.confirmPropertyRenamings(propertyRenamings);
 
-        logger.info("Sending response to POST request: \"/api/migrations/property-renames\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/migrations/property-renames\" from \"{}\".",
+                originURL);
     }
 }

@@ -17,17 +17,14 @@
 
 package org.rdfarchitect.services;
 
-/**
- * Interface to describe functionality spread over multiple controllers.
- */
+/** Interface to describe functionality spread over multiple controllers. */
 public interface ExpandURIUseCase {
 
     /**
      * Expands a given uri using the prefix mapping of the given dataset.
      *
      * @param dataset The dataset whose prefix mapping to use.
-     * @param uri     The uri to expand.
-     *
+     * @param uri The uri to expand.
      * @return The expanded uri, or the given uri, if there is no matching prefix.
      */
     String expandUri(String dataset, String uri);

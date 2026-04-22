@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.ontology;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.QuerySolution;
@@ -37,18 +38,19 @@ public class OntologyFactory {
     private static final String ONTOLOGY_FIELD_IRI = "?ontologyFieldIRI";
     private static final String ONTOLOGY_FIELD_VALUE = "?OntologyFieldValue";
 
-    private static final String QUERY = """
+    private static final String QUERY =
+            """
               PREFIX owl: <http://www.w3.org/2002/07/owl#>
               PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
-              
+
               SELECT {ONTOLOGY_IRI} {ONTOLOGY_FIELD_IRI} {ONTOLOGY_FIELD_VALUE} WHERE {
                   {ONTOLOGY_IRI}    rdf:type owl:Ontology;
                                   {ONTOLOGY_FIELD_IRI} {ONTOLOGY_FIELD_VALUE}.
               }ORDER BY(STR({ONTOLOGY_FIELD_IRI}))
               """
-              .replace("{ONTOLOGY_IRI}", ONTOLOGY_IRI)
-              .replace("{ONTOLOGY_FIELD_IRI}", ONTOLOGY_FIELD_IRI)
-              .replace("{ONTOLOGY_FIELD_VALUE}", ONTOLOGY_FIELD_VALUE);
+                    .replace("{ONTOLOGY_IRI}", ONTOLOGY_IRI)
+                    .replace("{ONTOLOGY_FIELD_IRI}", ONTOLOGY_FIELD_IRI)
+                    .replace("{ONTOLOGY_FIELD_VALUE}", ONTOLOGY_FIELD_VALUE);
 
     public static OntologyDTO createOntologyDTO(Model model) {
         var query = QueryFactory.create(QUERY);
@@ -95,18 +97,18 @@ public class OntologyFactory {
 
         if (ontologyFieldValueNode.isLiteral()) {
             var ontologyFieldValueLiteral = ontologyFieldValueNode.asLiteral();
-            ontologyEntry.setIriEntry(false)
-                         .setValue(ontologyFieldValueLiteral.getString());
-            //if the datatype is equal to rdf:langString, the literal is language tagged, so we do not set the dataTypeIRI
+            ontologyEntry.setIriEntry(false).setValue(ontologyFieldValueLiteral.getString());
+            // if the datatype is equal to rdf:langString, the literal is language tagged, so we do
+            // not set the dataTypeIRI
             if (!ontologyFieldValueLiteral.getDatatypeURI().equals(RDF.langString.getURI())) {
                 ontologyEntry.setDatatypeIri(ontologyFieldValueLiteral.getDatatypeURI());
             }
         } else if (ontologyFieldValueNode.isResource()) {
             var ontologyFieldValueResource = ontologyFieldValueNode.asResource();
-            ontologyEntry.setIriEntry(true)
-                         .setValue(ontologyFieldValueResource.getURI());
+            ontologyEntry.setIriEntry(true).setValue(ontologyFieldValueResource.getURI());
         } else {
-            throw new QueryException("Unknown node type for ontology field value: " + ontologyFieldValueNode);
+            throw new QueryException(
+                    "Unknown node type for ontology field value: " + ontologyFieldValueNode);
         }
         return ontologyEntry;
     }

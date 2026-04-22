@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.schemamigration.defaults;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -36,12 +38,11 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-
 class InheritanceChangeHandlerTest {
 
     private static final String PREFIX = "http://example.org#";
-    private static final String CIMS_PREFIX = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
+    private static final String CIMS_PREFIX =
+            "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
     private Model oldModel;
     private Model newModel;
     private List<SemanticClassChange> allClassChanges;
@@ -76,8 +77,11 @@ class InheritanceChangeHandlerTest {
             nameAttr.addProperty(RDF.type, RDF.Property);
             nameAttr.addProperty(RDFS.label, newModel.createLiteral("name"));
             nameAttr.addProperty(RDFS.domain, newIdentifiedObject);
-            nameAttr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
-            nameAttr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
+            nameAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            nameAttr.addProperty(
+                    CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             nameAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
             var newEquipment = newModel.createResource(PREFIX + "Equipment");
@@ -86,26 +90,32 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.subClassOf, newIdentifiedObject);
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             assertThat(classChange.getAttributes()).isNotEmpty();
-            assertThat(classChange.getAttributes()).anyMatch(attr ->
-                    attr.getLabel().equals("IdentifiedObject.name") &&
-                            attr.getSemanticResourceChangeType() == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-            );
+            assertThat(classChange.getAttributes())
+                    .anyMatch(
+                            attr ->
+                                    attr.getLabel().equals("IdentifiedObject.name")
+                                            && attr.getSemanticResourceChangeType()
+                                                    == SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE);
         }
 
         @Test
@@ -120,8 +130,12 @@ class InheritanceChangeHandlerTest {
             oldNameAttr.addProperty(RDF.type, RDF.Property);
             oldNameAttr.addProperty(RDFS.label, oldModel.createLiteral("name"));
             oldNameAttr.addProperty(RDFS.domain, oldIdentifiedObject);
-            oldNameAttr.addProperty(CIMS.datatype, oldModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
-            oldNameAttr.addProperty(CIMS.multiplicity, oldModel.createResource(CIMS_PREFIX + "M:1..1")).addProperty(RDFS.label, oldModel.createLiteral(CIMS_PREFIX + "M:1..1"));
+            oldNameAttr.addProperty(
+                    CIMS.datatype,
+                    oldModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            oldNameAttr
+                    .addProperty(CIMS.multiplicity, oldModel.createResource(CIMS_PREFIX + "M:1..1"))
+                    .addProperty(RDFS.label, oldModel.createLiteral(CIMS_PREFIX + "M:1..1"));
             oldNameAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
             var oldEquipment = oldModel.createResource(PREFIX + "Equipment");
@@ -136,29 +150,35 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.label, newModel.createLiteral("Equipment"));
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             assertThat(classChange.getAttributes()).isNotEmpty();
-            assertThat(classChange.getAttributes()).anyMatch(attr ->
-                    attr.getLabel().equals("IdentifiedObject.name") &&
-                            attr.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETED_FROM_INHERITANCE
-            );
+            assertThat(classChange.getAttributes())
+                    .anyMatch(
+                            attr ->
+                                    attr.getLabel().equals("IdentifiedObject.name")
+                                            && attr.getSemanticResourceChangeType()
+                                                    == SemanticResourceChangeType
+                                                            .DELETED_FROM_INHERITANCE);
         }
 
         @Test
@@ -173,7 +193,9 @@ class InheritanceChangeHandlerTest {
             oldAttr.addProperty(RDF.type, RDF.Property);
             oldAttr.addProperty(RDFS.label, oldModel.createLiteral("oldProperty"));
             oldAttr.addProperty(RDFS.domain, oldBase);
-            oldAttr.addProperty(CIMS.datatype, oldModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            oldAttr.addProperty(
+                    CIMS.datatype,
+                    oldModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
             oldAttr.addProperty(CIMS.multiplicity, oldModel.createResource(CIMS_PREFIX + "M:1..1"));
             oldAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
@@ -193,7 +215,9 @@ class InheritanceChangeHandlerTest {
             newAttr.addProperty(RDF.type, RDF.Property);
             newAttr.addProperty(RDFS.label, newModel.createLiteral("newProperty"));
             newAttr.addProperty(RDFS.domain, newBase);
-            newAttr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            newAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
             newAttr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             newAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
@@ -203,33 +227,42 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.subClassOf, newBase);
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             assertThat(classChange.getAttributes()).hasSize(2);
-            assertThat(classChange.getAttributes()).anyMatch(attr ->
-                    attr.getLabel().equals("OldBase.oldProperty") &&
-                            attr.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETED_FROM_INHERITANCE
-            );
-            assertThat(classChange.getAttributes()).anyMatch(attr ->
-                    attr.getLabel().equals("NewBase.newProperty") &&
-                            attr.getSemanticResourceChangeType() == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-            );
+            assertThat(classChange.getAttributes())
+                    .anyMatch(
+                            attr ->
+                                    attr.getLabel().equals("OldBase.oldProperty")
+                                            && attr.getSemanticResourceChangeType()
+                                                    == SemanticResourceChangeType
+                                                            .DELETED_FROM_INHERITANCE);
+            assertThat(classChange.getAttributes())
+                    .anyMatch(
+                            attr ->
+                                    attr.getLabel().equals("NewBase.newProperty")
+                                            && attr.getSemanticResourceChangeType()
+                                                    == SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE);
         }
 
         @Test
@@ -244,7 +277,9 @@ class InheritanceChangeHandlerTest {
             oldAttr.addProperty(RDF.type, RDF.Property);
             oldAttr.addProperty(RDFS.label, oldModel.createLiteral("property"));
             oldAttr.addProperty(RDFS.domain, oldBase);
-            oldAttr.addProperty(CIMS.datatype, oldModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            oldAttr.addProperty(
+                    CIMS.datatype,
+                    oldModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
             oldAttr.addProperty(CIMS.multiplicity, oldModel.createResource(CIMS_PREFIX + "M:1..1"));
             oldAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
@@ -264,7 +299,9 @@ class InheritanceChangeHandlerTest {
             newAttr.addProperty(RDF.type, RDF.Property);
             newAttr.addProperty(RDFS.label, newModel.createLiteral("property"));
             newAttr.addProperty(RDFS.domain, newBase);
-            newAttr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            newAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
             newAttr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             newAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
@@ -274,37 +311,42 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.subClassOf, newBase);
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var deletedBase = SemanticClassChange.builder()
-                    .iri(PREFIX + "OldBase")
-                    .label("OldBase")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var deletedBase =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "OldBase")
+                            .label("OldBase")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
-            var addedBase = SemanticClassChange.builder()
-                    .iri(PREFIX + "NewBase")
-                    .label("NewBase")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var addedBase =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "NewBase")
+                            .label("NewBase")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             classRenames.add(new RenameCandidate<>(deletedBase, addedBase, 0.9));
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             // Should not add or remove properties since it's just a rename
             assertThat(classChange.getAttributes()).isEmpty();
@@ -335,23 +377,26 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.subClassOf, newBase);
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             assertThat(classChange.getAttributes()).isEmpty();
         }
@@ -384,8 +429,11 @@ class InheritanceChangeHandlerTest {
             baseAttr.addProperty(RDF.type, RDF.Property);
             baseAttr.addProperty(RDFS.label, newModel.createLiteral("baseProperty"));
             baseAttr.addProperty(RDFS.domain, newBase);
-            baseAttr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
-            baseAttr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
+            baseAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            baseAttr.addProperty(
+                    CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             baseAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
             var newEquipment = newModel.createResource(PREFIX + "Equipment");
@@ -400,31 +448,39 @@ class InheritanceChangeHandlerTest {
             newTransformer.addProperty(RDFS.subClassOf, newEquipment);
             newTransformer.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var equipmentChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
-            var superClassChange = new SemanticFieldChange(SemanticFieldChangeType.SUPERCLASS_CHANGE, null, PREFIX + "Base");
+            var equipmentChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
+            var superClassChange =
+                    new SemanticFieldChange(
+                            SemanticFieldChangeType.SUPERCLASS_CHANGE, null, PREFIX + "Base");
             equipmentChange.getChanges().add(superClassChange);
 
             allClassChanges.add(equipmentChange);
 
-            InheritanceChangeHandler.processInheritanceChanges(allClassChanges, newModel, oldModel, classRenames);
+            InheritanceChangeHandler.processInheritanceChanges(
+                    allClassChanges, newModel, oldModel, classRenames);
 
             // Check that Transformer was added to allClassChanges and has the property
-            var transformerChange = allClassChanges.stream()
-                    .filter(c -> c.getIri().equals(PREFIX + "Transformer"))
-                    .findFirst();
+            var transformerChange =
+                    allClassChanges.stream()
+                            .filter(c -> c.getIri().equals(PREFIX + "Transformer"))
+                            .findFirst();
 
             assertThat(transformerChange).isPresent();
-            assertThat(transformerChange.get().getAttributes()).anyMatch(attr ->
-                    attr.getLabel().equals("Base.baseProperty") &&
-                            attr.getSemanticResourceChangeType() == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-            );
+            assertThat(transformerChange.get().getAttributes())
+                    .anyMatch(
+                            attr ->
+                                    attr.getLabel().equals("Base.baseProperty")
+                                            && attr.getSemanticResourceChangeType()
+                                                    == SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE);
         }
 
         @Test
@@ -442,8 +498,11 @@ class InheritanceChangeHandlerTest {
             nameAttr.addProperty(RDF.type, RDF.Property);
             nameAttr.addProperty(RDFS.label, newModel.createLiteral("name"));
             nameAttr.addProperty(RDFS.domain, newIdentified);
-            nameAttr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
-            nameAttr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
+            nameAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            nameAttr.addProperty(
+                    CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             nameAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
             var newBase = newModel.createResource(PREFIX + "Base");
@@ -451,23 +510,26 @@ class InheritanceChangeHandlerTest {
             newBase.addProperty(RDFS.label, newModel.createLiteral("Base"));
             newBase.addProperty(RDFS.subClassOf, newIdentified);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Base")
-                    .label("Base")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Base")
+                            .label("Base")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             // Abstract classes themselves don't get instance-level property changes
             assertThat(classChange.getAttributes()).isEmpty();
@@ -495,7 +557,8 @@ class InheritanceChangeHandlerTest {
             assoc.addProperty(RDFS.range, targetClass);
             assoc.addProperty(CIMS.associationUsed, "No");
             assoc.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:0..*"));
-            assoc.addProperty(CIMS.inverseRoleName, newModel.createResource(CIMS_PREFIX + "Target.Base"));
+            assoc.addProperty(
+                    CIMS.inverseRoleName, newModel.createResource(CIMS_PREFIX + "Target.Base"));
 
             var oldEquipment = oldModel.createResource(PREFIX + "Equipment");
             oldEquipment.addProperty(RDF.type, RDFS.Class);
@@ -508,26 +571,32 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.subClassOf, newBase);
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Equipment")
-                    .label("Equipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Equipment")
+                            .label("Equipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             assertThat(classChange.getAssociations()).isNotEmpty();
-            assertThat(classChange.getAssociations()).anyMatch(assoc2 ->
-                    assoc2.getLabel().equals("Base.Target") &&
-                            assoc2.getSemanticResourceChangeType() == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-            );
+            assertThat(classChange.getAssociations())
+                    .anyMatch(
+                            assoc2 ->
+                                    assoc2.getLabel().equals("Base.Target")
+                                            && assoc2.getSemanticResourceChangeType()
+                                                    == SemanticResourceChangeType
+                                                            .ADDED_FROM_INHERITANCE);
         }
     }
 
@@ -546,27 +615,36 @@ class InheritanceChangeHandlerTest {
             newEquipment.addProperty(RDFS.label, newModel.createLiteral("NewEquipment"));
             newEquipment.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "NewEquipment")
-                    .oldIRI(PREFIX + "OldEquipment")
-                    .label("NewEquipment")
-                    .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "NewEquipment")
+                            .oldIRI(PREFIX + "OldEquipment")
+                            .label("NewEquipment")
+                            .semanticResourceChangeType(SemanticResourceChangeType.RENAME)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(classChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             // Should not throw exception
-            assertThatCode(() ->
-                    InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                            classChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-                    )
-            ).doesNotThrowAnyException();
+            assertThatCode(
+                            () ->
+                                    InheritanceChangeHandler.addPropertyChangesFromInheritance(
+                                            classChange,
+                                            allClassChanges,
+                                            classChangeMap,
+                                            newModel,
+                                            oldModel,
+                                            classRenames))
+                    .doesNotThrowAnyException();
         }
 
         @Test
@@ -586,7 +664,9 @@ class InheritanceChangeHandlerTest {
             newAttr.addProperty(RDF.type, RDF.Property);
             newAttr.addProperty(RDFS.label, newModel.createLiteral("newProperty"));
             newAttr.addProperty(RDFS.domain, newBase);
-            newAttr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            newAttr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
             newAttr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             newAttr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
@@ -602,39 +682,50 @@ class InheritanceChangeHandlerTest {
             newDerived.addProperty(RDFS.subClassOf, newBase);
             newDerived.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var baseChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Base")
-                    .label("Base")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>(List.of(
-                            SemanticAttributeChange.builder()
-                                    .iri(PREFIX + "Base.newProperty")
-                                    .label("newProperty")
-                                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                                    .build()
-                    )))
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var baseChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Base")
+                            .label("Base")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(
+                                    new ArrayList<>(
+                                            List.of(
+                                                    SemanticAttributeChange.builder()
+                                                            .iri(PREFIX + "Base.newProperty")
+                                                            .label("newProperty")
+                                                            .semanticResourceChangeType(
+                                                                    SemanticResourceChangeType.ADD)
+                                                            .build())))
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
-            var derivedChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Derived")
-                    .label("Derived")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var derivedChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Derived")
+                            .label("Derived")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(baseChange);
             allClassChanges.add(derivedChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    derivedChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    derivedChange,
+                    allClassChanges,
+                    classChangeMap,
+                    newModel,
+                    oldModel,
+                    classRenames);
 
             // The new property should not be added to derived class since it's new in the base
             assertThat(derivedChange.getAttributes()).isEmpty();
@@ -651,7 +742,9 @@ class InheritanceChangeHandlerTest {
             attr.addProperty(RDF.type, RDF.Property);
             attr.addProperty(RDFS.label, newModel.createLiteral("property"));
             attr.addProperty(RDFS.domain, newBase);
-            attr.addProperty(CIMS.datatype, newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr.addProperty(
+                    CIMS.datatype,
+                    newModel.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr.addProperty(CIMS.multiplicity, newModel.createResource(CIMS_PREFIX + "M:1..1"));
             attr.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
 
@@ -667,38 +760,40 @@ class InheritanceChangeHandlerTest {
             newDerived.addProperty(RDFS.subClassOf, newBase);
             newDerived.addProperty(CIMS.stereotype, CIMStereotypes.concrete);
 
-            var baseChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "Base")
-                    .label("Base")
-                    .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var baseChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "Base")
+                            .label("Base")
+                            .semanticResourceChangeType(SemanticResourceChangeType.CHANGE)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
-            var newDerivedChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "NewDerivedClass")
-                    .label("NewDerivedClass")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .attributes(new ArrayList<>())
-                    .associations(new ArrayList<>())
-                    .enumEntries(new ArrayList<>())
-                    .build();
+            var newDerivedChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "NewDerivedClass")
+                            .label("NewDerivedClass")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .attributes(new ArrayList<>())
+                            .associations(new ArrayList<>())
+                            .enumEntries(new ArrayList<>())
+                            .build();
 
             allClassChanges.add(baseChange);
             allClassChanges.add(newDerivedChange);
 
-            var classChangeMap = allClassChanges.stream()
-                    .collect(java.util.stream.Collectors.toMap(SemanticClassChange::getIri, c -> c));
+            var classChangeMap =
+                    allClassChanges.stream()
+                            .collect(
+                                    java.util.stream.Collectors.toMap(
+                                            SemanticClassChange::getIri, c -> c));
 
             InheritanceChangeHandler.addPropertyChangesFromInheritance(
-                    baseChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames
-            );
+                    baseChange, allClassChanges, classChangeMap, newModel, oldModel, classRenames);
 
             // New derived classes should not get properties added
             assertThat(newDerivedChange.getAttributes()).isEmpty();
         }
     }
 }
-
-

@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.rdf.resources;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.ResourceFactory;
 

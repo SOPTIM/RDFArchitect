@@ -21,7 +21,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.services.select.GetDatasetSchemaUseCase;
 import org.slf4j.Logger;
@@ -43,56 +45,68 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DatasetContentRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(DatasetContentRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(DatasetContentRESTController.class);
 
     private final GetDatasetSchemaUseCase getDatasetSchemaUseCase;
 
     @Operation(
-              summary = "export dataset",
-              description = "Export a file storing all RDFSchema graphs from a dataset",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200",
-                                  content = {
-                                            @Content(mediaType = "application/trig"),
-                                            @Content(mediaType = "application/n-quads")
-                                  })
-              }
-    )
+            summary = "export dataset",
+            description = "Export a file storing all RDFSchema graphs from a dataset",
+            tags = {"graph"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        content = {
+                            @Content(mediaType = "application/trig"),
+                            @Content(mediaType = "application/n-quads")
+                        })
+            })
     @GetMapping
     public ResponseEntity<byte[]> getDatasetSchema(
-              @Parameter(description = "The requested Datatype.", hidden = true)
-              @RequestHeader("Accept")
-              String acceptHeader,
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/content\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The requested Datatype.", hidden = true)
+                    @RequestHeader("Accept")
+                    String acceptHeader,
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/content\" from \"{}\".",
+                datasetName,
+                originURL);
 
         var format = getRdfFormat(acceptHeader);
 
-        var fileName = datasetName + "." + getRdfFormat(acceptHeader).getLang().getFileExtensions().getFirst();
+        var fileName =
+                datasetName
+                        + "."
+                        + getRdfFormat(acceptHeader).getLang().getFileExtensions().getFirst();
 
         var outStream = getDatasetSchemaUseCase.getDatasetSchema(datasetName, format);
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-Disposition"));
-        var body = ResponseEntity.ok()
-                                 .headers(headers)
-                                 .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
-                                 .body(outStream.toByteArray());
+        var body =
+                ResponseEntity.ok()
+                        .headers(headers)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, fileName)
+                        .body(outStream.toByteArray());
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/content\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/content\" to \"{}\".",
+                datasetName,
+                originURL);
         return body;
     }
 
-    private final Map<String, RDFFormat> supportedFormats = Map.ofEntries(
-              new AbstractMap.SimpleEntry<>("application/trig", RDFFormat.TRIG),
-              new AbstractMap.SimpleEntry<>("application/n-quads", RDFFormat.NQUADS)
-                                                                         );
+    private final Map<String, RDFFormat> supportedFormats =
+            Map.ofEntries(
+                    new AbstractMap.SimpleEntry<>("application/trig", RDFFormat.TRIG),
+                    new AbstractMap.SimpleEntry<>("application/n-quads", RDFFormat.NQUADS));
 
     private RDFFormat getRdfFormat(String acceptHeader) {
         for (var entry : supportedFormats.entrySet()) {

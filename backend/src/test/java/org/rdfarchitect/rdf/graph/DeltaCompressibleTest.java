@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.rdf.graph;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
@@ -27,48 +29,76 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-
-/**
- * only testing compress method, because the rest is copy pasted from the {@link Delta}
- */
+/** only testing compress method, because the rest is copy pasted from the {@link Delta} */
 class DeltaCompressibleTest {
 
     @Test
     void compress() {
-        //set up
+        // set up
         Graph baseGraph = GraphFactory.createDefaultGraph();
         Graph compareGraph = GraphFactory.createDefaultGraph();
 
-        //base
+        // base
         List<Triple> base = new ArrayList<>();
-        base.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("a"), NodeFactory.createURI("a")));
-        base.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("a"), NodeFactory.createURI("b")));
-        base.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("a"), NodeFactory.createURI("c")));
+        base.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("a")));
+        base.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("b")));
+        base.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("c")));
         for (Triple t : base) {
             baseGraph.add(t);
             compareGraph.add(t);
         }
         DeltaCompressible deltaCompressible = new DeltaCompressible(baseGraph);
-        //additions
+        // additions
         List<Triple> additions = new ArrayList<>();
-        additions.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("b"), NodeFactory.createURI("a")));
-        additions.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("b"), NodeFactory.createURI("b")));
-        additions.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("b"), NodeFactory.createURI("c")));
+        additions.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("b"),
+                        NodeFactory.createURI("a")));
+        additions.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("b"),
+                        NodeFactory.createURI("b")));
+        additions.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("b"),
+                        NodeFactory.createURI("c")));
         for (Triple t : additions) {
             deltaCompressible.add(t);
             compareGraph.add(t);
         }
-        //deletions
+        // deletions
         List<Triple> deletions = new ArrayList<>();
-        deletions.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("a"), NodeFactory.createURI("c")));
-        deletions.add(Triple.create(NodeFactory.createURI("a"), NodeFactory.createURI("b"), NodeFactory.createURI("c")));
+        deletions.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("c")));
+        deletions.add(
+                Triple.create(
+                        NodeFactory.createURI("a"),
+                        NodeFactory.createURI("b"),
+                        NodeFactory.createURI("c")));
         for (Triple t : deletions) {
             deltaCompressible.delete(t);
             compareGraph.delete(t);
         }
 
-        //assertions
+        // assertions
         assertThat(deltaCompressible.isIsomorphicWith(compareGraph)).isTrue();
         assertThatNoException().isThrownBy(deltaCompressible::compress);
         assertThat(deltaCompressible.isIsomorphicWith(compareGraph)).isTrue();

@@ -40,11 +40,15 @@ public class HttpConnectionImpl implements DatabaseConnection {
     private final String defaultDataset;
     private final DatabaseAdminProtocol databaseAdminProtocol;
 
-    public HttpConnectionImpl(String url, String defaultDataset, DatabaseAdminProtocol databaseAdminProtocol) {
+    public HttpConnectionImpl(
+            String url, String defaultDataset, DatabaseAdminProtocol databaseAdminProtocol) {
         this.url = url;
         this.defaultDataset = defaultDataset;
         this.databaseAdminProtocol = databaseAdminProtocol;
-        logger.info("Initialized a databaseConnection via http with url: {} with default dataset: {}", this.url, this.defaultDataset);
+        logger.info(
+                "Initialized a databaseConnection via http with url: {} with default dataset: {}",
+                this.url,
+                this.defaultDataset);
     }
 
     @Override
@@ -55,10 +59,10 @@ public class HttpConnectionImpl implements DatabaseConnection {
     @Override
     public void sendInsert(Update insertUpdate, String datasetName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .setUpdate(insertUpdate)
-                  .execute();
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .setUpdate(insertUpdate)
+                .execute();
     }
 
     @Override
@@ -67,11 +71,12 @@ public class HttpConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void insertGraph(GraphSource graphsource, String datasetName) throws DataAccessException {
+    public void insertGraph(GraphSource graphsource, String datasetName)
+            throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .insertGraph(graphsource);
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .insertGraph(graphsource);
     }
 
     @Override
@@ -82,10 +87,10 @@ public class HttpConnectionImpl implements DatabaseConnection {
     @Override
     public void sendDelete(Update deleteUpdate, String datasetName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .setUpdate(deleteUpdate)
-                  .execute();
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .setUpdate(deleteUpdate)
+                .execute();
     }
 
     @Override
@@ -96,9 +101,9 @@ public class HttpConnectionImpl implements DatabaseConnection {
     @Override
     public void deleteGraph(String datasetName, String graphName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .deleteGraph(graphName);
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .deleteGraph(graphName);
     }
 
     @Override
@@ -119,9 +124,9 @@ public class HttpConnectionImpl implements DatabaseConnection {
     @Override
     public void deleteDataset(String datasetName) {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .deleteDataset();
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .deleteDataset();
     }
 
     @Override
@@ -132,10 +137,10 @@ public class HttpConnectionImpl implements DatabaseConnection {
     @Override
     public void sendUpdate(Update update, String datasetName) throws DataAccessException {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .setUpdate(update)
-                  .execute();
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .setUpdate(update)
+                .execute();
     }
 
     @Override
@@ -146,40 +151,40 @@ public class HttpConnectionImpl implements DatabaseConnection {
     @Override
     public ResultFormatter sendSelect(Query query, String datasetName) throws DataAccessException {
         return new HttpSelectCommandImpl()
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .setQuery(query)
-                  .execute();
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .setQuery(query)
+                .execute();
     }
 
     @Override
     public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
         return new HttpSelectCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .getCurrentPrefixMapping();
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .getCurrentPrefixMapping();
     }
 
     @Override
     public void addPrefix(String datasetName, String prefix, String uri) {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .addPrefix(prefix, uri);
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .addPrefix(prefix, uri);
     }
 
     @Override
     public void deletePrefix(String datasetName, String prefix) {
         new HttpUpdateCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .setDatasetName(datasetName)
-                  .deletePrefix(prefix);
+                .setEndpoint(this.url)
+                .setDatasetName(datasetName)
+                .deletePrefix(prefix);
     }
 
     @Override
     public List<String> listDatasets() {
         return new HttpSelectCommandImpl(this.databaseAdminProtocol)
-                  .setEndpoint(this.url)
-                  .listDatasets();
+                .setEndpoint(this.url)
+                .listDatasets();
     }
 }

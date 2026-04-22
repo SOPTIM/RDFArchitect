@@ -19,6 +19,7 @@ package org.rdfarchitect.shacl.property.shapebuilder;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.AnonId;
@@ -35,10 +36,14 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 @Accessors(chain = true)
 public class InverseCardinalityPropertyShapeBuilder {
 
-    private static final String DESCRIPTION_TEMPLATE = "This constraint validates the cardinality of the association at the inverse direction.";
-    private static final String MESSAGE_REQUIRED_TEMPLATE = "Missing required property (association).";
-    private static final String MESSAGE_UPPER_BOUND_N_TEMPLATE = "Cardinality violation (association). Upper bound shall be %s.";
-    private static final String MESSAGE_GENERIC_TEMPLATE = "Cardinality violation %d..%d (association).";
+    private static final String DESCRIPTION_TEMPLATE =
+            "This constraint validates the cardinality of the association at the inverse direction.";
+    private static final String MESSAGE_REQUIRED_TEMPLATE =
+            "Missing required property (association).";
+    private static final String MESSAGE_UPPER_BOUND_N_TEMPLATE =
+            "Cardinality violation (association). Upper bound shall be %s.";
+    private static final String MESSAGE_GENERIC_TEMPLATE =
+            "Cardinality violation %d..%d (association).";
 
     // Set by user
     private PrefixEntry prefixEntry;
@@ -57,7 +62,9 @@ public class InverseCardinalityPropertyShapeBuilder {
     }
 
     public Resource build() {
-        if ((lowerBound == null || lowerBound == 0) && upperBound == null) { //cardinality is set to be unbounded, so we don't need a shape
+        if ((lowerBound == null || lowerBound == 0)
+                && upperBound
+                        == null) { // cardinality is set to be unbounded, so we don't need a shape
             return null;
         }
 
@@ -68,17 +75,25 @@ public class InverseCardinalityPropertyShapeBuilder {
 
         propertyShape.addProperty(RDF.type, shaclModel.asRDFNode(SHACL.PropertyShape));
         propertyShape.addProperty(asProperty(SHACL.description), description());
-        propertyShape.addProperty(asProperty(SHACL.group), shaclModel.createResource(propertyGroupUri));
+        propertyShape.addProperty(
+                asProperty(SHACL.group), shaclModel.createResource(propertyGroupUri));
         propertyShape.addProperty(asProperty(SHACL.name), shapeName);
-        propertyShape.addLiteral(asProperty(SHACL.order), shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
+        propertyShape.addLiteral(
+                asProperty(SHACL.order),
+                shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
         propertyShape.addProperty(asProperty(SHACL.path), path());
-        propertyShape.addProperty(asProperty(SHACL.severity), shaclModel.asRDFNode(SHACL.Violation));
+        propertyShape.addProperty(
+                asProperty(SHACL.severity), shaclModel.asRDFNode(SHACL.Violation));
 
         if (lowerBound != null && lowerBound > 0) {
-            propertyShape.addLiteral(asProperty(SHACL.minCount), shaclModel.createTypedLiteral(lowerBound, XSDDatatype.XSDinteger));
+            propertyShape.addLiteral(
+                    asProperty(SHACL.minCount),
+                    shaclModel.createTypedLiteral(lowerBound, XSDDatatype.XSDinteger));
         }
         if (upperBound != null) {
-            propertyShape.addLiteral(asProperty(SHACL.maxCount), shaclModel.createTypedLiteral(upperBound, XSDDatatype.XSDinteger));
+            propertyShape.addLiteral(
+                    asProperty(SHACL.maxCount),
+                    shaclModel.createTypedLiteral(upperBound, XSDDatatype.XSDinteger));
         }
         propertyShape.addProperty(asProperty(SHACL.message), message());
 
@@ -88,7 +103,9 @@ public class InverseCardinalityPropertyShapeBuilder {
     private Resource path() {
         var anonId = AnonId.create();
         var blankNode = shaclModel.createResource(anonId);
-        blankNode.addProperty(shaclModel.createProperty(SHACL.inversePath.getURI()), shaclModel.createResource(inversePropertyUri));
+        blankNode.addProperty(
+                shaclModel.createProperty(SHACL.inversePath.getURI()),
+                shaclModel.createResource(inversePropertyUri));
         return blankNode;
     }
 
@@ -108,11 +125,13 @@ public class InverseCardinalityPropertyShapeBuilder {
             throw new IllegalArgumentException("Lower bound is not defined.");
         }
         if (lowerBound == 0) {
-            return shaclModel.createLiteral(String.format(MESSAGE_UPPER_BOUND_N_TEMPLATE, upperBound));
+            return shaclModel.createLiteral(
+                    String.format(MESSAGE_UPPER_BOUND_N_TEMPLATE, upperBound));
         }
         if (upperBound == null || (lowerBound.equals(upperBound) && upperBound == 1)) {
             return shaclModel.createLiteral(String.format(MESSAGE_REQUIRED_TEMPLATE));
         }
-        return shaclModel.createLiteral(String.format(MESSAGE_GENERIC_TEMPLATE, lowerBound, upperBound));
+        return shaclModel.createLiteral(
+                String.format(MESSAGE_GENERIC_TEMPLATE, lowerBound, upperBound));
     }
 }

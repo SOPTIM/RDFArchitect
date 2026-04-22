@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes.shacl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLGetClassRelationsUseCase;
@@ -38,11 +40,13 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/propertyShapes")
+@RequestMapping(
+        "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/shacl/propertyShapes")
 @RequiredArgsConstructor
 public class ClassPropertyShapesSHACLRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassPropertyShapesSHACLRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ClassPropertyShapesSHACLRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -52,31 +56,42 @@ public class ClassPropertyShapesSHACLRESTController {
             summary = "Get SHACL related to a class",
             description = "Get the shacl rules that can be related to a specified class.",
             tags = {"shacl"},
-            responses = {
-                    @ApiResponse(responseCode = "200")
-            }
-    )
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
     public List<PropertyShapesWrapper> getPropertyShapes(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI,
-            @Parameter(description = "The uuid of the class.")
-            @PathVariable
-            String classUUID) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        var res = shaclGetClassRelationsUseCase.getPropertyShapes(graphIdentifier, UUID.fromString(classUUID));
+        var res =
+                shaclGetClassRelationsUseCase.getPropertyShapes(
+                        graphIdentifier, UUID.fromString(classUUID));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl/propertyShapes\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return res;
     }
 }

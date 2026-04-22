@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.rendering.mermaid;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -26,75 +28,76 @@ import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMPackageToMermaid
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-
 class CIMPackageToMermaidBuilderTest {
 
     private static final String URI_PREFIX = "http://example.com#";
 
     private static final String PACKAGE_LABEL = "examplePackage";
 
-    private static final String EXPECTED_PACKAGE_HEADER = "    namespace " +
-              PACKAGE_LABEL +
-              "{\n";
+    private static final String EXPECTED_PACKAGE_HEADER = "    namespace " + PACKAGE_LABEL + "{\n";
 
     private CIMPackage cimPackage;
 
     @BeforeEach
     void setUp() {
-        cimPackage = CIMPackage.builder()
-                               .uri(new URI(URI_PREFIX + PACKAGE_LABEL))
-                               .label(new RDFSLabel(PACKAGE_LABEL))
-                               .build();
+        cimPackage =
+                CIMPackage.builder()
+                        .uri(new URI(URI_PREFIX + PACKAGE_LABEL))
+                        .label(new RDFSLabel(PACKAGE_LABEL))
+                        .build();
     }
 
     @Test
     void build_emptyPackage_returnsEmptyString() {
-        //Arrange
+        // Arrange
         var builder = new CIMPackageToMermaidBuilder(cimPackage, List.of());
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
+        // Assert
         assertThat(result).isEmpty();
     }
 
     @Test
     void build_packageWithOneClass_returnsMermaidClassWrappedInMermaidNamespace() {
-        //Arrange
-        var cimClassStringBuilder = new StringBuilder("class `uuid`[\"label\"]{\n    <<abstract>>\n}\n");
+        // Arrange
+        var cimClassStringBuilder =
+                new StringBuilder("class `uuid`[\"label\"]{\n    <<abstract>>\n}\n");
         var builder = new CIMPackageToMermaidBuilder(cimPackage, List.of(cimClassStringBuilder));
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_PACKAGE_HEADER + """
+        // Assert
+        assertThat(result)
+                .isEqualTo(
+                        EXPECTED_PACKAGE_HEADER
+                                + """
                                     class `uuid`["label"]{
                                         <<abstract>>
                                     }
                                 }
-                            """
-                                    );
+                            """);
     }
 
     @Test
     void build_virtualPackage_returnsClassContents() {
-        //Arrange
-        var cimClassStringBuilder = new StringBuilder("class `uuid`[\"label\"]{\n    <<abstract>>\n}\n");
+        // Arrange
+        var cimClassStringBuilder =
+                new StringBuilder("class `uuid`[\"label\"]{\n    <<abstract>>\n}\n");
         var builder = new CIMPackageToMermaidBuilder(null, List.of(cimClassStringBuilder));
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo("""
+        // Assert
+        assertThat(result)
+                .isEqualTo(
+                        """
                                                    class `uuid`["label"]{
                                                        <<abstract>>
                                                    }
-                                               """
-                                    );
+                                               """);
     }
 }

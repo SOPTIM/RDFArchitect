@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.select;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.Model;
@@ -25,10 +26,10 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
-import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
@@ -39,7 +40,11 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsUseCase, ListPrefixesUseCase, ListDatasetsUseCase {
+public class QueryDatasetService
+        implements GetDatasetSchemaUseCase,
+                ListGraphsUseCase,
+                ListPrefixesUseCase,
+                ListDatasetsUseCase {
 
     private final DatabasePort databasePort;
 
@@ -48,7 +53,7 @@ public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsU
         var graphUris = databasePort.listGraphUris(datasetName);
         var resultDataset = DatasetFactory.create();
 
-        //fetch graphs and insert into resultDataset
+        // fetch graphs and insert into resultDataset
         for (String graphUri : graphUris) {
             if (graphUri.equals("default")) {
                 resultDataset.setDefaultModel(getGraphAsModel(datasetName, "default"));
@@ -57,10 +62,10 @@ public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsU
             }
         }
 
-        //add DB prefixes too resultDataset
+        // add DB prefixes too resultDataset
         resultDataset.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
 
-        //format to file
+        // format to file
         var outStream = new ByteArrayOutputStream();
         RDFDataMgr.write(outStream, resultDataset, format);
 
@@ -70,7 +75,10 @@ public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsU
     private Model getGraphAsModel(String datasetName, String graphURI) {
         GraphRewindableWithUUIDs graph = null;
         try {
-            graph = databasePort.getGraphWithContext(new GraphIdentifier(datasetName, graphURI)).getRdfGraph();
+            graph =
+                    databasePort
+                            .getGraphWithContext(new GraphIdentifier(datasetName, graphURI))
+                            .getRdfGraph();
             graph.begin(TxnType.READ);
             return ModelFactory.createModelForGraph(GraphUtils.deepCopy(graph));
         } finally {
@@ -84,10 +92,7 @@ public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsU
     public List<URI> listGraphs(String datasetName) {
         List<String> graphUriList = databasePort.listGraphUris(datasetName);
 
-        return graphUriList
-                  .stream()
-                  .map(URI::new)
-                  .toList();
+        return graphUriList.stream().map(URI::new).toList();
     }
 
     @Override
@@ -102,19 +107,20 @@ public class QueryDatasetService implements GetDatasetSchemaUseCase, ListGraphsU
     }
 
     @Override
-    public String listFormattedPrefixes(String datasetName, String format){
+    public String listFormattedPrefixes(String datasetName, String format) {
         var prefixMapping = databasePort.getPrefixMapping(datasetName);
         var model = ModelFactory.createDefaultModel();
         model.setNsPrefixes(prefixMapping);
         var stream = new ByteArrayOutputStream();
-        var lang = switch (format) {
-            case "turtle", "ttl" -> Lang.TURTLE;
-            case "n3" -> Lang.N3;
-            case "nquads" -> Lang.NQUADS;
-            case "nt" -> Lang.NT;
-            case "trig" -> Lang.TRIG;
-            default -> throw new IllegalArgumentException("Unsupported format: " + format);
-        };
+        var lang =
+                switch (format) {
+                    case "turtle", "ttl" -> Lang.TURTLE;
+                    case "n3" -> Lang.N3;
+                    case "nquads" -> Lang.NQUADS;
+                    case "nt" -> Lang.NT;
+                    case "trig" -> Lang.TRIG;
+                    default -> throw new IllegalArgumentException("Unsupported format: " + format);
+                };
         RDFDataMgr.write(stream, model, lang);
         return stream.toString();
     }

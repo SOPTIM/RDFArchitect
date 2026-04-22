@@ -22,10 +22,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.slf4j.Logger;
@@ -50,36 +52,48 @@ public class ChangelogRESTController {
     private final ChangeLogUseCase changelogUseCase;
 
     @Operation(
-              summary = "list changes for graph",
-              description = "Get a list containing all changes made to a graph",
-              tags = {"graph"},
-              responses = {@ApiResponse(
+            summary = "list changes for graph",
+            description = "Get a list containing all changes made to a graph",
+            tags = {"graph"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  schema = @Schema(implementation = GraphChangeLog.class
-                                  ))
-              )}
-    )
-
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = GraphChangeLog.class)))
+            })
     @GetMapping
     public List<ChangeLogEntryDTO> getChangeLog(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var changes = changelogUseCase.listChanges(new GraphIdentifier(datasetName, extendedGraphURI));
+        var changes =
+                changelogUseCase.listChanges(new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/changes\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return changes;
     }
 }

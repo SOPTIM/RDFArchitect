@@ -20,8 +20,4 @@ package org.rdfarchitect.models.search.data;
 import java.util.List;
 
 public record SearchResults(
-          List<SearchResult> internalSearchResults,
-          List<SearchResult> externalSearchResults
-) {
-
-}
+        List<SearchResult> internalSearchResults, List<SearchResult> externalSearchResults) {}

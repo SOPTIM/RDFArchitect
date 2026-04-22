@@ -23,7 +23,9 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.exception.security.DatasetAccessDeniedException;
@@ -36,12 +38,15 @@ public class DatasetFilter implements Filter {
     private final DatabasePort databasePort;
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    public void doFilter(
+            ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+            throws IOException, ServletException {
         var httpRequest = (HttpServletRequest) servletRequest;
         var requestMethod = httpRequest.getMethod();
         var requestURI = httpRequest.getRequestURI();
 
-        // calls to OPTIONS are rejected as they come from preflight and are sent under a different sessionID
+        // calls to OPTIONS are rejected as they come from preflight and are sent under a different
+        // sessionID
         if (!requestMethod.equals("OPTIONS") && requestURI.startsWith("/api/datasets/")) {
             var datasetName = extractDatasetNameFromURI(httpRequest.getRequestURI());
             if (!hasDatasetAccess(requestMethod, requestURI, datasetName)) {
@@ -56,7 +61,7 @@ public class DatasetFilter implements Filter {
         // allow graph creation/import without requiring the dataset to exist beforehand
         if ("PUT".equals(method)
                 && (uri.matches("/api/datasets/[^/]+/graphs/content")
-                || uri.matches("/api/datasets/[^/]+/graphs/[^/]+/content"))) {
+                        || uri.matches("/api/datasets/[^/]+/graphs/[^/]+/content"))) {
             return true;
         }
         var datasets = databasePort.listDatasets();

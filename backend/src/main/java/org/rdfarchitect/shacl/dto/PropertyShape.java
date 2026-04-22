@@ -29,5 +29,4 @@ public class PropertyShape {
     private double order;
 
     private String triples;
-
 }

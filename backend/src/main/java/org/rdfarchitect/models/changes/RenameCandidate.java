@@ -20,12 +20,13 @@ package org.rdfarchitect.models.changes;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RenameCandidate <T extends SemanticResourceChange> {
+public class RenameCandidate<T extends SemanticResourceChange> {
     private T oldResource;
     private T newResource;
     private double confidenceScore;

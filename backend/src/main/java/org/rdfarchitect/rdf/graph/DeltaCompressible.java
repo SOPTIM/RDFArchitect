@@ -18,6 +18,7 @@
 package org.rdfarchitect.rdf.graph;
 
 import lombok.Getter;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphMemFactory;
 import org.apache.jena.graph.GraphUtil;
@@ -31,36 +32,24 @@ import org.jetbrains.annotations.NotNull;
 import java.util.UUID;
 
 /**
- * Graph operation for wrapping a base graph and leaving it unchanged while
- * recording all the attempted updates for later access.
- * <p>
- * The behavior of this class is not well-defined if triples are added to or
- * removed from the base graph, the additions graph, or the deletions graph
- * while this graph is in use.
+ * Graph operation for wrapping a base graph and leaving it unchanged while recording all the
+ * attempted updates for later access.
+ *
+ * <p>The behavior of this class is not well-defined if triples are added to or removed from the
+ * base graph, the additions graph, or the deletions graph while this graph is in use.
  */
-
 public class DeltaCompressible extends CompositionBase implements Graph {
 
-    /**
-     * -- GETTER --
-     * Answer the base graph.
-     */
-    @Getter
-    private Graph base;
-    /**
-     * -- GETTER --
-     * Answer the graph of all triples added.
-     */
-    @Getter
-    private Graph additions;
-    /**
-     * -- GETTER --
-     * Answer the graph of all triples removed.
-     */
-    @Getter
-    private Graph deletions;
-    @Getter
-    private final UUID versionId = UUID.randomUUID();
+    /** -- GETTER -- Answer the base graph. */
+    @Getter private Graph base;
+
+    /** -- GETTER -- Answer the graph of all triples added. */
+    @Getter private Graph additions;
+
+    /** -- GETTER -- Answer the graph of all triples removed. */
+    @Getter private Graph deletions;
+
+    @Getter private final UUID versionId = UUID.randomUUID();
 
     public DeltaCompressible(@NotNull Graph base) {
         super();
@@ -77,10 +66,7 @@ public class DeltaCompressible extends CompositionBase implements Graph {
         deletions = GraphMemFactory.createDefaultGraph();
     }
 
-    /**
-     * Add the triple to the graph, ie add it to the additions, remove it from
-     * the removals.
-     */
+    /** Add the triple to the graph, ie add it to the additions, remove it from the removals. */
     @Override
     public void performAdd(Triple t) {
         if (!base.contains(t)) {
@@ -89,9 +75,7 @@ public class DeltaCompressible extends CompositionBase implements Graph {
         deletions.delete(t);
     }
 
-    /**
-     * Remove the triple, ie, remove it from the adds, add it to the removals.
-     */
+    /** Remove the triple, ie, remove it from the adds, add it to the removals. */
     @Override
     public void performDelete(Triple t) {
         additions.delete(t);
@@ -101,12 +85,13 @@ public class DeltaCompressible extends CompositionBase implements Graph {
     }
 
     /**
-     * Find all the base triples matching tm, exclude the ones that are deleted,
-     * add the ones that have been added.
+     * Find all the base triples matching tm, exclude the ones that are deleted, add the ones that
+     * have been added.
      */
     @Override
     protected ExtendedIterator<Triple> graphBaseFind(Triple t) {
-        ExtendedIterator<Triple> iterator = base.find(t).filterDrop(deletions::contains).andThen(additions.find(t));
+        ExtendedIterator<Triple> iterator =
+                base.find(t).filterDrop(deletions::contains).andThen(additions.find(t));
         return SimpleEventManager.notifyingRemove(this, iterator);
     }
 

@@ -18,8 +18,8 @@
 package org.rdfarchitect.services;
 
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 
 import java.util.List;
 import java.util.UUID;
@@ -30,7 +30,7 @@ public interface ChangeLogUseCase {
      * Records a change in the changelog for the specified graph and current session.
      *
      * @param graphIdentifier The identifier of the graph where the change occurred.
-     * @param entry           The changelog entry to record.
+     * @param entry The changelog entry to record.
      */
     void recordChange(GraphIdentifier graphIdentifier, ChangeLogEntry entry);
 
@@ -52,7 +52,7 @@ public interface ChangeLogUseCase {
      * Restores a specific version of the graph for the graph provided through the graph identifier.
      *
      * @param graphIdentifier The identifier of the graph to restore.
-     * @param versionId       The unique identifier of the version to restore.
+     * @param versionId The unique identifier of the version to restore.
      */
     void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId);
 

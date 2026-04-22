@@ -19,13 +19,15 @@ package org.rdfarchitect.api.dto.dl;
 
 import lombok.Builder;
 import lombok.Data;
+
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * DTO for backend-interal usage that represents layout data required for creating rendering information
+ * DTO for backend-interal usage that represents layout data required for creating rendering
+ * information
  */
 @Data
 @Builder

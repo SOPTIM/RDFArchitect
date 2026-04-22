@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import org.apache.jena.shared.PrefixMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,9 +28,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
-
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class InMemoryDatabaseAdapterTest {
 
@@ -49,10 +49,22 @@ class InMemoryDatabaseAdapterTest {
 
         verify(database).create(eq(graphIdentifier), any());
         verify(database).enableEditing("new-dataset");
-        verify(database).setPrefixMapping(eq("new-dataset"), argThat(prefixMapping ->
-                prefixMapping.getNsPrefixMap().entrySet().containsAll(PrefixMapping.Standard.getNsPrefixMap().entrySet())
-                        && CIM.namespace.equals(prefixMapping.getNsPrefixURI("cim"))
-                        && CIMS.namespace.equals(prefixMapping.getNsPrefixURI("cims"))));
+        verify(database)
+                .setPrefixMapping(
+                        eq("new-dataset"),
+                        argThat(
+                                prefixMapping ->
+                                        prefixMapping
+                                                        .getNsPrefixMap()
+                                                        .entrySet()
+                                                        .containsAll(
+                                                                PrefixMapping.Standard
+                                                                        .getNsPrefixMap()
+                                                                        .entrySet())
+                                                && CIM.namespace.equals(
+                                                        prefixMapping.getNsPrefixURI("cim"))
+                                                && CIMS.namespace.equals(
+                                                        prefixMapping.getNsPrefixURI("cims"))));
     }
 
     @Test

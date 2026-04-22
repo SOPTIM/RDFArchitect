@@ -23,6 +23,7 @@ public interface SHACLDeleteShapeUseCase {
 
     /**
      * Delete a SHACL shape from the graph.
+     *
      * @param graphIdentifier The graph identifier
      * @param shaclShapeURI The URI of the SHACL shape to delete
      */

@@ -18,13 +18,15 @@
 package org.rdfarchitect.dl.queries;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.QuerySolution;
 import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYPosition;
 
 /**
- * Parses a {@link QuerySolution} to extract the values of the variables used in the context of CGMES DiagramLayout Profile.
+ * Parses a {@link QuerySolution} to extract the values of the variables used in the context of
+ * CGMES DiagramLayout Profile.
  */
 @RequiredArgsConstructor
 public class DLQuerySolutionParser {
@@ -35,7 +37,6 @@ public class DLQuerySolutionParser {
      * Extracts a {@link MRID} from the query solution.
      *
      * @param mridVar The variable name of the MRID to be extracted.
-     *
      * @return The MRID or null, if the given variables doesn't exist in the solution.
      */
     public MRID getMRID(String mridVar) {
@@ -51,7 +52,6 @@ public class DLQuerySolutionParser {
      * Extracts a name from the query solution.
      *
      * @param nameVar The variable name of the name to be extracted.
-     *
      * @return The name or null, if the given variables doesn't exist in the solution.
      */
     public String getName(String nameVar) {

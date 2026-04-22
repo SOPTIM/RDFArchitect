@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.ontology;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.rdf.model.Model;
@@ -34,7 +35,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OntologyFacade {
 
-    private static final String INSERT_UPDATE = """
+    private static final String INSERT_UPDATE =
+            """
               {PREFIXES}
               INSERT DATA {
                 {ONTOLOGY_IRI} a <http://www.w3.org/2002/07/owl#Ontology> .
@@ -42,7 +44,8 @@ public class OntologyFacade {
               }
               """;
 
-    private static final String DELETE_UPDATE = """
+    private static final String DELETE_UPDATE =
+            """
               DELETE {
                 ?ontologyIRI a <http://www.w3.org/2002/07/owl#Ontology> .
                 ?ontologyIRI ?ontologyProperty ?ontologyValue .
@@ -55,7 +58,8 @@ public class OntologyFacade {
               }
               """;
 
-    private static final String REPLACE_UPDATE = """
+    private static final String REPLACE_UPDATE =
+            """
               {PREFIXES}
               DELETE {
                 ?ontologyIRI    a <http://www.w3.org/2002/07/owl#Ontology> ;
@@ -81,22 +85,25 @@ public class OntologyFacade {
         var ontologyIRI = newOntologyDTO.getNamespace() + "Ontology";
         var dctLanguageTag = getDCTLanguageTag(newOntologyDTO);
         // Add UUID triple
-        var triplesToInsert = new StringBuilder()
-                  .append("<")
-                  .append(ontologyIRI)
-                  .append("> <")
-                  .append(RDFA.uuid.getURI())
-                  .append("> \"")
-                  .append(newOntologyDTO.getUuid())
-                  .append("\" .\n");
+        var triplesToInsert =
+                new StringBuilder()
+                        .append("<")
+                        .append(ontologyIRI)
+                        .append("> <")
+                        .append(RDFA.uuid.getURI())
+                        .append("> \"")
+                        .append(newOntologyDTO.getUuid())
+                        .append("\" .\n");
         for (var entry : newOntologyDTO.getEntries()) {
             triplesToInsert.append(ontologyEntryToString(ontologyIRI, entry, dctLanguageTag));
         }
 
-        var insertUpdate = UpdateFactory.create(INSERT_UPDATE.replace("{PREFIXES}", prefixString)
-                                                             .replace("{TRIPLES}", triplesToInsert)
-                                                             .replace("{ONTOLOGY_IRI}", "<" + ontologyIRI + ">")
-                                               );
+        var insertUpdate =
+                UpdateFactory.create(
+                        INSERT_UPDATE
+                                .replace("{PREFIXES}", prefixString)
+                                .replace("{TRIPLES}", triplesToInsert)
+                                .replace("{ONTOLOGY_IRI}", "<" + ontologyIRI + ">"));
         try {
             var qexec = UpdateExecutionFactory.create(insertUpdate, DatasetFactory.create(model));
             qexec.execute();
@@ -114,13 +121,17 @@ public class OntologyFacade {
         var prefixString = buildPrefixString();
         var triplesToInsert = new StringBuilder();
         for (var entry : newOntologyDTO.getEntries()) {
-            triplesToInsert.append(ontologyEntryToString(getOntologyIRI(newOntologyDTO), entry, dctLanguageTag));
+            triplesToInsert.append(
+                    ontologyEntryToString(getOntologyIRI(newOntologyDTO), entry, dctLanguageTag));
         }
-        var replaceUpdate = UpdateFactory.create(
-                  REPLACE_UPDATE.replace("{PREFIXES}", prefixString)
+        var replaceUpdate =
+                UpdateFactory.create(
+                        REPLACE_UPDATE
+                                .replace("{PREFIXES}", prefixString)
                                 .replace("{TRIPLES}", triplesToInsert.toString())
-                                .replace("{ONTOLOGY_IRI}", "<" + getOntologyIRI(newOntologyDTO) + ">")
-                                                );
+                                .replace(
+                                        "{ONTOLOGY_IRI}",
+                                        "<" + getOntologyIRI(newOntologyDTO) + ">"));
         try {
             var qexec = UpdateExecutionFactory.create(replaceUpdate, DatasetFactory.create(model));
             qexec.execute();
@@ -140,35 +151,32 @@ public class OntologyFacade {
         }
     }
 
-    private StringBuilder ontologyEntryToString(String ontologyIRI, OntologyEntry ontologyEntry, String dctLanguageTag) {
+    private StringBuilder ontologyEntryToString(
+            String ontologyIRI, OntologyEntry ontologyEntry, String dctLanguageTag) {
         if (!ontologyEntry.isValidEntry()) {
             throw new IllegalArgumentException("Invalid ontology entry");
         }
         // SUBJECT
-        var stringBuilder = new StringBuilder().append("<")
-                                               .append(ontologyIRI)
-                                               .append(">");
+        var stringBuilder = new StringBuilder().append("<").append(ontologyIRI).append(">");
         // PREDICATE
-        stringBuilder.append(" <")
-                     .append(ontologyEntry.getIri())
-                     .append(">");
+        stringBuilder.append(" <").append(ontologyEntry.getIri()).append(">");
         // OBJECT
         if (ontologyEntry.isIriEntry()) {
-            stringBuilder.append(" <")
-                         .append(ontologyEntry.getValue())
-                         .append(">");
+            stringBuilder.append(" <").append(ontologyEntry.getValue()).append(">");
         } else {
-            stringBuilder.append(" \"")
-                         .append(ontologyEntry.getValue())
-                         .append("\"");
-            if (dctLanguageTag != null && (ontologyEntry.getDatatypeIri() == null || ontologyEntry.getDatatypeIri().equals(XSDDatatype.XSDstring.getURI()))) {
-                stringBuilder.append("@")
-                             .append(dctLanguageTag);
+            stringBuilder.append(" \"").append(ontologyEntry.getValue()).append("\"");
+            if (dctLanguageTag != null
+                    && (ontologyEntry.getDatatypeIri() == null
+                            || ontologyEntry
+                                    .getDatatypeIri()
+                                    .equals(XSDDatatype.XSDstring.getURI()))) {
+                stringBuilder.append("@").append(dctLanguageTag);
             } else if (ontologyEntry.getDatatypeIri() != null) {
-                stringBuilder.append("^^")
-                             .append("<")
-                             .append(ontologyEntry.getDatatypeIri())
-                             .append(">");
+                stringBuilder
+                        .append("^^")
+                        .append("<")
+                        .append(ontologyEntry.getDatatypeIri())
+                        .append(">");
             }
         }
         return stringBuilder.append(".\n");
@@ -177,27 +185,32 @@ public class OntologyFacade {
     private String buildPrefixString() {
         var prefixString = new StringBuilder();
         for (var prefixPair : model.getNsPrefixMap().entrySet()) {
-            prefixString.append("PREFIX ")
-                        .append(prefixPair.getKey())
-                        .append(": <")
-                        .append(prefixPair.getValue())
-                        .append(">\n");
+            prefixString
+                    .append("PREFIX ")
+                    .append(prefixPair.getKey())
+                    .append(": <")
+                    .append(prefixPair.getValue())
+                    .append(">\n");
         }
         return prefixString.toString();
     }
 
     /**
-     * returns the language tag defined in dct:language for the ontology, or null if the tag is not defined
+     * returns the language tag defined in dct:language for the ontology, or null if the tag is not
+     * defined
      *
      * @param ontologyDTO the ontology DTO to extract the language tag from
-     *
      * @return the language tag or null
      */
     private String getDCTLanguageTag(OntologyDTO ontologyDTO) {
-        var dctLangTag = ontologyDTO.getEntries().stream()
-                                    .filter(ontologyEntry -> Objects.equals(ontologyEntry.getIri(), DCTerms.language.getURI()))
-                                    .findFirst()
-                                    .orElse(null);
+        var dctLangTag =
+                ontologyDTO.getEntries().stream()
+                        .filter(
+                                ontologyEntry ->
+                                        Objects.equals(
+                                                ontologyEntry.getIri(), DCTerms.language.getURI()))
+                        .findFirst()
+                        .orElse(null);
         if (dctLangTag != null) {
             return dctLangTag.getValue();
         }

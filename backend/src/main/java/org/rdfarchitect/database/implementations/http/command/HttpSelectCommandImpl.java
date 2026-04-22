@@ -19,6 +19,7 @@ package org.rdfarchitect.database.implementations.http.command;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.jena.atlas.web.HttpException;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.ResultSetFormatter;
@@ -89,46 +90,59 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
     @Override
     public ResultFormatter execute() throws DataAccessException {
         if (query == null) {
-            throw new QueryException("Query is null. Execution against endpoint " + this.endpoint + " skipped.");
+            throw new QueryException(
+                    "Query is null. Execution against endpoint " + this.endpoint + " skipped.");
         }
 
         var hex = Integer.toHexString(this.query.hashCode());
-        logger.debug("Execute query@{} against endpoint \"{}\":\n{}", hex, this.endpoint, this.query);
-        try (var qExec = QueryExecutionHTTPBuilder
-                  .create()
-                  .endpoint(this.endpoint)
-                  .query(this.query)
-                  .build()){
+        logger.debug(
+                "Execute query@{} against endpoint \"{}\":\n{}", hex, this.endpoint, this.query);
+        try (var qExec =
+                QueryExecutionHTTPBuilder.create()
+                        .endpoint(this.endpoint)
+                        .query(this.query)
+                        .build()) {
             var result = qExec.execSelect().rewindable();
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Received result for query@{} from \"{}\":\n{}", hex, this.endpoint, ResultSetFormatter.asText(result));
+                logger.debug(
+                        "Received result for query@{} from \"{}\":\n{}",
+                        hex,
+                        this.endpoint,
+                        ResultSetFormatter.asText(result));
             }
             result.reset();
             return new ResultSetFormatterImpl(result);
         } catch (QueryExceptionHTTP e) {
-            throw new DataAccessException("Failed to execute query against endpoint " + this.endpoint + " due to " +
-                                                    "an incorrect SPARQL query or internal server error.", e);
+            throw new DataAccessException(
+                    "Failed to execute query against endpoint "
+                            + this.endpoint
+                            + " due to "
+                            + "an incorrect SPARQL query or internal server error.",
+                    e);
         } catch (HttpException e) {
-            throw new DataAccessException("Failed to execute query against endpoint " + this.endpoint + " due to " +
-                                                    "an HTTP communication error.", e);
+            throw new DataAccessException(
+                    "Failed to execute query against endpoint "
+                            + this.endpoint
+                            + " due to "
+                            + "an HTTP communication error.",
+                    e);
         } catch (JenaException e) {
-            throw new DataAccessException("Failed to execute query against endpoint" + this.endpoint + ".", e);
+            throw new DataAccessException(
+                    "Failed to execute query against endpoint" + this.endpoint + ".", e);
         }
     }
 
     @Override
     public PrefixMappingReadOnly getCurrentPrefixMapping() {
         try (var client = HttpClient.newHttpClient()) {
-            var request = HttpRequest.newBuilder()
-                                     .uri(URI.create(endpoint + "/prefixes"))
-                                     .GET()
-                                     .build();
+            var request =
+                    HttpRequest.newBuilder().uri(URI.create(endpoint + "/prefixes")).GET().build();
 
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             var result = PrefixMapping.Factory.create();
-            List<Map<String, String>> httpResult = new ObjectMapper().readValue(response.body(), new TypeReference<>() {
-            });
+            List<Map<String, String>> httpResult =
+                    new ObjectMapper().readValue(response.body(), new TypeReference<>() {});
             for (var map : httpResult) {
                 var prefix = map.get("prefix");
                 var uri = map.get("uri");
@@ -136,10 +150,20 @@ public class HttpSelectCommandImpl implements DatabaseSelectCommand {
             }
             return new PrefixMappingReadOnly(result);
         } catch (IOException e) {
-            throw new DataAccessException("I/O-Error! Failed to access prefixes from endpoint \"" + this.endpoint + "/prefixes\"" + ".", e);
+            throw new DataAccessException(
+                    "I/O-Error! Failed to access prefixes from endpoint \""
+                            + this.endpoint
+                            + "/prefixes\""
+                            + ".",
+                    e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DataAccessException("Thread interrupted! Failed to access prefixes from endpoint \"" + this.endpoint + "/prefixes\"" + ".", e);
+            throw new DataAccessException(
+                    "Thread interrupted! Failed to access prefixes from endpoint \""
+                            + this.endpoint
+                            + "/prefixes\""
+                            + ".",
+                    e);
         }
     }
 

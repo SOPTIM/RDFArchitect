@@ -44,13 +44,14 @@ public class CIMClassToMermaidBuilder {
     }
 
     public StringBuilder build() {
-        mermaidString = new StringBuilder()
-                  .append("class `")
-                  .append(uuid)
-                  .append("`[\"")
-                  .append(cimClass.getLabel().getValue())
-                  .append("\"]")
-                  .append("{\n");
+        mermaidString =
+                new StringBuilder()
+                        .append("class `")
+                        .append(uuid)
+                        .append("`[\"")
+                        .append(cimClass.getLabel().getValue())
+                        .append("\"]")
+                        .append("{\n");
         appendClassStereotypes();
         appendClassContents();
         mermaidString.append("}\n");
@@ -58,10 +59,10 @@ public class CIMClassToMermaidBuilder {
     }
 
     /**
-     * Appends class contents like attributes or enum entries to be displayed in the mermaid class String.
+     * Appends class contents like attributes or enum entries to be displayed in the mermaid class
+     * String.
      *
      * @param classContents The contents of the class.
-     *
      * @return The builder.
      */
     public CIMClassToMermaidBuilder appendClassContents(List<StringBuilder> classContents) {
@@ -71,51 +72,46 @@ public class CIMClassToMermaidBuilder {
         return this;
     }
 
-    /**
-     * Appends the stereotypes to the mermaid class String.
-     */
+    /** Appends the stereotypes to the mermaid class String. */
     private void appendClassStereotypes() {
         var stereotypes = cimClass.getStereotypes();
         var stereotypesToRender = new ArrayList<String>();
-        if (CollectionUtils.isEmpty(stereotypes) || !stereotypes.contains(new CIMSStereotype(CIMStereotypes.concrete.toString()))) {
+        if (CollectionUtils.isEmpty(stereotypes)
+                || !stereotypes.contains(new CIMSStereotype(CIMStereotypes.concrete.toString()))) {
             stereotypesToRender.add("abstract");
         }
 
-        stereotypes.forEach(stereotype -> {
-            if (!stereotype.toString().equals(CIMStereotypes.concrete.toString())) {
-                stereotypesToRender.add(getShortenedStereotypeName(stereotype.toString()));
-            }
-        });
+        stereotypes.forEach(
+                stereotype -> {
+                    if (!stereotype.toString().equals(CIMStereotypes.concrete.toString())) {
+                        stereotypesToRender.add(getShortenedStereotypeName(stereotype.toString()));
+                    }
+                });
         if (stereotypesToRender.isEmpty()) {
             return;
         }
         stereotypesToRender.sort(String::compareTo);
         mermaidString
-                  .append(TAB)
-                  .append("<<")
-                  .append(String.join(", ", stereotypesToRender))
-                  .append(">>")
-                  .append("\n");
+                .append(TAB)
+                .append("<<")
+                .append(String.join(", ", stereotypesToRender))
+                .append(">>")
+                .append("\n");
     }
 
-    /**
-     * Appends the classContents to the mermaid String.
-     */
+    /** Appends the classContents to the mermaid String. */
     private void appendClassContents() {
         if (CollectionUtils.isEmpty(mermaidClassContents)) {
             return;
         }
-        mermaidClassContents.forEach(content -> mermaidString
-                  .append(TAB)
-                  .append(content));
+        mermaidClassContents.forEach(content -> mermaidString.append(TAB).append(content));
     }
 
     /**
-     * If the stereotype is a known uri: retrieves a shortened name,
-     * Otherwise returns the full string representation of the stereotype.
+     * If the stereotype is a known uri: retrieves a shortened name, Otherwise returns the full
+     * string representation of the stereotype.
      *
      * @param stereotype The String containing the stereotype uri.
-     *
      * @return The name of the stereotype.
      */
     private String getShortenedStereotypeName(String stereotype) {

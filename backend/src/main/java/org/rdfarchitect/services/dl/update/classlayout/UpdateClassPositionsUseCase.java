@@ -27,11 +27,16 @@ import java.util.UUID;
 public interface UpdateClassPositionsUseCase {
 
     /**
-     * Updates the positions of classes within the {@link Diagram diagram} associated with the given package.
+     * Updates the positions of classes within the {@link Diagram diagram} associated with the given
+     * package.
      *
-     * @param graphIdentifier      the identifier of the graph
-     * @param packageUUID          the UUID of the package identifying the diagram
-     * @param classPositionDTOList the list of class repositioning instructions containing class UUIDs and their new positions
+     * @param graphIdentifier the identifier of the graph
+     * @param packageUUID the UUID of the package identifying the diagram
+     * @param classPositionDTOList the list of class repositioning instructions containing class
+     *     UUIDs and their new positions
      */
-    void updateClassPositions(GraphIdentifier graphIdentifier, UUID packageUUID, List<ClassPositionDTO> classPositionDTOList);
+    void updateClassPositions(
+            GraphIdentifier graphIdentifier,
+            UUID packageUUID,
+            List<ClassPositionDTO> classPositionDTOList);
 }

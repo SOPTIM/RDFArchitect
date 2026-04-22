@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.migration;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
@@ -35,8 +36,15 @@ public class PropertyOverview {
 
     public PropertyOverview(SemanticClassChange classChange) {
         this.label = classChange.getLabel();
-        this.attributes = new ResourceRenameOverview<>(classChange.getAttributes(), classChange.getAttributeRenameCandidates());
-        this.associations = new ResourceRenameOverview<>(classChange.getAssociations(), classChange.getAssociationRenameCandidates());
-        this.enumEntries = new ResourceRenameOverview<>(classChange.getEnumEntries(), classChange.getEnumEntryRenameCandidates());
+        this.attributes =
+                new ResourceRenameOverview<>(
+                        classChange.getAttributes(), classChange.getAttributeRenameCandidates());
+        this.associations =
+                new ResourceRenameOverview<>(
+                        classChange.getAssociations(),
+                        classChange.getAssociationRenameCandidates());
+        this.enumEntries =
+                new ResourceRenameOverview<>(
+                        classChange.getEnumEntries(), classChange.getEnumEntryRenameCandidates());
     }
 }

@@ -39,8 +39,8 @@ public class SnapshotUtils {
 
     public static String findSnapshotName(List<String> datasetNames, String base64Token) {
         return datasetNames.stream()
-                           .filter(name -> name.endsWith(base64Token))
-                           .findFirst()
-                           .orElse(null);
+                .filter(name -> name.endsWith(base64Token))
+                .findFirst()
+                .orElse(null);
     }
 }

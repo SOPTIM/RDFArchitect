@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.data.queries.update.cimupdates.associations;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -26,6 +28,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
@@ -35,46 +38,52 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-
 public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
 
     private static final String ASSOCIATIONS_FILE_PATH = "associations/associations.ttl";
     private static final UUID MY_UUID = UUID.fromString("43836908-c7f7-4749-bb8b-3ac9250de655");
-    private static final String MULTIPLICITY_URI = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1";
+    private static final String MULTIPLICITY_URI =
+            "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1";
 
     private static CIMAssociation associationRequired;
     private static CIMAssociation associationInverseRequired;
 
     @BeforeAll
     static void setUpAssociationsEnvironment() {
-        CIMAssociation baseAssociation = CIMAssociation.builder()
-                                                       .uuid(ASSOC_UUID)
-                                                       .uri(new URI(ASSOC_URI))
-                                                       .label(new RDFSLabel(INVERSE_LABEL, "en"))
-                                                       .domain(new RDFSDomain(new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
-                                                       .range(new RDFSRange(new URI(INVERSE_URI), new RDFSLabel(INVERSE_LABEL, "en")))
-                                                       .associationUsed(new CIMSAssociationUsed("Yes"))
-                                                       .inverseRoleName(new CIMSInverseRoleName(new URI(INVERSE_ASSOC_URI)))
-                                                       .multiplicity(new CIMSMultiplicity(MULTIPLICITY_URI))
-                                                       .build();
-        CIMAssociation baseInverseAssociation = CIMAssociation.builder()
-                                                              .uuid(INVERSE_ASSOC_UUID)
-                                                              .uri(new URI(INVERSE_ASSOC_URI))
-                                                              .label(new RDFSLabel(CLASS_LABEL, "en"))
-                                                              .domain(new RDFSDomain(new URI(INVERSE_URI), new RDFSLabel(INVERSE_LABEL, "en")))
-                                                              .range(new RDFSRange(new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
-                                                              .associationUsed(new CIMSAssociationUsed("Yes"))
-                                                              .inverseRoleName(new CIMSInverseRoleName(new URI(ASSOC_URI)))
-                                                              .multiplicity(new CIMSMultiplicity(MULTIPLICITY_URI))
-                                                              .build();
+        CIMAssociation baseAssociation =
+                CIMAssociation.builder()
+                        .uuid(ASSOC_UUID)
+                        .uri(new URI(ASSOC_URI))
+                        .label(new RDFSLabel(INVERSE_LABEL, "en"))
+                        .domain(
+                                new RDFSDomain(
+                                        new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
+                        .range(
+                                new RDFSRange(
+                                        new URI(INVERSE_URI), new RDFSLabel(INVERSE_LABEL, "en")))
+                        .associationUsed(new CIMSAssociationUsed("Yes"))
+                        .inverseRoleName(new CIMSInverseRoleName(new URI(INVERSE_ASSOC_URI)))
+                        .multiplicity(new CIMSMultiplicity(MULTIPLICITY_URI))
+                        .build();
+        CIMAssociation baseInverseAssociation =
+                CIMAssociation.builder()
+                        .uuid(INVERSE_ASSOC_UUID)
+                        .uri(new URI(INVERSE_ASSOC_URI))
+                        .label(new RDFSLabel(CLASS_LABEL, "en"))
+                        .domain(
+                                new RDFSDomain(
+                                        new URI(INVERSE_URI), new RDFSLabel(INVERSE_LABEL, "en")))
+                        .range(new RDFSRange(new URI(CLASS_URI), new RDFSLabel(CLASS_LABEL, "en")))
+                        .associationUsed(new CIMSAssociationUsed("Yes"))
+                        .inverseRoleName(new CIMSInverseRoleName(new URI(ASSOC_URI)))
+                        .multiplicity(new CIMSMultiplicity(MULTIPLICITY_URI))
+                        .build();
         associationRequired = baseAssociation.toBuilder().build();
         associationInverseRequired = baseInverseAssociation.toBuilder().build();
     }
@@ -85,24 +94,33 @@ public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Deletes existing association (and inverse) from graph")
         void deleteAssociation_associationAndInverseExist_deletesAssociations() {
-            //Arrange
+            // Arrange
             addGraphFromFile(ASSOCIATIONS_FILE_PATH);
 
-            //Act
+            // Act
             executeUpdateOnTestGraph(
-                      CIMUpdates.deleteAssociation(
-                                          databasePort.getPrefixMapping(DATASET_NAME),
-                                          GRAPH_URI,
-                                          ASSOC_UUID)
-                                .build()
-                                    );
+                    CIMUpdates.deleteAssociation(
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    ASSOC_UUID)
+                            .build());
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                //isFalse
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_ASSOC_URI), Node.ANY, Node.ANY)).isFalse();
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_INVERSE_ASSOC_URI), Node.ANY, Node.ANY)).isFalse();
+                // isFalse
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_ASSOC_URI),
+                                        Node.ANY,
+                                        Node.ANY))
+                        .isFalse();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_INVERSE_ASSOC_URI),
+                                        Node.ANY,
+                                        Node.ANY))
+                        .isFalse();
             } finally {
                 testGraph.end();
             }
@@ -115,39 +133,118 @@ public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Replaces an existing association (and inverse) with a different association")
         void replaceAssociation_associationAndInverseExist_replacesAssociation() {
-            //Arrange
+            // Arrange
             addGraphFromFile(ASSOCIATIONS_FILE_PATH);
 
-            //Act
+            // Act
             executeUpdateOnTestGraph(
-                      CIMUpdates.replaceAssociation(
-                                          databasePort.getPrefixMapping(DATASET_NAME),
-                                          GRAPH_URI,
-                                          new CIMAssociationPair(associationRequired, associationInverseRequired))
-                                .build()
-                                    );
-            //Assert
+                    CIMUpdates.replaceAssociation(
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    new CIMAssociationPair(
+                                            associationRequired, associationInverseRequired))
+                            .build());
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                //isFalse
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_ASSOC_URI), Node.ANY, Node.ANY)).isFalse();
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_INVERSE_ASSOC_URI), Node.ANY, Node.ANY)).isFalse();
-                //isTrue
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDF.type.asNode(), RDF.Property.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(INVERSE_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDFS.domain.asNode(), NodeFactory.createURI(CLASS_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDFS.range.asNode(), NodeFactory.createURI(INVERSE_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), CIMS.associationUsed.asNode(), NodeFactory.createLiteralString("Yes"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), CIMS.inverseRoleName.asNode(), NodeFactory.createURI(INVERSE_ASSOC_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), CIMS.multiplicity.asNode(), new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDF.type.asNode(), RDF.Property.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(CLASS_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDFS.domain.asNode(), NodeFactory.createURI(INVERSE_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDFS.range.asNode(), NodeFactory.createURI(CLASS_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), CIMS.associationUsed.asNode(), NodeFactory.createLiteralString("Yes"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), CIMS.inverseRoleName.asNode(), NodeFactory.createURI(ASSOC_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), CIMS.multiplicity.asNode(), new CIMSMultiplicity(MULTIPLICITY_URI).getUri()
-                                                                                                                                                          .toNode())).isTrue();
+                // isFalse
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_ASSOC_URI),
+                                        Node.ANY,
+                                        Node.ANY))
+                        .isFalse();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_INVERSE_ASSOC_URI),
+                                        Node.ANY,
+                                        Node.ANY))
+                        .isFalse();
+                // isTrue
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDF.type.asNode(),
+                                        RDF.Property.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(INVERSE_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDFS.domain.asNode(),
+                                        NodeFactory.createURI(CLASS_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDFS.range.asNode(),
+                                        NodeFactory.createURI(INVERSE_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        CIMS.associationUsed.asNode(),
+                                        NodeFactory.createLiteralString("Yes")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        CIMS.inverseRoleName.asNode(),
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        CIMS.multiplicity.asNode(),
+                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDF.type.asNode(),
+                                        RDF.Property.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDFS.domain.asNode(),
+                                        NodeFactory.createURI(INVERSE_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDFS.range.asNode(),
+                                        NodeFactory.createURI(CLASS_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        CIMS.associationUsed.asNode(),
+                                        NodeFactory.createLiteralString("Yes")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        CIMS.inverseRoleName.asNode(),
+                                        NodeFactory.createURI(ASSOC_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        CIMS.multiplicity.asNode(),
+                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }
@@ -158,43 +255,125 @@ public class CIMUpdatesAssociationsTest extends CIMUpdatesTestBase {
     class replaceAssociations {
 
         @Test
-        @DisplayName("Replaces all existing associations (and inverses) with different associations")
+        @DisplayName(
+                "Replaces all existing associations (and inverses) with different associations")
         void replaceAssociations_associationAndInverseExist_replacesAssociations() {
-            //Arrange
+            // Arrange
             addGraphFromFile(ASSOCIATIONS_FILE_PATH);
 
-            //Act
+            // Act
             executeUpdateOnTestGraph(
-                      CIMUpdates.replaceAssociations(
-                                          databasePort.getPrefixMapping(DATASET_NAME),
-                                          GRAPH_URI,
-                                          MY_UUID.toString(),
-                                          List.of(new CIMAssociationPair(associationRequired, associationInverseRequired)))
-                                .build()
-                                    );
+                    CIMUpdates.replaceAssociations(
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    MY_UUID.toString(),
+                                    List.of(
+                                            new CIMAssociationPair(
+                                                    associationRequired,
+                                                    associationInverseRequired)))
+                            .build());
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                //isFalse
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_ASSOC_URI), Node.ANY, Node.ANY)).isFalse();
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_INVERSE_ASSOC_URI), Node.ANY, Node.ANY)).isFalse();
-                //isTrue
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDF.type.asNode(), RDF.Property.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(INVERSE_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDFS.domain.asNode(), NodeFactory.createURI(CLASS_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), RDFS.range.asNode(), NodeFactory.createURI(INVERSE_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), CIMS.associationUsed.asNode(), NodeFactory.createLiteralString("Yes"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), CIMS.inverseRoleName.asNode(), NodeFactory.createURI(INVERSE_ASSOC_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(ASSOC_URI), CIMS.multiplicity.asNode(), new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDF.type.asNode(), RDF.Property.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(CLASS_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDFS.domain.asNode(), NodeFactory.createURI(INVERSE_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), RDFS.range.asNode(), NodeFactory.createURI(CLASS_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), CIMS.associationUsed.asNode(), NodeFactory.createLiteralString("Yes"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), CIMS.inverseRoleName.asNode(), NodeFactory.createURI(ASSOC_URI))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(INVERSE_ASSOC_URI), CIMS.multiplicity.asNode(), new CIMSMultiplicity(MULTIPLICITY_URI).getUri()
-                                                                                                                                                          .toNode())).isTrue();
+                // isFalse
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_ASSOC_URI),
+                                        Node.ANY,
+                                        Node.ANY))
+                        .isFalse();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_INVERSE_ASSOC_URI),
+                                        Node.ANY,
+                                        Node.ANY))
+                        .isFalse();
+                // isTrue
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDF.type.asNode(),
+                                        RDF.Property.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(INVERSE_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDFS.domain.asNode(),
+                                        NodeFactory.createURI(CLASS_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        RDFS.range.asNode(),
+                                        NodeFactory.createURI(INVERSE_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        CIMS.associationUsed.asNode(),
+                                        NodeFactory.createLiteralString("Yes")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        CIMS.inverseRoleName.asNode(),
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(ASSOC_URI),
+                                        CIMS.multiplicity.asNode(),
+                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDF.type.asNode(),
+                                        RDF.Property.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDFS.domain.asNode(),
+                                        NodeFactory.createURI(INVERSE_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        RDFS.range.asNode(),
+                                        NodeFactory.createURI(CLASS_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        CIMS.associationUsed.asNode(),
+                                        NodeFactory.createLiteralString("Yes")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        CIMS.inverseRoleName.asNode(),
+                                        NodeFactory.createURI(ASSOC_URI)))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(INVERSE_ASSOC_URI),
+                                        CIMS.multiplicity.asNode(),
+                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }

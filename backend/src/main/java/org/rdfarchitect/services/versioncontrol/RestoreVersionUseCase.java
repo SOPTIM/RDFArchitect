@@ -27,7 +27,7 @@ public interface RestoreVersionUseCase {
      * Restores a specific version of the graph for the graph provided through the graph identifier.
      *
      * @param graphIdentifier The identifier of the graph to restore.
-     * @param versionId       The unique identifier of the version to restore.
+     * @param versionId The unique identifier of the version to restore.
      */
     void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId);
 }

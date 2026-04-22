@@ -29,10 +29,15 @@ public class CIMCollection {
     public CIMCollection() {
         packages = new TreeSet<>(Comparator.comparing(pack -> pack.getUri().toString()));
         classes = new TreeSet<>(Comparator.comparing(cimClass -> cimClass.getUri().toString()));
-        attributes = new TreeSet<>(Comparator.comparing(cimAttribute -> cimAttribute.getUri().toString()));
-        associations = new TreeSet<>(Comparator.comparing(cimAssociation -> cimAssociation.getUri().toString()));
+        attributes =
+                new TreeSet<>(
+                        Comparator.comparing(cimAttribute -> cimAttribute.getUri().toString()));
+        associations =
+                new TreeSet<>(
+                        Comparator.comparing(cimAssociation -> cimAssociation.getUri().toString()));
         enums = new TreeSet<>(Comparator.comparing(cimEnum -> cimEnum.getUri().toString()));
-        enumEntries = new TreeSet<>(Comparator.comparing(enumEntry -> enumEntry.getUri().toString()));
+        enumEntries =
+                new TreeSet<>(Comparator.comparing(enumEntry -> enumEntry.getUri().toString()));
     }
 
     private final SortedSet<CIMPackage> packages;
@@ -48,7 +53,9 @@ public class CIMCollection {
     private final SortedSet<CIMEnumEntry> enumEntries;
 
     public SortedSet<CIMClass> getClassesAndEnums() {
-        SortedSet<CIMClass> allClassesAndEnums = new TreeSet<>(Comparator.comparing(cimClassOrEnum -> cimClassOrEnum.getUri().toString()));
+        SortedSet<CIMClass> allClassesAndEnums =
+                new TreeSet<>(
+                        Comparator.comparing(cimClassOrEnum -> cimClassOrEnum.getUri().toString()));
         allClassesAndEnums.addAll(this.getClasses());
         allClassesAndEnums.addAll(this.getEnums());
         return allClassesAndEnums;

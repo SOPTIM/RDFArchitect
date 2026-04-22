@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.data.GraphToCIMCollectionConverterImpl;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
@@ -24,12 +26,12 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
@@ -40,17 +42,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-
 class GraphToCIMCollectionConverterImplFilterTest {
 
     private final InMemoryDatabase database = new InMemoryDatabaseImpl();
 
-    private final GraphToCIMCollectionConverterUseCase converter = new GraphToCIMCollectionConverterService(new InMemoryDatabaseAdapter(database));
+    private final GraphToCIMCollectionConverterUseCase converter =
+            new GraphToCIMCollectionConverterService(new InMemoryDatabaseAdapter(database));
 
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
-    private static final String PATH = "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverterImpl/";
+    private static final String PATH =
+            "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverterImpl/";
 
     @BeforeEach
     void setUp() {
@@ -84,17 +86,18 @@ class GraphToCIMCollectionConverterImplFilterTest {
     }
 
     @Test
-    void convert_associatedClassesFilterNoAssociations_collectionWithClassesAndNoAssociation() throws IOException {
-        //Arrange
+    void convert_associatedClassesFilterNoAssociations_collectionWithClassesAndNoAssociation()
+            throws IOException {
+        // Arrange
         addFileGraphToDatabase(PATH + "childClassToAssociatedClassAssociation.ttl");
         var filter = new GraphFilter(true);
         filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
         filter.setIncludeAssociations(false);
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, filter);
 
-        //Assert
+        // Assert
         assertThat(cimCollection.getAttributes()).isEmpty();
         assertThat(cimCollection.getEnums()).isEmpty();
         assertThat(cimCollection.getEnumEntries()).isEmpty();
@@ -104,17 +107,19 @@ class GraphToCIMCollectionConverterImplFilterTest {
     }
 
     @Test
-    void convert_associatedClassesFilterNoRelationsToExternalPackages_collectionWithOnlyClassesInPackage() throws IOException {
-        //Arrange
+    void
+            convert_associatedClassesFilterNoRelationsToExternalPackages_collectionWithOnlyClassesInPackage()
+                    throws IOException {
+        // Arrange
         addFileGraphToDatabase(PATH + "childClassToAssociatedClassAssociation.ttl");
         var filter = new GraphFilter(true);
         filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
         filter.setIncludeRelationsToExternalPackages(false);
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, filter);
 
-        //Assert
+        // Assert
         assertThat(cimCollection.getAttributes()).isEmpty();
         assertThat(cimCollection.getEnums()).isEmpty();
         assertThat(cimCollection.getEnumEntries()).isEmpty();
@@ -124,18 +129,19 @@ class GraphToCIMCollectionConverterImplFilterTest {
     }
 
     @Test
-    void convert_classWithAttributesFilterNoAttributes_collectionWithNoAttributes() throws IOException {
-        //Arrange
+    void convert_classWithAttributesFilterNoAttributes_collectionWithNoAttributes()
+            throws IOException {
+        // Arrange
         addFileGraphToDatabase(PATH + "childClass.ttl");
         addFileGraphToDatabase(PATH + "childClassAttributes.ttl");
         var filter = new GraphFilter(true);
         filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
         filter.setIncludeAttributes(false);
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, filter);
 
-        //Assert
+        // Assert
         assertThat(cimCollection.getAttributes()).isEmpty();
         assertThat(cimCollection.getEnums()).isEmpty();
         assertThat(cimCollection.getEnumEntries()).isEmpty();
@@ -146,16 +152,16 @@ class GraphToCIMCollectionConverterImplFilterTest {
 
     @Test
     void convert_enumClassFilterNoEnumEntries_collectionWithNoEnumEntries() throws IOException {
-        //Arrange
+        // Arrange
         addFileGraphToDatabase(PATH + "enumClass.ttl");
         var filter = new GraphFilter(true);
         filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
         filter.setIncludeEnumEntries(false);
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, filter);
 
-        //Assert
+        // Assert
         assertThat(cimCollection.getAttributes()).isEmpty();
         assertThat(cimCollection.getEnums()).hasSize(1);
         assertThat(cimCollection.getEnumEntries()).isEmpty();
@@ -165,8 +171,9 @@ class GraphToCIMCollectionConverterImplFilterTest {
     }
 
     @Test
-    void convert_childAndSuperClassFilterNoInheritance_collectionWithClassesAndNoInheritance() throws IOException {
-        //Arrange
+    void convert_childAndSuperClassFilterNoInheritance_collectionWithClassesAndNoInheritance()
+            throws IOException {
+        // Arrange
         addFileGraphToDatabase(PATH + "childClass.ttl");
         addFileGraphToDatabase(PATH + "superClass.ttl");
         var filter = new GraphFilter(true);
@@ -174,10 +181,10 @@ class GraphToCIMCollectionConverterImplFilterTest {
         filter.setIncludeInheritance(false);
         filter.setIncludeAttributes(false);
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, filter);
 
-        //Assert
+        // Assert
         assertThat(cimCollection.getAttributes()).isEmpty();
         assertThat(cimCollection.getEnums()).isEmpty();
         assertThat(cimCollection.getEnumEntries()).isEmpty();

@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.schemamigration.scriptgeneration;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
@@ -47,18 +48,19 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     private String generateUpdateForClass(SemanticClassChange classChange) {
         var result = new UpdateRequest();
 
-        String update = switch (classChange.getSemanticResourceChangeType()) {
-            case DELETE -> updateGenerator.generateDeleteClassUpdate(classChange);
-            case RENAME -> updateGenerator.generateRenameClassUpdate(classChange);
-            default -> null;
-        };
+        String update =
+                switch (classChange.getSemanticResourceChangeType()) {
+                    case DELETE -> updateGenerator.generateDeleteClassUpdate(classChange);
+                    case RENAME -> updateGenerator.generateRenameClassUpdate(classChange);
+                    default -> null;
+                };
 
         if (update != null) {
             result.add(update);
         }
 
-        if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE &&
-                  classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.ADD) {
+        if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE
+                && classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.ADD) {
             processClassChanges(classChange, result);
         }
 
@@ -91,39 +93,54 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
     }
 
-    private String generateUpdateForAttribute(SemanticAttributeChange attributeChange, String classIri) {
+    private String generateUpdateForAttribute(
+            SemanticAttributeChange attributeChange, String classIri) {
         var result = new UpdateRequest();
 
-        var update = switch (attributeChange.getSemanticResourceChangeType()) {
-            case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
-            case RENAME -> updateGenerator.generateRenameAttributeUpdate(attributeChange);
-            case ADD -> updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
-            case ADDED_FROM_INHERITANCE -> updateGenerator.generateAddAttributeToSingleClassUpdate(attributeChange, classIri);
-            case DELETED_FROM_INHERITANCE -> updateGenerator.generateDeletePropertyFromSingleClassUpdate(attributeChange, classIri);
-            default -> null;
-        };
+        var update =
+                switch (attributeChange.getSemanticResourceChangeType()) {
+                    case DELETE -> updateGenerator.generateDeletePropertyUpdate(attributeChange);
+                    case RENAME -> updateGenerator.generateRenameAttributeUpdate(attributeChange);
+                    case ADD ->
+                            updateGenerator.generateAddAttributeUpdate(attributeChange, classIri);
+                    case ADDED_FROM_INHERITANCE ->
+                            updateGenerator.generateAddAttributeToSingleClassUpdate(
+                                    attributeChange, classIri);
+                    case DELETED_FROM_INHERITANCE ->
+                            updateGenerator.generateDeletePropertyFromSingleClassUpdate(
+                                    attributeChange, classIri);
+                    default -> null;
+                };
 
         if (update != null) {
             result.add(update);
         }
 
         var type = attributeChange.getSemanticResourceChangeType();
-        if (type == SemanticResourceChangeType.CHANGE || type == SemanticResourceChangeType.RENAME) {
+        if (type == SemanticResourceChangeType.CHANGE
+                || type == SemanticResourceChangeType.RENAME) {
             processAttributeFieldChanges(attributeChange, classIri, result);
         }
 
         return result.toString();
     }
 
-    private void processAttributeFieldChanges(SemanticAttributeChange attributeChange, String classIri, UpdateRequest result) {
+    private void processAttributeFieldChanges(
+            SemanticAttributeChange attributeChange, String classIri, UpdateRequest result) {
         for (var change : attributeChange.getChanges()) {
-            var update = switch (change.getSemanticFieldChangeType()) {
-                case DATATYPE_CHANGE -> updateGenerator.generateDatatypeChangedUpdate(attributeChange);
-                case MADE_REQUIRED -> updateGenerator.generateAddAttributeToSingleClassUpdate(attributeChange, classIri);
-                case FIXED_VALUE_CHANGE -> updateGenerator.generateFixedValueUpdate(attributeChange);
-                case DOMAIN_RENAME -> updateGenerator.generateDomainRenameUpdate(attributeChange);
-                default -> null;
-            };
+            var update =
+                    switch (change.getSemanticFieldChangeType()) {
+                        case DATATYPE_CHANGE ->
+                                updateGenerator.generateDatatypeChangedUpdate(attributeChange);
+                        case MADE_REQUIRED ->
+                                updateGenerator.generateAddAttributeToSingleClassUpdate(
+                                        attributeChange, classIri);
+                        case FIXED_VALUE_CHANGE ->
+                                updateGenerator.generateFixedValueUpdate(attributeChange);
+                        case DOMAIN_RENAME ->
+                                updateGenerator.generateDomainRenameUpdate(attributeChange);
+                        default -> null;
+                    };
 
             if (update != null) {
                 result.add(update);
@@ -134,11 +151,12 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     private String generateUpdateForEnumEntry(SemanticEnumEntryChange enumEntryChange) {
         var result = new UpdateRequest();
 
-        var update = switch (enumEntryChange.getSemanticResourceChangeType()) {
-            case DELETE -> updateGenerator.generateDeleteEnumEntryUpdate(enumEntryChange);
-            case RENAME -> updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
-            default -> null;
-        };
+        var update =
+                switch (enumEntryChange.getSemanticResourceChangeType()) {
+                    case DELETE -> updateGenerator.generateDeleteEnumEntryUpdate(enumEntryChange);
+                    case RENAME -> updateGenerator.generateRenameEnumEntryUpdate(enumEntryChange);
+                    default -> null;
+                };
 
         if (update != null) {
             result.add(update);
@@ -150,34 +168,45 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
     private String generateUpdateForAssociation(SemanticAssociationChange associationChange) {
         var result = new UpdateRequest();
 
-        var update = switch (associationChange.getSemanticResourceChangeType()) {
-            case DELETE -> updateGenerator.generateDeletePropertyUpdate(associationChange);
-            case ADD -> updateGenerator.generateAddAssociationUpdate(associationChange);
-            case ADDED_FROM_INHERITANCE -> updateGenerator.generateAddAssociationToSingleClassUpdate(associationChange, associationChange.getIri());
-            case RENAME -> updateGenerator.generateRenameAssociationUpdate(associationChange);
-            default -> null;
-        };
+        var update =
+                switch (associationChange.getSemanticResourceChangeType()) {
+                    case DELETE -> updateGenerator.generateDeletePropertyUpdate(associationChange);
+                    case ADD -> updateGenerator.generateAddAssociationUpdate(associationChange);
+                    case ADDED_FROM_INHERITANCE ->
+                            updateGenerator.generateAddAssociationToSingleClassUpdate(
+                                    associationChange, associationChange.getIri());
+                    case RENAME ->
+                            updateGenerator.generateRenameAssociationUpdate(associationChange);
+                    default -> null;
+                };
 
         if (update != null) {
             result.add(update);
         }
 
         var type = associationChange.getSemanticResourceChangeType();
-        if (type == SemanticResourceChangeType.CHANGE || type == SemanticResourceChangeType.RENAME) {
+        if (type == SemanticResourceChangeType.CHANGE
+                || type == SemanticResourceChangeType.RENAME) {
             processAssociationFieldChanges(associationChange, result);
         }
 
         return result.toString();
     }
 
-    private void processAssociationFieldChanges(SemanticAssociationChange associationChange, UpdateRequest result) {
+    private void processAssociationFieldChanges(
+            SemanticAssociationChange associationChange, UpdateRequest result) {
         for (var change : associationChange.getChanges()) {
-            var update = switch (change.getSemanticFieldChangeType()) {
-                case TARGET_CHANGE -> updateGenerator.generateAddAssociationUpdate(associationChange);
-                case ASSOCIATION_USED_CHANGE -> updateGenerator.generateAssociationTargetChangeUpdate(associationChange);
-                case DOMAIN_RENAME -> updateGenerator.generateDomainRenameUpdate(associationChange);
-                default -> null;
-            };
+            var update =
+                    switch (change.getSemanticFieldChangeType()) {
+                        case TARGET_CHANGE ->
+                                updateGenerator.generateAddAssociationUpdate(associationChange);
+                        case ASSOCIATION_USED_CHANGE ->
+                                updateGenerator.generateAssociationTargetChangeUpdate(
+                                        associationChange);
+                        case DOMAIN_RENAME ->
+                                updateGenerator.generateDomainRenameUpdate(associationChange);
+                        default -> null;
+                    };
 
             if (update != null) {
                 result.add(update);
@@ -185,4 +214,3 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
         }
     }
 }
-

@@ -18,6 +18,7 @@
 package org.rdfarchitect.exception.handlers;
 
 import jakarta.servlet.http.HttpServletRequest;
+
 import org.rdfarchitect.exception.database.DatabaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,18 +45,24 @@ public class GenericExceptionHandler extends ResponseEntityExceptionHandler {
         HttpServletRequest req = ((ServletWebRequest) request).getRequest();
         String requestURL = req.getRequestURI();
 
-        String requestRemoteAddr = req.getHeader(HttpHeaders.ORIGIN) != null && !req.getHeader(HttpHeaders.ORIGIN).isEmpty() ?
-                                   req.getHeader(HttpHeaders.ORIGIN) : req.getRemoteAddr() + ":" + req.getRemotePort();
+        String requestRemoteAddr =
+                req.getHeader(HttpHeaders.ORIGIN) != null
+                                && !req.getHeader(HttpHeaders.ORIGIN).isEmpty()
+                        ? req.getHeader(HttpHeaders.ORIGIN)
+                        : req.getRemoteAddr() + ":" + req.getRemotePort();
 
-        log.warn("Sending error response to GET request \"{}\" from \"{}\"", requestURL, requestRemoteAddr);
+        log.warn(
+                "Sending error response to GET request \"{}\" from \"{}\"",
+                requestURL,
+                requestRemoteAddr);
     }
 
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(
-              HttpMessageNotReadableException ex,
-              HttpHeaders headers,
-              HttpStatusCode status,
-              WebRequest request) {
+            HttpMessageNotReadableException ex,
+            HttpHeaders headers,
+            HttpStatusCode status,
+            WebRequest request) {
 
         log.error("Request body parsing failed", ex);
 
@@ -65,13 +72,12 @@ public class GenericExceptionHandler extends ResponseEntityExceptionHandler {
 
         log.error("Root cause: {}", detailedMessage);
 
-        return ResponseEntity
-                  .badRequest()
-                  .body("Invalid request body: " + detailedMessage);
+        return ResponseEntity.badRequest().body("Invalid request body: " + detailedMessage);
     }
 
     @ExceptionHandler(value = {DatabaseException.class})
-    protected ResponseStatusException handleExceptionInternal(ResponseStatusException e, WebRequest request) {
+    protected ResponseStatusException handleExceptionInternal(
+            ResponseStatusException e, WebRequest request) {
         logException(e, request);
 
         return e;

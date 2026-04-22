@@ -28,9 +28,13 @@ public interface CreateClassLayoutDataUseCase {
      * Creates the diagram layout data for a newly created class
      *
      * @param graphIdentifier the identifier of the graph
-     * @param packageDTO      the DTO used for creating the new class
-     * @param className       the name of the newly created class
-     * @param classUUID       the UUID of the newly created class
+     * @param packageDTO the DTO used for creating the new class
+     * @param className the name of the newly created class
+     * @param classUUID the UUID of the newly created class
      */
-    void createClassLayoutData(GraphIdentifier graphIdentifier, PackageDTO packageDTO, String className, UUID classUUID);
+    void createClassLayoutData(
+            GraphIdentifier graphIdentifier,
+            PackageDTO packageDTO,
+            String className,
+            UUID classUUID);
 }

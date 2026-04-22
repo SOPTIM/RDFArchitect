@@ -30,7 +30,9 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {MappingUtils.class})
+@Mapper(
+        componentModel = "spring",
+        uses = {MappingUtils.class})
 public interface EnumEntryMapper {
 
     EnumEntryMapper INSTANCE = Mappers.getMapper(EnumEntryMapper.class);
@@ -58,7 +60,8 @@ public interface EnumEntryMapper {
     }
 
     default RDFType buildType(EnumEntryDTO dto) {
-        return new RDFType(new URI(dto.getType()), new RDFSLabel(new URI(dto.getType()).getSuffix(), "en"));
+        return new RDFType(
+                new URI(dto.getType()), new RDFSLabel(new URI(dto.getType()).getSuffix(), "en"));
     }
 
     default CIMSStereotype buildStereotype(String stereotype) {

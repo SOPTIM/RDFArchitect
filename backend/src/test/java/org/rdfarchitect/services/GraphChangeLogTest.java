@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.services;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,9 +28,6 @@ import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.util.UUID;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class GraphChangeLogTest {
 

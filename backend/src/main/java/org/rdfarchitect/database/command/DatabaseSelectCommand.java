@@ -24,16 +24,13 @@ import org.rdfarchitect.rdf.formatter.ResultFormatter;
 
 import java.util.List;
 
-/**
- * Defines how to execute a SPARQL {@link Query} against a dataset of a database.
- */
+/** Defines how to execute a SPARQL {@link Query} against a dataset of a database. */
 public interface DatabaseSelectCommand {
 
     /**
      * Sets the endpoint where the database is accessible.
      *
      * @param endpoint Endpoint (e.g. url, path)
-     *
      * @return This {@link DatabaseSelectCommand}
      */
     DatabaseSelectCommand setEndpoint(String endpoint);
@@ -42,7 +39,6 @@ public interface DatabaseSelectCommand {
      * Sets the name of the dataset in the database a {@link Query} is executed against.
      *
      * @param datasetName Name of the dataset
-     *
      * @return This {@link DatabaseSelectCommand}
      */
     DatabaseSelectCommand setDatasetName(String datasetName);
@@ -51,7 +47,6 @@ public interface DatabaseSelectCommand {
      * Sets the {@link Query} to be executed.
      *
      * @param query {@link Query}
-     *
      * @return This {@link DatabaseSelectCommand object} with the select query set
      */
     DatabaseSelectCommand setQuery(Query query);
@@ -63,9 +58,7 @@ public interface DatabaseSelectCommand {
      */
     ResultFormatter execute() throws DataAccessException;
 
-    /**
-     * Get the {@link PrefixMapping} of a specified dataset from the database.
-     */
+    /** Get the {@link PrefixMapping} of a specified dataset from the database. */
     PrefixMapping getCurrentPrefixMapping();
 
     /**

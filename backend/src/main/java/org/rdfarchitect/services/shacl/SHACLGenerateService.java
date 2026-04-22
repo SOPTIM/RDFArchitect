@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.shacl;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -37,7 +38,8 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public String exportGeneratedSHACLGraph(GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
+    public String exportGeneratedSHACLGraph(
+            GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
         GraphRewindable ontologyGraph = null;
         var prefixes = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
         try (var outStream = new ByteArrayOutputStream()) {

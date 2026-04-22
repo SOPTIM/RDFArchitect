@@ -18,13 +18,12 @@
 package org.rdfarchitect.models.cim.rdf.resources;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 
-/**
- * Class containing stereotype {@link Resource resources} for CIM.
- */
+/** Class containing stereotype {@link Resource resources} for CIM. */
 @UtilityClass
 public class CIMStereotypes {
 

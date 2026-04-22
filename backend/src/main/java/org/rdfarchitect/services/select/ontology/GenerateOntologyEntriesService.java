@@ -18,12 +18,13 @@
 package org.rdfarchitect.services.select.ontology;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
-import org.rdfarchitect.models.cim.ontology.OntologyGeneratableEntriesBuilder;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.ontology.OntologyGeneratableEntriesBuilder;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
@@ -46,9 +47,9 @@ public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUs
             var model = ModelFactory.createModelForGraph(graph);
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
             return new OntologyGeneratableEntriesBuilder(model)
-                      .generateDCTModified(changeLogUseCase.listChanges(graphIdentifier))
-                      .generateDCTIssued()
-                      .build();
+                    .generateDCTModified(changeLogUseCase.listChanges(graphIdentifier))
+                    .generateDCTIssued()
+                    .build();
         } finally {
             if (graph != null) {
                 graph.end();

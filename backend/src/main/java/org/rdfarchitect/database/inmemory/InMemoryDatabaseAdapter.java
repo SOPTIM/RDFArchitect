@@ -18,6 +18,7 @@
 package org.rdfarchitect.database.inmemory;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
@@ -57,9 +58,10 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     @Override
     public void createGraph(GraphIdentifier graphIdentifier, Graph graph) {
         database.create(graphIdentifier, graph);
-        var currentPrefixMapping = new PrefixMappingImpl()
-                  .setNsPrefixes(database.getPrefixMapping(graphIdentifier.getDatasetName()))
-                  .setNsPrefixes(graph.getPrefixMapping());
+        var currentPrefixMapping =
+                new PrefixMappingImpl()
+                        .setNsPrefixes(database.getPrefixMapping(graphIdentifier.getDatasetName()))
+                        .setNsPrefixes(graph.getPrefixMapping());
         database.setPrefixMapping(graphIdentifier.getDatasetName(), currentPrefixMapping);
     }
 
@@ -70,10 +72,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
         database.create(graphIdentifier, GraphFactory.createDefaultGraph());
         if (isNewDataset) {
             database.enableEditing(datasetName);
-            var prefixMapping = new PrefixMappingImpl()
-                      .setNsPrefixes(PrefixMapping.Standard)
-                      .setNsPrefix(CIM_PREFIX, CIM.namespace)
-                      .setNsPrefix(CIMS_PREFIX, CIMS.namespace);
+            var prefixMapping =
+                    new PrefixMappingImpl()
+                            .setNsPrefixes(PrefixMapping.Standard)
+                            .setNsPrefix(CIM_PREFIX, CIM.namespace)
+                            .setNsPrefix(CIMS_PREFIX, CIMS.namespace);
             database.setPrefixMapping(graphIdentifier.getDatasetName(), prefixMapping);
         }
     }

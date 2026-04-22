@@ -19,12 +19,14 @@ package org.rdfarchitect.models.changes.semanticchanges;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
@@ -32,40 +34,38 @@ import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Base class for all semantic resource changes.
- */
+/** Base class for all semantic resource changes. */
 @Data
 @SuperBuilder
-@EqualsAndHashCode(callSuper=false)
+@EqualsAndHashCode(callSuper = false)
 @AllArgsConstructor
 @NoArgsConstructor
-@JsonTypeInfo(
-          use = JsonTypeInfo.Id.NAME,
-          include = JsonTypeInfo.As.PROPERTY,
-          property = "type"
-)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 @JsonSubTypes({
-          @JsonSubTypes.Type(value = SemanticClassChange.class, name = "classChange"),
-          @JsonSubTypes.Type(value = SemanticPackageChange.class, name = "packageChange"),
-          @JsonSubTypes.Type(value = SemanticAttributeChange.class, name = "attributeChange"),
-          @JsonSubTypes.Type(value = SemanticResourceChange.class, name = "genericResourceChange"),
-          @JsonSubTypes.Type(value = SemanticAssociationChange.class, name = "associationChange"),
-          @JsonSubTypes.Type(value = SemanticEnumEntryChange.class, name = "enumEntryChange")
+    @JsonSubTypes.Type(value = SemanticClassChange.class, name = "classChange"),
+    @JsonSubTypes.Type(value = SemanticPackageChange.class, name = "packageChange"),
+    @JsonSubTypes.Type(value = SemanticAttributeChange.class, name = "attributeChange"),
+    @JsonSubTypes.Type(value = SemanticResourceChange.class, name = "genericResourceChange"),
+    @JsonSubTypes.Type(value = SemanticAssociationChange.class, name = "associationChange"),
+    @JsonSubTypes.Type(value = SemanticEnumEntryChange.class, name = "enumEntryChange")
 })
-public sealed class SemanticResourceChange permits SemanticClassChange, SemanticPackageChange, SemanticAttributeChange, SemanticAssociationChange, SemanticEnumEntryChange {
+public sealed class SemanticResourceChange
+        permits SemanticClassChange,
+                SemanticPackageChange,
+                SemanticAttributeChange,
+                SemanticAssociationChange,
+                SemanticEnumEntryChange {
 
     protected SemanticResourceChangeType semanticResourceChangeType;
 
     protected String label;
 
-    //only set in case of a rename
+    // only set in case of a rename
     protected String oldIRI;
 
     protected String iri;
 
-    @Builder.Default
-    protected List<SemanticFieldChange> changes =  new ArrayList<>();
+    @Builder.Default protected List<SemanticFieldChange> changes = new ArrayList<>();
 
     public SemanticResourceChange(String label) {
         this.label = label;
@@ -74,7 +74,7 @@ public sealed class SemanticResourceChange permits SemanticClassChange, Semantic
 
     public SemanticResourceChange(TripleResourceChange tripleChange) {
         this.label = tripleChange.getLabel();
-        this.iri =  tripleChange.getUri();
+        this.iri = tripleChange.getUri();
         this.changes = new ArrayList<>();
     }
 

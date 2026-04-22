@@ -44,9 +44,12 @@ public class FileConnectionImpl implements DatabaseConnection {
         this.path = path;
         this.defaultDataset = defaultDataset;
         this.lang = lang;
-        new FileDatabase(this.path, this.lang)
-                  .createDatabase();
-        logger.info("Initialized a file databaseConnection at: {} with default dataset: {} using language: {}", this.path, this.defaultDataset, this.lang.getName());
+        new FileDatabase(this.path, this.lang).createDatabase();
+        logger.info(
+                "Initialized a file databaseConnection at: {} with default dataset: {} using language: {}",
+                this.path,
+                this.defaultDataset,
+                this.lang.getName());
     }
 
     @Override
@@ -57,10 +60,10 @@ public class FileConnectionImpl implements DatabaseConnection {
     @Override
     public void sendInsert(Update insertUpdate, String datasetName) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .setUpdate(insertUpdate)
-                  .execute();
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .setUpdate(insertUpdate)
+                .execute();
     }
 
     @Override
@@ -69,11 +72,12 @@ public class FileConnectionImpl implements DatabaseConnection {
     }
 
     @Override
-    public void insertGraph(GraphSource graphSource, String datasetName) throws DataAccessException {
+    public void insertGraph(GraphSource graphSource, String datasetName)
+            throws DataAccessException {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .insertGraph(graphSource);
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .insertGraph(graphSource);
     }
 
     @Override
@@ -84,10 +88,10 @@ public class FileConnectionImpl implements DatabaseConnection {
     @Override
     public void sendDelete(Update deleteUpdate, String datasetName) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .setUpdate(deleteUpdate)
-                  .execute();
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .setUpdate(deleteUpdate)
+                .execute();
     }
 
     @Override
@@ -98,9 +102,9 @@ public class FileConnectionImpl implements DatabaseConnection {
     @Override
     public void deleteGraph(String datasetName, String graphName) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .deleteGraph(graphName);
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .deleteGraph(graphName);
     }
 
     @Override
@@ -121,9 +125,9 @@ public class FileConnectionImpl implements DatabaseConnection {
     @Override
     public void deleteDataset(String datasetName) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .deleteDataset();
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .deleteDataset();
     }
 
     @Override
@@ -134,10 +138,10 @@ public class FileConnectionImpl implements DatabaseConnection {
     @Override
     public void sendUpdate(Update update, String datasetName) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .setUpdate(update)
-                  .execute();
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .setUpdate(update)
+                .execute();
     }
 
     @Override
@@ -148,40 +152,38 @@ public class FileConnectionImpl implements DatabaseConnection {
     @Override
     public ResultFormatter sendSelect(Query query, String datasetName) {
         return new FileSelectCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .setQuery(query)
-                  .execute();
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .setQuery(query)
+                .execute();
     }
 
     @Override
     public PrefixMappingReadOnly getPrefixMapping(String datasetName) {
         return new FileSelectCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .getCurrentPrefixMapping();
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .getCurrentPrefixMapping();
     }
 
     @Override
     public void addPrefix(String datasetName, String prefix, String uri) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .addPrefix(prefix, uri);
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .addPrefix(prefix, uri);
     }
 
     @Override
     public void deletePrefix(String datasetName, String prefix) {
         new FileUpdateCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .deletePrefix(prefix);
+                .setEndpoint(this.path)
+                .setDatasetName(datasetName)
+                .deletePrefix(prefix);
     }
 
     @Override
     public List<String> listDatasets() {
-        return new FileSelectCommandImpl(this.lang)
-                  .setEndpoint(this.path)
-                  .listDatasets();
+        return new FileSelectCommandImpl(this.lang).setEndpoint(this.path).listDatasets();
     }
 }

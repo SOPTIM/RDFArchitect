@@ -26,7 +26,8 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.DatatypePropertyShapeBuilder;
 
-public class DatatypePropertyShapeFromCIMAttributeGenerator implements PropertyShapeFromCIMPropertyGenerator {
+public class DatatypePropertyShapeFromCIMAttributeGenerator
+        implements PropertyShapeFromCIMPropertyGenerator {
 
     private static final String PROPERTY_GROUP_LABEL = "DatatypeGroup";
 
@@ -57,25 +58,29 @@ public class DatatypePropertyShapeFromCIMAttributeGenerator implements PropertyS
     @Override
     public Resource createPropertyShape(Resource attribute) {
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
-            throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
+            throw new IllegalStateException(
+                    "Models and prefix must be set before creating property shapes.");
         }
-        if(!CIMPropertyUtils.isAttribute(attribute)) {
+        if (!CIMPropertyUtils.isAttribute(attribute)) {
             return null; // This converter only creates shapes for attributes
         }
         var order = CIMPropertySHACLUtils.getOrder(ontologyModel, attribute.getURI());
-        var propertyShapeBuilder = new DatatypePropertyShapeBuilder(shaclModel)
-                .setPrefixEntry(shaclPrefix)
-                .setAttributeUri(attribute.getURI())
-                .setOrder(order)
-                .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL);
-        if (CIMAttributeUtils.hasPrimitiveDatatype(attribute) || CIMAttributeUtils.hasCIMDatatype(attribute) || CIMAttributeUtils.hasXSDDatatype(attribute)) {
-            propertyShapeBuilder.setPrimitiveDatatype(CIMAttributeUtils.getPrimitiveDatatype(attribute));
+        var propertyShapeBuilder =
+                new DatatypePropertyShapeBuilder(shaclModel)
+                        .setPrefixEntry(shaclPrefix)
+                        .setAttributeUri(attribute.getURI())
+                        .setOrder(order)
+                        .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL);
+        if (CIMAttributeUtils.hasPrimitiveDatatype(attribute)
+                || CIMAttributeUtils.hasCIMDatatype(attribute)
+                || CIMAttributeUtils.hasXSDDatatype(attribute)) {
+            propertyShapeBuilder.setPrimitiveDatatype(
+                    CIMAttributeUtils.getPrimitiveDatatype(attribute));
         } else if (CIMAttributeUtils.hasEnumAttribute(attribute)) {
-            propertyShapeBuilder.setDatatypeUris(CIMAttributeUtils.listEnumDatatypeEntries(attribute)
-                    .stream()
-                    .map(Resource::getURI)
-                    .toList()
-            );
+            propertyShapeBuilder.setDatatypeUris(
+                    CIMAttributeUtils.listEnumDatatypeEntries(attribute).stream()
+                            .map(Resource::getURI)
+                            .toList());
         } else if (CIMAttributeUtils.isStatementAttribute(attribute)) {
             propertyShapeBuilder.setPrimitiveDatatype(XMLLiteralType.rdfXMLLiteral);
         } else {

@@ -22,9 +22,7 @@ import lombok.Data;
 
 import java.util.UUID;
 
-/**
- * DTO representing a SvelteFlow edge.
- */
+/** DTO representing a SvelteFlow edge. */
 @Data
 @Builder
 public class EdgeDTO {

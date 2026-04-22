@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.rendering.mermaid;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -24,35 +26,29 @@ import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMEnumEntryToMermaidBuilder;
 
-import static org.assertj.core.api.Assertions.*;
-
 class CIMEnumEntryToMermaidBuilderTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"enumEntry", "var", "x", "1", "\"sdf!§$", ""})
     void build_validEnumEntry_returnsMermaidEnumEntry(String enumEntryLabel) {
-        //Arrange
-        var enumEntry = CIMEnumEntry.builder()
-                                    .label(new RDFSLabel(enumEntryLabel))
-                                    .build();
+        // Arrange
+        var enumEntry = CIMEnumEntry.builder().label(new RDFSLabel(enumEntryLabel)).build();
         var builder = new CIMEnumEntryToMermaidBuilder(enumEntry);
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
+        // Assert
         assertThat(result).isEqualTo(enumEntryLabel + "\n");
     }
 
     @Test
     void build_validEnumEntryWithNullLabel_throwsException() {
-        //Arrange
-        var enumEntry = CIMEnumEntry.builder()
-                                    .label(null)
-                                    .build();
+        // Arrange
+        var enumEntry = CIMEnumEntry.builder().label(null).build();
         var builder = new CIMEnumEntryToMermaidBuilder(enumEntry);
 
-        //Act/Assert
+        // Act/Assert
         assertThatException().isThrownBy(builder::build);
     }
 }

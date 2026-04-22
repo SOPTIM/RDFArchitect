@@ -19,9 +19,7 @@ package org.rdfarchitect.database.implementations;
 
 import java.util.List;
 
-/**
- * Defines how to manage datasets in a database and provide other database utilities.
- */
+/** Defines how to manage datasets in a database and provide other database utilities. */
 public interface DatabaseAdminProtocol {
 
     /**

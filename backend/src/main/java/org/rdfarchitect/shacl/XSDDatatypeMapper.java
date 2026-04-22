@@ -18,6 +18,7 @@
 package org.rdfarchitect.shacl;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.datatypes.BaseDatatype;
 import org.apache.jena.datatypes.RDFDatatype;
 import org.apache.jena.datatypes.TypeMapper;

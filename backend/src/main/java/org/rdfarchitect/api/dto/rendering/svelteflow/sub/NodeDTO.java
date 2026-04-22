@@ -22,9 +22,7 @@ import lombok.Data;
 
 import java.util.UUID;
 
-/**
- * DTO representing a SvelteFlow node.
- */
+/** DTO representing a SvelteFlow node. */
 @Data
 @Builder
 public class NodeDTO {

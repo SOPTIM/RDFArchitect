@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.riot.RDFLanguages;
@@ -69,7 +70,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public ImportResult importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris) {
+    public ImportResult importGraphs(
+            String datasetName, List<MultipartFile> files, List<String> graphUris) {
         var reservedGraphUris = loadExistingGraphUris(datasetName);
         var result = new ImportResult();
 
@@ -87,20 +89,20 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private String getRequestedGraphUri(List<String> graphUris, int index) {
         if (graphUris != null
-                  && graphUris.size() > index
-                  && graphUris.get(index) != null
-                  && !graphUris.get(index).isBlank()
-        ) {
+                && graphUris.size() > index
+                && graphUris.get(index) != null
+                && !graphUris.get(index).isBlank()) {
             return graphUris.get(index);
         }
         return null;
     }
 
-    private void importSingleFile(ImportResult result,
-                                  String datasetName,
-                                  MultipartFile file,
-                                  String requestedUri,
-                                  Set<String> reservedGraphUris) {
+    private void importSingleFile(
+            ImportResult result,
+            String datasetName,
+            MultipartFile file,
+            String requestedUri,
+            Set<String> reservedGraphUris) {
         try {
             var graphUri = normalizeGraphUri(requestedUri, file.getOriginalFilename());
             graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
@@ -123,17 +125,24 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private void recordChange(GraphIdentifier graphIdentifier, String datasetName) {
         createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
         changeLogUseCase.recordChange(
-                  graphIdentifier,
-                  new ChangeLogEntry(
-                            "Imported graph into dataset '" + datasetName + "' with graph URI '"
-                                      + graphIdentifier.getGraphUri() + "'.",
-                            databasePort.getGraphWithContext(graphIdentifier).getRdfGraph().getLastDelta()
-                  )
-                                     );
+                graphIdentifier,
+                new ChangeLogEntry(
+                        "Imported graph into dataset '"
+                                + datasetName
+                                + "' with graph URI '"
+                                + graphIdentifier.getGraphUri()
+                                + "'.",
+                        databasePort
+                                .getGraphWithContext(graphIdentifier)
+                                .getRdfGraph()
+                                .getLastDelta()));
     }
 
-    private void importZipFile(ImportResult result, String datasetName,
-                               MultipartFile file, Set<String> reservedGraphUris) {
+    private void importZipFile(
+            ImportResult result,
+            String datasetName,
+            MultipartFile file,
+            Set<String> reservedGraphUris) {
         try (var zipInputStream = new ZipInputStream(file.getInputStream())) {
             ZipEntry entry;
             int entryCount = 0;
@@ -143,10 +152,12 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                     throw new DataAccessException("ZIP file contains too many entries.");
                 }
                 if (entry.getSize() > MAX_ENTRY_SIZE) {
-                    throw new DataAccessException("ZIP entry exceeds maximum allowed size: " + entry.getName());
+                    throw new DataAccessException(
+                            "ZIP entry exceeds maximum allowed size: " + entry.getName());
                 }
                 try {
-                    extractAndImportZipEntry(result, datasetName, entry, zipInputStream, reservedGraphUris);
+                    extractAndImportZipEntry(
+                            result, datasetName, entry, zipInputStream, reservedGraphUris);
                 } finally {
                     zipInputStream.closeEntry();
                 }
@@ -156,16 +167,22 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         }
     }
 
-    private void extractAndImportZipEntry(ImportResult result, String datasetName,
-                                          ZipEntry entry, ZipInputStream zipInputStream,
-                                          Set<String> reservedGraphUris) throws IOException {
+    private void extractAndImportZipEntry(
+            ImportResult result,
+            String datasetName,
+            ZipEntry entry,
+            ZipInputStream zipInputStream,
+            Set<String> reservedGraphUris)
+            throws IOException {
         if (entry.isDirectory()) {
             return;
         }
         var entryName = entry.getName();
         if (!isGraphFile(entryName)) {
-            logger.warn("Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.",
-                        entryName, datasetName);
+            logger.warn(
+                    "Skipping ZIP entry '{}' for dataset '{}' because it is not a supported file.",
+                    entryName,
+                    datasetName);
             return;
         }
         var extractedFile = toMultipartFile(entryName, zipInputStream);
@@ -182,10 +199,10 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private Graph parseGraph(MultipartFile file, String graphUri) {
         return new GraphFileSourceBuilderImpl()
-                  .setFile(file)
-                  .setGraphName(graphUri)
-                  .build()
-                  .graph();
+                .setFile(file)
+                .setGraphName(graphUri)
+                .build()
+                .graph();
     }
 
     private String ensureUniqueGraphUri(String graphUri, Set<String> reservedGraphUris) {
@@ -209,8 +226,10 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
         var lastPathSegment = Paths.get(name).getFileName().toString();
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
-        var sanitized = lastPathSegment.substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
-                                       .replaceAll("\\W", "_");
+        var sanitized =
+                lastPathSegment
+                        .substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
+                        .replaceAll("\\W", "_");
 
         if (sanitized.isBlank()) {
             sanitized = FALL_BACK_NAME;
@@ -240,13 +259,13 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private String guessContentType(String fileName) {
         return Objects.requireNonNullElse(
-                  URLConnection.guessContentTypeFromName(fileName),
-                  MediaType.APPLICATION_OCTET_STREAM_VALUE
-                                         );
+                URLConnection.guessContentTypeFromName(fileName),
+                MediaType.APPLICATION_OCTET_STREAM_VALUE);
     }
 
-    private record SimpleMultipartFile(String name, String originalFilename, String contentType,
-                                       byte[] content) implements MultipartFile {
+    private record SimpleMultipartFile(
+            String name, String originalFilename, String contentType, byte[] content)
+            implements MultipartFile {
 
         @Override
         public @NotNull String getName() {
@@ -293,13 +312,19 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             if (this == o) {
                 return true;
             }
-            if (!(o instanceof SimpleMultipartFile(String name1, String filename, String type, byte[] content1))) {
+            if (!(o
+                    instanceof
+                    SimpleMultipartFile(
+                            String name1,
+                            String filename,
+                            String type,
+                            byte[] content1))) {
                 return false;
             }
             return Objects.equals(name, name1)
-                      && Objects.equals(originalFilename, filename)
-                      && Objects.equals(contentType, type)
-                      && Arrays.equals(content, content1);
+                    && Objects.equals(originalFilename, filename)
+                    && Objects.equals(contentType, type)
+                    && Arrays.equals(content, content1);
         }
 
         @Override
@@ -312,7 +337,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         @Override
         public @NotNull String toString() {
             return "SimpleMultipartFile[name=%s, originalFilename=%s, contentType=%s, contentLength=%d]"
-                      .formatted(name, originalFilename, contentType, content.length);
+                    .formatted(name, originalFilename, contentType, content.length);
         }
     }
 }

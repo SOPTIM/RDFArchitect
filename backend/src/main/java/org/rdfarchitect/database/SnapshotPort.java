@@ -17,16 +17,13 @@
 
 package org.rdfarchitect.database;
 
-/**
- * Port interface for snapshot management operations
- */
+/** Port interface for snapshot management operations */
 public interface SnapshotPort {
 
     /**
      * Creates a snapshot of the current state of the specified dataset
      *
      * @param datasetName Name of the dataset to be snapshot
-     *
      * @return The Base64 token under which the snapshot has been persisted in the database
      */
     String createSnapshot(String datasetName);

@@ -23,8 +23,8 @@ public interface DeleteOntologyUseCase {
 
     /**
      * Deletes the ontology associated with the given graph identifier.
+     *
      * @param graphIdentifier The identifier of the graph whose ontology is to be deleted.
      */
     void deleteOntology(GraphIdentifier graphIdentifier);
-
 }

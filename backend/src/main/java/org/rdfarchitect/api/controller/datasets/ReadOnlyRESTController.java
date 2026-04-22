@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.readonly.DisableEditingUseCase;
 import org.rdfarchitect.services.readonly.EnableEditingUseCase;
@@ -51,26 +53,28 @@ public class ReadOnlyRESTController {
             summary = "is read only",
             description = "Check whether dataset is read-only",
             tags = {"dataset", "read-only"},
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200"
-                    )
-            }
-    )
-
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
     public boolean isReadOnly(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/readonly\" from \"{}\".", datasetName, originURL);
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/readonly\" from \"{}\".",
+                datasetName,
+                originURL);
 
         var isReadOnly = isReadOnlyUseCase.isReadOnly(datasetName);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/readonly\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/readonly\" to \"{}\".",
+                datasetName,
+                originURL);
         return isReadOnly;
     }
 
@@ -78,51 +82,57 @@ public class ReadOnlyRESTController {
             summary = "enable editing",
             description = "Enables editing for specified dataset",
             tags = {"dataset", "read-only"},
-            responses = {
-                    @ApiResponse(
-                            responseCode = "200"
-                    )
-            }
-    )
+            responses = {@ApiResponse(responseCode = "200")})
     @PutMapping
     public String enableEditing(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/readonly\" from \"{}\".", datasetName, originURL);
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/readonly\" from \"{}\".",
+                datasetName,
+                originURL);
 
         enableEditingUseCase.enableEditing(datasetName);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/readonly\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/readonly\" to \"{}\".",
+                datasetName,
+                originURL);
         return Response.SUCCESS;
     }
 
     @Operation(
-              summary = "disable editing",
-              description = "Disables editing for specified dataset",
-              tags = {"dataset", "read-only"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200"
-                        )
-              }
-    )
+            summary = "disable editing",
+            description = "Disables editing for specified dataset",
+            tags = {"dataset", "read-only"},
+            responses = {@ApiResponse(responseCode = "200")})
     @DeleteMapping
     public String disableEditing(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/readonly\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/readonly\" from \"{}\".",
+                datasetName,
+                originURL);
 
         disableEditingUseCase.disableEditing(datasetName);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/readonly\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/readonly\" to \"{}\".",
+                datasetName,
+                originURL);
         return Response.SUCCESS;
     }
 }

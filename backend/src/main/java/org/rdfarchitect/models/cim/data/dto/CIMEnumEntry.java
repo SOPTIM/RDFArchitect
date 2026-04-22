@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.data.dto;
 
 import lombok.Builder;
 import lombok.Data;
+
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;

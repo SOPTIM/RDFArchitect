@@ -22,11 +22,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
-import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.attributes.CreateAttributeUseCase;
 import org.rdfarchitect.services.update.classes.attributes.UpdateAttributesUseCase;
@@ -49,81 +51,113 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ClassAllAttributesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassAllAttributesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ClassAllAttributesRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final CreateAttributeUseCase createAttributeUseCase;
     private final UpdateAttributesUseCase updateAttributesUseCase;
 
     @Operation(
-              summary = "Create attribute",
-              description = "Creates a new attribute for a specified class.",
-              tags = {"class"}
-    )
+            summary = "Create attribute",
+            description = "Creates a new attribute for a specified class.",
+            tags = {"class"})
     @PostMapping
     public UUID createAttribute(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new attribute", content = @Content(
-                        schema = @Schema(implementation = AttributeDTO.class)
-              ))
-              @RequestBody AttributeDTO attribute) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new attribute",
+                            content =
+                                    @Content(schema = @Schema(implementation = AttributeDTO.class)))
+                    @RequestBody
+                    AttributeDTO attribute) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         var newAttributeUUID = createAttributeUseCase.createAttribute(graphIdentifier, attribute);
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return newAttributeUUID;
     }
 
     @Operation(
-              summary = "Replace all attributes",
-              description = "Replaces all attributes of a specified class.",
-              tags = {"class"}
-    )
+            summary = "Replace all attributes",
+            description = "Replaces all attributes of a specified class.",
+            tags = {"class"})
     @PutMapping
     public String replaceAllAttributes(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new attribute", content = @Content(
-                        array = @ArraySchema(schema = @Schema(implementation = CIMAttribute.class))
-              ))
-              @RequestBody List<AttributeDTO> attributeList) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new attribute",
+                            content =
+                                    @Content(
+                                            array =
+                                                    @ArraySchema(
+                                                            schema =
+                                                                    @Schema(
+                                                                            implementation =
+                                                                                    CIMAttribute
+                                                                                            .class))))
+                    @RequestBody
+                    List<AttributeDTO> attributeList) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         updateAttributesUseCase.replaceAllAttributes(graphIdentifier, classUUID, attributeList);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return Response.SUCCESS;
     }
 }

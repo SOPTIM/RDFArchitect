@@ -21,24 +21,24 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * Class containing variables for SPARQL queries that are used in the context of the CGMES DiagramLayout Profile.
- * This is to ensure they are the same over multiple files.
- * This prohibits typos in query and results.
+ * Class containing variables for SPARQL queries that are used in the context of the CGMES
+ * DiagramLayout Profile. This is to ensure they are the same over multiple files. This prohibits
+ * typos in query and results.
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class DLQueryVars {
 
-    //DIAGRAM
+    // DIAGRAM
     public static final String DIAGRAM_MRID = "?diagramMRID";
     public static final String DIAGRAM_NAME = "?diagramName";
     public static final String ORIENTATION = "?orientation";
 
-    //DIAGRAMOBJECT
+    // DIAGRAMOBJECT
     public static final String DO_MRID = "?doMRID";
     public static final String DO_NAME = "?doName";
     public static final String IO_MRID = "?ioMRID";
 
-    //DIAGRAMOBJECTPOINT
+    // DIAGRAMOBJECTPOINT
     public static final String DOP_MRID = "?dopMRID";
     public static final String X_POSITION = "?xPosition";
     public static final String Y_POSITION = "?yPosition";

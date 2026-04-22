@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.rdf.graph.wrapper;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
@@ -24,8 +26,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Comparator;
-
-import static org.assertj.core.api.Assertions.*;
 
 class SortedGraphTest {
 

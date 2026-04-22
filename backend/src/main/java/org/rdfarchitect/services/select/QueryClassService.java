@@ -18,18 +18,19 @@
 package org.rdfarchitect.services.select;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
 import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
@@ -40,22 +41,29 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class QueryClassService implements GetClassInformationUseCase, ListSuperClassesUseCase, GetClassesReferencingThisClassUseCase {
+public class QueryClassService
+        implements GetClassInformationUseCase,
+                ListSuperClassesUseCase,
+                GetClassesReferencingThisClassUseCase {
 
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
     private final ClassMapper mapper;
 
     @Override
-    public ClassUMLAdaptedDTO getClassInformation(GraphIdentifier graphIdentifier, String classUUID) {
+    public ClassUMLAdaptedDTO getClassInformation(
+            GraphIdentifier graphIdentifier, String classUUID) {
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
 
             var cimClass =
-                      CIMUMLObjectFactory.createCIMClassUMLAdapted(graph, graphIdentifier.getGraphUri(), databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                                                                   classUUID);
+                    CIMUMLObjectFactory.createCIMClassUMLAdapted(
+                            graph,
+                            graphIdentifier.getGraphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            classUUID);
             return umlAdaptedClassMapper.toDTO(cimClass);
         } finally {
             if (graph != null) {
@@ -72,14 +80,20 @@ public class QueryClassService implements GetClassInformationUseCase, ListSuperC
             graph.begin(TxnType.READ);
 
             var superClassList = new ArrayList<CIMClass>();
-            var cimObjectFetcher = new CIMObjectFetcher(graph, graphIdentifier.getGraphUri(), databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            var cimObjectFetcher =
+                    new CIMObjectFetcher(
+                            graph,
+                            graphIdentifier.getGraphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
             var baseClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
-            superClassList.add(cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));
+            superClassList.add(
+                    cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));
 
             for (var i = 0; i < superClassList.size(); i++) {
                 var superClass = superClassList.get(i);
                 if (superClass != null) {
-                    superClassList.add(cimObjectFetcher.fetchCIMClass(superClass.getUri().toString()));
+                    superClassList.add(
+                            cimObjectFetcher.fetchCIMClass(superClass.getUri().toString()));
                 }
             }
             return mapper.toDTOList(superClassList);
@@ -91,7 +105,8 @@ public class QueryClassService implements GetClassInformationUseCase, ListSuperC
     }
 
     @Override
-    public ClassRelationsDTO getClassesReferencingThisClass(GraphIdentifier graphIdentifier, UUID classUUID) {
+    public ClassRelationsDTO getClassesReferencingThisClass(
+            GraphIdentifier graphIdentifier, UUID classUUID) {
         GraphRewindable graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();

@@ -17,6 +17,10 @@
 
 package org.rdfarchitect.services.update.graph;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
 import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,10 +37,6 @@ import org.springframework.mock.web.MockMultipartFile;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 class ImportGraphsServiceTest {
 
     private ImportGraphsUseCase importGraphsUseCase;
@@ -48,52 +48,52 @@ class ImportGraphsServiceTest {
         changeLogUseCaseMock = mock(ChangeLogUseCase.class);
         var createDiagramLayoutUseCaseMock = mock(CreateDiagramLayoutUseCase.class);
         databasePortMock = mock(DatabasePort.class);
-        importGraphsUseCase = new ImportGraphsService(changeLogUseCaseMock, createDiagramLayoutUseCaseMock, databasePortMock);
+        importGraphsUseCase =
+                new ImportGraphsService(
+                        changeLogUseCaseMock, createDiagramLayoutUseCaseMock, databasePortMock);
     }
 
     @Test
     void importGraphs_sameFileNameTwice_autoGeneratesUniqueGraphUris() {
         var datasetName = "ds";
 
-        var file1 = new MockMultipartFile(
-                  "graph",
-                  "graph.ttl",
-                  "text/turtle",
-                  "@prefix ex: <http://example.com/> . ex:a ex:b ex:c .".getBytes(StandardCharsets.UTF_8)
-        );
-        var file2 = new MockMultipartFile(
-                  "graph",
-                  "graph.ttl",
-                  "text/turtle",
-                  "@prefix ex: <http://example.com/> . ex:d ex:e ex:f .".getBytes(StandardCharsets.UTF_8)
-        );
+        var file1 =
+                new MockMultipartFile(
+                        "graph",
+                        "graph.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:a ex:b ex:c ."
+                                .getBytes(StandardCharsets.UTF_8));
+        var file2 =
+                new MockMultipartFile(
+                        "graph",
+                        "graph.ttl",
+                        "text/turtle",
+                        "@prefix ex: <http://example.com/> . ex:d ex:e ex:f ."
+                                .getBytes(StandardCharsets.UTF_8));
 
         when(databasePortMock.listGraphUris(datasetName))
-                  .thenThrow(new RuntimeException("dataset does not exist"));
+                .thenThrow(new RuntimeException("dataset does not exist"));
 
         var graphWithContextMock = mock(GraphWithContext.class);
-        when(databasePortMock.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(graphWithContextMock);
+        when(databasePortMock.getGraphWithContext(any(GraphIdentifier.class)))
+                .thenReturn(graphWithContextMock);
         var graphMock = mock(GraphRewindableWithUUIDs.class, RETURNS_DEEP_STUBS);
         when(graphWithContextMock.getRdfGraph()).thenReturn(graphMock);
 
         var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
 
         assertThat(result.failedFileNames()).isEmpty();
-        assertThat(result.importedGraphUris()).containsExactly(
-                  RDFA.GRAPH_URI + "graph",
-                  RDFA.GRAPH_URI + "graph_1"
-                                                              );
+        assertThat(result.importedGraphUris())
+                .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
 
         var captor = ArgumentCaptor.forClass(GraphIdentifier.class);
 
         verify(databasePortMock, times(2)).createGraph(captor.capture(), any(Graph.class));
 
         assertThat(captor.getAllValues())
-                  .extracting(GraphIdentifier::getGraphUri)
-                  .containsExactly(
-                            RDFA.GRAPH_URI + "graph",
-                            RDFA.GRAPH_URI + "graph_1"
-                                  );
+                .extracting(GraphIdentifier::getGraphUri)
+                .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
 
         verify(changeLogUseCaseMock, times(2)).recordChange(any(GraphIdentifier.class), any());
     }

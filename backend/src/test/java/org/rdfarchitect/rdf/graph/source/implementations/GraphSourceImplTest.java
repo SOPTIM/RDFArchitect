@@ -17,13 +17,13 @@
 
 package org.rdfarchitect.rdf.graph.source.implementations;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.assertj.core.api.Assertions.*;
 
 class GraphSourceImplTest {
 
@@ -41,7 +41,15 @@ class GraphSourceImplTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://localhost:1", "https://localhost:1", "http://www.google.de", "http://", "https://", "default"})
+    @ValueSource(
+            strings = {
+                "http://localhost:1",
+                "https://localhost:1",
+                "http://www.google.de",
+                "http://",
+                "https://",
+                "default"
+            })
     void getGraphName_validGraphName_returnsSameGraphName(String graphName) {
         // Arrange
         Graph graph = GraphFactory.createDefaultGraph();
@@ -55,7 +63,15 @@ class GraphSourceImplTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://localhost:1", "https://localhost:1", "http://www.google.de", "http://", "https://", "default"})
+    @ValueSource(
+            strings = {
+                "http://localhost:1",
+                "https://localhost:1",
+                "http://www.google.de",
+                "http://",
+                "https://",
+                "default"
+            })
     void getGraphSourceType_anyInput_returnsSameGraphSourceType(String graphName) {
         // Arrange
         Graph graph = GraphFactory.createDefaultGraph();

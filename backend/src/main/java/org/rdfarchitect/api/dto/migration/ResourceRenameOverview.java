@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.migration;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
@@ -38,18 +39,31 @@ public class ResourceRenameOverview<T extends SemanticResourceChange> {
     private List<RenameCandidate<T>> deletedAndRenamed;
 
     public ResourceRenameOverview(List<T> changes, List<RenameCandidate<T>> renameCandidates) {
-        this.added = changes.stream()
-                            .filter(change -> change.getSemanticResourceChangeType() == SemanticResourceChangeType.ADD)
-                            .toList();
-        this.modified = changes.stream()
-                               .filter(change -> change.getSemanticResourceChangeType() == SemanticResourceChangeType.CHANGE)
-                               .toList();
-        var deleted = changes.stream()
-                             .filter(change -> change.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE)
-                             .toList();
-        var mappedDeleted = renameCandidates.stream()
-                                            .map(r -> r.getOldResource().getLabel())
-                                            .collect(Collectors.toSet());
+        this.added =
+                changes.stream()
+                        .filter(
+                                change ->
+                                        change.getSemanticResourceChangeType()
+                                                == SemanticResourceChangeType.ADD)
+                        .toList();
+        this.modified =
+                changes.stream()
+                        .filter(
+                                change ->
+                                        change.getSemanticResourceChangeType()
+                                                == SemanticResourceChangeType.CHANGE)
+                        .toList();
+        var deleted =
+                changes.stream()
+                        .filter(
+                                change ->
+                                        change.getSemanticResourceChangeType()
+                                                == SemanticResourceChangeType.DELETE)
+                        .toList();
+        var mappedDeleted =
+                renameCandidates.stream()
+                        .map(r -> r.getOldResource().getLabel())
+                        .collect(Collectors.toSet());
 
         // Add all unmapped deletions as potential renamingCandidates with confidenceScore 0
         var deletedAndRenamedCandidates = new ArrayList<>(renameCandidates);
