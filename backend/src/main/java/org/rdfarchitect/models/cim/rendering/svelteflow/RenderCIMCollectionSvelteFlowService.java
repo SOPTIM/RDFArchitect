@@ -18,7 +18,6 @@
 package org.rdfarchitect.models.cim.rendering.svelteflow;
 
 import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -50,46 +49,50 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Converts a {@link CIMCollection} to a DTO Record that contains two JSON arrays with nodes and
- * edges used to render a UML diagram using the JavaScript library SvelteFlow.
+ * Converts a {@link CIMCollection} to a DTO Record that contains two JSON arrays with nodes and edges used to render a UML diagram using the JavaScript library SvelteFlow.
  */
 @RequiredArgsConstructor
 public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollectionUseCase {
 
-    // CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
+    //CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
     private static final String CLASS_NODE_TYPE = "class";
     private static final String INHERITANCE_EDGE_TYPE = "inheritance";
     private static final String ASSOCIATION_EDGE_TYPE = "association";
     private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
-    private final EnsureDiagramLayoutForCIMCollectionUseCase
-            ensureDiagramLayoutForCIMCollectionUseCase;
+    private final EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase;
 
     @Override
-    public RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
+    public RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return createEmptyDiagram();
         }
 
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
-                graphIdentifier, packageUUID, cimCollection);
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, packageUUID, cimCollection);
 
-        // setup
+        //setup
         var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
-        var renderingLayoutData =
-                fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
-                        graphIdentifier, packageUUID);
+        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(graphIdentifier, packageUUID);
 
-        var renderContext = new RenderContext(cimCollection, uriToUUIDMap, renderingLayoutData);
+        var renderContext = new RenderContext(
+                  cimCollection,
+                  uriToUUIDMap,
+                  renderingLayoutData
+        );
 
         var nodes = assembleNodeDTOList(renderContext);
         var edges = assembleEdgeDTOList(renderContext);
 
-        return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
+        return SvelteFlowDTO.builder()
+                            .nodes(nodes)
+                            .edges(edges)
+                            .build();
     }
 
     private SvelteFlowDTO createEmptyDiagram() {
-        return SvelteFlowDTO.builder().nodes(List.of()).edges(List.of()).build();
+        return SvelteFlowDTO.builder()
+                            .nodes(List.of())
+                            .edges(List.of())
+                            .build();
     }
 
     /**
@@ -109,35 +112,36 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Assembles a NodeDTO for a single CIM class.
      *
      * @param cimClass The CIM class to convert
+     *
      * @return NodeDTO containing class data
      */
     private NodeDTO assembleNodeDTO(RenderContext renderContext, CIMClass cimClass) {
         var dop = renderContext.layoutingData().getClassLayoutingData().get(cimClass.getUuid());
 
-        var nodeDTO = NodeDTO.builder().id(cimClass.getUuid()).type(CLASS_NODE_TYPE);
+        var nodeDTO = NodeDTO.builder()
+                             .id(cimClass.getUuid())
+                             .type(CLASS_NODE_TYPE);
 
         var stereotypes = getClassStereotypes(cimClass);
         var attributes = getClassAttributes(renderContext, cimClass);
         var enumEntries = getClassEnumEntries(renderContext, cimClass);
 
-        var positionDTO =
-                PositionDTO.builder()
-                        .x(dop.getPosition().getX())
-                        .y(dop.getPosition().getY())
-                        .build();
+        var positionDTO = PositionDTO.builder()
+                                     .x(dop.getPosition().getX())
+                                     .y(dop.getPosition().getY())
+                                     .z(dop.getPosition().getZ())
+                                     .build();
         nodeDTO.position(positionDTO);
 
-        var nodeDataDTO =
-                NodeDataDTO.builder()
-                        .label(cimClass.getLabel().getValue())
-                        .belongsToCategory(
-                                cimClass.getBelongsToCategory() != null
-                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
-                                        : null)
-                        .stereotypes(stereotypes)
-                        .attributes(attributes)
-                        .enumEntries(enumEntries)
-                        .build();
+        var nodeDataDTO = NodeDataDTO.builder()
+                                     .label(cimClass.getLabel().getValue())
+                                     .belongsToCategory(cimClass.getBelongsToCategory() != null
+                                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
+                                                        : null)
+                                     .stereotypes(stereotypes)
+                                     .attributes(attributes)
+                                     .enumEntries(enumEntries)
+                                     .build();
 
         nodeDTO.data(nodeDataDTO);
 
@@ -148,6 +152,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Returns a list of AttributeDTOs for all CIM attributes belonging to a CIM class.
      *
      * @param cimClass The CIM class
+     *
      * @return List of AttributeDTOs
      */
     private List<AttributeDTO> getClassAttributes(RenderContext renderContext, CIMClass cimClass) {
@@ -157,12 +162,11 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
             if (!cimAttribute.getDomain().getUri().equals(cimClass.getUri())) {
                 continue;
             }
-            attributeDTOs.add(
-                    AttributeDTO.builder()
-                            .label(cimAttribute.getLabel().getValue())
-                            .type(cimAttribute.getDataType().getLabel().getValue())
-                            .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
-                            .build());
+            attributeDTOs.add(AttributeDTO.builder()
+                                          .label(cimAttribute.getLabel().getValue())
+                                          .type(cimAttribute.getDataType().getLabel().getValue())
+                                          .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
+                                          .build());
         }
 
         return attributeDTOs;
@@ -172,14 +176,14 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Filters and returns all necessary stereotypes to render for a CIM class
      *
      * @param cimClass The CIM class
+     *
      * @return Sorted list of stereotype names
      */
     private List<String> getClassStereotypes(CIMClass cimClass) {
         var stereotypes = cimClass.getStereotypes();
         var stereotypesToRender = new ArrayList<String>();
 
-        if (CollectionUtils.isEmpty(stereotypes)
-                || !stereotypes.contains(new CIMSStereotype(CIMStereotypes.concrete.toString()))) {
+        if (CollectionUtils.isEmpty(stereotypes) || !stereotypes.contains(new CIMSStereotype(CIMStereotypes.concrete.toString()))) {
             stereotypesToRender.add("abstract");
         }
 
@@ -202,6 +206,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Returns all enum entries belonging to a CIM class.
      *
      * @param cimClass The CIM class
+     *
      * @return List of enum entry labels
      */
     private List<String> getClassEnumEntries(RenderContext renderContext, CIMClass cimClass) {
@@ -253,20 +258,20 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Assembles an inheritance edge from a class to its superclass.
      *
      * @param cimClass The child class
+     *
      * @return EdgeDTO representing the inheritance relationship
      */
     private EdgeDTO assembleInheritanceEdgeDTO(RenderContext renderContext, CIMClass cimClass) {
         var classUUID = renderContext.uriToUUIDMap.get(cimClass.getUri().toString());
-        var superClassUUID =
-                renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
+        var superClassUUID = renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
 
         return EdgeDTO.builder()
-                .id(UUID.randomUUID().toString())
-                .type(INHERITANCE_EDGE_TYPE)
-                .source(classUUID)
-                .target(superClassUUID)
-                .data(null)
-                .build();
+                      .id(UUID.randomUUID().toString())
+                      .type(INHERITANCE_EDGE_TYPE)
+                      .source(classUUID)
+                      .target(superClassUUID)
+                      .data(null)
+                      .build();
     }
 
     /**
@@ -278,18 +283,11 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         List<EdgeDTO> associationEdgeDTOList = new ArrayList<>();
         var handledAssociations = new HashSet<URI>();
         for (var from : renderContext.cimCollection.getAssociations()) {
-            var to =
-                    renderContext.cimCollection.getAssociations().stream()
-                            .filter(
-                                    possibleTo ->
-                                            from.getInverseRoleName()
-                                                    .getUri()
-                                                    .equals(possibleTo.getUri()))
-                            .findFirst()
-                            .orElse(null);
-            if (to == null
-                    || (handledAssociations.contains(from.getUri())
-                            && handledAssociations.contains(to.getUri()))) {
+            var to = renderContext.cimCollection.getAssociations().stream()
+                                                .filter(possibleTo -> from.getInverseRoleName().getUri().equals(possibleTo.getUri()))
+                                                .findFirst()
+                                                .orElse(null);
+            if (to == null || (handledAssociations.contains(from.getUri()) && handledAssociations.contains(to.getUri()))) {
                 continue;
             }
 
@@ -306,11 +304,11 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Assembles an association edge from two paired CIM associations.
      *
      * @param from Source association
-     * @param to Target association
+     * @param to   Target association
+     *
      * @return EdgeDTO with multiplicity and usage data
      */
-    private EdgeDTO assembleAssociationEdgeDTO(
-            RenderContext renderContext, CIMAssociation from, CIMAssociation to) {
+    private EdgeDTO assembleAssociationEdgeDTO(RenderContext renderContext, CIMAssociation from, CIMAssociation to) {
         var sourceUUID = renderContext.uriToUUIDMap.get(from.getDomain().getUri().toString());
         var targetUUID = renderContext.uriToUUIDMap.get(from.getRange().getUri().toString());
 
@@ -319,27 +317,27 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
 
-        var edgeDataDTO =
-                EdgeDataDTO.builder()
-                        .toMultiplicity(toMultiplicity)
-                        .fromMultiplicity(fromMultiplicity)
-                        .useToAssociation(useToAssociation)
-                        .useFromAssociation(useFromAssociation)
-                        .build();
+        var edgeDataDTO = EdgeDataDTO.builder()
+                                     .toMultiplicity(toMultiplicity)
+                                     .fromMultiplicity(fromMultiplicity)
+                                     .useToAssociation(useToAssociation)
+                                     .useFromAssociation(useFromAssociation)
+                                     .build();
 
         return EdgeDTO.builder()
-                .id(UUID.randomUUID().toString())
-                .type(ASSOCIATION_EDGE_TYPE)
-                .source(sourceUUID)
-                .target(targetUUID)
-                .data(edgeDataDTO)
-                .build();
+                      .id(UUID.randomUUID().toString())
+                      .type(ASSOCIATION_EDGE_TYPE)
+                      .source(sourceUUID)
+                      .target(targetUUID)
+                      .data(edgeDataDTO)
+                      .build();
     }
 
     /**
      * Extracts the multiplicity string from a CIMSMultiplicity.
      *
      * @param multiplicity The multiplicity object
+     *
      * @return Multiplicity string without "M:" prefix
      */
     private String extractMultiplicityString(CIMSMultiplicity multiplicity) {
@@ -350,6 +348,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * Converts association used value to boolean.
      *
      * @param associationUsed The association used enum
+     *
      * @return true if "Yes", false if "No"
      */
     private boolean getAssociationUsedValue(CIMSAssociationUsed associationUsed) {
@@ -357,15 +356,18 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         return switch (associationUsedValue) {
             case "Yes" -> true;
             case "No" -> false;
-            default ->
-                    throw new IllegalArgumentException(
-                            "Unexpected associationUsed value: " + associationUsedValue);
+            default -> throw new IllegalArgumentException(
+                      "Unexpected associationUsed value: " + associationUsedValue
+            );
         };
     }
 
-    /** Helper record storing the rendering context shared across method calls */
-    private record RenderContext(
-            CIMCollection cimCollection,
-            Map<String, UUID> uriToUUIDMap,
-            RenderingLayoutData layoutingData) {}
+    /**
+     * Helper record storing the rendering context shared across method calls
+     */
+    private record RenderContext(CIMCollection cimCollection,
+                                 Map<String, UUID> uriToUUIDMap,
+                                 RenderingLayoutData layoutingData) {
+
+    }
 }

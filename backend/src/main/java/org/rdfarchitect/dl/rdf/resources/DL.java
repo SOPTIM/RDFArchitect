@@ -18,61 +18,47 @@
 package org.rdfarchitect.dl.rdf.resources;
 
 import lombok.experimental.UtilityClass;
-
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 
 /**
- * Class containing CGMES 3.0 DiagramLayout Profile {@link Resource resources}, {@link Property
- * properties} and namespace prefixes and strings
+ * Class containing CGMES 3.0 DiagramLayout Profile {@link Resource resources}, {@link Property properties} and namespace prefixes and strings
  */
 @UtilityClass
 public class DL {
 
-    // PROPERTIES
-    public final Property orientation =
-            ResourceFactory.createProperty(constructDLNamespacedTerm("Diagram.orientation"));
+    //PROPERTIES
+    public final Property orientation = ResourceFactory.createProperty(constructDLNamespacedTerm("Diagram.orientation"));
 
-    public final Property belongsToDiagram =
-            ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObject.Diagram"));
+    public final Property belongsToDiagram = ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObject.Diagram"));
 
-    public final Property belongsToIdentifiedObject =
-            ResourceFactory.createProperty(
-                    constructDLNamespacedTerm("DiagramObject.IdentifiedObject"));
+    public final Property belongsToIdentifiedObject = ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObject.IdentifiedObject"));
 
-    public final Property belongsToDiagramObject =
-            ResourceFactory.createProperty(
-                    constructDLNamespacedTerm("DiagramObjectPoint.DiagramObject"));
+    public final Property belongsToDiagramObject = ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObjectPoint.DiagramObject"));
 
-    public final Property xPosition =
-            ResourceFactory.createProperty(
-                    constructDLNamespacedTerm("DiagramObjectPoint.xPosition"));
+    public final Property xPosition = ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObjectPoint.xPosition"));
 
-    public final Property yPosition =
-            ResourceFactory.createProperty(
-                    constructDLNamespacedTerm("DiagramObjectPoint.yPosition"));
+    public final Property yPosition = ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObjectPoint.yPosition"));
 
-    // OBJECTS
-    public final Resource diagramType =
-            ResourceFactory.createResource(constructDLNamespacedTerm("Diagram"));
+    public final Property zPosition = ResourceFactory.createProperty(constructDLNamespacedTerm("DiagramObjectPoint.zPosition"));
 
-    public final Resource diagramObjectType =
-            ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObject"));
+    //OBJECTS
+    public final Resource diagramType = ResourceFactory.createResource(constructDLNamespacedTerm("Diagram"));
 
-    public final Resource diagramObjectPointType =
-            ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObjectPoint"));
+    public final Resource diagramObjectType = ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObject"));
 
-    public final Resource negativeOrientation =
-            ResourceFactory.createResource(constructDLNamespacedTerm("OrientationKind.negative"));
+    public final Resource diagramObjectPointType = ResourceFactory.createResource(constructDLNamespacedTerm("DiagramObjectPoint"));
 
-    public final Resource positiveOrientation =
-            ResourceFactory.createResource(constructDLNamespacedTerm("OrientationKind.positive"));
+    public final Resource negativeOrientation = ResourceFactory.createResource(constructDLNamespacedTerm("OrientationKind.negative"));
+
+    public final Resource positiveOrientation = ResourceFactory.createResource(constructDLNamespacedTerm("OrientationKind.positive"));
 
     /**
      * Prepends the namespace URL to a given term, constructing a namespaced term
      *
      * @param term the term to be put into the namespace
+     *
      * @return the namespaced term
      */
     private static String constructDLNamespacedTerm(String term) {

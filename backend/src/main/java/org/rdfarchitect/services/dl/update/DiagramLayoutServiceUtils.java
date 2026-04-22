@@ -18,8 +18,8 @@
 package org.rdfarchitect.services.dl.update;
 
 import lombok.experimental.UtilityClass;
-
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
@@ -27,10 +27,13 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYPosition;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.dl.rdf.resources.DL;
 
 import java.util.UUID;
 
-/** Utility class with helper methods for the DiagramLayout update services */
+/**
+ * Utility class with helper methods for the DiagramLayout update services
+ */
 @UtilityClass
 public class DiagramLayoutServiceUtils {
 
@@ -38,16 +41,16 @@ public class DiagramLayoutServiceUtils {
      * Helper method for creating and inserting a {@link Diagram} into a given model.
      *
      * @param diagramLayoutModel the model into which the diagram is inserted
-     * @param packageUUID the UUID of the package used for the diagram's mRID
-     * @param packageName the name of the package used for the diagram
+     * @param packageUUID        the UUID of the package used for the diagram's mRID
+     * @param packageName        the name of the package used for the diagram
+     *
      */
     public void insertDiagram(Model diagramLayoutModel, UUID packageUUID, String packageName) {
-        var diagram =
-                Diagram.builder()
-                        .mRID(new MRID(packageUUID))
-                        .name(packageName)
-                        .orientation(OrientationKind.NEGATIVE)
-                        .build();
+        var diagram = Diagram.builder()
+                             .mRID(new MRID(packageUUID))
+                             .name(packageName)
+                             .orientation(OrientationKind.NEGATIVE)
+                             .build();
         DLUpdates.insertDiagram(diagramLayoutModel, diagram);
     }
 
@@ -55,22 +58,22 @@ public class DiagramLayoutServiceUtils {
      * Helper method for creating and inserting a {@link DiagramObject} into a given model.
      *
      * @param diagramLayoutModel the model into which the diagram object is inserted
-     * @param packageUUID the UUID of the package whose diagram the object belongs to
-     * @param className the name of the class represented by the diagram object
-     * @param classUUID the UUID of the class represented by the diagram object
+     * @param packageUUID        the UUID of the package whose diagram the object belongs to
+     * @param className          the name of the class represented by the diagram object
+     * @param classUUID          the UUID of the class represented by the diagram object
+     *
      * @return the mRID of the created diagram object, used for creating diagram object points
+     *
      */
-    public MRID insertDiagramObject(
-            Model diagramLayoutModel, UUID packageUUID, String className, UUID classUUID) {
+    public MRID insertDiagramObject(Model diagramLayoutModel, UUID packageUUID, String className, UUID classUUID) {
         var diagramObjectMRID = new MRID(UUID.randomUUID());
 
-        var diagramObject =
-                DiagramObject.builder()
-                        .mRID(diagramObjectMRID)
-                        .name(className)
-                        .belongsToDiagram(new MRID(packageUUID))
-                        .belongsToIdentifiedObject(new MRID(classUUID))
-                        .build();
+        var diagramObject = DiagramObject.builder()
+                                         .mRID(diagramObjectMRID)
+                                         .name(className)
+                                         .belongsToDiagram(new MRID(packageUUID))
+                                         .belongsToIdentifiedObject(new MRID(classUUID))
+                                         .build();
         DLUpdates.insertDiagramObject(diagramLayoutModel, diagramObject);
 
         return diagramObjectMRID;
@@ -80,15 +83,23 @@ public class DiagramLayoutServiceUtils {
      * Helper method for creating and inserting a {@link DiagramObjectPoint} into a given model.
      *
      * @param diagramLayoutModel the model into which the diagram object point is inserted
-     * @param diagramObjectMRID the mRID of the diagram object the point belongs to
+     * @param diagramObjectMRID  the mRID of the diagram object the point belongs to
      */
     public void insertDiagramObjectPoint(Model diagramLayoutModel, MRID diagramObjectMRID) {
-        var diagramObjectPoint =
-                DiagramObjectPoint.builder()
-                        .mRID(new MRID(UUID.randomUUID()))
-                        .position(new XYPosition(0, 0))
-                        .belongsToDiagramObject(diagramObjectMRID)
-                        .build();
+        var maxZPosition = diagramLayoutModel.listObjectsOfProperty(DL.zPosition)
+                                             .toSet()
+                                             .stream()
+                                             .max((o1, o2) -> {
+                                                  var z1 = o1.asLiteral().getInt();
+                                                  var z2 = o2.asLiteral().getInt();
+                                                  return Integer.compare(z1, z2);
+                                             }).map(o -> o.asLiteral().getInt())
+                                             .orElse(0);
+        var diagramObjectPoint = DiagramObjectPoint.builder()
+                                                   .mRID(new MRID(UUID.randomUUID()))
+                                                   .position(new XYPosition(0, 0, maxZPosition + 1))
+                                                   .belongsToDiagramObject(diagramObjectMRID)
+                                                   .build();
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
     }
 }
