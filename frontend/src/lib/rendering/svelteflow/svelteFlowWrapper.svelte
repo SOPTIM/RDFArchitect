@@ -131,11 +131,14 @@
 
     /**
      * Initializes nodeOrder from inputNodes on first load.
+     * Sorts by position.z from the backend so persisted order is restored.
      * No need to handle add/remove since the diagram reloads in those cases.
      */
     function syncNodeOrder(nextNodes) {
         if (nodeOrder.length === 0) {
-            nodeOrder = nextNodes.map(n => n.id);
+            nodeOrder = [...nextNodes]
+                .sort((a, b) => (a.position?.z ?? 0) - (b.position?.z ?? 0))
+                .map(n => n.id);
         }
     }
 
@@ -177,7 +180,7 @@
         return (
             !!pendingNewClassPlacement &&
             editorState.selectedPackageUUID.getValue() ===
-            pendingNewClassPlacement.packageUUID
+                pendingNewClassPlacement.packageUUID
         );
     }
 
@@ -205,9 +208,9 @@
         return diagramNodes.map(node =>
             node.id === addedNode.id
                 ? {
-                    ...node,
-                    position: { x, y },
-                }
+                      ...node,
+                      position: { x, y },
+                  }
                 : node,
         );
     }
@@ -414,11 +417,11 @@
     }
 
     function handleClassCreated({
-                                    datasetName,
-                                    graphURI,
-                                    packageUUID,
-                                    className,
-                                }) {
+        datasetName,
+        graphURI,
+        packageUUID,
+        className,
+    }) {
         pendingNewClassPlacement = {
             datasetName,
             graphURI,
@@ -437,37 +440,57 @@
         if (idx === -1) return;
 
         const next = [...nodeOrder];
+        let changedIds;
 
         if (direction === "up") {
             // Swap with the one above (higher zIndex)
             if (idx >= next.length - 1) return;
             [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+            changedIds = [next[idx], next[idx + 1]];
         } else if (direction === "down") {
             // Swap with the one below (lower zIndex)
             if (idx <= 0) return;
             [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+            changedIds = [next[idx], next[idx - 1]];
         } else if (direction === "top") {
             // Move to front: remove and append at end
             if (idx >= next.length - 1) return;
             const [removed] = next.splice(idx, 1);
             next.push(removed);
+            // All indices from idx onward shifted
+            changedIds = next.slice(idx);
         } else if (direction === "bottom") {
             // Move to back: remove and prepend at start
             if (idx <= 0) return;
             const [removed] = next.splice(idx, 1);
             next.unshift(removed);
+            // All indices up to and including original idx shifted
+            changedIds = next.slice(0, idx + 1);
         }
 
         nodeOrder = next;
         nodes = applyZIndicesFromOrder(nodes);
 
-        // Placeholder for backend persistence
-        persistNodeOrder(nodeOrder);
+        persistNodeOrder(nodeOrder, changedIds);
     }
 
-    function persistNodeOrder(order) {
-        // TODO: Backend-Request zum Persistieren der Node-Reihenfolge
-        console.log("[placeholder] persist node order:", order);
+    function persistNodeOrder(order, changedIds) {
+        const classPositionDTOList = changedIds.map(id => {
+            const node = nodes.find(n => n.id === id);
+            return {
+                classUUID: id,
+                xPosition: node?.position.x ?? 0,
+                yPosition: node?.position.y ?? 0,
+                zPosition: order.indexOf(id),
+            };
+        });
+
+        bec.updateClassPositions(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            editorState.selectedPackageUUID.getValue(),
+            classPositionDTOList,
+        );
     }
 
     function updateNodePositions(movedNodes) {
@@ -477,6 +500,7 @@
                 classUUID: node.id,
                 xPosition: node.position.x,
                 yPosition: node.position.y,
+                zPosition: node.zIndex ?? nodeOrder.indexOf(node.id),
             };
             classPositionDTOList.push(classPositionDTO);
         }
@@ -581,47 +605,47 @@
 
 <div class="relative h-full w-full">
     <SvelteFlow
-            bind:nodes
-            bind:edges
-            {nodeTypes}
-            {edgeTypes}
-            nodesDraggable={!isDatasetReadOnly}
-            fitView
-            elementsSelectable={false}
-            nodesFocusable={false}
-            onnodeclick={handleNodeClick}
-            onnodecontextmenu={handleNodeContextMenu}
-            onpaneclick={closeContextMenus}
-            onpanecontextmenu={handlePaneContextMenu}
-            onedgecontextmenu={handleEdgeContextMenu}
-            onnodedragstop={handleNodeMove}
-            selectionMode={"full"}
-            connectionMode={"loose"}
-            multiSelectionKey={null}
-            minZoom={0.1}
-            maxZoom={5}
+        bind:nodes
+        bind:edges
+        {nodeTypes}
+        {edgeTypes}
+        nodesDraggable={!isDatasetReadOnly}
+        fitView
+        elementsSelectable={false}
+        nodesFocusable={false}
+        onnodeclick={handleNodeClick}
+        onnodecontextmenu={handleNodeContextMenu}
+        onpaneclick={closeContextMenus}
+        onpanecontextmenu={handlePaneContextMenu}
+        onedgecontextmenu={handleEdgeContextMenu}
+        onnodedragstop={handleNodeMove}
+        selectionMode={"full"}
+        connectionMode={"loose"}
+        multiSelectionKey={null}
+        minZoom={0.1}
+        maxZoom={5}
     >
         <EdgeMarkers />
         <Background patternColor="#aaa" gap={16} />
     </SvelteFlow>
 
     <SvelteFlowPaneContextMenu
-            request={paneContextMenuRequest}
-            disabled={isDatasetReadOnly}
-            lockedDatasetName={editorState.selectedDataset.getValue()}
-            lockedGraphUri={editorState.selectedGraph.getValue()}
-            onClassCreated={handleClassCreated}
-            onClose={closeContextMenus}
+        request={paneContextMenuRequest}
+        disabled={isDatasetReadOnly}
+        lockedDatasetName={editorState.selectedDataset.getValue()}
+        lockedGraphUri={editorState.selectedGraph.getValue()}
+        onClassCreated={handleClassCreated}
+        onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
-            request={classContextMenuRequest}
-            disabled={isDatasetReadOnly || !contextMenuClass}
-            {contextMenuClass}
-            datasetName={editorState.selectedDataset.getValue()}
-            graphUri={editorState.selectedGraph.getValue()}
-            {nodeOrder}
-            nodeCount={nodes.length}
-            onClose={closeContextMenus}
-            onMoveClass={handleMoveClass}
+        request={classContextMenuRequest}
+        disabled={isDatasetReadOnly || !contextMenuClass}
+        {contextMenuClass}
+        datasetName={editorState.selectedDataset.getValue()}
+        graphUri={editorState.selectedGraph.getValue()}
+        {nodeOrder}
+        nodeCount={nodes.length}
+        onClose={closeContextMenus}
+        onMoveClass={handleMoveClass}
     />
 </div>
