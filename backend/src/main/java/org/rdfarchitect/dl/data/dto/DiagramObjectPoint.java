@@ -21,7 +21,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYPosition;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 
 @Data
 @Builder(toBuilder = true)
@@ -29,7 +29,7 @@ public class DiagramObjectPoint {
 
     private MRID mRID;
 
-    private XYPosition position;
+    private XYZPosition position;
 
     private MRID belongsToDiagramObject;
 }

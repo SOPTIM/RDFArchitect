@@ -22,7 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.jena.query.QuerySolution;
 import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYPosition;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 
 /**
  * Parses a {@link QuerySolution} to extract the values of the variables used in the context of
@@ -62,11 +62,11 @@ public class DLQuerySolutionParser {
     }
 
     /**
-     * Extracts the {@link XYPosition} from the query solution.
+     * Extracts the {@link XYZPosition} from the query solution.
      *
-     * @return The XYPosition or null, if the given variables doesn't exist in the solution.
+     * @return The XYZPosition or null, if the given variables doesn't exist in the solution.
      */
-    public XYPosition getXYZPosition() {
+    public XYZPosition getXYZPosition() {
         if (!qs.contains(DLQueryVars.X_POSITION) || !qs.contains(DLQueryVars.Y_POSITION)) {
             return null;
         }
@@ -77,6 +77,6 @@ public class DLQuerySolutionParser {
         if(zPositionLiteral != null){
             zPosition = zPositionLiteral.getInt();
         }
-        return new XYPosition(xPosition, yPosition, zPosition);
+        return new XYZPosition(xPosition, yPosition, zPosition);
     }
 }

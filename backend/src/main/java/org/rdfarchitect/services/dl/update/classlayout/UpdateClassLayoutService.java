@@ -24,7 +24,7 @@ import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
-import org.rdfarchitect.dl.data.dto.relations.XYPosition;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
@@ -81,7 +81,7 @@ public class UpdateClassLayoutService implements UpdateClassPositionsUseCase, Cr
 
             DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, dopMRID);
 
-            diagramObjectPoint.setPosition(new XYPosition(classPositionDTO.getXPosition(), classPositionDTO.getYPosition(), classPositionDTO.getZPosition()));
+            diagramObjectPoint.setPosition(new XYZPosition(classPositionDTO.getXPosition(), classPositionDTO.getYPosition(), classPositionDTO.getZPosition()));
 
             DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
         }
