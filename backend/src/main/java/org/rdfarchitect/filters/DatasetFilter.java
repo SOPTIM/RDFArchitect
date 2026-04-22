@@ -41,7 +41,10 @@ public class DatasetFilter implements Filter {
     public void doFilter(
             ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
-        var httpRequest = (HttpServletRequest) servletRequest;
+        if (!(servletRequest instanceof HttpServletRequest httpRequest)) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
         var requestMethod = httpRequest.getMethod();
         var requestURI = httpRequest.getRequestURI();
 

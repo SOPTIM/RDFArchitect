@@ -35,6 +35,7 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -122,7 +123,7 @@ public class QueryDatasetService
                     default -> throw new IllegalArgumentException("Unsupported format: " + format);
                 };
         RDFDataMgr.write(stream, model, lang);
-        return stream.toString();
+        return stream.toString(StandardCharsets.UTF_8);
     }
 
     @Override

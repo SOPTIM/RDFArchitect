@@ -17,7 +17,8 @@
 
 package org.rdfarchitect.services;
 
-import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.*;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
 
 import lombok.RequiredArgsConstructor;
 

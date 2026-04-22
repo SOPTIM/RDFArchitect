@@ -34,7 +34,10 @@ public class SessionContextFilter implements Filter {
     public void doFilter(
             ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
-        var httpRequest = (HttpServletRequest) servletRequest;
+        if (!(servletRequest instanceof HttpServletRequest httpRequest)) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
 
         try {
             // preflight calls werden mit eigener sessionID abgeschickt, weshalb sie hier das

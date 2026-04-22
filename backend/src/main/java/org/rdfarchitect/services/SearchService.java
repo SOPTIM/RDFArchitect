@@ -321,14 +321,9 @@ public class SearchService implements SearchUseCase {
                                     + "?any })");
         }
 
-        return query.replace(
-                        FILTER_PACKAGE,
-                        """
-                              OPTIONAL {
-                                ?filterPackage  <http://example.org#uuid>  "%s" .
-                              }
-                              """
-                                .formatted(filter.getPackageUUID()))
+        var packageFilter =
+                "OPTIONAL {%n" + "  ?filterPackage  <http://example.org#uuid>  \"%s\" .%n" + "}%n";
+        return query.replace(FILTER_PACKAGE, packageFilter.formatted(filter.getPackageUUID()))
                 .replace(
                         PACKAGE_CONSTRAINT,
                         "FILTER (!BOUND(?filterPackage) || ?packageURI = ?filterPackage)");

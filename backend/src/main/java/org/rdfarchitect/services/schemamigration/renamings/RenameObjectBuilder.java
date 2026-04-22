@@ -42,11 +42,10 @@ public class RenameObjectBuilder {
         result.setSemanticResourceChangeType(SemanticResourceChangeType.RENAME);
         result.setChanges(mergeChanges(addedResource.getChanges(), deletedResource.getChanges()));
 
-        if (result instanceof SemanticClassChange) {
-            return createRenameClassChange(
-                    (SemanticClassChange) addedResource,
-                    (SemanticClassChange) deletedResource,
-                    result);
+        if (result instanceof SemanticClassChange classChange
+                && addedResource instanceof SemanticClassChange addedClass
+                && deletedResource instanceof SemanticClassChange deletedClass) {
+            return createRenameClassChange(addedClass, deletedClass, classChange);
         }
 
         return result;
@@ -55,8 +54,7 @@ public class RenameObjectBuilder {
     private SemanticClassChange createRenameClassChange(
             SemanticClassChange added,
             SemanticClassChange deleted,
-            SemanticResourceChange baseResult) {
-        var classChange = (SemanticClassChange) baseResult;
+            SemanticClassChange classChange) {
         classChange.setAttributes(
                 mergePropertyList(added.getAttributes(), deleted.getAttributes(), classChange));
         classChange.setAssociations(

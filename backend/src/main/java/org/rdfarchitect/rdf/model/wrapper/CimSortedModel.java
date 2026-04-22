@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -100,7 +101,7 @@ public class CimSortedModel implements Model {
     public Model write(Writer writer, String lang, String base) {
         try (var out = new ByteArrayOutputStream()) {
             this.write(out, lang, base);
-            writer.write(out.toString());
+            writer.write(out.toString(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }

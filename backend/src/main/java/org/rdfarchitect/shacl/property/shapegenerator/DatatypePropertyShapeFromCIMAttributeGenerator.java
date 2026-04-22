@@ -81,8 +81,6 @@ public class DatatypePropertyShapeFromCIMAttributeGenerator
                     CIMAttributeUtils.listEnumDatatypeEntries(attribute).stream()
                             .map(Resource::getURI)
                             .toList());
-        } else if (CIMAttributeUtils.isStatementAttribute(attribute)) {
-            propertyShapeBuilder.setPrimitiveDatatype(XMLLiteralType.rdfXMLLiteral);
         } else {
             propertyShapeBuilder.setPrimitiveDatatype(XMLLiteralType.rdfXMLLiteral);
         }

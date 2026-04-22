@@ -17,8 +17,10 @@
 
 package org.rdfarchitect.database.snapshots;
 
-import static org.rdfarchitect.database.snapshots.SnapshotUtils.*;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.*;
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.constructSnapshotName;
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.findSnapshotName;
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.generateBase64Token;
+import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;

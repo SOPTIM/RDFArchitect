@@ -122,9 +122,12 @@ public class CIMPropertyUtils {
     public record Multiplicity(Integer lowerBound, Integer upperBound) {}
 
     private Integer parseMultiplicityBound(String s) {
+        if (s == null) {
+            return null;
+        }
         try {
             return Integer.parseInt(s);
-        } catch (NumberFormatException | NullPointerException _) {
+        } catch (NumberFormatException _) {
             return null;
         }
     }

@@ -158,14 +158,17 @@ public class GraphBulkImportService {
 
     private String buildGraphUriFromFileName(String fileName) {
         var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
-        var lastPathSegment = Paths.get(name).getFileName().toString();
+        var fileNamePath = Paths.get(name).getFileName();
+        var lastPathSegment = fileNamePath == null ? FALL_BACK_NAME : fileNamePath.toString();
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
         var sanitized =
                 lastPathSegment
                         .substring(0, lastDotIndex < 0 ? lastPathSegment.length() : lastDotIndex)
                         .replaceAll("\\W", "_");
 
-        if (sanitized.isBlank()) sanitized = FALL_BACK_NAME;
+        if (sanitized.isBlank()) {
+            sanitized = FALL_BACK_NAME;
+        }
         return RDFA.GRAPH_URI + sanitized;
     }
 
@@ -241,8 +244,12 @@ public class GraphBulkImportService {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (!(o instanceof SimpleMultipartFile that)) return false;
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof SimpleMultipartFile that)) {
+                return false;
+            }
             return Objects.equals(name, that.name)
                     && Objects.equals(originalFilename, that.originalFilename)
                     && Objects.equals(contentType, that.contentType)

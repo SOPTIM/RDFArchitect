@@ -38,7 +38,7 @@ import java.util.UUID;
  * <p>The behavior of this class is not well-defined if triples are added to or removed from the
  * base graph, the additions graph, or the deletions graph while this graph is in use.
  */
-public class DeltaCompressible extends CompositionBase implements Graph {
+public class DeltaCompressible extends CompositionBase {
 
     /** -- GETTER -- Answer the base graph. */
     @Getter private Graph base;

@@ -17,7 +17,8 @@
 
 package org.rdfarchitect.database.inmemory;
 
-import static org.rdfarchitect.database.snapshots.SnapshotUtils.*;
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.SNAPSHOT_PREFIX;
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.findSnapshotName;
 
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Graph;

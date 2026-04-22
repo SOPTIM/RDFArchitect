@@ -26,10 +26,12 @@ import java.util.List;
 @UtilityClass
 public class SnapshotUtils {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     public static final String SNAPSHOT_PREFIX = "SNAPSHOT_";
 
     public static String generateBase64Token() {
-        var seed = (new SecureRandom()).generateSeed(16);
+        var seed = new byte[16];
+        SECURE_RANDOM.nextBytes(seed);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(seed);
     }
 

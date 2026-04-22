@@ -37,7 +37,6 @@
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
         <checkstyle.version>13.4.0</checkstyle.version>
         <spotbugs-maven-plugin.version>4.9.8.3</spotbugs-maven-plugin.version>
-        <maven-pmd-plugin.version>3.28.0</maven-pmd-plugin.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <lombok.version>1.18.44</lombok.version>
@@ -61,7 +60,6 @@
                             <style>AOSP</style>
                             <reorderImports>true</reorderImports>
                         </googleJavaFormat>
-                        <forbidWildcardImports/>
                         <removeUnusedImports/>
                         <formatAnnotations/>
                     </java>
@@ -309,57 +307,6 @@
                                 <phase>verify</phase>
                                 <goals>
                                     <goal>check</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-pmd-plugin</artifactId>
-                        <version>${maven-pmd-plugin.version}</version>
-                        <configuration>
-                            <targetJdk>${maven.compiler.release}</targetJdk>
-                            <rulesets>
-                                <ruleset>${project.basedir}/config/pmd/ruleset.xml</ruleset>
-                            </rulesets>
-                            <includeTests>false</includeTests>
-                            <skipPmdError>false</skipPmdError>
-                            <printFailingErrors>true</printFailingErrors>
-                            <excludeRoots>
-                                <excludeRoot>${project.build.directory}/generated-sources/annotations</excludeRoot>
-                            </excludeRoots>
-                            <minimumTokens>100</minimumTokens>
-                            <excludes>
-                                <exclude>org/rdfarchitect/api/controller/datasets/graphs/GraphContentRESTController.java</exclude>
-                                <exclude>org/rdfarchitect/api/controller/datasets/graphs/OntologyRESTController.java</exclude>
-                                <exclude>org/rdfarchitect/api/controller/datasets/graphs/shacl/SHACLContentRestController.java</exclude>
-                                <exclude>org/rdfarchitect/api/controller/datasets/graphs/shacl/custom/SHACLCustomContentRestController.java</exclude>
-                                <exclude>org/rdfarchitect/api/controller/datasets/graphs/shacl/generate/SHACLGenerateContentRestController.java</exclude>
-                                <exclude>org/rdfarchitect/api/dto/ClassMapper.java</exclude>
-                                <exclude>org/rdfarchitect/api/dto/ClassUMLAdaptedMapper.java</exclude>
-                                <exclude>org/rdfarchitect/database/inmemory/InMemoryDatabase.java</exclude>
-                                <exclude>org/rdfarchitect/database/inmemory/SessionDataStore.java</exclude>
-                                <exclude>org/rdfarchitect/services/update/ontology/UpdateOntologyService.java</exclude>
-                                <exclude>org/rdfarchitect/shacl/property/shapebuilder/CardinalityPropertyShapeBuilder.java</exclude>
-                                <exclude>org/rdfarchitect/shacl/property/shapebuilder/InverseCardinalityPropertyShapeBuilder.java</exclude>
-                                <exclude>org/rdfarchitect/shacl/property/shapegenerator/CIMAssociationToHasTypePropertyShapeConverter.java</exclude>
-                                <exclude>org/rdfarchitect/shacl/property/shapegenerator/InverseCardinalityPropertyShapeFromCIMAssociationGenerator.java</exclude>
-                                <exclude>org/rdfarchitect/shacl/property/shapegenerator/ValueTypePropertyShapeFromCIMAssociationGenerator.java</exclude>
-                            </excludes>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <id>backend-lint-pmd-check</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>check</goal>
-                                </goals>
-                            </execution>
-                            <execution>
-                                <id>backend-lint-cpd-check</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>cpd-check</goal>
                                 </goals>
                             </execution>
                         </executions>

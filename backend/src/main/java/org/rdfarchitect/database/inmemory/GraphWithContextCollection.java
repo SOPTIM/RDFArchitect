@@ -52,7 +52,7 @@ public class GraphWithContextCollection {
 
     private static final String DEFAULT_GRAPH_NAME = "default";
 
-    @Setter @Getter private boolean isReadOnly = true;
+    @Setter @Getter private volatile boolean isReadOnly = true;
 
     private final int maxVersions = GraphCompressionConfig.getMaxVersions();
     private final int compressCount = GraphCompressionConfig.getCompressCount();

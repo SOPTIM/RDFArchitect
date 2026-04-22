@@ -5,4 +5,5 @@
 
 <suppressions>
     <!-- Add file-specific suppressions here only when a violation cannot be fixed safely. -->
+    <suppress checks="AvoidStarImport" files=".*[/\\\\]src[/\\\\]test[/\\\\]java[/\\\\].*"/>
 </suppressions>

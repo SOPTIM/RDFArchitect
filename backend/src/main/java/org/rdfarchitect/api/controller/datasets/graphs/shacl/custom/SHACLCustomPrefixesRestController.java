@@ -37,6 +37,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/custom/prefixes")
 @RequiredArgsConstructor
@@ -90,7 +92,7 @@ public class SHACLCustomPrefixesRestController {
                         .exportCustomSHACLPrefixes(
                                 new GraphIdentifier(datasetName, extendedGraphURI),
                                 RDFFormat.TURTLE)
-                        .toString();
+                        .toString(StandardCharsets.UTF_8);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/prefixes/ttl\" to \"{}\".",

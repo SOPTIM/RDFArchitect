@@ -49,6 +49,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.AbstractMap;
 import java.util.List;
 import java.util.Map;
@@ -245,7 +246,7 @@ public class SHACLCustomContentRestController {
                         .exportCustomSHACLGraph(
                                 new GraphIdentifier(datasetName, extendedGraphURI),
                                 RDFFormat.TURTLE)
-                        .toString();
+                        .toString(StandardCharsets.UTF_8);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/custom/string\" to \"{}\".",

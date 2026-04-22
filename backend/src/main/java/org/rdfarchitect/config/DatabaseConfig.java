@@ -29,6 +29,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.Locale;
+
 /** Parses the database config and provides access to its contents */
 @Getter
 @Setter
@@ -66,7 +68,7 @@ public class DatabaseConfig {
     }
 
     private static Lang getFileLang(String dataType) {
-        dataType = dataType.toUpperCase();
+        dataType = dataType.toUpperCase(Locale.ROOT);
         if ("N-QUADS".equals(dataType)) {
             return Lang.NQUADS;
         }

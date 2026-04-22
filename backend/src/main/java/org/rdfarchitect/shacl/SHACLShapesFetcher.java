@@ -27,6 +27,7 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -190,10 +191,10 @@ public class SHACLShapesFetcher {
         var outputStream = new ByteArrayOutputStream();
         model.write(outputStream, "TURTLE");
         if (includePrefixes) {
-            return outputStream.toString();
+            return outputStream.toString(StandardCharsets.UTF_8);
         }
         String regex = "(?m)^PREFIX.*\\n";
-        return outputStream.toString().replaceAll(regex, "").trim();
+        return outputStream.toString(StandardCharsets.UTF_8).replaceAll(regex, "").trim();
     }
 
     /**

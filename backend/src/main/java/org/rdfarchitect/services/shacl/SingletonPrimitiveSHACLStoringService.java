@@ -51,6 +51,7 @@ import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -71,7 +72,7 @@ public class SingletonPrimitiveSHACLStoringService
 
     public static final PrefixEntry SHACL_NAMESPACE =
             PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL);
-    public static Model customSHACLFile = ModelFactory.createDefaultModel();
+    private static Model customSHACLFile = ModelFactory.createDefaultModel();
 
     private final DatabasePort databasePort;
 
@@ -237,7 +238,7 @@ public class SingletonPrimitiveSHACLStoringService
         model.setNsPrefixes(prefixMapping);
         var stream = new ByteArrayOutputStream();
         model.write(stream, Lang.TTL.getName());
-        return stream.toString();
+        return stream.toString(StandardCharsets.UTF_8);
     }
 
     @Override

@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.select;
 
-import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.*;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.*;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
+import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
 import lombok.RequiredArgsConstructor;
 

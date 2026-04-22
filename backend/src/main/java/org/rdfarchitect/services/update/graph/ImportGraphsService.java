@@ -109,7 +109,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             var graphIdentifier = replaceGraph(datasetName, graphUri, file);
             result.importedGraphUris().add(graphUri);
             recordChange(graphIdentifier, datasetName);
-        } catch (Exception _) {
+        } catch (RuntimeException _) {
             result.failedFileNames().add(file.getOriginalFilename());
         }
     }
@@ -224,7 +224,8 @@ public class ImportGraphsService implements ImportGraphsUseCase {
 
     private String buildGraphUriFromFileName(String fileName) {
         var name = Objects.requireNonNullElse(fileName, FALL_BACK_NAME);
-        var lastPathSegment = Paths.get(name).getFileName().toString();
+        var fileNamePath = Paths.get(name).getFileName();
+        var lastPathSegment = fileNamePath == null ? FALL_BACK_NAME : fileNamePath.toString();
         var lastDotIndex = lastPathSegment.lastIndexOf(".");
         var sanitized =
                 lastPathSegment
