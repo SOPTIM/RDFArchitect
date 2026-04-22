@@ -25,7 +25,7 @@
     let {
         showDialog = $bindable(),
         lockedDatasetName,
-        graph,
+        graphUri,
         classes,
     } = $props();
 
@@ -50,8 +50,8 @@
 
     async function addToDiagram() {
         const classesToAdd = classes.map(cls => ({
-            uuid: cls.uuid,
-            graphUri: graph,
+            graphUri: graphUri,
+            uuid: cls.id,
         }));
         await bec.addToCustomDatasetDiagram(
             lockedDatasetName,
@@ -69,7 +69,7 @@
     primaryLabel="Add to Diagram"
     onPrimary={addToDiagram}
     disablePrimary={disableSubmit}
-    title="Add to Diagram"
+    title="Add to Dataset Diagram"
 >
     <div class="mx-2 flex h-full flex-col">
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">

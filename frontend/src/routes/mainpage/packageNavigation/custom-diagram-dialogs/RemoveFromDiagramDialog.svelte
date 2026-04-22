@@ -28,7 +28,7 @@
 
     let {
         showDialog = $bindable(),
-        datasetName,
+        lockedDatasetName,
         graphUri,
         diagramId,
         cls,
@@ -39,16 +39,16 @@
     async function removeFromDiagram() {
         if (editorState.selectedGraph.getValue()) {
             await bec.removeFromCustomGraphDiagram(
-                datasetName,
+                lockedDatasetName,
                 graphUri,
                 diagramId,
-                cls.uuid,
+                cls.id,
             );
         } else {
             await bec.removeFromCustomDatasetDiagram(
-                datasetName,
+                lockedDatasetName,
                 diagramId,
-                cls.uuid,
+                cls.id,
             );
         }
         forceReloadTrigger.trigger();

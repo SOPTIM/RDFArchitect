@@ -115,6 +115,13 @@
                         : keepExpanded || isSelected,
                 };
             });
+
+            //reset classes after potential removal
+            classesByDiagram = {};
+            const expandedDiagrams = diagrams.filter(d => d.showContents);
+            await Promise.all(
+                expandedDiagrams.map(d => ensureClassesLoaded(d)),
+            );
         } catch (err) {
             console.error("Failed to load diagrams:", err);
         }

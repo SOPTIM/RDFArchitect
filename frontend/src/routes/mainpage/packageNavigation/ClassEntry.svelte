@@ -135,7 +135,7 @@
                 }}
                 faIcon={faObjectGroup}
             >
-                Add to Graph Diagram
+                Add to Profile Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -150,8 +150,7 @@
         {#if diagramId}
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    selectClass();
-                    showDeleteDialog = true;
+                    showRemoveFromDiagramDialog = true;
                 }}
                 faIcon={faMinus}
                 variant="danger"
@@ -201,7 +200,7 @@
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
-    graph={graphNavEntry.id}
+    graphUri={graphNavEntry.id}
     {diagramId}
     cls={classNavEntry}
 />

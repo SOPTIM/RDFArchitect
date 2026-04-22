@@ -53,7 +53,7 @@
 
     async function addToDiagram() {
         const classesToAdd = classes.map(cls => ({
-            uuid: cls.uuid,
+            uuid: cls.id,
             graphUri: lockedGraphUri,
         }));
         await bec.addToCustomGraphDiagram(
@@ -73,7 +73,7 @@
     primaryLabel="Add to Diagram"
     onPrimary={addToDiagram}
     disablePrimary={disableSubmit}
-    title="Add to Diagram"
+    title="Add to Profile Diagram"
 >
     <div class="mx-2 flex h-full flex-col">
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">
