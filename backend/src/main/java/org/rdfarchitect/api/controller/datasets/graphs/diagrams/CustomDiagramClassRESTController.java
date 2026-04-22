@@ -35,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes{classId}")
+@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes/{classId}")
 @RequiredArgsConstructor
 public class CustomDiagramClassRESTController {
 

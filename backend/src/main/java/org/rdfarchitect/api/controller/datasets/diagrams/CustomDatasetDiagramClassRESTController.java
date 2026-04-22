@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/diagrams/{diagramId}/classes{classId}")
+@RequestMapping("/api/datasets/{datasetName}/diagrams/{diagramId}/classes/{classId}")
 @RequiredArgsConstructor
 public class CustomDatasetDiagramClassRESTController {
 

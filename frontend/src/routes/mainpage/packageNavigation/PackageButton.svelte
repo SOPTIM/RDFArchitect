@@ -39,6 +39,7 @@
     import { isSelectedPackage } from "./packageNavigationUtils.svelte.js";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
 
     let {
@@ -151,7 +152,7 @@
                 }}
                 faIcon={faObjectGroup}
             >
-                Add to Graph Diagram
+                Add to Profile Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -220,11 +221,11 @@
     classes={packageNavEntry.children}
 />
 
-<AddToGraphDiagramDialog
+<AddToDatasetDiagramDialog
     bind:showDialog={showAddToDatasetDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
-    graph={graphNavEntry.id}
-    classes
+    graphUri={graphNavEntry.id}
+    classes={packageNavEntry.children}
 />
 
 <PackageEditorDialog
