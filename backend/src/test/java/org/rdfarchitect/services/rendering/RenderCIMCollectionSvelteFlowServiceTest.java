@@ -172,4 +172,29 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         assertThat(associationEdgeDTO.getData().isUseFromAssociation()).isFalse();
         assertThat(associationEdgeDTO.getData().isUseToAssociation()).isTrue();
     }
+
+    @Test
+    void renderGlobalUML_emptyCollection_emptyArrays() {
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
+
+        assertThat(result.getNodes()).isEmpty();
+        assertThat(result.getEdges()).isEmpty();
+    }
+
+    @Test
+    void renderGlobalUML_nullCollection_throwsException() {
+        assertThatException().isThrownBy(() -> svelteFlowRenderer.renderGlobalUML(null, "myDataset", null));
+    }
+
+    @Test
+    void renderGlobalUML_singleClass_createsNodeWithCorrectData() {
+        addPackage("package_package1");
+        addClass("package_package1", "class1");
+
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
+
+        assertThat(result.getNodes()).hasSize(1);
+        assertThat(result.getNodes().get(0).getData().getLabel()).isEqualTo("class1");
+        assertThat(result.getEdges()).isEmpty();
+    }
 }

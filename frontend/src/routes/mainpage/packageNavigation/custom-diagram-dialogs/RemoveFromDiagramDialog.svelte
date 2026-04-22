@@ -21,7 +21,10 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
@@ -34,7 +37,7 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     async function removeFromDiagram() {
-        if (editorState.selectedGraph.getValue()){
+        if (editorState.selectedGraph.getValue()) {
             await bec.removeFromCustomGraphDiagram(
                 datasetName,
                 graphUri,

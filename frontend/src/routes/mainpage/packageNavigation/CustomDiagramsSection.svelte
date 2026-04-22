@@ -25,7 +25,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
     import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
@@ -33,15 +33,11 @@
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import {
         isSelectedDataset,
-        isSelectedGraph
+        isSelectedGraph,
     } from "./packageNavigationUtils.svelte.js";
 
-    let {
-        datasetNavEntry,
-        graphNavEntry,
-        allGraphNavEntries,
-        readOnly
-    } = $props();
+    let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
+        $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -53,14 +49,14 @@
     let isSelected = $derived(
         graphNavEntry
             ? isSelectedGraph(datasetNavEntry.id, graphNavEntry.id) &&
-            editorState.selectedCustomDiagramUUID.getValue()
+                  editorState.selectedCustomDiagramUUID.getValue()
             : !editorState.selectedGraph.getValue() &&
-            isSelectedDataset(datasetNavEntry.id) &&
-            editorState.selectedCustomDiagramUUID.getValue()
+                  isSelectedDataset(datasetNavEntry.id) &&
+                  editorState.selectedCustomDiagramUUID.getValue(),
     );
     let level = $derived(graphNavEntry ? 3 : 2);
     let label = $derived(
-        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams"
+        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams",
     );
 
     $effect(() => {
@@ -90,7 +86,7 @@
             if (graphNavEntry) {
                 diagramList = await getGraphDiagrams(
                     datasetNavEntry.id,
-                    graphNavEntry.id
+                    graphNavEntry.id,
                 );
             } else {
                 diagramList = await getDatasetDiagrams(datasetNavEntry.id);
@@ -101,22 +97,22 @@
 
             diagrams = diagramList.map(diagram => {
                 const prev = previous.find(
-                    p => diagram.diagramId === p.diagramId
+                    p => diagram.diagramId === p.diagramId,
                 );
                 const keepExpanded = prev?.showContents ?? false;
                 const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
                 const isSelected = graphNavEntry
                     ? isSelectedGraph(datasetNavEntry, graphNavEntry) &&
-                    selectedDiagramId === diagram.diagramId
+                      selectedDiagramId === diagram.diagramId
                     : isSelectedDataset(datasetNavEntry) &&
-                    selectedDiagramId === diagram.diagramId;
+                      selectedDiagramId === diagram.diagramId;
 
                 return {
                     ...diagram,
                     userCollapsed,
                     showContents: userCollapsed
                         ? false
-                        : keepExpanded || isSelected
+                        : keepExpanded || isSelected,
                 };
             });
         } catch (err) {
@@ -131,14 +127,22 @@
 
         let classes = [];
         if (graphNavEntry) {
-            classes = graphNavEntry.children.map(pack => pack.children.filter(cls =>
-                diagram.classes.some(dc => dc.uuid === cls.id)
-            )).flat();
+            classes = graphNavEntry.children
+                .map(pack =>
+                    pack.children.filter(cls =>
+                        diagram.classes.some(dc => dc.uuid === cls.id),
+                    ),
+                )
+                .flat();
         } else {
             allGraphNavEntries.forEach(graph => {
-                let classesInGraph = graph.children.map(pack => pack.children.filter(cls =>
-                    diagram.classes.some(dc => dc.uuid === cls.id)
-                )).flat();
+                let classesInGraph = graph.children
+                    .map(pack =>
+                        pack.children.filter(cls =>
+                            diagram.classes.some(dc => dc.uuid === cls.id),
+                        ),
+                    )
+                    .flat();
 
                 classes.push(...classesInGraph);
             });

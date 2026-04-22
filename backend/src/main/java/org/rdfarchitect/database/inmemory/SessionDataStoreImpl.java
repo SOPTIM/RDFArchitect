@@ -116,6 +116,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
         lock.lock();
         try {
+            assertThatDatasetExists(datasetName);
             return graphCollections.get(datasetName).getCustomDiagrams();
         } finally {
             lock.unlock();
@@ -126,6 +127,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public DiagramLayout getDatasetDiagramLayout(String datasetName) {
         lock.lock();
         try {
+            assertThatDatasetExists(datasetName);
             return graphCollections.get(datasetName).getDiagramLayout();
         } finally {
             lock.unlock();

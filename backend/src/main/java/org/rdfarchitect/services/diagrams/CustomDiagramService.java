@@ -22,7 +22,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -101,7 +100,7 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
         if (diagram != null) {
-            diagram.getClasses().remove(new ClassInDiagram(classId, new URI(graphIdentifier.getGraphUri())));
+            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
     }
 
@@ -109,11 +108,11 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         for (var diagram : graphWithContext.getCustomDiagrams().values()) {
-            diagram.getClasses().remove(new ClassInDiagram(classId, new URI(graphIdentifier.getGraphUri())));
+            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
         var datasetDiagrams = databasePort.getDatasetDiagrams(graphIdentifier.getDatasetName());
         for (var diagram : datasetDiagrams.values()) {
-            diagram.getClasses().remove(new ClassInDiagram(classId, new URI(graphIdentifier.getGraphUri())));
+            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
     }
 }
