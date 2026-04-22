@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.cim.data.GraphToCIMCollectionConverterImpl;
+package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
 import static org.assertj.core.api.Assertions.*;
 

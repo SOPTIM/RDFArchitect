@@ -18,7 +18,7 @@
 <script>
     import {
         faFolder,
-        faFolderOpen
+        faFolderOpen,
     } from "@fortawesome/free-regular-svg-icons";
     import { faPencil, faTrash } from "@fortawesome/free-solid-svg-icons";
 
@@ -51,13 +51,16 @@
         classes?.forEach(diagramClass => {
             const graph = allGraphNavEntries.find(g =>
                 g.children.some(pack =>
-                    pack.children.some(cls => cls.id === diagramClass.id)
-                )
+                    pack.children.some(cls => cls.id === diagramClass.id),
+                ),
             );
             if (graph) {
                 map[diagramClass.id] = graph;
             } else {
-                console.warn("Could not find graph for class ", diagramClass.id)
+                console.warn(
+                    "Could not find graph for class ",
+                    diagramClass.id,
+                );
             }
         });
         return map;
@@ -67,7 +70,7 @@
     const hasClasses = $derived(diagram.classes?.length > 0);
 
     async function toggleDiagramContentsVisibility() {
-        await onToggle()
+        await onToggle();
         const next = !diagram.showContents;
 
         diagram.showContents = next;
@@ -87,7 +90,7 @@
     function selectDiagram() {
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
         editorState.selectedGraph.updateValue(
-            graphNavEntry ? graphNavEntry.id : null
+            graphNavEntry ? graphNavEntry.id : null,
         );
         editorState.selectedPackageUUID.updateValue(null);
         editorState.selectedCustomDiagramUUID.updateValue(diagram.diagramId);

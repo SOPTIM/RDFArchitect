@@ -80,7 +80,9 @@ class RenderCIMCollectionTestBase {
 
         var mockLayoutData = RenderingLayoutData.builder().classLayoutingData(mockMap).build();
         when(fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(any(), any()))
-                .thenReturn(mockLayoutData);
+                  .thenReturn(mockLayoutData);
+        when(fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(any(), any()))
+                  .thenReturn(mockLayoutData);
 
         mermaidRenderer = new RenderCIMCollectionMermaidService();
         svelteFlowRenderer =
