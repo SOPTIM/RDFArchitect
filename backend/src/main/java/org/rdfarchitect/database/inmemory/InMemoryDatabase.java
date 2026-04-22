@@ -24,10 +24,13 @@ import org.apache.jena.sparql.core.Transactional;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface InMemoryDatabase {
@@ -64,6 +67,24 @@ public interface InMemoryDatabase {
      * @return {@link GraphWithContext}
      */
     GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
+
+    /**
+     * Get all {@link CustomDiagram} for a dataset.
+     *
+     * @param datasetName literal dataset name
+     *
+     * @return map of custom diagrams belonging to the dataset
+     */
+    Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
+
+    /**
+     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
+     *
+     * @param datasetName literal dataset name
+     *
+     * @return diagram layout for the dataset
+     */
+    DiagramLayout getDatasetDiagramLayout(String datasetName);
 
     /**
      * Creates a new {@link GraphRewindableWithUUIDs} in a specified dataset. If the dataset does not exist yet, it will be created.

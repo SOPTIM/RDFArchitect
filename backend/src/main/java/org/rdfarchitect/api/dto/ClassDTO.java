@@ -33,6 +33,8 @@ public class ClassDTO {
 
     private UUID uuid;
 
+    private String graphUri;
+
     private String prefix;
 
     private String label;

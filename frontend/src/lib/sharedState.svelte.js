@@ -44,6 +44,7 @@ export const editorState = {
     selectedDataset: new StateValuePair(),
     selectedGraph: new StateValuePair(),
     selectedPackageUUID: new StateValuePair(),
+    selectedCustomDiagramUUID: new StateValuePair(),
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
@@ -54,6 +55,7 @@ export const editorState = {
         this.selectedDataset.updateValue(null);
         this.selectedGraph.updateValue(null);
         this.selectedPackageUUID.updateValue(null);
+        this.selectedCustomDiagramUUID.updateValue(null);
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
         this.selectedClassUUID.updateValue(null);

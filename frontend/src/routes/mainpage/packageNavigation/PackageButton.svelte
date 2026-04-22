@@ -25,6 +25,7 @@
         faLink,
         faTrash,
         faEye,
+        faObjectGroup,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -38,6 +39,8 @@
     import { isSelectedPackage } from "./packageNavigationUtils.svelte.js";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -47,6 +50,8 @@
         readonly,
     } = $props();
     let showNewClassDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeletePackageDialog = $state(false);
 
@@ -106,6 +111,7 @@
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
         editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
+        editorState.selectedCustomDiagramUUID.updateValue(null);
     }
 </script>
 
@@ -138,6 +144,23 @@
                 faIcon={faPlus}
             >
                 New Class
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToGraphDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Profile Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToDatasetDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -189,6 +212,20 @@
     lockedPackage={packageNavEntry.data?.uuid === "default"
         ? null
         : packageNavEntry.data}
+/>
+
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToGraphDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={packageNavEntry.children}
+/>
+
+<AddToDatasetDiagramDialog
+    bind:showDialog={showAddToDatasetDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    classes={packageNavEntry.children}
 />
 
 <PackageEditorDialog

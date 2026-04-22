@@ -54,12 +54,7 @@
             }
 
             if (editorState.selectedDataset.getValue() === datasetName) {
-                editorState.selectedDataset.updateValue(null);
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedPackageUUID.updateValue(null);
-                editorState.selectedClassDataset.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClassUUID.updateValue(null);
+                editorState.reset();
             }
         } finally {
             forceReloadTrigger.trigger();

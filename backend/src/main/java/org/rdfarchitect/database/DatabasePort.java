@@ -20,10 +20,12 @@ package org.rdfarchitect.database;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.inmemory.GraphWithContext;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
-
 
 public interface DatabasePort {
 
@@ -35,6 +37,24 @@ public interface DatabasePort {
      * @return {@link GraphWithContext}
      */
     GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
+
+    /**
+     * Get all {@link CustomDiagram} for a dataset.
+     *
+     * @param datasetName literal dataset name
+     *
+     * @return map of custom diagrams belonging to the dataset
+     */
+    Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
+
+    /**
+     * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
+     *
+     * @param datasetName literal dataset name
+     *
+     * @return diagram layout for the dataset
+     */
+    DiagramLayout getDatasetDiagramLayout(String datasetName);
 
     /**
      * Loads the namespace prefix mapping for the dataset.

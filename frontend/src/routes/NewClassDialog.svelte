@@ -224,6 +224,7 @@
                 editorState.selectedPackageUUID.updateValue(
                     selectedPackageUUID,
                 );
+                editorState.selectedCustomDiagramUUID.updateValue(null);
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);

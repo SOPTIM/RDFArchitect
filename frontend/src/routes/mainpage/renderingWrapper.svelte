@@ -69,17 +69,31 @@
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedPackageUUID.subscribe();
+        editorState.selectedCustomDiagramUUID.subscribe();
 
-        if (!editorState.selectedPackageUUID.getValue()) {
+        const packageUUID = editorState.selectedPackageUUID.getValue();
+        const diagramId = editorState.selectedCustomDiagramUUID.getValue();
+        const graph = editorState.selectedGraph.getValue();
+
+        if (diagramId) {
+            if (graph) {
+                await fetchGraphDiagramRenderingData(diagramId);
+            } else {
+                await fetchDatasetDiagramRenderingData(diagramId);
+            }
+        } else if (packageUUID) {
+            await fetchPackageRenderingData(packageUUID);
+        } else {
             response = null;
             renderingFormat = null;
             displayDiagram = false;
             isLoading = false;
-            return;
         }
+    });
 
+    async function fetchPackageRenderingData(packageUUID) {
         let graphFilter = {
-            packageUUID: editorState.selectedPackageUUID.getValue(),
+            packageUUID: packageUUID,
             includeEnumEntries:
                 graphViewState.filter.getValue().includeEnumEntries,
             includeAttributes:
@@ -119,7 +133,56 @@
             displayDiagram = false;
             isLoading = false;
         }
-    });
+    }
+
+    async function fetchDatasetDiagramRenderingData(diagramId) {
+        try {
+            const res = await bec.getCustomDatasetDiagramRenderingData(
+                editorState.selectedDataset.getValue(),
+                diagramId,
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function fetchGraphDiagramRenderingData(diagramId) {
+        try {
+            const res = await bec.getCustomGraphDiagramRenderingData(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                diagramId,
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+        } finally {
+            isLoading = false;
+        }
+    }
 
     async function isReadOnly(datasetName) {
         const res = await bec.isReadOnly(datasetName);
@@ -135,7 +198,7 @@
     }
 </script>
 
-{#if editorState.selectedPackageUUID.getValue()}
+{#if editorState.selectedPackageUUID.getValue() || editorState.selectedCustomDiagramUUID.getValue()}
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             {#if displayDiagram}

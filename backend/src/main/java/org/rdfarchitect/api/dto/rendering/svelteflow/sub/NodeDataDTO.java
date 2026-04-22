@@ -30,6 +30,7 @@ import java.util.List;
 public class NodeDataDTO {
 
     private String label;
+    private String graphUri;
     private String belongsToCategory;
     private List<String> stereotypes;
     private List<AttributeDTO> attributes;

@@ -72,6 +72,11 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         return new MermaidDTO(renderContext.mermaidString.toString());
     }
 
+    @Override
+    public RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID packageUUID) {
+        return null;
+    }
+
     private static final String ON_CLICK_CALLBACK_FUNCTION_NAME = "getClassInformation";
 
     private static final String TAB = "    ";

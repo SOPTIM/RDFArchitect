@@ -27,8 +27,11 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -42,6 +45,16 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     @Override
     public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         return database.getGraphWithContext(graphIdentifier);
+    }
+
+    @Override
+    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
+        return database.getDatasetDiagrams(datasetName);
+    }
+
+    @Override
+    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
+        return database.getDatasetDiagramLayout(datasetName);
     }
 
     @Override

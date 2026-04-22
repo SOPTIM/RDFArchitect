@@ -52,6 +52,7 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import PackageButton from "./PackageButton.svelte";
     import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
@@ -336,6 +337,12 @@
                     {readonly}
                 />
             {/each}
+
+            <CustomDiagramsSection
+                {datasetNavEntry}
+                {graphNavEntry}
+                {readonly}
+            />
         </div>
     {/if}
 </div>

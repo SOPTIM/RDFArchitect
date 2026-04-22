@@ -20,6 +20,8 @@
     import {
         faArrowUpRightFromSquare,
         faDiagramProject,
+        faMinus,
+        faObjectGroup,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
@@ -31,12 +33,16 @@
 
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteClassConfirmDialog from "../../DeleteClassConfirmDialog.svelte";
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
         datasetNavEntry,
         graphNavEntry,
         classNavEntry,
+        diagramId,
         namespaces = [],
         readonly = false,
         onPackChange = () => {},
@@ -44,6 +50,9 @@
 
     let showDeleteDialog = $state(false);
     let showSHACLDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
+    let showRemoveFromDiagramDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
     const shaclClass = $derived({
@@ -119,7 +128,36 @@
         >
             Constrains
         </ContextMenu.Item.Button>
+        {#if !diagramId}
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToGraphDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Profile Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToDatasetDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.Separator />
+        {#if diagramId}
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showRemoveFromDiagramDialog = true;
+                }}
+                faIcon={faMinus}
+                variant="danger"
+            >
+                Remove from Diagram
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.Item.Button
             onSelect={() => {
                 selectClass();
@@ -146,4 +184,23 @@
     graphUri={graphNavEntry.id}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
+/>
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToGraphDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={[classNavEntry]}
+/>
+<AddToDatasetDiagramDialog
+    bind:showDialog={showAddToDatasetDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={[classNavEntry]}
+/>
+<RemoveFromDiagramDialog
+    bind:showDialog={showRemoveFromDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    {diagramId}
+    cls={classNavEntry}
 />

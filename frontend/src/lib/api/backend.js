@@ -381,7 +381,22 @@ export class BackendConnection {
         packageUUID,
         classPositionDTOList,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}/layout/classes`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/layout/${encodeURIComponent(packageUUID)}/classes`;
+        return await fetch(url, {
+            method: "PUT",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            mode: "cors",
+            body: JSON.stringify(classPositionDTOList),
+            credentials: "include",
+        });
+    }
+
+    async updateGlobalClassPositions(
+        datasetName,
+        packageUUID,
+        classPositionDTOList,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/layout/${encodeURIComponent(packageUUID)}/classes`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -447,6 +462,115 @@ export class BackendConnection {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology/generate`;
         return await fetch(url, {
             method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async getCustomDiagramsForGraph(datasetName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async getCustomDiagramsForDataset(datasetName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async getCustomGraphDiagramRenderingData(datasetName, graphURI, diagramId) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async getCustomDatasetDiagramRenderingData(datasetName, diagramId) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async putCustomDiagram(datasetName, graphURI, diagramId, newDiagram) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
+        return await fetch(url, {
+            method: "PUT",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(newDiagram),
+            credentials: "include",
+        });
+    }
+
+    async putCustomDatasetDiagram(datasetName, diagramId, newDiagram) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
+        return await fetch(url, {
+            method: "PUT",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(newDiagram),
+            credentials: "include",
+        });
+    }
+
+    async addToCustomGraphDiagram(datasetName, graphURI, diagramId, classes) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+        return await fetch(url, {
+            method: "POST",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(classes),
+            credentials: "include",
+        });
+    }
+
+    async addToCustomDatasetDiagram(datasetName, diagramId, classes) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+        return await fetch(url, {
+            method: "POST",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(classes),
+            credentials: "include",
+        });
+    }
+
+    async removeFromCustomGraphDiagram(
+        datasetName,
+        graphURI,
+        diagramId,
+        classId,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
+        return await fetch(url, {
+            method: "DELETE",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async removeFromCustomDatasetDiagram(datasetName, diagramId, classId) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
+        return await fetch(url, {
+            method: "DELETE",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             credentials: "include",

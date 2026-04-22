@@ -18,11 +18,13 @@
 package org.rdfarchitect.services.dl.select;
 
 import lombok.RequiredArgsConstructor;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -38,12 +40,23 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     public RenderingLayoutData fetchRenderingLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        return fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, packageUUID);
+    }
+
+    @Override
+    public RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId) {
+        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+        return fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, diagramId);
+    }
+
+    private RenderingLayoutData fetchRenderingLayoutData(DiagramLayout diagramLayout, Model diagramLayoutModel, UUID diagramId) {
 
         Map<UUID, DiagramObjectPoint> classLayoutingData;
-        if (packageUUID == null) {
+        if (diagramId == null) {
             classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid());
         } else {
-            classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, packageUUID);
+            classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramId);
         }
 
         return RenderingLayoutData.builder()

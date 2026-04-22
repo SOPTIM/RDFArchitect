@@ -34,6 +34,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
@@ -53,6 +54,7 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+    private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
 
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
@@ -124,6 +126,7 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
         }
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, UUID.fromString(classUUID));
+        removeFromDiagramUseCase.removeFromAllDiagrams(graphIdentifier, UUID.fromString(classUUID));
 
         changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted class: " + classUUID, graph.getLastDelta()));
     }

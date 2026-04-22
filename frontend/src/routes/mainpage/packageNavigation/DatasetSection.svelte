@@ -36,6 +36,7 @@
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
@@ -93,6 +94,7 @@
         }
         editorState.selectedGraph.updateValue(null);
         editorState.selectedPackageUUID.updateValue(null);
+        editorState.selectedCustomDiagramUUID.updateValue(null);
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
     }
 
@@ -169,7 +171,6 @@
                     Manage Namespaces
                 {/if}
             </ContextMenu.Item.Button>
-            <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
                     selectDataset();
@@ -219,6 +220,12 @@
                     {readonly}
                 />
             {/each}
+
+            <CustomDiagramsSection
+                {datasetNavEntry}
+                allGraphNavEntries={datasetNavEntry.children}
+                {readonly}
+            />
         </div>
     {/if}
 </div>

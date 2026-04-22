@@ -24,9 +24,12 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -51,6 +54,16 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType) {
         return getOrCreateSessionDataStore().begin(graphIdentifier, txnType);
+    }
+
+    @Override
+    public Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName) {
+        return getOrCreateSessionDataStore().getDatasetDiagrams(datasetName);
+    }
+
+    @Override
+    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
+        return getOrCreateSessionDataStore().getDatasetDiagramLayout(datasetName);
     }
 
     @Override
@@ -147,6 +160,6 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
      * Returns the SessionDataStore for the current session, creating one if necessary.
      */
     private SessionDataStore getOrCreateSessionDataStore() {
-        return sessionStores.computeIfAbsent(SessionContext.getSessionId(), k -> new SessionDataStoreImpl());
+        return sessionStores.computeIfAbsent(SessionContext.getSessionId(), _ -> new SessionDataStoreImpl());
     }
 }

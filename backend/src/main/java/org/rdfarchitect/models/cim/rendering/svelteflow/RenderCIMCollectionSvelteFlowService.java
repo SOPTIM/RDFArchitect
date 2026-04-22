@@ -68,11 +68,19 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         }
 
         ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, packageUUID, cimCollection);
-
-        //setup
-        var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
         var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(graphIdentifier, packageUUID);
+        return renderUML(cimCollection, renderingLayoutData);
+    }
 
+    @Override
+    public RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID packageUUID) {
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(datasetName, packageUUID, cimCollection);
+        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(datasetName, packageUUID);
+        return renderUML(cimCollection, renderingLayoutData);
+    }
+
+    private RenderingDataDTO renderUML(CIMCollection cimCollection, RenderingLayoutData renderingLayoutData) {
+        var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
         var renderContext = new RenderContext(
                   cimCollection,
                   uriToUUIDMap,
@@ -133,6 +141,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         nodeDTO.position(positionDTO);
 
         var nodeDataDTO = NodeDataDTO.builder()
+                                     .graphUri(cimClass.getGraphUri())
                                      .label(cimClass.getLabel().getValue())
                                      .belongsToCategory(cimClass.getBelongsToCategory() != null
                                                         ? cimClass.getBelongsToCategory().getLabel().getValue()

@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.packages;
+package org.rdfarchitect.api.controller.datasets;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -29,22 +29,17 @@ import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassPositionsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages/{packageUUID}/layout/classes")
+@RequestMapping("api/datasets/{datasetName}/layout/{diagramUUID}/classes")
 @RequiredArgsConstructor
-public class ClassLayoutDataRESTController {
+public class GlobalClassLayoutDataRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassLayoutDataRESTController.class);
+    private static final Logger logger = LoggerFactory.getLogger(GlobalClassLayoutDataRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final UpdateClassPositionsUseCase updateClassPositionsUseCase;
@@ -62,12 +57,9 @@ public class ClassLayoutDataRESTController {
               @Parameter(description = "The literal name of the dataset.")
               @PathVariable
               String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
+              @Parameter(description = "The UUID of the package or custom diagram being updated.")
               @PathVariable
-              String graphURI,
-              @Parameter(description = "The UUID of the package to be replaced.")
-              @PathVariable
-              String packageUUID,
+              String diagramUUID,
               @io.swagger.v3.oas.annotations.parameters.RequestBody(
                         required = true,
                         description = "The DTO with necessary information for class reposition",
@@ -77,14 +69,11 @@ public class ClassLayoutDataRESTController {
               @RequestBody
               List<ClassPositionDTO> classPositionDTOList) {
 
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}/layout/classes\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
+        logger.info("Received PUT request: \"/api/datasets/{{}}/layout/{{}}/classes\" from \"{}\".", datasetName, diagramUUID, originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var resolvedPackageUUID = !packageUUID.equals("default") ? UUID.fromString(packageUUID) : null;
+        updateClassPositionsUseCase.updateClassPositions(datasetName, UUID.fromString(diagramUUID), classPositionDTOList);
 
-        updateClassPositionsUseCase.updateClassPositions(new GraphIdentifier(datasetName, extendedGraphURI), resolvedPackageUUID, classPositionDTOList);
-
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}/layout/classes\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
+        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/layout/{{}}/classes\" from \"{}\".", datasetName, diagramUUID, originURL);
         return "success";
     }
 }

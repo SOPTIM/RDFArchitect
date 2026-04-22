@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.cim.data.GraphToCIMCollectionConverterImpl;
+package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
 import org.apache.jena.query.TxnType;
 import org.apache.jena.riot.Lang;
@@ -34,8 +34,8 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabase;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,7 +47,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 
 
-class GraphToCIMCollectionConverterImplNoFilterTest {
+class GraphToCIMCollectionConverterServiceNoFilterTest {
 
     private final InMemoryDatabase database = new InMemoryDatabaseImpl();
 
@@ -55,7 +55,7 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
 
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
-    private static final String PATH = "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverterImpl/";
+    private static final String PATH = "src/test/java/org/rdfarchitect/cim/data/CIMCollectionConverter/";
 
     private final Map<String, String> prefixMapping = Map.of(
             "cim", "http://iec.ch/TC57/2013/CIM-schema-cim16#",

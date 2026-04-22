@@ -38,12 +38,22 @@ export function isSelectedPackage(dataset, graph, pack) {
     );
 }
 
+export function isSelectedCustomDiagram(dataset, graph, diagram) {
+    return graph
+        ? isSelectedGraph(dataset, graph) &&
+              editorState.selectedCustomDiagramUUID.getValue() ===
+                  diagram.diagramId
+        : isSelectedDataset(dataset) &&
+              editorState.selectedCustomDiagramUUID.getValue() ===
+                  diagram.diagramId;
+}
+
 export function isSelectedClass(dataset, graph, cls) {
     if (typeof cls === "string") {
         cls = { uuid: cls };
     }
     const datasetLabel = dataset?.label ?? dataset;
-    const graphUri = getUri(graph);
+    const graphUri = graph ? getUri(graph) : null;
     return (
         editorState.selectedClassUUID.getValue() === cls.uuid &&
         editorState.selectedClassDataset.getValue() === datasetLabel &&
@@ -59,7 +69,7 @@ export function getUri(resource) {
     return uri.prefix ? uri.prefix + uri.suffix : uri.suffix;
 }
 
-function getPackageId(pack) {
+export function getPackageId(pack) {
     if (typeof pack === "string") {
         return pack;
     }

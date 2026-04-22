@@ -28,9 +28,9 @@ import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
