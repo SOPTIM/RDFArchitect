@@ -40,7 +40,10 @@
         contextMenuClass = null,
         datasetName = "",
         graphUri = "",
+        nodeOrder = [],
+        nodeCount = 0,
         onClose = () => {},
+        onMoveClass = () => {},
     } = $props();
 
     let triggerRef = $state(null);
@@ -49,6 +52,12 @@
     let showDeleteClassDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    let classZIndex = $derived(
+        contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
+    );
+    let isAtFront = $derived(classZIndex >= nodeCount - 1);
+    let isAtBack = $derived(classZIndex <= 0);
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -72,10 +81,29 @@
         onClose();
     }
 
-    function handleMoveUp() {}
-    function handleMoveDown() {}
-    function handleMoveToBottom() {}
-    function handleMoveToTop() {}
+    function handleMoveUp() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "up" });
+        onClose();
+    }
+
+    function handleMoveDown() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "down" });
+        onClose();
+    }
+
+    function handleMoveToTop() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "top" });
+        onClose();
+    }
+
+    function handleMoveToBottom() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "bottom" });
+        onClose();
+    }
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -96,30 +124,34 @@
         </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger faIcon={faPlus}>
-                Move
+                Move ({classZIndex})
             </ContextMenu.SubMenu.Trigger>
             <ContextMenu.SubMenu.Content>
                 <ContextMenu.Item.Button
                     onSelect={handleMoveToTop}
                     faIcon={faAnglesUp}
+                    disabled={isAtFront}
                 >
                     Move to front
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={handleMoveUp}
                     faIcon={faAngleUp}
+                    disabled={isAtFront}
                 >
                     Move up
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={handleMoveDown}
                     faIcon={faAngleDown}
+                    disabled={isAtBack}
                 >
                     Move down
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={handleMoveToBottom}
                     faIcon={faAnglesDown}
+                    disabled={isAtBack}
                 >
                     Move to bottom
                 </ContextMenu.Item.Button>
