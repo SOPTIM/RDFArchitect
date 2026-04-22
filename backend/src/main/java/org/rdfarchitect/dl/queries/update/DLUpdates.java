@@ -18,7 +18,6 @@
 package org.rdfarchitect.dl.queries.update;
 
 import lombok.experimental.UtilityClass;
-
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -56,15 +55,9 @@ public class DLUpdates {
         var newDiagramObject = model.createResource(diagramObject.getMRID().getFullMRID());
 
         newDiagramObject.addProperty(RDF.type, DL.diagramObjectType);
-        newDiagramObject.addProperty(
-                CIM.ioName, ResourceFactory.createPlainLiteral(diagramObject.getName()));
-        newDiagramObject.addProperty(
-                DL.belongsToDiagram,
-                ResourceFactory.createResource(diagramObject.getBelongsToDiagram().getFullMRID()));
-        newDiagramObject.addProperty(
-                DL.belongsToIdentifiedObject,
-                ResourceFactory.createResource(
-                        diagramObject.getBelongsToIdentifiedObject().getFullMRID()));
+        newDiagramObject.addProperty(CIM.ioName, ResourceFactory.createPlainLiteral(diagramObject.getName()));
+        newDiagramObject.addProperty(DL.belongsToDiagram, ResourceFactory.createResource(diagramObject.getBelongsToDiagram().getFullMRID()));
+        newDiagramObject.addProperty(DL.belongsToIdentifiedObject, ResourceFactory.createResource(diagramObject.getBelongsToIdentifiedObject().getFullMRID()));
 
         model.add(newDiagramObject.listProperties());
     }
@@ -88,22 +81,13 @@ public class DLUpdates {
     }
 
     public void insertDiagramObjectPoint(Model model, DiagramObjectPoint diagramObjectPoint) {
-        var newDiagramObjectPoint =
-                model.createResource(diagramObjectPoint.getMRID().getFullMRID());
+        var newDiagramObjectPoint = model.createResource(diagramObjectPoint.getMRID().getFullMRID());
 
         newDiagramObjectPoint.addProperty(RDF.type, DL.diagramObjectPointType);
-        newDiagramObjectPoint.addProperty(
-                DL.xPosition,
-                ResourceFactory.createPlainLiteral(
-                        String.valueOf(diagramObjectPoint.getPosition().getX())));
-        newDiagramObjectPoint.addProperty(
-                DL.yPosition,
-                ResourceFactory.createPlainLiteral(
-                        String.valueOf(diagramObjectPoint.getPosition().getY())));
-        newDiagramObjectPoint.addProperty(
-                DL.belongsToDiagramObject,
-                ResourceFactory.createResource(
-                        diagramObjectPoint.getBelongsToDiagramObject().getFullMRID()));
+        newDiagramObjectPoint.addProperty(DL.xPosition, ResourceFactory.createPlainLiteral(String.valueOf(diagramObjectPoint.getPosition().getX())));
+        newDiagramObjectPoint.addProperty(DL.yPosition, ResourceFactory.createPlainLiteral(String.valueOf(diagramObjectPoint.getPosition().getY())));
+        newDiagramObjectPoint.addProperty(DL.zPosition, ResourceFactory.createPlainLiteral(String.valueOf(diagramObjectPoint.getPosition().getZ())));
+        newDiagramObjectPoint.addProperty(DL.belongsToDiagramObject, ResourceFactory.createResource(diagramObjectPoint.getBelongsToDiagramObject().getFullMRID()));
 
         model.add(newDiagramObjectPoint.listProperties());
     }
@@ -113,12 +97,12 @@ public class DLUpdates {
     }
 
     /**
-     * Helper method for deleting all triples with the provided mRID as subject from the given
-     * model.
+     * Helper method for deleting all triples with the provided mRID as subject from the given model.
      *
      * @param model the model from which the triples are removed
-     * @param mRID the mRID used as the subject of the triples to be deleted
+     * @param mRID  the mRID used as the subject of the triples to be deleted
      */
+
     private void deleteBase(Model model, MRID mRID) {
         var resource = model.getResource(mRID.getFullMRID());
         model.removeAll(resource, null, null);

@@ -66,12 +66,17 @@ public class DLQuerySolutionParser {
      *
      * @return The XYPosition or null, if the given variables doesn't exist in the solution.
      */
-    public XYPosition getXYPosition() {
+    public XYPosition getXYZPosition() {
         if (!qs.contains(DLQueryVars.X_POSITION) || !qs.contains(DLQueryVars.Y_POSITION)) {
             return null;
         }
         var xPosition = qs.getLiteral(DLQueryVars.X_POSITION).getFloat();
         var yPosition = qs.getLiteral(DLQueryVars.Y_POSITION).getFloat();
-        return new XYPosition(xPosition, yPosition);
+        var zPositionLiteral = qs.getLiteral(DLQueryVars.Z_POSITION);
+        var zPosition = 0;
+        if(zPositionLiteral != null){
+            zPosition = zPositionLiteral.getInt();
+        }
+        return new XYPosition(xPosition, yPosition, zPosition);
     }
 }
