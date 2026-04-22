@@ -26,7 +26,7 @@
     } from "@xyflow/svelte";
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
     import ELK from "elkjs/lib/elk.bundled.js";
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -59,6 +59,8 @@
         inheritance: InheritanceEdge,
     };
 
+    const EDGE_Z_INDEX = 10000;
+
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
@@ -68,6 +70,10 @@
     let contextMenuClass = $state(null);
     let pendingNewClassPlacement = null;
 
+    // Ordered list of node IDs from back (index 0) to front (index n-1).
+    // Each node's zIndex equals its position in this array.
+    let nodeOrder = $state([]);
+
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
@@ -76,7 +82,14 @@
     );
 
     $effect(() => {
-        syncDiagramElements();
+        // Track only the inputs
+        if (!inputNodes || !inputEdges) {
+            return;
+        }
+        // Don't track the internal state writes
+        untrack(() => {
+            syncDiagramElements();
+        });
     });
 
     $effect(async () => {
@@ -116,37 +129,55 @@
         );
     }
 
+    /**
+     * Initializes nodeOrder from inputNodes on first load.
+     * No need to handle add/remove since the diagram reloads in those cases.
+     */
+    function syncNodeOrder(nextNodes) {
+        if (nodeOrder.length === 0) {
+            nodeOrder = nextNodes.map(n => n.id);
+        }
+    }
+
+    function applyZIndicesFromOrder(diagramNodes) {
+        const zIndexLookup = new Map();
+        for (let i = 0; i < nodeOrder.length; i++) {
+            zIndexLookup.set(nodeOrder[i], i);
+        }
+        return diagramNodes.map(node => ({
+            ...node,
+            zIndex: zIndexLookup.get(node.id) ?? 0,
+        }));
+    }
+
     function syncDiagramElements() {
         const nextNodes = syncDiagramNodes();
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
-        nodes = nextNodes;
+        syncNodeOrder(nextNodes);
+        nodes = applyZIndicesFromOrder(nextNodes);
         edges = buildDiagramEdges();
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
     function syncDiagramNodes() {
-        const nextNodes = [...inputNodes];
-        if (!shouldApplyPendingNewClassPlacement()) {
-            return nextNodes;
+        let nextNodes = [...inputNodes];
+        if (shouldApplyPendingNewClassPlacement()) {
+            const addedNode = findAddedNodeForPlacement(nextNodes);
+            if (addedNode) {
+                persistPendingNewClassPosition(addedNode);
+                nextNodes = placePendingNewClassNode(nextNodes, addedNode);
+                pendingNewClassPlacement = null;
+            }
         }
-
-        const addedNode = findAddedNodeForPlacement(nextNodes);
-        if (!addedNode) {
-            return nextNodes;
-        }
-
-        persistPendingNewClassPosition(addedNode);
-        const syncedNodes = placePendingNewClassNode(nextNodes, addedNode);
-        pendingNewClassPlacement = null;
-        return syncedNodes;
+        return nextNodes;
     }
 
     function shouldApplyPendingNewClassPlacement() {
         return (
             !!pendingNewClassPlacement &&
             editorState.selectedPackageUUID.getValue() ===
-                pendingNewClassPlacement.packageUUID
+            pendingNewClassPlacement.packageUUID
         );
     }
 
@@ -174,9 +205,9 @@
         return diagramNodes.map(node =>
             node.id === addedNode.id
                 ? {
-                      ...node,
-                      position: { x, y },
-                  }
+                    ...node,
+                    position: { x, y },
+                }
                 : node,
         );
     }
@@ -207,12 +238,14 @@
     }
 
     function decorateEdgeForDiagram(edge) {
+        const decorated = { ...edge, zIndex: EDGE_Z_INDEX };
+
         if (!shouldOffsetInheritanceEdge(edge)) {
-            return edge;
+            return decorated;
         }
 
         return {
-            ...edge,
+            ...decorated,
             data: {
                 ...(edge.data || {}),
                 offsetEdge: true,
@@ -381,11 +414,11 @@
     }
 
     function handleClassCreated({
-        datasetName,
-        graphURI,
-        packageUUID,
-        className,
-    }) {
+                                    datasetName,
+                                    graphURI,
+                                    packageUUID,
+                                    className,
+                                }) {
         pendingNewClassPlacement = {
             datasetName,
             graphURI,
@@ -397,6 +430,44 @@
                 y: contextMenuFlowPosition.y,
             },
         };
+    }
+
+    function handleMoveClass({ classUuid, direction }) {
+        const idx = nodeOrder.indexOf(classUuid);
+        if (idx === -1) return;
+
+        const next = [...nodeOrder];
+
+        if (direction === "up") {
+            // Swap with the one above (higher zIndex)
+            if (idx >= next.length - 1) return;
+            [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+        } else if (direction === "down") {
+            // Swap with the one below (lower zIndex)
+            if (idx <= 0) return;
+            [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+        } else if (direction === "top") {
+            // Move to front: remove and append at end
+            if (idx >= next.length - 1) return;
+            const [removed] = next.splice(idx, 1);
+            next.push(removed);
+        } else if (direction === "bottom") {
+            // Move to back: remove and prepend at start
+            if (idx <= 0) return;
+            const [removed] = next.splice(idx, 1);
+            next.unshift(removed);
+        }
+
+        nodeOrder = next;
+        nodes = applyZIndicesFromOrder(nodes);
+
+        // Placeholder for backend persistence
+        persistNodeOrder(nodeOrder);
+    }
+
+    function persistNodeOrder(order) {
+        // TODO: Backend-Request zum Persistieren der Node-Reihenfolge
+        console.log("[placeholder] persist node order:", order);
     }
 
     function updateNodePositions(movedNodes) {
@@ -510,44 +581,47 @@
 
 <div class="relative h-full w-full">
     <SvelteFlow
-        bind:nodes
-        bind:edges
-        {nodeTypes}
-        {edgeTypes}
-        nodesDraggable={!isDatasetReadOnly}
-        fitView
-        elementsSelectable={false}
-        nodesFocusable={false}
-        onnodeclick={handleNodeClick}
-        onnodecontextmenu={handleNodeContextMenu}
-        onpaneclick={closeContextMenus}
-        onpanecontextmenu={handlePaneContextMenu}
-        onedgecontextmenu={handleEdgeContextMenu}
-        onnodedragstop={handleNodeMove}
-        selectionMode={"full"}
-        connectionMode={"loose"}
-        multiSelectionKey={null}
-        minZoom={0.1}
-        maxZoom={5}
+            bind:nodes
+            bind:edges
+            {nodeTypes}
+            {edgeTypes}
+            nodesDraggable={!isDatasetReadOnly}
+            fitView
+            elementsSelectable={false}
+            nodesFocusable={false}
+            onnodeclick={handleNodeClick}
+            onnodecontextmenu={handleNodeContextMenu}
+            onpaneclick={closeContextMenus}
+            onpanecontextmenu={handlePaneContextMenu}
+            onedgecontextmenu={handleEdgeContextMenu}
+            onnodedragstop={handleNodeMove}
+            selectionMode={"full"}
+            connectionMode={"loose"}
+            multiSelectionKey={null}
+            minZoom={0.1}
+            maxZoom={5}
     >
         <EdgeMarkers />
         <Background patternColor="#aaa" gap={16} />
     </SvelteFlow>
 
     <SvelteFlowPaneContextMenu
-        request={paneContextMenuRequest}
-        disabled={isDatasetReadOnly}
-        lockedDatasetName={editorState.selectedDataset.getValue()}
-        lockedGraphUri={editorState.selectedGraph.getValue()}
-        onClassCreated={handleClassCreated}
-        onClose={closeContextMenus}
+            request={paneContextMenuRequest}
+            disabled={isDatasetReadOnly}
+            lockedDatasetName={editorState.selectedDataset.getValue()}
+            lockedGraphUri={editorState.selectedGraph.getValue()}
+            onClassCreated={handleClassCreated}
+            onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
-        request={classContextMenuRequest}
-        disabled={isDatasetReadOnly || !contextMenuClass}
-        {contextMenuClass}
-        datasetName={editorState.selectedDataset.getValue()}
-        graphUri={editorState.selectedGraph.getValue()}
-        onClose={closeContextMenus}
+            request={classContextMenuRequest}
+            disabled={isDatasetReadOnly || !contextMenuClass}
+            {contextMenuClass}
+            datasetName={editorState.selectedDataset.getValue()}
+            graphUri={editorState.selectedGraph.getValue()}
+            {nodeOrder}
+            nodeCount={nodes.length}
+            onClose={closeContextMenus}
+            onMoveClass={handleMoveClass}
     />
 </div>
