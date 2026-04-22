@@ -16,7 +16,14 @@
   -->
 
 <script>
-    import { faTrash } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faAngleDown,
+        faAnglesDown,
+        faAnglesUp,
+        faAngleUp,
+        faPlus,
+        faTrash,
+    } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
 
@@ -25,16 +32,21 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
+    import DeleteClassConfirmDialog from "../../../../routes/DeleteClassConfirmDialog.svelte";
 
     let {
         request = null,
         disabled = false,
-        onDeleteClass = () => {},
+        contextMenuClass = null,
+        datasetName = "",
+        graphUri = "",
         onClose = () => {},
     } = $props();
 
     let triggerRef = $state(null);
     let open = $state(false);
+    let deleteClassTarget = $state(null);
+    let showDeleteClassDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -51,9 +63,19 @@
         handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
     }
 
-    function handleDeleteClass() {
-        onDeleteClass();
+    function openDeleteClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        deleteClassTarget = contextMenuClass;
+        showDeleteClassDialog = true;
+        onClose();
     }
+
+    function handleMoveUp() {}
+    function handleMoveDown() {}
+    function handleMoveToBottom() {}
+    function handleMoveToTop() {}
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -65,12 +87,51 @@
     />
     <ContextMenu.Content>
         <ContextMenu.Item.Button
-            onSelect={handleDeleteClass}
+            onSelect={openDeleteClassDialog}
             {disabled}
             faIcon={faTrash}
             variant="danger"
         >
             Delete class
         </ContextMenu.Item.Button>
+        <ContextMenu.SubMenu.Root>
+            <ContextMenu.SubMenu.Trigger faIcon={faPlus}>
+                Move
+            </ContextMenu.SubMenu.Trigger>
+            <ContextMenu.SubMenu.Content>
+                <ContextMenu.Item.Button
+                    onSelect={handleMoveToTop}
+                    faIcon={faAnglesUp}
+                >
+                    Move to front
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={handleMoveUp}
+                    faIcon={faAngleUp}
+                >
+                    Move up
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={handleMoveDown}
+                    faIcon={faAngleDown}
+                >
+                    Move down
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={handleMoveToBottom}
+                    faIcon={faAnglesDown}
+                >
+                    Move to bottom
+                </ContextMenu.Item.Button>
+            </ContextMenu.SubMenu.Content>
+        </ContextMenu.SubMenu.Root>
     </ContextMenu.Content>
 </ContextMenu.Root>
+
+<DeleteClassConfirmDialog
+    bind:showDialog={showDeleteClassDialog}
+    {datasetName}
+    {graphUri}
+    classUuid={deleteClassTarget?.uuid}
+    classLabel={deleteClassTarget?.label}
+/>
