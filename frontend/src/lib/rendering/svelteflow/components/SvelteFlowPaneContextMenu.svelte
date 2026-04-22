@@ -25,16 +25,20 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
+    import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
 
     let {
         request = null,
         disabled = false,
-        onAddClass = () => {},
+        lockedDatasetName = "",
+        lockedGraphUri = "",
+        onClassCreated = () => {},
         onClose = () => {},
     } = $props();
 
     let triggerRef = $state(null);
     let open = $state(false);
+    let showNewClassDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -51,8 +55,9 @@
         handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
     }
 
-    function handleAddClass() {
-        onAddClass();
+    function openNewClassDialog() {
+        showNewClassDialog = true;
+        onClose();
     }
 </script>
 
@@ -65,7 +70,7 @@
     />
     <ContextMenu.Content>
         <ContextMenu.Item.Button
-            onSelect={handleAddClass}
+            onSelect={openNewClassDialog}
             {disabled}
             faIcon={faPlus}
         >
@@ -73,3 +78,10 @@
         </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
+
+<NewClassDialog
+    bind:showDialog={showNewClassDialog}
+    {lockedDatasetName}
+    {lockedGraphUri}
+    {onClassCreated}
+/>

@@ -25,7 +25,7 @@
         useSvelteFlow,
     } from "@xyflow/svelte";
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
-    import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
+    import ELK from "elkjs/lib/elk.bundled.js";
     import { onMount } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
@@ -42,8 +42,6 @@
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
-    import DeleteClassConfirmDialog from "../../../routes/DeleteClassConfirmDialog.svelte";
-    import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
         nodes: inputNodes,
@@ -68,9 +66,6 @@
     let paneContextMenuRequest = $state(null);
     let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
-    let deleteClassTarget = $state(null);
-    let showDeleteClassDialog = $state(false);
-    let showNewClassDialog = $state(false);
     let pendingNewClassPlacement = null;
 
     let nodesInit = useNodesInitialized();
@@ -383,12 +378,6 @@
             x: event.clientX,
             y: event.clientY,
         };
-        editorState.selectedClassUUID.updateValue(node.id);
-    }
-
-    function openNewClassDialog() {
-        showNewClassDialog = true;
-        closeContextMenus();
     }
 
     function handleClassCreated({
@@ -408,15 +397,6 @@
                 y: contextMenuFlowPosition.y,
             },
         };
-    }
-
-    function openDeleteClassDialog() {
-        if (!contextMenuClass) {
-            return;
-        }
-        deleteClassTarget = contextMenuClass;
-        showDeleteClassDialog = true;
-        closeContextMenus();
     }
 
     function updateNodePositions(movedNodes) {
@@ -557,28 +537,17 @@
     <SvelteFlowPaneContextMenu
         request={paneContextMenuRequest}
         disabled={isDatasetReadOnly}
-        onAddClass={openNewClassDialog}
+        lockedDatasetName={editorState.selectedDataset.getValue()}
+        lockedGraphUri={editorState.selectedGraph.getValue()}
+        onClassCreated={handleClassCreated}
         onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
         request={classContextMenuRequest}
         disabled={isDatasetReadOnly || !contextMenuClass}
-        onDeleteClass={openDeleteClassDialog}
+        {contextMenuClass}
+        datasetName={editorState.selectedDataset.getValue()}
+        graphUri={editorState.selectedGraph.getValue()}
         onClose={closeContextMenus}
     />
 </div>
-
-<NewClassDialog
-    bind:showDialog={showNewClassDialog}
-    lockedDatasetName={editorState.selectedDataset.getValue()}
-    lockedGraphUri={editorState.selectedGraph.getValue()}
-    onClassCreated={handleClassCreated}
-/>
-
-<DeleteClassConfirmDialog
-    bind:showDialog={showDeleteClassDialog}
-    datasetName={editorState.selectedDataset.getValue()}
-    graphUri={editorState.selectedGraph.getValue()}
-    classUuid={deleteClassTarget?.uuid}
-    classLabel={deleteClassTarget?.label}
-/>
