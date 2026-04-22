@@ -26,7 +26,7 @@
 
 ### Jackson-dataformat-YAML
 - **Package:** com.fasterxml.jackson.dataformat
-- **Version:** 2.20.2
+- **Version:** 2.21.1
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/FasterXML/jackson-dataformats-text](https://github.com/FasterXML/jackson-dataformats-text)
 
@@ -50,37 +50,37 @@
 
 ### spring-boot-starter
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.4
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-log4j2
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.4
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-test
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.4
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-thymeleaf
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.4
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webflux
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.4
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webmvc
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.4
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
@@ -104,7 +104,7 @@
 
 ### Project Lombok
 - **Package:** org.projectlombok
-- **Version:** 1.18.42
+- **Version:** 1.18.44
 - **License:** MIT License
 - **URL:** [https://projectlombok.org](https://projectlombok.org)
 

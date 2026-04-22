@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring request wrappers intentionally keep mutable DTOs for Jackson binding. -->
+    <Match>
+        <Class name="org.rdfarchitect.api.controller.datasets.graphs.classes.AllClassesRESTController$AddNewClassRequest"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Bulk import results stay mutable while the service aggregates successes and failures. -->
+    <Match>
+        <Class name="org.rdfarchitect.services.update.graph.ImportGraphsUseCase$ImportResult"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Jena-backed builders intentionally keep mutable models and graphs during construction. -->
+    <Match>
+        <Class name="~org\.rdfarchitect\.cim\.rendering\.mermaid\.builder\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.shacl.SHACLFromCIMGenerator"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.shacl.SHACLShapesFetcher"/>
+        <Bug pattern="EI_EXPOSE_REP2,RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="~org\.rdfarchitect\.shacl\.property\.shapebuilder\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    </Match>
+    <Match>
+        <Class name="~org\.rdfarchitect\.shacl\.property\.shapegenerator\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.shacl.dto.PropertyShapesWrapper$PropertyShapesWrapperBuilder"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- Query and source helpers wrap mutable Jena state as part of their contract. -->
+    <Match>
+        <Class name="~org\.rdfarchitect\.cim\.queries\.(select|update)\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.cim.relations.CIMClassRelationFinder"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="~org\.rdfarchitect\.rdf\.graph\.source\..*"/>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2,RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.rdf.graph.DeltaCompressible"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge"/>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.rdf.graph.wrapper.DiagramLayout"/>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+
+    <!-- Database adapters wrap mutable transport state and fluent Jena APIs. -->
+    <Match>
+        <Class name="~org\.rdfarchitect\.database\.implementations\.http(\.command)?\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="~org\.rdfarchitect\.database\.implementations\.file\.command\..*"/>
+        <Bug pattern="EI_EXPOSE_REP2,RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.database.implementations.file.FileDatabase"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW,MC_OVERRIDABLE_METHOD_CALL_IN_CONSTRUCTOR,RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.database.inmemory.GraphWithContext"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.database.snapshots.FusekiSnapshotAdapter"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!-- These services intentionally ignore fluent return values from Jena mutators. -->
+    <Match>
+        <Class name="~org\.rdfarchitect\.services\.(select\.QueryDatasetService|select\.ontology\.GenerateOntologyEntriesService|select\.ontology\.ReadOntologyService|shacl\.SHACLGenerateService|shacl\.SingletonPrimitiveSHACLStoringService|update\.ontology\.UpdateOntologyService)"/>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT,ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.cim.queries.update.CIMUpdates"/>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.dl.queries.update.DLUpdates"/>
+        <Bug pattern="RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT"/>
+    </Match>
+
+    <!-- Remaining legacy findings are framework-related and not actionable without broader rewrites. -->
+    <Match>
+        <Class name="org.rdfarchitect.config.GraphCompressionConfig"/>
+        <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.cim.data.dto.relations.CIMSAssociationUsed"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.rdf.graph.wrapper.GraphRewindable"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW,UL_UNRELEASED_LOCK"/>
+    </Match>
+    <Match>
+        <Class name="org.rdfarchitect.database.inmemory.SessionDataStoreImpl"/>
+        <Bug pattern="UL_UNRELEASED_LOCK_EXCEPTION_PATH"/>
+    </Match>
+</FindBugsFilter>
