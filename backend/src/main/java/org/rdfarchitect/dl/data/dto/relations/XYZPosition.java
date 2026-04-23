@@ -27,12 +27,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class XYZPosition {
 
-    @Getter
-    private float x;
+    @Getter private float x;
 
-    @Getter
-    private float y;
+    @Getter private float y;
 
-    @Getter
-    private int z;
+    @Getter private int z;
 }

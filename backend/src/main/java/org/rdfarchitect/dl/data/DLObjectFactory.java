@@ -18,6 +18,7 @@
 package org.rdfarchitect.dl.data;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.query.QuerySolution;
 import org.rdfarchitect.dl.data.dto.Diagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
@@ -27,7 +28,8 @@ import org.rdfarchitect.dl.queries.DLQuerySolutionParser;
 import org.rdfarchitect.dl.queries.DLQueryVars;
 
 /**
- * Factory class that provides static methods for creating CGMES DiagramLayout Profile objects from queries
+ * Factory class that provides static methods for creating CGMES DiagramLayout Profile objects from
+ * queries
  */
 @UtilityClass
 public class DLObjectFactory {
@@ -35,49 +37,49 @@ public class DLObjectFactory {
     /**
      * Creates a {@link Diagram} from a given query solution.
      *
-     * @param querySolution {@link QuerySolution} with results bound to variables from {@link DLQueryVars}.
-     *
+     * @param querySolution {@link QuerySolution} with results bound to variables from {@link
+     *     DLQueryVars}.
      * @return {@link Diagram}
      */
     public static Diagram createDiagram(QuerySolution querySolution) {
         var parser = new DLQuerySolutionParser(querySolution);
         return Diagram.builder()
-                      .mRID(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
-                      .name(parser.getName(DLQueryVars.DIAGRAM_NAME))
-                      .orientation(OrientationKind.NEGATIVE)
-                      .build();
+                .mRID(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
+                .name(parser.getName(DLQueryVars.DIAGRAM_NAME))
+                .orientation(OrientationKind.NEGATIVE)
+                .build();
     }
 
     /**
      * Creates a {@link DiagramObject} from a given query solution.
      *
-     * @param querySolution {@link QuerySolution} with results bound to variables from {@link DLQueryVars}.
-     *
+     * @param querySolution {@link QuerySolution} with results bound to variables from {@link
+     *     DLQueryVars}.
      * @return {@link DiagramObject}
      */
     public static DiagramObject createDiagramObject(QuerySolution querySolution) {
         var parser = new DLQuerySolutionParser(querySolution);
         return DiagramObject.builder()
-                            .mRID(parser.getMRID(DLQueryVars.DO_MRID))
-                            .name(parser.getName(DLQueryVars.DO_NAME))
-                            .belongsToDiagram(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
-                            .belongsToIdentifiedObject(parser.getMRID(DLQueryVars.IO_MRID))
-                            .build();
+                .mRID(parser.getMRID(DLQueryVars.DO_MRID))
+                .name(parser.getName(DLQueryVars.DO_NAME))
+                .belongsToDiagram(parser.getMRID(DLQueryVars.DIAGRAM_MRID))
+                .belongsToIdentifiedObject(parser.getMRID(DLQueryVars.IO_MRID))
+                .build();
     }
 
     /**
      * Creates a {@link DiagramObjectPoint} from a given query solution.
      *
-     * @param querySolution {@link QuerySolution} with results bound to variables from {@link DLQueryVars}.
-     *
+     * @param querySolution {@link QuerySolution} with results bound to variables from {@link
+     *     DLQueryVars}.
      * @return {@link DiagramObjectPoint}
      */
     public static DiagramObjectPoint createDiagramObjectPoint(QuerySolution querySolution) {
         var parser = new DLQuerySolutionParser(querySolution);
         return DiagramObjectPoint.builder()
-                                 .mRID(parser.getMRID(DLQueryVars.DOP_MRID))
-                                 .position(parser.getXYZPosition())
-                                 .belongsToDiagramObject(parser.getMRID(DLQueryVars.DO_MRID))
-                                 .build();
+                .mRID(parser.getMRID(DLQueryVars.DOP_MRID))
+                .position(parser.getXYZPosition())
+                .belongsToDiagramObject(parser.getMRID(DLQueryVars.DO_MRID))
+                .build();
     }
 }
