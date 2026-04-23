@@ -21,7 +21,7 @@
         faAnglesDown,
         faAnglesUp,
         faAngleUp,
-        faPlus,
+        faLayerGroup,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
@@ -44,6 +44,8 @@
         nodeCount = 0,
         onClose = () => {},
         onMoveClass = () => {},
+        onSetLayer = () => {},
+        onPersistLayer = () => {},
     } = $props();
 
     let triggerRef = $state(null);
@@ -84,25 +86,35 @@
     function handleMoveUp() {
         if (!contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "up" });
-        onClose();
     }
 
     function handleMoveDown() {
         if (!contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "down" });
-        onClose();
     }
 
     function handleMoveToTop() {
         if (!contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "top" });
-        onClose();
     }
 
     function handleMoveToBottom() {
         if (!contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "bottom" });
-        onClose();
+    }
+
+    function handleLayerChange(newLayer) {
+        if (!contextMenuClass) return;
+        const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
+        // Immediate local update
+        onSetLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
+    }
+
+    function handleLayerPersist(newLayer) {
+        if (!contextMenuClass) return;
+        const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
+        // Debounced API call
+        onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
 </script>
 
@@ -123,33 +135,55 @@
             Delete class
         </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
-            <ContextMenu.SubMenu.Trigger faIcon={faPlus}>
-                Move ({classZIndex})
+            <ContextMenu.SubMenu.Trigger faIcon={faLayerGroup}>
+                Move
             </ContextMenu.SubMenu.Trigger>
             <ContextMenu.SubMenu.Content>
                 <ContextMenu.Item.Button
-                    onSelect={handleMoveToTop}
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToTop();
+                    }}
                     faIcon={faAnglesUp}
                     disabled={isAtFront}
                 >
                     Move to front
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
-                    onSelect={handleMoveUp}
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveUp();
+                    }}
                     faIcon={faAngleUp}
                     disabled={isAtFront}
                 >
                     Move up
                 </ContextMenu.Item.Button>
+                <ContextMenu.Item.Counter
+                    value={classZIndex}
+                    min={0}
+                    max={nodeCount - 1}
+                    {disabled}
+                    onchange={handleLayerChange}
+                    onpersist={handleLayerPersist}
+                >
+                    Layer
+                </ContextMenu.Item.Counter>
                 <ContextMenu.Item.Button
-                    onSelect={handleMoveDown}
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveDown();
+                    }}
                     faIcon={faAngleDown}
                     disabled={isAtBack}
                 >
                     Move down
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
-                    onSelect={handleMoveToBottom}
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToBottom();
+                    }}
                     faIcon={faAnglesDown}
                     disabled={isAtBack}
                 >

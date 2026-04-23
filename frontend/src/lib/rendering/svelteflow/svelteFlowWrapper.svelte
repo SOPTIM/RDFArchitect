@@ -74,6 +74,9 @@
     // Each node's zIndex equals its position in this array.
     let nodeOrder = $state([]);
 
+    // Temporarily elevated node (not persisted) — shown in front during click/drag/search
+    let temporaryFrontNodeId = $state(null);
+
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
@@ -113,6 +116,16 @@
         focusRequestedClassInDiagram();
     });
 
+    $effect(() => {
+        editorState.selectedClassUUID.subscribe();
+        const selectedUUID = editorState.selectedClassUUID.getValue();
+        untrack(() => {
+            if (!selectedUUID) {
+                resetTemporaryFront();
+            }
+        });
+    });
+
     onMount(() => {
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
@@ -147,10 +160,27 @@
         for (let i = 0; i < nodeOrder.length; i++) {
             zIndexLookup.set(nodeOrder[i], i);
         }
+        // Temporary front node gets a zIndex just below EDGE_Z_INDEX
+        const tempFrontZ = EDGE_Z_INDEX - 1;
         return diagramNodes.map(node => ({
             ...node,
-            zIndex: zIndexLookup.get(node.id) ?? 0,
+            zIndex:
+                node.id === temporaryFrontNodeId
+                    ? tempFrontZ
+                    : (zIndexLookup.get(node.id) ?? 0),
         }));
+    }
+
+    function bringToFrontTemporarily(nodeId) {
+        if (temporaryFrontNodeId === nodeId) return;
+        temporaryFrontNodeId = nodeId;
+        nodes = applyZIndicesFromOrder(nodes);
+    }
+
+    function resetTemporaryFront() {
+        if (temporaryFrontNodeId === null) return;
+        temporaryFrontNodeId = null;
+        nodes = applyZIndicesFromOrder(nodes);
     }
 
     function syncDiagramElements() {
@@ -305,6 +335,7 @@
         }
 
         queueMicrotask(() => {
+            bringToFrontTemporarily(focusNode.id);
             svelteFlowAPI.svelteFlow.fitView({
                 nodes: [focusNode],
                 padding: 0.4,
@@ -325,6 +356,8 @@
         if (nodeClickEvent.node.type === "class") {
             const id = nodeClickEvent.node.id;
             console.log("selecting class: ", id);
+
+            bringToFrontTemporarily(id);
 
             if (!editorState.selectedClassUUID.getValue()) {
                 eventStack.executeNewestEvent(id);
@@ -493,6 +526,31 @@
         );
     }
 
+    function moveToLayer(classUuid, layer) {
+        const currentIdx = nodeOrder.indexOf(classUuid);
+        if (currentIdx === -1 || currentIdx === layer) return;
+
+        const next = [...nodeOrder];
+        const [removed] = next.splice(currentIdx, 1);
+        next.splice(layer, 0, removed);
+
+        nodeOrder = next;
+        nodes = applyZIndicesFromOrder(nodes);
+    }
+
+    function handleSetLayer({ classUuid, layer }) {
+        moveToLayer(classUuid, layer);
+    }
+
+    function handlePersistLayer({ classUuid }) {
+        // nodeOrder is already updated by handleSetLayer
+        const currentIdx = nodeOrder.indexOf(classUuid);
+        if (currentIdx === -1) return;
+
+        // Persist all nodes since we don't know intermediate states
+        persistNodeOrder(nodeOrder, [...nodeOrder]);
+    }
+
     function updateNodePositions(movedNodes) {
         let classPositionDTOList = [];
         for (const node of movedNodes) {
@@ -618,6 +676,7 @@
         onpaneclick={closeContextMenus}
         onpanecontextmenu={handlePaneContextMenu}
         onedgecontextmenu={handleEdgeContextMenu}
+        onnodedragstart={({ node }) => bringToFrontTemporarily(node.id)}
         onnodedragstop={handleNodeMove}
         selectionMode={"full"}
         connectionMode={"loose"}
@@ -647,5 +706,7 @@
         nodeCount={nodes.length}
         onClose={closeContextMenus}
         onMoveClass={handleMoveClass}
+        onSetLayer={handleSetLayer}
+        onPersistLayer={handlePersistLayer}
     />
 </div>
