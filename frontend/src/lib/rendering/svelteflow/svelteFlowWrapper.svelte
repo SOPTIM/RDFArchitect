@@ -59,7 +59,7 @@
         inheritance: InheritanceEdge,
     };
 
-    const EDGE_Z_INDEX = 10000;
+    const EDGE_Z_INDEX = -1;
 
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
@@ -160,8 +160,8 @@
         for (let i = 0; i < nodeOrder.length; i++) {
             zIndexLookup.set(nodeOrder[i], i);
         }
-        // Temporary front node gets a zIndex just below EDGE_Z_INDEX
-        const tempFrontZ = EDGE_Z_INDEX - 1;
+        // Temporary front node gets a zIndex above all other nodes
+        const tempFrontZ = nodeOrder.length + 1;
         return diagramNodes.map(node => ({
             ...node,
             zIndex:
