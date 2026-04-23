@@ -114,18 +114,6 @@
 >
     {#if attribute && classEditorContext && datatypes && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">
-            <!-- UUID -->
-            <div>
-                <span class="mb-1">UUID:</span>
-                <p class="w-full">
-                    {#if attribute.uuid.value}
-                        {attribute.uuid.value}
-                    {:else}
-                        not yet assigned
-                    {/if}
-                </p>
-            </div>
-
             <!-- NAMESPACE -->
             <div>
                 <span class="mb-1">Namespace:</span>

@@ -53,13 +53,7 @@
         </span>
     </div>
 
-    <!-- Row 2: UUID -->
-    <div class="col-start-1 row-start-2 pl-2">
-        <span class="mb-1">UUID:</span>
-        <p class="w-full">{association.uuid.value}</p>
-    </div>
-
-    <!-- Row 3: Namespace -->
+    <!-- Row 2: Namespace -->
     <div class="col-start-1 row-start-3 pl-2">
         <span class="mb-1">Namespace:</span>
         <SearchableSelect
@@ -84,7 +78,7 @@
         <ViolationMessages violations={association.namespace.violations} />
     </div>
 
-    <!-- Row 4: Label -->
+    <!-- Row 3: Label -->
     <div class="col-start-1 row-start-4 pl-2">
         <TextEditControl
             label="Label:"
@@ -101,7 +95,7 @@
         <ViolationMessages violations={association.label.violations} />
     </div>
 
-    <!-- Row 5: Target -->
+    <!-- Row 4: Target -->
     <div class="col-start-1 row-start-5 pl-2">
         <SearchableSelect
             label="Target:"
@@ -130,7 +124,7 @@
         <ViolationMessages violations={association.target.violations} />
     </div>
 
-    <!-- Row 6: Multiplicity LowerBound -->
+    <!-- Row 5: Multiplicity LowerBound -->
     <div class="col-start-1 row-start-6 pl-2">
         <NumberInputControl
             label="Multiplicity LowerBound:"
@@ -149,7 +143,7 @@
         />
     </div>
 
-    <!-- Row 7: Multiplicity UpperBound -->
+    <!-- Row 6: Multiplicity UpperBound -->
     <div class="col-start-1 row-start-7 pl-2">
         <NumberInputControl
             label="Multiplicity UpperBound:"
@@ -168,7 +162,7 @@
         />
     </div>
 
-    <!-- Row 8: Use association checkbox -->
+    <!-- Row 7: Use association checkbox -->
     <div class="col-start-1 row-start-8 pl-2">
         <div class="relative flex items-end space-x-1">
             <CheckBoxEditControl
@@ -186,7 +180,7 @@
         <ViolationMessages violations={association.isUsed.violations} />
     </div>
 
-    <!-- Row 9: Comment -->
+    <!-- Row 8: Comment -->
     <div class="col-start-1 row-start-9 pl-2">
         <label for="association-edit-dialog-direct-comment-text-area">
             Comment:
