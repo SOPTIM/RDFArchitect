@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.dl.update;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.Diagram;
@@ -37,7 +38,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase, EnsureDiagramLayoutForCIMCollectionUseCase {
+public class UpdateDiagramLayoutService
+        implements CreateDiagramLayoutUseCase, EnsureDiagramLayoutForCIMCollectionUseCase {
 
     final String DEFAULT_PACKAGE_NAME = "default";
 
@@ -50,67 +52,77 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase, E
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
         var allPackagesGraphFilter = new GraphFilter(false);
-        CIMCollection allPackagesCIMCollection = converter.convert(graphIdentifier, allPackagesGraphFilter);
+        CIMCollection allPackagesCIMCollection =
+                converter.convert(graphIdentifier, allPackagesGraphFilter);
 
-        //set filter to also include classes outside the package
+        // set filter to also include classes outside the package
         var packageGraphFilter = new GraphFilter(false);
         packageGraphFilter.setIncludeInheritance(true);
         packageGraphFilter.setIncludeAssociations(true);
         packageGraphFilter.setIncludeRelationsToExternalPackages(true);
 
-        //create DL diagram for the default package
-        DLUpdates.insertDiagram(diagramLayoutModel, Diagram.builder()
-                                                           .mRID(diagramLayout.getDefaultPackageMRID())
-                                                           .name(graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME)
-                                                           .orientation(OrientationKind.NEGATIVE)
-                                                           .build());
-        //create DOs and DOPs for the default package
+        // create DL diagram for the default package
+        DLUpdates.insertDiagram(
+                diagramLayoutModel,
+                Diagram.builder()
+                        .mRID(diagramLayout.getDefaultPackageMRID())
+                        .name(graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME)
+                        .orientation(OrientationKind.NEGATIVE)
+                        .build());
+        // create DOs and DOPs for the default package
         packageGraphFilter.setPackageUUID(null);
-        var defaultPackageClassesCIMCollection = converter.convert(graphIdentifier, packageGraphFilter);
+        var defaultPackageClassesCIMCollection =
+                converter.convert(graphIdentifier, packageGraphFilter);
         for (var cimClassOrEnum : defaultPackageClassesCIMCollection.getClassesAndEnums()) {
-            var diagramObjectMRID = DiagramLayoutServiceUtils.insertDiagramObject(diagramLayoutModel,
-                                                                                  diagramLayout.getDefaultPackageMRID().getUuid(),
-                                                                                  cimClassOrEnum.getLabel().getValue(),
-                                                                                  cimClassOrEnum.getUuid());
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID);
+            var diagramObjectMRID =
+                    DiagramLayoutServiceUtils.insertDiagramObject(
+                            diagramLayoutModel,
+                            diagramLayout.getDefaultPackageMRID().getUuid(),
+                            cimClassOrEnum.getLabel().getValue(),
+                            cimClassOrEnum.getUuid());
+            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                    diagramLayoutModel, diagramObjectMRID);
         }
 
-        //create DOs and DOPs for each frontend diagram
+        // create DOs and DOPs for each frontend diagram
         for (var cimPackage : allPackagesCIMCollection.getPackages()) {
-            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
+            DiagramLayoutServiceUtils.insertDiagram(
+                    diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
 
             packageGraphFilter.setPackageUUID(cimPackage.getUuid().toString());
             var classesCIMCollection = converter.convert(graphIdentifier, packageGraphFilter);
 
             for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
-                var diagramObjectMRID = DiagramLayoutServiceUtils.insertDiagramObject(diagramLayoutModel,
-                                                                                      cimPackage.getUuid(),
-                                                                                      cimClassOrEnum.getLabel().getValue(),
-                                                                                      cimClassOrEnum.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID);
+                var diagramObjectMRID =
+                        DiagramLayoutServiceUtils.insertDiagramObject(
+                                diagramLayoutModel,
+                                cimPackage.getUuid(),
+                                cimClassOrEnum.getLabel().getValue(),
+                                cimClassOrEnum.getUuid());
+                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                        diagramLayoutModel, diagramObjectMRID);
             }
         }
     }
 
     @Override
-    public void ensureDiagramLayoutExists(GraphIdentifier graphIdentifier, UUID packageUUID, CIMCollection cimCollection) {
+    public void ensureDiagramLayoutExists(
+            GraphIdentifier graphIdentifier, UUID packageUUID, CIMCollection cimCollection) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
-        var resolvedPackageUUID = packageUUID != null ?
-                                  packageUUID :
-                                  diagramLayout.getDefaultPackageMRID().getUuid();
+        var resolvedPackageUUID =
+                packageUUID != null ? packageUUID : diagramLayout.getDefaultPackageMRID().getUuid();
 
-        //ensure a DL diagram exists for the requested package
+        // ensure a DL diagram exists for the requested package
         var diagram = DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedPackageUUID);
         if (diagram == null) {
             String packageName = null;
 
-            //finds the package name for the DL diagram to be added
-            if(resolvedPackageUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
+            // finds the package name for the DL diagram to be added
+            if (resolvedPackageUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
                 packageName = graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME;
-            }
-            else {
+            } else {
                 for (var cimPackage : cimCollection.getPackages()) {
                     if (cimPackage.getUuid().equals(resolvedPackageUUID)) {
                         packageName = cimPackage.getLabel().getValue();
@@ -119,25 +131,33 @@ public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase, E
                 }
 
                 if (packageName == null) {
-                    throw new IllegalArgumentException("Package with UUID " + resolvedPackageUUID + " not found");
+                    throw new IllegalArgumentException(
+                            "Package with UUID " + resolvedPackageUUID + " not found");
                 }
             }
 
-            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, resolvedPackageUUID, packageName);        }
+            DiagramLayoutServiceUtils.insertDiagram(
+                    diagramLayoutModel, resolvedPackageUUID, packageName);
+        }
 
-        //ensure DOs and DOPs exist for all classes to be rendered
+        // ensure DOs and DOPs exist for all classes to be rendered
         var cimClasses = cimCollection.getClassesAndEnums();
-        var diagramObjects = DLObjectFetcher.fetchDiagramDOs(diagramLayoutModel, new MRID(resolvedPackageUUID));
-        var existingMRIDs = diagramObjects.stream()
-                                          .map(DiagramObject::getBelongsToIdentifiedObject)
-                                          .collect(Collectors.toSet());
+        var diagramObjects =
+                DLObjectFetcher.fetchDiagramDOs(diagramLayoutModel, new MRID(resolvedPackageUUID));
+        var existingMRIDs =
+                diagramObjects.stream()
+                        .map(DiagramObject::getBelongsToIdentifiedObject)
+                        .collect(Collectors.toSet());
         for (var cimClass : cimClasses) {
             if (!existingMRIDs.contains(new MRID(cimClass.getUuid()))) {
-                var diagramObjectMRID = DiagramLayoutServiceUtils.insertDiagramObject(diagramLayoutModel,
-                                                                                      resolvedPackageUUID,
-                                                                                      cimClass.getLabel().getValue(),
-                                                                                      cimClass.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID);
+                var diagramObjectMRID =
+                        DiagramLayoutServiceUtils.insertDiagramObject(
+                                diagramLayoutModel,
+                                resolvedPackageUUID,
+                                cimClass.getLabel().getValue(),
+                                cimClass.getUuid());
+                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                        diagramLayoutModel, diagramObjectMRID);
             }
         }
     }

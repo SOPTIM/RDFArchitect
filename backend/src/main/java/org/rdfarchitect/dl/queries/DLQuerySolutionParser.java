@@ -74,7 +74,7 @@ public class DLQuerySolutionParser {
         var yPosition = qs.getLiteral(DLQueryVars.Y_POSITION).getFloat();
         var zPositionLiteral = qs.getLiteral(DLQueryVars.Z_POSITION);
         var zPosition = 0;
-        if(zPositionLiteral != null){
+        if (zPositionLiteral != null) {
             zPosition = zPositionLiteral.getInt();
         }
         return new XYZPosition(xPosition, yPosition, zPosition);

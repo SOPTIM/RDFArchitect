@@ -17,10 +17,13 @@
 
 package org.rdfarchitect.services.rendering;
 
+import static org.mockito.Mockito.*;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
+import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
@@ -42,7 +45,6 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
 import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
-import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 
@@ -50,8 +52,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import static org.mockito.Mockito.*;
 
 class RenderCIMCollectionTestBase {
 
@@ -62,9 +62,11 @@ class RenderCIMCollectionTestBase {
 
     @BeforeAll
     static void setUpEnvironment() {
-        //das anfragen der layout informationen wird weg gemocked
-        FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
-        EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase = mock(EnsureDiagramLayoutForCIMCollectionUseCase.class);
+        // das anfragen der layout informationen wird weg gemocked
+        FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase =
+                mock(FetchRenderingLayoutDataUseCase.class);
+        EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase =
+                mock(EnsureDiagramLayoutForCIMCollectionUseCase.class);
 
         var mockXYPosition = mock(XYZPosition.class);
         when(mockXYPosition.getX()).thenReturn(0f);
@@ -76,14 +78,15 @@ class RenderCIMCollectionTestBase {
         var mockMap = mock(Map.class);
         when(mockMap.get(any(UUID.class))).thenReturn(mockDop);
 
-        var mockLayoutData = RenderingLayoutData.builder()
-                                                .classLayoutingData(mockMap)
-                                                .build();
+        var mockLayoutData = RenderingLayoutData.builder().classLayoutingData(mockMap).build();
         when(fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(any(), any()))
-                  .thenReturn(mockLayoutData);
+                .thenReturn(mockLayoutData);
 
         mermaidRenderer = new RenderCIMCollectionMermaidService();
-        svelteFlowRenderer = new RenderCIMCollectionSvelteFlowService(fetchRenderingLayoutDataUseCase, ensureDiagramLayoutForCIMCollectionUseCase);
+        svelteFlowRenderer =
+                new RenderCIMCollectionSvelteFlowService(
+                        fetchRenderingLayoutDataUseCase,
+                        ensureDiagramLayoutForCIMCollectionUseCase);
     }
 
     @BeforeEach
@@ -95,11 +98,7 @@ class RenderCIMCollectionTestBase {
         var uri = new URI(URI_PREFIX + packageLabel);
         var label = new RDFSLabel(packageLabel);
 
-        var cimPackage = CIMPackage.builder()
-                                   .uuid(UUID.randomUUID())
-                                   .uri(uri)
-                                   .label(label)
-                                   .build();
+        var cimPackage = CIMPackage.builder().uuid(UUID.randomUUID()).uri(uri).label(label).build();
         cimCollection.getPackages().add(cimPackage);
     }
 
@@ -107,14 +106,19 @@ class RenderCIMCollectionTestBase {
         var uri = new URI(URI_PREFIX + classLabel);
         var label = new RDFSLabel(classLabel);
 
-        var cimClass = CIMClass.builder()
-                               .uuid(UUID.randomUUID())
-                               .uri(uri)
-                               .label(label)
-                               .superClass(null)
-                               .belongsToCategory(null);
+        var cimClass =
+                CIMClass.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(uri)
+                        .label(label)
+                        .superClass(null)
+                        .belongsToCategory(null);
         if (packageLabel != null) {
-            cimClass.belongsToCategory(new CIMSBelongsToCategory(new URI(URI_PREFIX + packageLabel), new RDFSLabel(packageLabel), UUID.randomUUID()));
+            cimClass.belongsToCategory(
+                    new CIMSBelongsToCategory(
+                            new URI(URI_PREFIX + packageLabel),
+                            new RDFSLabel(packageLabel),
+                            UUID.randomUUID()));
         }
         cimCollection.getClasses().add(cimClass.build());
     }
@@ -124,22 +128,31 @@ class RenderCIMCollectionTestBase {
         var label = new RDFSLabel(attributeLabel);
 
         var dataTypeUri = new URI(datatype.getURI());
-        var dataType = new CIMSPrimitiveDataType(dataTypeUri, new RDFSLabel(dataTypeUri.getSuffix()));
+        var dataType =
+                new CIMSPrimitiveDataType(dataTypeUri, new RDFSLabel(dataTypeUri.getSuffix()));
 
-        var attribute = CIMAttribute.builder()
-                                    .uuid(UUID.randomUUID())
-                                    .uri(uri)
-                                    .label(label)
-                                    .dataType(dataType)
-                                    .domain(new RDFSDomain(new URI(URI_PREFIX + classLabel), new RDFSLabel(classLabel)))
-                                    .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
-                                    .stereotype(new CIMSStereotype(CIMStereotypes.attribute.getURI()))
-                                    .build();
+        var attribute =
+                CIMAttribute.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(uri)
+                        .label(label)
+                        .dataType(dataType)
+                        .domain(
+                                new RDFSDomain(
+                                        new URI(URI_PREFIX + classLabel),
+                                        new RDFSLabel(classLabel)))
+                        .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
+                        .stereotype(new CIMSStereotype(CIMStereotypes.attribute.getURI()))
+                        .build();
 
         cimCollection.getAttributes().add(attribute);
     }
 
-    protected void addAssociation(String domainLabel, String rangeLabel, AssociationUsed fromAssociationUsed, AssociationUsed toAssociationUsed) {
+    protected void addAssociation(
+            String domainLabel,
+            String rangeLabel,
+            AssociationUsed fromAssociationUsed,
+            AssociationUsed toAssociationUsed) {
         var fromUri = new URI(URI_PREFIX + domainLabel + "." + rangeLabel);
         var toUri = new URI(URI_PREFIX + rangeLabel + "." + domainLabel);
         var fromLabel = new RDFSLabel(fromUri.getSuffix());
@@ -151,27 +164,33 @@ class RenderCIMCollectionTestBase {
         var rangeUri = new URI(URI_PREFIX + rangeLabel);
         var rangeRDFSLabel = new RDFSLabel(rangeLabel);
 
-        var from = CIMAssociation.builder()
-                                 .uuid(UUID.randomUUID())
-                                 .uri(fromUri)
-                                 .label(fromLabel)
-                                 .domain(new RDFSDomain(domainUri, domainRDFSLabel))
-                                 .range(new RDFSRange(rangeUri, rangeRDFSLabel))
-                                 .inverseRoleName(new CIMSInverseRoleName(toUri))
-                                 .associationUsed(new CIMSAssociationUsed(fromAssociationUsed == AssociationUsed.YES ? "Yes" : "No"))
-                                 .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
-                                 .build();
+        var from =
+                CIMAssociation.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(fromUri)
+                        .label(fromLabel)
+                        .domain(new RDFSDomain(domainUri, domainRDFSLabel))
+                        .range(new RDFSRange(rangeUri, rangeRDFSLabel))
+                        .inverseRoleName(new CIMSInverseRoleName(toUri))
+                        .associationUsed(
+                                new CIMSAssociationUsed(
+                                        fromAssociationUsed == AssociationUsed.YES ? "Yes" : "No"))
+                        .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
+                        .build();
 
-        var to = CIMAssociation.builder()
-                               .uuid(UUID.randomUUID())
-                               .uri(toUri)
-                               .label(toLabel)
-                               .domain(new RDFSDomain(rangeUri, rangeRDFSLabel))
-                               .range(new RDFSRange(domainUri, domainRDFSLabel))
-                               .inverseRoleName(new CIMSInverseRoleName(fromUri))
-                               .associationUsed(new CIMSAssociationUsed(toAssociationUsed == AssociationUsed.YES ? "Yes" : "No"))
-                               .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
-                               .build();
+        var to =
+                CIMAssociation.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(toUri)
+                        .label(toLabel)
+                        .domain(new RDFSDomain(rangeUri, rangeRDFSLabel))
+                        .range(new RDFSRange(domainUri, domainRDFSLabel))
+                        .inverseRoleName(new CIMSInverseRoleName(fromUri))
+                        .associationUsed(
+                                new CIMSAssociationUsed(
+                                        toAssociationUsed == AssociationUsed.YES ? "Yes" : "No"))
+                        .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
+                        .build();
 
         cimCollection.getAssociations().add(from);
         cimCollection.getAssociations().add(to);
@@ -181,26 +200,35 @@ class RenderCIMCollectionTestBase {
         var uri = new URI(URI_PREFIX + enumLabel);
         var label = new RDFSLabel(enumLabel);
 
-        var cimEnum = CIMClass.builder()
-                              .uuid(UUID.randomUUID())
-                              .uri(uri)
-                              .label(label)
-                              .belongsToCategory(null);
+        var cimEnum =
+                CIMClass.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(uri)
+                        .label(label)
+                        .belongsToCategory(null);
 
         if (packageLabel != null) {
-            cimEnum.belongsToCategory(new CIMSBelongsToCategory(new URI(URI_PREFIX + packageLabel), new RDFSLabel(packageLabel), UUID.randomUUID()));
+            cimEnum.belongsToCategory(
+                    new CIMSBelongsToCategory(
+                            new URI(URI_PREFIX + packageLabel),
+                            new RDFSLabel(packageLabel),
+                            UUID.randomUUID()));
         }
-        cimEnum.stereotypes(new ArrayList<>(List.of(new CIMSStereotype(CIMStereotypes.enumeration.getURI()))));
+        cimEnum.stereotypes(
+                new ArrayList<>(List.of(new CIMSStereotype(CIMStereotypes.enumeration.getURI()))));
         cimCollection.getEnums().add(cimEnum.build());
     }
 
     protected void addEnumEntry(String enumLabel, String enumEntryLabel) {
-        var enumEntry = CIMEnumEntry.builder()
-                                    .uuid(UUID.randomUUID())
-                                    .uri(new URI(URI_PREFIX + enumEntryLabel))
-                                    .label(new RDFSLabel(enumEntryLabel))
-                                    .type(new RDFType(new URI(URI_PREFIX + enumLabel), new RDFSLabel(enumLabel)))
-                                    .build();
+        var enumEntry =
+                CIMEnumEntry.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(new URI(URI_PREFIX + enumEntryLabel))
+                        .label(new RDFSLabel(enumEntryLabel))
+                        .type(
+                                new RDFType(
+                                        new URI(URI_PREFIX + enumLabel), new RDFSLabel(enumLabel)))
+                        .build();
 
         cimCollection.getEnumEntries().add(enumEntry);
     }

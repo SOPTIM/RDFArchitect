@@ -20,9 +20,7 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * DTO representing a 3D position within a diagram layout.
- */
+/** DTO representing a 3D position within a diagram layout. */
 @Data
 @Builder
 public class PositionDTO {

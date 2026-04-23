@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.dl.update.classlayout;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -35,13 +36,21 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateClassLayoutService implements UpdateClassPositionsUseCase, CreateClassLayoutDataUseCase, DeleteClassLayoutDataUseCase, UpdateDiagramObjectNameUseCase {
+public class UpdateClassLayoutService
+        implements UpdateClassPositionsUseCase,
+                CreateClassLayoutDataUseCase,
+                DeleteClassLayoutDataUseCase,
+                UpdateDiagramObjectNameUseCase {
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
 
     @Override
-    public void createClassLayoutData(GraphIdentifier graphIdentifier, PackageDTO packageDTO, String className, UUID classUUID) {
+    public void createClassLayoutData(
+            GraphIdentifier graphIdentifier,
+            PackageDTO packageDTO,
+            String className,
+            UUID classUUID) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
         UUID packageUUID;
@@ -53,43 +62,55 @@ public class UpdateClassLayoutService implements UpdateClassPositionsUseCase, Cr
             packageUUID = diagramLayout.getDefaultPackageMRID().getUuid();
         }
 
-        MRID doMRID = DiagramLayoutServiceUtils.insertDiagramObject(diagramLayoutModel, packageUUID, className, classUUID);
+        MRID doMRID =
+                DiagramLayoutServiceUtils.insertDiagramObject(
+                        diagramLayoutModel, packageUUID, className, classUUID);
         DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, doMRID);
     }
 
     @Override
-    public void updateClassPositions(GraphIdentifier graphIdentifier, UUID packageUUID, List<ClassPositionDTO> classPositionDTOList) {
+    public void updateClassPositions(
+            GraphIdentifier graphIdentifier,
+            UUID packageUUID,
+            List<ClassPositionDTO> classPositionDTOList) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        var resolvedPackageUUID = packageUUID != null ?
-                                  packageUUID :
-                                  diagramLayout.getDefaultPackageMRID().getUuid();
+        var resolvedPackageUUID =
+                packageUUID != null ? packageUUID : diagramLayout.getDefaultPackageMRID().getUuid();
 
         for (var classPositionDTO : classPositionDTOList) {
-            var diagramObject = DLObjectFetcher.fetchDiagramDOForClass(
-                      diagramLayoutModel,
-                      resolvedPackageUUID,
-                      classPositionDTO.getClassUUID());
+            var diagramObject =
+                    DLObjectFetcher.fetchDiagramDOForClass(
+                            diagramLayoutModel,
+                            resolvedPackageUUID,
+                            classPositionDTO.getClassUUID());
 
             var doMRID = diagramObject.getMRID();
 
-            var diagramObjectPoint = DLObjectFetcher.fetchDOPForDO(
-                      diagramLayoutModel,
-                      doMRID);
+            var diagramObjectPoint = DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, doMRID);
 
             var dopMRID = diagramObjectPoint.getMRID();
 
             DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, dopMRID);
 
-            diagramObjectPoint.setPosition(new XYZPosition(classPositionDTO.getXPosition(), classPositionDTO.getYPosition(), classPositionDTO.getZPosition()));
+            diagramObjectPoint.setPosition(
+                    new XYZPosition(
+                            classPositionDTO.getXPosition(),
+                            classPositionDTO.getYPosition(),
+                            classPositionDTO.getZPosition()));
 
             DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
         }
     }
 
     @Override
-    public void updateDiagramObjectName(GraphIdentifier graphIdentifier, UUID classUUID, String name) {
-        var diagramLayoutModel = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout().getDiagramLayoutModel();
+    public void updateDiagramObjectName(
+            GraphIdentifier graphIdentifier, UUID classUUID, String name) {
+        var diagramLayoutModel =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel();
 
         var diagramObjects = DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID);
 
@@ -100,7 +121,11 @@ public class UpdateClassLayoutService implements UpdateClassPositionsUseCase, Cr
 
     @Override
     public void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID) {
-        var diagramLayoutModel = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout().getDiagramLayoutModel();
+        var diagramLayoutModel =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel();
 
         for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, classUUID)) {
             DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
