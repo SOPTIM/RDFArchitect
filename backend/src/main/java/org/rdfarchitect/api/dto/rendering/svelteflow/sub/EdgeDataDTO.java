@@ -20,9 +20,7 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
-/**
- * DTO representing the specific data object in a SvelteFlow edge.
- */
+/** DTO representing the specific data object in a SvelteFlow edge. */
 @Data
 @Builder
 public class EdgeDataDTO {

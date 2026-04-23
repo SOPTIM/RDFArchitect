@@ -18,6 +18,7 @@
 package org.rdfarchitect.config;
 
 import lombok.extern.log4j.Log4j2;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -37,7 +38,8 @@ public class AppVersionResolver {
 
     static final String DEFAULT_VERSION = "0.0.0-SNAPSHOT";
     private static final Pattern SEMVER_TAG_PATTERN = Pattern.compile("^v(\\d+\\.\\d+\\.\\d+)$");
-    private static final Pattern GIT_DESCRIBE_PATTERN = Pattern.compile("^v(\\d+\\.\\d+\\.\\d+)(?:-(\\d+)-g([0-9a-f]+))?$");
+    private static final Pattern GIT_DESCRIBE_PATTERN =
+            Pattern.compile("^v(\\d+\\.\\d+\\.\\d+)(?:-(\\d+)-g([0-9a-f]+))?$");
 
     private final String configuredVersion;
     private final Supplier<Optional<String>> gitPropertiesVersionSupplier;
@@ -48,13 +50,13 @@ public class AppVersionResolver {
         this(
                 configuredVersion,
                 () -> resolveVersionFromGitProperties(loadGitProperties()),
-                AppVersionResolver::resolveVersionFromGitCommands
-        );
+                AppVersionResolver::resolveVersionFromGitCommands);
     }
 
-    AppVersionResolver(String configuredVersion,
-                       Supplier<Optional<String>> gitPropertiesVersionSupplier,
-                       Supplier<Optional<String>> gitCommandVersionSupplier) {
+    AppVersionResolver(
+            String configuredVersion,
+            Supplier<Optional<String>> gitPropertiesVersionSupplier,
+            Supplier<Optional<String>> gitCommandVersionSupplier) {
         this.configuredVersion = configuredVersion;
         this.gitPropertiesVersionSupplier = gitPropertiesVersionSupplier;
         this.gitCommandVersionSupplier = gitCommandVersionSupplier;
@@ -66,9 +68,10 @@ public class AppVersionResolver {
             return normalizedConfiguredVersion;
         }
 
-        return gitPropertiesVersionSupplier.get()
-                                           .or(gitCommandVersionSupplier)
-                                           .orElse(DEFAULT_VERSION);
+        return gitPropertiesVersionSupplier
+                .get()
+                .or(gitCommandVersionSupplier)
+                .orElse(DEFAULT_VERSION);
     }
 
     static Optional<String> resolveVersionFromGitProperties(Properties gitProperties) {
@@ -91,12 +94,14 @@ public class AppVersionResolver {
             return Optional.empty();
         }
 
-        return stableVersion.map(version -> version + "-" + commitCount + "-g" + commitAbbreviation);
+        return stableVersion.map(
+                version -> version + "-" + commitCount + "-g" + commitAbbreviation);
     }
 
     private static Properties loadGitProperties() {
         var properties = new Properties();
-        try (var inputStream = AppVersionResolver.class.getClassLoader().getResourceAsStream("git.properties")) {
+        try (var inputStream =
+                AppVersionResolver.class.getClassLoader().getResourceAsStream("git.properties")) {
             if (inputStream == null) {
                 return properties;
             }
@@ -111,12 +116,7 @@ public class AppVersionResolver {
 
     private static Optional<String> resolveVersionFromGitCommands() {
         return readGitDescribeVersion(
-                "describe",
-                "--tags",
-                "--match",
-                "v[0-9]*.[0-9]*.[0-9]*",
-                "--abbrev=8"
-        );
+                "describe", "--tags", "--match", "v[0-9]*.[0-9]*.[0-9]*", "--abbrev=8");
     }
 
     private static Optional<String> readGitDescribeVersion(String... args) {
@@ -129,7 +129,8 @@ public class AppVersionResolver {
 
         try {
             var process = processBuilder.start();
-            var output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            var output =
+                    new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             var exitCode = process.waitFor();
             if (exitCode != 0) {
                 return Optional.empty();
@@ -153,9 +154,7 @@ public class AppVersionResolver {
         }
 
         var matcher = SEMVER_TAG_PATTERN.matcher(normalizedTagName);
-        return matcher.matches()
-                ? Optional.of(matcher.group(1))
-                : Optional.empty();
+        return matcher.matches() ? Optional.of(matcher.group(1)) : Optional.empty();
     }
 
     private static Optional<String> extractDescribeVersion(String describeOutput) {

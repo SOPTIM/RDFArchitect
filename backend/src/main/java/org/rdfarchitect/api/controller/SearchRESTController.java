@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.models.search.SearchFilter;
 import org.rdfarchitect.models.search.data.SearchResults;
 import org.rdfarchitect.services.SearchUseCase;
@@ -44,26 +46,21 @@ public class SearchRESTController {
     private final SearchUseCase searchUseCase;
 
     @Operation(
-              summary = "Search the graph",
-              description = "Searches the given graph for a specific query",
-              tags = {"dataset"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200"
-                        )
-              }
-    )
+            summary = "Search the graph",
+            description = "Searches the given graph for a specific query",
+            tags = {"dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public SearchResults search(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The query to search for")
-              @RequestParam
-              String query,
-              @Parameter(description = "The scope where the search is performed.")
-              @RequestBody
-              SearchFilter filter) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The query to search for") @RequestParam String query,
+            @Parameter(description = "The scope where the search is performed.") @RequestBody
+                    SearchFilter filter) {
         logger.info("Received GET request: \"/api/search\" from \"{}\".", originURL);
 
         var results = searchUseCase.search(query, filter);

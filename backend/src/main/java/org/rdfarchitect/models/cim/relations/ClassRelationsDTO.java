@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.relations;
 
 import lombok.Data;
+
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
@@ -34,21 +35,21 @@ public class ClassRelationsDTO {
 
     private Map<String, Collection<ClassDTO>> classesReferencingThisClass;
 
-    public void setClassesReferencingThisClassFromCIM(Map<String, Collection<CIMClass>> cimClassesMap) {
+    public void setClassesReferencingThisClassFromCIM(
+            Map<String, Collection<CIMClass>> cimClassesMap) {
         if (cimClassesMap == null) {
             this.classesReferencingThisClass = null;
             return;
         }
 
-        this.classesReferencingThisClass = cimClassesMap.entrySet()
-                                                        .stream()
-                                                        .collect(Collectors.toMap(
-                                                                  Map.Entry::getKey,
-                                                                  entry -> entry.getValue()
-                                                                                .stream()
-                                                                                .map(ClassMapper.INSTANCE::toDTO)
-                                                                                .toList()
-                                                                                 )
-                                                                );
+        this.classesReferencingThisClass =
+                cimClassesMap.entrySet().stream()
+                        .collect(
+                                Collectors.toMap(
+                                        Map.Entry::getKey,
+                                        entry ->
+                                                entry.getValue().stream()
+                                                        .map(ClassMapper.INSTANCE::toDTO)
+                                                        .toList()));
     }
 }

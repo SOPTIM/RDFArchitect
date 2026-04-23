@@ -25,11 +25,11 @@ import java.util.List;
 public interface ImportGraphsUseCase {
 
     /**
-     * Result of a graph import operation, separating successfully imported graph URIs
-     * from the filenames of files that failed to import.
+     * Result of a graph import operation, separating successfully imported graph URIs from the
+     * filenames of files that failed to import.
      *
      * @param importedGraphUris the URIs of successfully imported graphs
-     * @param failedFileNames   the original filenames of files that could not be imported
+     * @param failedFileNames the original filenames of files that could not be imported
      */
     record ImportResult(List<String> importedGraphUris, List<String> failedFileNames) {
         public ImportResult() {
@@ -41,10 +41,11 @@ public interface ImportGraphsUseCase {
      * Imports multiple graphs into the specified dataset.
      *
      * @param datasetName The name of the dataset where the graphs will be imported.
-     * @param files       The list of files containing the graph data to be imported.
-     * @param graphUris   The list of graph URIs corresponding to each file.
-     *
-     * @return A record storing both the successfully imported graph URIs and the filenames of files that failed to import.
+     * @param files The list of files containing the graph data to be imported.
+     * @param graphUris The list of graph URIs corresponding to each file.
+     * @return A record storing both the successfully imported graph URIs and the filenames of files
+     *     that failed to import.
      */
-    ImportResult importGraphs(String datasetName, List<MultipartFile> files, List<String> graphUris);
+    ImportResult importGraphs(
+            String datasetName, List<MultipartFile> files, List<String> graphUris);
 }

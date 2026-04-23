@@ -33,10 +33,14 @@ public class RenderingConfig {
     private String rendererType;
 
     @Bean
-    public RenderCIMCollectionUseCase renderingPort(FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase,
-                                                    EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase) {
+    public RenderCIMCollectionUseCase renderingPort(
+            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase,
+            EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase) {
         return switch (rendererType) {
-            case "svelteflow" -> new RenderCIMCollectionSvelteFlowService(fetchRenderingLayoutDataUseCase, ensureDiagramLayoutForCIMCollectionUseCase);
+            case "svelteflow" ->
+                    new RenderCIMCollectionSvelteFlowService(
+                            fetchRenderingLayoutDataUseCase,
+                            ensureDiagramLayoutForCIMCollectionUseCase);
             case "mermaid" -> new RenderCIMCollectionMermaidService();
             default -> new RenderCIMCollectionMermaidService();
         };

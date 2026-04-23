@@ -31,13 +31,15 @@ public interface SHACLGetClassRelationsUseCase {
      * Get shacl shapes with they relations to a class.
      *
      * @param graphIdentifier The graph identifier of the graph.
-     * @param classUUID        The uri of the class.
+     * @param classUUID The uri of the class.
      * @return The relations of the class.
      */
-    CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLToClassRelations(GraphIdentifier graphIdentifier, UUID classUUID);
+    CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLToClassRelations(
+            GraphIdentifier graphIdentifier, UUID classUUID);
 
     /**
      * Get all property shapes related to a class.
+     *
      * @param graphIdentifier Identifier to specify, which graph the class is in.
      * @param classUUID The uuid of the class to get property shapes for.
      * @return A list of property shapes related to the class.

@@ -18,6 +18,7 @@
 package org.rdfarchitect.shacl.property;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.system.PrefixEntry;
@@ -35,7 +36,7 @@ public class PropertyGroupFactory {
     private final Model shaclModel;
     private final PrefixEntry shaclPrefix;
 
-    public Collection<Resource> createReferencedPropertyGroups(){
+    public Collection<Resource> createReferencedPropertyGroups() {
         var propertyGroupList = listReferencedPropertyGroups();
 
         for (var i = 0; i < propertyGroupList.size(); i++) {
@@ -45,17 +46,18 @@ public class PropertyGroupFactory {
                     .setGroupName(new URI(propertyGroup.getURI()).getSuffix())
                     .setOrder(i)
                     .build();
-
         }
         return propertyGroupList;
     }
 
     private List<Resource> listReferencedPropertyGroups() {
-        return new ArrayList<>(shaclModel.listObjectsOfProperty(shaclModel.createProperty(SHACL.group.getURI()))
-                .mapWith(object -> object.asResource().getURI())
-                .toSet()
-                .stream()
-                .map(shaclModel::createResource)
-                .toList());
+        return new ArrayList<>(
+                shaclModel
+                        .listObjectsOfProperty(shaclModel.createProperty(SHACL.group.getURI()))
+                        .mapWith(object -> object.asResource().getURI())
+                        .toSet()
+                        .stream()
+                        .map(shaclModel::createResource)
+                        .toList());
     }
 }

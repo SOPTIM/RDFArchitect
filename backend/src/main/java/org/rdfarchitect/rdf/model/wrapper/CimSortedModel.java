@@ -18,6 +18,7 @@
 package org.rdfarchitect.rdf.model.wrapper;
 
 import lombok.experimental.Delegate;
+
 import org.apache.jena.graph.Triple;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -46,27 +47,30 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * A Model wrapper that ensures that all iterators return their elements in alphabetical order, except for the ontology resource which is always the first element.
- * Also, when writing the model to an output stream or writer, the statements are written in alphabetical order.
- * Supported formats are RDF/XML, N-Triples, Turtle, TriG and JSON-LD.
- * Other formats can still be written, although there is no guarantee that they will be sorted
+ * A Model wrapper that ensures that all iterators return their elements in alphabetical order,
+ * except for the ontology resource which is always the first element. Also, when writing the model
+ * to an output stream or writer, the statements are written in alphabetical order. Supported
+ * formats are RDF/XML, N-Triples, Turtle, TriG and JSON-LD. Other formats can still be written,
+ * although there is no guarantee that they will be sorted
  */
 public class CimSortedModel implements Model {
 
-    @Delegate
-    private final Model model;
+    @Delegate private final Model model;
 
     public CimSortedModel() {
         this(ModelFactory.createDefaultModel());
     }
 
     public CimSortedModel(Model model) {
-        this.model = ModelFactory.createModelForGraph(new SortedGraph(this::compareTriples, model.getGraph()));
+        this.model =
+                ModelFactory.createModelForGraph(
+                        new SortedGraph(this::compareTriples, model.getGraph()));
     }
 
     @Override
@@ -97,7 +101,7 @@ public class CimSortedModel implements Model {
     public Model write(Writer writer, String lang, String base) {
         try (var out = new ByteArrayOutputStream()) {
             this.write(out, lang, base);
-            writer.write(out.toString());
+            writer.write(out.toString(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -130,7 +134,8 @@ public class CimSortedModel implements Model {
     }
 
     @Override
-    public StmtIterator listLiteralStatements(Resource subject, Property predicate, boolean object) {
+    public StmtIterator listLiteralStatements(
+            Resource subject, Property predicate, boolean object) {
         var list = this.model.listLiteralStatements(subject, predicate, object).toList();
         list.sort(this::compareStatements);
         return new StmtIteratorImpl(list.iterator());
@@ -179,14 +184,16 @@ public class CimSortedModel implements Model {
     }
 
     @Override
-    public StmtIterator listStatements(Resource subject, Property predicate, String object, String lang) {
+    public StmtIterator listStatements(
+            Resource subject, Property predicate, String object, String lang) {
         var list = this.model.listStatements(subject, predicate, object, lang).toList();
         list.sort(this::compareStatements);
         return new StmtIteratorImpl(list.iterator());
     }
 
     @Override
-    public StmtIterator listStatements(Resource subject, Property predicate, String object, String lang, String direction) {
+    public StmtIterator listStatements(
+            Resource subject, Property predicate, String object, String lang, String direction) {
         var list = this.model.listStatements(subject, predicate, object, lang, direction).toList();
         list.sort(this::compareStatements);
         return new StmtIteratorImpl(list.iterator());
@@ -322,23 +329,23 @@ public class CimSortedModel implements Model {
     public Map<String, String> getNsPrefixMap() {
         Map<String, String> map = this.model.getNsPrefixMap();
         return map.entrySet().stream()
-                  .sorted(Map.Entry.comparingByKey())
-                  .collect(Collectors.toMap(
-                            Map.Entry::getKey,
-                            Map.Entry::getValue,
-                            (e1, _) -> e1,
-                            java.util.LinkedHashMap::new
-                                           ));
+                .sorted(Map.Entry.comparingByKey())
+                .collect(
+                        Collectors.toMap(
+                                Map.Entry::getKey,
+                                Map.Entry::getValue,
+                                (e1, _) -> e1,
+                                java.util.LinkedHashMap::new));
     }
 
     /**
-     * Generic comparison that places ontology resources first, then falls back to alphabetical order.
+     * Generic comparison that places ontology resources first, then falls back to alphabetical
+     * order.
      *
      * @param isOntology extracts whether an element is (or belongs to) the ontology resource
-     * @param a          first element
-     * @param b          second element
-     * @param <T>        element type
-     *
+     * @param a first element
+     * @param b second element
+     * @param <T> element type
      * @return negative if a comes first, positive if b comes first, 0 if equal
      */
     private <T> int compareWithOntologyPrioritized(Predicate<T> isOntology, T a, T b) {
@@ -358,14 +365,19 @@ public class CimSortedModel implements Model {
     }
 
     private int compareStatements(Statement s1, Statement s2) {
-        return compareWithOntologyPrioritized(s -> s.getSubject().hasProperty(RDF.type, OWL2.Ontology), s1, s2);
+        return compareWithOntologyPrioritized(
+                s -> s.getSubject().hasProperty(RDF.type, OWL2.Ontology), s1, s2);
     }
 
     private int compareNodes(RDFNode n1, RDFNode n2) {
-        return compareWithOntologyPrioritized(n -> n.isResource() && n.asResource().hasProperty(RDF.type, OWL2.Ontology), n1, n2);
+        return compareWithOntologyPrioritized(
+                n -> n.isResource() && n.asResource().hasProperty(RDF.type, OWL2.Ontology), n1, n2);
     }
 
     private int compareTriples(Triple t1, Triple t2) {
-        return compareWithOntologyPrioritized(t -> model.wrapAsResource(t.getSubject()).hasProperty(RDF.type, OWL2.Ontology), t1, t2);
+        return compareWithOntologyPrioritized(
+                t -> model.wrapAsResource(t.getSubject()).hasProperty(RDF.type, OWL2.Ontology),
+                t1,
+                t2);
     }
 }

@@ -24,7 +24,9 @@ public interface SHACLInsertUseCase {
 
     /**
      * Insert a custom SHACL graph into the database.
-     * @param graphIdentifier The graph identifier the Ontology graph the SHACL graph is associated with.
+     *
+     * @param graphIdentifier The graph identifier the Ontology graph the SHACL graph is associated
+     *     with.
      * @param shacl The SHACL graph to insert.
      */
     void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl);

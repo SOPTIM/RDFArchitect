@@ -28,8 +28,9 @@ public interface EnsureDiagramLayoutForCIMCollectionUseCase {
      * Ensures that the necessary diagram layout data exists for the {@link CIMCollection} provided
      *
      * @param graphIdentifier the identifier of the graph
-     * @param packageUUID     the UUID of the package identifying the diagram
-     * @param cimCollection   the CIMCollection containing all packages, classes and enums
+     * @param packageUUID the UUID of the package identifying the diagram
+     * @param cimCollection the CIMCollection containing all packages, classes and enums
      */
-    void ensureDiagramLayoutExists(GraphIdentifier graphIdentifier, UUID packageUUID, CIMCollection cimCollection);
+    void ensureDiagramLayoutExists(
+            GraphIdentifier graphIdentifier, UUID packageUUID, CIMCollection cimCollection);
 }

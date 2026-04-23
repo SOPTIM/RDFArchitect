@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.slf4j.Logger;
@@ -44,28 +46,31 @@ public class GraphsRESTController {
     private final ListGraphsUseCase listGraphsUseCase;
 
     @Operation(
-              summary = "List graphs",
-              description = "Lists all graphs in a specified datasets",
-              tags = {"dataset"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200"
-                        )
-              }
-    )
+            summary = "List graphs",
+            description = "Lists all graphs in a specified datasets",
+            tags = {"dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
     public List<URI> listGraphs(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs\" from \"{}\".",
+                datasetName,
+                originURL);
 
         var result = listGraphsUseCase.listGraphs(datasetName);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs\" to \"{}\".",
+                datasetName,
+                originURL);
         return result;
     }
 }

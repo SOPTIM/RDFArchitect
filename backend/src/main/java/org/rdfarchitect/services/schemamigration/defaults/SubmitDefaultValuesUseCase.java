@@ -21,12 +21,11 @@ import org.rdfarchitect.api.dto.migration.DefaultValueView;
 
 import java.util.List;
 
-/**
- * Use case for submitting default values for schema migration.
- */
+/** Use case for submitting default values for schema migration. */
 public interface SubmitDefaultValuesUseCase {
     /**
      * Submits the default values provided by the user.
+     *
      * @param defaultValueViews the list of classes with
      */
     void submitDefaultValues(List<DefaultValueView> defaultValueViews);

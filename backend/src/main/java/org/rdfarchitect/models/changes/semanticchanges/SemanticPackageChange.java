@@ -19,17 +19,19 @@ package org.rdfarchitect.models.changes.semanticchanges;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Object collecting all changes made to a package. This mainly consists of the changes made to the classes contained in the package.
+ * Object collecting all changes made to a package. This mainly consists of the changes made to the
+ * classes contained in the package.
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-public final class SemanticPackageChange extends SemanticResourceChange{
+public final class SemanticPackageChange extends SemanticResourceChange {
     List<SemanticClassChange> classChanges = new ArrayList<>();
 
     public SemanticPackageChange(TriplePackageChange tripleChange) {

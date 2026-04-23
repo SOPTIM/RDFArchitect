@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.api.dto;
 
+import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,9 +38,6 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.junit.jupiter.api.Assertions.*;
-
 class AssociationMapperTest {
 
     private final AssociationMapper associationMapper = Mappers.getMapper(AssociationMapper.class);
@@ -47,26 +47,37 @@ class AssociationMapperTest {
 
     @BeforeEach
     void setUp() {
-        cimAssociation = CIMAssociation.builder()
-                                       .uuid(UUID.randomUUID())
-                                       .uri(new URI("http://example.com#Class1.Class2"))
-                                       .label(new RDFSLabel("Class2", "en"))
-                                       .multiplicity(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"))
-                                       .domain(new RDFSDomain(new URI("http://example.com#Class1"), new RDFSLabel("Class1", "en")))
-                                       .range(new RDFSRange(new URI("http://example.com/class2#Class2"), new RDFSLabel("Class2", "en")))
-                                       .associationUsed(new CIMSAssociationUsed("Yes"))
-                                       .inverseRoleName(new CIMSInverseRoleName("http://example.com#Class2.Class1"))
-                                       .build();
+        cimAssociation =
+                CIMAssociation.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(new URI("http://example.com#Class1.Class2"))
+                        .label(new RDFSLabel("Class2", "en"))
+                        .multiplicity(
+                                new CIMSMultiplicity(
+                                        "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"))
+                        .domain(
+                                new RDFSDomain(
+                                        new URI("http://example.com#Class1"),
+                                        new RDFSLabel("Class1", "en")))
+                        .range(
+                                new RDFSRange(
+                                        new URI("http://example.com/class2#Class2"),
+                                        new RDFSLabel("Class2", "en")))
+                        .associationUsed(new CIMSAssociationUsed("Yes"))
+                        .inverseRoleName(
+                                new CIMSInverseRoleName("http://example.com#Class2.Class1"))
+                        .build();
 
-        associationDTO = AssociationDTO.builder()
-                                       .uuid(UUID.randomUUID())
-                                       .prefix("http://example.com#")
-                                       .label("Class2")
-                                       .multiplicity("1...1")
-                                       .domain("http://example.com#Class1")
-                                       .range(new DataTypeDTO("Class2", "http://example.com/class2#"))
-                                       .associationUsed(true)
-                                       .build();
+        associationDTO =
+                AssociationDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix("http://example.com#")
+                        .label("Class2")
+                        .multiplicity("1...1")
+                        .domain("http://example.com#Class1")
+                        .range(new DataTypeDTO("Class2", "http://example.com/class2#"))
+                        .associationUsed(true)
+                        .build();
     }
 
     @Nested
@@ -77,35 +88,39 @@ class AssociationMapperTest {
             var dto = associationMapper.toDTO(cimAssociation);
 
             assertAll(
-                      () -> assertThat(dto.getUuid()).isEqualTo(cimAssociation.getUuid()),
-                      () -> assertThat(dto.getPrefix()).isEqualTo("http://example.com#"),
-                      () -> assertThat(dto.getLabel()).isEqualTo("Class2"),
-                      () -> assertThat(dto.getComment()).isNull(),
-                      () -> assertThat(dto.getMultiplicity()).isEqualTo("1...1"),
-                      () -> assertThat(dto.getDomain()).isEqualTo("http://example.com#Class1"),
-                      () -> assertThat(dto.getRange().getLabel()).isEqualTo("Class2"),
-                      () -> assertThat(dto.getRange().getPrefix()).isEqualTo("http://example.com/class2#"),
-                      () -> assertThat(dto.isAssociationUsed()).isTrue()
-                     );
+                    () -> assertThat(dto.getUuid()).isEqualTo(cimAssociation.getUuid()),
+                    () -> assertThat(dto.getPrefix()).isEqualTo("http://example.com#"),
+                    () -> assertThat(dto.getLabel()).isEqualTo("Class2"),
+                    () -> assertThat(dto.getComment()).isNull(),
+                    () -> assertThat(dto.getMultiplicity()).isEqualTo("1...1"),
+                    () -> assertThat(dto.getDomain()).isEqualTo("http://example.com#Class1"),
+                    () -> assertThat(dto.getRange().getLabel()).isEqualTo("Class2"),
+                    () ->
+                            assertThat(dto.getRange().getPrefix())
+                                    .isEqualTo("http://example.com/class2#"),
+                    () -> assertThat(dto.isAssociationUsed()).isTrue());
         }
 
         @Test
         void toDTO_fullAssociation() {
-            cimAssociation.setComment(new RDFSComment("Test Comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
+            cimAssociation.setComment(
+                    new RDFSComment(
+                            "Test Comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
 
             var dto = associationMapper.toDTO(cimAssociation);
 
             assertAll(
-                      () -> assertThat(dto.getUuid()).isEqualTo(cimAssociation.getUuid()),
-                      () -> assertThat(dto.getPrefix()).isEqualTo("http://example.com#"),
-                      () -> assertThat(dto.getLabel()).isEqualTo("Class2"),
-                      () -> assertThat(dto.getComment()).isEqualTo("Test Comment"),
-                      () -> assertThat(dto.getMultiplicity()).isEqualTo("1...1"),
-                      () -> assertThat(dto.getDomain()).isEqualTo("http://example.com#Class1"),
-                      () -> assertThat(dto.getRange().getLabel()).isEqualTo("Class2"),
-                      () -> assertThat(dto.getRange().getPrefix()).isEqualTo("http://example.com/class2#"),
-                      () -> assertThat(dto.isAssociationUsed()).isTrue()
-                     );
+                    () -> assertThat(dto.getUuid()).isEqualTo(cimAssociation.getUuid()),
+                    () -> assertThat(dto.getPrefix()).isEqualTo("http://example.com#"),
+                    () -> assertThat(dto.getLabel()).isEqualTo("Class2"),
+                    () -> assertThat(dto.getComment()).isEqualTo("Test Comment"),
+                    () -> assertThat(dto.getMultiplicity()).isEqualTo("1...1"),
+                    () -> assertThat(dto.getDomain()).isEqualTo("http://example.com#Class1"),
+                    () -> assertThat(dto.getRange().getLabel()).isEqualTo("Class2"),
+                    () ->
+                            assertThat(dto.getRange().getPrefix())
+                                    .isEqualTo("http://example.com/class2#"),
+                    () -> assertThat(dto.isAssociationUsed()).isTrue());
         }
     }
 
@@ -114,38 +129,98 @@ class AssociationMapperTest {
 
         @Test
         void toCIMObject_minimalAssociation() {
-            var mappedCIMAssociation = associationMapper.toCIMObject(associationDTO, "http://example.com/class2#Class2.inverseLabel");
+            var mappedCIMAssociation =
+                    associationMapper.toCIMObject(
+                            associationDTO, "http://example.com/class2#Class2.inverseLabel");
 
             assertAll(
-                      () -> assertThat(mappedCIMAssociation.getUuid()).isEqualTo(associationDTO.getUuid()),
-                      () -> assertThat(mappedCIMAssociation.getUri()).isEqualTo(new URI("http://example.com#Class1.Class2")),
-                      () -> assertThat(mappedCIMAssociation.getLabel()).isEqualTo(new RDFSLabel("Class2", "en")),
-                      () -> assertThat(mappedCIMAssociation.getComment()).isNull(),
-                      () -> assertThat(mappedCIMAssociation.getMultiplicity()).isEqualTo(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1")),
-                      () -> assertThat(mappedCIMAssociation.getDomain()).isEqualTo(new RDFSDomain(new URI("http://example.com#Class1"), new RDFSLabel("Class1", "en"))),
-                      () -> assertThat(mappedCIMAssociation.getRange()).isEqualTo(new RDFSRange(new URI("http://example.com/class2#Class2"), new RDFSLabel("Class2", "en"))),
-                      () -> assertThat(mappedCIMAssociation.getAssociationUsed()).isEqualTo(new CIMSAssociationUsed("Yes")),
-                      () -> assertThat(mappedCIMAssociation.getInverseRoleName()).isEqualTo(new CIMSInverseRoleName("http://example.com/class2#Class2.inverseLabel"))
-                     );
+                    () ->
+                            assertThat(mappedCIMAssociation.getUuid())
+                                    .isEqualTo(associationDTO.getUuid()),
+                    () ->
+                            assertThat(mappedCIMAssociation.getUri())
+                                    .isEqualTo(new URI("http://example.com#Class1.Class2")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getLabel())
+                                    .isEqualTo(new RDFSLabel("Class2", "en")),
+                    () -> assertThat(mappedCIMAssociation.getComment()).isNull(),
+                    () ->
+                            assertThat(mappedCIMAssociation.getMultiplicity())
+                                    .isEqualTo(
+                                            new CIMSMultiplicity(
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getDomain())
+                                    .isEqualTo(
+                                            new RDFSDomain(
+                                                    new URI("http://example.com#Class1"),
+                                                    new RDFSLabel("Class1", "en"))),
+                    () ->
+                            assertThat(mappedCIMAssociation.getRange())
+                                    .isEqualTo(
+                                            new RDFSRange(
+                                                    new URI("http://example.com/class2#Class2"),
+                                                    new RDFSLabel("Class2", "en"))),
+                    () ->
+                            assertThat(mappedCIMAssociation.getAssociationUsed())
+                                    .isEqualTo(new CIMSAssociationUsed("Yes")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getInverseRoleName())
+                                    .isEqualTo(
+                                            new CIMSInverseRoleName(
+                                                    "http://example.com/class2#Class2.inverseLabel")));
         }
 
         @Test
         void toCIMObject_fullAssociation() {
             associationDTO.setComment("Test Comment");
 
-            var mappedCIMAssociation = associationMapper.toCIMObject(associationDTO, "http://example.com/class2#Class2.inverseLabel");
+            var mappedCIMAssociation =
+                    associationMapper.toCIMObject(
+                            associationDTO, "http://example.com/class2#Class2.inverseLabel");
 
             assertAll(
-                      () -> assertThat(mappedCIMAssociation.getUuid()).isEqualTo(associationDTO.getUuid()),
-                      () -> assertThat(mappedCIMAssociation.getUri()).isEqualTo(new URI("http://example.com#Class1.Class2")),
-                      () -> assertThat(mappedCIMAssociation.getLabel()).isEqualTo(new RDFSLabel("Class2", "en")),
-                      () -> assertThat(mappedCIMAssociation.getComment()).isEqualTo(new RDFSComment("Test Comment", new URI("http://www.w3.org/2001/XMLSchema#String"))),
-                      () -> assertThat(mappedCIMAssociation.getMultiplicity()).isEqualTo(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1")),
-                      () -> assertThat(mappedCIMAssociation.getDomain()).isEqualTo(new RDFSDomain(new URI("http://example.com#Class1"), new RDFSLabel("Class1", "en"))),
-                      () -> assertThat(mappedCIMAssociation.getRange()).isEqualTo(new RDFSRange(new URI("http://example.com/class2#Class2"), new RDFSLabel("Class2", "en"))),
-                      () -> assertThat(mappedCIMAssociation.getAssociationUsed()).isEqualTo(new CIMSAssociationUsed("Yes")),
-                      () -> assertThat(mappedCIMAssociation.getInverseRoleName()).isEqualTo(new CIMSInverseRoleName("http://example.com/class2#Class2.inverseLabel"))
-                     );
+                    () ->
+                            assertThat(mappedCIMAssociation.getUuid())
+                                    .isEqualTo(associationDTO.getUuid()),
+                    () ->
+                            assertThat(mappedCIMAssociation.getUri())
+                                    .isEqualTo(new URI("http://example.com#Class1.Class2")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getLabel())
+                                    .isEqualTo(new RDFSLabel("Class2", "en")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getComment())
+                                    .isEqualTo(
+                                            new RDFSComment(
+                                                    "Test Comment",
+                                                    new URI(
+                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                    () ->
+                            assertThat(mappedCIMAssociation.getMultiplicity())
+                                    .isEqualTo(
+                                            new CIMSMultiplicity(
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getDomain())
+                                    .isEqualTo(
+                                            new RDFSDomain(
+                                                    new URI("http://example.com#Class1"),
+                                                    new RDFSLabel("Class1", "en"))),
+                    () ->
+                            assertThat(mappedCIMAssociation.getRange())
+                                    .isEqualTo(
+                                            new RDFSRange(
+                                                    new URI("http://example.com/class2#Class2"),
+                                                    new RDFSLabel("Class2", "en"))),
+                    () ->
+                            assertThat(mappedCIMAssociation.getAssociationUsed())
+                                    .isEqualTo(new CIMSAssociationUsed("Yes")),
+                    () ->
+                            assertThat(mappedCIMAssociation.getInverseRoleName())
+                                    .isEqualTo(
+                                            new CIMSInverseRoleName(
+                                                    "http://example.com/class2#Class2.inverseLabel")));
         }
     }
 }

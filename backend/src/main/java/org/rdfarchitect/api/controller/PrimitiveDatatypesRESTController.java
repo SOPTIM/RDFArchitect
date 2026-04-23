@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.GetPrimitiveDatatypesUseCase;
 import org.slf4j.Logger;
@@ -41,29 +43,37 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PrimitiveDatatypesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(PrimitiveDatatypesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(PrimitiveDatatypesRESTController.class);
 
     private final GetPrimitiveDatatypesUseCase getPrimitiveDatatypesUseCase;
 
     @Operation(
-              summary = "Get primitive datatypes",
-              description = "Get a list of all supported xsd datatypes.",
-              tags = {"data"},
-              responses = {
-                        @ApiResponse(responseCode = "200",
-                                     description = "A list containing the uris of xsd datatypes.",
-                                     content = @Content(
-                                               mediaType = "application/json",
-                                               array = @ArraySchema(schema = @Schema(implementation = URI.class)))
-                        )
-              }
-    )
+            summary = "Get primitive datatypes",
+            description = "Get a list of all supported xsd datatypes.",
+            tags = {"data"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "A list containing the uris of xsd datatypes.",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                URI.class))))
+            })
     @GetMapping
     public List<URI> getPrimitiveDatatypes(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL
-                                          ) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL) {
         logger.info("Received GET request: \"/api/primitives\" from \"{}\".", originURL);
 
         var xsdURIList = getPrimitiveDatatypesUseCase.getPrimitiveDatatypes();

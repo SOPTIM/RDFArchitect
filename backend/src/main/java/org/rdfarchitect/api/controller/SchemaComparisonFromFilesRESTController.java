@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 import org.rdfarchitect.services.compare.SchemaComparisonUseCase;
 import org.slf4j.Logger;
@@ -43,35 +45,43 @@ import java.util.List;
 @RequestMapping("api/compare")
 public class SchemaComparisonFromFilesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SchemaComparisonFromFilesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(SchemaComparisonFromFilesRESTController.class);
 
     private final SchemaComparisonUseCase schemaComparisonUseCase;
 
     @Operation(
-              summary = "compare schemas",
-              description = "Compare two given graphs",
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200",
-                                  content = @Content(
-                                            mediaType = "application/json",
-                                            array = @ArraySchema(schema = @Schema(implementation = TriplePackageChange.class))
-                                  )
-                        )
-              }
-    )
+            summary = "compare schemas",
+            description = "Compare two given graphs",
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                TriplePackageChange
+                                                                                        .class))))
+            })
     @PostMapping
     public List<TriplePackageChange> compareSchemas(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The first graph file.")
-              @RequestParam("fileA")
-              MultipartFile fileA,
-              @Parameter(description = "The second graph file.")
-              @RequestParam("fileB")
-              MultipartFile fileB) {
-        logger.info("Received POST request: \"/api/datasets/graphs/compare/files\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The first graph file.") @RequestParam("fileA")
+                    MultipartFile fileA,
+            @Parameter(description = "The second graph file.") @RequestParam("fileB")
+                    MultipartFile fileB) {
+        logger.info(
+                "Received POST request: \"/api/datasets/graphs/compare/files\" from \"{}\".",
+                originURL);
 
         var changes = schemaComparisonUseCase.compareSchemas(fileA, fileB);
 

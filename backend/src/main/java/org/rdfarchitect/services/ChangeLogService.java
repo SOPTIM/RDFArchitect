@@ -18,12 +18,13 @@
 package org.rdfarchitect.services;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
-import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -38,21 +39,25 @@ public class ChangeLogService implements ChangeLogUseCase {
 
     private final ChangeLogEntryMapper mapper;
 
-    private final Map<String, Map<String, Map<String, GraphChangeLog>>> changeLogs = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Map<String, GraphChangeLog>>> changeLogs =
+            new ConcurrentHashMap<>();
 
     private GraphChangeLog getChangeLog(GraphIdentifier graphIdentifier) {
         return changeLogs
-                  .getOrDefault(SessionContext.getSessionId(), Collections.emptyMap())
-                  .getOrDefault(graphIdentifier.getDatasetName(), Collections.emptyMap())
-                  .getOrDefault(graphIdentifier.getGraphUri(), new GraphChangeLog());
+                .getOrDefault(SessionContext.getSessionId(), Collections.emptyMap())
+                .getOrDefault(graphIdentifier.getDatasetName(), Collections.emptyMap())
+                .getOrDefault(graphIdentifier.getGraphUri(), new GraphChangeLog());
     }
 
     @Override
     public void recordChange(GraphIdentifier graphIdentifier, ChangeLogEntry entry) {
-        var graphChangeLog = changeLogs
-                  .computeIfAbsent(SessionContext.getSessionId(), _ -> new ConcurrentHashMap<>())
-                  .computeIfAbsent(graphIdentifier.getDatasetName(), _ -> new ConcurrentHashMap<>())
-                  .computeIfAbsent(graphIdentifier.getGraphUri(), _ -> new GraphChangeLog());
+        var graphChangeLog =
+                changeLogs
+                        .computeIfAbsent(
+                                SessionContext.getSessionId(), _ -> new ConcurrentHashMap<>())
+                        .computeIfAbsent(
+                                graphIdentifier.getDatasetName(), _ -> new ConcurrentHashMap<>())
+                        .computeIfAbsent(graphIdentifier.getGraphUri(), _ -> new GraphChangeLog());
         graphChangeLog.addEntry(entry);
     }
 

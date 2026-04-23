@@ -23,14 +23,10 @@ import java.util.UUID;
 
 public interface Rewindable {
 
-    /**
-     * Undo the last change to this Object. Is its own transaction.
-     */
+    /** Undo the last change to this Object. Is its own transaction. */
     void undo();
 
-    /**
-     * Redo a previously undone change. Is its own transaction.
-     */
+    /** Redo a previously undone change. Is its own transaction. */
     void redo();
 
     /**
@@ -47,9 +43,7 @@ public interface Rewindable {
      */
     boolean canRedo();
 
-    /**
-     * Restore the state of this object to a specific version.
-     */
+    /** Restore the state of this object to a specific version. */
     void restore(UUID versionId);
 
     /**

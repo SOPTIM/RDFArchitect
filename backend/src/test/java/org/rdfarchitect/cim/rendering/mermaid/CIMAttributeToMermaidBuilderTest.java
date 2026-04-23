@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.rendering.mermaid;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -26,24 +28,27 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
 
-import static org.assertj.core.api.Assertions.*;
-
 class CIMAttributeToMermaidBuilderTest {
 
     private static final String URI_PREFIX = "http://example.com#";
 
     @Test
     void build_validAttribute_returnsMermaidAttribute() {
-        //Arrange
-        var attribute = CIMAttribute.builder()
-                                    .label(new RDFSLabel("attribute"))
-                                    .dataType(new CIMSDataType(new URI(URI_PREFIX + "datatype"), new RDFSLabel("datatype"), CIMSDataType.Type.UNKNOWN))
-                                    .build();
+        // Arrange
+        var attribute =
+                CIMAttribute.builder()
+                        .label(new RDFSLabel("attribute"))
+                        .dataType(
+                                new CIMSDataType(
+                                        new URI(URI_PREFIX + "datatype"),
+                                        new RDFSLabel("datatype"),
+                                        CIMSDataType.Type.UNKNOWN))
+                        .build();
         var builder = new CIMAttributeToMermaidBuilder(attribute);
-        //Act
+        // Act
 
         var result = builder.build().toString();
-        //Assert
+        // Assert
 
         assertThat(result).isEqualTo("attribute: datatype\n");
     }
@@ -51,16 +56,21 @@ class CIMAttributeToMermaidBuilderTest {
     @ParameterizedTest
     @ValueSource(strings = {"attribute", "var", "x", "1", "\"sdf!§$", ""})
     void build_validAttributeWithDifferentLabels_returnsMermaidAttribute(String label) {
-        //Arrange
-        var attribute = CIMAttribute.builder()
-                                    .label(new RDFSLabel(label))
-                                    .dataType(new CIMSDataType(new URI(URI_PREFIX + "datatype"), new RDFSLabel("datatype"), CIMSDataType.Type.UNKNOWN))
-                                    .build();
+        // Arrange
+        var attribute =
+                CIMAttribute.builder()
+                        .label(new RDFSLabel(label))
+                        .dataType(
+                                new CIMSDataType(
+                                        new URI(URI_PREFIX + "datatype"),
+                                        new RDFSLabel("datatype"),
+                                        CIMSDataType.Type.UNKNOWN))
+                        .build();
         var builder = new CIMAttributeToMermaidBuilder(attribute);
-        //Act
+        // Act
 
         var result = builder.build().toString();
-        //Assert
+        // Assert
 
         assertThat(result).isEqualTo(label + ": datatype\n");
     }
@@ -68,43 +78,51 @@ class CIMAttributeToMermaidBuilderTest {
     @ParameterizedTest
     @ValueSource(strings = {"datatype", "var", "x", "1", "\"sdf!§$", ""})
     void build_validAttributeWithDifferentDataTypes_returnsMermaidAttribute(String dataType) {
-        //Arrange
-        var attribute = CIMAttribute.builder()
-                                    .label(new RDFSLabel("attribute"))
-                                    .dataType(new CIMSDataType(new URI(URI_PREFIX + dataType), new RDFSLabel(dataType), CIMSDataType.Type.UNKNOWN))
-                                    .build();
+        // Arrange
+        var attribute =
+                CIMAttribute.builder()
+                        .label(new RDFSLabel("attribute"))
+                        .dataType(
+                                new CIMSDataType(
+                                        new URI(URI_PREFIX + dataType),
+                                        new RDFSLabel(dataType),
+                                        CIMSDataType.Type.UNKNOWN))
+                        .build();
         var builder = new CIMAttributeToMermaidBuilder(attribute);
-        //Act
+        // Act
 
         var result = builder.build().toString();
-        //Assert
+        // Assert
 
         assertThat(result).isEqualTo("attribute: " + dataType + "\n");
     }
 
     @Test
     void build_attributeWithNullType_throwsException() {
-        //Arrange
-        var attribute = CIMAttribute.builder()
-                                    .label(new RDFSLabel("attribute"))
-                                    .dataType(null)
-                                    .build();
+        // Arrange
+        var attribute =
+                CIMAttribute.builder().label(new RDFSLabel("attribute")).dataType(null).build();
         var builder = new CIMAttributeToMermaidBuilder(attribute);
 
-        //Act/Assert
+        // Act/Assert
         assertThatException().isThrownBy(builder::build);
     }
 
     @Test
     void build_attributeWithNullLabel_throwsException() {
-        //Arrange
-        var attribute = CIMAttribute.builder()
-                                    .label(null)
-                                    .dataType(new CIMSDataType(new URI(URI_PREFIX + "datatype"), new RDFSLabel("datatype"), CIMSDataType.Type.UNKNOWN))
-                                    .build();
+        // Arrange
+        var attribute =
+                CIMAttribute.builder()
+                        .label(null)
+                        .dataType(
+                                new CIMSDataType(
+                                        new URI(URI_PREFIX + "datatype"),
+                                        new RDFSLabel("datatype"),
+                                        CIMSDataType.Type.UNKNOWN))
+                        .build();
         var builder = new CIMAttributeToMermaidBuilder(attribute);
 
-        //Act/Assert
+        // Act/Assert
         assertThatException().isThrownBy(builder::build);
     }
 }

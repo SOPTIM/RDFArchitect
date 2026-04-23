@@ -19,6 +19,7 @@ package org.rdfarchitect.shacl.property.shapebuilder;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.graph.Node;
 import org.apache.jena.rdf.model.Literal;
@@ -35,8 +36,10 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 @Accessors(chain = true)
 public class HasTypePropertyShapeBuilder {
 
-    private static final String DESCRIPTION_TEXT = "This constraint validates that an association points to a node with an rdf:type.";
-    private static final String MESSAGE_TEXT = "The referenced node is missing an rdf:type, therefore a type validation is not possible.";
+    private static final String DESCRIPTION_TEXT =
+            "This constraint validates that an association points to a node with an rdf:type.";
+    private static final String MESSAGE_TEXT =
+            "The referenced node is missing an rdf:type, therefore a type validation is not possible.";
 
     private static final Literal DESCRIPTION = ResourceFactory.createPlainLiteral(DESCRIPTION_TEXT);
     private static final Literal MESSAGE = ResourceFactory.createPlainLiteral(MESSAGE_TEXT);
@@ -63,11 +66,15 @@ public class HasTypePropertyShapeBuilder {
         // Create the main PropertyShape
         propertyShape.addProperty(RDF.type, shaclModel.asRDFNode(SHACL.PropertyShape));
         propertyShape.addProperty(asProperty(SHACL.description), DESCRIPTION);
-        propertyShape.addProperty(asProperty(SHACL.group), shaclModel.createResource(propertyGroupUri));
+        propertyShape.addProperty(
+                asProperty(SHACL.group), shaclModel.createResource(propertyGroupUri));
         propertyShape.addProperty(asProperty(SHACL.message), MESSAGE);
         propertyShape.addProperty(asProperty(SHACL.name), propertyShapeName);
-        propertyShape.addLiteral(asProperty(SHACL.order), shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
-        propertyShape.addProperty(asProperty(SHACL.path), shaclModel.createResource(associationUri));
+        propertyShape.addLiteral(
+                asProperty(SHACL.order),
+                shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
+        propertyShape.addProperty(
+                asProperty(SHACL.path), shaclModel.createResource(associationUri));
         propertyShape.addProperty(asProperty(SHACL.severity), shaclModel.asRDFNode(SHACL.Warning));
 
         // Create the nested NodeShape as blank node
@@ -77,7 +84,9 @@ public class HasTypePropertyShapeBuilder {
         // Create the nested PropertyShape for rdf:type validation
         var nestedPropertyShape = shaclModel.createResource();
         nestedPropertyShape.addProperty(asProperty(SHACL.path), RDF.type);
-        nestedPropertyShape.addLiteral(asProperty(SHACL.minCount), shaclModel.createTypedLiteral(1, XSDDatatype.XSDinteger));
+        nestedPropertyShape.addLiteral(
+                asProperty(SHACL.minCount),
+                shaclModel.createTypedLiteral(1, XSDDatatype.XSDinteger));
 
         // Connect nested PropertyShape to nested NodeShape
         nestedNodeShape.addProperty(asProperty(SHACL.property), nestedPropertyShape);

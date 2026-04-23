@@ -24,10 +24,11 @@ import java.util.UUID;
 public interface DeletePackageUseCase {
 
     /**
-     * Removes the package identified by {@code packageUUID} from the graph defined by {@code graphIdentifier}.
+     * Removes the package identified by {@code packageUUID} from the graph defined by {@code
+     * graphIdentifier}.
      *
      * @param graphIdentifier identifies the dataset and graph in which the package lives
-     * @param packageUUID     the UUID of the package that should be deleted
+     * @param packageUUID the UUID of the package that should be deleted
      */
     void deletePackage(GraphIdentifier graphIdentifier, UUID packageUUID);
 }

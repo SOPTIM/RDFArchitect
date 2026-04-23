@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.data.dto.relations;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -25,13 +26,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CIMSAssociationUsed {
 
-    @JsonValue
-    private String associationUsed;
+    @JsonValue private String associationUsed;
 
     public CIMSAssociationUsed(String associationUsed) {
         this.associationUsed = associationUsed;
         if (!associationUsed.equals("Yes") && !associationUsed.equals("No")) {
-            throw new IllegalArgumentException("The associationUsed must either be \"YES\" or \"NO\"");
+            throw new IllegalArgumentException(
+                    "The associationUsed must either be \"YES\" or \"NO\"");
         }
     }
 

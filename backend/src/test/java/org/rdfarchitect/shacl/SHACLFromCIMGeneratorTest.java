@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.shacl;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -37,13 +39,12 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import static org.assertj.core.api.Assertions.*;
-
 class SHACLFromCIMGeneratorTest {
 
     private static final String TEST_DATA_DIR = "src/test/java/org/rdfarchitect/shacl/testdata/";
 
-    private static final PrefixEntry PREFIX_ENTRY = PrefixEntry.create("rdfash", "https://example.com/shacl#");
+    private static final PrefixEntry PREFIX_ENTRY =
+            PrefixEntry.create("rdfash", "https://example.com/shacl#");
 
     @BeforeAll
     static void setUp() {
@@ -149,8 +150,10 @@ class SHACLFromCIMGeneratorTest {
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
             assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.OtherClass>");
-            assertThat(entry.message()).isEqualTo("Cardinality violation (association). Upper bound shall be 1.");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.OtherClass>");
+            assertThat(entry.message())
+                    .isEqualTo("Cardinality violation (association). Upper bound shall be 1.");
         }
 
         @ParameterizedTest
@@ -169,8 +172,10 @@ class SHACLFromCIMGeneratorTest {
             assertThat(report.getEntries()).hasSize(1);
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
-            assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#childMissingParentAtt");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Parent.parentAtt>");
+            assertThat(entry.focusNode().getURI())
+                    .isEqualTo("http://example.org/instances#childMissingParentAtt");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Parent.parentAtt>");
             assertThat(entry.message()).isEqualTo("Missing required property (attribute).");
         }
 
@@ -191,7 +196,8 @@ class SHACLFromCIMGeneratorTest {
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
             assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Parent.parentAtt>");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Parent.parentAtt>");
             assertThat(entry.message()).isEqualTo("Missing required property (attribute).");
         }
 
@@ -212,8 +218,10 @@ class SHACLFromCIMGeneratorTest {
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
             assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.childAtt>");
-            assertThat(entry.message()).isEqualTo("Cardinality violation (attribute). Upper bound shall be 1.");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.childAtt>");
+            assertThat(entry.message())
+                    .isEqualTo("Cardinality violation (attribute). Upper bound shall be 1.");
         }
 
         @ParameterizedTest
@@ -233,7 +241,8 @@ class SHACLFromCIMGeneratorTest {
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
             assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.childEnumAtt>");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.childEnumAtt>");
             assertThat(entry.message()).isEqualTo("Missing required property (attribute).");
         }
 
@@ -254,7 +263,8 @@ class SHACLFromCIMGeneratorTest {
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
             assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.childEnumAtt>");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.childEnumAtt>");
             assertThat(entry.message()).isEqualTo("Missing required property (attribute).");
         }
     }
@@ -278,9 +288,12 @@ class SHACLFromCIMGeneratorTest {
             assertThat(report.getEntries()).hasSize(1);
             var entry1 = report.getEntries().iterator().next();
             assertThat(entry1.severity()).isEqualTo(Severity.Violation);
-            assertThat(entry1.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry1.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.childAtt>");
-            assertThat(entry1.message()).isEqualTo("The datatype is not literal or it violates the xsd datatype.");
+            assertThat(entry1.focusNode().getURI())
+                    .isEqualTo("http://example.org/instances#child1");
+            assertThat(entry1.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.childAtt>");
+            assertThat(entry1.message())
+                    .isEqualTo("The datatype is not literal or it violates the xsd datatype.");
         }
 
         @ParameterizedTest
@@ -299,9 +312,13 @@ class SHACLFromCIMGeneratorTest {
             assertThat(report.getEntries()).hasSize(1);
             var entry1 = report.getEntries().iterator().next();
             assertThat(entry1.severity()).isEqualTo(Severity.Violation);
-            assertThat(entry1.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry1.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.childEnumAtt>");
-            assertThat(entry1.message()).isEqualTo("The datatype is not an IRI (Internationalized Resource Identifier) or its enumerated value is not part of the profile.");
+            assertThat(entry1.focusNode().getURI())
+                    .isEqualTo("http://example.org/instances#child1");
+            assertThat(entry1.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.childEnumAtt>");
+            assertThat(entry1.message())
+                    .isEqualTo(
+                            "The datatype is not an IRI (Internationalized Resource Identifier) or its enumerated value is not part of the profile.");
         }
 
         @ParameterizedTest
@@ -320,9 +337,12 @@ class SHACLFromCIMGeneratorTest {
             assertThat(report.getEntries()).hasSize(1);
             var entry1 = report.getEntries().iterator().next();
             assertThat(entry1.severity()).isEqualTo(Severity.Violation);
-            assertThat(entry1.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry1.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Parent.parentAtt>");
-            assertThat(entry1.message()).isEqualTo("The datatype is not literal or it violates the xsd datatype.");
+            assertThat(entry1.focusNode().getURI())
+                    .isEqualTo("http://example.org/instances#child1");
+            assertThat(entry1.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Parent.parentAtt>");
+            assertThat(entry1.message())
+                    .isEqualTo("The datatype is not literal or it violates the xsd datatype.");
         }
     }
 
@@ -346,8 +366,12 @@ class SHACLFromCIMGeneratorTest {
             var entry1 = report.getEntries().iterator().next();
             assertThat(entry1.severity()).isEqualTo(Severity.Violation);
             assertThat(entry1.focusNode().getURI()).isEqualTo("http://example.org/instances#child");
-            assertThat(entry1.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.OtherClass>/<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>");
-            assertThat(entry1.message()).isEqualTo("One of the following occurs: 1) The value type is not IRI; 2) The value type is not the right class.");
+            assertThat(entry1.resultPath())
+                    .hasToString(
+                            "<http://iec.ch/TC57/CIM100#Child.OtherClass>/<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>");
+            assertThat(entry1.message())
+                    .isEqualTo(
+                            "One of the following occurs: 1) The value type is not IRI; 2) The value type is not the right class.");
         }
 
         @ParameterizedTest
@@ -367,8 +391,11 @@ class SHACLFromCIMGeneratorTest {
             var entry1 = report.getEntries().iterator().next();
             assertThat(entry1.severity()).isEqualTo(Severity.Warning);
             assertThat(entry1.focusNode().getURI()).isEqualTo("http://example.org/instances#child");
-            assertThat(entry1.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.OtherClass>");
-            assertThat(entry1.message()).isEqualTo("The referenced node is missing an rdf:type, therefore a type validation is not possible.");
+            assertThat(entry1.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.OtherClass>");
+            assertThat(entry1.message())
+                    .isEqualTo(
+                            "The referenced node is missing an rdf:type, therefore a type validation is not possible.");
         }
     }
 
@@ -391,7 +418,8 @@ class SHACLFromCIMGeneratorTest {
             var entry = report.getEntries().iterator().next();
             assertThat(entry.severity()).isEqualTo(Severity.Violation);
             assertThat(entry.focusNode().getURI()).isEqualTo("http://example.org/instances#child1");
-            assertThat(entry.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#unknwonProperty>");
+            assertThat(entry.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#unknwonProperty>");
             assertThat(entry.value()).hasToString("\"iShouldntExist\"");
         }
 
@@ -457,9 +485,12 @@ class SHACLFromCIMGeneratorTest {
             assertThat(report.getEntries()).hasSize(1);
             var entry1 = report.getEntries().iterator().next();
             assertThat(entry1.severity()).isEqualTo(Severity.Violation);
-            assertThat(entry1.focusNode().getURI()).isEqualTo("http://example.org/instances#child2");
-            assertThat(entry1.resultPath()).hasToString("<http://iec.ch/TC57/CIM100#Child.childAtt>");
-            assertThat(entry1.message()).isEqualTo("The datatype is not literal or it violates the xsd datatype.");
+            assertThat(entry1.focusNode().getURI())
+                    .isEqualTo("http://example.org/instances#child2");
+            assertThat(entry1.resultPath())
+                    .hasToString("<http://iec.ch/TC57/CIM100#Child.childAtt>");
+            assertThat(entry1.message())
+                    .isEqualTo("The datatype is not literal or it violates the xsd datatype.");
         }
     }
 }

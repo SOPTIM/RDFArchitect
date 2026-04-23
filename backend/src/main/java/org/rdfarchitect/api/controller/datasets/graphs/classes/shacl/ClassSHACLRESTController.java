@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes.shacl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -55,69 +57,89 @@ public class ClassSHACLRESTController {
     private final SHACLUpdateUseCase shaclUpdateUseCase;
 
     @Operation(
-              summary = "Get SHACL related to a class",
-              description = "Get the shacl rules that can be related to a specified class.",
-              tags = {"shacl"},
-              responses = {
-                        @ApiResponse(responseCode = "200")
-              }
-    )
+            summary = "Get SHACL related to a class",
+            description = "Get the shacl rules that can be related to a specified class.",
+            tags = {"shacl"},
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
     public CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLRelatedToClass(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        var res = shaclGetClassRelationsUseCase.getSHACLToClassRelations(graphIdentifier, UUID.fromString(classUUID));
+        var res =
+                shaclGetClassRelationsUseCase.getSHACLToClassRelations(
+                        graphIdentifier, UUID.fromString(classUUID));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return res;
     }
 
     @Operation(
-              summary = "Replace or insert SHACL",
-              description = "Replace or insert SHACL rules related to a class.",
-              tags = {"shacl"},
-              responses = {
-                        @ApiResponse(responseCode = "200")
-              }
-    )
+            summary = "Replace or insert SHACL",
+            description = "Replace or insert SHACL rules related to a class.",
+            tags = {"shacl"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PutMapping("/custom")
     public String putSHACL(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID,
-              @Parameter(description = "The SHACL shapes to be inserted.")
-              @RequestBody
-              String shaclString) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @Parameter(description = "The SHACL shapes to be inserted.") @RequestBody
+                    String shaclString) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-        shaclUpdateUseCase.updateClassSHACL(graphIdentifier, UUID.fromString(classUUID), shaclString);
+        shaclUpdateUseCase.updateClassSHACL(
+                graphIdentifier, UUID.fromString(classUUID), shaclString);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/shacl\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return Response.SUCCESS;
     }
 }

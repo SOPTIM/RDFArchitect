@@ -20,24 +20,24 @@ package org.rdfarchitect.services.schemamigration;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * Use case for setting the migration context.
- */
+/** Use case for setting the migration context. */
 public interface SetMigrationContextUseCase {
 
     /**
-     * Sets the migration context for the given graph identifier of an edited schema loaded in memory and the uploaded old schema updatesSchema.
+     * Sets the migration context for the given graph identifier of an edited schema loaded in
+     * memory and the uploaded old schema updatesSchema.
      *
      * @param originalSchema the graph identifier of the edited schema loaded in memory
-     * @param updatesSchema  the uploaded old schema
+     * @param updatesSchema the uploaded old schema
      */
     void setMigrationContext(MultipartFile originalSchema, GraphIdentifier updatesSchema);
 
     /**
-     * Sets the migration context for the given graph identifier of an edited schema loaded in memory and the graph identifier of the old schema loaded in memory.
+     * Sets the migration context for the given graph identifier of an edited schema loaded in
+     * memory and the graph identifier of the old schema loaded in memory.
      *
      * @param originalSchema the graph identifier of the edited schema loaded in memory
-     * @param updatedSchema  the graph identifier of the old schema loaded in memory
+     * @param updatedSchema the graph identifier of the old schema loaded in memory
      */
     void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema);
 
@@ -45,7 +45,7 @@ public interface SetMigrationContextUseCase {
      * Sets the migration context for the two uploaded schema files.
      *
      * @param originalSchema the graph identifier of the edited schema loaded in memory
-     * @param updatedSchema  the graph identifier of the old schema loaded in memory
+     * @param updatedSchema the graph identifier of the old schema loaded in memory
      */
     void setMigrationContext(MultipartFile originalSchema, MultipartFile updatedSchema);
 }

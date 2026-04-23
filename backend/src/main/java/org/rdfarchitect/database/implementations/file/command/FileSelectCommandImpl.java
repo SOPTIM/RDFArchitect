@@ -72,39 +72,55 @@ public class FileSelectCommandImpl implements DatabaseSelectCommand {
     @Override
     public ResultFormatter execute() {
         if (query == null) {
-            throw new QueryException("Query is null. Execution against endpoint \"" + this.path + "\\" +
-                                               this.datasetName + "." + this.lang.getFileExtensions().getFirst() + "\" skipped.");
+            throw new QueryException(
+                    "Query is null. Execution against endpoint \""
+                            + this.path
+                            + "\\"
+                            + this.datasetName
+                            + "."
+                            + this.lang.getFileExtensions().getFirst()
+                            + "\" skipped.");
         }
 
         String hex = Integer.toHexString(this.query.hashCode());
-        logger.debug("Execute query@{} against endpoint \"{}/{}\":\n{}",
-                     hex,
-                     this.path,
-                     this.datasetName,
-                     this.query);
+        logger.debug(
+                "Execute query@{} against endpoint \"{}/{}\":\n{}",
+                hex,
+                this.path,
+                this.datasetName,
+                this.query);
 
-        Dataset dataset = new FileDatabase(this.path, this.lang)
-                  .getDataset(datasetName);
-
+        Dataset dataset = new FileDatabase(this.path, this.lang).getDataset(datasetName);
 
         try (var qExec = QueryExecutionFactory.create(query, dataset)) {
             var result = qExec.execSelect().rewindable();
             if (logger.isDebugEnabled()) {
-                logger.debug("Received result for query@{} from \"{}/{}\":\n{}",
-                             hex,
-                             this.path,
-                             this.datasetName,
-                             ResultSetFormatter.asText(result));
+                logger.debug(
+                        "Received result for query@{} from \"{}/{}\":\n{}",
+                        hex,
+                        this.path,
+                        this.datasetName,
+                        ResultSetFormatter.asText(result));
                 result.reset();
             }
             return new ResultSetFormatterImpl(result);
         } catch (Exception e) {
-            logger.debug("Failed to execute query@{} against endpoint \"{}/{}\"",
-                         hex,
-                         this.path,
-                         this.datasetName);
-            throw new DataAccessException("Failed to execute query@" + hex + " against endpoint \"" + this.path + "\\" +
-                                                    this.datasetName + "." + this.lang.getFileExtensions().getFirst() + "\"", e);
+            logger.debug(
+                    "Failed to execute query@{} against endpoint \"{}/{}\"",
+                    hex,
+                    this.path,
+                    this.datasetName);
+            throw new DataAccessException(
+                    "Failed to execute query@"
+                            + hex
+                            + " against endpoint \""
+                            + this.path
+                            + "\\"
+                            + this.datasetName
+                            + "."
+                            + this.lang.getFileExtensions().getFirst()
+                            + "\"",
+                    e);
         }
     }
 

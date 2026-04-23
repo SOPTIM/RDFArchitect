@@ -35,7 +35,10 @@ public class PortConfig {
     }
 
     @Bean
-    public SnapshotPort snapshotPort(DatabasePort databasePort, DatabaseConnection databaseConnection, DatabaseConfig databaseConfig) {
+    public SnapshotPort snapshotPort(
+            DatabasePort databasePort,
+            DatabaseConnection databaseConnection,
+            DatabaseConfig databaseConfig) {
         return new FusekiSnapshotAdapter(databasePort, databaseConnection, databaseConfig);
     }
 }

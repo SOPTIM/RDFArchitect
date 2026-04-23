@@ -21,7 +21,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.services.schemamigration.scriptgeneration.GenerateMigrationScriptUseCase;
@@ -46,28 +48,29 @@ import java.util.zip.ZipOutputStream;
 @RequiredArgsConstructor
 public class MigrationScriptRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(MigrationScriptRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(MigrationScriptRESTController.class);
 
     private final GenerateMigrationScriptUseCase generateMigrationScriptUseCase;
     private final SHACLExportUseCase shaclExportUseCase;
     private final MigrationSessionStore migrationSessionStore;
 
     @Operation(
-              summary = "generate migration script",
-              description = "Generates a migration script based on the previously computed migration actions and the shacl shapes of the new schema.",
-              tags = {"migration"},
-              responses = {@ApiResponse(
+            summary = "generate migration script",
+            description =
+                    "Generates a migration script based on the previously computed migration actions and the shacl shapes of the new schema.",
+            tags = {"migration"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/zip"
-                        ))
-              }
-    )
+                        content = @Content(mediaType = "application/zip"))
+            })
     @GetMapping("/api/migrations/export")
     public ResponseEntity<byte[]> generateMigrationScript(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL) throws IOException {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL)
+            throws IOException {
         logger.info("Received GET request: \"/api/migrations/export\" from \"{}\".", originURL);
 
         var updatedSchema = migrationSessionStore.getContext().getUpdatedSchema();
@@ -86,14 +89,16 @@ public class MigrationScriptRESTController {
         }
         var headers = new HttpHeaders();
         headers.setAccessControlExposeHeaders(List.of("Content-disposition"));
-        var response = ResponseEntity.ok()
-                                     .headers(headers)
-                                     .header(HttpHeaders.CONTENT_DISPOSITION, "migration-package.zip")
-                                     .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                                     .body(body.toByteArray());
+        var response =
+                ResponseEntity.ok()
+                        .headers(headers)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "migration-package.zip")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .body(body.toByteArray());
 
-
-        logger.info("Sending response to GET request: \"/api/migrations/export\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/migrations/export\" from \"{}\".",
+                originURL);
 
         return response;
     }

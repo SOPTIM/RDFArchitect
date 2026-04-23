@@ -21,11 +21,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;
 
 /**
- * Represents a single change to a resource and stores the old and new values of a triple.
- * Includes a type to indicate what semantic meaning the change has to the resource.
+ * Represents a single change to a resource and stores the old and new values of a triple. Includes
+ * a type to indicate what semantic meaning the change has to the resource.
  */
 @Data
 @Builder

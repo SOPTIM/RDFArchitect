@@ -24,10 +24,11 @@ import java.util.UUID;
 public interface DeletePackageLayoutDataUseCase {
 
     /**
-     * Deletes all diagram layout data associated with the diagram identified by the given package UUID.
+     * Deletes all diagram layout data associated with the diagram identified by the given package
+     * UUID.
      *
      * @param graphIdentifier the identifier of the graph
-     * @param packageUUID     the UUID of the package identifying the diagram
+     * @param packageUUID the UUID of the package identifying the diagram
      */
     void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID);
 }

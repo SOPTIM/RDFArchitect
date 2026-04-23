@@ -18,17 +18,22 @@
 package org.rdfarchitect.models.cim.data.dto.relations.uri;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 
 @Data
 @NoArgsConstructor
 @JsonDeserialize(using = URIDeserializer.class)
-@Schema(description = "When deserializing (parsing json to object), it is possible to alternatively only put a String containing the whole uri. For serializing (parsing object " +
-          "to json), the object structure ist always used.")
+@Schema(
+        description =
+                "When deserializing (parsing json to object), it is possible to alternatively only put a String containing the whole uri. For serializing (parsing object "
+                        + "to json), the object structure ist always used.")
 public class URI {
 
     private String prefix;
@@ -37,7 +42,7 @@ public class URI {
     public URI(String uri) {
         String[] split = uri.split("#", 2);
         if (split.length == 2) {
-            //split
+            // split
             prefix = split[0] + "#";
             suffix = split[1];
         } else {
@@ -65,4 +70,3 @@ public class URI {
         return this.toString().hashCode();
     }
 }
-

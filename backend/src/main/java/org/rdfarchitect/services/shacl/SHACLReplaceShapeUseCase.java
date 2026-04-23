@@ -22,11 +22,13 @@ import org.rdfarchitect.database.GraphIdentifier;
 public interface SHACLReplaceShapeUseCase {
 
     /**
-     * Deletes a SHACL shape from a graph and inserts SHACL coded as Turtle. Prefix changes are not adopted.
+     * Deletes a SHACL shape from a graph and inserts SHACL coded as Turtle. Prefix changes are not
+     * adopted.
      *
      * @param graphIdentifier the identifier of the graph
      * @param shaclShapeURI the uri of the SHACL shape
      * @param shaclToInsert the shacl to insert
      */
-    void replaceSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert);
+    void replaceSHACLShape(
+            GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert);
 }

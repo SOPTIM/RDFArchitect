@@ -30,19 +30,21 @@ public class CIMAssociationToMermaidBuilder {
 
     private final Map<String, UUID> uriToUuidMap;
 
-    public CIMAssociationToMermaidBuilder(CIMAssociation from, CIMAssociation to, Map<String, UUID> uriToUuidMap) {
+    public CIMAssociationToMermaidBuilder(
+            CIMAssociation from, CIMAssociation to, Map<String, UUID> uriToUuidMap) {
         this.from = from;
         this.to = to;
         this.uriToUuidMap = uriToUuidMap;
     }
 
     public StringBuilder build() {
-        var mermaidString = new StringBuilder()
-                  .append("`")
-                  .append(uriToUuidMap.get(from.getDomain().getUri().toString()))
-                  .append("` \"")
-                  .append(from.getMultiplicity().getUri().getSuffix())
-                  .append("\" ");
+        var mermaidString =
+                new StringBuilder()
+                        .append("`")
+                        .append(uriToUuidMap.get(from.getDomain().getUri().toString()))
+                        .append("` \"")
+                        .append(from.getMultiplicity().getUri().getSuffix())
+                        .append("\" ");
         if (to.getAssociationUsed().toString().equals("Yes")) {
             mermaidString.append("<");
         }
@@ -51,12 +53,12 @@ public class CIMAssociationToMermaidBuilder {
             mermaidString.append(">");
         }
         mermaidString
-                  .append(" \"")
-                  .append(to.getMultiplicity().getUri().getSuffix())
-                  .append("\" `")
-                  .append(uriToUuidMap.get(to.getDomain().getUri().toString()))
-                  .append("`")
-                  .append("\n");
+                .append(" \"")
+                .append(to.getMultiplicity().getUri().getSuffix())
+                .append("\" `")
+                .append(uriToUuidMap.get(to.getDomain().getUri().toString()))
+                .append("`")
+                .append("\n");
         return mermaidString;
     }
 }

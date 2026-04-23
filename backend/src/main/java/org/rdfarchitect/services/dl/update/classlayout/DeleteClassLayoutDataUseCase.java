@@ -24,10 +24,11 @@ import java.util.UUID;
 public interface DeleteClassLayoutDataUseCase {
 
     /**
-     * Deletes all diagram layout data associated with the diagram object and diagram object point identified by the given class UUID.
+     * Deletes all diagram layout data associated with the diagram object and diagram object point
+     * identified by the given class UUID.
      *
      * @param graphIdentifier the identifier of the graph
-     * @param classUUID       the UUID of the class identifying the diagram object
+     * @param classUUID the UUID of the class identifying the diagram object
      */
     void deleteClassLayoutData(GraphIdentifier graphIdentifier, UUID classUUID);
 }

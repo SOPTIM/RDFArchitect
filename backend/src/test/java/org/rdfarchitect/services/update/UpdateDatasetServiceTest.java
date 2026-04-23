@@ -17,16 +17,16 @@
 
 package org.rdfarchitect.services.update;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.services.update.dataset.UpdateDatasetService;
 
 import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class UpdateDatasetServiceTest {
 
@@ -48,10 +48,10 @@ class UpdateDatasetServiceTest {
 
     @Test
     void replaceNamespaces_validNamespaces_callsSetPrefixMapping() {
-        var namespaces = List.of(
-                  mockCIMPrefixPair("ex:", "http://example.org/"),
-                  mockCIMPrefixPair("foaf:", "http://xmlns.com/foaf/0.1/")
-                                );
+        var namespaces =
+                List.of(
+                        mockCIMPrefixPair("ex:", "http://example.org/"),
+                        mockCIMPrefixPair("foaf:", "http://xmlns.com/foaf/0.1/"));
 
         service.replaceNamespaces("test-dataset", namespaces);
 
@@ -60,14 +60,14 @@ class UpdateDatasetServiceTest {
 
     @Test
     void replaceNamespaces_duplicatePrefix_throwsException() {
-        var namespaces = List.of(
-                  mockCIMPrefixPair("ex:", "http://example.org/"),
-                  mockCIMPrefixPair("ex:", "http://example.com/")
-                                );
+        var namespaces =
+                List.of(
+                        mockCIMPrefixPair("ex:", "http://example.org/"),
+                        mockCIMPrefixPair("ex:", "http://example.com/"));
 
-        assertThrows(IllegalArgumentException.class, () ->
-                               service.replaceNamespaces("test-dataset", namespaces)
-                    );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.replaceNamespaces("test-dataset", namespaces));
     }
 
     private CIMPrefixPair mockCIMPrefixPair(String substitutedPrefix, String prefix) {

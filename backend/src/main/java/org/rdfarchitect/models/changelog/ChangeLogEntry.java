@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.changelog;
 
 import lombok.Data;
+
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 

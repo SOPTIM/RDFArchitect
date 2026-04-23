@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.rdf.model.RDFNode;
@@ -52,19 +53,16 @@ public class CIMQuerySolutionParser {
     /**
      * Helper record to store a URI, Label pair
      *
-     * @param uri   The URI
+     * @param uri The URI
      * @param label The Label
      */
-    private record URILabelPair(URI uri, RDFSLabel label) {
-
-    }
+    private record URILabelPair(URI uri, RDFSLabel label) {}
 
     /**
      * Extracts the {@link URILabelPair} from the query solution.
      *
-     * @param uriVar   The variable name of the URI.
+     * @param uriVar The variable name of the URI.
      * @param labelVar The variable name of the label.
-     *
      * @return The URI and label as a {@link URILabelPair}. The label can be null.
      */
     private URILabelPair getURILabelPair(String uriVar, String labelVar) {
@@ -73,7 +71,9 @@ public class CIMQuerySolutionParser {
         RDFSLabel label = null;
         if (qs.contains(labelVar)) {
             var labelNode = qs.get(labelVar).asNode();
-            label = new RDFSLabel(labelNode.getLiteralLexicalForm(), labelNode.getLiteralLanguage());
+            label =
+                    new RDFSLabel(
+                            labelNode.getLiteralLexicalForm(), labelNode.getLiteralLanguage());
         }
         if (label == null) {
             label = new RDFSLabel(uri.getSuffix());
@@ -84,12 +84,12 @@ public class CIMQuerySolutionParser {
     /**
      * Extracts the {@link CIMSPrimitiveDataType} from the query solution.
      *
-     * @param primitiveTypeUriVar   The variable name of the primitive datatype URI.
+     * @param primitiveTypeUriVar The variable name of the primitive datatype URI.
      * @param primitiveTypeLabelVar The variable name of the primitive datatype label.
-     *
      * @return The primitive datatype or null, if the given variables don't exist in the solution.
      */
-    public CIMSPrimitiveDataType getPrimitiveDataType(String primitiveTypeUriVar, String primitiveTypeLabelVar) {
+    public CIMSPrimitiveDataType getPrimitiveDataType(
+            String primitiveTypeUriVar, String primitiveTypeLabelVar) {
         if (!qs.contains(primitiveTypeUriVar)) {
             return null;
         }
@@ -100,9 +100,8 @@ public class CIMQuerySolutionParser {
     /**
      * Extracts the {@link RDFSRange} from the query solution.
      *
-     * @param rangeUriVar   The variable name of the range URI.
+     * @param rangeUriVar The variable name of the range URI.
      * @param rangeLabelVar The variable name of the range label.
-     *
      * @return The range or null, if the given variables don't exist in the solution.
      */
     public RDFSRange getRange(String rangeUriVar, String rangeLabelVar) {
@@ -117,7 +116,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link CIMSAssociationUsed} used from the query solution.
      *
      * @param associationUsedVar The variable name of the association used.
-     *
      * @return The association used or null, if the given variables doesn't exist in the solution.
      */
     public CIMSAssociationUsed getAssociationUsed(String associationUsedVar) {
@@ -131,13 +129,13 @@ public class CIMQuerySolutionParser {
     /**
      * Extracts the {@link CIMSBelongsToCategory} from the query solution.
      *
-     * @param packageUriVar   The variable name of the package URI.
+     * @param packageUriVar The variable name of the package URI.
      * @param packageLabelVar The variable name of the package label.
-     * @param packageUUIDVar  The variable name of the package UUID.
-     *
+     * @param packageUUIDVar The variable name of the package UUID.
      * @return The belongs to category or null, if the given variables don't exist in the solution.
      */
-    public CIMSBelongsToCategory getBelongsToCategory(String packageUriVar, String packageLabelVar, String packageUUIDVar) {
+    public CIMSBelongsToCategory getBelongsToCategory(
+            String packageUriVar, String packageLabelVar, String packageUUIDVar) {
         if (!qs.contains(packageUriVar)) {
             return null;
         }
@@ -154,7 +152,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link CIMSInverseRoleName} from the query solution.
      *
      * @param inverseRoleNameVar The variable name of the inverse role name.
-     *
      * @return The inverse role name or null, if the given variables doesn't exist in the solution.
      */
     public CIMSInverseRoleName getInverseRoleName(String inverseRoleNameVar) {
@@ -169,7 +166,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link CIMSIsDefault} from the query solution.
      *
      * @param isDefaultVar The variable name of the isDefault.
-     *
      * @return The is default or null, if the given variables doesn't exist in the solution.
      */
     public CIMSIsDefault getIsDefault(String isDefaultVar) {
@@ -185,7 +181,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link CIMSIsFixed} from the query solution.
      *
      * @param isFixedVar The variable name of the isFixed.
-     *
      * @return The is fixed or null, if the given variables doesn't exist in the solution.
      */
     public CIMSIsFixed getIsFixed(String isFixedVar) {
@@ -201,7 +196,6 @@ public class CIMQuerySolutionParser {
      * Helper method to extract the value and datatype of a RDFNode.
      *
      * @param node The RDFNode to extract the value and datatype from.
-     *
      * @return A {@link AbstractMap.SimpleEntry} with the value as key and the datatype as value.
      */
     private AbstractMap.SimpleEntry<String, URI> getValueDatatypePair(RDFNode node) {
@@ -222,7 +216,6 @@ public class CIMQuerySolutionParser {
      * Helper method to extract the first predicate and object of a blankNode.
      *
      * @param node The RDFNode to extract the predicate and object from.
-     *
      * @return A {@link AbstractMap.SimpleEntry} with the predicate as key and the object as value.
      */
     private AbstractMap.SimpleEntry<String, URI> getPredicateObjectPair(RDFNode node) {
@@ -243,7 +236,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link CIMSMultiplicity} from the query solution.
      *
      * @param multiplicityVar The variable name of the multiplicity.
-     *
      * @return The multiplicity or null, if the given variables doesn't exist in the solution.
      */
     public CIMSMultiplicity getMultiplicity(String multiplicityVar) {
@@ -258,7 +250,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link CIMSStereotype} from the query solution.
      *
      * @param stereotypeVar The variable name of the stereotype.
-     *
      * @return The stereotype or null, if the given variables doesn't exist in the solution.
      */
     public CIMSStereotype getStereotype(String stereotypeVar) {
@@ -278,7 +269,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link RDFSComment} from the query solution.
      *
      * @param commentVar The variable name of the comment.
-     *
      * @return The comment or null, if the given variables doesn't exist in the solution.
      */
     public RDFSComment getComment(String commentVar) {
@@ -286,15 +276,15 @@ public class CIMQuerySolutionParser {
             return null;
         }
         var comment = qs.get(commentVar).asNode();
-        return new RDFSComment(comment.getLiteralLexicalForm(), new URI(comment.getLiteralDatatypeURI()));
+        return new RDFSComment(
+                comment.getLiteralLexicalForm(), new URI(comment.getLiteralDatatypeURI()));
     }
 
     /**
      * Extracts the {@link RDFSDomain} from the query solution.
      *
-     * @param domainUriVar   The variable name of the domain URI.
+     * @param domainUriVar The variable name of the domain URI.
      * @param domainLabelVar The variable name of the domain label.
-     *
      * @return The domain or null, if the given variables don't exist in the solution.
      */
     public RDFSDomain getDomain(String domainUriVar, String domainLabelVar) {
@@ -317,7 +307,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link RDFSLabel} from the query solution.
      *
      * @param labelVar The variable name of the label.
-     *
      * @return The label or null, if the given variables doesn't exist in the solution.
      */
     public RDFSLabel getLabel(String labelVar) {
@@ -331,9 +320,8 @@ public class CIMQuerySolutionParser {
     /**
      * Extracts the {@link RDFSSubClassOf} from the query solution.
      *
-     * @param superClassUriVar   The variable name of the super class URI.
+     * @param superClassUriVar The variable name of the super class URI.
      * @param superClassLabelVar The variable name of the super class label.
-     *
      * @return The super class or null, if the given variables don't exist
      */
     public RDFSSubClassOf getSubClassOf(String superClassUriVar, String superClassLabelVar) {
@@ -347,9 +335,8 @@ public class CIMQuerySolutionParser {
     /**
      * Extracts the {@link RDFType} from the query solution.
      *
-     * @param typeUriVar   The variable name of the type URI.
+     * @param typeUriVar The variable name of the type URI.
      * @param typeLabelVar The variable name of the type label.
-     *
      * @return The type or null, if the given variables don't exist in the solution.
      */
     public RDFType getType(String typeUriVar, String typeLabelVar) {
@@ -364,7 +351,6 @@ public class CIMQuerySolutionParser {
      * Extracts the {@link URI} from the query solution.
      *
      * @param uriVar The variable name of the URI.
-     *
      * @return The URI or null, if the given variables doesn't exist in the solution.
      */
     public URI getURI(String uriVar) {

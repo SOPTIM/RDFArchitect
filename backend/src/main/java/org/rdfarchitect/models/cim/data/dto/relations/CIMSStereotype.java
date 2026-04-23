@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.data.dto.relations;
 
 import com.fasterxml.jackson.annotation.JsonValue;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -27,8 +28,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CIMSStereotype {
 
-    @JsonValue
-    private String stereotype;
+    @JsonValue private String stereotype;
 
     public String toString() {
         return stereotype;

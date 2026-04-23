@@ -25,7 +25,8 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.ValueTypePropertyShapeBuilder;
 
-public class ValueTypePropertyShapeFromCIMAssociationGenerator implements PropertyShapeFromCIMPropertyGenerator {
+public class ValueTypePropertyShapeFromCIMAssociationGenerator
+        implements PropertyShapeFromCIMPropertyGenerator {
 
     private static final String PROPERTY_GROUP_LABEL = "ValueTypeGroup";
 
@@ -56,9 +57,11 @@ public class ValueTypePropertyShapeFromCIMAssociationGenerator implements Proper
     @Override
     public Resource createPropertyShape(Resource association) {
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
-            throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
+            throw new IllegalStateException(
+                    "Models and prefix must be set before creating property shapes.");
         }
-        if (!CIMPropertyUtils.isAssociation(association) || !CIMAssociationUtils.isUsedAssociation(association)) {
+        if (!CIMPropertyUtils.isAssociation(association)
+                || !CIMAssociationUtils.isUsedAssociation(association)) {
             return null; // This converter only creates shapes for used associations
         }
         var order = CIMPropertySHACLUtils.getOrder(ontologyModel, association.getURI());
@@ -67,11 +70,10 @@ public class ValueTypePropertyShapeFromCIMAssociationGenerator implements Proper
                 .setPropertyUri(association.getURI())
                 .setOrder(order)
                 .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL)
-                .setValueTypeUris(CIMAssociationUtils.listAssociationDatatypes(association)
-                        .stream()
-                        .map(Resource::getURI)
-                        .toList()
-                )
+                .setValueTypeUris(
+                        CIMAssociationUtils.listAssociationDatatypes(association).stream()
+                                .map(Resource::getURI)
+                                .toList())
                 .build();
     }
 }

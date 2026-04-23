@@ -22,7 +22,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -58,136 +60,179 @@ public class OntologyRESTController {
     private final DeleteOntologyUseCase deleteOntologyUseCase;
 
     @Operation(
-              summary = "Get ontology",
-              description = "Get the currently stored ontology. null if none stored.",
-              tags = {"ontology"},
-              responses = {@ApiResponse(
+            summary = "Get ontology",
+            description = "Get the currently stored ontology. null if none stored.",
+            tags = {"ontology"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  schema = @Schema(implementation = OntologyDTO.class)))}
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = OntologyDTO.class)))
+            })
     @GetMapping
     public OntologyDTO getOntology(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         var classObject = readOntologyUseCase.getCurrentOntology(graphIdentifier);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return classObject;
     }
 
     @Operation(
-              summary = "Create ontology",
-              description = "create a new ontology.",
-              tags = {"ontology"},
-              responses = {@ApiResponse(
-                        responseCode = "200"
-              )}
-    )
+            summary = "Create ontology",
+            description = "create a new ontology.",
+            tags = {"ontology"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public String createOntology(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new ontology", content = @Content(
-                        schema = @Schema(implementation = OntologyDTO.class)
-              ))
-              @RequestBody OntologyDTO newOntology) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new ontology",
+                            content =
+                                    @Content(schema = @Schema(implementation = OntologyDTO.class)))
+                    @RequestBody
+                    OntologyDTO newOntology) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         createOntologyUseCase.createOntology(graphIdentifier, newOntology);
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return Response.SUCCESS;
     }
 
     @Operation(
-              summary = "Replace ontology",
-              description = "Replace the currently stored ontology with a new one.",
-              tags = {"ontology"},
-              responses = {@ApiResponse(
-                        responseCode = "200"
-              )}
-    )
+            summary = "Replace ontology",
+            description = "Replace the currently stored ontology with a new one.",
+            tags = {"ontology"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PutMapping
     public String replaceOntology(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new ontology", content = @Content(
-                        schema = @Schema(implementation = OntologyDTO.class)
-              ))
-              @RequestBody OntologyDTO newOntology) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new ontology",
+                            content =
+                                    @Content(schema = @Schema(implementation = OntologyDTO.class)))
+                    @RequestBody
+                    OntologyDTO newOntology) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         updateOntologyUseCase.replaceOntology(graphIdentifier, newOntology);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return Response.SUCCESS;
     }
 
     @Operation(
-              summary = "Delete ontology",
-              description = "Deletes the currently stored ontology.",
-              tags = {"ontology"},
-              responses = {@ApiResponse(
-                        responseCode = "200"
-              )}
-    )
+            summary = "Delete ontology",
+            description = "Deletes the currently stored ontology.",
+            tags = {"ontology"},
+            responses = {@ApiResponse(responseCode = "200")})
     @DeleteMapping
     public String deleteOntology(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         deleteOntologyUseCase.deleteOntology(graphIdentifier);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/ontology\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return Response.SUCCESS;
     }
 }

@@ -17,6 +17,11 @@
 
 package org.rdfarchitect.services.update;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import static utils.TestUtils.*;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -46,10 +51,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
-import static utils.TestUtils.*;
-
 @SpringBootTest
 class UpdateClassServiceTest {
 
@@ -57,10 +58,8 @@ class UpdateClassServiceTest {
     private DatabasePort databasePort;
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
-    @Autowired
-    private ClassUMLAdaptedMapper classMapper;
-    @Autowired
-    private PackageMapper packageMapper;
+    @Autowired private ClassUMLAdaptedMapper classMapper;
+    @Autowired private PackageMapper packageMapper;
 
     private static final String PATH = "src/test/java/org/rdfarchitect/services/update/";
     private static final String PREFIX = "http://example.org#";
@@ -73,31 +72,49 @@ class UpdateClassServiceTest {
         var mockChangeLogService = mock(ChangeLogService.class);
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         updateClassService =
-                  new UpdateClassService(databasePort, classMapper, packageMapper, mockChangeLogService, mockUpdateClassLayoutService, mockUpdateClassLayoutService,
-                                         mockUpdateClassLayoutService);
+                new UpdateClassService(
+                        databasePort,
+                        classMapper,
+                        packageMapper,
+                        mockChangeLogService,
+                        mockUpdateClassLayoutService,
+                        mockUpdateClassLayoutService,
+                        mockUpdateClassLayoutService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
-        var graphSource = new GraphFileSourceBuilderImpl()
-                  .setFile(file)
-                  .setGraphName(graphIdentifier.getGraphUri())
-                  .build();
+        var graphSource =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(file)
+                        .setGraphName(graphIdentifier.getGraphUri())
+                        .build();
         databasePort.createGraph(graphIdentifier, graphSource.graph());
     }
 
     @Test
     void addClass_createsNewClass() {
-        var packageDTO = PackageDTO.builder()
-                                   .uuid(UUID.randomUUID())
-                                   .prefix(PREFIX)
-                                   .label("default")
-                                   .build();
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix(PREFIX)
+                        .label("default")
+                        .build();
 
         updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass");
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.READ);
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "newClass"), RDF.type.asNode(), RDFS.Class.asNode())).isTrue();
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "newClass"), RDFS.label.asNode(), new RDFSLabel("newClass", "en").asLangLiteral().asNode())).isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "newClass"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "newClass"),
+                                    RDFS.label.asNode(),
+                                    new RDFSLabel("newClass", "en").asLangLiteral().asNode()))
+                    .isTrue();
         } finally {
             graph.end();
         }
@@ -106,11 +123,12 @@ class UpdateClassServiceTest {
     @Test
     void replaceClass_replacesExistingClass() {
         var label = new RDFSLabel("newClass", "en");
-        var newClass = ClassUMLAdaptedDTO.builder()
-                                         .uuid(UUID.fromString(CLASS_UUID))
-                                         .prefix(PREFIX)
-                                         .label("newClass")
-                                         .build();
+        var newClass =
+                ClassUMLAdaptedDTO.builder()
+                        .uuid(UUID.fromString(CLASS_UUID))
+                        .prefix(PREFIX)
+                        .label("newClass")
+                        .build();
 
         updateClassService.replaceClass(graphIdentifier, newClass);
 
@@ -118,12 +136,29 @@ class UpdateClassServiceTest {
         try {
             graph.begin(TxnType.READ);
 
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "class"), Node.ANY, Node.ANY)).isFalse();
-            assertThat(graph.contains(Node.ANY, Node.ANY, NodeFactory.createURI(PREFIX + "class"))).isFalse();
+            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "class"), Node.ANY, Node.ANY))
+                    .isFalse();
+            assertThat(graph.contains(Node.ANY, Node.ANY, NodeFactory.createURI(PREFIX + "class")))
+                    .isFalse();
 
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "newClass"), RDF.type.asNode(), RDFS.Class.asNode())).isTrue();
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "newClass"), RDFS.label.asNode(), label.asLangLiteral().asNode())).isTrue();
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "subClass"), RDFS.subClassOf.asNode(), NodeFactory.createURI(PREFIX + "newClass"))).isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "newClass"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "newClass"),
+                                    RDFS.label.asNode(),
+                                    label.asLangLiteral().asNode()))
+                    .isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "subClass"),
+                                    RDFS.subClassOf.asNode(),
+                                    NodeFactory.createURI(PREFIX + "newClass")))
+                    .isTrue();
         } finally {
             graph.end();
         }
@@ -142,8 +177,15 @@ class UpdateClassServiceTest {
             assertThat(statements).hasSize(1);
             assertThat(statements.getFirst().getSubject()).hasToString(PREFIX + "class");
             assertThat(statements.getFirst().getPredicate()).hasToString(RDFA.uuid.getURI());
-            assertThat(statements.getFirst().getObject()).hasToString("43836908-c7f7-4749-bb8b-3ac9250de655");
-            assertThat(model.listStatements(null, model.createProperty(PREFIX + "class"), (RDFNode) null).hasNext()).isFalse();
+            assertThat(statements.getFirst().getObject())
+                    .hasToString("43836908-c7f7-4749-bb8b-3ac9250de655");
+            assertThat(
+                            model.listStatements(
+                                            null,
+                                            model.createProperty(PREFIX + "class"),
+                                            (RDFNode) null)
+                                    .hasNext())
+                    .isFalse();
         } finally {
             graph.end();
         }

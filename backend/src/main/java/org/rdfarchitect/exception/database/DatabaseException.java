@@ -20,9 +20,7 @@ package org.rdfarchitect.exception.database;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Base exception for all database-related exceptions.
- */
+/** Base exception for all database-related exceptions. */
 public abstract class DatabaseException extends ResponseStatusException {
 
     protected DatabaseException(HttpStatus status) {

@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.cim.rendering.mermaid;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,8 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-
 class CIMClassToMermaidBuilderTest {
 
     private static final String URI_PREFIX = "http://example.com#";
@@ -42,102 +42,87 @@ class CIMClassToMermaidBuilderTest {
 
     private static final UUID CLASS_UUID = UUID.randomUUID();
 
-    private static final String EXPECTED_CLASS_HEADER = "class `" +
-              CLASS_UUID +
-              "`[\"" +
-              CLASS_LABEL +
-              "\"]{\n";
+    private static final String EXPECTED_CLASS_HEADER =
+            "class `" + CLASS_UUID + "`[\"" + CLASS_LABEL + "\"]{\n";
 
     private CIMClass cimClass;
 
     @BeforeEach
     void setUp() {
-        cimClass = CIMClass.builder()
-                           .uri(new URI(URI_PREFIX + CLASS_LABEL))
-                           .label(new RDFSLabel(CLASS_LABEL))
-                           .build();
+        cimClass =
+                CIMClass.builder()
+                        .uri(new URI(URI_PREFIX + CLASS_LABEL))
+                        .label(new RDFSLabel(CLASS_LABEL))
+                        .build();
     }
 
     @Test
     void build_emptyClass_returnsAbstractMermaidClass() {
-        //Arrange
+        // Arrange
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_CLASS_HEADER +
-                            "    <<abstract>>\n" +
-                            "}\n"
-                                    );
+        // Assert
+        assertThat(result).isEqualTo(EXPECTED_CLASS_HEADER + "    <<abstract>>\n" + "}\n");
     }
 
     @Test
     void build_concreteClass_returnsEmptyMermaidClass() {
-        //Arrange
+        // Arrange
         var stereotypeList = new ArrayList<CIMSStereotype>();
         stereotypeList.add(new CIMSStereotype(CIMStereotypes.concrete.toString()));
         cimClass.setStereotypes(stereotypeList);
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_CLASS_HEADER +
-                            "}\n"
-                                    );
+        // Assert
+        assertThat(result).isEqualTo(EXPECTED_CLASS_HEADER + "}\n");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"foo", "any", URI_PREFIX + "stereotype", "enum"})
-    void build_concreteClassWithOtherStereotype_returnsMermaidClassWithStereotype(String stereotype) {
-        //Arrange
+    void build_concreteClassWithOtherStereotype_returnsMermaidClassWithStereotype(
+            String stereotype) {
+        // Arrange
         var stereotypeList = new ArrayList<CIMSStereotype>();
         stereotypeList.add(new CIMSStereotype(CIMStereotypes.concrete.toString()));
         stereotypeList.add(new CIMSStereotype(stereotype));
         cimClass.setStereotypes(stereotypeList);
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_CLASS_HEADER +
-                            "    <<" +
-                            stereotype +
-                            ">>\n" +
-                            "}\n"
-                                    );
+        // Assert
+        assertThat(result)
+                .isEqualTo(EXPECTED_CLASS_HEADER + "    <<" + stereotype + ">>\n" + "}\n");
     }
 
     @Test
-    void build_concreteClassWithCIMSEnumerationStereotype_returnsMermaidClassWithShortenedEnumerationStereotype() {
-        //Arrange
+    void
+            build_concreteClassWithCIMSEnumerationStereotype_returnsMermaidClassWithShortenedEnumerationStereotype() {
+        // Arrange
         var stereotypeList = new ArrayList<CIMSStereotype>();
         stereotypeList.add(new CIMSStereotype(CIMStereotypes.concrete.toString()));
         stereotypeList.add(new CIMSStereotype(CIMStereotypes.enumeration.getURI()));
         cimClass.setStereotypes(stereotypeList);
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_CLASS_HEADER +
-                            "    <<enumeration>>\n" +
-                            "}\n"
-                                    );
+        // Assert
+        assertThat(result).isEqualTo(EXPECTED_CLASS_HEADER + "    <<enumeration>>\n" + "}\n");
     }
 
     @Test
-    void build_concreteClassWithMultipleStereotypes_returnsMermaidClassWithMultipleStereotypesInAlphabeticalOrder() {
-        //Arrange
+    void
+            build_concreteClassWithMultipleStereotypes_returnsMermaidClassWithMultipleStereotypesInAlphabeticalOrder() {
+        // Arrange
         var stereotypeList = new ArrayList<CIMSStereotype>();
         stereotypeList.add(new CIMSStereotype("foo"));
         stereotypeList.add(new CIMSStereotype("any"));
@@ -147,39 +132,39 @@ class CIMClassToMermaidBuilderTest {
         cimClass.setStereotypes(stereotypeList);
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
-        //Act
+        // Act
         var result = builder.build().toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_CLASS_HEADER +
-                            "    <<abstract, any, enumeration, foo, stereotype>>\n" +
-                            "}\n"
-                                    );
+        // Assert
+        assertThat(result)
+                .isEqualTo(
+                        EXPECTED_CLASS_HEADER
+                                + "    <<abstract, any, enumeration, foo, stereotype>>\n"
+                                + "}\n");
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"anything", "foo", "x: Integer\n", "<<abstract>>", "foo%$&(/^°)`*'"})
     void appendClassContents_appendAnyString_returnsStringContainedInMermaidClass(String contents) {
-        //Arrange
+        // Arrange
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
-        //Act
-        var result = builder.appendClassContents(List.of(new StringBuilder(contents))).build().toString();
+        // Act
+        var result =
+                builder.appendClassContents(List.of(new StringBuilder(contents)))
+                        .build()
+                        .toString();
 
-        //Assert
-        assertThat(result).isEqualTo(
-                  EXPECTED_CLASS_HEADER +
-                            "    <<abstract>>\n" +
-                            "    " +
-                            contents +
-                            "}\n"
-                                    );
+        // Assert
+        assertThat(result)
+                .isEqualTo(
+                        EXPECTED_CLASS_HEADER + "    <<abstract>>\n" + "    " + contents + "}\n");
     }
 
     @Test
-    void appendClassContents_appendMultipleContents_returnsSortedTabPrefixedContentsWrappedInMermaidClass() {
-        //Arrange
+    void
+            appendClassContents_appendMultipleContents_returnsSortedTabPrefixedContentsWrappedInMermaidClass() {
+        // Arrange
         var builder = new CIMClassToMermaidBuilder(cimClass, CLASS_UUID);
 
         var contents = new ArrayList<StringBuilder>();
@@ -189,11 +174,13 @@ class CIMClassToMermaidBuilderTest {
         contents.add(new StringBuilder("loremIpsum\n"));
         contents.add(new StringBuilder());
 
-        //Act
+        // Act
         var result = builder.appendClassContents(contents).build().toString();
 
-        //Assert
-        var expectedResult = EXPECTED_CLASS_HEADER + """
+        // Assert
+        var expectedResult =
+                EXPECTED_CLASS_HEADER
+                        + """
                       <<abstract>>
                           anything
                       foo

@@ -23,13 +23,18 @@ import org.rdfarchitect.database.GraphIdentifier;
 public interface AddClassUseCase {
 
     /**
-     * Constructs a new class and adds it to the specified graph.
-     * All optional parameters are set to null. The label of the class is set to NewClass with an index number appended if a NewClass already exists in the graph.
+     * Constructs a new class and adds it to the specified graph. All optional parameters are set to
+     * null. The label of the class is set to NewClass with an index number appended if a NewClass
+     * already exists in the graph.
      *
      * @param graphIdentifier The graph URI and database name of the graph to add the class to.
-     * @param packageDTO      The Package to which the class will be added.
-     * @param classURIPrefix  The prefix of the class to be added.
-     * @param className       The name of the class to be added.
+     * @param packageDTO The Package to which the class will be added.
+     * @param classURIPrefix The prefix of the class to be added.
+     * @param className The name of the class to be added.
      */
-    void addClass(GraphIdentifier graphIdentifier, PackageDTO packageDTO, String classURIPrefix, String className);
+    void addClass(
+            GraphIdentifier graphIdentifier,
+            PackageDTO packageDTO,
+            String classURIPrefix,
+            String className);
 }

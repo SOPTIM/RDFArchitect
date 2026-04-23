@@ -20,16 +20,13 @@ package org.rdfarchitect.rdf.graph.source.builder;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
 
-/**
- * Defines Builder for {@link GraphSource}
- */
+/** Defines Builder for {@link GraphSource} */
 public interface GraphSourceBuilder {
 
     /**
      * Sets the name of the graph.
      *
      * @param graphName name of the graph, set to {@code null} or {@code ""} for default
-     *
      * @return This {@link GraphSourceBuilder object} with the name set.
      */
     GraphSourceBuilder setGraphName(String graphName);

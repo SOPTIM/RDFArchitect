@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.services.update.graph.ImportGraphsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,43 +44,49 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GraphBulkContentRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(GraphBulkContentRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(GraphBulkContentRESTController.class);
 
     private final ImportGraphsUseCase importGraphsUseCase;
 
     @Operation(
-              summary = "Replace/Insert multiple graphs",
-              description = "Replace or insert one or more rdf graphs for the dataset. Accepts multiple files and/or zip archives containing several graph files.",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200")
-              }
-    )
+            summary = "Replace/Insert multiple graphs",
+            description =
+                    "Replace or insert one or more rdf graphs for the dataset. Accepts multiple files and/or zip archives containing several graph files.",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PutMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<GraphBulkImportResponse> replaceGraphs(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The files containing the graph data")
-              @RequestParam("files")
-              List<MultipartFile> files,
-              @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-              @RequestParam(value = "graphUris", required = false)
-              List<String> graphUris) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/content\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The files containing the graph data") @RequestParam("files")
+                    List<MultipartFile> files,
+            @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
+                    @RequestParam(value = "graphUris", required = false)
+                    List<String> graphUris) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/content\" from \"{}\".",
+                datasetName,
+                originURL);
 
         var result = importGraphsUseCase.importGraphs(datasetName, files, graphUris);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/content\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/content\" to \"{}\".",
+                datasetName,
+                originURL);
         var msg = result.failedFileNames().isEmpty() ? "success" : "failed imports";
-        return ResponseEntity.ok(new GraphBulkImportResponse(msg, result.failedFileNames(), result.importedGraphUris()));
+        return ResponseEntity.ok(
+                new GraphBulkImportResponse(
+                        msg, result.failedFileNames(), result.importedGraphUris()));
     }
 
-    public record GraphBulkImportResponse(String message, List<String> failedImports, List<String> importedGraphUris) {
-
-    }
+    public record GraphBulkImportResponse(
+            String message, List<String> failedImports, List<String> importedGraphUris) {}
 }

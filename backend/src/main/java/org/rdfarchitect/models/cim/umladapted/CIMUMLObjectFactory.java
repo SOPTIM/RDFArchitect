@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.umladapted;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.shared.PrefixMapping;
@@ -32,40 +33,44 @@ import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Factory class that provides static methods for creating CIMUMLObjects from queries
- */
+/** Factory class that provides static methods for creating CIMUMLObjects from queries */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class CIMUMLObjectFactory {
 
     /**
-     * Creates a {@link CIMClassUMLAdapted} from a given graph, prefixMapping, graphURI and classURI.
+     * Creates a {@link CIMClassUMLAdapted} from a given graph, prefixMapping, graphURI and
+     * classURI.
      *
-     * @param graph         {@link Graph}
+     * @param graph {@link Graph}
      * @param prefixMapping {@link PrefixMapping}
-     * @param classUUID     The UUID of the class.
-     *
+     * @param classUUID The UUID of the class.
      * @return {@link CIMClassUMLAdapted}
      */
-    public static CIMClassUMLAdapted createCIMClassUMLAdapted(Graph graph, String graphUri, PrefixMapping prefixMapping, String classUUID) {
+    public static CIMClassUMLAdapted createCIMClassUMLAdapted(
+            Graph graph, String graphUri, PrefixMapping prefixMapping, String classUUID) {
         var objectFetcher = new CIMObjectFetcher(graph, graphUri, prefixMapping);
-        //fetch class
+        // fetch class
         var classObject = new CIMClassUMLAdapted(objectFetcher.fetchCIMClass(classUUID));
 
-        //if enum, then fetch enum entries
-        if (classObject.getStereotypes().contains(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"))) {
-            var enumEntriesQuery = CIMQueries.getEnumEntriesQuery(prefixMapping, graphUri, classUUID).build();
+        // if enum, then fetch enum entries
+        if (classObject
+                .getStereotypes()
+                .contains(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"))) {
+            var enumEntriesQuery =
+                    CIMQueries.getEnumEntriesQuery(prefixMapping, graphUri, classUUID).build();
             var enumEntries = objectFetcher.fetchCIMEnumEntryList(enumEntriesQuery);
             classObject.setEnumEntries(enumEntries);
         }
 
-        //fetch attributes
-        var attributeQuery = CIMQueries.getAttributesQuery(prefixMapping, classUUID, graphUri).build();
+        // fetch attributes
+        var attributeQuery =
+                CIMQueries.getAttributesQuery(prefixMapping, classUUID, graphUri).build();
         var attributes = objectFetcher.fetchCIMAttributeList(attributeQuery);
         classObject.setAttributes(attributes);
 
-        //fetch associations
-        var associationPairsQuery = CIMQueries.getAssociationPairsQuery(prefixMapping, classUUID, graphUri).build();
+        // fetch associations
+        var associationPairsQuery =
+                CIMQueries.getAssociationPairsQuery(prefixMapping, classUUID, graphUri).build();
         var associationPairs = objectFetcher.fetchCIMAssociationPairsList(associationPairsQuery);
         classObject.setAssociationPairs(associationPairs);
         return classObject;
@@ -74,14 +79,17 @@ public class CIMUMLObjectFactory {
     /**
      * Creates a List of {@link CIMClassUMLAdapted CIMClasses} .
      *
-     * @param classQueryResultSet {@link ResultSet} with results bound to variables from  {@link CIMQueryVars CIMQueryVars}.
-     *
+     * @param classQueryResultSet {@link ResultSet} with results bound to variables from {@link
+     *     CIMQueryVars CIMQueryVars}.
      * @return List of {@link CIMClassUMLAdapted CIMClasses}
      */
-    public static List<CIMClassUMLAdapted> createCIMClassUMLAdaptedList(ResultSet classQueryResultSet) {
+    public static List<CIMClassUMLAdapted> createCIMClassUMLAdaptedList(
+            ResultSet classQueryResultSet) {
         var classObjectList = new ArrayList<CIMClassUMLAdapted>();
         while (classQueryResultSet.hasNext()) {
-            classObjectList.add(new CIMClassUMLAdapted(CIMObjectFactory.createCIMClass(classQueryResultSet.next())));
+            classObjectList.add(
+                    new CIMClassUMLAdapted(
+                            CIMObjectFactory.createCIMClass(classQueryResultSet.next())));
         }
         return classObjectList;
     }

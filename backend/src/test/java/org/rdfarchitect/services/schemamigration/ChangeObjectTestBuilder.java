@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.schemamigration;
 
 import lombok.experimental.UtilityClass;
+
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
@@ -28,23 +29,20 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeTyp
 public class ChangeObjectTestBuilder {
     public SemanticResourceChange resourceChange(String label, SemanticResourceChangeType type) {
         return SemanticResourceChange.builder()
-                                     .label(label)
-                                     .semanticResourceChangeType(type)
-                                     .build();
+                .label(label)
+                .semanticResourceChangeType(type)
+                .build();
     }
 
     public SemanticFieldChange fieldChange(SemanticFieldChangeType type, String from, String to) {
         return SemanticFieldChange.builder()
-                                  .semanticFieldChangeType(type)
-                                  .from(from)
-                                  .to(to)
-                                  .build();
+                .semanticFieldChangeType(type)
+                .from(from)
+                .to(to)
+                .build();
     }
 
     public SemanticClassChange classChange(String label, SemanticResourceChangeType type) {
-        return SemanticClassChange.builder()
-                                  .label(label)
-                                  .semanticResourceChangeType(type)
-                                  .build();
+        return SemanticClassChange.builder().label(label).semanticResourceChangeType(type).build();
     }
 }

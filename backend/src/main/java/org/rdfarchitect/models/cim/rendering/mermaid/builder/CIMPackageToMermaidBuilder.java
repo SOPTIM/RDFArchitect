@@ -41,31 +41,24 @@ public class CIMPackageToMermaidBuilder {
         var packageMermaidString = new StringBuilder();
         if (cimPackage != null) {
             packageMermaidString
-                      .append(TAB)
-                      .append("namespace ")
-                      .append(cimPackage.getLabel().getValue().replaceAll("\\W", "_"))
-                      .append("{\n");
+                    .append(TAB)
+                    .append("namespace ")
+                    .append(cimPackage.getLabel().getValue().replaceAll("\\W", "_"))
+                    .append("{\n");
         }
 
-        packageContents.forEach(packageContent -> {
-                                    var lines = packageContent.toString().split("\n");
-                                    for (var line : lines) {
-                                        if (cimPackage != null) {
-                                            packageMermaidString
-                                                      .append(TAB);
-                                        }
-                                        packageMermaidString
-                                                  .append(TAB)
-                                                  .append(line)
-                                                  .append("\n");
-                                    }
-                                }
-                               );
+        packageContents.forEach(
+                packageContent -> {
+                    var lines = packageContent.toString().split("\n");
+                    for (var line : lines) {
+                        if (cimPackage != null) {
+                            packageMermaidString.append(TAB);
+                        }
+                        packageMermaidString.append(TAB).append(line).append("\n");
+                    }
+                });
         if (cimPackage != null) {
-            packageMermaidString
-                      .append(TAB)
-                      .append("}")
-                      .append("\n");
+            packageMermaidString.append(TAB).append("}").append("\n");
         }
         return packageMermaidString;
     }

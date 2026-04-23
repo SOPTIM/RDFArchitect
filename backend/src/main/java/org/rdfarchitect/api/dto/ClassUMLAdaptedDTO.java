@@ -18,10 +18,12 @@
 package org.rdfarchitect.api.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
@@ -48,14 +50,11 @@ public class ClassUMLAdaptedDTO {
 
     private List<String> stereotypes;
 
-    @Builder.Default
-    private List<AttributeDTO> attributes = new ArrayList<>();
+    @Builder.Default private List<AttributeDTO> attributes = new ArrayList<>();
 
-    @Builder.Default
-    private List<EnumEntryDTO> enumEntries = new ArrayList<>();
+    @Builder.Default private List<EnumEntryDTO> enumEntries = new ArrayList<>();
 
-    @Builder.Default
-    private List<AssociationPairDTO> associationPairs = new ArrayList<>();
+    @Builder.Default private List<AssociationPairDTO> associationPairs = new ArrayList<>();
 
     @JsonProperty("package")
     private BelongsToCategoryDTO belongsToCategory;

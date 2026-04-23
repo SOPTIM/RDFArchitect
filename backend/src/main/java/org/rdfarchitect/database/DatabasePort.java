@@ -24,14 +24,12 @@ import org.rdfarchitect.database.inmemory.GraphWithContext;
 import java.util.List;
 import java.util.UUID;
 
-
 public interface DatabasePort {
 
     /**
      * Get a {@link GraphWithContext} from the database.
      *
      * @param graphIdentifier The identifier of the graph.
-     *
      * @return {@link GraphWithContext}
      */
     GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
@@ -40,7 +38,6 @@ public interface DatabasePort {
      * Loads the namespace prefix mapping for the dataset.
      *
      * @param datasetName literal dataset name
-     *
      * @return prefix mapping associated with the dataset
      */
     PrefixMapping getPrefixMapping(String datasetName);
@@ -53,17 +50,18 @@ public interface DatabasePort {
     void deleteGraph(GraphIdentifier graphIdentifier);
 
     /**
-     * Creates or replaces the graph referenced by {@code graphIdentifier} using the supplied RDF content.
+     * Creates or replaces the graph referenced by {@code graphIdentifier} using the supplied RDF
+     * content.
      *
      * @param graphIdentifier identifies dataset and graph URI
-     * @param graph           graph contents to persist
+     * @param graph graph contents to persist
      */
     void createGraph(GraphIdentifier graphIdentifier, Graph graph);
 
     /**
      * Creates an empty graph referenced by {@code graphIdentifier}.
      *
-     * <p>If the dataset does not exist yet, it will be created.</p>
+     * <p>If the dataset does not exist yet, it will be created.
      *
      * @param graphIdentifier identifies dataset and graph URI
      */
@@ -73,7 +71,6 @@ public interface DatabasePort {
      * Indicates whether there is a forward change that can be re-applied on the graph.
      *
      * @param graphIdentifier identifies dataset and graph URI
-     *
      * @return {@code true} if redo is possible, otherwise {@code false}
      */
     Boolean canRedo(GraphIdentifier graphIdentifier);
@@ -82,7 +79,6 @@ public interface DatabasePort {
      * Indicates whether there is a previous change that can be undone on the graph.
      *
      * @param graphIdentifier identifies dataset and graph URI
-     *
      * @return {@code true} if undo is possible, otherwise {@code false}
      */
     Boolean canUndo(GraphIdentifier graphIdentifier);
@@ -105,7 +101,7 @@ public interface DatabasePort {
      * Restores a historic version of the graph identified by {@code graphIdentifier}.
      *
      * @param graphIdentifier identifies dataset and graph URI
-     * @param versionId       historic version to restore
+     * @param versionId historic version to restore
      */
     void restore(GraphIdentifier graphIdentifier, UUID versionId);
 
@@ -113,7 +109,6 @@ public interface DatabasePort {
      * Lists all graph URIs belonging to the dataset.
      *
      * @param datasetName literal dataset name
-     *
      * @return graph URIs within the dataset
      */
     List<String> listGraphUris(String datasetName);
@@ -122,14 +117,14 @@ public interface DatabasePort {
      * Persists pending changes of the graph to the backing database.
      *
      * @param databaseConnection resolved database connection
-     * @param graphIdentifier    identifies dataset and graph URI
+     * @param graphIdentifier identifies dataset and graph URI
      */
     void persist(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier);
 
     /**
      * Sets the complete prefix mapping for the dataset, replacing any existing prefixes.
      *
-     * @param datasetName   literal dataset name
+     * @param datasetName literal dataset name
      * @param prefixMapping new prefix mapping to set
      */
     void setPrefixMapping(String datasetName, PrefixMapping prefixMapping);
@@ -142,7 +137,8 @@ public interface DatabasePort {
     List<String> listDatasets();
 
     /**
-     * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to it.
+     * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
+     * it.
      *
      * @param datasetName the literal dataset name to delete
      */
@@ -159,7 +155,7 @@ public interface DatabasePort {
      * Loads a snapshot represented by {@code base64Token} into the resolved connection.
      *
      * @param databaseConnection resolved database connection
-     * @param base64Token        base64 encoded snapshot payload
+     * @param base64Token base64 encoded snapshot payload
      */
     void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token);
 
@@ -167,7 +163,6 @@ public interface DatabasePort {
      * Indicates whether the dataset is currently read-only.
      *
      * @param datasetName literal dataset name
-     *
      * @return {@code true} if editing is disabled, otherwise {@code false}
      */
     boolean isReadOnly(String datasetName);

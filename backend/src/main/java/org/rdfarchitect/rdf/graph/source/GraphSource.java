@@ -20,9 +20,7 @@ package org.rdfarchitect.rdf.graph.source;
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.exception.database.DataAccessException;
 
-/**
- * Defines how the graph can be imported
- */
+/** Defines how the graph can be imported */
 public interface GraphSource {
 
     /**

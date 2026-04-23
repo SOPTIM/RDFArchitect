@@ -30,7 +30,7 @@ public class SparqlTemplateLoader {
             var resource = new ClassPathResource("sparql-templates/" + path + ".sparql");
             return new ParameterizedSparqlString(readTemplate(resource));
         } catch (Exception e) {
-            throw new RuntimeException("Failed to load SPARQL template: " + path, e);
+            throw new IllegalStateException("Failed to load SPARQL template: " + path, e);
         }
     }
 

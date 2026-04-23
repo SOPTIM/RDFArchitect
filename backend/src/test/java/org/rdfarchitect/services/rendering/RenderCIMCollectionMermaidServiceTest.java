@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.services.rendering;
 
+import static org.assertj.core.api.Assertions.assertThatException;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.mermaid.MermaidDTO;
@@ -29,9 +32,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.assertj.core.api.Assertions.assertThatException;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-
 class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase {
 
     private float countOccurrences(String str, String subStr) {
@@ -40,120 +40,149 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
 
     @Test
     void renderUML_emptyCollection_emptyMermaidDiagram() {
-        //Arrange
+        // Arrange
 
-        //Act
+        // Act
         var result = mermaidRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         assertThat(result).isNull();
     }
 
     @Test
     void renderUML_nullCollection_throwsException() {
-        //Assert/Act
+        // Assert/Act
         assertThatException().isThrownBy(() -> mermaidRenderer.renderUML(null, null, null));
     }
 
     @Test
     void renderUML_collectionWithOnlyPackages_emptyMermaidDiagram() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addPackage("package_package2");
 
-        //Act
+        // Act
         var result = mermaidRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         assertThat(result).isNull();
     }
 
     @Test
     void renderUML_collectionWithOneAbstractClass_MermaidStringContainingOneClass() {
-        //Arrange
+        // Arrange
         addClass(null, "class1");
         var class1 = cimCollection.getClasses().getFirst();
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
 
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-        //Assert
+        // Assert
         assertThat(matcher.find()).isTrue();
         matcher.reset();
         while (matcher.find()) {
             var match = matcher.group();
-            assertThat(result).containsSubsequence("click `" + match + "` call getClassInformation(\"" + class1.getUuid() + "\")");
-            assertThat(result).containsSubsequence("class `" + match + "`[\"class1\"]{\n        <<abstract>>\n    }");
+            assertThat(result)
+                    .containsSubsequence(
+                            "click `"
+                                    + match
+                                    + "` call getClassInformation(\""
+                                    + class1.getUuid()
+                                    + "\")");
+            assertThat(result)
+                    .containsSubsequence(
+                            "class `" + match + "`[\"class1\"]{\n        <<abstract>>\n    }");
             assertThat(countOccurrences(result, match)).isEqualTo(3);
         }
     }
 
     @Test
     void renderUML_collectionWithOneConcreteClass_MermaidStringContainingOneClass() {
-        //Arrange
+        // Arrange
         addClass(null, "class1");
         var class1 = cimCollection.getClasses().getFirst();
-        class1.setStereotypes(new ArrayList<>(List.of(new CIMSStereotype(CIMStereotypes.concrete.getURI()))));
+        class1.setStereotypes(
+                new ArrayList<>(List.of(new CIMSStereotype(CIMStereotypes.concrete.getURI()))));
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
 
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-        //Assert
+        // Assert
         assertThat(matcher.find()).isTrue();
         matcher.reset();
         while (matcher.find()) {
             var match = matcher.group();
-            assertThat(result).containsSubsequence("click `" + match + "` call getClassInformation(\"" + class1.getUuid() + "\")");
+            assertThat(result)
+                    .containsSubsequence(
+                            "click `"
+                                    + match
+                                    + "` call getClassInformation(\""
+                                    + class1.getUuid()
+                                    + "\")");
             assertThat(result).containsSubsequence("class `" + match + "`[\"class1\"]{\n    }");
             assertThat(countOccurrences(result, match)).isEqualTo(3);
         }
     }
 
     @Test
-    void renderUML_collection_WithOneClassContainingAttributes_MermaidStringContainingOneClassWithAttributes() {
-        //Arrange
+    void
+            renderUML_collection_WithOneClassContainingAttributes_MermaidStringContainingOneClassWithAttributes() {
+        // Arrange
         addClass(null, "class1");
         var class1 = cimCollection.getClasses().getFirst();
         addAttribute("class1", "attribute1", XSDDatatype.XSDstring);
         addAttribute("class1", "attribute2", XSDDatatype.XSDint);
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
 
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-        //Assert
+        // Assert
         assertThat(matcher.find()).isTrue();
         matcher.reset();
         while (matcher.find()) {
             var match = matcher.group();
-            assertThat(result).containsSubsequence("click `" + match + "` call getClassInformation(\"" + class1.getUuid() + "\")");
-            assertThat(result).containsSubsequence("class `" + match + "`[\"class1\"]{\n        <<abstract>>\n        attribute1: string [1]\n        attribute2: int [1]\n    }");
+            assertThat(result)
+                    .containsSubsequence(
+                            "click `"
+                                    + match
+                                    + "` call getClassInformation(\""
+                                    + class1.getUuid()
+                                    + "\")");
+            assertThat(result)
+                    .containsSubsequence(
+                            "class `"
+                                    + match
+                                    + "`[\"class1\"]{\n        <<abstract>>\n        attribute1: string [1]\n        attribute2: int [1]\n    }");
             assertThat(countOccurrences(result, match)).isEqualTo(3);
         }
     }
 
     @Test
     void renderUML_collectionWithMultipleClasses_MermaidStringContainingMultipleClasses() {
-        //Arrange
+        // Arrange
         addClass(null, "class1");
         addClass(null, "class2");
         addClass(null, "class3");
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-
-        //Assert
+        // Assert
         assertThat(matcher.find()).isTrue();
         matcher.reset();
         while (matcher.find()) {
@@ -164,17 +193,18 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
 
     @Test
     void renderUML_collectionWithOneAssociation_MermaidStringContainingOneAssociation() {
-        //Arrange
+        // Arrange
         addClass(null, "class1");
         addClass(null, "class2");
         addAssociation("class1", "class2", AssociationUsed.YES, AssociationUsed.YES);
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-        //Assert
+        // Assert
         assertThat(result).containsSubsequence("click `");
         assertThat(result).containsSubsequence("` \"M:1\" <--> \"M:1\" `");
         assertThat(matcher.find()).isTrue();
@@ -187,18 +217,19 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
 
     @Test
     void renderUML_collectionWithClassesInPackages_MermaidStringContainingClassesInPackages() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addPackage("package_package2");
         addClass("package_package1", "class1");
         addClass("package_package2", "class2");
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-        //Assert
+        // Assert
         assertThat(matcher.find()).isTrue();
         matcher.reset();
         while (matcher.find()) {
@@ -209,29 +240,40 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
 
     @Test
     void renderUML_collectionWithEnum_MermaidStringContainingEnum() {
-        //Arrange
+        // Arrange
         addEnum(null, "enum1");
         var enum1 = cimCollection.getEnums().getFirst();
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
-        //Assert
+        // Assert
         assertThat(matcher.find()).isTrue();
         matcher.reset();
         while (matcher.find()) {
             var match = matcher.group();
-            assertThat(result).containsSubsequence("click `" + match + "` call getClassInformation(\"" + enum1.getUuid() + "\")");
-            assertThat(result).containsSubsequence("class `" + match + "`[\"enum1\"]{\n        <<abstract, enumeration>>\n    }");
+            assertThat(result)
+                    .containsSubsequence(
+                            "click `"
+                                    + match
+                                    + "` call getClassInformation(\""
+                                    + enum1.getUuid()
+                                    + "\")");
+            assertThat(result)
+                    .containsSubsequence(
+                            "class `"
+                                    + match
+                                    + "`[\"enum1\"]{\n        <<abstract, enumeration>>\n    }");
             assertThat(countOccurrences(result, match)).isEqualTo(3);
         }
     }
 
     @Test
     void renderUML_complexCollection_ContainsAllElements() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addPackage("package_package2");
         addClass("package_package1", "class1");
@@ -248,11 +290,14 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         addEnumEntry("enum1", "enumEntry1");
         addEnumEntry("enum1", "enumEntry2");
 
-        //Act
-        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        // Act
+        var result =
+                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
 
-        //Assert
-        assertThat(result.replaceAll("[a-f0-9-]{36}", "UUID")).endsWith("""
+        // Assert
+        assertThat(result.replaceAll("[a-f0-9-]{36}", "UUID"))
+                .endsWith(
+                        """
                                                                                   classDiagram
                                                                                       namespace package_package1{
                                                                                           class `UUID`["class1"]{

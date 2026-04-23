@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.ontology;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
@@ -34,7 +35,8 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntologyUseCase, DeleteOntologyUseCase {
+public class UpdateOntologyService
+        implements CreateOntologyUseCase, UpdateOntologyUseCase, DeleteOntologyUseCase {
 
     private final DatabasePort databasePort;
     private final ExpandURIUseCase expandURIUseCase;
@@ -55,7 +57,8 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
             } else {
                 if (isInvalidUUID(ontologyDTO.getUuid())) {
-                    throw new IllegalArgumentException("Invalid UUID for ontology: " + ontologyDTO.getUuid());
+                    throw new IllegalArgumentException(
+                            "Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
             var ontology = new OntologyFacade(model);
@@ -64,7 +67,9 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         } finally {
             if (graph != null) {
                 graph.end();
-                changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created Ontology", graph.getLastDelta()));
+                changeLogUseCase.recordChange(
+                        graphIdentifier,
+                        new ChangeLogEntry("Created Ontology", graph.getLastDelta()));
             }
         }
     }
@@ -84,7 +89,8 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
             } else {
                 if (isInvalidUUID(ontologyDTO.getUuid())) {
-                    throw new IllegalArgumentException("Invalid UUID for ontology: " + ontologyDTO.getUuid());
+                    throw new IllegalArgumentException(
+                            "Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
             var ontology = new OntologyFacade(model);
@@ -93,7 +99,9 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         } finally {
             if (graph != null) {
                 graph.end();
-                changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced Ontology", graph.getLastDelta()));
+                changeLogUseCase.recordChange(
+                        graphIdentifier,
+                        new ChangeLogEntry("Replaced Ontology", graph.getLastDelta()));
             }
         }
     }
@@ -114,7 +122,9 @@ public class UpdateOntologyService implements CreateOntologyUseCase, UpdateOntol
         } finally {
             if (graph != null) {
                 graph.end();
-                changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted Ontology", graph.getLastDelta()));
+                changeLogUseCase.recordChange(
+                        graphIdentifier,
+                        new ChangeLogEntry("Deleted Ontology", graph.getLastDelta()));
             }
         }
     }

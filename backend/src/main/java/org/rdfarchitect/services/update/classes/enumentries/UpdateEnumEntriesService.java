@@ -18,13 +18,14 @@
 package org.rdfarchitect.services.update.classes.enumentries;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
-import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
@@ -40,7 +41,8 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
     private final ChangeLogUseCase changeLogUseCase;
 
     @Override
-    public UUID replaceOrCreateEnumEntry(GraphIdentifier graphIdentifier, EnumEntryDTO enumEntryDTO) {
+    public UUID replaceOrCreateEnumEntry(
+            GraphIdentifier graphIdentifier, EnumEntryDTO enumEntryDTO) {
         GraphRewindable graph = null;
         String message;
         UUID uuid;
@@ -57,11 +59,17 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
             if (enumEntryDTO.getUuid() == null) {
                 uuid = UUID.randomUUID();
                 cimEnumEntry.setUuid(uuid);
-                CIMUpdates.insertEnumEntry(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), cimEnumEntry);
+                CIMUpdates.insertEnumEntry(
+                        graph,
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        cimEnumEntry);
                 message = "Enum entry " + uuid + " created";
             } else {
                 uuid = enumEntryDTO.getUuid();
-                CIMUpdates.replaceEnumEntry(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), cimEnumEntry);
+                CIMUpdates.replaceEnumEntry(
+                        graph,
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        cimEnumEntry);
                 message = "Enum entry " + uuid + " replaced";
             }
 
@@ -77,7 +85,8 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
             }
         }
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry(message, graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier, new ChangeLogEntry(message, graph.getLastDelta()));
         return uuid;
     }
 }

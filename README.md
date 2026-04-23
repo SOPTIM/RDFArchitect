@@ -91,6 +91,8 @@ When the backend is running, Swagger UI is available at:
 
 ```bash
 cd backend
+mvn -B spotless:apply
+mvn -B -Plint -DskipTests verify
 mvn -B test
 mvn -B verify
 ```

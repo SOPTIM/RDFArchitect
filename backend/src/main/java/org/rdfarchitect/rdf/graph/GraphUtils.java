@@ -19,12 +19,11 @@ package org.rdfarchitect.rdf.graph;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.sparql.graph.GraphFactory;
 
-/**
- * Utility class for graph operations
- */
+/** Utility class for graph operations */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class GraphUtils {
 

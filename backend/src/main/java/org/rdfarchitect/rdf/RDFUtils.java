@@ -23,14 +23,12 @@ import java.net.URISyntaxException;
 
 public class RDFUtils {
 
-    private RDFUtils() {
-    }
+    private RDFUtils() {}
 
     /**
      * Prepares a string for usage in a SPARQL query
      *
      * @param s String to be wrapped
-     *
      * @return Wrapped string
      */
     public static String wrapURLorLiteral(String s) {
@@ -38,7 +36,7 @@ public class RDFUtils {
             throw new NullPointerException("URI or Literal cannot be null");
         }
         try {
-            var _ = new URI(s).toURL();
+            new URI(s).toURL();
             return "<" + s + ">";
         } catch (URISyntaxException | MalformedURLException | IllegalArgumentException _) {
             return "\"" + s + "\"";
@@ -49,7 +47,6 @@ public class RDFUtils {
      * Checks if given String is an URL
      *
      * @param s Possible URL
-     *
      * @return true if URL otherwise false
      */
     public static boolean isURL(String s) {
@@ -57,7 +54,7 @@ public class RDFUtils {
             return false;
         }
         try {
-            var _ = new URI(s).toURL();
+            new URI(s).toURL();
             return true;
         } catch (URISyntaxException | MalformedURLException | IllegalArgumentException _) {
             return false;

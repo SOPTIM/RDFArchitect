@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -42,47 +44,58 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ClassAllEnumEntriesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassAllEnumEntriesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ClassAllEnumEntriesRESTController.class);
     private final ExpandURIUseCase expandURIUseCase;
 
     private final ReplaceOrCreateEnumEntryUseCase replaceOrCreateEnumEntryUseCase;
 
     @Operation(
-              summary = "Create enum entry",
-              description = "Creates a new enum entry for a specified class..",
-              tags = {"enum"},
-              responses = {@ApiResponse(responseCode = "200")}
-    )
+            summary = "Create enum entry",
+            description = "Creates a new enum entry for a specified class..",
+            tags = {"enum"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public UUID createEnumEntry(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the enum.")
-              @PathVariable
-              String classUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new enum entry."
-              )
-              @RequestBody EnumEntryDTO enumEntry) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the enum.") @PathVariable String classUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new enum entry.")
+                    @RequestBody
+                    EnumEntryDTO enumEntry) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var newEnumEntryUUID = replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
-                  graphIdentifier,
-                  enumEntry
-                                                                                       );
+        var newEnumEntryUUID =
+                replaceOrCreateEnumEntryUseCase.replaceOrCreateEnumEntry(
+                        graphIdentifier, enumEntry);
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/enumentries\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return newEnumEntryUUID;
     }
 }

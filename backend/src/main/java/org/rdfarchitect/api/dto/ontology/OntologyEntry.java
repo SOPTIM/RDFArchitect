@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.ontology;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -27,8 +28,10 @@ import lombok.experimental.Accessors;
 public class OntologyEntry {
 
     private String iri;
+
     @JsonProperty("isIriEntry")
     private boolean iriEntry;
+
     private String datatypeIri;
     private String value;
 
@@ -44,12 +47,12 @@ public class OntologyEntry {
 
     @JsonIgnore
     public boolean isValidEntry() {
-        //namespace, label and value must not be null
+        // namespace, label and value must not be null
         if (iri == null || value == null) {
             return false;
         }
 
-        //if the value is an iri, datatypeIri must be null
+        // if the value is an iri, datatypeIri must be null
         if (iriEntry) {
             return datatypeIri == null;
         }

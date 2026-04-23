@@ -23,6 +23,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+
 import org.rdfarchitect.context.SessionContext;
 
 import java.io.IOException;
@@ -30,11 +31,17 @@ import java.io.IOException;
 public class SessionContextFilter implements Filter {
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-        var httpRequest = (HttpServletRequest) servletRequest;
+    public void doFilter(
+            ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+            throws IOException, ServletException {
+        if (!(servletRequest instanceof HttpServletRequest httpRequest)) {
+            filterChain.doFilter(servletRequest, servletResponse);
+            return;
+        }
 
         try {
-            //preflight calls werden mit eigener sessionID abgeschickt, weshalb sie hier das erstellen einer neuen Session triggern würden
+            // preflight calls werden mit eigener sessionID abgeschickt, weshalb sie hier das
+            // erstellen einer neuen Session triggern würden
             if (!"OPTIONS".equalsIgnoreCase(httpRequest.getMethod())) {
                 SessionContext.setSessionId(httpRequest.getSession().getId());
             }

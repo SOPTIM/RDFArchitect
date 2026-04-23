@@ -19,12 +19,13 @@ package org.rdfarchitect.api.controller.datasets.graphs.packages;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
 import org.slf4j.Logger;
@@ -52,68 +53,92 @@ public class PackageRESTController {
     private final DeletePackageUseCase deletePackageUseCase;
 
     @Operation(
-              summary = "replace package",
-              description = "Replaces a whole package.",
-              tags = {"package", "graph"}
-    )
+            summary = "replace package",
+            description = "Replaces a whole package.",
+            tags = {"package", "graph"})
     @PutMapping
     public String replacePackage(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The UUID of the package to be replaced.")
-              @PathVariable
-              String packageUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        description = "DTO for the package to be replaced"
-              )
-              @RequestBody PackageDTO packageDTO) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The UUID of the package to be replaced.") @PathVariable
+                    String packageUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "DTO for the package to be replaced")
+                    @RequestBody
+                    PackageDTO packageDTO) {
 
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".", datasetName, graphURI, originURL, packageUUID);
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL,
+                packageUUID);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         replacePackageUseCase.replacePackage(graphIdentifier, packageDTO);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".", datasetName, graphURI, originURL, packageUUID);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL,
+                packageUUID);
         return Response.SUCCESS;
     }
 
     @Operation(
-              summary = "delete package",
-              description = "Deletes a package by UUID.",
-              tags = {"package", "graph"}
-    )
+            summary = "delete package",
+            description = "Deletes a package by UUID.",
+            tags = {"package", "graph"})
     @DeleteMapping
     public String deletePackage(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The UUID of the package to be deleted.")
-              @PathVariable
-              UUID packageUUID) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The UUID of the package to be deleted.") @PathVariable
+                    UUID packageUUID) {
 
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                packageUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         deletePackageUseCase.deletePackage(graphIdentifier, packageUUID);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".", datasetName, graphURI, packageUUID, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/packages/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                packageUUID,
+                originURL);
         return Response.SUCCESS;
     }
 }

@@ -28,9 +28,7 @@ public class CIMAttributeToMermaidBuilder {
     }
 
     public StringBuilder build() {
-        var attribute = new StringBuilder()
-                  .append(cimAttribute.getLabel().getValue())
-                  .append(": ");
+        var attribute = new StringBuilder().append(cimAttribute.getLabel().getValue()).append(": ");
 
         if (cimAttribute.getDataType().getLabel() != null) {
             attribute.append(cimAttribute.getDataType().getLabel().getValue());
@@ -39,9 +37,10 @@ public class CIMAttributeToMermaidBuilder {
         }
 
         if (cimAttribute.getMultiplicity() != null) {
-            attribute.append(" [")
-                     .append(cimAttribute.getMultiplicity().getUri().getSuffix().replace("M:", ""))
-                     .append("]");
+            attribute
+                    .append(" [")
+                    .append(cimAttribute.getMultiplicity().getUri().getSuffix().replace("M:", ""))
+                    .append("]");
         }
 
         return attribute.append("\n");

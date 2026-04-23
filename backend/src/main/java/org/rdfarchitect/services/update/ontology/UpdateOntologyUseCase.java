@@ -24,6 +24,7 @@ public interface UpdateOntologyUseCase {
 
     /**
      * Replaces an existing ontology in the specified graph with the provided ontology data.
+     *
      * @param graphIdentifier The identifier of the graph where the ontology will be replaced.
      * @param ontologyDTO The ontology data transfer object containing the new ontology details.
      */

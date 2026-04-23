@@ -17,9 +17,7 @@
 
 package org.rdfarchitect.models.changes.semanticchanges;
 
-/**
- * Enum representing the types of changes that can occur to CIM Resources.
- */
+/** Enum representing the types of changes that can occur to CIM Resources. */
 public enum SemanticFieldChangeType {
     LABEL_CHANGE,
     COMMENT_CHANGE,

@@ -19,6 +19,7 @@ package org.rdfarchitect.config;
 
 import lombok.Getter;
 import lombok.Setter;
+
 import org.apache.jena.riot.Lang;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.implementations.file.FileConnectionImpl;
@@ -28,9 +29,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Parses the database config and provides access to its contents
- */
+import java.util.Locale;
+
+/** Parses the database config and provides access to its contents */
 @Getter
 @Setter
 @Configuration
@@ -42,11 +43,11 @@ public class DatabaseConfig {
     @Value("${database.defaultDataset:default}")
     private String defaultDataset;
 
-    //http
+    // http
     @Value("${database.http.endpoint}")
     private String httpEndpoint;
 
-    //file
+    // file
     @Value("${database.file.endpoint:C:/fileDatabase}")
     private String fileEndpoint;
 
@@ -55,15 +56,20 @@ public class DatabaseConfig {
 
     @Bean
     public DatabaseConnection databaseConnection() {
-        if("http".equals(databaseType)){
-            return new HttpConnectionImpl(httpEndpoint, defaultDataset, new FusekiHttpAdminProtocol(httpEndpoint));
+        if ("http".equals(databaseType)) {
+            return new HttpConnectionImpl(
+                    httpEndpoint, defaultDataset, new FusekiHttpAdminProtocol(httpEndpoint));
         }
-        return new FileConnectionImpl(fileEndpoint, defaultDataset, getFileLang(dataType)); //all options must return a DatabaseConnection even if the option doesn't happen.
+        return new FileConnectionImpl(
+                fileEndpoint,
+                defaultDataset,
+                getFileLang(dataType)); // all options must return a DatabaseConnection even if the
+        // option doesn't happen.
     }
 
     private static Lang getFileLang(String dataType) {
-        dataType = dataType.toUpperCase();
-        if("N-QUADS".equals(dataType)){
+        dataType = dataType.toUpperCase(Locale.ROOT);
+        if ("N-QUADS".equals(dataType)) {
             return Lang.NQUADS;
         }
         return Lang.TRIG;

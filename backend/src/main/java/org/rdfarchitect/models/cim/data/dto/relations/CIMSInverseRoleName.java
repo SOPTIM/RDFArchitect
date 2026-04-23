@@ -20,6 +20,7 @@ package org.rdfarchitect.models.cim.data.dto.relations;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 @Data

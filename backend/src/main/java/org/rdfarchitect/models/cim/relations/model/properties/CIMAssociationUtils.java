@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.relations.model.properties;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
@@ -35,25 +36,23 @@ public class CIMAssociationUtils {
      * @return true if it's a used association, false if not
      */
     public boolean isUsedAssociation(Resource association) {
-        return CIMPropertyUtils.isAssociation(association) &&
-               association.hasProperty(CIMS.associationUsed, CIMS.yes);
+        return CIMPropertyUtils.isAssociation(association)
+                && association.hasProperty(CIMS.associationUsed, CIMS.yes);
     }
 
     /**
      * Lists all datatypes for an association property.
+     *
      * @param property the association property to list datatypes for
      * @return a set of resources representing the datatypes
      */
     public Set<Resource> listAssociationDatatypes(Resource property) {
-        var targetClass = property.getModel()
-                .getProperty(property, RDFS.range)
-                .getResource();
-        var instantiableDerivingClasses = CIMClassUtils.findDerivingClasses(targetClass)
-                .stream()
-                .filter(CIMClassUtils::isInstantiableClass)
-                .collect(Collectors.toSet());
+        var targetClass = property.getModel().getProperty(property, RDFS.range).getResource();
+        var instantiableDerivingClasses =
+                CIMClassUtils.findDerivingClasses(targetClass).stream()
+                        .filter(CIMClassUtils::isInstantiableClass)
+                        .collect(Collectors.toSet());
         instantiableDerivingClasses.add(targetClass); // include the class itself
         return instantiableDerivingClasses;
     }
-
 }

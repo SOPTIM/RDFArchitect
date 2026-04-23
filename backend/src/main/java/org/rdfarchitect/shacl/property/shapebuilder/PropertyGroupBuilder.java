@@ -19,6 +19,7 @@ package org.rdfarchitect.shacl.property.shapebuilder;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
@@ -46,10 +47,12 @@ public class PropertyGroupBuilder {
 
     public Resource build() {
         var propertyGroup = shaclModel.createResource(prefixEntry.getUri() + groupName);
-        propertyGroup.addProperty(RDF.type, ResourceFactory.createResource(SHACL.PropertyGroup.getURI()));
+        propertyGroup.addProperty(
+                RDF.type, ResourceFactory.createResource(SHACL.PropertyGroup.getURI()));
         propertyGroup.addLiteral(RDFS.label, groupName);
-        propertyGroup.addLiteral(ResourceFactory.createProperty(SHACL.order.getURI()), shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
+        propertyGroup.addLiteral(
+                ResourceFactory.createProperty(SHACL.order.getURI()),
+                shaclModel.createTypedLiteral(order, XSDDatatype.XSDdecimal));
         return propertyGroup;
     }
-
 }
