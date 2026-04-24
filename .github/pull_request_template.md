@@ -95,7 +95,7 @@
 - [ ] Click on class opens class editor
 
 ### Editor - Class Editor
-- [ ] Display and edit class properties: UUID (readonly), Label, Namespace, Package, Derived from, Abstract, Stereotypes, Attributes, Associations, Comment
+- [ ] Display and edit class properties: Label, Namespace, Package, Derived from, Abstract, Stereotypes, Attributes, Associations, Comment
 - [ ] Delete class works
 - [ ] Save changes works
 - [ ] Discard changes works
