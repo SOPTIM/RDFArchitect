@@ -19,14 +19,13 @@ package org.rdfarchitect.config;
 
 import lombok.Getter;
 import lombok.Setter;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.Map;
 
-/**
- * Parses the frontend config and provides access to its contents
- */
+/** Parses the frontend config and provides access to its contents */
 @Getter
 @Setter
 @Configuration

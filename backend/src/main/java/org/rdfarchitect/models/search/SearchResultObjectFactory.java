@@ -19,36 +19,37 @@ package org.rdfarchitect.models.search;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
+import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.models.search.data.ResultType;
 import org.rdfarchitect.models.search.data.SearchResult;
-import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
-import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Factory class that provides static methods for creating SearchResults from queries
- */
+/** Factory class that provides static methods for creating SearchResults from queries */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SearchResultObjectFactory {
 
     /**
      * Creates a List of {@link SearchResult SearchResults} .
      *
-     * @param graphIdentifier {@link GraphIdentifier} with datasetName and graphURI of the graph to be searched.
-     * @param queryResultSet  {@link ResultSet} with results bound to variables from  {@link CIMQueryVars CIMQueryVars}.
-     *
+     * @param graphIdentifier {@link GraphIdentifier} with datasetName and graphURI of the graph to
+     *     be searched.
+     * @param queryResultSet {@link ResultSet} with results bound to variables from {@link
+     *     CIMQueryVars CIMQueryVars}.
      * @return List of {@link SearchResult SearchResults}
      */
-    public static List<SearchResult> createSearchResultObjectList(GraphIdentifier graphIdentifier, ResultSet queryResultSet) {
+    public static List<SearchResult> createSearchResultObjectList(
+            GraphIdentifier graphIdentifier, ResultSet queryResultSet) {
         var resultList = new ArrayList<SearchResult>();
         while (queryResultSet.hasNext()) {
             resultList.add(createSearchResult(graphIdentifier, queryResultSet.next()));
@@ -59,12 +60,14 @@ public class SearchResultObjectFactory {
     /**
      * Creates a {@link SearchResult} from a given graph, prefixMapping, and querySolution.
      *
-     * @param graphIdentifier {@link GraphIdentifier} with datasetName and graphURI of the graph to be searched.
-     * @param querySolution   {@link QuerySolution} with results bound to variables from  {@link CIMQueryVars CIMQueryVars}.
-     *
+     * @param graphIdentifier {@link GraphIdentifier} with datasetName and graphURI of the graph to
+     *     be searched.
+     * @param querySolution {@link QuerySolution} with results bound to variables from {@link
+     *     CIMQueryVars CIMQueryVars}.
      * @return {@link CIMClassUMLAdapted}
      */
-    public static SearchResult createSearchResult(GraphIdentifier graphIdentifier, QuerySolution querySolution) {
+    public static SearchResult createSearchResult(
+            GraphIdentifier graphIdentifier, QuerySolution querySolution) {
         var parser = new CIMQuerySolutionParser(querySolution);
 
         ResultType type;
@@ -77,7 +80,11 @@ public class SearchResultObjectFactory {
         switch (typeInfo.getUri().getSuffix()) {
             case "Class" -> {
                 type = ResultType.CLASS;
-                var pack = parser.getBelongsToCategory(CIMQueryVars.PACKAGE_URI, CIMQueryVars.PACKAGE_LABEL, CIMQueryVars.PACKAGE_UUID);
+                var pack =
+                        parser.getBelongsToCategory(
+                                CIMQueryVars.PACKAGE_URI,
+                                CIMQueryVars.PACKAGE_LABEL,
+                                CIMQueryVars.PACKAGE_UUID);
                 if (pack != null) {
                     packageUUID = pack.getUuid();
                     packageLabel = pack.getLabel();
@@ -87,10 +94,15 @@ public class SearchResultObjectFactory {
                 var stereotype = parser.getStereotype(CIMQueryVars.STEREOTYPE);
                 var domain = parser.getDomain(CIMQueryVars.DOMAIN_URI, CIMQueryVars.DOMAIN_LABEL);
                 var domainUUID = parser.getDomainUUID(CIMQueryVars.DOMAIN_UUID);
-                var pack = parser.getBelongsToCategory(CIMQueryVars.PACKAGE_URI, CIMQueryVars.PACKAGE_LABEL, CIMQueryVars.PACKAGE_UUID);
-                type = (stereotype != null && stereotype.getStereotype().contains("attribute"))
-                       ? ResultType.ATTRIBUTE
-                       : ResultType.ASSOCIATION;
+                var pack =
+                        parser.getBelongsToCategory(
+                                CIMQueryVars.PACKAGE_URI,
+                                CIMQueryVars.PACKAGE_LABEL,
+                                CIMQueryVars.PACKAGE_UUID);
+                type =
+                        (stereotype != null && stereotype.getStereotype().contains("attribute"))
+                                ? ResultType.ATTRIBUTE
+                                : ResultType.ASSOCIATION;
                 parentClassUri = domain.getUri();
                 parentClassUUID = domainUUID;
                 if (pack != null) {
@@ -103,7 +115,11 @@ public class SearchResultObjectFactory {
                 packageUUID = parser.getUUID(CIMQueryVars.UUID);
             }
             default -> {
-                var pack = parser.getBelongsToCategory(CIMQueryVars.PACKAGE_URI, CIMQueryVars.PACKAGE_LABEL, CIMQueryVars.PACKAGE_UUID);
+                var pack =
+                        parser.getBelongsToCategory(
+                                CIMQueryVars.PACKAGE_URI,
+                                CIMQueryVars.PACKAGE_LABEL,
+                                CIMQueryVars.PACKAGE_UUID);
                 type = ResultType.ENUMTYPE;
                 parentClassUri = parser.getURI(CIMQueryVars.TYPE_URI);
                 parentClassUUID = parser.getUUID(CIMQueryVars.TYPE_UUID);
@@ -115,16 +131,16 @@ public class SearchResultObjectFactory {
         }
 
         return SearchResult.builder()
-                           .datasetName(graphIdentifier.getDatasetName())
-                           .graphUri(graphIdentifier.getGraphUri())
-                           .uri(parser.getURI(CIMQueryVars.URI))
-                           .uuid(parser.getUUID(CIMQueryVars.UUID))
-                           .label(parser.getLabel(CIMQueryVars.LABEL))
-                           .type(type)
-                           .parentClassUri(parentClassUri)
-                           .parentClassUUID(parentClassUUID)
-                           .packageUUID(packageUUID)
-                           .packageLabel(packageLabel)
-                           .build();
+                .datasetName(graphIdentifier.getDatasetName())
+                .graphUri(graphIdentifier.getGraphUri())
+                .uri(parser.getURI(CIMQueryVars.URI))
+                .uuid(parser.getUUID(CIMQueryVars.UUID))
+                .label(parser.getLabel(CIMQueryVars.LABEL))
+                .type(type)
+                .parentClassUri(parentClassUri)
+                .parentClassUUID(parentClassUUID)
+                .packageUUID(packageUUID)
+                .packageLabel(packageLabel)
+                .build();
     }
 }

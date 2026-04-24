@@ -22,7 +22,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -55,110 +57,147 @@ public class ClassRESTController {
     private final DeleteClassUseCase deleteClassUseCase;
 
     @Operation(
-              summary = "Get class information",
-              description = "Get all information about a specified class.",
-              tags = {"class"},
-              responses = {@ApiResponse(
+            summary = "Get class information",
+            description = "Get all information about a specified class.",
+            tags = {"class"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  schema = @Schema(implementation = ClassUMLAdaptedDTO.class)))}
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema =
+                                                @Schema(implementation = ClassUMLAdaptedDTO.class)))
+            })
     @GetMapping
     public ClassUMLAdaptedDTO getClassInformation(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var classObject = getClassInformationUseCase.getClassInformation(graphIdentifier, classUUID);
+        var classObject =
+                getClassInformationUseCase.getClassInformation(graphIdentifier, classUUID);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return classObject;
     }
 
     @Operation(
-              summary = "Replace class",
-              description = "Replace a whole class.",
-              tags = {"class"},
-              responses = {@ApiResponse(
-                        responseCode = "200"
-              )
-              }
-    )
+            summary = "Replace class",
+            description = "Replace a whole class.",
+            tags = {"class"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PutMapping
     public String replaceClass(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new class", content = @Content(
-                        schema = @Schema(implementation = ClassUMLAdaptedDTO.class)
-              ))
-              @RequestBody ClassUMLAdaptedDTO newClass) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new class",
+                            content =
+                                    @Content(
+                                            schema =
+                                                    @Schema(
+                                                            implementation =
+                                                                    ClassUMLAdaptedDTO.class)))
+                    @RequestBody
+                    ClassUMLAdaptedDTO newClass) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         replaceClassUseCase.replaceClass(graphIdentifier, newClass);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return Response.SUCCESS;
     }
 
     @Operation(
-              summary = "Delete class",
-              description = "Deletes a whole class.",
-              tags = {"class"},
-              responses = {@ApiResponse(
-                        responseCode = "200"
-              )
-              }
-    )
+            summary = "Delete class",
+            description = "Deletes a whole class.",
+            tags = {"class"},
+            responses = {@ApiResponse(responseCode = "200")})
     @DeleteMapping
     public String deleteClass(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var graphIdentifier = new GraphIdentifier(datasetName, graphURI);
 
         deleteClassUseCase.deleteClass(graphIdentifier, classUUID);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return Response.SUCCESS;
     }
 }

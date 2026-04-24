@@ -131,13 +131,15 @@
         onchange={() => (graph = null)}
     />
 
-    <label for={graphSelectId} class="mt-3 mb-1 block text-sm">Graph</label>
+    <label for={graphSelectId} class="mt-3 mb-1 block text-sm">
+        Schema (RDFS)
+    </label>
     <SelectEditControl
         id={graphSelectId}
         bind:value={graph}
         options={graphNames}
         disabled={graphSelectDisabled}
-        placeholder={dataset ? "Select graph" : "Select a dataset first"}
+        placeholder={dataset ? "Select schema" : "Select a dataset first"}
         getOptionValue={getUri}
         getOptionLabel={g => g.suffix}
     />

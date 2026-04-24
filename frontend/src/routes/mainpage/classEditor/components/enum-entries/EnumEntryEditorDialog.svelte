@@ -30,7 +30,11 @@
 
     import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
 
-    let { showDialog = $bindable(), enumEntry, enumEntries } = $props();
+    let {
+        showDialog = $bindable(),
+        enumEntry = $bindable(),
+        enumEntries,
+    } = $props();
 
     let classEditorContext = $state();
 
@@ -92,8 +96,8 @@
     isValid={enumEntry?.isValid}
     {readonly}
     title={isNewEnumEntry
-        ? "Create Enum Entry"
-        : `Edit Enum Entry: ${enumEntry.label.backup}`}
+        ? "Create new Enum entry"
+        : `Edit Enum entry: ${enumEntry.label.backup}`}
 >
     {#if enumEntry && classEditorContext && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">

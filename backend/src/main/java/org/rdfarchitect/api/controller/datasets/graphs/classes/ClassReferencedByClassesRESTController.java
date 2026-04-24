@@ -19,9 +19,11 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
+
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.GetClassesReferencingThisClassUseCase;
 import org.slf4j.Logger;
@@ -36,11 +38,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/referencedByClasses")
+@RequestMapping(
+        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/referencedByClasses")
 @RequiredArgsConstructor
 public class ClassReferencedByClassesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassReferencedByClassesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ClassReferencedByClassesRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -49,30 +53,43 @@ public class ClassReferencedByClassesRESTController {
     @Operation(
             summary = "Get classes referencing this class",
             description = "Get all classes referencing this class.",
-            tags = {"class"}
-    )
+            tags = {"class"})
     @GetMapping
     public ClassRelationsDTO getClassesReferencingThisClass(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI,
-            @Parameter(description = "The uuid of the class.")
-            @PathVariable
-            String classUUID) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".", datasetName, graphURI, classUUID, originURL);
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var classesReferencingThisClass = getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(graphIdentifier, UUID.fromString(classUUID));
+        var classesReferencingThisClass =
+                getClassesReferencingThisClassUseCase.getClassesReferencingThisClass(
+                        graphIdentifier, UUID.fromString(classUUID));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".", datasetName, graphURI, classUUID, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/referencedByClasses\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
         return classesReferencingThisClass;
     }
 }

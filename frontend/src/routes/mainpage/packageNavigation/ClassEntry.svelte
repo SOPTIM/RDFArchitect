@@ -117,7 +117,7 @@
             }}
             faIcon={faDiagramProject}
         >
-            SHACL
+            Constrains
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />
         <ContextMenu.Item.Button

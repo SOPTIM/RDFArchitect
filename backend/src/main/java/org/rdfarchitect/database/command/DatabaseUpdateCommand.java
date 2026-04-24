@@ -22,16 +22,13 @@ import org.apache.jena.update.Update;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
 
-/**
- * Defines how to execute a SPARQL {@link Update} against a dataset of a database.
- */
+/** Defines how to execute a SPARQL {@link Update} against a dataset of a database. */
 public interface DatabaseUpdateCommand {
 
     /**
      * Sets the endpoint where the database is accessible.
      *
      * @param endpoint Endpoint (e.g. url, path)
-     *
      * @return This {@link DatabaseUpdateCommand}
      */
     DatabaseUpdateCommand setEndpoint(String endpoint);
@@ -40,7 +37,6 @@ public interface DatabaseUpdateCommand {
      * Sets the name of the dataset in the database the {@link Update} is against.
      *
      * @param datasetName Name of the dataset
-     *
      * @return This {@link DatabaseUpdateCommand}
      */
     DatabaseUpdateCommand setDatasetName(String datasetName) throws DataAccessException;
@@ -49,14 +45,11 @@ public interface DatabaseUpdateCommand {
      * Sets the {@link Update} to be executed.
      *
      * @param update {@link Update}
-     *
      * @return This {@link DatabaseUpdateCommand object} with the update query set
      */
     DatabaseUpdateCommand setUpdate(Update update);
 
-    /**
-     * Executes the {@link Update} against the specified dataset of the database.
-     */
+    /** Executes the {@link Update} against the specified dataset of the database. */
     void execute() throws DataAccessException;
 
     /**
@@ -73,16 +66,15 @@ public interface DatabaseUpdateCommand {
      */
     void deleteGraph(String graphName);
 
-    /**
-     * Deletes the specified dataset from the database.
-     */
+    /** Deletes the specified dataset from the database. */
     void deleteDataset();
 
     /**
-     * Appends a new prefix substitution to a datasets current prefixes. If a prefix with the same substitute already exist, it will be replaced.
+     * Appends a new prefix substitution to a datasets current prefixes. If a prefix with the same
+     * substitute already exist, it will be replaced.
      *
      * @param prefix the substituted prefix
-     * @param uri    the extended prefix
+     * @param uri the extended prefix
      */
     void addPrefix(String prefix, String uri);
 

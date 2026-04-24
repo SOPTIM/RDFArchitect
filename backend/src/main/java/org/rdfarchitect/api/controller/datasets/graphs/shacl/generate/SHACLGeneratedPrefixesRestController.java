@@ -21,7 +21,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -35,12 +37,15 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/generated/prefixes")
 @RequiredArgsConstructor
 public class SHACLGeneratedPrefixesRestController {
 
-    private static final Logger logger = LoggerFactory.getLogger(SHACLGeneratedPrefixesRestController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(SHACLGeneratedPrefixesRestController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -48,37 +53,52 @@ public class SHACLGeneratedPrefixesRestController {
 
     @Operation(
             summary = "export generated SHACL prefixes",
-            description = "Export the prefixes of the generated SHACL graph for a given graph identifier.",
+            description =
+                    "Export the prefixes of the generated SHACL graph for a given graph identifier.",
             tags = {"shacl"},
             responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            content = {
-                                    @Content(mediaType = "text/turtle"),
-                            })
-            }
-    )
+                @ApiResponse(
+                        responseCode = "200",
+                        content = {
+                            @Content(mediaType = "text/turtle"),
+                        })
+            })
     @GetMapping("/ttl")
     public String getGeneratedSHACLPrefixesAsString(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable
-            String datasetName,
-            @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/prefixes/ttl\" from \"{}\".", datasetName, graphURI, originURL);
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/prefixes/ttl\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        //fetch data
-        var shaclString = shaclExportUseCase.exportGeneratedSHACLPrefixes(new GraphIdentifier(datasetName, extendedGraphURI), RDFFormat.TURTLE)
-                .toString();
+        // fetch data
+        var shaclString =
+                shaclExportUseCase
+                        .exportGeneratedSHACLPrefixes(
+                                new GraphIdentifier(datasetName, extendedGraphURI),
+                                RDFFormat.TURTLE)
+                        .toString(StandardCharsets.UTF_8);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/prefixes/ttl\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/prefixes/ttl\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return shaclString;
     }
-
 }

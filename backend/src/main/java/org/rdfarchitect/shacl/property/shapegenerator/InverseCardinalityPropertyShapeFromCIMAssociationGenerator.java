@@ -28,7 +28,8 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.InverseCardinalityPropertyShapeBuilder;
 
-public class InverseCardinalityPropertyShapeFromCIMAssociationGenerator implements PropertyShapeFromCIMPropertyGenerator {
+public class InverseCardinalityPropertyShapeFromCIMAssociationGenerator
+        implements PropertyShapeFromCIMPropertyGenerator {
 
     private static final String PROPERTY_GROUP_LABEL = "InverseCardinalityGroup";
 
@@ -59,17 +60,21 @@ public class InverseCardinalityPropertyShapeFromCIMAssociationGenerator implemen
     @Override
     public Resource createPropertyShape(Resource association) {
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
-            throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
+            throw new IllegalStateException(
+                    "Models and prefix must be set before creating property shapes.");
         }
-        if (!CIMPropertyUtils.isAssociation(association) || !shouldCreateInverseCardinalityPropertyShape(association)) {
-            return null; // This converter only creates shapes for associations that have an inverse Cardinality Constraint for an instantiable class
+        if (!CIMPropertyUtils.isAssociation(association)
+                || !shouldCreateInverseCardinalityPropertyShape(association)) {
+            return null; // This converter only creates shapes for associations that have an inverse
+            // Cardinality Constraint for an instantiable class
         }
         var order = CIMPropertySHACLUtils.getOrder(ontologyModel, association.getURI());
         var multiplicity = CIMPropertyUtils.resolveMultiplicity(association);
         return new InverseCardinalityPropertyShapeBuilder(shaclModel)
                 .setPrefixEntry(shaclPrefix)
                 .setPropertyUri(association.getURI())
-                .setInversePropertyUri(association.getProperty(CIMS.inverseRoleName).getResource().getURI())
+                .setInversePropertyUri(
+                        association.getProperty(CIMS.inverseRoleName).getResource().getURI())
                 .setPropertyGroupUri(shaclPrefix.getUri() + PROPERTY_GROUP_LABEL)
                 .setOrder(order)
                 .setLowerBound(multiplicity.lowerBound())
@@ -78,11 +83,12 @@ public class InverseCardinalityPropertyShapeFromCIMAssociationGenerator implemen
     }
 
     private boolean shouldCreateInverseCardinalityPropertyShape(Resource association) {
-        if (!CIMAssociationUtils.isUsedAssociation(association.getProperty(CIMS.inverseRoleName).getResource())) {
+        if (!CIMAssociationUtils.isUsedAssociation(
+                association.getProperty(CIMS.inverseRoleName).getResource())) {
             return false;
         }
         var range = association.getProperty(RDFS.range).getResource();
-        return CIMClassUtils.isInstantiableClass(range) ||
-               !CIMClassUtils.findDerivingClasses(range).isEmpty();
+        return CIMClassUtils.isInstantiableClass(range)
+                || !CIMClassUtils.findDerivingClasses(range).isEmpty();
     }
 }

@@ -17,21 +17,18 @@
 
 package org.rdfarchitect.services;
 
+import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.database.GraphIdentifier;
 
-/**
- * Converts a Graph to a {@link CIMCollection}.
- */
+/** Converts a Graph to a {@link CIMCollection}. */
 public interface GraphToCIMCollectionConverterUseCase {
 
     /**
      * Converts a Graph to a {@link CIMCollection}.
      *
      * @param graphIdentifier The graph to getClassDefinition.
-     * @param filter          The filter to apply to the graph.
-     *
+     * @param filter The filter to apply to the graph.
      * @return The {@link CIMCollection}.
      */
     CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter);

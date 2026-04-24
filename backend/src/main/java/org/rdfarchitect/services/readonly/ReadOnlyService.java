@@ -18,12 +18,14 @@
 package org.rdfarchitect.services.readonly;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.DatabasePort;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
-public class ReadOnlyService implements IsReadOnlyUseCase, EnableEditingUseCase, DisableEditingUseCase {
+public class ReadOnlyService
+        implements IsReadOnlyUseCase, EnableEditingUseCase, DisableEditingUseCase {
 
     private final DatabasePort databasePort;
 

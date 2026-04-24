@@ -51,7 +51,6 @@ public interface ChangeLogEntryMapper {
         return new TripleDTO(
                 triple.getSubject().toString(),
                 triple.getPredicate().toString(),
-                triple.getObject().toString()
-        );
+                triple.getObject().toString());
     }
 }

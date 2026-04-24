@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.versioncontrol;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -28,7 +29,13 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class VersionControlService implements CanRedoUseCase, CanUndoUseCase, RedoUseCase, UndoUseCase, PersistUseCase, RestoreVersionUseCase {
+public class VersionControlService
+        implements CanRedoUseCase,
+                CanUndoUseCase,
+                RedoUseCase,
+                UndoUseCase,
+                PersistUseCase,
+                RestoreVersionUseCase {
 
     private final DatabasePort databasePort;
     private final DatabaseConnection databaseConnection;

@@ -17,9 +17,7 @@
 
 package org.rdfarchitect.models.changes.semanticchanges;
 
-/**
- * Types of semantic changes that can occur to a resource.
- */
+/** Types of semantic changes that can occur to a resource. */
 public enum SemanticResourceChangeType {
     ADD,
     ADDED_FROM_INHERITANCE,

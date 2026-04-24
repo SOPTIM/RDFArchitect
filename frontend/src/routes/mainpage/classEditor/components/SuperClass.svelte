@@ -67,6 +67,7 @@
             accessDisplayData={cls => cls.label}
             accessIdentifier={cls =>
                 classEditorContext.getSubstitutedNamespace(cls.prefix) +
+                ":" +
                 cls.label}
             callOnValidChange={newSuperClass =>
                 (superClass.value = newSuperClass.uuid)}

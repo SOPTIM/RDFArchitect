@@ -57,17 +57,17 @@
     const compareModeOptions = $derived([
         {
             value: CompareMode.STORED_TO_STORED,
-            label: "Stored graph → Stored graph",
+            label: "Stored schema → Stored schema",
             disabled: false,
         },
         {
             value: CompareMode.FILE_TO_STORED,
-            label: "Uploaded graph → Stored graph",
+            label: "Uploaded schema → Stored schema",
             disabled: false,
         },
         {
             value: CompareMode.FILE_TO_FILE,
-            label: "Uploaded graph → Uploaded graph",
+            label: "Uploaded schema → Uploaded schema",
             disabled: !!lockedDatasetName || !!lockedGraphUri,
         },
     ]);
@@ -168,12 +168,12 @@
     primaryLabel="Compare"
     onPrimary={runCompare}
     disablePrimary={disableSubmit}
-    title="Compare Graphs"
+    title="Compare Schemas"
 >
     <div class="mx-2 flex h-full flex-col font-[350]">
         <div class="mb-3">
             <p class="text-text-subtle mt-1 text-sm">
-                Select a source and a modified graph to see what changed
+                Select a source and a modified schema to see what changed
             </p>
         </div>
 

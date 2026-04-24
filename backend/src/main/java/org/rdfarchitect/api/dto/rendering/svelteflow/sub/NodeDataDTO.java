@@ -22,9 +22,7 @@ import lombok.Data;
 
 import java.util.List;
 
-/**
- * DTO representing the specific data object in a SvelteFlow node.
- */
+/** DTO representing the specific data object in a SvelteFlow node. */
 @Data
 @Builder
 public class NodeDataDTO {

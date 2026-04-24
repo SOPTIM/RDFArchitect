@@ -28,8 +28,6 @@ public class CIMEnumEntryToMermaidBuilder {
     }
 
     public StringBuilder build() {
-        return new StringBuilder()
-                  .append(cimEnumEntry.getLabel().getValue())
-                  .append("\n");
+        return new StringBuilder().append(cimEnumEntry.getLabel().getValue()).append("\n");
     }
 }

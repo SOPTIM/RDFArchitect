@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.rdf.graph.wrapper;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
@@ -31,8 +33,6 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-
 class GraphRewindableWithUUIDsTest {
 
     private static final Graph graph = GraphFactory.createDefaultGraph();
@@ -44,11 +44,19 @@ class GraphRewindableWithUUIDsTest {
 
     @Test
     void enhanceWithUUIDs_subjectWithoutUUID_addsUUID() {
-        graph.add(NodeFactory.createURI("http://example.com/testSubject"), RDF.type.asNode(), RDFS.Class.asNode());
+        graph.add(
+                NodeFactory.createURI("http://example.com/testSubject"),
+                RDF.type.asNode(),
+                RDFS.Class.asNode());
         GraphRewindableWithUUIDs.enhanceWithUUIDs(graph);
 
         assertThat(graph.size()).isEqualTo(2);
-        assertThat(graph.contains(NodeFactory.createURI("http://example.com/testSubject"), RDFA.uuid.asNode(), Node.ANY)).isTrue();
+        assertThat(
+                        graph.contains(
+                                NodeFactory.createURI("http://example.com/testSubject"),
+                                RDFA.uuid.asNode(),
+                                Node.ANY))
+                .isTrue();
     }
 
     @Test
@@ -66,12 +74,22 @@ class GraphRewindableWithUUIDsTest {
 
     @Test
     void commit_graphWithMissingUUIDs_addsUUIDs() {
-        var graphRewindable = new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 20, 5);
+        var graphRewindable =
+                new GraphRewindableWithUUIDs(GraphFactory.createDefaultGraph(), 20, 5);
         try {
             graphRewindable.begin(TxnType.WRITE);
-            graphRewindable.add(NodeFactory.createURI("http://example.com/testSubject"), RDF.type.asNode(), RDFS.Class.asNode());
-            graphRewindable.add(NodeFactory.createURI("http://example.com/testSubject2"), RDF.type.asNode(), CIMS.classCategory.asNode());
-            graphRewindable.add(NodeFactory.createURI("http://example.com/testSubject3"), RDF.type.asNode(), RDF.Property.asNode());
+            graphRewindable.add(
+                    NodeFactory.createURI("http://example.com/testSubject"),
+                    RDF.type.asNode(),
+                    RDFS.Class.asNode());
+            graphRewindable.add(
+                    NodeFactory.createURI("http://example.com/testSubject2"),
+                    RDF.type.asNode(),
+                    CIMS.classCategory.asNode());
+            graphRewindable.add(
+                    NodeFactory.createURI("http://example.com/testSubject3"),
+                    RDF.type.asNode(),
+                    RDF.Property.asNode());
             graphRewindable.commit();
         } finally {
             graphRewindable.end();
@@ -88,9 +106,18 @@ class GraphRewindableWithUUIDsTest {
 
     @Test
     void constructor_GraphWithMissingUUIDs_addsUUIDs() {
-        graph.add(NodeFactory.createURI("http://example.com/testSubject"), RDF.type.asNode(), RDFS.Class.asNode());
-        graph.add(NodeFactory.createURI("http://example.com/testSubject2"), RDF.type.asNode(), CIMS.classCategory.asNode());
-        graph.add(NodeFactory.createURI("http://example.com/testSubject3"), RDF.type.asNode(), RDF.Property.asNode());
+        graph.add(
+                NodeFactory.createURI("http://example.com/testSubject"),
+                RDF.type.asNode(),
+                RDFS.Class.asNode());
+        graph.add(
+                NodeFactory.createURI("http://example.com/testSubject2"),
+                RDF.type.asNode(),
+                CIMS.classCategory.asNode());
+        graph.add(
+                NodeFactory.createURI("http://example.com/testSubject3"),
+                RDF.type.asNode(),
+                RDF.Property.asNode());
 
         var graphRewindable = new GraphRewindableWithUUIDs(graph, 10, 5);
 
@@ -108,7 +135,10 @@ class GraphRewindableWithUUIDsTest {
             graphRewindable.begin(TxnType.READ);
             var triples = graphRewindable.find(Node.ANY, RDF.type.asNode(), Node.ANY);
             while (triples.hasNext()) {
-                assertThat(graphRewindable.contains(triples.next().getSubject(), RDFA.uuid.asNode(), Node.ANY)).isTrue();
+                assertThat(
+                                graphRewindable.contains(
+                                        triples.next().getSubject(), RDFA.uuid.asNode(), Node.ANY))
+                        .isTrue();
             }
         } finally {
             graphRewindable.end();

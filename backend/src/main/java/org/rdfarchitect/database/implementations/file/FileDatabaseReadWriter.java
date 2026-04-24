@@ -36,8 +36,7 @@ public class FileDatabaseReadWriter {
 
     private static final Logger logger = LoggerFactory.getLogger(FileDatabaseReadWriter.class);
 
-    private FileDatabaseReadWriter() {
-    }
+    private FileDatabaseReadWriter() {}
 
     /**
      * created a Database directory if it doesn't exist yet
@@ -56,13 +55,15 @@ public class FileDatabaseReadWriter {
      * checks whether a dataset exists at a given path
      *
      * @param pathDatabase Path of the database directory
-     * @param datasetName  Name of the dataset
-     * @param lang         Lang the dataset is stored in
-     *
+     * @param datasetName Name of the dataset
+     * @param lang Lang the dataset is stored in
      * @return true if it exists, otherwise false
      */
     public static boolean datasetExists(Path pathDatabase, String datasetName, Lang lang) {
-        Path pathDataset = Paths.get(pathDatabase.toString(), datasetName + "." + lang.getFileExtensions().get(0));
+        Path pathDataset =
+                Paths.get(
+                        pathDatabase.toString(),
+                        datasetName + "." + lang.getFileExtensions().get(0));
         if (!Files.exists(pathDataset)) {
             logger.debug("dataset file \"{}\" doesnt exist", pathDataset);
             return false;
@@ -73,13 +74,17 @@ public class FileDatabaseReadWriter {
     /**
      * writes a dataset to a file
      *
-     * @param dataset      to be written to the file
+     * @param dataset to be written to the file
      * @param pathDatabase path of the db directory
-     * @param datasetName  name of the dataset
-     * @param lang         Lang the dataset should be stored in
+     * @param datasetName name of the dataset
+     * @param lang Lang the dataset should be stored in
      */
-    public static void writeToFile(Dataset dataset, Path pathDatabase, String datasetName, Lang lang) {
-        Path pathDataset = Paths.get(pathDatabase.toString(), datasetName + "." + lang.getFileExtensions().get(0));
+    public static void writeToFile(
+            Dataset dataset, Path pathDatabase, String datasetName, Lang lang) {
+        Path pathDataset =
+                Paths.get(
+                        pathDatabase.toString(),
+                        datasetName + "." + lang.getFileExtensions().get(0));
         try {
             OutputStream out = Files.newOutputStream(pathDataset);
             RDFDataMgr.write(out, dataset, lang);
@@ -92,13 +97,15 @@ public class FileDatabaseReadWriter {
      * reads a dataset from a given path
      *
      * @param pathDatabase Path of the db directory
-     * @param datasetName  Name of the Dataset
-     * @param lang         Lang the dataset is stored in
-     *
+     * @param datasetName Name of the Dataset
+     * @param lang Lang the dataset is stored in
      * @return the Dataset
      */
     public static Dataset readDataset(Path pathDatabase, String datasetName, Lang lang) {
-        Path pathDataset = Paths.get(pathDatabase.toString(), datasetName + "." + lang.getFileExtensions().get(0));
+        Path pathDataset =
+                Paths.get(
+                        pathDatabase.toString(),
+                        datasetName + "." + lang.getFileExtensions().get(0));
         try {
             return RDFDataMgr.loadDataset(pathDataset.toString(), lang);
         } catch (Exception e) {
@@ -119,18 +126,21 @@ public class FileDatabaseReadWriter {
      * Lists the names of all datasets in the Database:
      *
      * @param databasePath Path where the database is located
-     *
      * @return A List containing the names of all datasets
      */
     public static List<String> listDatasets(Path databasePath, Lang lang) {
         try (Stream<Path> files = Files.list(databasePath)) {
-            return files
-                      .filter(path -> !Files.isDirectory(path))
-                      .map(Path::getFileName)
-                      .map(Path::toString)
-                      .filter(name -> name.endsWith(lang.getFileExtensions().get(0)))
-                      .map(name -> name.substring(0, name.length() - lang.getFileExtensions().get(0).length()))
-                      .toList();
+            return files.filter(path -> !Files.isDirectory(path))
+                    .map(Path::getFileName)
+                    .map(Path::toString)
+                    .filter(name -> name.endsWith(lang.getFileExtensions().get(0)))
+                    .map(
+                            name ->
+                                    name.substring(
+                                            0,
+                                            name.length()
+                                                    - lang.getFileExtensions().get(0).length()))
+                    .toList();
         } catch (IOException e) {
             throw new DataAccessException("Error listing datasets", e);
         }
@@ -140,11 +150,14 @@ public class FileDatabaseReadWriter {
      * Creates an empty dataset in a database.
      *
      * @param databasePath Path where the database is located
-     * @param lang         Lang the dataset will be stored in
-     * @param datasetName  Name of the dataset to be created
+     * @param lang Lang the dataset will be stored in
+     * @param datasetName Name of the dataset to be created
      */
     public static void createDataset(Path databasePath, String datasetName, Lang lang) {
-        Path datasetPath = Paths.get(databasePath.toString(), datasetName + "." + lang.getFileExtensions().get(0));
+        Path datasetPath =
+                Paths.get(
+                        databasePath.toString(),
+                        datasetName + "." + lang.getFileExtensions().get(0));
         try {
             Files.createFile(datasetPath);
             logger.info("Successfully created dataset {}", datasetPath);
@@ -157,11 +170,14 @@ public class FileDatabaseReadWriter {
      * Deletes a dataset in a database.
      *
      * @param databasePath Path where the database is located
-     * @param lang         Lang of the dataset to be deleted
-     * @param datasetName  Name of the dataset to be deleted
+     * @param lang Lang of the dataset to be deleted
+     * @param datasetName Name of the dataset to be deleted
      */
     public static void deleteDataset(Path databasePath, String datasetName, Lang lang) {
-        Path path = Paths.get(databasePath.toString(), datasetName + "." + lang.getFileExtensions().get(0));
+        Path path =
+                Paths.get(
+                        databasePath.toString(),
+                        datasetName + "." + lang.getFileExtensions().get(0));
         try {
             Files.delete(path);
         } catch (IOException e) {

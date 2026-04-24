@@ -18,6 +18,7 @@
 package org.rdfarchitect.config;
 
 import lombok.Getter;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,16 +28,15 @@ public class GraphCompressionConfig {
     private static final int DEFAULT_MAX_VERSIONS = 20;
     private static final int DEFAULT_COMPRESS_COUNT = 5;
 
-    @Getter
-    private static int maxVersions = DEFAULT_MAX_VERSIONS;
-    @Getter
-    private static int compressCount = DEFAULT_COMPRESS_COUNT;
+    @Getter private static int maxVersions = DEFAULT_MAX_VERSIONS;
+    @Getter private static int compressCount = DEFAULT_COMPRESS_COUNT;
 
     @Value("${graph.maxVersions:" + DEFAULT_MAX_VERSIONS + "}")
     @SuppressWarnings("java:S2696")
     public void setMaxVersions(int maxVersions) {
         GraphCompressionConfig.maxVersions = maxVersions;
     }
+
     @Value("${graph.compressCount:" + DEFAULT_COMPRESS_COUNT + "}")
     @SuppressWarnings("java:S2696")
     public void setCompressCount(int compressCount) {

@@ -29,7 +29,8 @@ public class FilterConfig {
 
     @Bean
     public FilterRegistrationBean<SessionContextFilter> sessionContextFilterRegistration() {
-        FilterRegistrationBean<SessionContextFilter> registrationBean = new FilterRegistrationBean<>();
+        FilterRegistrationBean<SessionContextFilter> registrationBean =
+                new FilterRegistrationBean<>();
         registrationBean.setFilter(new SessionContextFilter());
         registrationBean.setOrder(1);
         registrationBean.addUrlPatterns("/*");
@@ -37,11 +38,13 @@ public class FilterConfig {
     }
 
     @Bean
-    public FilterRegistrationBean<DatasetFilter> datasetFilterRegistration(DatabasePort databasePort) {
+    public FilterRegistrationBean<DatasetFilter> datasetFilterRegistration(
+            DatabasePort databasePort) {
         FilterRegistrationBean<DatasetFilter> registrationBean = new FilterRegistrationBean<>();
         registrationBean.setFilter(new DatasetFilter(databasePort));
         registrationBean.setOrder(2);
-        //erinnerung: das URL pattern /api/datasets/* matched auch auf /api/datasets, obwohl am ende kein slash ist
+        // erinnerung: das URL pattern /api/datasets/* matched auch auf /api/datasets, obwohl am
+        // ende kein slash ist
         registrationBean.addUrlPatterns("/api/datasets/*");
         return registrationBean;
     }

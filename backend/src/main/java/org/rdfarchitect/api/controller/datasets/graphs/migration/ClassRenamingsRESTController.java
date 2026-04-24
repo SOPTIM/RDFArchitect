@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
@@ -45,54 +47,69 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ClassRenamingsRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassRenamingsRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ClassRenamingsRESTController.class);
 
     private final ClassRenamingsUseCase classRenamingsUseCase;
     private final GetClassRenamingsUseCase getClassRenamingsUseCase;
 
     @Operation(
-              summary = "migration class overview",
-              description = "Provides an overview of the migration classes including added, modified, deleted and potentially renamed classes.",
-              tags = {"migration"},
-              responses = {@ApiResponse(
+            summary = "migration class overview",
+            description =
+                    "Provides an overview of the migration classes including added, modified, deleted and potentially renamed classes.",
+            tags = {"migration"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = ResourceRenameOverview.class))
-                        ))
-              }
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                ResourceRenameOverview
+                                                                                        .class))))
+            })
     @GetMapping
     public ResourceRenameOverview<SemanticClassChange> getClassRenamings(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL) {
-        logger.info("Received GET request: \"/api/migrations/class-renamings\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL) {
+        logger.info(
+                "Received GET request: \"/api/migrations/class-renamings\" from \"{}\".",
+                originURL);
 
         var classes = getClassRenamingsUseCase.getClassRenamings();
 
-        logger.info("Sending response to GET request: \"/api/datasets/migrations/class-renamings\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/migrations/class-renamings\" from \"{}\".",
+                originURL);
 
         return classes;
     }
 
     @Operation(
-              summary = "confirm renamed classes",
-              description = "Confirms the previously suggested renamed classes and updates the migration context accordingly.",
-              tags = {"migration"}
-    )
+            summary = "confirm renamed classes",
+            description =
+                    "Confirms the previously suggested renamed classes and updates the migration context accordingly.",
+            tags = {"migration"})
     @PostMapping
     public void confirmRenamedClasses(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The updated class renamings")
-              @RequestBody
-              List<RenameCandidate<SemanticClassChange>> classRenamings) {
-        logger.info("Received POST request: \"/api/migrations/class-renamings\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The updated class renamings") @RequestBody
+                    List<RenameCandidate<SemanticClassChange>> classRenamings) {
+        logger.info(
+                "Received POST request: \"/api/migrations/class-renamings\" from \"{}\".",
+                originURL);
 
         classRenamingsUseCase.confirmClassRenamings(classRenamings);
 
-        logger.info("Sending response to POST request: \"/api/migrations/class-renamings\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/migrations/class-renamings\" from \"{}\".",
+                originURL);
     }
 }

@@ -22,6 +22,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
 import org.apache.jena.rdf.model.Resource;
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
 
@@ -29,8 +30,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Object collecting all relevant information about a change to an attribute. Includes fields for specifying default values for data migration.
- * dataType, primitiveDataType, optional will be populated automatically when assigning default values, while forceDefaultValue and defaultValue can  be set by the user.
+ * Object collecting all relevant information about a change to an attribute. Includes fields for
+ * specifying default values for data migration. dataType, primitiveDataType, optional will be
+ * populated automatically when assigning default values, while forceDefaultValue and defaultValue
+ * can be set by the user.
  */
 @Data
 @SuperBuilder
@@ -48,8 +51,7 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
 
     private boolean forceDefaultValue = false;
 
-    @Builder.Default
-    private List<String> allowedValues = new ArrayList<>();
+    @Builder.Default private List<String> allowedValues = new ArrayList<>();
 
     public SemanticAttributeChange(TripleResourceChange tripleChange) {
         super(tripleChange);

@@ -25,7 +25,9 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {AssociationMapper.class})
+@Mapper(
+        componentModel = "spring",
+        uses = {AssociationMapper.class})
 public interface AssociationPairMapper {
 
     @Mapping(target = "from", source = "associationPair.from")
@@ -35,15 +37,21 @@ public interface AssociationPairMapper {
     List<AssociationPairDTO> toDTOList(List<CIMAssociationPair> associationPairs);
 
     default CIMAssociationPair toCIMObject(AssociationPairDTO associationPairDTO) {
-        CIMAssociation from = AssociationMapper.INSTANCE.toCIMObject(
-                  associationPairDTO.getFrom(),
-                  associationPairDTO.getTo().getPrefix() + new URI(associationPairDTO.getTo().getDomain()).getSuffix() + "." + associationPairDTO.getTo().getLabel()
-                                                                    );
+        CIMAssociation from =
+                AssociationMapper.INSTANCE.toCIMObject(
+                        associationPairDTO.getFrom(),
+                        associationPairDTO.getTo().getPrefix()
+                                + new URI(associationPairDTO.getTo().getDomain()).getSuffix()
+                                + "."
+                                + associationPairDTO.getTo().getLabel());
 
-        CIMAssociation to = AssociationMapper.INSTANCE.toCIMObject(
-                  associationPairDTO.getTo(),
-                  associationPairDTO.getFrom().getPrefix() + new URI(associationPairDTO.getFrom().getDomain()).getSuffix() + "." + associationPairDTO.getFrom().getLabel()
-                                                                  );
+        CIMAssociation to =
+                AssociationMapper.INSTANCE.toCIMObject(
+                        associationPairDTO.getTo(),
+                        associationPairDTO.getFrom().getPrefix()
+                                + new URI(associationPairDTO.getFrom().getDomain()).getSuffix()
+                                + "."
+                                + associationPairDTO.getFrom().getLabel());
 
         return new CIMAssociationPair(from, to);
     }

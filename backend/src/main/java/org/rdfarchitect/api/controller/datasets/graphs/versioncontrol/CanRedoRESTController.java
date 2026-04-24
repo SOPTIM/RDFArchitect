@@ -19,7 +19,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.versioncontrol.CanRedoUseCase;
@@ -43,26 +45,40 @@ public class CanRedoRESTController {
     private final CanRedoUseCase canRedoUseCase;
 
     @Operation(
-              summary = "can Redo",
-              description = "Check whether the last undone change can be redone",
-              tags = {"graph"}
-    )
+            summary = "can Redo",
+            description = "Check whether the last undone change can be redone",
+            tags = {"graph"})
     @PostMapping
     public boolean canRedo(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.") @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.") @PathVariable
-              String graphURI) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/canRedo\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/canRedo\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        boolean canRedo = canRedoUseCase.canRedo(new GraphIdentifier(datasetName, extendedGraphURI));
+        boolean canRedo =
+                canRedoUseCase.canRedo(new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/canRedo\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/canRedo\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return canRedo;
     }
 }

@@ -20,6 +20,7 @@ package org.rdfarchitect.models.cim.data.dto.relations;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -42,6 +43,7 @@ public class CIMSIsDefault {
         if (dataType == null) {
             return ResourceFactory.createPlainLiteral(value);
         }
-        return ResourceFactory.createTypedLiteral(value, TypeMapper.getInstance().getSafeTypeByName(dataType.toString()));
+        return ResourceFactory.createTypedLiteral(
+                value, TypeMapper.getInstance().getSafeTypeByName(dataType.toString()));
     }
 }

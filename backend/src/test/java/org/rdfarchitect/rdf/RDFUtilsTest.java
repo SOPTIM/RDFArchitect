@@ -17,38 +17,40 @@
 
 package org.rdfarchitect.rdf;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.assertj.core.api.Assertions.*;
-
 class RDFUtilsTest {
 
     @ParameterizedTest
-    @ValueSource(strings = {
-              "http://localhost:1",
-              "https://localhost:1",
-              "http://www.google.de",
-    })
+    @ValueSource(
+            strings = {
+                "http://localhost:1",
+                "https://localhost:1",
+                "http://www.google.de",
+            })
     void wrapURLorLiteral_stringIsAnURL_returnsStringWrappedAsURI(String candidate) {
         assertThat(RDFUtils.wrapURLorLiteral(candidate)).isEqualTo("<" + candidate + ">");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-              "!\"²§%&/{([)]=}?\\`´*+~'#",
-              "foo://",
-              "http://foo  foo",
-              " ",
-              "localhost",
-              "foo#foo#foo",
-              "foo.foo.foo",
-              "foo.foo.foo.foo.foo.foo.foo.foo",
-              "http://",
-              "https://"
-    })
+    @ValueSource(
+            strings = {
+                "!\"²§%&/{([)]=}?\\`´*+~'#",
+                "foo://",
+                "http://foo  foo",
+                " ",
+                "localhost",
+                "foo#foo#foo",
+                "foo.foo.foo",
+                "foo.foo.foo.foo.foo.foo.foo.foo",
+                "http://",
+                "https://"
+            })
     void wrapURLorLiteral_stringIsNotAnURL_returnsStringWrappedAsLiteral(String candidate) {
         assertThat(RDFUtils.wrapURLorLiteral(candidate)).isEqualTo("\"" + candidate + "\"");
     }
@@ -59,28 +61,30 @@ class RDFUtilsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-              "http://localhost:1",
-              "https://localhost:1",
-              "http://www.google.de",
-    })
+    @ValueSource(
+            strings = {
+                "http://localhost:1",
+                "https://localhost:1",
+                "http://www.google.de",
+            })
     void isURI_stringIsAnURL_returnsTrue(String candidate) {
         assertThat(RDFUtils.isURL(candidate)).isTrue();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {
-              "!\"²§%&/{([)]=}?\\`´*+~'#",
-              "foo://",
-              "http://foo  foo",
-              " ",
-              "localhost",
-              "foo#foo#foo",
-              "foo.foo.foo",
-              "foo.foo.foo.foo.foo.foo.foo.foo",
-              "http://",
-              "https://"
-    })
+    @ValueSource(
+            strings = {
+                "!\"²§%&/{([)]=}?\\`´*+~'#",
+                "foo://",
+                "http://foo  foo",
+                " ",
+                "localhost",
+                "foo#foo#foo",
+                "foo.foo.foo",
+                "foo.foo.foo.foo.foo.foo.foo.foo",
+                "http://",
+                "https://"
+            })
     void isURI_stringIsNotAnURL_returnsFalse(String candidate) {
         assertThat(RDFUtils.isURL(candidate)).isFalse();
     }

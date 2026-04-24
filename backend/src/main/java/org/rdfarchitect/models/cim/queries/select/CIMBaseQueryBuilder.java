@@ -35,7 +35,8 @@ public class CIMBaseQueryBuilder {
     }
 
     /**
-     * Call to finish building the baseQuery. Calling this repeatedly might result in unexpected behaviour.
+     * Call to finish building the baseQuery. Calling this repeatedly might result in unexpected
+     * behaviour.
      *
      * @return the {@link SelectBuilder} object.
      */
@@ -45,7 +46,8 @@ public class CIMBaseQueryBuilder {
     }
 
     /**
-     * Call to finish building the baseQuery without adding the searchUri as a variable. Calling this repeatedly might result in unexpected behaviour.
+     * Call to finish building the baseQuery without adding the searchUri as a variable. Calling
+     * this repeatedly might result in unexpected behaviour.
      *
      * @return the {@link SelectBuilder} object.
      */
@@ -57,7 +59,6 @@ public class CIMBaseQueryBuilder {
      * Adds a {@link PrefixMapping}.
      *
      * @param prefixes A {@link PrefixMapping} containing the prefixes to be added.
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder addPrefixes(PrefixMapping prefixes) {
@@ -69,7 +70,6 @@ public class CIMBaseQueryBuilder {
      * Sets the graph the query should be executed on.
      *
      * @param graphURI the GraphUri or "default"/null
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder setGraph(String graphURI) {
@@ -103,7 +103,6 @@ public class CIMBaseQueryBuilder {
      * Sets the type relation of the base uri
      *
      * @param type The object of the {@link RDF#type} relation.
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder setType(Object type) {
@@ -115,7 +114,6 @@ public class CIMBaseQueryBuilder {
      * Sets the type relation of the base uri, in case the type is an enum.
      *
      * @param enumUUID The UUID of the enum.
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder setEnumType(String enumUUID) {
@@ -128,7 +126,6 @@ public class CIMBaseQueryBuilder {
      * Sets the domain of the base uri
      *
      * @param domainUUID The UUID of the domain.
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder setDomain(String domainUUID) {
@@ -137,21 +134,30 @@ public class CIMBaseQueryBuilder {
     }
 
     /**
-     * Adds a list of stereotypes the base uri is allowed to have. repeated calls can create unexpected behaviour.
+     * Adds a list of stereotypes the base uri is allowed to have. repeated calls can create
+     * unexpected behaviour.
      *
      * @param stereotypes A list of stereotypes.
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder filterStereotypes(String... stereotypes) {
         if (stereotypes.length == 0) {
             return this;
         }
-        var sb = new StringBuilder(CIMQueryVars.STEREOTYPE + " = " + RDFUtils.wrapURLorLiteral(stereotypes[0]));
+        var sb =
+                new StringBuilder(
+                        CIMQueryVars.STEREOTYPE
+                                + " = "
+                                + RDFUtils.wrapURLorLiteral(stereotypes[0]));
         for (int i = 1; i < stereotypes.length; i++) {
-            sb.append(" || ").append(CIMQueryVars.STEREOTYPE).append(" = ").append(RDFUtils.wrapURLorLiteral(stereotypes[i]));
+            sb.append(" || ")
+                    .append(CIMQueryVars.STEREOTYPE)
+                    .append(" = ")
+                    .append(RDFUtils.wrapURLorLiteral(stereotypes[i]));
         }
-        baseQuery.addWhere(CIMQueryVars.URI, CIMS.stereotype, CIMQueryVars.STEREOTYPE).addFilter(sb.toString());
+        baseQuery
+                .addWhere(CIMQueryVars.URI, CIMS.stereotype, CIMQueryVars.STEREOTYPE)
+                .addFilter(sb.toString());
         return this;
     }
 
@@ -159,8 +165,7 @@ public class CIMBaseQueryBuilder {
      * Adds a filter to require a specific relation to the base uri
      *
      * @param predicate The predicate of the relation.
-     * @param object    The object of the relation.
-     *
+     * @param object The object of the relation.
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder addWhereThis(Object predicate, Object object) {
@@ -172,12 +177,17 @@ public class CIMBaseQueryBuilder {
      * adds a filter to exclude a specific relation to the base uri
      *
      * @param predicate The predicate of the relation.
-     * @param object    The object of the relation.
-     *
+     * @param object The object of the relation.
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder addWhereThisNotExists(String predicate, String object) {
-        baseQuery.addFilter("NOT EXISTS{ " + CIMQueryVars.URI + RDFUtils.wrapURLorLiteral(predicate) + " " + RDFUtils.wrapURLorLiteral(object) + " }");
+        baseQuery.addFilter(
+                "NOT EXISTS{ "
+                        + CIMQueryVars.URI
+                        + RDFUtils.wrapURLorLiteral(predicate)
+                        + " "
+                        + RDFUtils.wrapURLorLiteral(object)
+                        + " }");
         return this;
     }
 
@@ -185,7 +195,6 @@ public class CIMBaseQueryBuilder {
      * Sets the label relation of the base uri
      *
      * @param label The object of the {@link RDFS#label} relation.
-     *
      * @return {@link CIMBaseQueryBuilder this}
      */
     public CIMBaseQueryBuilder setLabel(Object label) {

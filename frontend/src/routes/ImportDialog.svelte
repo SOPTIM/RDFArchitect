@@ -259,7 +259,7 @@
     primaryLabel="Import"
     onPrimary={importGraphs}
     disablePrimary={!enableSubmit}
-    title="Import Graphs"
+    title="Import Schemas"
 >
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
         {#if !datasetSelectionLocked}
@@ -338,12 +338,12 @@
                     </p>
                 </div>
                 <p class="text-font-secondary mt-2 text-xs">
-                    Each file becomes a graph named after the file. ZIP files
+                    Each file becomes a schema named after the file. ZIP files
                     are unpacked and imported automatically.
                     <br />
                     Supported file extensions:
                     <b>{allowedFileExtensions}</b>
-                    . In ZIP files, graphs must be located at the root level; folders
+                    . In ZIP files, schemas must be located at the root level; folders
                     are ignored.
                 </p>
                 {#if rejectedFiles.length > 0}

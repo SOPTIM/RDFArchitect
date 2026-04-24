@@ -17,10 +17,10 @@
 
 package org.rdfarchitect.rdf;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
-
-import static org.assertj.core.api.Assertions.*;
 
 public class TestRDFUtils {
 
@@ -28,8 +28,8 @@ public class TestRDFUtils {
         var split = triple.split("\\s");
         assertThat(split).hasSize(3);
         return Triple.create(
-                  NodeFactory.createURI(split[0]),
-                  NodeFactory.createURI(split[1]),
-                  NodeFactory.createURI(split[2]));
+                NodeFactory.createURI(split[0]),
+                NodeFactory.createURI(split[1]),
+                NodeFactory.createURI(split[2]));
     }
 }

@@ -20,7 +20,6 @@ package org.rdfarchitect.context;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class SessionContext {
 

@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.relations.model;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
@@ -113,13 +114,16 @@ public class CIMClassUtils {
         var classes = CIMClassUtils.listSuperClasses(classResource);
         classes.add(classResource); // include the class itself
         classes.forEach(
-                superClass -> properties.addAll(ontology.listSubjectsWithProperty(RDFS.domain, superClass).toSet())
-        );
+                superClass ->
+                        properties.addAll(
+                                ontology.listSubjectsWithProperty(RDFS.domain, superClass)
+                                        .toSet()));
         return properties;
     }
 
     /**
      * Lists all direct properties of a specified class.
+     *
      * @param classResource the class
      * @return a set of Resources
      */
@@ -130,18 +134,22 @@ public class CIMClassUtils {
 
     /**
      * Checks whether a class is instantiable.
+     *
      * @param classResource the class resource to check
      * @return true if the class is instantiable, false otherwise
      */
     public boolean isInstantiableClass(Resource classResource) {
-        //check if the classResource is a valid resource
-        if(classResource == null || !classResource.isURIResource()) {
+        // check if the classResource is a valid resource
+        if (classResource == null || !classResource.isURIResource()) {
             return false;
         }
-        return classResource.hasProperty(RDF.type, RDFS.Class) &&                            // is a class
-               classResource.hasProperty(CIMS.stereotype, CIMStereotypes.concrete) &&        // is concrete
-               !classResource.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration) &&    // not an enumeration
-               !classResource.hasProperty(CIMS.stereotype, CIMStereotypes.cimDataType);      // not a CIM datatype
+        return classResource.hasProperty(RDF.type, RDFS.Class)
+                && // is a class
+                classResource.hasProperty(CIMS.stereotype, CIMStereotypes.concrete)
+                && // is concrete
+                !classResource.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration)
+                && // not an enumeration
+                !classResource.hasProperty(
+                        CIMS.stereotype, CIMStereotypes.cimDataType); // not a CIM datatype
     }
-
 }

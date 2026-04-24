@@ -18,13 +18,14 @@
 package org.rdfarchitect.services.update.packages;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
-import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
@@ -36,7 +37,8 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUseCase, DeletePackageUseCase {
+public class UpdatePackageService
+        implements AddPackageUseCase, ReplacePackageUseCase, DeletePackageUseCase {
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
@@ -55,7 +57,10 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var newPackage = packageMapper.toCIMObject(packageDTO);
-            CIMUpdates.insertPackage(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newPackage);
+            CIMUpdates.insertPackage(
+                    graph,
+                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    newPackage);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -63,9 +68,12 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
             }
         }
 
-        createPackageLayoutData.createPackageLayoutData(graphIdentifier, packageDTO, newPackageUUID);
+        createPackageLayoutData.createPackageLayoutData(
+                graphIdentifier, packageDTO, newPackageUUID);
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Added package " + packageDTO.getLabel(), graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry("Added package " + packageDTO.getLabel(), graph.getLastDelta()));
         return newPackageUUID;
     }
 
@@ -76,7 +84,10 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var newPackage = packageMapper.toCIMObject(packageDTO);
-            CIMUpdates.replacePackage(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newPackage);
+            CIMUpdates.replacePackage(
+                    graph,
+                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    newPackage);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -84,9 +95,13 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
             }
         }
 
-        replaceDiagramUseCase.replaceDiagram(graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
+        replaceDiagramUseCase.replaceDiagram(
+                graphIdentifier, packageDTO.getUuid(), packageDTO.getLabel());
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced package " + packageDTO.getUuid(), graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry(
+                        "Replaced package " + packageDTO.getUuid(), graph.getLastDelta()));
     }
 
     @Override
@@ -95,7 +110,10 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
-            CIMUpdates.deletePackage(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), packageUUID.toString());
+            CIMUpdates.deletePackage(
+                    graph,
+                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    packageUUID.toString());
             graph.commit();
         } finally {
             if (graph != null) {
@@ -105,6 +123,8 @@ public class UpdatePackageService implements AddPackageUseCase, ReplacePackageUs
 
         deletePackageLayoutDataUseCase.deletePackageLayoutData(graphIdentifier, packageUUID);
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted package " + packageUUID, graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry("Deleted package " + packageUUID, graph.getLastDelta()));
     }
 }

@@ -18,6 +18,7 @@
 package org.rdfarchitect.api.dto.ontology;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Builder;
 import lombok.Getter;
 
@@ -26,8 +27,9 @@ import lombok.Getter;
 public class OntologyField {
 
     private String iri;
+
     @JsonProperty("isIriEntry")
     private boolean isIriEntry;
-    private String datatypeIri;
 
+    private String datatypeIri;
 }

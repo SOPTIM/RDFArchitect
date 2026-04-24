@@ -26,7 +26,6 @@ public interface ReadOntologyUseCase {
      * Retrieves the current ontology for the specified graph identifier.
      *
      * @param identifier The graph identifier for which to retrieve the ontology.
-     *
      * @return The ontology data transfer object representing the current ontology.
      */
     OntologyDTO getCurrentOntology(GraphIdentifier identifier);

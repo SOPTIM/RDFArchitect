@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
@@ -34,8 +36,6 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
 import java.util.Map;
-
-import static org.assertj.core.api.Assertions.*;
 
 class GraphWithContextCollectionTest {
 
@@ -82,7 +82,8 @@ class GraphWithContextCollectionTest {
     @Test
     void constructor_emptyDataset_returnsEmptyCollection() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection(DatasetFactory.create());
+        GraphWithContextCollection collection =
+                new GraphWithContextCollection(DatasetFactory.create());
 
         // Act
         int size = collection.listGraphUris().size();
@@ -95,14 +96,16 @@ class GraphWithContextCollectionTest {
     void constructor_nonEmptyDataset_returnsCollectionWithGraphs() {
         // Arrange
         var dataset = DatasetFactory.create();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
-        dataset.addNamedModel("http://example.org/graph1", ModelFactory.createModelForGraph(exampleGraphs.get(0)));
-        dataset.addNamedModel("http://example.org/graph2", ModelFactory.createModelForGraph(exampleGraphs.get(1)));
-        dataset.addNamedModel("http://example.org/graph3", ModelFactory.createModelForGraph(exampleGraphs.get(2)));
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
+        dataset.addNamedModel(
+                "http://example.org/graph1",
+                ModelFactory.createModelForGraph(exampleGraphs.get(0)));
+        dataset.addNamedModel(
+                "http://example.org/graph2",
+                ModelFactory.createModelForGraph(exampleGraphs.get(1)));
+        dataset.addNamedModel(
+                "http://example.org/graph3",
+                ModelFactory.createModelForGraph(exampleGraphs.get(2)));
 
         GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
 
@@ -152,14 +155,12 @@ class GraphWithContextCollectionTest {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
 
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.READ);
+        GraphRewindableWithUUIDs graph =
+                collection.begin("http://example.org/graph1", TxnType.READ);
 
         // Assert
         assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
@@ -194,8 +195,8 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.begin("http://example.org/nonexistent", TxnType.READ))
-                  .withMessage("Graph URI http://example.org/nonexistent does not exist.");
+                .isThrownBy(() -> collection.begin("http://example.org/nonexistent", TxnType.READ))
+                .withMessage("Graph URI http://example.org/nonexistent does not exist.");
     }
 
     @ParameterizedTest
@@ -206,22 +207,20 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.begin(graphUri, TxnType.READ))
-                  .withMessage("Graph Uri " + graphUri + " is not a valid URI");
+                .isThrownBy(() -> collection.begin(graphUri, TxnType.READ))
+                .withMessage("Graph Uri " + graphUri + " is not a valid URI");
     }
 
     @Test
     void begin_existingNamedGraphWithWrite_graphRewindableInWriteTransaction() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.WRITE);
+        GraphRewindableWithUUIDs graph =
+                collection.begin("http://example.org/graph1", TxnType.WRITE);
 
         // Assert
         assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
@@ -236,14 +235,12 @@ class GraphWithContextCollectionTest {
     void begin_existingNamedGraphWithReadAndEndTransaction_graphRewindableInReadPromote() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.READ_PROMOTE);
+        GraphRewindableWithUUIDs graph =
+                collection.begin("http://example.org/graph1", TxnType.READ_PROMOTE);
 
         // Assert
         assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
@@ -258,14 +255,12 @@ class GraphWithContextCollectionTest {
     void begin_existingNamedGraphWithReadCommitedPromote_graphRewindableInReadCommitedPromote() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.READ_COMMITTED_PROMOTE);
+        GraphRewindableWithUUIDs graph =
+                collection.begin("http://example.org/graph1", TxnType.READ_COMMITTED_PROMOTE);
 
         // Assert
         assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
@@ -277,14 +272,17 @@ class GraphWithContextCollectionTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://example.org/graph1", "http://example.org/graph2", "http://example.org/graph3", DEFAULT_GRAPH_NAME})
+    @ValueSource(
+            strings = {
+                "http://example.org/graph1",
+                "http://example.org/graph2",
+                "http://example.org/graph3",
+                DEFAULT_GRAPH_NAME
+            })
     void create_validName_returnsGraphRewindable(String graphUri) {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
         // Act
         collection.create(graphUri, exampleGraphs.getFirst());
@@ -304,23 +302,19 @@ class GraphWithContextCollectionTest {
     void create_invalidUri_throwsException(String graphUri) {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
 
         // Act/Assert
         var firstGraph = exampleGraphs.getFirst();
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.create(graphUri, firstGraph));
+                .isThrownBy(() -> collection.create(graphUri, firstGraph));
     }
 
     @Test
     void remove_existingGraphUri_removesGraph() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
@@ -346,9 +340,7 @@ class GraphWithContextCollectionTest {
     void containsGraph_existingGraphUri_returnsTrue() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
@@ -378,7 +370,7 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.containsGraph(graphUri));
+                .isThrownBy(() -> collection.containsGraph(graphUri));
     }
 
     @Test
@@ -397,11 +389,7 @@ class GraphWithContextCollectionTest {
     void listGraphUris_nonEmptyCollection_returnsListWithGraphUris() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.get(0));
         collection.create("http://example.org/graph2", exampleGraphs.get(1));
         collection.create("http://example.org/graph3", exampleGraphs.get(2));
@@ -410,13 +398,18 @@ class GraphWithContextCollectionTest {
         List<String> graphUris = collection.listGraphUris();
 
         // Assert
-        assertThat(graphUris).containsExactlyInAnyOrder("http://example.org/graph1", "http://example.org/graph2", "http://example.org/graph3");
+        assertThat(graphUris)
+                .containsExactlyInAnyOrder(
+                        "http://example.org/graph1",
+                        "http://example.org/graph2",
+                        "http://example.org/graph3");
     }
 
     @Test
     void listGraphUris_emptyDataset_returnsEmptyList() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection(DatasetFactory.create());
+        GraphWithContextCollection collection =
+                new GraphWithContextCollection(DatasetFactory.create());
 
         // Act
         List<String> graphUris = collection.listGraphUris();
@@ -441,11 +434,7 @@ class GraphWithContextCollectionTest {
     void getPrefixMapping_nonEmptyCollection_returnsEmptyPrefixMapping() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph(), createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.get(0));
         collection.create("http://example.org/graph2", exampleGraphs.get(1));
         collection.create("http://example.org/graph3", exampleGraphs.get(2));
@@ -460,7 +449,8 @@ class GraphWithContextCollectionTest {
     @Test
     void getPrefixMapping_datasetWithEmptyPrefixMapping_returnsEmptyPrefixMapping() {
         // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection(DatasetFactory.create());
+        GraphWithContextCollection collection =
+                new GraphWithContextCollection(DatasetFactory.create());
 
         // Act
         var prefixes = collection.getPrefixMapping();
@@ -480,7 +470,8 @@ class GraphWithContextCollectionTest {
         var prefixes = collection.getPrefixMapping();
 
         // Assert
-        assertThat(prefixes.getNsPrefixMap()).containsExactlyInAnyOrderEntriesOf(Map.of("ex", "http://example.org/"));
+        assertThat(prefixes.getNsPrefixMap())
+                .containsExactlyInAnyOrderEntriesOf(Map.of("ex", "http://example.org/"));
     }
 
     @Test
@@ -496,39 +487,45 @@ class GraphWithContextCollectionTest {
         var prefixes = collection.getPrefixMapping();
 
         // Assert
-        assertThat(prefixes.getNsPrefixMap()).containsExactlyInAnyOrderEntriesOf(Map.of(
-                  "ex", "http://example.org/",
-                  "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-                  "rdfs", "http://www.w3.org/2000/01/rdf-schema#"
-                                                                                       ));
+        assertThat(prefixes.getNsPrefixMap())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(
+                                "ex", "http://example.org/",
+                                "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                                "rdfs", "http://www.w3.org/2000/01/rdf-schema#"));
     }
 
     @Test
     void getPrefixMapping_datasetWithMultiplePrefixMappingsAndGraphs_returnsPrefixMapping() {
         // Arrange
         var dataset = DatasetFactory.create();
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph(),
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs =
+                List.of(GraphFactory.createDefaultGraph(), GraphFactory.createDefaultGraph());
         dataset.getDefaultModel().setNsPrefix("ex", "http://example.org/");
         dataset.getDefaultModel().setNsPrefix("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
         dataset.getDefaultModel().setNsPrefix("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
-        dataset.addNamedModel("http://example.org/graph1", ModelFactory.createModelForGraph(exampleGraphs.get(0)));
-        dataset.getNamedModel("http://example.org/graph1").setNsPrefix("owl", "http://www.w3.org/2002/07/owl#");
-        dataset.addNamedModel("http://example.org/graph2", ModelFactory.createModelForGraph(exampleGraphs.get(1)));
-        dataset.getNamedModel("http://example.org/graph2").setNsPrefix("xsd", "http://www.w3.org/2001/XMLSchema#");
+        dataset.addNamedModel(
+                "http://example.org/graph1",
+                ModelFactory.createModelForGraph(exampleGraphs.get(0)));
+        dataset.getNamedModel("http://example.org/graph1")
+                .setNsPrefix("owl", "http://www.w3.org/2002/07/owl#");
+        dataset.addNamedModel(
+                "http://example.org/graph2",
+                ModelFactory.createModelForGraph(exampleGraphs.get(1)));
+        dataset.getNamedModel("http://example.org/graph2")
+                .setNsPrefix("xsd", "http://www.w3.org/2001/XMLSchema#");
         GraphWithContextCollection collection = new GraphWithContextCollection(dataset);
 
         // Act
         var prefixes = collection.getPrefixMapping();
 
         // Assert
-        assertThat(prefixes.getNsPrefixMap()).containsExactlyInAnyOrderEntriesOf(Map.of(
-                  "ex", "http://example.org/",
-                  "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-                  "rdfs", "http://www.w3.org/2000/01/rdf-schema#"
-                                                                                       ));
+        assertThat(prefixes.getNsPrefixMap())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(
+                                "ex", "http://example.org/",
+                                "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                                "rdfs", "http://www.w3.org/2000/01/rdf-schema#"));
     }
 
     @Test
@@ -546,10 +543,11 @@ class GraphWithContextCollectionTest {
 
         // Assert
         var prefixes = collection.getPrefixMapping();
-        assertThat(prefixes.getNsPrefixMap()).containsExactlyInAnyOrderEntriesOf(Map.of(
-                  "ex", "http://example.org/",
-                  "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-                                                                                       ));
+        assertThat(prefixes.getNsPrefixMap())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(
+                                "ex", "http://example.org/",
+                                "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
     }
 
     @Test
@@ -597,9 +595,11 @@ class GraphWithContextCollectionTest {
 
         // Assert
         var prefixes = collection.getPrefixMapping();
-        assertThat(prefixes.getNsPrefixMap()).containsExactlyInAnyOrderEntriesOf(Map.of(
-                  "ex", "http://example.org/",
-                  "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
+        assertThat(prefixes.getNsPrefixMap())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(
+                                "ex", "http://example.org/",
+                                "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#"));
     }
 
     @Test
@@ -619,21 +619,21 @@ class GraphWithContextCollectionTest {
 
         // Assert
         var prefixes = collection.getPrefixMapping();
-        assertThat(prefixes.getNsPrefixMap()).containsExactlyInAnyOrderEntriesOf(Map.of(
-                  "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
-                  "owl", "http://www.w3.org/2002/07/owl#"
-                                                                                       ));
+        assertThat(prefixes.getNsPrefixMap())
+                .containsExactlyInAnyOrderEntriesOf(
+                        Map.of(
+                                "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
+                                "owl", "http://www.w3.org/2002/07/owl#"));
     }
 
     @Test
     void undo_existingGraphUri_undoesLastChange() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.WRITE);
+        GraphRewindableWithUUIDs graph =
+                collection.begin("http://example.org/graph1", TxnType.WRITE);
         graph.add(TestRDFUtils.triple("a a d"));
         graph.commit();
         graph.end();
@@ -654,7 +654,7 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.undo("http://example.org/nonexistent"));
+                .isThrownBy(() -> collection.undo("http://example.org/nonexistent"));
     }
 
     @ParameterizedTest
@@ -665,18 +665,17 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.undo(graphUri));
+                .isThrownBy(() -> collection.undo(graphUri));
     }
 
     @Test
     void redo_existingGraphUri_restoresLastChange() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        GraphRewindableWithUUIDs graph = collection.begin("http://example.org/graph1", TxnType.WRITE);
+        GraphRewindableWithUUIDs graph =
+                collection.begin("http://example.org/graph1", TxnType.WRITE);
         graph.add(TestRDFUtils.triple("a a d"));
         graph.commit();
         graph.end();
@@ -698,7 +697,7 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.redo("http://example.org/nonexistent"));
+                .isThrownBy(() -> collection.redo("http://example.org/nonexistent"));
     }
 
     @ParameterizedTest
@@ -709,6 +708,6 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                  .isThrownBy(() -> collection.redo(graphUri));
+                .isThrownBy(() -> collection.redo(graphUri));
     }
 }

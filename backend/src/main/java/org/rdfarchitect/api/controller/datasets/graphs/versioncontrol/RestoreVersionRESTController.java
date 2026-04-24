@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.versioncontrol;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -42,45 +44,54 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RestoreVersionRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(RestoreVersionRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(RestoreVersionRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final RestoreVersionUseCase restoreVersionUseCase;
 
     @Operation(
-              summary = "restore ",
-              description = "restores the graph to the state specified by the version id",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200")
-              }
-    )
+            summary = "restore ",
+            description = "restores the graph to the state specified by the version id",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public String restoreVersion(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The ID of the version to restore."
-              )
-              @RequestBody String versionId)
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The ID of the version to restore.")
+                    @RequestBody
+                    String versionId) {
 
-    {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" from \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        restoreVersionUseCase.restoreVersion(new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(versionId));
+        restoreVersionUseCase.restoreVersion(
+                new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(versionId));
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/restore\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return Response.SUCCESS;
     }
 }

@@ -69,7 +69,7 @@
     primaryLabel="Export"
     {disablePrimary}
     {onPrimary}
-    title="Export SHACL"
+    title="Export Constrains (SHACL)"
 >
     <div class="h-10 w-24">
         <ButtonControl callOnClick={toggleGeneratedOrCustom}>

@@ -22,7 +22,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
@@ -55,48 +57,59 @@ public class RenderingRESTController {
 
     private final ExpandURIUseCase expandURIUseCase;
 
-
     @Operation(
-              summary = "Get rendering data",
-              description = "Returns rendering data for UML diagrams. The content varies based on environment configuration (Mermaid or Svelteflow).",
-              tags = {"svelteflow", "mermaid"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200",
-                                  description = "Rendering data (Mermaid or Svelteflow)",
-                                  content = @Content(
-                                            mediaType = "application/json",
-                                            schema = @Schema(implementation = RenderingDataDTO.class)
-                                  )
-                        )
-              }
-    )
+            summary = "Get rendering data",
+            description =
+                    "Returns rendering data for UML diagrams. The content varies based on environment configuration (Mermaid or Svelteflow).",
+            tags = {"svelteflow", "mermaid"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        description = "Rendering data (Mermaid or Svelteflow)",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema = @Schema(implementation = RenderingDataDTO.class)))
+            })
     @PostMapping
     public RenderingDataDTO getRenderingDataParameterized(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @RequestBody
-              GraphFilter filter) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @RequestBody GraphFilter filter) {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/rendering\" from \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/rendering\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var packageUUID = !filter.getPackageUUID().equals("default") ?
-                          UUID.fromString(filter.getPackageUUID()) :
-                          null;
+        var packageUUID =
+                !filter.getPackageUUID().equals("default")
+                        ? UUID.fromString(filter.getPackageUUID())
+                        : null;
 
         CIMCollection cimCollection = converter.convert(graphIdentifier, filter);
-        RenderingDataDTO renderingData = renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
+        RenderingDataDTO renderingData =
+                renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
 
-        logger.info("Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return renderingData;
     }
 }

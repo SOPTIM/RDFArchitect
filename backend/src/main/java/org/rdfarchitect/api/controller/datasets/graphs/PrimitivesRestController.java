@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -50,35 +52,56 @@ public class PrimitivesRestController {
     private final ListPrimitivesUseCase listPrimitivesUseCase;
 
     @Operation(
-              summary = "list primitives",
-              description = "Get a list of primitive datatypes/classes. Doesn't include: stereotypes, attributes and associations.",
-              tags = {"graph"},
-              responses = {@ApiResponse(
+            summary = "list primitives",
+            description =
+                    "Get a list of primitive datatypes/classes. Doesn't include: stereotypes, attributes and associations.",
+            tags = {"graph"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = ClassUMLAdaptedDTO.class))
-                        ))
-              }
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                ClassUMLAdaptedDTO
+                                                                                        .class))))
+            })
     @GetMapping
     public List<ClassUMLAdaptedDTO> listPrimitives(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/primitives\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/primitives\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var cimClassList = listPrimitivesUseCase.listPrimitives(new GraphIdentifier(datasetName, extendedGraphURI));
+        var cimClassList =
+                listPrimitivesUseCase.listPrimitives(
+                        new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/primitives\" from \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/primitives\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return cimClassList;
     }
 }

@@ -42,15 +42,14 @@ public class ResultSetFormatterImpl implements ResultFormatter {
     @Override
     public ResultSet asResultSet() {
         ResultSet resultset = this.resultSet;
-        logger.debug("Format result: ResultSet\n" +
-                               "Content: {}"
-                  , resultset);
+        logger.debug("Format result: ResultSet\n" + "Content: {}", resultset);
         return resultset;
     }
 
     /**
-     * Parses RDF-triples from a {@link ResultSet} to a {@link Graph}. This implementation assumes that the first three variables in the result set are the subject, predicate
-     * and object of the triple.
+     * Parses RDF-triples from a {@link ResultSet} to a {@link Graph}. This implementation assumes
+     * that the first three variables in the result set are the subject, predicate and object of the
+     * triple.
      *
      * @return {@link Graph}
      */
@@ -58,38 +57,36 @@ public class ResultSetFormatterImpl implements ResultFormatter {
     public Graph asGraph() {
         var vars = resultSet.getResultVars();
         if (vars.size() < 3) {
-            throw new IllegalArgumentException("Failed to parse triples from result set. " +
-                                                         "Need at least three variables containing subject, predicate and object, got " + vars.size());
+            throw new IllegalArgumentException(
+                    "Failed to parse triples from result set. "
+                            + "Need at least three variables containing subject, predicate and object, got "
+                            + vars.size());
         }
         var graph = GraphFactory.createDefaultGraph();
         while (resultSet.hasNext()) {
             QuerySolution qs = resultSet.next();
-            Node s = qs.get(vars.get(0)).asNode(); //we can only process queries with Sub pre obj as result
+            Node s =
+                    qs.get(vars.get(0))
+                            .asNode(); // we can only process queries with Sub pre obj as result
             Node p = qs.get(vars.get(1)).asNode();
             Node o = qs.get(vars.get(2)).asNode();
             graph.add(Triple.create(s, p, o));
         }
-        logger.debug("Format result: graph\n" +
-                               "Instance: {}"
-                  , graph);
+        logger.debug("Format result: graph\n" + "Instance: {}", graph);
         return graph;
     }
 
     @Override
     public String asText() {
         String text = ResultSetFormatter.asText(resultSet);
-        logger.debug("Format result: text\n" +
-                               "Content: {}"
-                  , text);
+        logger.debug("Format result: text\n" + "Content: {}", text);
         return text;
     }
 
     @Override
     public Model asModel() {
         Model model = ModelFactory.createModelForGraph(this.asGraph());
-        logger.debug("Format result: model\n" +
-                               "Instance: {}"
-                  , model);
+        logger.debug("Format result: model\n" + "Instance: {}", model);
         return model;
     }
 }

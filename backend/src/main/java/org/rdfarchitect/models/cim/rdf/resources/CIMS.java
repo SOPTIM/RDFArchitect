@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.rdf.resources;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.Resource;
@@ -25,62 +26,55 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 
-/**
- * Class containing CIM RDF-predicates as {@link Property properties}.
- */
+/** Class containing CIM RDF-predicates as {@link Property properties}. */
 @UtilityClass
 public class CIMS {
 
     public final String namespace = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
 
-    //predicates
+    // predicates
     /**
-     * If set defines the fixed value of the resource. If not set the value of the resource is not fixed.
+     * If set defines the fixed value of the resource. If not set the value of the resource is not
+     * fixed.
      */
     public final Property isFixed = ResourceFactory.createProperty(namespace + "isFixed");
 
     /**
-     * If set defines the default value of the resource. If not set the value of the resource has no custom default value.
+     * If set defines the default value of the resource. If not set the value of the resource has no
+     * custom default value.
      */
     public final Property isDefault = ResourceFactory.createProperty(namespace + "isDefault");
 
-    /**
-     * Defines the stereotypes of a resource.
-     */
+    /** Defines the stereotypes of a resource. */
     public final Property stereotype = ResourceFactory.createProperty(namespace + "stereotype");
 
-    /**
-     * Defines the data type of a resource.
-     */
+    /** Defines the data type of a resource. */
     public final Property datatype = ResourceFactory.createProperty(namespace + "dataType");
 
-    /**
-     * Defines the Multiplicity of a resource.
-     */
+    /** Defines the Multiplicity of a resource. */
     public final Property multiplicity = ResourceFactory.createProperty(namespace + "multiplicity");
 
     /**
-     * Defines whether a {@link CIMAssociation CIMAssociation} points to its counterpart or
-     * if it's only used as a reference for another {@link CIMAssociation CIMAssociation}.
+     * Defines whether a {@link CIMAssociation CIMAssociation} points to its counterpart or if it's
+     * only used as a reference for another {@link CIMAssociation CIMAssociation}.
      */
-    public final Property associationUsed = ResourceFactory.createProperty(namespace + "AssociationUsed");
+    public final Property associationUsed =
+            ResourceFactory.createProperty(namespace + "AssociationUsed");
 
-    /**
-     * Defines the resource uri of the inverse association of an association.
-     */
-    public final Property inverseRoleName = ResourceFactory.createProperty(namespace + "inverseRoleName");
+    /** Defines the resource uri of the inverse association of an association. */
+    public final Property inverseRoleName =
+            ResourceFactory.createProperty(namespace + "inverseRoleName");
 
-    /**
-     * Defines the {@link #classCategory} a resource belongs to.
-     */
-    public final Property belongsToCategory = ResourceFactory.createProperty(namespace + "belongsToCategory");
+    /** Defines the {@link #classCategory} a resource belongs to. */
+    public final Property belongsToCategory =
+            ResourceFactory.createProperty(namespace + "belongsToCategory");
 
-    //objects
+    // objects
     /**
      * If a resource is of {@link RDF#type} {@link #classCategory} it is a classCategory/Package.
      */
-    public final Resource classCategory = ResourceFactory.createResource(namespace + "ClassCategory");
-
+    public final Resource classCategory =
+            ResourceFactory.createResource(namespace + "ClassCategory");
 
     public final Literal yes = ResourceFactory.createPlainLiteral("Yes");
 

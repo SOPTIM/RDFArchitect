@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.rendering.svelteflow;
 
 import lombok.Builder;
 import lombok.Data;
+
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingFormat;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
@@ -26,9 +27,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 
 import java.util.List;
 
-/**
- * DTO for SvelteFlow rendering data.
- */
+/** DTO for SvelteFlow rendering data. */
 @Data
 @Builder
 public class SvelteFlowDTO implements RenderingDataDTO {

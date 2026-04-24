@@ -18,6 +18,7 @@
 package org.rdfarchitect.database.inmemory;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
@@ -31,7 +32,8 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 @UtilityClass
 public class InMemorySparqlExecutor {
 
-    public void executeSingleUpdate(GraphRewindableWithUUIDs graph, Update update, String graphUri) {
+    public void executeSingleUpdate(
+            GraphRewindableWithUUIDs graph, Update update, String graphUri) {
         try {
             graph.begin(TxnType.WRITE);
             var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
@@ -42,7 +44,8 @@ public class InMemorySparqlExecutor {
         }
     }
 
-    public ResultSet executeSingleQuery(GraphRewindableWithUUIDs graph, Query query, String graphUri) {
+    public ResultSet executeSingleQuery(
+            GraphRewindableWithUUIDs graph, Query query, String graphUri) {
         QueryExecution queryExecution = null;
         try {
             graph.begin(TxnType.READ);

@@ -27,8 +27,8 @@ public interface ReplaceDiagramUseCase {
      * Replaces the diagram with a new diagram created using the values in the parameters
      *
      * @param graphIdentifier the identifier of the graph
-     * @param packageUUID     the UUID of the package identifying the diagram
-     * @param packageName     the name of the new diagram
+     * @param packageUUID the UUID of the package identifying the diagram
+     * @param packageName the name of the new diagram
      */
     void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName);
 }

@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ResolveIdentifierUseCase;
@@ -38,41 +40,55 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ResolveIdentifierRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ResolveIdentifierRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ResolveIdentifierRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final ResolveIdentifierUseCase resolveIdentifierUseCase;
 
     @Operation(
-              summary = "resolve iri identifier",
-              description = "Resolve iri identifier of a cim resource to its uuid.",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(responseCode = "200")
-              }
-    )
+            summary = "resolve iri identifier",
+            description = "Resolve iri identifier of a cim resource to its uuid.",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping("iri/{iriIdentifier}")
     public String resolveIri(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The url encoded iri identifier of the cim resource.")
-              @PathVariable
-              String iriIdentifier) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".", datasetName, graphURI, iriIdentifier, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The url encoded iri identifier of the cim resource.")
+                    @PathVariable
+                    String iriIdentifier) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                iriIdentifier,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var extendedResourceIRI = expandURIUseCase.expandUri(datasetName, iriIdentifier);
 
-        var uuid = resolveIdentifierUseCase.resolveIRI(new GraphIdentifier(datasetName, extendedGraphURI), extendedResourceIRI);
+        var uuid =
+                resolveIdentifierUseCase.resolveIRI(
+                        new GraphIdentifier(datasetName, extendedGraphURI), extendedResourceIRI);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".", datasetName, graphURI, iriIdentifier, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/resolve/iri/{{}}\" to \"{}\".",
+                datasetName,
+                graphURI,
+                iriIdentifier,
+                originURL);
         return uuid.toString();
     }
 }

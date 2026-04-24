@@ -31,7 +31,7 @@
 
     const attributeEditorDialog = $state({
         showDialog: false,
-        attributeData: null,
+        attribute: null,
     });
 
     let expandStereotypes = $state(true);
@@ -97,6 +97,6 @@
 </List>
 <AttributeEditorDialog
     bind:showDialog={attributeEditorDialog.showDialog}
-    attribute={attributeEditorDialog.attribute}
+    bind:attribute={attributeEditorDialog.attribute}
     {attributes}
 />

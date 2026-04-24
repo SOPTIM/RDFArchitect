@@ -19,6 +19,7 @@ package org.rdfarchitect.dl.data.dto;
 
 import lombok.Builder;
 import lombok.Data;
+
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYPosition;
 

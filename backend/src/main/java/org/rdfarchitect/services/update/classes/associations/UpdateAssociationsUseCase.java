@@ -24,7 +24,11 @@ import java.util.List;
 
 public interface UpdateAssociationsUseCase {
 
-    void replaceAllAssociations(GraphIdentifier graphIdentifier, String classUUID, List<AssociationPairDTO> associationPairList);
+    void replaceAllAssociations(
+            GraphIdentifier graphIdentifier,
+            String classUUID,
+            List<AssociationPairDTO> associationPairList);
 
-    AssociationsService.AssociationUUIDs replaceAssociation(GraphIdentifier graphIdentifier, AssociationPairDTO associationPair);
+    AssociationsService.AssociationUUIDs replaceAssociation(
+            GraphIdentifier graphIdentifier, AssociationPairDTO associationPair);
 }

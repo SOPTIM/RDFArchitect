@@ -18,9 +18,8 @@
 package org.rdfarchitect.models.cim.queries;
 
 /**
- * Class containing variables for SPARQL queries that are used in the context of CIM.
- * This is to ensure they are the same over multiple files.
- * This prohibits typos in query and results.
+ * Class containing variables for SPARQL queries that are used in the context of CIM. This is to
+ * ensure they are the same over multiple files. This prohibits typos in query and results.
  */
 public class CIMQueryVars {
 
@@ -50,8 +49,7 @@ public class CIMQueryVars {
     public static final String PACKAGE_UUID = "?packageUUID";
     public static final String PACKAGE_LABEL = "?packageLabel";
 
-    private CIMQueryVars() {
-    }
+    private CIMQueryVars() {}
 
     public static class Inverse {
 
@@ -62,7 +60,6 @@ public class CIMQueryVars {
         public static final String MULTIPLICITY = "?inverseMultiplicity";
         public static final String ASSOCIATION_USED = "?inverseAssociationUsed";
 
-        private Inverse() {
-        }
+        private Inverse() {}
     }
 }

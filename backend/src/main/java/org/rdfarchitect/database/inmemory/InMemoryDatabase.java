@@ -33,7 +33,8 @@ import java.util.UUID;
 public interface InMemoryDatabase {
 
     /**
-     * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on individual graphs before deleting.
+     * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
+     * individual graphs before deleting.
      *
      * @param datasetName The name of the Dataset to be deleted.
      */
@@ -49,10 +50,11 @@ public interface InMemoryDatabase {
     /**
      * Begin a transaction on a {@link GraphRewindableWithUUIDs}.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     * @param txnType         The transactionType
-     *
-     * @return The {@link GraphRewindableWithUUIDs} the {@link Transactional Transaction} is performed on.
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
+     * @param txnType The transactionType
+     * @return The {@link GraphRewindableWithUUIDs} the {@link Transactional Transaction} is
+     *     performed on.
      */
     GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType);
 
@@ -60,32 +62,35 @@ public interface InMemoryDatabase {
      * Get a {@link GraphWithContext} from the database.
      *
      * @param graphIdentifier The identifier of the graph.
-     *
      * @return {@link GraphWithContext}
      */
     GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
 
     /**
-     * Creates a new {@link GraphRewindableWithUUIDs} in a specified dataset. If the dataset does not exist yet, it will be created.
-     * If the {@link GraphRewindableWithUUIDs} already exists nothing happens.
+     * Creates a new {@link GraphRewindableWithUUIDs} in a specified dataset. If the dataset does
+     * not exist yet, it will be created. If the {@link GraphRewindableWithUUIDs} already exists
+     * nothing happens.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     * @param newGraph        The new Graph.
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
+     * @param newGraph The new Graph.
      */
     void create(GraphIdentifier graphIdentifier, Graph newGraph);
 
     /**
-     * Deletes a {@link GraphRewindableWithUUIDs} from a specified dataset. If the graph or dataset does not exist, nothing happens.
+     * Deletes a {@link GraphRewindableWithUUIDs} from a specified dataset. If the graph or dataset
+     * does not exist, nothing happens.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      */
     void remove(GraphIdentifier graphIdentifier);
 
     /**
      * Checks whether a Graph exists in a specified dataset.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      * @return True if the graph exists, otherwise False.
      */
     boolean containsGraph(GraphIdentifier graphIdentifier);
@@ -94,9 +99,7 @@ public interface InMemoryDatabase {
      * List all graphs contained in a specified Dataset
      *
      * @param datasetName The name of the dataset.
-     *
      * @return A list of GraphUris
-     *
      * @throws DataAccessException if the dataset does not exist.
      */
     List<String> listGraphUris(String datasetName);
@@ -105,9 +108,7 @@ public interface InMemoryDatabase {
      * Lists the prefixes belonging to a specified dataset.
      *
      * @param datasetName The name of the dataset.
-     *
      * @return {@link PrefixMappingReadOnly}
-     *
      * @throws DataAccessException if the dataset does not exist.
      */
     PrefixMappingReadOnly getPrefixMapping(String datasetName);
@@ -124,33 +125,36 @@ public interface InMemoryDatabase {
      * Writes a specified graph to a database.
      *
      * @param databaseConnection The connection to the persistent Database.
-     * @param graphIdentifier    The identifier of the graph, which includes the dataset name and the graph URI.
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     void writeToDatabase(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier);
 
     /**
-     * Drops the contents of this {@link InMemoryDatabaseImpl} and releases all its resources, then fetches the state of an external database and writes it to this
-     * {@link InMemoryDatabaseImpl}. Does not fetch snapshots.
+     * Drops the contents of this {@link InMemoryDatabaseImpl} and releases all its resources, then
+     * fetches the state of an external database and writes it to this {@link InMemoryDatabaseImpl}.
+     * Does not fetch snapshots.
      *
      * @param databaseConnection The connection to the external Database.
      */
     void fetchFromDatabase(DatabaseConnection databaseConnection);
 
     /**
-     * Fetches the snapshot identified by the provided Base64 token and inserts it into the currently displayed data.
+     * Fetches the snapshot identified by the provided Base64 token and inserts it into the
+     * currently displayed data.
      *
      * @param databaseConnection The connection to the external Database.
-     * @param base64Token        The Base64 token under which the snapshot has been persisted in the database
+     * @param base64Token The Base64 token under which the snapshot has been persisted in the
+     *     database
      */
     void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token);
 
     /**
      * Undoes the last change made to a graph.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     void undo(GraphIdentifier graphIdentifier);
@@ -158,8 +162,8 @@ public interface InMemoryDatabase {
     /**
      * Redoes the last previously undone change made to a graph.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     void redo(GraphIdentifier graphIdentifier);
@@ -167,10 +171,9 @@ public interface InMemoryDatabase {
     /**
      * Checks whether the last change made to a graph can be undone.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      * @return True if the last change can be undone, otherwise False.
-     *
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     boolean canUndo(GraphIdentifier graphIdentifier);
@@ -178,10 +181,9 @@ public interface InMemoryDatabase {
     /**
      * Checks whether the last undone change can be redone.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
      * @return True if the last undone change can be redone, otherwise False.
-     *
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     boolean canRedo(GraphIdentifier graphIdentifier);
@@ -190,9 +192,7 @@ public interface InMemoryDatabase {
      * Checks if a dataset is currently set to read-only.
      *
      * @param datasetName The name of the dataset.
-     *
      * @return true if the dataset is set to read-only, otherwise false
-     *
      * @throws DataAccessException if the dataset does not exist.
      */
     boolean isReadOnly(String datasetName);
@@ -201,7 +201,6 @@ public interface InMemoryDatabase {
      * Enables editing for a read-only dataset
      *
      * @param datasetName The name of the dataset.
-     *
      * @throws DataAccessException if the dataset does not exist.
      */
     void enableEditing(String datasetName);
@@ -210,7 +209,6 @@ public interface InMemoryDatabase {
      * Disables editing for a dataset and switches it back to read-only.
      *
      * @param datasetName The name of the dataset.
-     *
      * @throws DataAccessException if the dataset does not exist.
      */
     void disableEditing(String datasetName);
@@ -218,10 +216,11 @@ public interface InMemoryDatabase {
     /**
      * Restores a graph to a specific version identified by its UUID.
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI.
-     * @param versionId       The UUID of the version to restore.
-     *
-     * @throws DataAccessException if the dataset or graph does not exist, or if the versionId is invalid.
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI.
+     * @param versionId The UUID of the version to restore.
+     * @throws DataAccessException if the dataset or graph does not exist, or if the versionId is
+     *     invalid.
      */
     void restore(GraphIdentifier graphIdentifier, UUID versionId);
 }

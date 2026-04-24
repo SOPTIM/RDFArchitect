@@ -31,7 +31,9 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
-@Mapper(componentModel = "spring", uses = {MappingUtils.class})
+@Mapper(
+        componentModel = "spring",
+        uses = {MappingUtils.class})
 public interface AssociationMapper {
 
     AssociationMapper INSTANCE = Mappers.getMapper(AssociationMapper.class);
@@ -48,12 +50,13 @@ public interface AssociationMapper {
     @Mapping(target = "inverseRoleName", expression = "java(buildInverseRoleName(inverseUri))")
     CIMAssociation toCIMObject(AssociationDTO dto, String inverseUri);
 
-    default String toDomain(URI value){
+    default String toDomain(URI value) {
         return value.toString();
     }
 
     default DataTypeDTO mapRange(RDFSRange range) {
-        return new DataTypeDTO(range.getLabel().getValue(), range.getUri().getPrefix(), DataTypeDTO.Type.RANGE);
+        return new DataTypeDTO(
+                range.getLabel().getValue(), range.getUri().getPrefix(), DataTypeDTO.Type.RANGE);
     }
 
     default boolean mapAssociationUsed(CIMSAssociationUsed associationUsed) {
@@ -61,11 +64,13 @@ public interface AssociationMapper {
     }
 
     default URI buildURI(AssociationDTO dto) {
-        return new URI(dto.getPrefix() + new URI(dto.getDomain()).getSuffix() + "." + dto.getLabel());
+        return new URI(
+                dto.getPrefix() + new URI(dto.getDomain()).getSuffix() + "." + dto.getLabel());
     }
 
     default CIMSMultiplicity buildMultiplicity(String multiplicity) {
-        return new CIMSMultiplicity(new URI("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#" + multiplicity));
+        return new CIMSMultiplicity(
+                new URI("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#" + multiplicity));
     }
 
     default RDFSDomain buildDomain(AssociationDTO dto) {
@@ -74,7 +79,9 @@ public interface AssociationMapper {
     }
 
     default RDFSRange buildRange(DataTypeDTO range) {
-        return new RDFSRange(new URI(range.getPrefix() + range.getLabel()), new RDFSLabel(range.getLabel(), "en"));
+        return new RDFSRange(
+                new URI(range.getPrefix() + range.getLabel()),
+                new RDFSLabel(range.getLabel(), "en"));
     }
 
     default CIMSAssociationUsed buildAssociationUsed(boolean associationUsed) {

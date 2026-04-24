@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.snapshots;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.snapshot.LoadSnapshotUseCase;
 import org.slf4j.Logger;
@@ -42,27 +44,31 @@ public class SnapshotRESTController {
     private final LoadSnapshotUseCase loadSnapshotUseCase;
 
     @Operation(
-              summary = "get snapshot",
-              description = "Fetch a snapshot",
-              tags = {"snapshot", "dataset"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200")
-              }
-    )
+            summary = "get snapshot",
+            description = "Fetch a snapshot",
+            tags = {"snapshot", "dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
     public String loadSnapshot(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String base64Token) {
-        logger.info("Received GET request: \"/api/snapshots/{{}}\" from \"{}\".", base64Token, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String base64Token) {
+        logger.info(
+                "Received GET request: \"/api/snapshots/{{}}\" from \"{}\".",
+                base64Token,
+                originURL);
 
         loadSnapshotUseCase.loadSnapshot(base64Token);
 
-        logger.info("Sending response to GET request: \"/api/snapshots/{{}}\" from \"{}\".", base64Token, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/snapshots/{{}}\" from \"{}\".",
+                base64Token,
+                originURL);
         return Response.SUCCESS;
     }
 }

@@ -23,9 +23,7 @@ import org.apache.jena.shared.PrefixMapping;
 
 import java.util.Map;
 
-/**
- * Class for creating an {@link UpdateBuilder} to be used in the context of other CIM methods.
- */
+/** Class for creating an {@link UpdateBuilder} to be used in the context of other CIM methods. */
 public class CIMBaseUpdateBuilder {
 
     private final UpdateBuilder baseUpdate;
@@ -42,7 +40,6 @@ public class CIMBaseUpdateBuilder {
      * Adds a map of prefixes substituted->extended.
      *
      * @param prefixes {@link Map} containing prefixes
-     *
      * @return {@link CIMBaseUpdateBuilder this}
      */
     public CIMBaseUpdateBuilder addPrefixes(Map<String, String> prefixes) {
@@ -54,7 +51,6 @@ public class CIMBaseUpdateBuilder {
      * Adds a map of prefixes substituted->extended.
      *
      * @param prefixes {@link PrefixMapping}
-     *
      * @return {@link CIMBaseUpdateBuilder this}
      */
     public CIMBaseUpdateBuilder addPrefixes(PrefixMapping prefixes) {
@@ -66,7 +62,6 @@ public class CIMBaseUpdateBuilder {
      * Sets the graph the query should be executed on.
      *
      * @param graphURI the GraphUri or "default"/null
-     *
      * @return {@link CIMBaseUpdateBuilder this}
      */
     public CIMBaseUpdateBuilder setGraph(String graphURI) {

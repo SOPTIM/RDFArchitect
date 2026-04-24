@@ -17,14 +17,14 @@
 
 package org.rdfarchitect.rdf.graph.source.builder.implementations;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.TestRDFUtils;
-
-import static org.assertj.core.api.Assertions.*;
 
 class GraphSourceBuilderImplTest {
 
@@ -51,7 +51,15 @@ class GraphSourceBuilderImplTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"http://localhost:1", "https://localhost:1", "http://www.google.de", "http://", "https://", "default"})
+    @ValueSource(
+            strings = {
+                "http://localhost:1",
+                "https://localhost:1",
+                "http://www.google.de",
+                "http://",
+                "https://",
+                "default"
+            })
     void setGraphName_validName_nameIsSetInBuiltObject(String graphUri) {
         // Arrange
         GraphSourceBuilderImpl builder = new GraphSourceBuilderImpl();
@@ -93,7 +101,7 @@ class GraphSourceBuilderImplTest {
         // Assert
         assertThat(builtGraphSource.graph()).isEqualTo(graph);
         assertThat(builtGraphSource.graph().find().toList())
-                  .contains(TestRDFUtils.triple("a a a"), TestRDFUtils.triple("a a b"))
-                  .hasSize(2);
+                .contains(TestRDFUtils.triple("a a a"), TestRDFUtils.triple("a a b"))
+                .hasSize(2);
     }
 }

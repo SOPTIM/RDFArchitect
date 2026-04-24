@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.dl.update.packagelayout;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -37,25 +38,38 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdatePackageLayoutService implements CreatePackageLayoutDataUseCase, DeletePackageLayoutDataUseCase, ReplaceDiagramUseCase {
+public class UpdatePackageLayoutService
+        implements CreatePackageLayoutDataUseCase,
+                DeletePackageLayoutDataUseCase,
+                ReplaceDiagramUseCase {
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
     private final GraphToCIMCollectionConverterUseCase converter;
 
     @Override
-    public void createPackageLayoutData(GraphIdentifier graphIdentifier, PackageDTO packageDTO, UUID newPackageUUID) {
+    public void createPackageLayoutData(
+            GraphIdentifier graphIdentifier, PackageDTO packageDTO, UUID newPackageUUID) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         cimPackage.setUuid(newPackageUUID);
 
-        var diagramLayoutModel = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout().getDiagramLayoutModel();
+        var diagramLayoutModel =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel();
 
-        DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
+        DiagramLayoutServiceUtils.insertDiagram(
+                diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
     }
 
     @Override
     public void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        var diagramLayoutModel = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout().getDiagramLayoutModel();
+        var diagramLayoutModel =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel();
 
         var packageGraphFilter = new GraphFilter(false);
         packageGraphFilter.setIncludeInheritance(true);
@@ -66,15 +80,19 @@ public class UpdatePackageLayoutService implements CreatePackageLayoutDataUseCas
         var classesCIMCollection = converter.convert(graphIdentifier, packageGraphFilter);
 
         for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
-            //if the class belongs to the package, delete all DOs and DOPs globally
+            // if the class belongs to the package, delete all DOs and DOPs globally
             if (cimClassOrEnum.getBelongsToCategory().getUuid() == packageUUID) {
-                for (var diagramObject : DLObjectFetcher.fetchAllDOs(diagramLayoutModel, cimClassOrEnum.getUuid())) {
-                    DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+                for (var diagramObject :
+                        DLObjectFetcher.fetchAllDOs(diagramLayoutModel, cimClassOrEnum.getUuid())) {
+                    DLUpdates.deleteDiagramObjectCascade(
+                            diagramLayoutModel, diagramObject.getMRID());
                 }
             }
-            //if the class belongs to a different package, only delete the DO/DOP in the diagram
+            // if the class belongs to a different package, only delete the DO/DOP in the diagram
             else {
-                var diagramObject = DLObjectFetcher.fetchDiagramDOForClass(diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
+                var diagramObject =
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
                 DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
         }
@@ -83,15 +101,21 @@ public class UpdatePackageLayoutService implements CreatePackageLayoutDataUseCas
     }
 
     @Override
-    public void replaceDiagram(GraphIdentifier graphIdentifier, UUID packageUUID, String packageName) {
-        var diagramLayoutModel = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout().getDiagramLayoutModel();
+    public void replaceDiagram(
+            GraphIdentifier graphIdentifier, UUID packageUUID, String packageName) {
+        var diagramLayoutModel =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getDiagramLayout()
+                        .getDiagramLayoutModel();
         var diagramMRID = new MRID(packageUUID);
 
-        var newDiagram = Diagram.builder()
-                                .mRID(diagramMRID)
-                                .name(packageName)
-                                .orientation(OrientationKind.NEGATIVE)
-                                .build();
+        var newDiagram =
+                Diagram.builder()
+                        .mRID(diagramMRID)
+                        .name(packageName)
+                        .orientation(OrientationKind.NEGATIVE)
+                        .build();
 
         DLUpdates.replaceDiagram(diagramLayoutModel, diagramMRID, newDiagram);
     }

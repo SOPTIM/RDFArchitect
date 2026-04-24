@@ -25,7 +25,8 @@ import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 import org.rdfarchitect.shacl.property.CIMPropertySHACLUtils;
 import org.rdfarchitect.shacl.property.shapebuilder.CardinalityPropertyShapeBuilder;
 
-public class CardinalityPropertyShapeFromCIMPropertyGenerator implements PropertyShapeFromCIMPropertyGenerator {
+public class CardinalityPropertyShapeFromCIMPropertyGenerator
+        implements PropertyShapeFromCIMPropertyGenerator {
 
     private static final String PROPERTY_GROUP_LABEL = "CardinalityGroup";
 
@@ -56,14 +57,15 @@ public class CardinalityPropertyShapeFromCIMPropertyGenerator implements Propert
     @Override
     public Resource createPropertyShape(Resource property) {
         if (ontologyModel == null || shaclModel == null || shaclPrefix == null) {
-            throw new IllegalStateException("Models and prefix must be set before creating property shapes.");
+            throw new IllegalStateException(
+                    "Models and prefix must be set before creating property shapes.");
         }
         var propertyType = "unknown";
         if (CIMPropertyUtils.isAttribute(property)) {
             propertyType = "attribute";
         }
         if (CIMPropertyUtils.isAssociation(property)) {
-            if(!CIMAssociationUtils.isUsedAssociation(property)){
+            if (!CIMAssociationUtils.isUsedAssociation(property)) {
                 return null; // This converter only creates shapes for used associations
             }
             propertyType = "association";

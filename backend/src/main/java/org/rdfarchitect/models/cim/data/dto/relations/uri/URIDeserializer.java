@@ -30,14 +30,14 @@ import java.util.Map;
 public class URIDeserializer extends JsonDeserializer<URI> {
 
     @Override
-    public URI deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public URI deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)
+            throws IOException {
         if (jsonParser.getCurrentToken().isScalarValue()) {
             String value = jsonParser.getValueAsString();
             return new URI(value);
         }
         ObjectMapper mapper = (ObjectMapper) jsonParser.getCodec();
-        var map = mapper.readValue(jsonParser, new TypeReference<Map<String, String>>() {
-        });
+        var map = mapper.readValue(jsonParser, new TypeReference<Map<String, String>>() {});
 
         var suffix = map.getOrDefault("suffix", null);
         var prefix = map.getOrDefault("prefix", null);

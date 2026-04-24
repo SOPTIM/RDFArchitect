@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.dl.select;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -35,19 +36,21 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     public final DatabasePort databasePort;
 
     @Override
-    public RenderingLayoutData fetchRenderingLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
+    public RenderingLayoutData fetchRenderingLayoutData(
+            GraphIdentifier graphIdentifier, UUID packageUUID) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
         Map<UUID, DiagramObjectPoint> classLayoutingData;
         if (packageUUID == null) {
-            classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid());
+            classLayoutingData =
+                    DLObjectFetcher.fetchDiagramDOPPerClass(
+                            diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid());
         } else {
-            classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, packageUUID);
+            classLayoutingData =
+                    DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, packageUUID);
         }
 
-        return RenderingLayoutData.builder()
-                                  .classLayoutingData(classLayoutingData)
-                                  .build();
+        return RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
     }
 }

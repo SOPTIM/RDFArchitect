@@ -23,11 +23,12 @@ import org.rdfarchitect.database.GraphIdentifier;
 public interface ReplacePackageUseCase {
 
     /**
-     * Replaces an existing package in the specified graph with the provided package data.
-     * The package is identified by its UUID within the packageDTO and updated with all new values.
+     * Replaces an existing package in the specified graph with the provided package data. The
+     * package is identified by its UUID within the packageDTO and updated with all new values.
      *
-     * @param graphIdentifier The graph URI and database name of the graph containing the package to replace.
-     * @param packageDTO      The package data to replace the existing package with.
+     * @param graphIdentifier The graph URI and database name of the graph containing the package to
+     *     replace.
+     * @param packageDTO The package data to replace the existing package with.
      */
     void replacePackage(GraphIdentifier graphIdentifier, PackageDTO packageDTO);
 }

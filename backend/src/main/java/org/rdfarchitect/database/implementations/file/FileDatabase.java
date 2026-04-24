@@ -43,12 +43,12 @@ public class FileDatabase {
         createDatabase();
     }
 
-    /**
-     * created a Database directory if it doesn't exist yet
-     */
+    /** created a Database directory if it doesn't exist yet */
     public void createDatabase() {
         if (FileDatabaseReadWriter.ping(this.databasePath)) {
-            logger.debug("{} file database already exists so there is no need to create one", lang.getName());
+            logger.debug(
+                    "{} file database already exists so there is no need to create one",
+                    lang.getName());
             return;
         }
         try {
@@ -73,30 +73,37 @@ public class FileDatabase {
     }
 
     /**
-     * Writes a {@link Graph} to a file, if the Graph already exists in the {@link Dataset} it will be overwritten
+     * Writes a {@link Graph} to a file, if the Graph already exists in the {@link Dataset} it will
+     * be overwritten
      *
-     * @param graph       {@link Graph}
+     * @param graph {@link Graph}
      * @param datasetName Name of the Dataset
-     * @param graphName   Name of the graph, null or "" for default
+     * @param graphName Name of the graph, null or "" for default
      */
     public void write(Graph graph, String datasetName, String graphName) {
         write(ModelFactory.createModelForGraph(graph), datasetName, graphName);
     }
 
     /**
-     * Writes a {@link Model} to a file, if the Model already exists in the {@link Dataset} it will be overwritten
+     * Writes a {@link Model} to a file, if the Model already exists in the {@link Dataset} it will
+     * be overwritten
      *
-     * @param model       {@link Model}
+     * @param model {@link Model}
      * @param datasetName Name of the Dataset
-     * @param graphName   Name of the graph, null or "" for default
+     * @param graphName Name of the graph, null or "" for default
      */
     public void write(Model model, String datasetName, String graphName) {
         this.createDatabase();
         this.createDataset(datasetName);
 
-        logger.info("Storing graph  \"{}\" in file database at {}/{}.{} ...", graphName, databasePath, datasetName, lang.getFileExtensions().getFirst());
+        logger.info(
+                "Storing graph  \"{}\" in file database at {}/{}.{} ...",
+                graphName,
+                databasePath,
+                datasetName,
+                lang.getFileExtensions().getFirst());
         Dataset dataset = FileDatabaseReadWriter.readDataset(databasePath, datasetName, lang);
-        if (graphName == null || graphName.isEmpty()) { //add default model
+        if (graphName == null || graphName.isEmpty()) { // add default model
             dataset.getDefaultModel().removeAll();
             dataset.getDefaultModel().add(model);
         } else {
@@ -109,18 +116,31 @@ public class FileDatabase {
 
         try {
             FileDatabaseReadWriter.writeToFile(dataset, this.databasePath, datasetName, lang);
-            logger.info("Storing graph \"{}\" in file database at: \"{}/{}.{}\" successful", graphName, databasePath,
-                        datasetName, lang.getFileExtensions().getFirst());
+            logger.info(
+                    "Storing graph \"{}\" in file database at: \"{}/{}.{}\" successful",
+                    graphName,
+                    databasePath,
+                    datasetName,
+                    lang.getFileExtensions().getFirst());
         } catch (RuntimeException e) {
-            throw new DataAccessException("Storing graph \"" + graphName + "\" in the file database at: " +
-                                                    databasePath + "/" + datasetName + "." + lang.getFileExtensions().getFirst() + " failed", e);
+            throw new DataAccessException(
+                    "Storing graph \""
+                            + graphName
+                            + "\" in the file database at: "
+                            + databasePath
+                            + "/"
+                            + datasetName
+                            + "."
+                            + lang.getFileExtensions().getFirst()
+                            + " failed",
+                    e);
         }
     }
 
     /**
      * Writes a {@link Dataset} to a file
      *
-     * @param dataset     {@link Dataset}
+     * @param dataset {@link Dataset}
      * @param datasetName Name of the Dataset
      */
     public void write(Dataset dataset, String datasetName) {
@@ -131,7 +151,6 @@ public class FileDatabase {
      * returns a dataset by name
      *
      * @param datasetName Name of the dataset
-     *
      * @return dataset
      */
     public Dataset getDataset(String datasetName) {

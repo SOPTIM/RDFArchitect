@@ -20,16 +20,18 @@ package org.rdfarchitect.api.dto;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.data.dto.CIMClass;
 
 import java.util.Collections;
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {MappingUtils.class})
+@Mapper(
+        componentModel = "spring",
+        uses = {MappingUtils.class})
 public interface ClassMapper {
 
     ClassMapper INSTANCE = Mappers.getMapper(ClassMapper.class);
@@ -44,7 +46,7 @@ public interface ClassMapper {
 
     @Mapping(target = "uri", source = ".")
     @Mapping(target = "belongsToCategory", ignore = true)
-        // Wird separat behandelt
+    // Wird separat behandelt
     CIMClass toCIMObject(ClassDTO dto);
 
     List<CIMClass> toCIMObjectList(List<ClassDTO> dtoList);
@@ -53,9 +55,7 @@ public interface ClassMapper {
         if (stereotypes == null || stereotypes.isEmpty()) {
             return Collections.emptyList();
         }
-        return stereotypes.stream()
-                          .map(CIMSStereotype::getStereotype)
-                          .toList();
+        return stereotypes.stream().map(CIMSStereotype::getStereotype).toList();
     }
 
     default SuperClassDTO mapSuperClass(RDFSSubClassOf superClass) {
@@ -73,15 +73,14 @@ public interface ClassMapper {
         if (dto == null) {
             return null;
         }
-        return new RDFSSubClassOf(new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
+        return new RDFSSubClassOf(
+                new URI(dto.getPrefix() + dto.getLabel()), new RDFSLabel(dto.getLabel(), "en"));
     }
 
     default List<CIMSStereotype> buildStereotypes(List<String> stereotypes) {
         if (stereotypes == null || stereotypes.isEmpty()) {
             return Collections.emptyList();
         }
-        return stereotypes.stream()
-                          .map(CIMSStereotype::new)
-                          .toList();
+        return stereotypes.stream().map(CIMSStereotype::new).toList();
     }
 }

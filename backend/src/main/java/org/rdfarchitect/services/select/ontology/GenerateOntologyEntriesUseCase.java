@@ -25,10 +25,11 @@ import java.util.List;
 public interface GenerateOntologyEntriesUseCase {
 
     /**
-     * Generates a list of ontology entries. Different Implementations might generate different lists
+     * Generates a list of ontology entries. Different Implementations might generate different
+     * lists
+     *
      * @param graphIdentifier The graph identifier for which to generate the ontology entries
      * @return A list of ontology entries
      */
     List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier);
-
 }

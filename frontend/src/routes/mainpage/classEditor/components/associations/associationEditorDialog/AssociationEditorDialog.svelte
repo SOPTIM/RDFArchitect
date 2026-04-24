@@ -27,7 +27,11 @@
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
     import Inverse from "./Inverse.svelte";
 
-    let { showDialog = $bindable(), associations, association } = $props();
+    let {
+        showDialog = $bindable(),
+        associations,
+        association = $bindable(),
+    } = $props();
 
     let classEditorContext = $state();
     let isNewAssociation = $state(true);
@@ -123,7 +127,9 @@
     isValid={association?.isValid}
     size="w-2/3"
     {readonly}
-    title={`${isNewAssociation ? "Create" : "Edit"} Association${association ? `: '${association.label.backup}' to '${association.inverse.label.backup}'` : ""}`}
+    title={isNewAssociation
+        ? "Create new association"
+        : `Edit association: '${association.label.backup}' to '${association.inverse.label.backup}'`}
 >
     {#if association}
         <div

@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.55.0
+- **Version:** 2.57.1
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -251,7 +251,7 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 7.3.1
+- **Version:** 7.3.2
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 

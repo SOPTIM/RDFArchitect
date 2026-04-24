@@ -21,9 +21,7 @@ import lombok.experimental.UtilityClass;
 
 import java.util.UUID;
 
-/**
- * Utility class for all operations concerning the CGMES DiagramLayout
- */
+/** Utility class for all operations concerning the CGMES DiagramLayout */
 @UtilityClass
 public class DLUtils {
 
@@ -31,7 +29,6 @@ public class DLUtils {
      * Extracts the UUID from a mRID String
      *
      * @param mRID the MRID from which the UUID shall be extracted
-     *
      * @return {@link UUID}
      */
     public UUID extractUUIDFromMRID(String mRID) {

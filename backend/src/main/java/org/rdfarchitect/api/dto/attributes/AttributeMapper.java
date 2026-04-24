@@ -34,7 +34,10 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {MappingUtils.class}, imports = CIMSStereotype.class)
+@Mapper(
+        componentModel = "spring",
+        uses = {MappingUtils.class},
+        imports = CIMSStereotype.class)
 public interface AttributeMapper {
 
     AttributeMapper INSTANCE = Mappers.getMapper(AttributeMapper.class);
@@ -56,7 +59,10 @@ public interface AttributeMapper {
 
     @Mapping(target = "uri", source = ".")
     @Mapping(target = "domain", source = ".")
-    @Mapping(target = "stereotype", expression = "java(new CIMSStereotype(\"http://iec.ch/TC57/NonStandard/UML#attribute\"))")
+    @Mapping(
+            target = "stereotype",
+            expression =
+                    "java(new CIMSStereotype(\"http://iec.ch/TC57/NonStandard/UML#attribute\"))")
     @Mapping(target = "fixedValue", source = ".")
     @Mapping(target = "defaultValue", source = ".")
     CIMAttribute toCIMObject(AttributeDTO dto);
@@ -69,36 +75,43 @@ public interface AttributeMapper {
     }
 
     default URI buildURI(AttributeDTO dto) {
-        return new URI(dto.getPrefix() + new URI(dto.getDomain()).getSuffix() + '.' + dto.getLabel());
+        return new URI(
+                dto.getPrefix() + new URI(dto.getDomain()).getSuffix() + '.' + dto.getLabel());
     }
 
     default RDFSDomain buildDomain(AttributeDTO dto) {
-        return new RDFSDomain(new URI(dto.getDomain()), new RDFSLabel(new URI(dto.getDomain()).getSuffix(), "en"));
+        return new RDFSDomain(
+                new URI(dto.getDomain()),
+                new RDFSLabel(new URI(dto.getDomain()).getSuffix(), "en"));
     }
 
     default CIMSMultiplicity buildMultiplicity(String multiplicity) {
-        return new CIMSMultiplicity(new URI("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#" + multiplicity));
+        return new CIMSMultiplicity(
+                new URI("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#" + multiplicity));
     }
 
     default CIMSIsFixed buildFixedValue(AttributeDTO dto) {
         if (dto.getFixedValue() == null) {
             return null;
         }
-        return new CIMSIsFixed(dto.getFixedValue(), new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
+        return new CIMSIsFixed(
+                dto.getFixedValue(),
+                new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
     }
 
     default CIMSIsDefault buildDefaultValue(AttributeDTO dto) {
         if (dto.getDefaultValue() == null) {
             return null;
         }
-        return new CIMSIsDefault(dto.getDefaultValue(), new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
+        return new CIMSIsDefault(
+                dto.getDefaultValue(),
+                new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
     }
 
     default CIMSDataType buildDataType(DataTypeDTO dto) {
         return new CIMSDataType(
-                  new URI(dto.getPrefix() + dto.getLabel()),
-                  new RDFSLabel(dto.getLabel(), "en"),
-                  CIMSDataType.Type.valueOf(dto.getType().toString())
-        );
+                new URI(dto.getPrefix() + dto.getLabel()),
+                new RDFSLabel(dto.getLabel(), "en"),
+                CIMSDataType.Type.valueOf(dto.getType().toString()));
     }
 }

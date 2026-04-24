@@ -18,6 +18,7 @@
 package org.rdfarchitect.api.dto;
 
 import lombok.experimental.UtilityClass;
+
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;

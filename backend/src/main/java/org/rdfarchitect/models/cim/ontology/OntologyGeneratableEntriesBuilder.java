@@ -42,20 +42,22 @@ public class OntologyGeneratableEntriesBuilder {
     }
 
     /**
-     * Generates the dcterms:modified entry based on the provided changelog list and adds it to the ontology entries.
-     * If the changelog is empty, return the existing dcterms:modified entry from the ontology if it exists, otherwise do nothing.
+     * Generates the dcterms:modified entry based on the provided changelog list and adds it to the
+     * ontology entries. If the changelog is empty, return the existing dcterms:modified entry from
+     * the ontology if it exists, otherwise do nothing.
      *
      * @param changelogList List of ChangeLogEntry representing the changelog
-     *
      * @return The current instance of OntologyGeneratableEntriesBuilder
      */
-    public OntologyGeneratableEntriesBuilder generateDCTModified(List<ChangeLogEntryDTO> changelogList) {
+    public OntologyGeneratableEntriesBuilder generateDCTModified(
+            List<ChangeLogEntryDTO> changelogList) {
         if (changelogList == null || changelogList.isEmpty()) {
             if (ontology.getOntology() != null) {
-                ontology.getOntology()
-                        .getEntries()
-                        .stream()
-                        .filter(entry -> entry.getIri().equals(KnownOntologyFields.DCT_MODIFIED.getIri()))
+                ontology.getOntology().getEntries().stream()
+                        .filter(
+                                entry ->
+                                        entry.getIri()
+                                                .equals(KnownOntologyFields.DCT_MODIFIED.getIri()))
                         .findFirst()
                         .ifPresent(ontologyEntries::add);
             }
@@ -63,14 +65,12 @@ public class OntologyGeneratableEntriesBuilder {
         }
         final var latestChangeLogEntry = changelogList.getLast();
         final var timeStampString = latestChangeLogEntry.getTimestamp();
-        final var formattedTimestamp = LocalDateTime.parse(timeStampString)
-                                                    .toLocalDate()
-                                                    .format(DateTimeFormatter.ISO_LOCAL_DATE);
+        final var formattedTimestamp =
+                LocalDateTime.parse(timeStampString)
+                        .toLocalDate()
+                        .format(DateTimeFormatter.ISO_LOCAL_DATE);
         ontologyEntries.add(
-                  new OntologyEntry(
-                            KnownOntologyFields.DCT_MODIFIED,
-                            formattedTimestamp
-                  ));
+                new OntologyEntry(KnownOntologyFields.DCT_MODIFIED, formattedTimestamp));
         return this;
     }
 
@@ -81,21 +81,24 @@ public class OntologyGeneratableEntriesBuilder {
      */
     public OntologyGeneratableEntriesBuilder generateDCTIssued() {
         if (ontology.getOntology() != null) {
-            final var first = ontology.getOntology()
-                                      .getEntries()
-                                      .stream()
-                                      .filter(entry -> entry.getIri().equals(KnownOntologyFields.DCT_ISSUED.getIri()))
-                                      .findFirst();
+            final var first =
+                    ontology.getOntology().getEntries().stream()
+                            .filter(
+                                    entry ->
+                                            entry.getIri()
+                                                    .equals(
+                                                            KnownOntologyFields.DCT_ISSUED
+                                                                    .getIri()))
+                            .findFirst();
             if (first.isPresent()) {
                 ontologyEntries.add(first.get());
                 return this;
             }
         }
         ontologyEntries.add(
-                  new OntologyEntry(
-                            KnownOntologyFields.DCT_ISSUED,
-                            LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                  ));
+                new OntologyEntry(
+                        KnownOntologyFields.DCT_ISSUED,
+                        LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)));
         return this;
     }
 }

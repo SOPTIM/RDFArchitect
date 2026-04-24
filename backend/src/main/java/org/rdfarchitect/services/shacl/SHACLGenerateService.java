@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.shacl;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -30,6 +31,7 @@ import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @RequiredArgsConstructor
 public class SHACLGenerateService implements SHACLGenerateUseCase {
@@ -37,7 +39,8 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public String exportGeneratedSHACLGraph(GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
+    public String exportGeneratedSHACLGraph(
+            GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
         GraphRewindable ontologyGraph = null;
         var prefixes = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
         try (var outStream = new ByteArrayOutputStream()) {
@@ -47,7 +50,7 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
             ontologyModel.setNsPrefixes(prefixes);
             var shaclModel = new SHACLFromCIMGenerator(ontologyModel, shaclPrefix, true).generate();
             shaclModel.write(outStream, Lang.TTL.getName());
-            return outStream.toString();
+            return outStream.toString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new ShaclException("Error while writing SHACL model to output stream", e);
         } finally {
