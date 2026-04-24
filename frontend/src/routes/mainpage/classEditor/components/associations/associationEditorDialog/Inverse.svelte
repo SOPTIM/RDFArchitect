@@ -53,7 +53,7 @@
     </div>
 
     <!-- Row 2: Namespace -->
-    <div class="col-start-2 row-start-3 pl-2">
+    <div class="col-start-2 row-start-2 pl-2">
         <span class="mb-1">Inverse Namespace:</span>
         <SearchableSelect
             placeholder="namespace..."
@@ -80,7 +80,7 @@
     </div>
 
     <!-- Row 3: Label -->
-    <div class="col-start-2 row-start-4 pl-2">
+    <div class="col-start-2 row-start-3 pl-2">
         <TextEditControl
             label="Inverse Label:"
             placeholder="association label..."
@@ -97,7 +97,7 @@
     </div>
 
     <!-- Row 4: Target (disabled) -->
-    <div class="col-start-2 row-start-5 pl-2">
+    <div class="col-start-2 row-start-4 pl-2">
         <TextEditControl
             label="Inverse Target:"
             disabled={true}
@@ -106,7 +106,7 @@
     </div>
 
     <!-- Row 5: Multiplicity LowerBound -->
-    <div class="col-start-2 row-start-6 pl-2">
+    <div class="col-start-2 row-start-5 pl-2">
         <NumberInputControl
             label="Inverse Multiplicity LowerBound:"
             placeholder="multiplicity LowerBound..."
@@ -125,7 +125,7 @@
     </div>
 
     <!-- Row 6: Multiplicity UpperBound -->
-    <div class="col-start-2 row-start-7 pl-2">
+    <div class="col-start-2 row-start-6 pl-2">
         <NumberInputControl
             label="Inverse Multiplicity UpperBound:"
             placeholder="multiplicity UpperBound..."
@@ -144,7 +144,7 @@
     </div>
 
     <!-- Row 7: Use inverse association checkbox -->
-    <div class="col-start-2 row-start-8 pl-2">
+    <div class="col-start-2 row-start-7 pl-2">
         <div class="relative flex items-end space-x-1">
             <CheckBoxEditControl
                 label="Use inverse association?"
@@ -162,7 +162,7 @@
     </div>
 
     <!-- Row 8: Comment -->
-    <div class="col-start-2 row-start-9 pl-2">
+    <div class="col-start-2 row-start-8 pl-2">
         <label for="association-edit-dialog-inverse-comment-text-area">
             Inverse Comment:
         </label>

@@ -54,7 +54,7 @@
     </div>
 
     <!-- Row 2: Namespace -->
-    <div class="col-start-1 row-start-3 pl-2">
+    <div class="col-start-1 row-start-2 pl-2">
         <span class="mb-1">Namespace:</span>
         <SearchableSelect
             placeholder="namespace..."
@@ -79,7 +79,7 @@
     </div>
 
     <!-- Row 3: Label -->
-    <div class="col-start-1 row-start-4 pl-2">
+    <div class="col-start-1 row-start-3 pl-2">
         <TextEditControl
             label="Label:"
             placeholder="association label..."
@@ -96,7 +96,7 @@
     </div>
 
     <!-- Row 4: Target -->
-    <div class="col-start-1 row-start-5 pl-2">
+    <div class="col-start-1 row-start-4 pl-2">
         <SearchableSelect
             label="Target:"
             placeholder="Target"
@@ -125,7 +125,7 @@
     </div>
 
     <!-- Row 5: Multiplicity LowerBound -->
-    <div class="col-start-1 row-start-6 pl-2">
+    <div class="col-start-1 row-start-5 pl-2">
         <NumberInputControl
             label="Multiplicity LowerBound:"
             placeholder="multiplicity LowerBound..."
@@ -144,7 +144,7 @@
     </div>
 
     <!-- Row 6: Multiplicity UpperBound -->
-    <div class="col-start-1 row-start-7 pl-2">
+    <div class="col-start-1 row-start-6 pl-2">
         <NumberInputControl
             label="Multiplicity UpperBound:"
             placeholder="multiplicity UpperBound..."
@@ -163,7 +163,7 @@
     </div>
 
     <!-- Row 7: Use association checkbox -->
-    <div class="col-start-1 row-start-8 pl-2">
+    <div class="col-start-1 row-start-7 pl-2">
         <div class="relative flex items-end space-x-1">
             <CheckBoxEditControl
                 label="Use association?"
@@ -181,7 +181,7 @@
     </div>
 
     <!-- Row 8: Comment -->
-    <div class="col-start-1 row-start-9 pl-2">
+    <div class="col-start-1 row-start-8 pl-2">
         <label for="association-edit-dialog-direct-comment-text-area">
             Comment:
         </label>
