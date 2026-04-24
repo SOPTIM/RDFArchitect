@@ -2,7 +2,7 @@
 
 [![Backend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)
-[![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](https://github.com/SOPTIM/RDFArchitect/releases)
+[![Version](https://img.shields.io/github/v/tag/SOPTIM/RDFArchitect?sort=semver)](https://github.com/SOPTIM/RDFArchitect/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
 RDFArchitect is a web-based tool for visualizing and editing RDF graphs that model UML classes using the CIM standard.
@@ -10,6 +10,18 @@ RDFArchitect is a web-based tool for visualizing and editing RDF graphs that mod
 ## Overview
 
 RDFArchitect combines a Java/Spring backend and a Svelte frontend to provide a practical modeling workflow for CIM-based RDF data. The application supports importing, editing, comparing, validating, and exporting graph data with an interactive UI.
+
+## Screenshots
+
+The main editor combines dataset and graph navigation, package-focused diagram rendering, and context-sensitive actions for importing, versioning, and validation.
+
+Class editing stays close to the model: labels, packages, inheritance, attributes, associations, enum entries, comments, and class-specific SHACL Constrains are all available from the same workspace.
+
+RDFArchitect also supports release workflows such as schema comparison, change review, and SHACL inspection without leaving the application.
+
+![Editor](docs/assets/screenshots/editor.png)
+
+For the full screenshot gallery, see [docs/screenshots.md](docs/screenshots.md).
 
 ## Key Features
 
@@ -24,7 +36,7 @@ RDFArchitect combines a Java/Spring backend and a Svelte frontend to provide a p
 
 - Backend: Spring Boot service in `backend/` (default runtime port `8080`)
 - Frontend: SvelteKit app in `frontend/` (dev server on `1407`)
-- Gateway (local Docker): Nginx proxy in `docker-compose.yaml` exposed on `3000`
+- Gateway (local Docker): Nginx proxy in `docker/docker-compose.yaml` exposed on `3000`
   - `/` routes to frontend
   - `/api` routes to backend
 
@@ -60,6 +72,7 @@ npm run dev
 ### Run with Docker Compose
 
 ```bash
+cd docker
 docker compose up --build
 ```
 
@@ -109,15 +122,15 @@ npm run build
 
 ## Contributing
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidelines.
+Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development and pull request guidelines.
 
 ## Security
 
-Please see [SECURITY.md](SECURITY.md) for responsible vulnerability reporting.
+Please see [SECURITY.md](.github/SECURITY.md) for responsible vulnerability reporting.
 
 ## Support
 
-Please see [SUPPORT.md](SUPPORT.md) for usage help, issue routing, and support options.
+Please see [SUPPORT.md](.github/SUPPORT.md) for usage help, issue routing, and support options.
 
 ## Changelog
 
