@@ -2,29 +2,49 @@
 
 [![Backend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)
-[![Version](https://img.shields.io/badge/version-0.16.0-blue.svg)](https://github.com/SOPTIM/RDFArchitect/releases)
+[![Version](https://img.shields.io/github/v/tag/SOPTIM/RDFArchitect?sort=semver)](https://github.com/SOPTIM/RDFArchitect/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 
-RDFArchitect is a web-based tool for visualizing and editing RDF graphs that model UML classes using the CIM standard.
+RDFArchitect is a web-based tool for visualizing, editing, and sharing RDFS schemas with CIM extensions - as used in CGMES and the ENTSO-e network code profiles — along with their SHACL constraints.
+
+It is an open source alternative to proprietary CIM/RDF modeling tools.
 
 ## Overview
 
-RDFArchitect combines a Java/Spring backend and a Svelte frontend to provide a practical modeling workflow for CIM-based RDF data. The application supports importing, editing, comparing, validating, and exporting graph data with an interactive UI.
+RDFArchitect combines a Java/Spring backend and a Svelte frontend to provide a practical modeling workflow for CIM-based RDF schemas. The application supports importing, editing, sharing, comparing, validating, and exporting schemas with an interactive UI.
+
+Diagrams can be easily shared as a complete, browsable reference of classes, relations, attributes, enumerations, notes, and SHACL shapes - no modeling tool or download required.
+
+## Screenshots
+
+The main editor combines schema navigation, package-focused diagram rendering, and context-sensitive actions for importing, versioning, and validation.
+
+Class editing stays close to the model: labels, packages, inheritance, attributes, associations, enum entries, comments, and class-specific SHACL constraints are all available from the same workspace.
+
+RDFArchitect also supports release workflows such as schema comparison, change review, and SHACL inspection without leaving the application.
+
+![Editor](docs/assets/screenshots/editor.png)
+
+For the full screenshot gallery, see [docs/screenshots.md](docs/screenshots.md).
 
 ## Key Features
 
-- Import and export RDF graph content
+- Import and export RDF schemas and CIM extensions
 - Visualize class structures via UML diagrams
-- Edit classes, attributes, associations, and enum entries
-- Manage datasets, graphs, packages, and namespaces
-- Compare graphs and inspect change history
-- Generate and inspect SHACL content
+- Edit classes, attributes, associations, enum entries, and notes
+- Share diagrams as a complete, read-friendly reference of classes, relations, notes, and constraints
+- Schema migration between CIM versions and extensions
+- Compare schemas and inspect change history
+- Comprehensive SHACL support:
+  - Generate SHACL rules covering everything in the schema
+  - Import and manage custom SHACL shapes
+  - Inspect shapes in context - directly on their target classes and properties
 
 ## Architecture
 
 - Backend: Spring Boot service in `backend/` (default runtime port `8080`)
 - Frontend: SvelteKit app in `frontend/` (dev server on `1407`)
-- Gateway (local Docker): Nginx proxy in `docker-compose.yaml` exposed on `3000`
+- Gateway (local Docker): Nginx proxy in `docker/docker-compose.yaml` exposed on `3000`
   - `/` routes to frontend
   - `/api` routes to backend
 
@@ -60,6 +80,7 @@ npm run dev
 ### Run with Docker Compose
 
 ```bash
+cd docker
 docker compose up --build
 ```
 
@@ -109,15 +130,15 @@ npm run build
 
 ## Contributing
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development and pull request guidelines.
+Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development and pull request guidelines.
 
 ## Security
 
-Please see [SECURITY.md](SECURITY.md) for responsible vulnerability reporting.
+Please see [SECURITY.md](.github/SECURITY.md) for responsible vulnerability reporting.
 
 ## Support
 
-Please see [SUPPORT.md](SUPPORT.md) for usage help, issue routing, and support options.
+Please see [SUPPORT.md](.github/SUPPORT.md) for usage help, issue routing, and support options.
 
 ## Changelog
 

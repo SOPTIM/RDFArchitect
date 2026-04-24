@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-04-24
+
+### Added
+
+- RDFA-459: Added Maven-based backend linting ([10107dc2](https://github.com/SOPTIM/RDFArchitect/commit/10107dc2), [#67](https://github.com/SOPTIM/RDFArchitect/pull/67))
+
+### Fixed
+
+- Handle whitespace normalization for RDF comments in compare ([d4c5192e](https://github.com/SOPTIM/RDFArchitect/commit/d4c5192e), [#40](https://github.com/SOPTIM/RDFArchitect/pull/40))
+
 ## [0.16.0] - 2026-04-16
 
 ### Added
