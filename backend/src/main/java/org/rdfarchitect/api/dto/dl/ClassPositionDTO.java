@@ -36,4 +36,7 @@ public class ClassPositionDTO {
 
     @JsonProperty("yPosition")
     private float yPosition;
+
+    @JsonProperty("zPosition")
+    private int zPosition;
 }

@@ -124,6 +124,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 PositionDTO.builder()
                         .x(dop.getPosition().getX())
                         .y(dop.getPosition().getY())
+                        .z(dop.getPosition().getZ())
                         .build();
         nodeDTO.position(positionDTO);
 

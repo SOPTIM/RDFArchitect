@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 public class UpdateDiagramLayoutService
         implements CreateDiagramLayoutUseCase, EnsureDiagramLayoutForCIMCollectionUseCase {
 
-    private static final String DEFAULT_PACKAGE_NAME = "default";
+    final String DEFAULT_PACKAGE_NAME = "default";
 
     private final DatabasePort databasePort;
     private final GraphToCIMCollectionConverterUseCase converter;
