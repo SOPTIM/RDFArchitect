@@ -239,7 +239,7 @@
 
 ### uuid
 - **Package:** uuid
-- **Version:** 13.0.0
+- **Version:** 14.0.0
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 
