@@ -37,6 +37,34 @@
     let isNewAssociation = $state(true);
     let readonly = $derived(classEditorContext?.readonly);
 
+    let bec = $derived(classEditorContext?.backendConnection);
+
+    $effect(() => {
+        (async () => {
+            const targetValue = association?.target?.value;
+            const ctx = classEditorContext;
+
+            if (!ctx || !targetValue) return;
+
+            const existingClassInfo = ctx.getTargetClassInfoByUuid(targetValue);
+            if (!existingClassInfo) {
+                const res = await bec.getClassInfo(
+                    ctx.datasetName,
+                    ctx.graphUri,
+                    targetValue,
+                );
+                const classInfo = await res.json();
+                ctx.addTargetClassInfo(classInfo);
+            }
+
+            // Trigger violation checks
+            if (association?.inverse?.label) {
+                association.inverse.label.value =
+                    association.inverse.label.value;
+            }
+        })();
+    });
+
     function onOpen() {
         classEditorContext = getContext("classEditor");
         if (!associations.contains(association)) {
@@ -48,14 +76,10 @@
                     namespace: classEditorContext.reactiveClass.namespace.value,
                 },
             });
+            associations.appendClass(association);
         } else {
             isNewAssociation = false;
         }
-    }
-
-    function onClose() {
-        association = null;
-        isNewAssociation = true;
     }
 
     async function saveAssociation() {
@@ -79,11 +103,17 @@
         association.inverse.uuid.value = result.associationUUIDs.toUUID;
         association.save();
         if (isNewAssociation) {
-            associations.append(association);
             isNewAssociation = false;
         }
         association.save();
         forceReloadTrigger.trigger();
+    }
+
+    function onClose() {
+        if (isNewAssociation) {
+            associations.remove(association, true);
+        }
+        association = null;
     }
 </script>
 

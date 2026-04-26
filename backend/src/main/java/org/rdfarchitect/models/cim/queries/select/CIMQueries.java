@@ -127,6 +127,7 @@ public class CIMQueries {
                 .appendDomainQuery(REQUIRED)
                 .appendCommentQuery(OPTIONAL)
                 // inverse
+                .appendInverseUuidQuery(REQUIRED)
                 .appendInverseLabelQuery(REQUIRED)
                 .appendInverseMultiplicityQuery(REQUIRED)
                 .appendInverseAssociationUsedQuery(REQUIRED)
