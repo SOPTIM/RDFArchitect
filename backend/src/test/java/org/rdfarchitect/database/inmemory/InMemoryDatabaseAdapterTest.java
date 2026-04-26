@@ -23,8 +23,8 @@ import static org.mockito.Mockito.*;
 import org.apache.jena.shared.PrefixMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.rdf.resources.CIM;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.rdf.resources.CIM;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
