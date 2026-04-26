@@ -325,12 +325,12 @@
             <groupId>org.apache.jena</groupId>
             <artifactId>apache-jena-libs</artifactId>
             <type>pom</type>
-            <version>5.6.0</version>
+            <version>6.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>jena-querybuilder</artifactId>
-            <version>5.6.0</version>
+            <version>6.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

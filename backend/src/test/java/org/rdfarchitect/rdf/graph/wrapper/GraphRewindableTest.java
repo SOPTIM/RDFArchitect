@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.rdfarchitect.rdf.TestRDFUtils.*;
 
-import org.apache.jena.graph.Capabilities;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphEventManager;
 import org.apache.jena.graph.Node;
@@ -92,22 +91,9 @@ class GraphRewindableTest {
         }
 
         @Test
-        void dependsOn() {
-            Graph emtpyGraph = GraphFactory.createDefaultGraph();
-            assertThatExceptionOfType(GraphNotInATransactionException.class)
-                    .isThrownBy(() -> graphRewindable.dependsOn(emtpyGraph));
-        }
-
-        @Test
         void getTransactionHandler_noTransactionStarted_throwsGraphNotInATransactionException() {
             assertThatExceptionOfType(GraphNotInATransactionException.class)
                     .isThrownBy(() -> graphRewindable.getTransactionHandler());
-        }
-
-        @Test
-        void getCapabilities_noTransactionStarted_throwsGraphNotInATransactionException() {
-            assertThatExceptionOfType(GraphNotInATransactionException.class)
-                    .isThrownBy(() -> graphRewindable.getCapabilities());
         }
 
         @Test
@@ -275,25 +261,10 @@ class GraphRewindableTest {
         }
 
         @Test
-        void dependsOn() {
-            graphRewindable.begin(TxnType.READ);
-            assertThat(graphRewindable.dependsOn(GraphFactory.createDefaultGraph()))
-                    .isInstanceOf(Boolean.class);
-            graphRewindable.end();
-        }
-
-        @Test
         void getTransactionHandler() {
             graphRewindable.begin(TxnType.READ);
             assertThat(graphRewindable.getTransactionHandler())
                     .isInstanceOf(TransactionHandler.class);
-            graphRewindable.end();
-        }
-
-        @Test
-        void getCapabilities() {
-            graphRewindable.begin(TxnType.READ);
-            assertThat(graphRewindable.getCapabilities()).isInstanceOf(Capabilities.class);
             graphRewindable.end();
         }
 
