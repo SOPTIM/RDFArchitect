@@ -71,7 +71,7 @@ function applyFix(fixer, nodes, sourceCode) {
 }
 
 export function processNodes(context, nodes) {
-    const sourceCode = context.sourceCode || context.getSourceCode();
+    const sourceCode = context.sourceCode;
     if (!Array.isArray(nodes) || nodes.length < 2) return;
     const violation = findFirstViolation(nodes);
     if (!violation) return;

@@ -35,7 +35,7 @@ const copyrightHeaderRule = {
         schema: [],
     },
     create(context) {
-        const filename = context.getFilename();
+        const filename = context.filename;
         if (!needsCheck(filename)) return {};
 
         const expectedNormalized = getCopyrightNotice().normalized;
@@ -43,7 +43,7 @@ const copyrightHeaderRule = {
 
         return {
             Program() {
-                const sourceCode = context.getSourceCode();
+                const sourceCode = context.sourceCode;
                 const text = sourceCode.getText();
                 const leading = findLeadingBlockComment(text);
 
