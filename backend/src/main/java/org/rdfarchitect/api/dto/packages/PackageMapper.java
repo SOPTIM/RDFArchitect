@@ -36,7 +36,7 @@ public interface PackageMapper {
 
     PackageMapper INSTANCE = Mappers.getMapper(PackageMapper.class);
 
-    @Mapping(target = "label", source = "label.value")
+    @Mapping(target = "label", source = "uri.suffix")
     @Mapping(target = "prefix", source = "uri.prefix")
     @Mapping(target = "comment", source = "comment.value")
     PackageDTO toDTO(CIMPackage packageCIM);
@@ -54,7 +54,7 @@ public interface PackageMapper {
         }
         return new BelongsToCategoryDTO(
                 belongsToCategory.getUri().getPrefix(),
-                belongsToCategory.getLabel().getValue(),
+                belongsToCategory.getUri().getSuffix(),
                 belongsToCategory.getUuid());
     }
 
