@@ -29,6 +29,7 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
         editorState,
@@ -274,7 +275,7 @@
             placeholder={datasetName && graphURI
                 ? "Select package"
                 : "Select a schema first"}
-            getOptionLabel={pkg => pkg.label}
+            getOptionLabel={pkg => getPackageDisplayLabel(pkg.label)}
         />
 
         <label for={domIds.classURINamespace} class="mt-3 mb-1 block text-sm">

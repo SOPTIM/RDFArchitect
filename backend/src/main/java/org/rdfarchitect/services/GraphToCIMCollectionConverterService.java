@@ -17,8 +17,7 @@
 
 package org.rdfarchitect.services;
 
-import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
-import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -101,9 +100,9 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             Graph graph, GraphIdentifier graphIdentifier, CIMCollection cimCollection) {
         var internalPackagesQuery =
                 new CIMQueryBuilder(buildBaseQuery(graphIdentifier).build())
-                        .appendUUIDQuery(REQUIRED)
-                        .appendLabelQuery(REQUIRED)
-                        .appendCommentQuery(OPTIONAL)
+                        .appendUUIDQuery(Mode.REQUIRED)
+                        .appendLabelQuery(Mode.REQUIRED)
+                        .appendCommentQuery(Mode.OPTIONAL)
                         .buildSelectBuilder()
                         .addWhere(CIMQueryVars.URI, RDF.type, CIMS.classCategory)
                         .build();
@@ -135,9 +134,9 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                         .addWhere(Node.ANY, CIMS.belongsToCategory, CIMQueryVars.URI);
         var externalPackagesQuery =
                 new CIMQueryBuilder(externalPackagesBaseQuery)
-                        .appendUUIDQuery(REQUIRED)
-                        .appendLabelQuery(OPTIONAL)
-                        .appendCommentQuery(OPTIONAL)
+                        .appendUUIDQuery(Mode.REQUIRED)
+                        .appendLabelQuery(Mode.OPTIONAL)
+                        .appendCommentQuery(Mode.OPTIONAL)
                         .build();
 
         // execute query
@@ -151,13 +150,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                                 .uuid(solutionParser.getUUID(CIMQueryVars.UUID))
                                 .uri(solutionParser.getURI(CIMQueryVars.URI))
                                 .build();
-                var labelValue = cimPackage.getUri().getSuffix();
-                if (labelValue.startsWith("Package_") && labelValue.length() > 8) {
-                    var rdfsLabel = new RDFSLabel(labelValue.substring(8));
-                    cimPackage.setLabel(rdfsLabel);
-                } else {
-                    cimPackage.setLabel(new RDFSLabel(labelValue));
-                }
+                cimPackage.setLabel(new RDFSLabel(cimPackage.getUri().getSuffix()));
 
                 cimCollection.getPackages().add(cimPackage);
             }

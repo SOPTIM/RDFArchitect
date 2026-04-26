@@ -20,6 +20,7 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { compareState } from "$lib/sharedState.svelte.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import PackageView from "./PackageView.svelte";
 
@@ -35,8 +36,7 @@
     });
 
     function getPackageLabel(pack) {
-        if (pack.label === "default") return "default";
-        return pack.label.replace("Package_", "");
+        return getPackageDisplayLabel(pack.label);
     }
 
     function getPackageChangeType(pack) {

@@ -22,6 +22,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { pack } = $props();
 
@@ -39,7 +40,7 @@
 
     function getPackageLabel(packageUUID) {
         const pkg = classEditorContext.getPackageByUuid(packageUUID);
-        return pkg ? pkg.label : packageUUID;
+        return getPackageDisplayLabel(pkg ? pkg.label : packageUUID);
     }
 </script>
 
@@ -55,7 +56,7 @@
             highlight={pack.isModified}
             warn={!pack.isValid}
             optionObjectList={packages}
-            accessDisplayData={pack => pack.label}
+            accessDisplayData={pack => getPackageDisplayLabel(pack.label)}
             accessIdentifier={pack =>
                 (pack.prefix
                     ? classEditorContext.getSubstitutedNamespace(pack.prefix)

@@ -24,6 +24,7 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { showDialog = $bindable(), datasetName, graphUri, pack } = $props();
 
@@ -55,7 +56,9 @@
     primaryLabel="Delete Package"
     onPrimary={deletePackage}
     primaryVariant="danger"
-    title={pack?.label ? `Delete package "${pack.label}"?` : "Delete package?"}
+    title={pack?.label
+        ? `Delete package "${getPackageDisplayLabel(pack.label)}"?`
+        : "Delete package?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >

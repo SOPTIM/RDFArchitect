@@ -121,7 +121,7 @@ class PackageMapperTest {
                     () -> assertThat(mappedCIMPackage.getUuid()).isEqualTo(packageDTO.getUuid()),
                     () ->
                             assertThat(mappedCIMPackage.getUri())
-                                    .isEqualTo(new URI("http://example.org#Package_TestPackage")),
+                                    .isEqualTo(new URI("http://example.org#TestPackage")),
                     () ->
                             assertThat(mappedCIMPackage.getLabel())
                                     .isEqualTo(new RDFSLabel("TestPackage", "en")),
@@ -142,14 +142,14 @@ class PackageMapperTest {
 
             var expectedBelongsToCategory = new CIMSBelongsToCategory();
             expectedBelongsToCategory.setUri(
-                    new URI("http://example.org/Packages#Package_TestParentPackage"));
+                    new URI("http://example.org/Packages#TestParentPackage"));
             expectedBelongsToCategory.setLabel(new RDFSLabel("TestParentPackage", "en"));
             expectedBelongsToCategory.setUuid(packageDTO.getBelongsToCategory().getUuid());
             assertAll(
                     () -> assertThat(mappedCIMPackage.getUuid()).isEqualTo(packageDTO.getUuid()),
                     () ->
                             assertThat(mappedCIMPackage.getUri())
-                                    .isEqualTo(new URI("http://example.org#Package_TestPackage")),
+                                    .isEqualTo(new URI("http://example.org#TestPackage")),
                     () ->
                             assertThat(mappedCIMPackage.getLabel())
                                     .isEqualTo(new RDFSLabel("TestPackage", "en")),
@@ -163,6 +163,21 @@ class PackageMapperTest {
                     () ->
                             assertThat(mappedCIMPackage.getBelongsToCategory())
                                     .isEqualTo(expectedBelongsToCategory));
+        }
+
+        @Test
+        void toCIMObject_prefixedPackageLabel_preservesRawLabelWithoutDoublingPrefix() {
+            packageDTO.setLabel("Package_TestPackage");
+
+            var mappedCIMPackage = packageMapper.toCIMObject(packageDTO);
+
+            assertAll(
+                    () ->
+                            assertThat(mappedCIMPackage.getUri())
+                                    .isEqualTo(new URI("http://example.org#Package_TestPackage")),
+                    () ->
+                            assertThat(mappedCIMPackage.getLabel())
+                                    .isEqualTo(new RDFSLabel("Package_TestPackage", "en")));
         }
 
         @Test
