@@ -29,7 +29,9 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = {MappingUtils.class})
+@Mapper(
+        componentModel = "spring",
+        uses = {MappingUtils.class})
 public interface PackageMapper {
 
     PackageMapper INSTANCE = Mappers.getMapper(PackageMapper.class);
@@ -51,24 +53,23 @@ public interface PackageMapper {
             return null;
         }
         return new BelongsToCategoryDTO(
-                  belongsToCategory.getUri().getPrefix(),
-                  belongsToCategory.getLabel().getValue(),
-                  belongsToCategory.getUuid()
-        );
+                belongsToCategory.getUri().getPrefix(),
+                belongsToCategory.getLabel().getValue(),
+                belongsToCategory.getUuid());
     }
 
     default URI buildURI(PackageDTO dto) {
         return new URI(dto.getPrefix() + dto.getLabel());
     }
 
-    default CIMSBelongsToCategory buildBelongsToCategory(BelongsToCategoryDTO belongsToCategoryDTO) {
+    default CIMSBelongsToCategory buildBelongsToCategory(
+            BelongsToCategoryDTO belongsToCategoryDTO) {
         if (belongsToCategoryDTO == null) {
             return null;
         }
         return new CIMSBelongsToCategory(
-                  new URI(belongsToCategoryDTO.getPrefix() + belongsToCategoryDTO.getLabel()),
-                  new RDFSLabel(belongsToCategoryDTO.getLabel(), "en"),
-                  belongsToCategoryDTO.getUuid()
-        );
+                new URI(belongsToCategoryDTO.getPrefix() + belongsToCategoryDTO.getLabel()),
+                new RDFSLabel(belongsToCategoryDTO.getLabel(), "en"),
+                belongsToCategoryDTO.getUuid());
     }
 }

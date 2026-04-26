@@ -17,6 +17,10 @@
 
 package org.rdfarchitect.models.cim.data;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import org.apache.jena.query.QuerySolutionMap;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -25,18 +29,17 @@ import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 class CIMObjectFactoryTest {
 
     @Test
     void createExternalCIMPackageList_preservesUriSuffixAsLabel() {
         var packageUuid = UUID.randomUUID();
         var querySolution = new QuerySolutionMap();
-        querySolution.add(CIMQueryVars.URI, ResourceFactory.createResource("http://example.org#Package_TestPackage"));
-        querySolution.add(CIMQueryVars.UUID, ResourceFactory.createStringLiteral(packageUuid.toString()));
+        querySolution.add(
+                CIMQueryVars.URI,
+                ResourceFactory.createResource("http://example.org#Package_TestPackage"));
+        querySolution.add(
+                CIMQueryVars.UUID, ResourceFactory.createStringLiteral(packageUuid.toString()));
 
         var resultSet = mock(ResultSet.class);
         when(resultSet.hasNext()).thenReturn(true, false);
@@ -45,7 +48,8 @@ class CIMObjectFactoryTest {
         var packages = CIMObjectFactory.createExternalCIMPackageList(resultSet);
 
         assertThat(packages).hasSize(1);
-        assertThat(packages.getFirst().getUri().toString()).isEqualTo("http://example.org#Package_TestPackage");
+        assertThat(packages.getFirst().getUri().toString())
+                .isEqualTo("http://example.org#Package_TestPackage");
         assertThat(packages.getFirst().getLabel().getValue()).isEqualTo("Package_TestPackage");
         assertThat(packages.getFirst().getUuid()).isEqualTo(packageUuid);
     }

@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.models.cim;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.jena.query.QuerySolutionMap;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.Test;
@@ -24,24 +26,28 @@ import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class CIMQuerySolutionParserTest {
 
     @Test
     void getBelongsToCategory_withoutExplicitLabel_preservesUriSuffix() {
         var packageUuid = UUID.randomUUID();
         var querySolution = new QuerySolutionMap();
-        querySolution.add(CIMQueryVars.PACKAGE_URI, ResourceFactory.createResource("http://example.org#Package_TestPackage"));
-        querySolution.add(CIMQueryVars.PACKAGE_UUID, ResourceFactory.createStringLiteral(packageUuid.toString()));
+        querySolution.add(
+                CIMQueryVars.PACKAGE_URI,
+                ResourceFactory.createResource("http://example.org#Package_TestPackage"));
+        querySolution.add(
+                CIMQueryVars.PACKAGE_UUID,
+                ResourceFactory.createStringLiteral(packageUuid.toString()));
 
-        var belongsToCategory = new CIMQuerySolutionParser(querySolution).getBelongsToCategory(
-                  CIMQueryVars.PACKAGE_URI,
-                  CIMQueryVars.PACKAGE_LABEL,
-                  CIMQueryVars.PACKAGE_UUID
-        );
+        var belongsToCategory =
+                new CIMQuerySolutionParser(querySolution)
+                        .getBelongsToCategory(
+                                CIMQueryVars.PACKAGE_URI,
+                                CIMQueryVars.PACKAGE_LABEL,
+                                CIMQueryVars.PACKAGE_UUID);
 
-        assertThat(belongsToCategory.getUri().toString()).isEqualTo("http://example.org#Package_TestPackage");
+        assertThat(belongsToCategory.getUri().toString())
+                .isEqualTo("http://example.org#Package_TestPackage");
         assertThat(belongsToCategory.getLabel().getValue()).isEqualTo("Package_TestPackage");
         assertThat(belongsToCategory.getUuid()).isEqualTo(packageUuid);
     }
