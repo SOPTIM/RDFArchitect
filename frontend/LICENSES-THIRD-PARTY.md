@@ -8,7 +8,7 @@
 
 ### @eslint/js
 - **Package:** @eslint/js
-- **Version:** 9.39.4
+- **Version:** 10.0.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -126,7 +126,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 9.39.4
+- **Version:** 10.2.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -136,11 +136,11 @@
 - **License:** MIT
 - **URL:** [https://github.com/prettier/eslint-config-prettier#readme](https://github.com/prettier/eslint-config-prettier#readme)
 
-### eslint-plugin-import
-- **Package:** eslint-plugin-import
-- **Version:** 2.32.0
+### eslint-plugin-import-x
+- **Package:** eslint-plugin-import-x
+- **Version:** 4.16.2
 - **License:** MIT
-- **URL:** [https://github.com/import-js/eslint-plugin-import](https://github.com/import-js/eslint-plugin-import)
+- **URL:** [https://github.com/un-ts/eslint-plugin-import-x#readme](https://github.com/un-ts/eslint-plugin-import-x#readme)
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
@@ -230,6 +230,12 @@
 - **Version:** 4.2.2
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
+
+### typescript
+- **Package:** typescript
+- **Version:** 5.9.3
+- **License:** Apache-2.0
+- **URL:** [https://www.typescriptlang.org/](https://www.typescriptlang.org/)
 
 ### typescript-eslint
 - **Package:** typescript-eslint
