@@ -160,12 +160,9 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return true;
         }
         if (!Set.of(supported).contains(action)) {
+            var typeString = type.name().toLowerCase().replace("_", " ");
             throw new UnsupportedOperationException(
-                    "Action "
-                            + action
-                            + " is not supported for "
-                            + type.name().toLowerCase().replace("_", " ")
-                            + ".");
+                    "Action " + action + " is not supported for " + typeString + ".");
         }
         return false;
     }

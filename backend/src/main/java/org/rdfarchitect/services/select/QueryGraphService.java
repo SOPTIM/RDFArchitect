@@ -114,29 +114,30 @@ public class QueryGraphService
               SELECT DISTINCT ?uri ?uuid ?label ?packageURI ?packageLabel ?packageUUID ?comment ?superClassURI ?superClassLabel
               WHERE
                 {
-                  %s
-                  ?uri  <http://example.org#uuid>  ?uuid
-                  OPTIONAL
-                    { ?uri  rdfs:label  ?label}
-                  OPTIONAL
-                    { ?uri  cims:belongsToCategory  ?packageURI
-                      OPTIONAL
-                        { ?packageURI  rdfs:label  ?packageLabel}
-                      OPTIONAL
-                        { ?packageURI  <http://example.org#uuid>  ?packageUUID}
-                    }
-                  OPTIONAL
-                    { ?uri  rdfs:comment  ?comment}
-                  OPTIONAL
-                    { ?uri  rdfs:subClassOf  ?superClassURI
-                      OPTIONAL
-                        { ?superClassURI
-                                    rdfs:label  ?superClassLabel}
-                    }
-                }
-              ORDER BY ?uri
               """
-                        .formatted(classFilter);
+                        + classFilter
+                        + """
+          ?uri  <http://example.org#uuid>  ?uuid
+          OPTIONAL
+            { ?uri  rdfs:label  ?label}
+          OPTIONAL
+            { ?uri  cims:belongsToCategory  ?packageURI
+              OPTIONAL
+                { ?packageURI  rdfs:label  ?packageLabel}
+              OPTIONAL
+                { ?packageURI  <http://example.org#uuid>  ?packageUUID}
+            }
+          OPTIONAL
+            { ?uri  rdfs:comment  ?comment}
+          OPTIONAL
+            { ?uri  rdfs:subClassOf  ?superClassURI
+              OPTIONAL
+                { ?superClassURI
+                            rdfs:label  ?superClassLabel}
+            }
+        }
+      ORDER BY ?uri
+      """;
 
         // execute query
         var queryResultSet =
