@@ -29,7 +29,7 @@ public class CIMResourceUtils {
 
     /**
      * Checks whether a resource is external/referenced only. In our model this would mean it only
-     * has a {@link RDFA::uuid} property, but no other properties.
+     * has a {@link RDFA uuid} property, but no other properties.
      *
      * @param resource The resource to check for.
      * @return True if the resource is an external resource, false otherwise.
