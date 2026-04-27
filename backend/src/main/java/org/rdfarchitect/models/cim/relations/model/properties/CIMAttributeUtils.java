@@ -30,6 +30,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.shacl.XSDDatatypeMapper;
 
+import java.util.List;
 import java.util.Set;
 
 @UtilityClass
@@ -174,5 +175,25 @@ public class CIMAttributeUtils {
         var ontology = attribute.getModel();
         var enumClass = attribute.getProperty(RDFS.range).getResource();
         return ontology.listResourcesWithProperty(RDF.type, enumClass).toSet();
+    }
+
+    /**
+     * Lists all attributes that use a given class as their datatype (via {@code cims:datatype} or
+     * {@code rdfs:range}).
+     *
+     * @param classResource the class resource used as datatype
+     * @return a list of attribute resources that reference the class as their datatype
+     */
+    public List<Resource> listAttributesWithClassAsDatatype(Resource classResource) {
+        var model = classResource.getModel();
+        var byDatatype = model.listSubjectsWithProperty(CIMS.datatype, classResource);
+        var byRange = model.listSubjectsWithProperty(RDFS.range, classResource);
+        return byDatatype
+                .andThen(byRange)
+                .filterKeep(CIMPropertyUtils::isAttribute)
+                .toList()
+                .stream()
+                .distinct()
+                .toList();
     }
 }

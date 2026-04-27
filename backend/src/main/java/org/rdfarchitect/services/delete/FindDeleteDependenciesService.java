@@ -24,7 +24,6 @@ import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceIdentifier;
@@ -34,11 +33,13 @@ import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource.AffectedResourceReason;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
+import org.rdfarchitect.models.cim.relations.model.CIMPackageUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMAssociationUtils;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.springframework.stereotype.Service;
@@ -105,7 +106,7 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
             UUID uuid,
             AffectedResourceReason reason,
             List<DeleteAction> deleteActions) {
-        var classesInPackage = listClassesInPackage(model, uuid);
+        var classesInPackage = CIMPackageUtils.listClassesInPackage(model, uuid);
         var affectedResources = new ArrayList<AffectedResource>();
         var clsDeleteActions =
                 List.of(
@@ -148,7 +149,7 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
 
     private List<AffectedResource> findAffectedAttributesForClass(Resource classResource) {
         var childActions = List.of(DeleteAction.DELETE, DeleteAction.KEEP);
-        return listAttributesWithClassAsDatatype(classResource).stream()
+        return CIMAttributeUtils.listAttributesWithClassAsDatatype(classResource).stream()
                 .map(
                         attr ->
                                 new AffectedOwnedResource(
@@ -166,7 +167,7 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
 
     private List<AffectedResource> findAffectedAssociationsForClass(
             Resource classResource, ResourceIdentifier classResourceId) {
-        return listAssociationsReferencingClass(classResource).stream()
+        return CIMAssociationUtils.listAssociationsReferencingClass(classResource).stream()
                 .map(
                         assoc -> {
                             var childActions = new ArrayList<DeleteAction>();
@@ -175,32 +176,17 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
                                     assoc.getProperty(RDFS.range).getObject().asResource())) {
                                 childActions.add(DeleteAction.KEEP);
                             }
+                            var targetResource = CIMAssociationUtils.getAssociationTarget(assoc);
                             return new AffectedAssociation(
                                             createResourceIdentifier(assoc),
                                             CimResourceType.ASSOCIATION,
                                             AffectedResourceReason
                                                     .REFENCES_DELETED_CLASS_VIA_ASSOCIATION,
                                             classResourceId,
-                                            getAssociationTarget(assoc))
+                                            createResourceIdentifier(targetResource))
                                     .setActions(childActions);
                         })
                 .toList();
-    }
-
-    private ResourceIdentifier getAssociationTarget(Resource associationResource) {
-        var rangeStatement = associationResource.getProperty(RDFS.range);
-        if (rangeStatement == null) {
-            throw new IllegalStateException(
-                    "Association " + associationResource + " does not have a range.");
-        }
-        if (rangeStatement.getObject().isLiteral()) {
-            throw new IllegalStateException(
-                    "Association "
-                            + associationResource
-                            + " has a literal as range, which is not supported.");
-        }
-        var rangeResource = rangeStatement.getObject().asResource();
-        return createResourceIdentifier(rangeResource);
     }
 
     private List<AffectedResource> findAffectedChildClassesForClass(Resource classResource) {
@@ -241,7 +227,7 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
     private LinkedList<Map.Entry<Resource, Resource>> initializeQueue(
             Resource classResource, Set<Resource> visited) {
         var queue = new LinkedList<Map.Entry<Resource, Resource>>();
-        for (var directChild : listDirectlyDescendingClasses(classResource)) {
+        for (var directChild : CIMClassUtils.listDirectlyDerivingClasses(classResource)) {
             if (visited.add(directChild)) {
                 queue.add(Map.entry(directChild, classResource));
             }
@@ -287,49 +273,11 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
             Resource current,
             Set<Resource> visited,
             LinkedList<Map.Entry<Resource, Resource>> queue) {
-        for (var child : listDirectlyDescendingClasses(current)) {
+        for (var child : CIMClassUtils.listDirectlyDerivingClasses(current)) {
             if (visited.add(child)) {
                 queue.add(Map.entry(child, current));
             }
         }
-    }
-
-    private List<Resource> listDirectlyDescendingClasses(Resource classResource) {
-        return classResource
-                .getModel()
-                .listSubjectsWithProperty(RDFS.subClassOf, classResource)
-                .toList();
-    }
-
-    private List<Resource> listClassesInPackage(Model model, UUID uuid) {
-        var packageResource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, uuid);
-        if (!packageResource.hasProperty(RDF.type, CIMS.classCategory)) {
-            throw new IllegalStateException("Resource with UUID " + uuid + " is not a package.");
-        }
-        return model.listSubjectsWithProperty(CIMS.belongsToCategory, packageResource)
-                .filterKeep(cls -> cls.hasProperty(RDF.type, RDFS.Class))
-                .toList();
-    }
-
-    private List<Resource> listAssociationsReferencingClass(Resource classResource) {
-        return classResource
-                .getModel()
-                .listSubjectsWithProperty(RDFS.domain, classResource)
-                .filterKeep(CIMPropertyUtils::isAssociation)
-                .toList();
-    }
-
-    private List<Resource> listAttributesWithClassAsDatatype(Resource classResource) {
-        var model = classResource.getModel();
-        var byDatatype = model.listSubjectsWithProperty(CIMS.datatype, classResource);
-        var byRange = model.listSubjectsWithProperty(RDFS.range, classResource);
-        return byDatatype
-                .andThen(byRange)
-                .filterKeep(CIMPropertyUtils::isAttribute)
-                .toList()
-                .stream()
-                .distinct()
-                .toList();
     }
 
     private ResourceIdentifier createResourceIdentifier(Model model, UUID uuid) {
