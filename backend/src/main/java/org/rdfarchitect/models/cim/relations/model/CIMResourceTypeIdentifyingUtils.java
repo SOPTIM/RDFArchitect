@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.relations.model;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.OWL2;
@@ -45,33 +46,40 @@ public class CIMResourceTypeIdentifyingUtils {
         UNKNOWN,
     }
 
-    private record TypeRule(Predicate<Resource> matches, CimResourceType type) {
+    private record TypeRule(Predicate<Resource> matches, CimResourceType type) {}
 
-    }
-
-    private static final List<TypeRule> TYPE_RULES = List.of(
-              new TypeRule(s -> s.hasProperty(RDF.type, CIMS.classCategory), CimResourceType.PACKAGE),
-              new TypeRule(s -> s.hasProperty(RDF.type, RDFS.Class), CimResourceType.CLASS),
-              new TypeRule(s -> s.hasProperty(RDF.type, OWL2.Ontology), CimResourceType.ONTOLOGY),
-              new TypeRule(CIMPropertyUtils::isAttribute, CimResourceType.ATTRIBUTE),
-              new TypeRule(CIMPropertyUtils::isAssociation, CimResourceType.ASSOCIATION),
-              new TypeRule(CIMResourceTypeIdentifyingUtils::isEnumEntry, CimResourceType.ENUM_ENTRY)
-                                                            );
+    private static final List<TypeRule> TYPE_RULES =
+            List.of(
+                    new TypeRule(
+                            s -> s.hasProperty(RDF.type, CIMS.classCategory),
+                            CimResourceType.PACKAGE),
+                    new TypeRule(s -> s.hasProperty(RDF.type, RDFS.Class), CimResourceType.CLASS),
+                    new TypeRule(
+                            s -> s.hasProperty(RDF.type, OWL2.Ontology), CimResourceType.ONTOLOGY),
+                    new TypeRule(CIMPropertyUtils::isAttribute, CimResourceType.ATTRIBUTE),
+                    new TypeRule(CIMPropertyUtils::isAssociation, CimResourceType.ASSOCIATION),
+                    new TypeRule(
+                            CIMResourceTypeIdentifyingUtils::isEnumEntry,
+                            CimResourceType.ENUM_ENTRY));
 
     public CimResourceType getType(Model model, UUID uuid) {
         var subject = findUniqueSubject(model, uuid);
 
         return TYPE_RULES.stream()
-                         .filter(rule -> rule.matches().test(subject))
-                         .map(TypeRule::type)
-                         .findFirst()
-                         .orElse(CimResourceType.UNKNOWN);
+                .filter(rule -> rule.matches().test(subject))
+                .map(TypeRule::type)
+                .findFirst()
+                .orElse(CimResourceType.UNKNOWN);
     }
 
     public Resource findUniqueSubject(Model model, UUID uuid) {
         var subjects = model.listSubjectsWithProperty(RDFA.uuid, uuid.toString()).toList();
         if (subjects.size() != 1) {
-            throw new IllegalArgumentException("Expected exactly one subject with UUID " + uuid + ", but found " + subjects.size());
+            throw new IllegalArgumentException(
+                    "Expected exactly one subject with UUID "
+                            + uuid
+                            + ", but found "
+                            + subjects.size());
         }
         return subjects.getFirst();
     }
@@ -81,7 +89,9 @@ public class CIMResourceTypeIdentifyingUtils {
         if (types.size() != 1 || !types.getFirst().getObject().isURIResource()) {
             return false;
         }
-        return types.getFirst().getObject().asResource()
-                    .hasProperty(CIMS.stereotype, CIMStereotypes.enumeration);
+        return types.getFirst()
+                .getObject()
+                .asResource()
+                .hasProperty(CIMS.stereotype, CIMStereotypes.enumeration);
     }
 }

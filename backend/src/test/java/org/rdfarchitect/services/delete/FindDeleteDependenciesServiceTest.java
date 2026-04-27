@@ -17,6 +17,10 @@
 
 package org.rdfarchitect.services.delete;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -44,30 +48,32 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
 @ExtendWith(MockitoExtension.class)
 class FindDeleteDependenciesServiceTest {
 
-    private static final String TEST_DATA_PATH = "src/test/java/org/rdfarchitect/services/delete/testdata.ttl";
+    private static final String TEST_DATA_PATH =
+            "src/test/java/org/rdfarchitect/services/delete/testdata.ttl";
 
-    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier("default", "default");
+    private static final GraphIdentifier GRAPH_IDENTIFIER =
+            new GraphIdentifier("default", "default");
 
     // UUIDs from the TTL test data
-    private static final UUID PARENT_CLASS_UUID = UUID.fromString("05131eaf-a7dd-4ac4-8624-9665990985ab");
-    private static final UUID CHILD_CLASS_UUID = UUID.fromString("93ee2f31-5ddd-4b25-b119-e90a5ed327b0");
-    private static final UUID ASSOCIATED_CLASS_UUID = UUID.fromString("f6d92056-c469-40d4-add1-1d6adf2fa7a6");
-    private static final UUID PACKAGE_UUID = UUID.fromString("0351f9b6-5e91-4059-9d8b-169d28f1b2c8");
-    private static final UUID DATATYPE_CLASS_UUID = UUID.fromString("db520255-95ef-40d4-b328-e1631e4683a4");
-    private static final UUID ONTOLOGY_UUID = UUID.fromString("dba8f8e3-bfb3-4e62-9ca5-b0136ed186b2");
+    private static final UUID PARENT_CLASS_UUID =
+            UUID.fromString("05131eaf-a7dd-4ac4-8624-9665990985ab");
+    private static final UUID CHILD_CLASS_UUID =
+            UUID.fromString("93ee2f31-5ddd-4b25-b119-e90a5ed327b0");
+    private static final UUID ASSOCIATED_CLASS_UUID =
+            UUID.fromString("f6d92056-c469-40d4-add1-1d6adf2fa7a6");
+    private static final UUID PACKAGE_UUID =
+            UUID.fromString("0351f9b6-5e91-4059-9d8b-169d28f1b2c8");
+    private static final UUID DATATYPE_CLASS_UUID =
+            UUID.fromString("db520255-95ef-40d4-b328-e1631e4683a4");
+    private static final UUID ONTOLOGY_UUID =
+            UUID.fromString("dba8f8e3-bfb3-4e62-9ca5-b0136ed186b2");
 
-    @Mock
-    private DatabasePort databasePort;
+    @Mock private DatabasePort databasePort;
 
-    @InjectMocks
-    private FindDeleteDependenciesService service;
+    @InjectMocks private FindDeleteDependenciesService service;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -79,7 +85,8 @@ class FindDeleteDependenciesServiceTest {
         var wrappedGraph = new GraphRewindableWithUUIDs(graph, 5, 5);
         var wrappedContext = new GraphWithContext(wrappedGraph);
 
-        when(databasePort.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(wrappedContext);
+        when(databasePort.getGraphWithContext(any(GraphIdentifier.class)))
+                .thenReturn(wrappedContext);
     }
 
     // ==================== Simple resource types ====================
@@ -112,14 +119,17 @@ class FindDeleteDependenciesServiceTest {
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(PARENT_CLASS_UUID);
         assertThat(result.getType()).isEqualTo(CimResourceType.CLASS);
 
-        var childClasses = result.getChildren().stream()
-                                 .filter(c -> c.getType() == CimResourceType.CLASS)
-                                 .toList();
+        var childClasses =
+                result.getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.CLASS)
+                        .toList();
 
-        assertThat(childClasses).isNotEmpty()
-                                .anyMatch(c ->
-                                                    c.getResourceIdentifier().getUuid().equals(CHILD_CLASS_UUID)
-                                                              && c.getReason() == AffectedResourceReason.CHILD_OF);
+        assertThat(childClasses)
+                .isNotEmpty()
+                .anyMatch(
+                        c ->
+                                c.getResourceIdentifier().getUuid().equals(CHILD_CLASS_UUID)
+                                        && c.getReason() == AffectedResourceReason.CHILD_OF);
     }
 
     @Test
@@ -130,17 +140,27 @@ class FindDeleteDependenciesServiceTest {
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(ASSOCIATED_CLASS_UUID);
 
         // ParentClass should be a direct child
-        var parentClassChild = result.getChildren().stream()
-                                     .filter(c -> c.getType() == CimResourceType.CLASS
-                                               && c.getResourceIdentifier().getUuid().equals(PARENT_CLASS_UUID))
-                                     .findFirst();
+        var parentClassChild =
+                result.getChildren().stream()
+                        .filter(
+                                c ->
+                                        c.getType() == CimResourceType.CLASS
+                                                && c.getResourceIdentifier()
+                                                        .getUuid()
+                                                        .equals(PARENT_CLASS_UUID))
+                        .findFirst();
         assertThat(parentClassChild).isPresent();
 
         // ChildClass should be nested under ParentClass, not flat
-        var childClassNested = parentClassChild.get().getChildren().stream()
-                                               .filter(c -> c.getType() == CimResourceType.CLASS
-                                                         && c.getResourceIdentifier().getUuid().equals(CHILD_CLASS_UUID))
-                                               .findFirst();
+        var childClassNested =
+                parentClassChild.get().getChildren().stream()
+                        .filter(
+                                c ->
+                                        c.getType() == CimResourceType.CLASS
+                                                && c.getResourceIdentifier()
+                                                        .getUuid()
+                                                        .equals(CHILD_CLASS_UUID))
+                        .findFirst();
         assertThat(childClassNested).isPresent();
     }
 
@@ -154,9 +174,8 @@ class FindDeleteDependenciesServiceTest {
 
         // Each class must appear only once in the tree
         var allChildClasses = flattenChildClasses(result);
-        var classUuids = allChildClasses.stream()
-                                        .map(c -> c.getResourceIdentifier().getUuid())
-                                        .toList();
+        var classUuids =
+                allChildClasses.stream().map(c -> c.getResourceIdentifier().getUuid()).toList();
         assertThat(classUuids).doesNotHaveDuplicates();
     }
 
@@ -164,14 +183,20 @@ class FindDeleteDependenciesServiceTest {
     void getDeleteDependencies_childClassActions_containDeleteKeepAndRemoveSubclassReference() {
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
 
-        var childClasses = result.getChildren().stream()
-                                 .filter(c -> c.getType() == CimResourceType.CLASS)
-                                 .toList();
+        var childClasses =
+                result.getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.CLASS)
+                        .toList();
 
-        assertThat(childClasses).isNotEmpty()
-                                .allSatisfy(child ->
-                                                      assertThat(child.getActions()).containsExactlyInAnyOrder(
-                                                                DeleteAction.DELETE, DeleteAction.KEEP, DeleteAction.REMOVE_SUBCLASS_REFERENCE));
+        assertThat(childClasses)
+                .isNotEmpty()
+                .allSatisfy(
+                        child ->
+                                assertThat(child.getActions())
+                                        .containsExactlyInAnyOrder(
+                                                DeleteAction.DELETE,
+                                                DeleteAction.KEEP,
+                                                DeleteAction.REMOVE_SUBCLASS_REFERENCE));
     }
 
     // ==================== Class with associations ====================
@@ -180,27 +205,34 @@ class FindDeleteDependenciesServiceTest {
     void getDeleteDependencies_classWithAssociations_returnsAssociationsAsAffectedResources() {
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
 
-        var associations = result.getChildren().stream()
-                                 .filter(c -> c.getType() == CimResourceType.ASSOCIATION)
-                                 .toList();
+        var associations =
+                result.getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.ASSOCIATION)
+                        .toList();
 
-        assertThat(associations).isNotEmpty()
-                                .allSatisfy(assoc ->
-                                                      assertThat(assoc.getReason()).isEqualTo(AffectedResourceReason.REFENCES_DELETED_CLASS_VIA_ASSOCIATION));
+        assertThat(associations)
+                .isNotEmpty()
+                .allSatisfy(
+                        assoc ->
+                                assertThat(assoc.getReason())
+                                        .isEqualTo(
+                                                AffectedResourceReason
+                                                        .REFENCES_DELETED_CLASS_VIA_ASSOCIATION));
     }
 
     @Test
     void getDeleteDependencies_associationWithTarget_returnsAffectedAssociationWithTarget() {
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
 
-        var affectedAssociations = result.getChildren().stream()
-                                         .filter(AffectedAssociation.class::isInstance)
-                                         .map(c -> (AffectedAssociation) c)
-                                         .toList();
+        var affectedAssociations =
+                result.getChildren().stream()
+                        .filter(AffectedAssociation.class::isInstance)
+                        .map(c -> (AffectedAssociation) c)
+                        .toList();
 
-        assertThat(affectedAssociations).isNotEmpty()
-                                        .allSatisfy(assoc ->
-                                                              assertThat(assoc.getTarget()).isNotNull());
+        assertThat(affectedAssociations)
+                .isNotEmpty()
+                .allSatisfy(assoc -> assertThat(assoc.getTarget()).isNotNull());
     }
 
     // ==================== Child classes have their own dependencies ====================
@@ -211,15 +243,21 @@ class FindDeleteDependenciesServiceTest {
         // and ChildClass should have its own associations as children
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PARENT_CLASS_UUID);
 
-        var childClassAffected = result.getChildren().stream()
-                                       .filter(c -> c.getType() == CimResourceType.CLASS
-                                                 && c.getResourceIdentifier().getUuid().equals(CHILD_CLASS_UUID))
-                                       .findFirst();
+        var childClassAffected =
+                result.getChildren().stream()
+                        .filter(
+                                c ->
+                                        c.getType() == CimResourceType.CLASS
+                                                && c.getResourceIdentifier()
+                                                        .getUuid()
+                                                        .equals(CHILD_CLASS_UUID))
+                        .findFirst();
         assertThat(childClassAffected).isPresent();
 
-        var childAssociations = childClassAffected.get().getChildren().stream()
-                                                  .filter(c -> c.getType() == CimResourceType.ASSOCIATION)
-                                                  .toList();
+        var childAssociations =
+                childClassAffected.get().getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.ASSOCIATION)
+                        .toList();
         assertThat(childAssociations).isNotEmpty();
     }
 
@@ -230,13 +268,19 @@ class FindDeleteDependenciesServiceTest {
         // DatatypeClass is used as datatype in ParentClass.attr1
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, DATATYPE_CLASS_UUID);
 
-        var attributes = result.getChildren().stream()
-                               .filter(c -> c.getType() == CimResourceType.ATTRIBUTE)
-                               .toList();
+        var attributes =
+                result.getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.ATTRIBUTE)
+                        .toList();
 
-        assertThat(attributes).isNotEmpty()
-                              .allSatisfy(attr ->
-                                                    assertThat(attr.getReason()).isEqualTo(AffectedResourceReason.USES_DELETED_CLASS_AS_DATATYPE));
+        assertThat(attributes)
+                .isNotEmpty()
+                .allSatisfy(
+                        attr ->
+                                assertThat(attr.getReason())
+                                        .isEqualTo(
+                                                AffectedResourceReason
+                                                        .USES_DELETED_CLASS_AS_DATATYPE));
     }
 
     // ==================== Delete package ====================
@@ -249,43 +293,56 @@ class FindDeleteDependenciesServiceTest {
         assertThat(result.getType()).isEqualTo(CimResourceType.PACKAGE);
         assertThat(result.getReason()).isEqualTo(AffectedResourceReason.DELETION_REQUESTED_BY_USER);
 
-        var childClasses = result.getChildren().stream()
-                                 .filter(c -> c.getType() == CimResourceType.CLASS)
-                                 .toList();
+        var childClasses =
+                result.getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.CLASS)
+                        .toList();
 
         // Package_Package contains: ParentClass, ChildClass, AssociatedClass
         assertThat(childClasses).hasSize(3);
 
-        var childUuids = childClasses.stream()
-                                     .map(c -> c.getResourceIdentifier().getUuid())
-                                     .toList();
-        assertThat(childUuids).containsExactlyInAnyOrder(
-                  PARENT_CLASS_UUID, CHILD_CLASS_UUID, ASSOCIATED_CLASS_UUID);
+        var childUuids =
+                childClasses.stream().map(c -> c.getResourceIdentifier().getUuid()).toList();
+        assertThat(childUuids)
+                .containsExactlyInAnyOrder(
+                        PARENT_CLASS_UUID, CHILD_CLASS_UUID, ASSOCIATED_CLASS_UUID);
     }
 
     @Test
     void getDeleteDependencies_package_classesHaveCorrectReasonAndActions() {
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PACKAGE_UUID);
 
-        var childClasses = result.getChildren().stream()
-                                 .filter(c -> c.getType() == CimResourceType.CLASS)
-                                 .toList();
+        var childClasses =
+                result.getChildren().stream()
+                        .filter(c -> c.getType() == CimResourceType.CLASS)
+                        .toList();
 
-        assertThat(childClasses).isNotEmpty()
-                                .allSatisfy(cls -> {
-                                    assertThat(cls.getReason()).isEqualTo(AffectedResourceReason.CONTAINED_IN_PACKAGE);
-                                    assertThat(cls.getActions()).containsExactlyInAnyOrder(
-                                              DeleteAction.DELETE, DeleteAction.KEEP, DeleteAction.REMOVE_PACKAGE_REFERENCE);
-                                });
+        assertThat(childClasses)
+                .isNotEmpty()
+                .allSatisfy(
+                        cls -> {
+                            assertThat(cls.getReason())
+                                    .isEqualTo(AffectedResourceReason.CONTAINED_IN_PACKAGE);
+                            assertThat(cls.getActions())
+                                    .containsExactlyInAnyOrder(
+                                            DeleteAction.DELETE,
+                                            DeleteAction.KEEP,
+                                            DeleteAction.REMOVE_PACKAGE_REFERENCE);
+                        });
     }
 
     @Test
     void getDeleteDependencies_package_classesInPackageHaveTheirOwnDependencies() {
         var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PACKAGE_UUID);
 
-        var associatedClassAffected = result.getChildren().stream()
-                                            .filter(c -> c.getResourceIdentifier().getUuid().equals(ASSOCIATED_CLASS_UUID))
-                                            .findFirst();
+        var associatedClassAffected =
+                result.getChildren().stream()
+                        .filter(
+                                c ->
+                                        c.getResourceIdentifier()
+                                                .getUuid()
+                                                .equals(ASSOCIATED_CLASS_UUID))
+                        .findFirst();
         assertThat(associatedClassAffected).isPresent();
 
         // AssociatedClass has associations and child classes

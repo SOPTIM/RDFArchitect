@@ -29,8 +29,8 @@ public interface GetClassListUseCase {
      *
      * @param graphIdentifier The graph to getClassDefinition.
      * @param includeExternalClasses Whether to include external classes in the result.
-     *
      * @return The list of classes in the graph.
      */
-    List<ClassUMLAdaptedDTO> getClassList(GraphIdentifier graphIdentifier,boolean includeExternalClasses);
+    List<ClassUMLAdaptedDTO> getClassList(
+            GraphIdentifier graphIdentifier, boolean includeExternalClasses);
 }

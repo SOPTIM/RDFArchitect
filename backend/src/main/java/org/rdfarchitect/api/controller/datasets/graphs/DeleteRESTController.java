@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets.graphs;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -53,67 +55,93 @@ public class DeleteRESTController {
     private final DeleteResourcesUseCase deleteResourcesUseCase;
 
     @Operation(
-              summary = "Get deletion impact",
-              description = "Returns a tree of affected resources for deleting the resource with the given UUID.",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(responseCode = "200")
-              }
-    )
+            summary = "Get deletion impact",
+            description =
+                    "Returns a tree of affected resources for deleting the resource with the given UUID.",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping("/uuid/{uuid}/deletion-impact")
     public AffectedResource getDeletionImpact(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The url encoded iri identifier of the cim resource.")
-              @PathVariable
-              String uuid) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".", datasetName, graphURI, uuid, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The url encoded iri identifier of the cim resource.")
+                    @PathVariable
+                    String uuid) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".",
+                datasetName,
+                graphURI,
+                uuid,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var resultObj = findDeleteDependenciesUseCase.getDeleteDependencies(new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(uuid));
+        var resultObj =
+                findDeleteDependenciesUseCase.getDeleteDependencies(
+                        new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(uuid));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".", datasetName, graphURI, uuid, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".",
+                datasetName,
+                graphURI,
+                uuid,
+                originURL);
         return resultObj;
     }
 
     @Operation(
-              summary = "Delete resources",
-              description = "Processes a list of delete requests, each specifying a resource UUID and the desired action.",
-              tags = {"graph"},
-              responses = {
-                        @ApiResponse(responseCode = "200")
-              }
-    )
+            summary = "Delete resources",
+            description =
+                    "Processes a list of delete requests, each specifying a resource UUID and the desired action.",
+            tags = {"graph"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping("/delete-requests")
     public String deleteResources(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")
-              @RequestBody
-              List<ResourceDeleteRequest> deleteRequests
-                                 ) {
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(
+                            description =
+                                    "A list of resource delete requests, each containing the uuid of the resource to delete and the type of deletion")
+                    @RequestBody
+                    List<ResourceDeleteRequest> deleteRequests) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        deleteResourcesUseCase.executeDeleteRequests(new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
+        deleteResourcesUseCase.executeDeleteRequests(
+                new GraphIdentifier(datasetName, extendedGraphURI), deleteRequests);
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/delete\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return "success";
     }
 }

@@ -26,9 +26,11 @@ public interface FindDeleteDependenciesUseCase {
 
     /**
      * Finds the resources that would be affected by deleting a specified resource.
+     *
      * @param graphIdentifier The identifier of the graph.
      * @param uuid The resource to find dependencies for.
-     * @return An {@link AffectedResource} containing the affected resources with and their relations.
+     * @return An {@link AffectedResource} containing the affected resources with and their
+     *     relations.
      */
     AffectedResource getDeleteDependencies(GraphIdentifier graphIdentifier, UUID uuid);
 }
