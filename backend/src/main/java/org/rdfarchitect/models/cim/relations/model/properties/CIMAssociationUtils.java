@@ -24,6 +24,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -54,5 +55,41 @@ public class CIMAssociationUtils {
                         .collect(Collectors.toSet());
         instantiableDerivingClasses.add(targetClass); // include the class itself
         return instantiableDerivingClasses;
+    }
+
+    /**
+     * Lists all associations that reference a given class via {@code rdfs:domain}.
+     *
+     * @param classResource the class resource to find referencing associations for
+     * @return a list of association resources referencing the class
+     */
+    public List<Resource> listAssociationsReferencingClass(Resource classResource) {
+        return classResource
+                .getModel()
+                .listSubjectsWithProperty(RDFS.domain, classResource)
+                .filterKeep(CIMPropertyUtils::isAssociation)
+                .toList();
+    }
+
+    /**
+     * Returns the target (range) resource of an association.
+     *
+     * @param associationResource the association resource
+     * @return the range resource of the association
+     * @throws IllegalStateException if the association has no range or has a literal as range
+     */
+    public Resource getAssociationTarget(Resource associationResource) {
+        var rangeStatement = associationResource.getProperty(RDFS.range);
+        if (rangeStatement == null) {
+            throw new IllegalStateException(
+                    "Association " + associationResource + " does not have a range.");
+        }
+        if (rangeStatement.getObject().isLiteral()) {
+            throw new IllegalStateException(
+                    "Association "
+                            + associationResource
+                            + " has a literal as range, which is not supported.");
+        }
+        return rangeStatement.getObject().asResource();
     }
 }
