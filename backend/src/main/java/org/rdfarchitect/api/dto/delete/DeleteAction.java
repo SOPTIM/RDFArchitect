@@ -19,29 +19,23 @@ package org.rdfarchitect.api.dto.delete;
 
 public enum DeleteAction {
 
-    /**
-     * Delete the affected resource entirely.
-     * Applicable to all resource types.
-     */
+    /** Delete the affected resource entirely. Applicable to all resource types. */
     DELETE,
 
     /**
-     * Keep the affected resource as-is, even though
-     * it references a deleted resource.
-     * E.g. a class that extends a deleted class — keep the class
-     * but accept that the parent reference becomes invalid.
+     * Keep the affected resource as-is, even though it references a deleted resource. E.g. a class
+     * that extends a deleted class — keep the class but accept that the parent reference becomes
+     * invalid.
      */
     KEEP,
 
     /**
-     * Remove the {@code cims:belongsToCategory} triple from a class
-     * whose package is being deleted.
+     * Remove the {@code cims:belongsToCategory} triple from a class whose package is being deleted.
      */
     REMOVE_PACKAGE_REFERENCE,
 
     /**
-     * Remove the {@code rdfs:subClassOf} triple from a class
-     * whose parent class is being deleted.
+     * Remove the {@code rdfs:subClassOf} triple from a class whose parent class is being deleted.
      */
     REMOVE_SUBCLASS_REFERENCE;
 }

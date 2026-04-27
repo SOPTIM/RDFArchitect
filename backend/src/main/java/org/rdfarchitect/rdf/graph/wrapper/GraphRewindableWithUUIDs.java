@@ -28,9 +28,9 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
 import java.util.HashSet;
@@ -39,14 +39,17 @@ import java.util.UUID;
 
 public class GraphRewindableWithUUIDs extends GraphRewindable {
 
-    private static final Set<String> RELEVANT_TYPES = Set.of(RDF.Property.toString(), RDFS.Class.toString());
+    private static final Set<String> RELEVANT_TYPES =
+            Set.of(RDF.Property.toString(), RDFS.Class.toString());
 
     /**
-     * Accepts a {@link Graph} that serves as a base version of the {@link GraphRewindableWithUUIDs}.
+     * Accepts a {@link Graph} that serves as a base version of the {@link
+     * GraphRewindableWithUUIDs}.
      *
-     * @param base          The base graph
-     * @param maxVersions   The maximum amount of versions the graph stores.
-     * @param compressCount The amount of versions that are compressed to a new base when compressing.
+     * @param base The base graph
+     * @param maxVersions The maximum amount of versions the graph stores.
+     * @param compressCount The amount of versions that are compressed to a new base when
+     *     compressing.
      */
     public GraphRewindableWithUUIDs(@NotNull Graph base, int maxVersions, int compressCount) {
         super(enhanceWithUUIDs(base), maxVersions, compressCount);
@@ -83,9 +86,10 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
     }
 
     private static void addUUIDsToTypedResources(Model model) {
-        var subjects = model.listResourcesWithProperty(RDF.type)
-                            .filterKeep(r -> r.isURIResource() && !r.hasProperty(RDFA.uuid))
-                            .toSet();
+        var subjects =
+                model.listResourcesWithProperty(RDF.type)
+                        .filterKeep(r -> r.isURIResource() && !r.hasProperty(RDFA.uuid))
+                        .toSet();
 
         for (var subject : subjects) {
             subject.addProperty(RDFA.uuid, createUUID());
@@ -96,29 +100,30 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
         var objects = new HashSet<Resource>();
 
         model.listResourcesWithProperty(RDF.type)
-             .filterKeep(r -> r.isURIResource() && hasAnyType(r))
-             .forEachRemaining(subject ->
-                                         subject.listProperties()
-                                                .mapWith(Statement::getObject)
-                                                .filterKeep(GraphRewindableWithUUIDs::isReferencedOnlyURI)
-                                                .mapWith(RDFNode::asResource)
-                                                .forEachRemaining(objects::add));
+                .filterKeep(r -> r.isURIResource() && hasAnyType(r))
+                .forEachRemaining(
+                        subject ->
+                                subject.listProperties()
+                                        .mapWith(Statement::getObject)
+                                        .filterKeep(GraphRewindableWithUUIDs::isReferencedOnlyURI)
+                                        .mapWith(RDFNode::asResource)
+                                        .forEachRemaining(objects::add));
 
         objects.forEach(o -> o.addProperty(RDFA.uuid, createUUID()));
     }
 
     private static boolean hasAnyType(Resource resource) {
         return resource.listProperties(RDF.type)
-                       .mapWith(Statement::getObject)
-                       .filterKeep(o -> RELEVANT_TYPES.contains(o.asResource().getURI()))
-                       .hasNext();
+                .mapWith(Statement::getObject)
+                .filterKeep(o -> RELEVANT_TYPES.contains(o.asResource().getURI()))
+                .hasNext();
     }
 
     private static boolean isReferencedOnlyURI(RDFNode node) {
         return node.isURIResource()
-                  && !RELEVANT_TYPES.contains(node.asResource().getURI())
-                  && !node.asResource().hasProperty(RDFA.uuid)
-                  && !node.asResource().listProperties().hasNext();
+                && !RELEVANT_TYPES.contains(node.asResource().getURI())
+                && !node.asResource().hasProperty(RDFA.uuid)
+                && !node.asResource().listProperties().hasNext();
     }
 
     private static String createUUID() {

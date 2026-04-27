@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.delete;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -52,7 +53,8 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public void executeDeleteRequests(GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
+    public void executeDeleteRequests(
+            GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
         GraphRewindable graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
@@ -71,9 +73,16 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             try {
                 deleteResource(model, deleteRequest);
             } catch (UnsupportedOperationException | IllegalArgumentException e) {
-                logger.warn("Skipping deletion of resource with UUID {} due to unsupported action: {} : {}", deleteRequest.getUuid(), deleteRequest.getAction(), e.getMessage());
+                logger.warn(
+                        "Skipping deletion of resource with UUID {} due to unsupported action: {} : {}",
+                        deleteRequest.getUuid(),
+                        deleteRequest.getAction(),
+                        e.getMessage());
             } catch (IllegalStateException e) {
-                logger.warn("Skipping deletion of resource with UUID {} due to illegal state: {}", deleteRequest.getUuid(), e.getMessage());
+                logger.warn(
+                        "Skipping deletion of resource with UUID {} due to illegal state: {}",
+                        deleteRequest.getUuid(),
+                        e.getMessage());
             }
         }
     }
@@ -87,20 +96,23 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             case ASSOCIATION -> deleteAssociation(model, deleteRequest);
             case ENUM_ENTRY -> deleteEnumEntry(model, deleteRequest);
             case ONTOLOGY -> deleteOntology(model, deleteRequest);
-            case UNKNOWN -> throw new IllegalArgumentException("Unknown resource type for resource with UUID: " + deleteRequest.getUuid());
+            case UNKNOWN ->
+                    throw new IllegalArgumentException(
+                            "Unknown resource type for resource with UUID: "
+                                    + deleteRequest.getUuid());
         }
     }
 
     /**
      * Validates the given action against the supported actions for a resource type.
      *
-     * @return {@code true} if the action is {@link DeleteAction#KEEP} and should be skipped,
-     * {@code false} if the action is supported and deletion should proceed.
-     *
-     * @throws IllegalArgumentException      if the action is {@code null}
+     * @return {@code true} if the action is {@link DeleteAction#KEEP} and should be skipped, {@code
+     *     false} if the action is supported and deletion should proceed.
+     * @throws IllegalArgumentException if the action is {@code null}
      * @throws UnsupportedOperationException if the action is not in the supported set
      */
-    private boolean shouldSkipOrThrow(DeleteAction action, CimResourceType type, DeleteAction... supported) {
+    private boolean shouldSkipOrThrow(
+            DeleteAction action, CimResourceType type, DeleteAction... supported) {
         if (action == null) {
             throw new IllegalArgumentException("Action must not be null");
         }
@@ -109,16 +121,19 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
         }
         if (!Set.of(supported).contains(action)) {
             throw new UnsupportedOperationException(
-                      "Action " + action + " is not supported for " + type.name().toLowerCase().replace("_", " ") + "."
-            );
+                    "Action "
+                            + action
+                            + " is not supported for "
+                            + type.name().toLowerCase().replace("_", " ")
+                            + ".");
         }
         return false;
     }
 
     /**
-     * Removes a resource and all its transitively reachable blank nodes from the model.
-     * Nodes that are still referenced by other resources are not fully deleted;
-     * instead, only their {@code rdfa:uuid} triple is preserved to maintain referential integrity.
+     * Removes a resource and all its transitively reachable blank nodes from the model. Nodes that
+     * are still referenced by other resources are not fully deleted; instead, only their {@code
+     * rdfa:uuid} triple is preserved to maintain referential integrity.
      *
      * @param resource the root resource to delete
      */
@@ -129,11 +144,9 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
 
         while (!queue.isEmpty()) {
             var current = queue.poll();
-            current.listProperties()
-                   .toList()
-                   .stream()
-                   .filter(stmt -> stmt.getObject().isAnon())
-                   .forEach(stmt -> queue.add(stmt.getObject().asResource()));
+            current.listProperties().toList().stream()
+                    .filter(stmt -> stmt.getObject().isAnon())
+                    .forEach(stmt -> queue.add(stmt.getObject().asResource()));
 
             // Delete inverse association
             var inverseStmt = current.getProperty(CIMS.inverseRoleName);
@@ -157,29 +170,36 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
 
     private boolean isReferencedElsewhere(Model model, Resource resource) {
         return model.listStatements(null, null, resource)
-                    .filterDrop(stmt -> stmt.getPredicate().equals(RDFA.uuid))
-                    .hasNext();
+                .filterDrop(stmt -> stmt.getPredicate().equals(RDFA.uuid))
+                .hasNext();
     }
 
     private void deletePackage(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.PACKAGE, DeleteAction.DELETE)) {
+        if (shouldSkipOrThrow(
+                deleteRequest.getAction(), CimResourceType.PACKAGE, DeleteAction.DELETE)) {
             return;
         }
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
+        var resource =
+                CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
         removeResource(resource);
     }
 
     /**
-     * Deletes a class and all its owned resources (attributes, associations, and enum entries).
-     * If the action is {@link DeleteAction#REMOVE_SUBCLASS_REFERENCE}, only the {@code rdfs:subClassOf}
-     * triple is removed, leaving the class itself intact.
+     * Deletes a class and all its owned resources (attributes, associations, and enum entries). If
+     * the action is {@link DeleteAction#REMOVE_SUBCLASS_REFERENCE}, only the {@code
+     * rdfs:subClassOf} triple is removed, leaving the class itself intact.
      */
     private void deleteClass(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.CLASS, DeleteAction.DELETE, DeleteAction.REMOVE_SUBCLASS_REFERENCE,
-                              DeleteAction.REMOVE_PACKAGE_REFERENCE)) {
+        if (shouldSkipOrThrow(
+                deleteRequest.getAction(),
+                CimResourceType.CLASS,
+                DeleteAction.DELETE,
+                DeleteAction.REMOVE_SUBCLASS_REFERENCE,
+                DeleteAction.REMOVE_PACKAGE_REFERENCE)) {
             return;
         }
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
+        var resource =
+                CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
         if (deleteRequest.getAction() == DeleteAction.REMOVE_SUBCLASS_REFERENCE) {
             resource.listProperties(RDFS.subClassOf).forEach(model::remove);
             return;
@@ -192,45 +212,51 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
 
         // Delete attributes
         model.listSubjectsWithProperty(RDFS.domain, resource)
-             .filterKeep(CIMPropertyUtils::isAttribute)
-             .toList()
-             .forEach(this::removeResource);
+                .filterKeep(CIMPropertyUtils::isAttribute)
+                .toList()
+                .forEach(this::removeResource);
 
-        //delete associations only if it references an external resource
+        // delete associations only if it references an external resource
         model.listSubjectsWithProperty(RDFS.domain, resource)
-             .filterKeep(CIMPropertyUtils::isAssociation)
-             .filterKeep(assoc -> CIMResourceUtils.isExternalResource(assoc.getProperty(RDFS.range).getObject().asResource()))
-             .toList()
-             .forEach(this::removeResource);
+                .filterKeep(CIMPropertyUtils::isAssociation)
+                .filterKeep(
+                        assoc ->
+                                CIMResourceUtils.isExternalResource(
+                                        assoc.getProperty(RDFS.range).getObject().asResource()))
+                .toList()
+                .forEach(this::removeResource);
 
         // Delete enum entries
         model.listSubjectsWithProperty(RDF.type, resource)
-             .filterKeep(CIMResourceTypeIdentifyingUtils::isEnumEntry)
-             .toList()
-             .forEach(this::removeResource);
+                .filterKeep(CIMResourceTypeIdentifyingUtils::isEnumEntry)
+                .toList()
+                .forEach(this::removeResource);
 
         removeResource(resource);
     }
 
     private void deleteAttribute(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.ATTRIBUTE, DeleteAction.DELETE)) {
+        if (shouldSkipOrThrow(
+                deleteRequest.getAction(), CimResourceType.ATTRIBUTE, DeleteAction.DELETE)) {
             return;
         }
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
+        var resource =
+                CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
         removeResource(resource);
     }
 
     /**
-     * Deletes an association and its inverse. Since associations reference each other
-     * via {@code cims:inverseRoleName}, the mutual references are removed first to
-     * prevent {@link #removeResource} from preserving stale UUID triples due to
-     * the circular reference.
+     * Deletes an association and its inverse. Since associations reference each other via {@code
+     * cims:inverseRoleName}, the mutual references are removed first to prevent {@link
+     * #removeResource} from preserving stale UUID triples due to the circular reference.
      */
     private void deleteAssociation(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.ASSOCIATION, DeleteAction.DELETE)) {
+        if (shouldSkipOrThrow(
+                deleteRequest.getAction(), CimResourceType.ASSOCIATION, DeleteAction.DELETE)) {
             return;
         }
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
+        var resource =
+                CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
 
         var inverseStmt = resource.getProperty(CIMS.inverseRoleName);
         if (inverseStmt != null && inverseStmt.getObject().isResource()) {
@@ -245,18 +271,22 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     }
 
     private void deleteEnumEntry(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.ENUM_ENTRY, DeleteAction.DELETE)) {
+        if (shouldSkipOrThrow(
+                deleteRequest.getAction(), CimResourceType.ENUM_ENTRY, DeleteAction.DELETE)) {
             return;
         }
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
+        var resource =
+                CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
         removeResource(resource);
     }
 
     private void deleteOntology(Model model, ResourceDeleteRequest deleteRequest) {
-        if (shouldSkipOrThrow(deleteRequest.getAction(), CimResourceType.ONTOLOGY, DeleteAction.DELETE)) {
+        if (shouldSkipOrThrow(
+                deleteRequest.getAction(), CimResourceType.ONTOLOGY, DeleteAction.DELETE)) {
             return;
         }
-        var resource = CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
+        var resource =
+                CIMResourceTypeIdentifyingUtils.findUniqueSubject(model, deleteRequest.getUuid());
         removeResource(resource);
     }
 }

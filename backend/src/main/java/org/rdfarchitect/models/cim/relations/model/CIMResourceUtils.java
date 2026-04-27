@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.relations.model;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Resource;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
@@ -27,18 +28,21 @@ import java.util.UUID;
 public class CIMResourceUtils {
 
     /**
-     * Checks whether a resource is external/referenced only. In our model this would mean it only has a {@link RDFA::uuid} property, but no other properties.
+     * Checks whether a resource is external/referenced only. In our model this would mean it only
+     * has a {@link RDFA::uuid} property, but no other properties.
+     *
      * @param resource The resource to check for.
      * @return True if the resource is an external resource, false otherwise.
      */
     public boolean isExternalResource(Resource resource) {
         return !resource.listProperties()
-                    .filterDrop(stmt -> stmt.getPredicate().equals(RDFA.uuid))
-                    .hasNext();
+                .filterDrop(stmt -> stmt.getPredicate().equals(RDFA.uuid))
+                .hasNext();
     }
 
     /**
      * Finds the uuid of a resource.
+     *
      * @param resource The resource to finde the uuid for.
      * @return The uuid of the resource.
      */

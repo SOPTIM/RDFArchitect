@@ -21,6 +21,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+
 import org.rdfarchitect.api.dto.delete.ResourceIdentifier;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
 
@@ -32,11 +33,12 @@ public class AffectedAssociation extends AffectedOwnedResource {
 
     private ResourceIdentifier target;
 
-    public AffectedAssociation(ResourceIdentifier resourceIdentifier,
-                               CIMResourceTypeIdentifyingUtils.CimResourceType type,
-                               AffectedResourceReason reason,
-                               ResourceIdentifier domain,
-                               ResourceIdentifier target) {
+    public AffectedAssociation(
+            ResourceIdentifier resourceIdentifier,
+            CIMResourceTypeIdentifyingUtils.CimResourceType type,
+            AffectedResourceReason reason,
+            ResourceIdentifier domain,
+            ResourceIdentifier target) {
         this.target = target;
         super(resourceIdentifier, type, reason, domain);
     }

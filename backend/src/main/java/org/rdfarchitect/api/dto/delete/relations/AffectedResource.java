@@ -20,6 +20,7 @@ package org.rdfarchitect.api.dto.delete.relations;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+
 import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceIdentifier;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
@@ -46,9 +47,10 @@ public class AffectedResource {
 
     private Map<String, String> context = new HashMap<>();
 
-    public AffectedResource(ResourceIdentifier resourceIdentifier,
-                            CIMResourceTypeIdentifyingUtils.CimResourceType type,
-                            AffectedResourceReason reason) {
+    public AffectedResource(
+            ResourceIdentifier resourceIdentifier,
+            CIMResourceTypeIdentifyingUtils.CimResourceType type,
+            AffectedResourceReason reason) {
         this.resourceIdentifier = resourceIdentifier;
         this.type = type;
         this.reason = reason;
