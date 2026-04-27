@@ -112,10 +112,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    attributeRequired)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            attributeRequired));
 
             // Assert
             try {
@@ -179,10 +178,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    attributeOptional)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            attributeOptional));
 
             // Assert
             try {
@@ -270,10 +268,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                     () ->
                             executeUpdateOnTestGraph(
                                     CIMUpdates.replaceAttribute(
-                                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                                    GRAPH_URI,
-                                                    newAttribute)
-                                            .build()));
+                                            databasePort.getPrefixMapping(DATASET_NAME),
+                                            GRAPH_URI,
+                                            newAttribute)));
         }
 
         @Test
@@ -286,10 +283,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    attributePrimitive)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            attributePrimitive));
 
             // Assert
             try {
@@ -353,10 +349,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    attributeOptional)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            attributeOptional));
 
             // Assert
             try {
@@ -563,11 +558,10 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttributes(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    MY_UUID.toString(),
-                                    List.of(newAttributeOne))
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            MY_UUID.toString(),
+                            List.of(newAttributeOne)));
 
             // Assert
             try {
@@ -644,11 +638,10 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttributes(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    MY_UUID.toString(),
-                                    List.of(newAttributeOne))
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            MY_UUID.toString(),
+                            List.of(newAttributeOne)));
 
             // Assert
             try {
@@ -753,11 +746,10 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttributes(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    MY_UUID.toString(),
-                                    List.of())
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            MY_UUID.toString(),
+                            List.of()));
 
             // Assert
             try {
@@ -790,11 +782,10 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.replaceAttributes(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    "does not exist",
-                                    List.of())
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            "does not exist",
+                            List.of()));
 
             // Assert
             try {

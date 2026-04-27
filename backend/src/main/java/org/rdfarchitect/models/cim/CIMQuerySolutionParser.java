@@ -17,12 +17,9 @@
 
 package org.rdfarchitect.models.cim;
 
-import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QuerySolution;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
@@ -39,16 +36,30 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSPrimitiveData
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
-import java.util.AbstractMap;
 import java.util.UUID;
 
 /**
  * Parses a {@link QuerySolution} to extract the values of the variables used in the context of CIM.
  */
-@RequiredArgsConstructor
 public class CIMQuerySolutionParser {
 
     private final QuerySolution qs;
+
+    /**
+     * Optional model used by {@link #getIsFixed(String)}/{@link #getIsDefault(String)} to look up
+     * the properties of an attribute fixed/default value that was returned from the query as a
+     * blank node. May be {@code null} when blank-node values are not expected.
+     */
+    private final Model valueNodeModel;
+
+    public CIMQuerySolutionParser(QuerySolution qs) {
+        this(qs, null);
+    }
+
+    public CIMQuerySolutionParser(QuerySolution qs, Model valueNodeModel) {
+        this.qs = qs;
+        this.valueNodeModel = valueNodeModel;
+    }
 
     /**
      * Helper record to store a URI, Label pair
@@ -172,9 +183,8 @@ public class CIMQuerySolutionParser {
         if (!qs.contains(isDefaultVar)) {
             return null;
         }
-        var isDefaultRDFNode = qs.get(isDefaultVar);
-        var tuple = getValueDatatypePair(isDefaultRDFNode);
-        return new CIMSIsDefault(tuple.getKey(), tuple.getValue());
+        var parsed = ValueNodeParser.parse(qs.get(isDefaultVar), valueNodeModel);
+        return new CIMSIsDefault(parsed.value(), parsed.dataType(), parsed.blankNode());
     }
 
     /**
@@ -187,49 +197,8 @@ public class CIMQuerySolutionParser {
         if (!qs.contains(isFixedVar)) {
             return null;
         }
-        var isFixedRDFNode = qs.get(isFixedVar);
-        var tuple = getValueDatatypePair(isFixedRDFNode);
-        return new CIMSIsFixed(tuple.getKey(), tuple.getValue());
-    }
-
-    /**
-     * Helper method to extract the value and datatype of a RDFNode.
-     *
-     * @param node The RDFNode to extract the value and datatype from.
-     * @return A {@link AbstractMap.SimpleEntry} with the value as key and the datatype as value.
-     */
-    private AbstractMap.SimpleEntry<String, URI> getValueDatatypePair(RDFNode node) {
-        URI datatype = null;
-        String value = null;
-        if (node.isLiteral()) {
-            value = node.asNode().getLiteralLexicalForm();
-            var dataTypeUri = node.asNode().getLiteralDatatypeURI();
-            datatype = dataTypeUri.isEmpty() ? null : new URI(dataTypeUri);
-        }
-        var tuple = getPredicateObjectPair(node);
-        value = tuple.getKey() != null ? tuple.getKey() : value;
-        datatype = tuple.getValue() != null ? tuple.getValue() : datatype;
-        return new AbstractMap.SimpleEntry<>(value, datatype);
-    }
-
-    /**
-     * Helper method to extract the first predicate and object of a blankNode.
-     *
-     * @param node The RDFNode to extract the predicate and object from.
-     * @return A {@link AbstractMap.SimpleEntry} with the predicate as key and the object as value.
-     */
-    private AbstractMap.SimpleEntry<String, URI> getPredicateObjectPair(RDFNode node) {
-        URI datatype = null;
-        String value = null;
-        if (node.isAnon()) {
-            var it = ((Resource) node).listProperties();
-            if (it.hasNext()) {
-                var stmt = it.next().asTriple();
-                value = stmt.getObject().toString();
-                datatype = new URI(stmt.getPredicate().toString());
-            }
-        }
-        return new AbstractMap.SimpleEntry<>(value, datatype);
+        var parsed = ValueNodeParser.parse(qs.get(isFixedVar), valueNodeModel);
+        return new CIMSIsFixed(parsed.value(), parsed.dataType(), parsed.blankNode());
     }
 
     /**
