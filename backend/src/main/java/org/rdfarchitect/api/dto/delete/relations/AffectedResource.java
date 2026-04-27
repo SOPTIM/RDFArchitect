@@ -65,8 +65,9 @@ public class AffectedResource {
         return new ArrayList<>(children);
     }
 
-    public void setChildren(List<AffectedResource> children) {
+    public AffectedResource setChildren(List<AffectedResource> children) {
         this.children = (children == null) ? new ArrayList<>() : new ArrayList<>(children);
+        return this;
     }
 
     public enum AffectedResourceReason {
