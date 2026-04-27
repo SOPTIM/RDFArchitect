@@ -27,7 +27,7 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUti
 
 @Data
 @Accessors(chain = true)
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = true, onParam_ = {@Override})
 @NoArgsConstructor
 public class AffectedOwnedResource extends AffectedResource {
 
