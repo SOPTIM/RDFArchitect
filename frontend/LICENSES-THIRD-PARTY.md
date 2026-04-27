@@ -233,7 +233,7 @@
 
 ### typescript
 - **Package:** typescript
-- **Version:** 5.9.3
+- **Version:** 6.0.3
 - **License:** Apache-2.0
 - **URL:** [https://www.typescriptlang.org/](https://www.typescriptlang.org/)
 
