@@ -17,8 +17,11 @@
 
 package org.rdfarchitect.api.dto.delete.relations;
 
+import lombok.AccessLevel;
 import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import org.rdfarchitect.api.dto.delete.DeleteAction;
@@ -43,6 +46,8 @@ public class AffectedResource {
 
     private List<DeleteAction> actions = new ArrayList<>();
 
+    @Getter(AccessLevel.NONE)
+    @Setter(AccessLevel.NONE)
     private List<AffectedResource> children = new ArrayList<>();
 
     private Map<String, String> context = new HashMap<>();
@@ -54,6 +59,14 @@ public class AffectedResource {
         this.resourceIdentifier = resourceIdentifier;
         this.type = type;
         this.reason = reason;
+    }
+
+    public List<AffectedResource> getChildren() {
+        return new ArrayList<>(children);
+    }
+
+    public void setChildren(List<AffectedResource> children) {
+        this.children = (children == null) ? new ArrayList<>() : new ArrayList<>(children);
     }
 
     public enum AffectedResourceReason {
