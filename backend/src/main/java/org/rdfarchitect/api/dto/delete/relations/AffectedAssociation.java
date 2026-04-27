@@ -27,9 +27,7 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUti
 
 @Data
 @Accessors(chain = true)
-@EqualsAndHashCode(
-        callSuper = true,
-        onParam_ = {@Override})
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 public class AffectedAssociation extends AffectedOwnedResource {
 
@@ -41,7 +39,7 @@ public class AffectedAssociation extends AffectedOwnedResource {
             AffectedResourceReason reason,
             ResourceIdentifier domain,
             ResourceIdentifier target) {
-        this.target = target;
         super(resourceIdentifier, type, reason, domain);
+        this.target = target;
     }
 }
