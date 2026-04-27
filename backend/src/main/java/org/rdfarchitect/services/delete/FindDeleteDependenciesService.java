@@ -261,9 +261,6 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
         var parentAffected = resourceMap.get(parent);
         if (parentAffected != null) {
             var existingChildren = parentAffected.getChildren();
-            if (existingChildren == null) {
-                existingChildren = new ArrayList<>();
-            }
             existingChildren.add(affectedResource);
             parentAffected.setChildren(existingChildren);
         }
