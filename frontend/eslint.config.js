@@ -19,7 +19,7 @@ import { includeIgnoreFile } from "@eslint/compat";
 import js from "@eslint/js";
 import * as typescriptParser from "@typescript-eslint/parser";
 import prettier from "eslint-config-prettier";
-import importPlugin from "eslint-plugin-import";
+import importPlugin from "eslint-plugin-import-x";
 import svelte from "eslint-plugin-svelte";
 import * as espree from "espree";
 import globals from "globals";
@@ -162,6 +162,7 @@ export default [
             "rdfa-order/svelte-file-structure": "error",
             "rdfa-order/svelte-script-sections": "error",
             "import/order": createImportOrderRule(),
+            "no-useless-assignment": "off",
         },
     },
 ];
