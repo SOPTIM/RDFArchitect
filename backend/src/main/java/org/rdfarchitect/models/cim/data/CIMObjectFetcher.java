@@ -24,6 +24,7 @@ import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
@@ -139,11 +140,24 @@ public class CIMObjectFetcher {
     /**
      * Fetches a List of {@link CIMAttribute CIMAttributes}.
      *
+     * <p>The current dataset model is passed through to the factory so that blank-node fixed and
+     * default values can be re-resolved against it.
+     *
      * @param query {@link Query} to fetch attributes.
      * @return List of {@link CIMAttribute CIMAttributes}.
      */
     public List<CIMAttribute> fetchCIMAttributeList(Query query) {
-        return executeQueryForList(query, CIMObjectFactory::createCIMAttributeList);
+        var valueNodeModel = getQueryModel();
+        return executeQueryForList(
+                query,
+                resultSet -> CIMObjectFactory.createCIMAttributeList(resultSet, valueNodeModel));
+    }
+
+    private Model getQueryModel() {
+        if (graphURI == null || "default".equals(graphURI)) {
+            return dataset.getDefaultModel();
+        }
+        return dataset.getNamedModel(graphURI);
     }
 
     /**

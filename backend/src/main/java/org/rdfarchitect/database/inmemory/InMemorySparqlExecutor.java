@@ -27,13 +27,14 @@ import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.update.Update;
 import org.apache.jena.update.UpdateExecutionFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 @UtilityClass
 public class InMemorySparqlExecutor {
 
     public void executeSingleUpdate(
-            GraphRewindableWithUUIDs graph, Update update, String graphUri) {
+            GraphRewindableWithUUIDs graph, UpdateRequest update, String graphUri) {
         try {
             graph.begin(TxnType.WRITE);
             var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
@@ -42,6 +43,11 @@ public class InMemorySparqlExecutor {
         } finally {
             graph.end();
         }
+    }
+
+    public void executeSingleUpdate(
+            GraphRewindableWithUUIDs graph, Update update, String graphUri) {
+        executeSingleUpdate(graph, new UpdateRequest().add(update), graphUri);
     }
 
     public ResultSet executeSingleQuery(
