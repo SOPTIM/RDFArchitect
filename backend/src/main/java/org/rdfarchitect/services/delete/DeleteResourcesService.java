@@ -42,6 +42,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
@@ -160,7 +161,7 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
             return true;
         }
         if (!Set.of(supported).contains(action)) {
-            var typeString = type.name().toLowerCase().replace("_", " ");
+            var typeString = type.name().toLowerCase(Locale.ROOT).replace("_", " ");
             throw new UnsupportedOperationException(
                     "Action " + action + " is not supported for " + typeString + ".");
         }
