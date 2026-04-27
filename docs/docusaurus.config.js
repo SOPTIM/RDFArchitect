@@ -8,7 +8,7 @@ const config = {
   favicon: 'img/favicon.svg',
 
   url: 'https://soptim.github.io',
-  baseUrl: '/rdfarchitect/',
+  baseUrl: '/RDFArchitect/',
 
   organizationName: 'SOPTIM',
   projectName: 'RDFArchitect',
@@ -54,6 +54,7 @@ const config = {
         logo: {
           alt: 'RDFArchitect',
           src: 'img/logo.svg',
+          srcDark: 'img/logo-dark.svg',
         },
         items: [
           {
@@ -108,10 +109,11 @@ const config = {
               { label: 'CIM/CGMES Mapping', to: '/reference/cim-mapping' },
               { label: 'FAQ & Troubleshooting', to: '/reference/faq' },
               { label: 'License', href: 'https://github.com/SOPTIM/RDFArchitect/blob/main/LICENSE' },
+              { label: 'Legal Notice', href: 'https://www.soptim.de/en/legal-notice/' },
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} SOPTIM AG. Licensed under Apache 2.0.`,
+        copyright: `Copyright © 2024-${new Date().getFullYear()} SOPTIM AG. Licensed under Apache 2.0.`,
       },
       prism: {
         theme: prismThemes.github,

@@ -5,34 +5,34 @@ sidebar_position: 2
 
 # Core Concepts
 
-RDFArchitect is built around a small set of concepts borrowed from the RDF and UML worlds. Once these click, every screen in the tool reads naturally.
+RDFArchitect is built around a small set of concepts derived from RDF and UML. \
+This page provides a brief introduction to these concepts.
 
 ## Dataset
 
-A **dataset** is a top-level container, equivalent to a *named dataset* in an RDF triple store. In a default installation it is backed by an Apache Jena Fuseki dataset.
+A **dataset** is a top-level container. It holds a collection of schemas, plus per-dataset namespace prefixes.
 
-Use one dataset per project, customer, or compliance scope. Datasets are the unit of access control, backup, and bulk import/export. The default dataset is named `default`.
+## Schema
 
-## Graph
+A **schema** is the editable artifact you spend most of your time with. It contains all the packages, classes, attributes, associations, enumerations, and SHACL constraints of one model. In CIM/CGMES terms, a schema is what's called a *profile*.
 
-A **graph** is a *named graph* inside a dataset and corresponds to a single schema (or schema profile). Most editing happens at the graph level:
+Each dataset contains one or more schemas. Most editing actions target the currently active schema:
 
-- Importing a Turtle/RDF/XML file creates or replaces a graph.
-- Comparing two schemas compares two graphs.
-- The changelog, snapshots, and version history are per-graph.
-- The "active graph" indicator in the toolbar is what every editor action targets.
+- Comparing two schemas produces a diff.
+- The change history, snapshots, and version restore are per-schema.
+- Read-only locking is per-schema.
 
-A dataset can hold many graphs side-by-side — for example one graph per CIM/CGMES profile.
+Importing a Turtle / RDF/XML / N-Triples file places its content into the active dataset, either as a new schema or by replacing an existing one. You can keep many schemas side by side — for example one per CGMES profile, or one per CIM version while you plan a migration.
 
 ## Package
 
-A **package** groups classes that belong together logically. Packages are the primary navigation aid: the left-hand tree groups classes by package, and the diagram view focuses one package at a time.
+A **package** groups classes that belong together logically. Packages are the primary navigation aid: the navigation tree groups classes by package, and the diagram view focuses one package at a time.
 
-Packages are stored in the graph as `cims:Package` resources and behave like UML packages. A class always belongs to exactly one package.
+A class always belongs to exactly one package.
 
 ## Class
 
-A **class** is the central modeling element. In CIM terms, every `Breaker`, `BaseVoltage`, `Terminal`, etc. is a class. In RDFArchitect a class carries:
+A **class** is the central modeling element. In CIM terms, every `Breaker`, `BaseVoltage`, `Terminal`, etc. is a class. A class carries:
 
 - An IRI and a human-readable label.
 - Zero or one parent class (single inheritance).
@@ -45,58 +45,41 @@ A **class** is the central modeling element. In CIM terms, every `Breaker`, `Bas
 
 ## Attribute
 
-An **attribute** is a literal-valued property: a name, a datatype (string, integer, boolean, date, …), a multiplicity (cardinality), and optional metadata such as a fixed value or stereotype. Attributes are the leaves of the model.
+An **attribute** is a literal-valued property: a name, a datatype (string, integer, boolean, date, …), a multiplicity, and optional metadata such as a fixed value or stereotype.
 
 ## Association
 
-An **association** points from one class to another. It carries a name, a multiplicity on each end, and (optionally) a direction and a stereotype such as `aggregate` or `composite`. Associations show up as edges in the diagram.
+An **association** points from one class to another. It carries a name, a multiplicity on each end, and (optionally) a stereotype. Associations show up as edges in the diagram.
 
 ## Enumeration
 
-An **enumeration** is a class whose only purpose is to define a fixed set of allowed values (e.g. `BreakerType` with entries `Air`, `Vacuum`, `SF6`). Enum entries are first-class citizens in RDFArchitect: they have IRIs and can be referenced from attributes.
+An **enumeration** is a class whose only purpose is to define a fixed set of allowed values (e.g. `BreakerType` with entries `Air`, `Vacuum`, `SF6`). Enum entries are first-class citizens with their own IRIs.
 
 ## SHACL Shapes
 
 [**SHACL**](https://www.w3.org/TR/shacl/) (Shapes Constraint Language) is the W3C standard for validating RDF data. RDFArchitect treats SHACL in two complementary ways:
 
-- **Generated shapes** are derived from your model automatically. Every class becomes a `sh:NodeShape`, every attribute and association becomes a `sh:PropertyShape`, with cardinalities and datatypes filled in.
-- **Custom shapes** are SHACL files you author yourself (or import from another tool). They live alongside the generated shapes and can express constraints that don't fit naturally into RDFS — pattern matches, value ranges, sh:sparql constraints, and so on.
+- **Generated shapes** are derived from your model automatically. Every class becomes a `sh:NodeShape`, every attribute and association becomes a `sh:PropertyShape`.
+- **Custom shapes** are SHACL files you author yourself (or import). They live alongside the generated shapes and can express constraints that don't fit naturally into RDFS — pattern matches, value ranges, `sh:sparql` constraints, and so on.
 
-Both kinds are inspectable from the SHACL views and from the class editor.
+Both are inspectable from the SHACL views and from the class editor.
 
 ## Namespace and Prefix
 
 A **namespace** is the IRI base used for resources in your schema (e.g. `http://iec.ch/TC57/CIM100#`). A **prefix** is the short name you use for it in serialized RDF (`cim:`).
 
-RDFArchitect manages prefixes both **globally** (defaults applied to every new graph) and **per-dataset** (overrides for a specific dataset). See [Prefixes](./prefixes).
+See [Prefixes](./prefixes) for managing them.
 
 ## Snapshot
 
-A **snapshot** is a frozen, read-only copy of a graph at a point in time. Snapshots are designed for sharing: you can hand a snapshot link to a reviewer who has no editing access, and they get a fully browsable view of the schema, packages, classes, and SHACL constraints.
+A **snapshot** is a frozen copy of a schema at a point in time, made primarily for sharing. When a reviewer follows a snapshot link, they see a read-only view of the schema as it was when the snapshot was taken — they can browse, compare, and inspect, but not edit it through that link.
 
-## Changelog
+A snapshot itself is just a schema-shaped artifact. You (or anyone with appropriate access) can import it back into a dataset as a new schema and continue editing from there. Snapshots are therefore stable reference points, not permanent locks: they preserve a state for review without preventing anyone from picking up that state and continuing from it.
 
-Every write operation against a graph appends an entry to that graph's **changelog**. From the Changelog view you can:
+## Change history
 
-- See who changed what and when.
-- Inspect the before/after of a change.
-- Restore the graph to an earlier point in time.
-- Undo or redo recent operations from the toolbar.
+Every write operation against a schema is recorded. The history view lets you inspect changes, undo, redo, and restore earlier states. See [History](./history).
 
-## Read-only Mode
+## Read-only mode
 
-A graph (or an entire dataset) can be marked **read-only**. Read-only graphs are perfectly browsable — diagrams, classes, SHACL, comparison — but every editing affordance is hidden or disabled. Snapshots are always read-only.
-
-## How they fit together
-
-```text
-Dataset ─┬─ Graph ─┬─ Package ─── Class ─┬─ Attribute
-         │         │                     ├─ Association
-         │         │                     └─ Enum entry (for enumerations)
-         │         ├─ Custom SHACL shapes
-         │         ├─ Changelog
-         │         └─ Snapshots
-         └─ Namespaces / Prefixes
-```
-
-Most things you do in RDFArchitect — importing, editing, validating, comparing, sharing — are operations on a single graph inside a dataset.
+A schema can be marked **read-only**. Read-only schemas are perfectly browsable but every editing affordance is hidden or disabled.

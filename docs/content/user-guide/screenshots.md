@@ -11,25 +11,25 @@ A visual tour of the editor and the main workflows.
 
 ![Welcome page](/img/screenshots/homepage.png)
 
-The entry point. List of datasets, a quick-create button, links to documentation and to the active graph.
+The entry point. List of available schemas, links to documentation, and the active schema indicator.
 
 ## Editor overview
 
 ![Editor overview](/img/screenshots/editor.png)
 
-Left: package and class navigation. Center: package-focused diagram. Right: contextual actions. The active dataset/graph indicator and the toolbar are pinned at the top.
+Schema and class navigation, the package-focused diagram, and the contextual editing actions, all in one place.
 
 ## Importing a schema
 
 ![Import schema dialog](/img/screenshots/import-schema.png)
 
-Pick the destination dataset and graph, drop the file, and confirm. The dialog detects the serialization from the file extension and surfaces SHACL shapes inside the file as custom shapes after import.
+Drop a file in, choose whether to create a new schema or replace an existing one. SHACL inside the file is recognised and stored as custom shapes.
 
 ## Managing namespaces
 
 ![Manage namespaces](/img/screenshots/manage-namespaces.png)
 
-Per-dataset namespace and prefix configuration. Global prefixes are visible but cannot be edited here.
+Per-dataset namespace and prefix configuration.
 
 ## Adding a package
 
@@ -41,34 +41,34 @@ Packages can be created directly from the navigation tree. Provide a name, optio
 
 ![Add class](/img/screenshots/add-class.png)
 
-The new-class dialog is contextual: dataset, graph, namespace and package are pre-filled based on where you opened it from.
+The new-class dialog is contextual: schema, namespace, and package are pre-filled based on where you opened it from.
 
 ## Class editor
 
 ![Class editor](/img/screenshots/class-editor.png)
 
-The main editing surface. Tabs for general metadata, attributes, associations, enum entries (when applicable), and SHACL.
+The main editing surface, with metadata, attributes, associations, enum entries (when applicable), and SHACL.
 
 ## SHACL inspection
 
 ![SHACL view](/img/screenshots/shacl.png)
 
-Generated and custom shapes are listed side by side, clearly distinguished. Property shapes can be drilled into for the full constraint detail.
+Generated and custom shapes side by side.
 
-## Changelog
+## Change history
 
-![Changelog](/img/screenshots/changelog.png)
+![Change history](/img/screenshots/changelog.png)
 
-Per-graph history. Each entry expands to a triple-level diff and offers a *Restore* action.
+Per-schema history with triple-level diffs and a restore action.
 
 ## Schema comparison
 
 ![Compare schemas](/img/screenshots/compare.png)
 
-Side-by-side comparison of two graphs, snapshots, or files. Differences are organised at package, class, and property level with inline diffs.
+Side-by-side comparison of two schemas, snapshots, or files. Differences are organised at package, class, and property level.
 
 ## Snapshots and sharing
 
 ![Share snapshot](/img/screenshots/share-snapshot.png)
 
-Snapshots produce a stable, read-only URL that reviewers can browse without affecting the working graph.
+Snapshots produce a stable, read-only URL that reviewers can browse without affecting the working schema.

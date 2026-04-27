@@ -49,7 +49,7 @@ Granular authorization (per-dataset, per-graph) is **not** supported in 1.0. Thr
 - **Use multiple datasets and per-path access rules at the proxy** — restrict `/api/datasets/restricted/**` to a specific group.
 - **Use the read-only flag on graphs / datasets** — combined with operational discipline, this gives "approval gating" without code changes.
 
-A native role-based access-control feature is on the post-1.0 roadmap.
+If you need native role-based access control, open a GitHub issue describing the use case.
 
 ## Header propagation
 

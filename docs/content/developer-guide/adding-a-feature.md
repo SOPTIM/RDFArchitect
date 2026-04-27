@@ -5,177 +5,38 @@ sidebar_position: 8
 
 # Adding a Feature End-to-End
 
-A worked example: **"List all abstract classes in a graph"**. Eight layers, all eight touched. Use this as a template when you add your own feature.
+A checklist of the layers a typical feature touches, plus how to find the canonical pattern in each layer.
 
-## The shape of the change
+## The eight layers
 
-| Layer | File | What you add |
-| ----- | ---- | ------------ |
-| 1. Use case interface | `services/classes/ListAbstractClassesUseCase.java` | Declares the operation. |
-| 2. Use case implementation | `services/classes/ListAbstractClassesService.java` | The actual SPARQL/Jena code. |
-| 3. SPARQL template | `resources/sparql-templates/list-abstract-classes.sparql` | The query. |
-| 4. DTO | `api/dto/classes/AbstractClassDTO.java` | Response shape. |
-| 5. Mapper | `api/dto/classes/AbstractClassMapper.java` | Domain → DTO. |
-| 6. Controller | `api/controller/datasets/graphs/classes/AbstractClassRESTController.java` | Endpoint. |
-| 7. Frontend API method | `frontend/src/lib/api/backend.js` | Call wrapper. |
-| 8. Frontend usage | `routes/mainpage/...` | UI. |
+| Layer | Where | What you add |
+| ----- | ----- | ------------ |
+| 1. Use case interface | `services/<feature>/` | Declares the operation. |
+| 2. Use case implementation | same package | The actual orchestration / Jena code. |
+| 3. SPARQL template | `resources/sparql-templates/` | The query, when one is needed. |
+| 4. DTO | `api/dto/<feature>/` | Request / response shape. |
+| 5. Mapper | `api/dto/<feature>/` | MapStruct interface, domain ↔ DTO. |
+| 6. Controller | `api/controller/...` | The endpoint. |
+| 7. Frontend API method | `frontend/src/lib/api/` | Call wrapper. |
+| 8. Frontend usage | `frontend/src/routes/...` | UI. |
 
 Plus tests at every layer that has logic.
 
-## 1. Use case interface
+## How to learn the pattern in each layer
 
-```java
-// backend/src/main/java/org/rdfarchitect/services/classes/ListAbstractClassesUseCase.java
-package org.rdfarchitect.services.classes;
+The codebase is large enough that a printed example would go stale. Instead, before writing your feature:
 
-import java.util.List;
-import org.rdfarchitect.graph.GraphIdentifier;
-import org.rdfarchitect.model.Class;
+1. **Find the closest existing endpoint.** For a new "list X" endpoint, locate any `*RESTController` whose verb and shape match — same HTTP method, same kind of return value (single resource / list / page).
+2. **Trace it down to the database.** From that controller, follow the calls into `services/`, the SPARQL template (if any), and the DTO/mapper. That trace *is* the recipe for your feature.
+3. **Copy the structure.** Don't try to "improve" it; if the existing pattern uses a record DTO, make yours a record. If it uses MapStruct, do the same. Reviewers will notice and slow you down if you diverge.
 
-public interface ListAbstractClassesUseCase {
-    List<Class> execute(GraphIdentifier graph);
-}
-```
+## Recommended order of work
 
-## 2. Use case implementation
-
-```java
-@Service
-@RequiredArgsConstructor
-public class ListAbstractClassesService implements ListAbstractClassesUseCase {
-
-    private final GraphPort graphPort;
-    private final SparqlTemplate sparql;
-
-    @Override
-    public List<Class> execute(GraphIdentifier graph) {
-        try (var txn = graphPort.beginRead(graph)) {
-            var query = sparql.load("list-abstract-classes");
-            return txn.executeSelect(query, row -> Class.builder()
-                    .iri(row.get("iri").asResource().getURI())
-                    .label(row.get("label").asLiteral().getString())
-                    .build());
-        }
-    }
-}
-```
-
-Read transactions are fine for read-only operations.
-
-## 3. SPARQL template
-
-```sparql
-# resources/sparql-templates/list-abstract-classes.sparql
-PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
-PREFIX cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-
-SELECT ?iri ?label
-WHERE {
-  ?iri  a              rdfs:Class ;
-        rdfs:label     ?label ;
-        cims:stereotype "abstract" .
-}
-ORDER BY ?label
-```
-
-Keep templates side-by-side under `sparql-templates/`. The `SparqlTemplate` helper handles classpath loading.
-
-## 4. DTO
-
-```java
-public record AbstractClassDTO(String iri, String label) {}
-```
-
-DTOs are records when possible.
-
-## 5. Mapper
-
-```java
-@Mapper(componentModel = "spring")
-public interface AbstractClassMapper {
-    AbstractClassDTO toDto(Class source);
-    List<AbstractClassDTO> toDtoList(List<Class> source);
-}
-```
-
-## 6. Controller
-
-```java
-@RestController
-@RequestMapping("/api/datasets/{datasetId}/graphs/{graphId}/classes/abstract")
-@RequiredArgsConstructor
-public class AbstractClassRESTController {
-
-    private final ListAbstractClassesUseCase useCase;
-    private final AbstractClassMapper mapper;
-
-    @GetMapping
-    public Response<List<AbstractClassDTO>> list(@PathVariable String datasetId,
-                                                 @PathVariable String graphId) {
-        var graph = new GraphIdentifier(datasetId, graphId);
-        return Response.ok(mapper.toDtoList(useCase.execute(graph)));
-    }
-}
-```
-
-## 7. Frontend API method
-
-```js
-// frontend/src/lib/api/backend.js (excerpt)
-export const backend = {
-  // …
-  classes: {
-    // …
-    listAbstract: ({ datasetId, graphId }) =>
-      fetchJson(`${base}/datasets/${datasetId}/graphs/${graphId}/classes/abstract`, {
-        credentials: 'include',
-      }),
-  },
-};
-```
-
-`fetchJson` is the project's existing wrapper that handles errors and JSON parsing.
-
-## 8. Frontend usage
-
-```svelte
-<script>
-  import { backend } from '$lib/api/backend.js';
-  import { active } from '$lib/sharedState.svelte.js';
-
-  let abstractClasses = $state([]);
-
-  $effect(async () => {
-    if (!active.dataset || !active.graph) return;
-    abstractClasses = await backend.classes.listAbstract({
-      datasetId: active.dataset.id,
-      graphId: active.graph.id,
-    });
-  });
-</script>
-
-<ul>
-  {#each abstractClasses as cls}
-    <li>{cls.label}</li>
-  {/each}
-</ul>
-```
-
-## Tests
-
-| Layer | Test |
-| ----- | ---- |
-| `ListAbstractClassesService` | In-memory `GraphPort`, Turtle fixture with two classes (one abstract). Assert the right one comes back. |
-| `AbstractClassMapper` | Trivial unit test asserting fields are copied. |
-| `AbstractClassRESTController` | MockMvc test mocking the use case. |
-| Frontend | Optional Vitest test for the `backend.classes.listAbstract` URL composition. |
-
-## Don'ts
-
-- Don't put SPARQL strings inside Java code; load templates from the resources folder.
-- Don't bypass `GraphPort` and reach into Jena directly.
-- Don't add a parallel state store on the frontend; reuse `sharedState`.
-- Don't construct backend URLs in components — go through `BackendConnection`.
+1. Decide the contract first: write the use-case interface and the DTO. They're cheap and force clarity.
+2. Implement the use case against the in-memory database adapter, with a test fixture small enough to fit on a screen.
+3. Wire the controller; add a controller test that mocks the use case.
+4. Add the frontend API call. URL composition goes through the existing backend wrapper; do **not** hand-roll fetch URLs.
+5. Build the UI, reusing existing components, dialogs, and reactive primitives.
 
 ## Pre-PR checklist
 
@@ -193,4 +54,12 @@ npm run test
 npm run build
 ```
 
-If everything passes, your PR is ready. CI will rerun all of this on the cloud.
+If everything passes, your PR is ready. CI reruns all of this on the cloud.
+
+## Don'ts
+
+- Don't put SPARQL strings inside Java code; load templates from the resources folder.
+- Don't bypass the database port and reach into Jena directly from a service.
+- Don't add a parallel state store on the frontend; reuse the existing primitives.
+- Don't construct backend URLs in components — go through the existing API wrapper.
+- Don't skip a write to the change history when your service mutates the model.

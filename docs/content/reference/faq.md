@@ -37,7 +37,7 @@ No. Each class belongs to exactly one package. This matches the CIM convention.
 
 ### Can I rename a class without breaking instance data?
 
-In RDFArchitect itself, yes — the rename ripples to associations within the same graph and is recorded in the changelog. For *instance* data living elsewhere, use the migration wizard to generate a SPARQL Update that performs the rename across instance graphs.
+In RDFArchitect itself, yes — the rename ripples to associations within the same schema and is recorded in the history. For *instance* data living elsewhere, use the migration wizard to generate a SPARQL Update that performs the rename across instance data.
 
 ### How are IRIs assigned to new classes?
 
@@ -53,13 +53,13 @@ No. SHACL is the constraint language. OCL triples in imported files are preserve
 
 Press undo repeatedly. Or open the changelog and *Restore* to a specific point in time.
 
-### Can two people edit the same graph?
+### Can two people edit the same schema?
 
-Yes, but RDFArchitect 1.0 does **not** detect conflicts at the model level. The last save wins. Either coordinate via process or split editing across separate graphs.
+Yes, but RDFArchitect does **not** detect conflicts at the model level. The last save wins. Either coordinate via process or split editing across separate schemas.
 
 ### Where did my custom SHACL go after re-importing?
 
-Reimporting *into the same graph* replaces the graph contents, including custom SHACL. Use the SHACL upload dialog instead — it adds shapes without replacing the model. Or take a snapshot before the import.
+Reimporting *into the same schema* replaces its contents, including custom SHACL. Use the SHACL upload dialog instead — it adds shapes without replacing the model. Or take a snapshot before the import.
 
 ### Can I bulk-edit attributes across many classes?
 
@@ -83,7 +83,7 @@ The semantics are identical. If you need byte-identical round-trips, store the o
 
 ### Can I export only one package?
 
-Not in 1.0. Export is whole-graph. As a workaround, copy the package's classes into a fresh graph (use the export+import dance) and export that.
+Not currently. Export is whole-schema. As a workaround, copy the package's classes into a fresh schema (use the export+import dance) and export that.
 
 ## SHACL
 
@@ -97,7 +97,7 @@ No — change the model and the shape regenerates. If you need a constraint the 
 
 ### Can I author custom SHACL inside RDFArchitect?
 
-Not in 1.0. Author the shapes as a Turtle file and import via the SHACL upload dialog. In-app authoring is on the roadmap.
+Not currently. Author the shapes as a Turtle file and import via the SHACL upload dialog.
 
 ### How do I run the SHACL constraints against instance data?
 

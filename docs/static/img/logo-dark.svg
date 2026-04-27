@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" role="img" aria-label="RDFArchitect">
   <style>
     .word { font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 700; font-size: 44px; letter-spacing: -0.5px; }
-    .accent { fill: #2a6ebb; }
-    .rest { fill: #1c1e21; }
+    .accent { fill: #6ea7e0; }
+    .rest { fill: #f5f6f7; }
   </style>
   <text x="0" y="48" class="word">
     <tspan class="accent">RDFA</tspan><tspan class="rest">rchitect</tspan>

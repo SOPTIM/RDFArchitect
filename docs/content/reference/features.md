@@ -9,38 +9,38 @@ A quick map of what's in the box, organised by who tends to use what.
 
 ## Power-system / electrical engineers
 
-| Feature | Where in the UI |
-| ------- | --------------- |
-| Browse a CIM/CGMES schema as a UML-style diagram | Editor → diagram canvas |
-| Drill into a class's attributes, associations, and inheritance | Editor → class editor |
-| Inspect generated and custom SHACL constraints on a class | Class editor → SHACL tab |
-| Compare a working schema against a snapshot | Toolbar → Compare |
-| Receive a snapshot link, browse without an account | Snapshot URL |
-| View change history of a graph | Toolbar → Changelog |
+| Feature |
+| ------- |
+| Browse a CIM/CGMES schema as a UML-style diagram. |
+| Drill into a class's attributes, associations, and inheritance. |
+| Inspect generated and custom SHACL constraints on a class. |
+| Compare a working schema against a snapshot. |
+| Receive a snapshot link and browse without an account. |
+| View change history of a schema. |
 
 ## Information modelers / data architects
 
-| Feature | Where in the UI |
-| ------- | --------------- |
-| Create classes, attributes, associations, enumerations, packages | Class editor / package editor / new-class dialog |
-| Single-inheritance modelling | Class editor → General tab → Parent class |
-| Multiplicity, datatypes, fixed values, stereotypes | Class editor → Attributes tab |
-| Custom SHACL upload | SHACL menu → Upload |
-| Auto-generated SHACL exposed for review and export | SHACL menu → Full SHACL view |
-| Per-graph and per-dataset namespace management | Dataset menu → Manage namespaces |
-| Graph import (Turtle, RDF/XML, N-Triples, N-Quads, TriG, JSON-LD) | Toolbar → Import |
-| Graph export with optional layout & SHACL | Toolbar → Export |
-| Schema comparison with package/class/property granularity | Toolbar → Compare |
-| Five-step migration wizard producing a SPARQL Update script | Toolbar → Migrate |
+| Feature |
+| ------- |
+| Create classes, attributes, associations, enumerations, packages. |
+| Single-inheritance modelling. |
+| Multiplicity, datatypes, fixed values, stereotypes. |
+| Custom SHACL upload. |
+| Auto-generated SHACL exposed for review and export. |
+| Per-dataset namespace and prefix management. |
+| Schema import (Turtle, RDF/XML, N-Triples, N-Quads, TriG, JSON-LD). |
+| Schema export with optional layout and SHACL. |
+| Schema comparison with package, class, and property granularity. |
+| Migration wizard producing a SPARQL Update script. |
 
 ## Project managers / product owners
 
-| Feature | Where in the UI |
-| ------- | --------------- |
-| Read-only browse of any dataset / graph / snapshot | Read-only badge in the toolbar |
-| Stable, shareable snapshot links | Graph menu → Snapshot |
-| Per-graph changelog with restore | Toolbar → Changelog |
-| Comparison of two snapshots / files | Toolbar → Compare |
+| Feature |
+| ------- |
+| Read-only browse of any schema or snapshot. |
+| Stable, shareable snapshot links. |
+| Per-schema history with restore. |
+| Comparison of two snapshots, schemas, or files. |
 
 ## Developers
 
@@ -58,21 +58,9 @@ A quick map of what's in the box, organised by who tends to use what.
 | Feature | Where |
 | ------- | ----- |
 | Pluggable storage backends (Fuseki HTTP, file, in-memory) | `application-database.yml` |
-| Read-only mode at dataset, graph, or application level | UI toggles + `frontend.url` config |
-| Audit-grade changelog | Per-graph, persisted in Fuseki |
-| Reverse-proxy-friendly auth integration (`X-Authenticated-User`) | [Access control](/admin-guide/access-control) |
-
-## Where in the UI: quick reference
-
-| Action | Path |
-| ------ | ---- |
-| Welcome | `/` |
-| Editor | `/mainpage` |
-| Changelog | `/changelog` |
-| Compare | `/compare` |
-| Migration wizard | `/migrate` |
-| SHACL view | `/shacl` |
-| Prefix manager | `/prefixes` |
+| Read-only mode at schema, dataset, or application level | UI toggles + backend config |
+| Audit-grade history | Per-schema, persisted in the triple store |
+| Reverse-proxy-friendly auth integration | [Access control](/admin-guide/access-control) |
 
 ## What's not (yet) in the box
 

@@ -55,4 +55,4 @@ Most installations will never need to scale beyond the single-backend, single-Fu
 1. Vertical scaling first.
 2. Splitting the workload across datasets (and possibly across multiple RDFArchitect instances) before attempting clustering.
 
-A horizontally-scalable backend is on the post-1.0 roadmap.
+If you outgrow vertical scaling, open a GitHub issue describing the workload — concrete pressure is the most useful input.

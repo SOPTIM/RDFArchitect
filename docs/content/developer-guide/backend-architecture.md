@@ -22,7 +22,7 @@ HTTP Request
 │   └─ orchestrates side effects          │
 ├─────────────────────────────────────────┤
 │ database/ + graph/                      │  Ports & adapters
-│   ├─ DatabasePort, GraphPort            │
+│   ├─ database & graph ports             │
 │   ├─ Fuseki, file, in-memory adapters   │
 │   └─ Jena transaction wrappers          │
 └─────────────────────────────────────────┘
@@ -39,83 +39,19 @@ REST controllers are deliberately thin. Their responsibilities are limited to:
 
 - Mapping HTTP verbs and paths to use-case calls.
 - Decoding/encoding DTOs via MapStruct mappers.
-- Surfacing exceptions as appropriate HTTP status codes via the global `@ControllerAdvice`.
+- Surfacing exceptions as appropriate HTTP status codes via the global exception handler.
 - Audit logging for write operations.
 
-A controller skeleton looks like this:
-
-```java
-@RestController
-@RequestMapping("/api/datasets/{datasetId}/graphs/{graphId}/classes")
-@RequiredArgsConstructor
-public class ClassRESTController {
-
-    private final ListClassesUseCase listClasses;
-    private final EditClassUseCase editClass;
-    private final ClassMapper mapper;
-
-    @GetMapping
-    public Response<List<ClassDTO>> list(@PathVariable String datasetId,
-                                         @PathVariable String graphId) {
-        var graph = new GraphIdentifier(datasetId, graphId);
-        var classes = listClasses.execute(graph);
-        return Response.ok(mapper.toDtoList(classes));
-    }
-
-    @PutMapping("/{classIri}")
-    public Response<ClassDTO> edit(@PathVariable String datasetId,
-                                   @PathVariable String graphId,
-                                   @PathVariable String classIri,
-                                   @RequestBody EditClassDTO request) {
-        var graph = new GraphIdentifier(datasetId, graphId);
-        var updated = editClass.execute(graph, classIri, mapper.fromDto(request));
-        return Response.ok(mapper.toDto(updated));
-    }
-}
-```
-
-Notes:
-
-- Controllers receive raw IRI strings and delegate IRI expansion to the existing helpers — never roll your own URL decoder.
-- All write methods feed the changelog via the use-case implementation, not at controller level.
+Browse the controller package to see the canonical patterns. New endpoints should mirror the closest existing controller — same package layout, same delegation style, same DTO and mapper conventions.
 
 ## Use cases (`services/<feature>/`)
 
-For each feature there is a `*UseCase` interface and at least one implementation. The interface is the contract used by controllers and tests; the implementation contains the orchestration:
+For each feature there is a `*UseCase` interface and at least one implementation. The interface is the contract used by controllers and tests; the implementation contains the orchestration.
 
-```java
-public interface EditClassUseCase {
-    Class execute(GraphIdentifier graph, String classIri, ClassEdit edit);
-}
-
-@Service
-@RequiredArgsConstructor
-public class EditClassService implements EditClassUseCase {
-
-    private final GraphPort graphPort;
-    private final ChangelogService changelog;
-    private final LayoutService layout;
-    private final ReadOnlyService readOnly;
-
-    @Override
-    public Class execute(GraphIdentifier graph, String classIri, ClassEdit edit) {
-        readOnly.assertWritable(graph);
-        try (var txn = graphPort.beginWrite(graph)) {
-            var before = txn.findClass(classIri);
-            var after = txn.applyClassEdit(classIri, edit);
-            changelog.record(txn, classIri, before, after);
-            layout.touch(txn, classIri);
-            txn.commit();
-            return after;
-        }
-    }
-}
-```
-
-Why interfaces? Because there are roughly 80 of them across the backend; they look near-identical, but the indirection lets us:
+There are roughly 80 of these interfaces across the backend. They look near-identical, but the indirection lets us:
 
 - Unit-test controllers by mocking the interface.
-- Swap in alternative implementations (e.g. an audited variant) without touching callers.
+- Swap in alternative implementations without touching callers.
 - Keep dependency direction one-way: controller → interface → implementation.
 
 When you add a new feature, follow the same pattern even if the implementation is trivial.
@@ -124,44 +60,35 @@ When you add a new feature, follow the same pattern even if the implementation i
 
 Every HTTP request and response shape is modelled as a DTO record (or POJO). MapStruct-generated mappers convert between DTOs and the internal domain types. Hand-written conversion is acceptable only when the structural distance is too large for MapStruct.
 
-DTOs live next to their controllers in the package hierarchy. The MapStruct mapper interface annotated with `@Mapper(componentModel = "spring")` is picked up automatically.
+DTOs live next to their controllers in the package hierarchy.
 
 ## Database layer (`database/`, `graph/`)
 
-`DatabasePort` is the top-level abstraction over the dataset. `GraphPort` operates on a single graph. There are three adapters:
+The database package defines the **ports** — abstractions over the dataset and over a single graph — and provides three **adapters**:
 
 | Adapter | Use |
 | ------- | --- |
-| `FusekiDatabase` | Production. Talks to a remote Fuseki via HTTP. |
-| `FileDatabase` | Single-process file-backed mode. |
-| `InMemoryDatabase` | Unit and integration tests. |
+| Fuseki HTTP | Production. Talks to a remote Fuseki via HTTP. |
+| File-based | Single-process file-backed mode. |
+| In-memory | Unit and integration tests. |
 
-The `databaseType` property in `application-database.yml` selects which adapter is wired in.
+The `database.databaseType` property in `application-database.yml` selects which adapter is wired in.
 
 ### Transactions
 
-All graph mutations follow the same pattern:
+All graph mutations follow the standard Jena pattern: open a transaction through the port, perform reads/writes, commit, and ensure the transaction is ended in `finally`. The repo's helpers wrap this so a missed commit can't leak. Every Jena `Dataset` operation lives inside a transaction — *do not* call low-level Jena APIs directly from a service; route them through the port.
 
-```java
-try (var txn = graphPort.beginWrite(graph)) {
-    // perform reads and writes via txn
-    txn.commit();
-}
-```
+### Graph identifiers
 
-`try-with-resources` guarantees `end()` is called even if `commit()` is missed. Every Jena `Dataset` operation lives inside a transaction — *do not* call low-level Jena APIs directly from a service; route them through the port.
-
-### `GraphIdentifier`
-
-Every operation that targets a single graph takes a `GraphIdentifier(datasetId, graphId)`. This type is the canonical representation throughout the backend; never pass two raw strings around.
+Operations targeting a single graph take a graph-identifier value type that wraps the dataset name and the graph IRI. This type is the canonical representation throughout the backend; never pass two raw strings around.
 
 ## SHACL pipeline (`shacl/`)
 
 The SHACL package contains:
 
-- The **generator** that walks the model and emits `sh:NodeShape` / `sh:PropertyShape` triples.
-- The **importer** that classifies incoming SHACL into custom shapes for storage.
-- The **exporter** that combines generated and stored shapes for output.
+- A **generator** that walks the model and emits `sh:NodeShape` / `sh:PropertyShape` triples.
+- An **importer** that classifies incoming SHACL into custom shapes for storage.
+- An **exporter** that combines generated and stored shapes for output.
 
 The generator is deterministic — given the same model, it produces byte-for-byte identical output. This is the property that makes it safe to *not* persist generated shapes.
 
@@ -178,15 +105,8 @@ Each template handles one kind of change (class rename, property delete, attribu
 
 ## Exception handling
 
-A single `@ControllerAdvice` translates domain exceptions to HTTP status codes:
-
-- `NotFoundException` → 404
-- `ReadOnlyException` → 409
-- `ValidationException` → 400
-- everything else → 500 (logged with stack trace)
-
-Adding a new exception means adding a new `@ExceptionHandler` method or extending an existing one.
+A single `@ControllerAdvice` translates domain exceptions to HTTP status codes — not-found to 404, read-only to 409, validation to 400, everything else to 500 (logged with stack trace). Adding a new exception means adding a new handler method or extending an existing one.
 
 ## Audit logging
 
-Every write controller logs a structured audit line: timestamp, principal (if any), graph identifier, operation, target. The changelog feature reads these entries — the audit log is **the source of truth** for history, not a redundant copy.
+Every write controller logs a structured audit line with timestamp, principal (if any), graph identifier, operation, and target. The change-history feature reads from the same channel — the audit log is the source of truth for history, not a redundant copy.

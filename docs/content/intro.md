@@ -8,19 +8,19 @@ sidebar_position: 1
 
 **RDFArchitect** is an open-source, web-based tool for visualizing, editing, validating, and sharing RDFS schemas with **CIM** extensions — as used in **CGMES** and the **ENTSO-E** network code profiles — together with their **SHACL** constraints.
 
-It provides a practical modeling workflow for CIM-based RDF schemas without requiring a desktop modeling tool, license server, or RDF expertise from every team member who needs to read or review the model.
+It provides a practical modeling workflow for CIM-based RDF schemas without requiring a desktop modeling tool or RDF expertise from every team member who needs to read or review the model.
 
 ![RDFArchitect editor](/img/screenshots/editor.png)
 
 ## What can you do with it?
 
-- **Import** RDFS, OWL, and SHACL files (Turtle, RDF/XML, N-Triples, etc.) into a managed dataset.
+- **Import** RDFS, OWL, and SHACL files (Turtle, RDF/XML, N-Triples, etc.).
 - **Edit** classes, attributes, associations, enumerations, and notes through a UML-style diagram editor.
 - **Validate** schemas using both auto-generated and hand-written SHACL shapes.
 - **Compare** two schema versions side-by-side and review changes at the package, class, and property level.
 - **Migrate** instance data from one schema version to the next via a guided wizard.
 - **Share** read-only snapshots so reviewers can browse a schema without installing anything.
-- **Track** every change in a per-graph changelog, with undo, redo, and version restore.
+- **Track** every change in a per-schema history, with undo/redo, and version restore.
 
 ## Who is it for?
 
@@ -43,6 +43,12 @@ import DocCardList from '@theme/DocCardList';
   { type: 'link', href: '/reference/cim-mapping', label: 'CIM/CGMES Mapping', description: 'How RDFArchitect concepts map to CIM, CGMES, and ENTSO-E terminology.' },
   { type: 'link', href: '/reference/faq', label: 'FAQ & Troubleshooting', description: 'Answers to the most common questions and known issues.' },
 ]} />
+
+## Maintenance and commercial support
+
+RDFArchitect is actively developed and maintained by **[SOPTIM AG](https://www.soptim.de/)**. The project is open source and free to use under Apache 2.0; commercial support — including consulting, custom feature development, deployment assistance, and CIM/CGMES advisory — is available on request.
+
+If your organisation needs paid support or has integration questions, contact [opencgmes@soptim.de](mailto:opencgmes@soptim.de).
 
 ## License
 

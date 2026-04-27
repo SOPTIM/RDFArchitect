@@ -5,39 +5,29 @@ sidebar_position: 7
 
 # Packages and Diagrams
 
-Packages structure the model; diagrams visualise one package at a time. Knowing how the two interact is the difference between fighting the editor and flowing through it.
+Packages structure the model; diagrams visualise one package at a time.
 
 ## The package navigation tree
 
-The left panel shows every package in the active graph as an alphabetically ordered tree. Each package node expands to reveal its classes.
+The navigation tree shows every package in the active schema, alphabetically. Each package node expands to reveal its classes.
 
 ![Add package](/img/screenshots/add-package.png)
 
 From the tree you can:
 
-- Click a package — the diagram view switches to it.
-- Click a class — the class editor opens (the diagram stays put).
-- Right-click a package — context actions (rename, delete, edit, new class, new package).
+- Click a package to switch the diagram view to it.
+- Click a class to open it in the class editor.
+- Use context actions to create / rename / delete a package or add a class.
 - Use the search bar to jump straight to a class without expanding the tree.
 
-## Creating a package
+## Creating and editing packages
 
-From the package menu or the navigation tree's context menu choose **New package**. Provide:
+When creating a package you provide a name (used as the IRI fragment and label), an optional parent package, and an optional comment.
 
-- **Name** (used as IRI fragment and label).
-- **Parent package** (optional — sub-packages are supported).
-- **Comment**.
-
-A new empty package shows up immediately in the tree.
-
-## Editing a package
-
-The package editor lets you rename, recomment, change the parent package, or delete a package. Renaming updates every class's `cims:belongsToCategory` reference; the changelog captures the rename atomically.
-
-Deleting a package requires you to choose what happens to its classes:
+Renaming a package updates every class's package reference accordingly. Deleting a package asks you to choose what happens to its classes:
 
 - **Move them to another package** — recommended, non-destructive.
-- **Delete them too** — only when you really mean it. The confirmation dialog spells out the consequences.
+- **Delete them too** — only when you really mean it.
 
 ## The diagram view
 
@@ -49,52 +39,33 @@ The center pane is a UML-style diagram of the active package. Class boxes show:
 
 ![Add class](/img/screenshots/add-class.png)
 
-### Interacting with the diagram
+You can pan, zoom, and drag class boxes around. Manual positions are persisted so re-opening the package later restores your layout.
 
-- **Pan** with click-and-drag on empty canvas, or with `Space` + drag.
-- **Zoom** with the mouse wheel, the on-screen `+` / `−` buttons, or the keyboard shortcuts `Ctrl/Cmd + =` / `Ctrl/Cmd + −`. `Ctrl/Cmd + 0` resets zoom.
-- **Move a class** by dragging its header. The new position is saved automatically.
-- **Click a class** to focus it. **Double-click** to open the class editor.
-- **Right-click** a class for the context menu (edit, copy IRI, focus parents, delete, …).
-- **Right-click empty canvas** for the diagram context menu (new class, new association, layout reset).
+## Filtering and view options
 
-### Filtering and view options
-
-Open **Filter view** from the diagram toolbar to limit what the canvas shows:
-
-- Hide attributes (compact view).
-- Hide associations to external packages.
-- Hide enumerations.
-- Hide abstract classes.
-- Show only classes whose name matches a substring.
-
-These filters are local to the current browser session — they do not change the underlying model.
+The diagram view has filters that hide elements you don't currently need to see (attributes, external associations, enumerations, abstract classes). Filters are local to the current browser session — they don't change the underlying model.
 
 ## Diagram layout
 
-Layout is computed automatically the first time you open a package. After that, your manual adjustments are persisted as `arch:` triples in the graph, so:
+Layout is computed automatically the first time you open a package. After that, your manual adjustments are persisted with the schema, so:
 
 - Re-opening the package later restores your layout.
 - Exporting the schema (with layout) preserves it.
 - Re-importing an exported schema brings the layout back.
 
-If a layout becomes a mess, **Reset layout** in the diagram context menu re-runs the auto-layout from scratch. The change is recorded in the changelog and can be undone.
+If a layout becomes a mess, resetting it re-runs the auto-layout from scratch. The reset is recorded in the history and can be undone.
 
 ## Adding classes from the diagram
 
-The diagram context menu has **New class**, which opens the same dialog as the navigation tree.
-
-Drawing an association is a drag-from-class-to-class gesture: hover the source class until the connector handles appear, drag to the target class, and pick the multiplicity in the popup that appears.
+The diagram offers actions for creating classes and drawing associations directly inside the canvas. Pre-fills (target package, namespace) come from the diagram context.
 
 ## Cross-package context
 
-Associations to classes in *other* packages are shown as connectors leaving the canvas, terminating at a faded "ghost" representation of the foreign class. Clicking the ghost takes you to the package that actually owns the foreign class.
+Associations to classes in *other* packages are shown as connectors leaving the canvas, terminating at a faded representation of the foreign class. Following the ghost takes you to the package that actually owns it.
 
 ## Performance notes
 
-Very large packages (hundreds of classes) render slower. Two strategies help:
+Very large packages render slower. Two strategies help:
 
 - Split a large package into sub-packages.
-- Use the filter view to hide details you do not need.
-
-If a package consistently feels slow, consider whether the level of nesting reflects the model intent or whether the package is functioning as a "miscellaneous" bucket that should be split.
+- Use the filter view to hide details you don't currently need.
