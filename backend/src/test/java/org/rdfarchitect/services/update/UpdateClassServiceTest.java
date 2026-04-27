@@ -17,11 +17,11 @@
 
 package org.rdfarchitect.services.update;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static utils.TestUtils.readMultipartFileFromFile;
 
-import static utils.TestUtils.*;
-
+import java.util.UUID;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -33,6 +33,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.attributes.AttributeMapper;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.context.SessionContext;
@@ -49,8 +51,6 @@ import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.util.UUID;
-
 @SpringBootTest
 class UpdateClassServiceTest {
 
@@ -60,6 +60,10 @@ class UpdateClassServiceTest {
 
     @Autowired private ClassUMLAdaptedMapper classMapper;
     @Autowired private PackageMapper packageMapper;
+    @Autowired
+    private AttributeMapper attributeMapper;
+    @Autowired
+    private EnumEntryMapper enumEntryMapper;
 
     private static final String PATH = "src/test/java/org/rdfarchitect/services/update/";
     private static final String PREFIX = "http://example.org#";
@@ -77,6 +81,8 @@ class UpdateClassServiceTest {
                         classMapper,
                         packageMapper,
                         mockChangeLogService,
+                        attributeMapper,
+                        enumEntryMapper,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService);
