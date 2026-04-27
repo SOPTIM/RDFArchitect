@@ -38,6 +38,7 @@ import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
+import org.rdfarchitect.services.update.classes.attributes.AttributeFixedDefaultResolver;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -51,6 +52,7 @@ public class UpdateClassService
     private final ClassUMLAdaptedMapper classMapper;
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
+    private final AttributeFixedDefaultResolver fixedDefaultResolver;
 
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
@@ -63,6 +65,8 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
+            // resolver inherits the open WRITE txn for its read-only attribute lookup
+            fixedDefaultResolver.resolve(graph, cimClass.getAttributes());
             CIMUpdates.replaceClass(
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),

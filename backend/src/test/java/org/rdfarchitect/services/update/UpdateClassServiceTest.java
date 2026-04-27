@@ -46,6 +46,7 @@ import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSource
 import org.rdfarchitect.services.ChangeLogService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
+import org.rdfarchitect.services.update.classes.attributes.AttributeFixedDefaultResolver;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
@@ -70,6 +71,7 @@ class UpdateClassServiceTest {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
         var mockChangeLogService = mock(ChangeLogService.class);
+        var mockFixedDefaultResolver = mock(AttributeFixedDefaultResolver.class);
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         updateClassService =
                 new UpdateClassService(
@@ -77,6 +79,7 @@ class UpdateClassServiceTest {
                         classMapper,
                         packageMapper,
                         mockChangeLogService,
+                        mockFixedDefaultResolver,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService);
