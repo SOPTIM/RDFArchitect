@@ -34,5 +34,3 @@ public class TriplePackageChange extends TripleResourceChange {
 
     private List<TripleClassChange> classes;
 }
-
-

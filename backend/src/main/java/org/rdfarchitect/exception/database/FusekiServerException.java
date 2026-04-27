@@ -19,9 +19,7 @@ package org.rdfarchitect.exception.database;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Exception is thrown when there is an issue with the Fuseki server
- */
+/** Exception is thrown when there is an issue with the Fuseki server */
 public class FusekiServerException extends DatabaseException {
 
     public FusekiServerException() {

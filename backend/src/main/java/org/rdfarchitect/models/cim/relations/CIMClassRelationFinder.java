@@ -35,17 +35,15 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-
-/**
- * This class provides functionality to find classes referencing another.
- */
+/** This class provides functionality to find classes referencing another. */
 public class CIMClassRelationFinder {
 
-    private static final String CLASSES_REFERENCING_VIA_ATTRIBUTES_QUERY = """
+    private static final String CLASSES_REFERENCING_VIA_ATTRIBUTES_QUERY =
+            """
                 PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX cims:    <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                
+
                 SELECT ?thatClass WHERE {
                     ?attribute  cims:dataType <thisClass> ;
                                 rdfs:domain ?thatClass ;
@@ -54,11 +52,12 @@ public class CIMClassRelationFinder {
                 }
                 """;
 
-    private static final String CLASSES_REFERENCING_VIA_ASSOCIATIONS_QUERY = """
+    private static final String CLASSES_REFERENCING_VIA_ASSOCIATIONS_QUERY =
+            """
                 PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX cims:    <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                
+
                 SELECT ?thatClass WHERE {
                     ?association    rdfs:range <thisClass> ;
                                     rdfs:domain ?thatClass ;
@@ -82,18 +81,26 @@ public class CIMClassRelationFinder {
     /**
      * Finds all classes referencing a given class URI via attributes or associations.
      *
-     * @param graph     the graph containing the ontology
+     * @param graph the graph containing the ontology
      * @param classUUID the UUID of the class
      * @return ClassRelationsDTO containing the classes referencing the given class URI
      */
     public static ClassRelationsDTO getAllClassRelations(Graph graph, UUID classUUID) {
         var ontology = ModelFactory.createModelForGraph(graph);
-        var classURI = ontology.listSubjectsWithProperty(RDFA.uuid, ontology.createLiteral(classUUID.toString())).next().getURI();
+        var classURI =
+                ontology.listSubjectsWithProperty(
+                                RDFA.uuid, ontology.createLiteral(classUUID.toString()))
+                        .next()
+                        .getURI();
         var cimClassRelationFinder = new CIMClassRelationFinder(ontology);
         var classReferencingThisClassVia = new HashMap<String, Collection<CIMClass>>();
-        classReferencingThisClassVia.put("superClasses", cimClassRelationFinder.findSuperClasses(classUUID));
-        classReferencingThisClassVia.put("attributes", cimClassRelationFinder.findClassesReferencingViaAttributes(classURI));
-        classReferencingThisClassVia.put("associations", cimClassRelationFinder.findClassesReferencingViaAssociations(classURI));
+        classReferencingThisClassVia.put(
+                "superClasses", cimClassRelationFinder.findSuperClasses(classUUID));
+        classReferencingThisClassVia.put(
+                "attributes", cimClassRelationFinder.findClassesReferencingViaAttributes(classURI));
+        classReferencingThisClassVia.put(
+                "associations",
+                cimClassRelationFinder.findClassesReferencingViaAssociations(classURI));
 
         var cimClassRelationsDTO = new ClassRelationsDTO();
         cimClassRelationsDTO.setUuid(classUUID);
@@ -108,13 +115,21 @@ public class CIMClassRelationFinder {
      * @return a set of cim classes
      */
     public Set<CIMClass> findSuperClasses(UUID classUUID) {
-        var classRessource = ontology.listSubjectsWithProperty(RDFA.uuid, ontology.createLiteral(classUUID.toString())).next();
-        return CIMClassUtils.listSuperClasses(classRessource)
-                .stream()
-                .map(superClass -> cimObjectFetcher.fetchCIMClass(superClass.getProperty(RDFA.uuid).getObject().asLiteral().getString()))
+        var classRessource =
+                ontology.listSubjectsWithProperty(
+                                RDFA.uuid, ontology.createLiteral(classUUID.toString()))
+                        .next();
+        return CIMClassUtils.listSuperClasses(classRessource).stream()
+                .map(
+                        superClass ->
+                                cimObjectFetcher.fetchCIMClass(
+                                        superClass
+                                                .getProperty(RDFA.uuid)
+                                                .getObject()
+                                                .asLiteral()
+                                                .getString()))
                 .collect(Collectors.toSet());
     }
-
 
     /**
      * Finds all classes referencing a given class URI via attributes.
@@ -144,10 +159,14 @@ public class CIMClassRelationFinder {
             var classList = new ArrayList<CIMClass>();
             while (classUris.hasNext()) {
                 var classUri = classUris.next().getResource(classUriVar);
-                classList.add(cimObjectFetcher.fetchCIMClass(classUri.getProperty(RDFA.uuid).getObject().asLiteral().getString()));
+                classList.add(
+                        cimObjectFetcher.fetchCIMClass(
+                                classUri.getProperty(RDFA.uuid)
+                                        .getObject()
+                                        .asLiteral()
+                                        .getString()));
             }
             return classList;
         }
     }
-
 }

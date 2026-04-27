@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -58,7 +59,8 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase, DeleteClassUseCase, CopyClassUseCase {
+public class UpdateClassService
+          implements AddClassUseCase, ReplaceClassUseCase, DeleteClassUseCase, CopyClassUseCase {
 
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper classMapper;
@@ -78,7 +80,10 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
-            CIMUpdates.replaceClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), cimClass);
+            CIMUpdates.replaceClass(
+                    graph,
+                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    cimClass);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -86,13 +91,20 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             }
         }
 
-        updateDiagramObjectNameUseCase.updateDiagramObjectName(graphIdentifier, newClass.getUuid(), newClass.getLabel());
+        updateDiagramObjectNameUseCase.updateDiagramObjectName(
+                graphIdentifier, newClass.getUuid(), newClass.getLabel());
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Updated class " + newClass.getUuid(), graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry("Updated class " + newClass.getUuid(), graph.getLastDelta()));
     }
 
     @Override
-    public void addClass(GraphIdentifier graphIdentifier, PackageDTO packageDTO, String classURIPrefix, String className) {
+    public void addClass(
+            GraphIdentifier graphIdentifier,
+            PackageDTO packageDTO,
+            String classURIPrefix,
+            String className) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         GraphRewindableWithUUIDs graph = null;
         UUID newClassUUID;
@@ -101,7 +113,11 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             graph.begin(TxnType.WRITE);
 
             var newClass = constructClass(cimPackage, classURIPrefix, className);
-            newClassUUID = CIMUpdates.insertClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), newClass);
+            newClassUUID =
+                    CIMUpdates.insertClass(
+                            graph,
+                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            newClass);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -109,19 +125,26 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             }
         }
 
-        createClassLayoutDataUseCase.createClassLayoutData(graphIdentifier, packageDTO, className, newClassUUID);
+        createClassLayoutDataUseCase.createClassLayoutData(
+                graphIdentifier, packageDTO, className, newClassUUID);
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Added class " + className, graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry("Added class " + className, graph.getLastDelta()));
     }
 
-    private CIMClass constructClass(CIMPackage cimPackage, String classURIPrefix, String classLabel) {
-        var cimClass = CIMClass.builder()
-                               .uri(new URI(classURIPrefix + classLabel))
-                               .label(new RDFSLabel(classLabel, "en"))
-                               .superClass(null)
-                               .comment(null);
+    private CIMClass constructClass(
+            CIMPackage cimPackage, String classURIPrefix, String classLabel) {
+        var cimClass =
+                CIMClass.builder()
+                        .uri(new URI(classURIPrefix + classLabel))
+                        .label(new RDFSLabel(classLabel, "en"))
+                        .superClass(null)
+                        .comment(null);
         if (cimPackage != null) {
-            cimClass.belongsToCategory(new CIMSBelongsToCategory(cimPackage.getUri(), cimPackage.getLabel(), cimPackage.getUuid()));
+            cimClass.belongsToCategory(
+                    new CIMSBelongsToCategory(
+                            cimPackage.getUri(), cimPackage.getLabel(), cimPackage.getUuid()));
         }
         return cimClass.build();
     }
@@ -132,7 +155,10 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
-            CIMUpdates.deleteClass(graph, databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), classUUID);
+            CIMUpdates.deleteClass(
+                    graph,
+                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    classUUID);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -140,9 +166,12 @@ public class UpdateClassService implements AddClassUseCase, ReplaceClassUseCase,
             }
         }
 
-        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, UUID.fromString(classUUID));
+        deleteClassLayoutDataUseCase.deleteClassLayoutData(
+                graphIdentifier, UUID.fromString(classUUID));
 
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Deleted class: " + classUUID, graph.getLastDelta()));
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry("Deleted class: " + classUUID, graph.getLastDelta()));
     }
 
     @Override

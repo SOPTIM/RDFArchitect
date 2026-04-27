@@ -58,19 +58,22 @@ public class PropertyShapeToClassAssigner {
         resultList.addAll(getSparqlConstraints(classUUID));
         addRemainingPropertyShapes(classUUID, resultList);
 
-
         resultList.sort(Comparator.comparing(PropertyShapesWrapper::getLabel));
-        resultList.sort(Comparator.comparing(propertyShapesWrapper -> {
-            if (propertyShapesWrapper.getPropertyShapes().isEmpty()) {
-                return 0.0;
-            }
-            return propertyShapesWrapper.getPropertyShapes().getFirst().getOrder();
-        }));
+        resultList.sort(
+                Comparator.comparing(
+                        propertyShapesWrapper -> {
+                            if (propertyShapesWrapper.getPropertyShapes().isEmpty()) {
+                                return 0.0;
+                            }
+                            return propertyShapesWrapper.getPropertyShapes().getFirst().getOrder();
+                        }));
         return resultList;
     }
 
     public List<PropertyShapesWrapper> getDerivedPropertyShapesOfClass(UUID classUUID) {
-        var superClasses = new CIMClassRelationFinder(dataset.getNamedModel(ONTOLOGY_GRAPH_URI)).findSuperClasses(classUUID);
+        var superClasses =
+                new CIMClassRelationFinder(dataset.getNamedModel(ONTOLOGY_GRAPH_URI))
+                        .findSuperClasses(classUUID);
         var propertyShapes = new ArrayList<PropertyShapesWrapper>();
         for (var superClass : superClasses) {
             propertyShapes.addAll(getPropertyShapes(superClass.getUuid()));
@@ -79,12 +82,13 @@ public class PropertyShapeToClassAssigner {
     }
 
     private List<PropertyShapesWrapper> getAttributePropertyShapes(UUID classUUID) {
-        var query = """
+        var query =
+                """
                 PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX  sh:   <http://www.w3.org/ns/shacl#>
                 PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX  cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                
+
                 SELECT DISTINCT ?Property
                 WHERE {
                     GRAPH <ONTOLOGY_GRAPH_URI> {
@@ -105,23 +109,28 @@ public class PropertyShapeToClassAssigner {
                         }
                     }
                 }
-                """.replace("CLASS_UUID", classUUID.toString())
-                .replace("RDFA_UUID", RDFA.uuid.getURI())
-                .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
-                .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
+                """
+                        .replace("CLASS_UUID", classUUID.toString())
+                        .replace("RDFA_UUID", RDFA.uuid.getURI())
+                        .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
+                        .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
         try (var qExec = QueryExecutionFactory.create(query, dataset)) {
             var results = qExec.execSelect();
             var propertyShapes = new ArrayList<PropertyShapesWrapper>();
             while (results.hasNext()) {
                 var querySolution = results.next();
                 var propertyUri = querySolution.getResource("?Property").getURI();
-                var propertyShapesOfProperty = new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI)).getPropertyShapesOfProperty(dataset.getNamedModel(ONTOLOGY_GRAPH_URI), propertyUri);
-                var propertyShapeWrapper = PropertyShapesWrapper.builder()
-                        .domain(classUUID)
-                        .propertyType("attribute")
-                        .label(propertyUri.split("#", 2)[1])
-                        .propertyShapes(propertyShapesOfProperty)
-                        .build();
+                var propertyShapesOfProperty =
+                        new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI))
+                                .getPropertyShapesOfProperty(
+                                        dataset.getNamedModel(ONTOLOGY_GRAPH_URI), propertyUri);
+                var propertyShapeWrapper =
+                        PropertyShapesWrapper.builder()
+                                .domain(classUUID)
+                                .propertyType("attribute")
+                                .label(propertyUri.split("#", 2)[1])
+                                .propertyShapes(propertyShapesOfProperty)
+                                .build();
                 propertyShapeWrapper.setLabel(propertyUri.split("#", 2)[1]);
                 propertyShapeWrapper.setPropertyShapes(propertyShapesOfProperty);
                 propertyShapes.add(propertyShapeWrapper);
@@ -132,12 +141,13 @@ public class PropertyShapeToClassAssigner {
 
     private List<PropertyShapesWrapper> getAssociationPropertyShapes(UUID classUUID) {
         // fetch properties that have propertyShapes
-        var query = """
+        var query =
+                """
                 PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX  sh:   <http://www.w3.org/ns/shacl#>
                 PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX  cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                
+
                 SELECT DISTINCT ?Property
                 WHERE {
                     {
@@ -169,23 +179,29 @@ public class PropertyShapeToClassAssigner {
                         }
                     }
                 }
-                """.replace("CLASS_UUID", classUUID.toString())
-                .replace("RDFA_UUID", RDFA.uuid.getURI())
-                .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
-                .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
+                """
+                        .replace("CLASS_UUID", classUUID.toString())
+                        .replace("RDFA_UUID", RDFA.uuid.getURI())
+                        .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
+                        .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
         try (var quexec = QueryExecutionFactory.create(query, dataset)) {
             var results = quexec.execSelect();
             var propertyShapes = new ArrayList<PropertyShapesWrapper>();
             while (results.hasNext()) {
                 var querySolution = results.next();
                 var propertyUri = querySolution.getResource("?Property").getURI();
-                var propertyShapeFetcher = new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI));
-                var propertyShapeWrapper = PropertyShapesWrapper.builder()
-                        .domain(classUUID)
-                        .propertyType("association")
-                        .label(propertyUri.split("#", 2)[1])
-                        .propertyShapes(propertyShapeFetcher.getPropertyShapesOfProperty(dataset.getNamedModel(ONTOLOGY_GRAPH_URI), propertyUri))
-                        .build();
+                var propertyShapeFetcher =
+                        new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI));
+                var propertyShapeWrapper =
+                        PropertyShapesWrapper.builder()
+                                .domain(classUUID)
+                                .propertyType("association")
+                                .label(propertyUri.split("#", 2)[1])
+                                .propertyShapes(
+                                        propertyShapeFetcher.getPropertyShapesOfProperty(
+                                                dataset.getNamedModel(ONTOLOGY_GRAPH_URI),
+                                                propertyUri))
+                                .build();
                 propertyShapes.add(propertyShapeWrapper);
             }
             return propertyShapes;
@@ -193,12 +209,13 @@ public class PropertyShapeToClassAssigner {
     }
 
     private List<PropertyShapesWrapper> getSparqlConstraints(UUID classUUID) {
-        var query = """
+        var query =
+                """
                 PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX  sh:   <http://www.w3.org/ns/shacl#>
                 PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX  cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                
+
                 SELECT DISTINCT ?PropertyShape
                 WHERE {
                     GRAPH <ONTOLOGY_GRAPH_URI> {
@@ -212,24 +229,28 @@ public class PropertyShapeToClassAssigner {
                                         sh:sparql ?sparql.
                     }
                 }
-                """.replace("CLASS_UUID", classUUID.toString())
-                .replace("RDFA_UUID", RDFA.uuid.getURI())
-                .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
-                .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
+                """
+                        .replace("CLASS_UUID", classUUID.toString())
+                        .replace("RDFA_UUID", RDFA.uuid.getURI())
+                        .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
+                        .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
         try (var quexec = QueryExecutionFactory.create(query, dataset)) {
             var results = quexec.execSelect();
             var propertyShapes = new ArrayList<PropertyShapesWrapper>();
             while (results.hasNext()) {
                 var querySolution = results.next();
                 var propertyShapeUri = querySolution.getResource("?PropertyShape").getURI();
-                var propertyShapeFetcher = new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI));
-                var propertyShapesOfProperty = propertyShapeFetcher.getPropertyShape(propertyShapeUri);
-                var propertyShapeWrapper = PropertyShapesWrapper.builder()
-                        .domain(classUUID)
-                        .propertyType("sparql")
-                        .label(propertyShapeUri.split("#", 2)[1])
-                        .propertyShapes(new ArrayList<>(List.of(propertyShapesOfProperty)))
-                        .build();
+                var propertyShapeFetcher =
+                        new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI));
+                var propertyShapesOfProperty =
+                        propertyShapeFetcher.getPropertyShape(propertyShapeUri);
+                var propertyShapeWrapper =
+                        PropertyShapesWrapper.builder()
+                                .domain(classUUID)
+                                .propertyType("sparql")
+                                .label(propertyShapeUri.split("#", 2)[1])
+                                .propertyShapes(new ArrayList<>(List.of(propertyShapesOfProperty)))
+                                .build();
                 propertyShapes.add(propertyShapeWrapper);
             }
             return propertyShapes;
@@ -239,16 +260,19 @@ public class PropertyShapeToClassAssigner {
     /**
      * Adds the remaining property shapes to the list of property shapes.
      *
-     * @param classUUID                 the uuid of the class.
+     * @param classUUID the uuid of the class.
      * @param propertyShapesWrapperList the list of known property shapes.
      */
-    private void addRemainingPropertyShapes(UUID classUUID, List<PropertyShapesWrapper> propertyShapesWrapperList) {
-        var querySb = new StringBuilder("""
+    private void addRemainingPropertyShapes(
+            UUID classUUID, List<PropertyShapesWrapper> propertyShapesWrapperList) {
+        var querySb =
+                new StringBuilder(
+                        """
                 PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX  sh:   <http://www.w3.org/ns/shacl#>
                 PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
                 PREFIX  cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
-                
+
                 SELECT DISTINCT ?propertyShape
                 WHERE {
                     GRAPH <ONTOLOGY_GRAPH_URI> {
@@ -265,17 +289,20 @@ public class PropertyShapeToClassAssigner {
                         .append(">)\n");
             }
         }
-        querySb.append("""
+        querySb.append(
+                """
                     }
                 }
                 """);
-        var query = querySb.toString()
-                .replace("CLASS_UUID", classUUID.toString())
-                .replace("RDFA_UUID", RDFA.uuid.getURI())
-                .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
-                .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
-        var superClasses = new CIMClassRelationFinder(dataset.getNamedModel(ONTOLOGY_GRAPH_URI))
-                .findSuperClasses(classUUID);
+        var query =
+                querySb.toString()
+                        .replace("CLASS_UUID", classUUID.toString())
+                        .replace("RDFA_UUID", RDFA.uuid.getURI())
+                        .replace("SHACL_GRAPH_URI", SHACL_GRAPH_URI)
+                        .replace("ONTOLOGY_GRAPH_URI", ONTOLOGY_GRAPH_URI);
+        var superClasses =
+                new CIMClassRelationFinder(dataset.getNamedModel(ONTOLOGY_GRAPH_URI))
+                        .findSuperClasses(classUUID);
         try (var qexec = QueryExecutionFactory.create(query, dataset)) {
             var results = qexec.execSelect();
             while (results.hasNext()) {
@@ -283,24 +310,26 @@ public class PropertyShapeToClassAssigner {
                 var propertyShapeUri = querySolution.getResource("propertyShape").getURI();
                 // Check if the property shape is a super class attribute
                 String localName = propertyShapeUri.split("#", 2)[1];
-                boolean isSuperClassAttribute = superClasses.stream()
-                        .map(sc -> sc.getLabel().getValue())
-                        .anyMatch(localName::startsWith);
+                boolean isSuperClassAttribute =
+                        superClasses.stream()
+                                .map(sc -> sc.getLabel().getValue())
+                                .anyMatch(localName::startsWith);
                 if (isSuperClassAttribute) {
                     continue;
                 }
-                var propertyShapeFetcher = new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI));
-                var propertyShapesOfProperty = propertyShapeFetcher.getPropertyShape(propertyShapeUri);
-                var propertyShapeWrapper = PropertyShapesWrapper.builder()
-                        .domain(classUUID)
-                        .propertyType("other")
-                        .label(propertyShapeUri.split("#", 2)[1])
-                        .propertyShapes(new ArrayList<>(List.of(propertyShapesOfProperty)))
-                        .build();
+                var propertyShapeFetcher =
+                        new SHACLShapesFetcher(dataset.getNamedModel(SHACL_GRAPH_URI));
+                var propertyShapesOfProperty =
+                        propertyShapeFetcher.getPropertyShape(propertyShapeUri);
+                var propertyShapeWrapper =
+                        PropertyShapesWrapper.builder()
+                                .domain(classUUID)
+                                .propertyType("other")
+                                .label(propertyShapeUri.split("#", 2)[1])
+                                .propertyShapes(new ArrayList<>(List.of(propertyShapesOfProperty)))
+                                .build();
                 propertyShapesWrapperList.add(propertyShapeWrapper);
             }
         }
     }
-
-
 }

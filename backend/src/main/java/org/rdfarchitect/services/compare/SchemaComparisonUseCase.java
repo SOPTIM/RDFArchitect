@@ -23,41 +23,41 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-/**
- * Interface for comparing two schemas.
- */
+/** Interface for comparing two schemas. */
 public interface SchemaComparisonUseCase {
 
     /**
-     * Compares the schema of the given file with the schema of the graph identified by the given identifier.
-     * Changes in UUID are ignored, as they are currently only present in the InMemoryGraph.
+     * Compares the schema of the given file with the schema of the graph identified by the given
+     * identifier. Changes in UUID are ignored, as they are currently only present in the
+     * InMemoryGraph.
      *
      * @param graphIdentifier The identifier of the graph to compare against.
-     * @param file            The file containing the schema to compare.
-     *
-     * @return A list changes structured by Package and Class representing the differences between the schemas.
+     * @param file The file containing the schema to compare.
+     * @return A list changes structured by Package and Class representing the differences between
+     *     the schemas.
      */
     List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, MultipartFile file);
 
     /**
-     * Compares the schemas of two graphs identified by the given identifiers.
-     * Changes in UUID are ignored, as they are currently only present in the InMemoryGraph.
+     * Compares the schemas of two graphs identified by the given identifiers. Changes in UUID are
+     * ignored, as they are currently only present in the InMemoryGraph.
      *
-     * @param graphIdentifier      The identifier of the first graph to compare.
+     * @param graphIdentifier The identifier of the first graph to compare.
      * @param otherGraphIdentifier The identifier of the second graph to compare.
-     *
-     * @return A list changes structured by Package and Class representing the differences between the schemas.
+     * @return A list changes structured by Package and Class representing the differences between
+     *     the schemas.
      */
-    List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, GraphIdentifier otherGraphIdentifier);
+    List<TriplePackageChange> compareSchemas(
+            GraphIdentifier graphIdentifier, GraphIdentifier otherGraphIdentifier);
 
     /**
-     * Compares the schemas of two files.
-     * Changes in UUID are ignored, as they are currently only present in the InMemoryGraph.
+     * Compares the schemas of two files. Changes in UUID are ignored, as they are currently only
+     * present in the InMemoryGraph.
      *
      * @param file1 The first file containing a schema to compare.
      * @param file2 The second file containing a schema to compare.
-     *
-     * @return A list changes structured by Package and Class representing the differences between the schemas.
+     * @return A list changes structured by Package and Class representing the differences between
+     *     the schemas.
      */
     List<TriplePackageChange> compareSchemas(MultipartFile file1, MultipartFile file2);
 }

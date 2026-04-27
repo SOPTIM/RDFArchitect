@@ -41,4 +41,3 @@ public class MigrationSessionStore {
         sessionStore.remove(sessionId);
     }
 }
-

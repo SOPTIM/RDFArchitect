@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.rendering;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -30,18 +32,16 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import java.util.List;
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-
 class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBase {
 
     @Test
     void renderUML_emptyCollection_emptyArrays() {
-        //Arrange
+        // Arrange
 
-        //Act
+        // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
     }
@@ -53,39 +53,50 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderUML_collectionWithOnlyPackages_emptyMermaidDiagram() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addPackage("package_package2");
 
-        //Act
+        // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
     }
 
     @Test
     void renderUML_singleClass_createsNodeWithCorrectData() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addClass("package_package1", "class1");
         var classesIterator = cimCollection.getClasses().iterator();
         var class1 = classesIterator.next();
-        class1.setStereotypes(List.of(new CIMSStereotype("Entsoe"), new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#concrete")));
-        class1.setBelongsToCategory(new CIMSBelongsToCategory(new URI("http://example.com/Category#package_package1"), new RDFSLabel("package1", "en"), UUID.randomUUID()));
+        class1.setStereotypes(
+                List.of(
+                        new CIMSStereotype("Entsoe"),
+                        new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#concrete")));
+        class1.setBelongsToCategory(
+                new CIMSBelongsToCategory(
+                        new URI("http://example.com/Category#package_package1"),
+                        new RDFSLabel("package1", "en"),
+                        UUID.randomUUID()));
         addAttribute("class1", "attribute1", XSDDatatype.XSDstring);
         addAttribute("class1", "attribute2", XSDDatatype.XSDint);
         var attributeIterator = cimCollection.getAttributes().iterator();
         var attribute1 = attributeIterator.next();
-        attribute1.setMultiplicity(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"));
+        attribute1.setMultiplicity(
+                new CIMSMultiplicity(
+                        "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"));
         var attribute2 = attributeIterator.next();
-        attribute2.setMultiplicity(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#0...n"));
+        attribute2.setMultiplicity(
+                new CIMSMultiplicity(
+                        "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#0...n"));
 
-        //Act
+        // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         var nodeDTO = result.getNodes().get(0);
         var attr1DTO = nodeDTO.getData().getAttributes().get(0);
         var attr2DTO = nodeDTO.getData().getAttributes().get(1);
@@ -107,25 +118,31 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderUML_singleEnum_createsNodeWithCorrectData() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addEnum("package_package1", "enum1");
         addEnumEntry("enum1", "enumEntry1");
         addEnumEntry("enum1", "enumEntry2");
 
-        //Act
+        // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         var nodeDTO = result.getNodes().get(0);
         assertThat(result.getNodes()).hasSize(1);
-        assertThat(nodeDTO.getData().getStereotypes()).hasSize(2).contains("enumeration").contains("abstract");
-        assertThat(nodeDTO.getData().getEnumEntries()).hasSize(2).contains("enumEntry1").contains("enumEntry2");
+        assertThat(nodeDTO.getData().getStereotypes())
+                .hasSize(2)
+                .contains("enumeration")
+                .contains("abstract");
+        assertThat(nodeDTO.getData().getEnumEntries())
+                .hasSize(2)
+                .contains("enumEntry1")
+                .contains("enumEntry2");
     }
 
     @Test
     void renderUML_superClassAndSubClass_createsInheritanceEdge() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addClass("package_package1", "subClass");
         addClass("package_package1", "superClass");
@@ -134,10 +151,10 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var superClass = classesIterator.next();
         subClass.setSuperClass(new RDFSSubClassOf(superClass.getUri(), superClass.getLabel()));
 
-        //Act
+        // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         var inheritanceEdgeDTO = result.getEdges().get(0);
         var subClassUUID = result.getNodes().get(0).getId();
         var superClassUUID = result.getNodes().get(1).getId();
@@ -150,7 +167,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderUML_twoClassesAndAssociation_createsAssociationEdge() {
-        //Arrange
+        // Arrange
         addPackage("package_package1");
         addClass("package_package1", "class1");
         addClass("package_package2", "class2");
@@ -158,13 +175,17 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var associationIterator = cimCollection.getAssociations().iterator();
         var fromAssoc = associationIterator.next();
         var toAssoc = associationIterator.next();
-        fromAssoc.setMultiplicity(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#0...n"));
-        toAssoc.setMultiplicity(new CIMSMultiplicity("http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"));
+        fromAssoc.setMultiplicity(
+                new CIMSMultiplicity(
+                        "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#0...n"));
+        toAssoc.setMultiplicity(
+                new CIMSMultiplicity(
+                        "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"));
 
-        //Act
+        // Act
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
-        //Assert
+        // Assert
         var associationEdgeDTO = result.getEdges().get(0);
         assertThat(result.getEdges()).hasSize(1);
         assertThat(associationEdgeDTO.getData().getFromMultiplicity()).isEqualTo("0...n");

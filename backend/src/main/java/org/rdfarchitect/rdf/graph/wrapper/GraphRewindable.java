@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.rdf.graph.wrapper;
 
-import org.apache.jena.graph.Capabilities;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphEventManager;
 import org.apache.jena.graph.Node;
@@ -49,38 +48,41 @@ import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
- * An Implementation of the Graph interface that allows for storing changes and then cycling through them.
- * Perform any amount of update operations on this Graph, then commit to store those changes as a version.
- * Undoing a change and then redoing is possible. However, new changes after an undo will delete all previously following changes.
- * this implementation ensures thread safety by utilizing the single-writer multiple-reader principle (SWMR).
+ * An Implementation of the Graph interface that allows for storing changes and then cycling through
+ * them. Perform any amount of update operations on this Graph, then commit to store those changes
+ * as a version. Undoing a change and then redoing is possible. However, new changes after an undo
+ * will delete all previously following changes. this implementation ensures thread safety by
+ * utilizing the single-writer multiple-reader principle (SWMR).
  */
 public class GraphRewindable implements Graph, Transactional, Rewindable {
 
-    //logger
+    // logger
     protected static final Logger logger = LoggerFactory.getLogger(GraphRewindable.class);
 
-    //thread safety
+    // thread safety
     protected final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
     protected final ThreadLocal<TxnType> transactionType = new ThreadLocal<>();
 
-    //graph storage
+    // graph storage
     protected final Deque<DeltaCompressible> pastDeltas;
 
     protected DeltaCompressible currentDelta;
 
     protected final Deque<DeltaCompressible> futureDeltas;
 
-    //version control
+    // version control
     protected final int maxVersions;
 
     protected final int compressCount;
 
     /**
-     * Accepts a {@link Graph} that serves as a base version of the {@link GraphRewindableWithUUIDs}.
+     * Accepts a {@link Graph} that serves as a base version of the {@link
+     * GraphRewindableWithUUIDs}.
      *
-     * @param base          The base graph
-     * @param maxVersions   The maximum amount of versions the graph stores.
-     * @param compressCount The amount of versions that are compressed to a new base when compressing.
+     * @param base The base graph
+     * @param maxVersions The maximum amount of versions the graph stores.
+     * @param compressCount The amount of versions that are compressed to a new base when
+     *     compressing.
      */
     public GraphRewindable(@NotNull Graph base, int maxVersions, int compressCount) {
         replaceCommentFormat(base);
@@ -90,25 +92,36 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         currentDelta = new DeltaCompressible(pastDeltas.peek());
         futureDeltas = new ArrayDeque<>();
         if (maxVersions < 1) {
-            throw new IllegalArgumentException("the maximum amount of Versions must be greater than 1");
+            throw new IllegalArgumentException(
+                    "the maximum amount of Versions must be greater than 1");
         }
         if (maxVersions < compressCount) {
-            throw new IllegalArgumentException("The maximum amount of version of a GraphRewindable cannot be smaller than the compress count.");
+            throw new IllegalArgumentException(
+                    "The maximum amount of version of a GraphRewindable cannot be smaller than the compress count.");
         }
         if (compressCount < 1) {
-            throw new IllegalArgumentException("the maximum amount of versions that would be suppressed at a time cannot be smaller than 1.");
+            throw new IllegalArgumentException(
+                    "the maximum amount of versions that would be suppressed at a time cannot be smaller than 1.");
         }
         this.maxVersions = maxVersions;
         this.compressCount = compressCount;
     }
 
     private void replaceCommentFormat(Graph graph) {
-        graph.find(Node.ANY, RDFS.comment.asNode(), Node.ANY).toList().forEach(triple -> {
-            var newComment = new RDFSComment(triple.getObject().getLiteralLexicalForm(),
-                                             new URI("http://www.w3.org/2001/XMLSchema#string"));
-            graph.delete(triple);
-            graph.add(triple.getSubject(), RDFS.comment.asNode(), newComment.asTypedLiteral().asNode());
-        });
+        graph.find(Node.ANY, RDFS.comment.asNode(), Node.ANY)
+                .toList()
+                .forEach(
+                        triple -> {
+                            var newComment =
+                                    new RDFSComment(
+                                            triple.getObject().getLiteralLexicalForm(),
+                                            new URI("http://www.w3.org/2001/XMLSchema#string"));
+                            graph.delete(triple);
+                            graph.add(
+                                    triple.getSubject(),
+                                    RDFS.comment.asNode(),
+                                    newComment.asTypedLiteral().asNode());
+                        });
     }
 
     /**
@@ -127,9 +140,7 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         return pastDeltas.size() - 1;
     }
 
-    /**
-     * Checks whether the graph is closed and if so, throws a {@link ClosedException}.
-     */
+    /** Checks whether the graph is closed and if so, throws a {@link ClosedException}. */
     protected void checkClosed() {
         if (isClosed()) {
             throw new ClosedException("Graph is closed!", this);
@@ -142,7 +153,8 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         checkClosed();
         if (getCurrentVersion() == 0) {
             end();
-            throw new GraphVersionControlException("Cannot undo last change because this is already the oldest version.");
+            throw new GraphVersionControlException(
+                    "Cannot undo last change because this is already the oldest version.");
         }
         futureDeltas.push(pastDeltas.pop());
         assert pastDeltas.peek() != null;
@@ -156,7 +168,8 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         checkClosed();
         if (futureDeltas.isEmpty()) {
             end();
-            throw new GraphVersionControlException("Cannot redo last change because this is already the newest version.");
+            throw new GraphVersionControlException(
+                    "Cannot redo last change because this is already the newest version.");
         }
         pastDeltas.push(futureDeltas.pop());
         assert pastDeltas.peek() != null;
@@ -187,8 +200,8 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
     }
 
     /**
-     * Clears the undo/redo history while keeping the current graph state.
-     * Compresses the latest delta into a new base and drops all prior versions.
+     * Clears the undo/redo history while keeping the current graph state. Compresses the latest
+     * delta into a new base and drops all prior versions.
      */
     public void resetHistory() {
         begin(TxnType.WRITE);
@@ -214,7 +227,8 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         try {
             checkClosed();
             if (!containsDelta(versionId, pastDeltas)) {
-                throw new GraphVersionControlException("Cannot restore to version " + versionId + " because it does not exist.");
+                throw new GraphVersionControlException(
+                        "Cannot restore to version " + versionId + " because it does not exist.");
             }
             while (!pastDeltas.isEmpty() && !pastDeltas.peek().getVersionId().equals(versionId)) {
                 pastDeltas.pop();
@@ -230,8 +244,7 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
      * Checks whether the given versionId is contained in the given deque of deltas.
      *
      * @param versionId The versionId to check for.
-     * @param deltas    The deque of deltas to check in.
-     *
+     * @param deltas The deque of deltas to check in.
      * @return True if the versionId is contained, otherwise false.
      */
     private boolean containsDelta(UUID versionId, Deque<DeltaCompressible> deltas) {
@@ -249,9 +262,7 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         }
     }
 
-    /**
-     * Compresses the {@code versionConfig.compressCount} oldest versions to a new base graph.
-     */
+    /** Compresses the {@code versionConfig.compressCount} oldest versions to a new base graph. */
     protected void compressBase() {
         int deleteVersionCount = Math.min(pastDeltas.size() - 1, compressCount);
         for (int i = 0; i < deleteVersionCount; i++) {
@@ -267,29 +278,13 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         return currentDelta.getAdditions().isEmpty() && currentDelta.getDeletions().isEmpty();
     }
 
-    //Graph
-    @Override
-    public boolean dependsOn(Graph other) {
-        if (!isInTransaction()) {
-            throw new GraphNotInATransactionException();
-        }
-        return currentDelta.dependsOn(other);
-    }
-
+    // Graph
     @Override
     public TransactionHandler getTransactionHandler() {
         if (!isInTransaction()) {
             throw new GraphNotInATransactionException();
         }
         return currentDelta.getTransactionHandler();
-    }
-
-    @Override
-    public Capabilities getCapabilities() {
-        if (!isInTransaction()) {
-            throw new GraphNotInATransactionException();
-        }
-        return currentDelta.getCapabilities();
     }
 
     @Override
@@ -428,10 +423,13 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
     @Override
     public void begin(TxnType txnType) {
         if (isInTransaction()) {
-            throw new GraphTransactionException("Access to GraphRewindable denied, because there already is an ongoing transaction on this thread.");
+            throw new GraphTransactionException(
+                    "Access to GraphRewindable denied, because there already is an ongoing transaction on this thread.");
         }
         transactionType.set(txnType);
-        if (txnType == TxnType.READ || txnType == TxnType.READ_COMMITTED_PROMOTE || txnType == TxnType.READ_PROMOTE) {
+        if (txnType == TxnType.READ
+                || txnType == TxnType.READ_COMMITTED_PROMOTE
+                || txnType == TxnType.READ_PROMOTE) {
             rwLock.readLock().lock();
         } else if (txnType == TxnType.WRITE) {
             rwLock.writeLock().lock();
@@ -509,7 +507,9 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
         if (!isInTransaction()) {
             throw new GraphNotInATransactionException();
         }
-        if (transactionMode() == ReadWrite.WRITE && (!isClosed() && !noChangesInTransaction())) { //abort changes if they are not commited
+        if (transactionMode() == ReadWrite.WRITE
+                && (!isClosed()
+                        && !noChangesInTransaction())) { // abort changes if they are not commited
             abort();
         }
         var lock = transactionMode() == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();

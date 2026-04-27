@@ -28,8 +28,9 @@ public interface CreatePackageLayoutDataUseCase {
      * Creates the diagram layout data for a newly created package
      *
      * @param graphIdentifier the identifier of the graph
-     * @param packageDTO      the DTO used for creating the new package
-     * @param newPackageUUID  the UUID of the newly created package
+     * @param packageDTO the DTO used for creating the new package
+     * @param newPackageUUID the UUID of the newly created package
      */
-    void createPackageLayoutData(GraphIdentifier graphIdentifier, PackageDTO packageDTO, UUID newPackageUUID);
+    void createPackageLayoutData(
+            GraphIdentifier graphIdentifier, PackageDTO packageDTO, UUID newPackageUUID);
 }

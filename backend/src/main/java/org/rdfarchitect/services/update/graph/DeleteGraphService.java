@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
@@ -43,11 +44,12 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
         if (file == null || file.isEmpty()) {
             databasePort.createEmptyGraph(graphIdentifier);
         } else {
-            var graph = new GraphFileSourceBuilderImpl()
-                    .setFile(file)
-                    .setGraphName(graphIdentifier.getGraphUri())
-                    .build()
-                    .graph();
+            var graph =
+                    new GraphFileSourceBuilderImpl()
+                            .setFile(file)
+                            .setGraphName(graphIdentifier.getGraphUri())
+                            .build()
+                            .graph();
             databasePort.createGraph(graphIdentifier, graph);
         }
 

@@ -18,10 +18,12 @@
 package org.rdfarchitect.models.cim.umladapted.data;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
+
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;

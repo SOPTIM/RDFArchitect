@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.schemamigration.defaults;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
@@ -37,27 +38,38 @@ import java.util.List;
 @UtilityClass
 public class DefaultValueAssigner {
 
-    public void assignDefaultValues(List<SemanticClassChange> classes, Model model, List<DefaultValueView> result) {
+    public void assignDefaultValues(
+            List<SemanticClassChange> classes, Model model, List<DefaultValueView> result) {
         for (var cls : classes) {
-            if (!hasPropertyChanges(cls) || cls.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE) {
+            if (!hasPropertyChanges(cls)
+                    || cls.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE) {
                 continue;
             }
 
             DefaultValueAssigner.assignDefaultValueToAttributes(cls.getAttributes(), model);
             DefaultValueAssigner.assignDefaultsToAssociations(cls.getAssociations(), model);
             DefaultValueAssigner.assignDefaultsToEnumEntries(cls, cls.getEnumEntries(), model);
-            result.add(new DefaultValueView(cls.getLabel(), cls.getAttributes(), cls.getAssociations(), cls.getEnumEntries()));
+            result.add(
+                    new DefaultValueView(
+                            cls.getLabel(),
+                            cls.getAttributes(),
+                            cls.getAssociations(),
+                            cls.getEnumEntries()));
         }
     }
 
     private boolean hasPropertyChanges(SemanticClassChange cls) {
-        return !cls.getAttributes().isEmpty() || !cls.getAssociations().isEmpty() || !cls.getEnumEntries().isEmpty();
+        return !cls.getAttributes().isEmpty()
+                || !cls.getAssociations().isEmpty()
+                || !cls.getEnumEntries().isEmpty();
     }
 
-    public void assignDefaultValueToAttributes(List<SemanticAttributeChange> attributes, Model model) {
+    public void assignDefaultValueToAttributes(
+            List<SemanticAttributeChange> attributes, Model model) {
         for (var attributeChange : attributes) {
-            if (attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE ||
-                      attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
+            if (attributeChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE
+                    || attributeChange.getSemanticResourceChangeType()
+                            == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
                 continue;
             }
 
@@ -66,10 +78,13 @@ public class DefaultValueAssigner {
         }
     }
 
-    public void assignDefaultsToAssociations(List<SemanticAssociationChange> associations, Model model) {
+    public void assignDefaultsToAssociations(
+            List<SemanticAssociationChange> associations, Model model) {
         for (var associationChange : associations) {
-            if (associationChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE ||
-                      associationChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
+            if (associationChange.getSemanticResourceChangeType()
+                            == SemanticResourceChangeType.DELETE
+                    || associationChange.getSemanticResourceChangeType()
+                            == SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
                 continue;
             }
 
@@ -78,29 +93,39 @@ public class DefaultValueAssigner {
         }
     }
 
-    public void assignDefaultsToEnumEntries(SemanticClassChange enumClass, List<SemanticEnumEntryChange> enumEntries, Model model) {
+    public void assignDefaultsToEnumEntries(
+            SemanticClassChange enumClass, List<SemanticEnumEntryChange> enumEntries, Model model) {
         var enumResource = model.getResource(enumClass.getIri());
         var allowedValues = model.listSubjectsWithProperty(RDF.type, enumResource).toList();
         for (var enumEntryChange : enumEntries) {
-            if (enumEntryChange.getSemanticResourceChangeType() == SemanticResourceChangeType.DELETE) {
-                enumEntryChange.setAllowedValues(allowedValues.stream().map(Resource::getURI).toList());
+            if (enumEntryChange.getSemanticResourceChangeType()
+                    == SemanticResourceChangeType.DELETE) {
+                enumEntryChange.setAllowedValues(
+                        allowedValues.stream().map(Resource::getURI).toList());
             }
         }
     }
 
-    private void assignDefaultValueToAttribute(SemanticAttributeChange attributeChange, Resource attributeResource) {
+    private void assignDefaultValueToAttribute(
+            SemanticAttributeChange attributeChange, Resource attributeResource) {
         if (attributeResource.getProperty(CIMS.isDefault) != null) {
-            attributeChange.setDefaultValue(attributeResource.getProperty(CIMS.isDefault).getString());
+            attributeChange.setDefaultValue(
+                    attributeResource.getProperty(CIMS.isDefault).getString());
         }
         if (attributeResource.getProperty(CIMS.isFixed) != null) {
-            attributeChange.setDefaultValue(attributeResource.getProperty(CIMS.isFixed).getString());
+            attributeChange.setDefaultValue(
+                    attributeResource.getProperty(CIMS.isFixed).getString());
         }
 
         attributeChange.setOptional(CIMPropertyUtils.isOptional(attributeResource));
 
-        if (CIMAttributeUtils.hasPrimitiveDatatype(attributeResource) || CIMAttributeUtils.hasCIMDatatype(attributeResource) || CIMAttributeUtils.hasXSDDatatype(attributeResource)) {
-            attributeChange.setPrimitiveDataType(CIMAttributeUtils.getPrimitiveDatatype(attributeResource).getURI());
-            attributeChange.setDataType(attributeResource.getProperty(CIMS.datatype).getResource().getURI());
+        if (CIMAttributeUtils.hasPrimitiveDatatype(attributeResource)
+                || CIMAttributeUtils.hasCIMDatatype(attributeResource)
+                || CIMAttributeUtils.hasXSDDatatype(attributeResource)) {
+            attributeChange.setPrimitiveDataType(
+                    CIMAttributeUtils.getPrimitiveDatatype(attributeResource).getURI());
+            attributeChange.setDataType(
+                    attributeResource.getProperty(CIMS.datatype).getResource().getURI());
         } else if (CIMAttributeUtils.hasEnumAttribute(attributeResource)) {
             assignDefaultValueToEnumAttribute(attributeChange, attributeResource);
         } else {
@@ -110,18 +135,23 @@ public class DefaultValueAssigner {
         }
     }
 
-    private void assignDefaultValueToEnumAttribute(SemanticAttributeChange attributeChange, Resource attributeResource) {
-        attributeChange.setDataType(attributeResource.getProperty(RDFS.range).getResource().getURI());
-        var enumEntries = CIMAttributeUtils.listEnumDatatypeEntries(attributeResource).stream()
-                                           .map(Resource::getURI)
-                                           .toList();
+    private void assignDefaultValueToEnumAttribute(
+            SemanticAttributeChange attributeChange, Resource attributeResource) {
+        attributeChange.setDataType(
+                attributeResource.getProperty(RDFS.range).getResource().getURI());
+        var enumEntries =
+                CIMAttributeUtils.listEnumDatatypeEntries(attributeResource).stream()
+                        .map(Resource::getURI)
+                        .toList();
         attributeChange.setAllowedValues(enumEntries);
     }
 
-    private void assignDefaultValueToAssociation(SemanticAssociationChange associationChange, Resource associationResource) {
-        associationChange.setRange(associationResource.getProperty(RDFS.range).getResource().getURI());
-        var associationUsed = associationResource.getProperty(CIMS.associationUsed).getString().equals("Yes");
+    private void assignDefaultValueToAssociation(
+            SemanticAssociationChange associationChange, Resource associationResource) {
+        associationChange.setRange(
+                associationResource.getProperty(RDFS.range).getResource().getURI());
+        var associationUsed =
+                associationResource.getProperty(CIMS.associationUsed).getString().equals("Yes");
         associationChange.setAssociationUsed(associationUsed);
     }
 }
-

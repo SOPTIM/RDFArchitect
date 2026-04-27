@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.schemamigration.defaults;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -34,12 +36,11 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.*;
-
 class DefaultValueAssignerTest {
 
     private static final String PREFIX = "http://example.org#";
-    private static final String CIMS_PREFIX = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
+    private static final String CIMS_PREFIX =
+            "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
     private Model model;
 
     @BeforeEach
@@ -53,15 +54,17 @@ class DefaultValueAssignerTest {
         @Test
         void populateDefaultsForAttributes_attributeWithDefaultValue_setsDefaultValue() {
             var attr = model.createResource(PREFIX + "Attribute1");
-            attr.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr.addProperty(CIMS.isDefault, "DefaultValue");
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..1"));
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
@@ -71,15 +74,17 @@ class DefaultValueAssignerTest {
         @Test
         void populateDefaultsForAttributes_attributeWithFixedValue_setsDefaultValue() {
             var attr = model.createResource(PREFIX + "Attribute1");
-            attr.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr.addProperty(CIMS.isFixed, "FixedValue");
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
@@ -89,14 +94,16 @@ class DefaultValueAssignerTest {
         @Test
         void populateDefaultsForAttributes_optionalAttribute_setsOptionalTrue() {
             var attr = model.createResource(PREFIX + "Attribute1");
-            attr.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..1"));
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
@@ -106,14 +113,16 @@ class DefaultValueAssignerTest {
         @Test
         void populateDefaultsForAttributes_requiredAttribute_setsOptionalFalse() {
             var attr = model.createResource(PREFIX + "Attribute1");
-            attr.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
@@ -128,16 +137,19 @@ class DefaultValueAssignerTest {
             attr.addProperty(CIMS.datatype, xsdString);
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
-            assertThat(attributeChange.getPrimitiveDataType()).isEqualTo("http://www.w3.org/2001/XMLSchema#string");
-            assertThat(attributeChange.getDataType()).isEqualTo("http://www.w3.org/2001/XMLSchema#string");
+            assertThat(attributeChange.getPrimitiveDataType())
+                    .isEqualTo("http://www.w3.org/2001/XMLSchema#string");
+            assertThat(attributeChange.getDataType())
+                    .isEqualTo("http://www.w3.org/2001/XMLSchema#string");
         }
 
         @Test
@@ -158,30 +170,34 @@ class DefaultValueAssignerTest {
             attr.addProperty(CIMS.datatype, enumClass);
             attr.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
             assertThat(attributeChange.getDataType()).isEqualTo(PREFIX + "StatusEnum");
             assertThat(attributeChange.getAllowedValues()).hasSize(2);
-            assertThat(attributeChange.getAllowedValues()).contains(PREFIX + "StatusEnum.ACTIVE", PREFIX + "StatusEnum.INACTIVE");
+            assertThat(attributeChange.getAllowedValues())
+                    .contains(PREFIX + "StatusEnum.ACTIVE", PREFIX + "StatusEnum.INACTIVE");
         }
 
         @Test
         void populateDefaultsForAttributes_deletedAttribute_skipsProcessing() {
             var attr = model.createResource(PREFIX + "Attribute1");
-            attr.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr.addProperty(CIMS.isDefault, "DefaultValue");
 
-            var attributeChange = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var attributeChange =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(attributeChange), model);
 
@@ -191,26 +207,30 @@ class DefaultValueAssignerTest {
         @Test
         void populateDefaultsForAttributes_multipleAttributes_processesAll() {
             var attr1 = model.createResource(PREFIX + "Attribute1");
-            attr1.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
+            attr1.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#string"));
             attr1.addProperty(CIMS.isDefault, "Default1");
             attr1.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:0..1"));
 
             var attr2 = model.createResource(PREFIX + "Attribute2");
-            attr2.addProperty(CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#int"));
+            attr2.addProperty(
+                    CIMS.datatype, model.createResource("http://www.w3.org/2001/XMLSchema#int"));
             attr2.addProperty(CIMS.isDefault, "0");
             attr2.addProperty(CIMS.multiplicity, model.createResource(CIMS_PREFIX + "M:1..1"));
 
-            var change1 = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute1")
-                    .label("Attribute1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var change1 =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute1")
+                            .label("Attribute1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
-            var change2 = SemanticAttributeChange.builder()
-                    .iri(PREFIX + "Attribute2")
-                    .label("Attribute2")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var change2 =
+                    SemanticAttributeChange.builder()
+                            .iri(PREFIX + "Attribute2")
+                            .label("Attribute2")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultValueToAttributes(List.of(change1, change2), model);
 
@@ -229,11 +249,12 @@ class DefaultValueAssignerTest {
             assoc.addProperty(RDFS.range, targetClass);
             assoc.addProperty(CIMS.associationUsed, "No");
 
-            var associationChange = SemanticAssociationChange.builder()
-                    .iri(PREFIX + "Association1")
-                    .label("Association1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var associationChange =
+                    SemanticAssociationChange.builder()
+                            .iri(PREFIX + "Association1")
+                            .label("Association1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultsToAssociations(List.of(associationChange), model);
 
@@ -247,11 +268,12 @@ class DefaultValueAssignerTest {
             assoc.addProperty(RDFS.range, targetClass);
             assoc.addProperty(CIMS.associationUsed, "Yes");
 
-            var associationChange = SemanticAssociationChange.builder()
-                    .iri(PREFIX + "Association1")
-                    .label("Association1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var associationChange =
+                    SemanticAssociationChange.builder()
+                            .iri(PREFIX + "Association1")
+                            .label("Association1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultsToAssociations(List.of(associationChange), model);
 
@@ -265,11 +287,12 @@ class DefaultValueAssignerTest {
             assoc.addProperty(RDFS.range, targetClass);
             assoc.addProperty(CIMS.associationUsed, "No");
 
-            var associationChange = SemanticAssociationChange.builder()
-                    .iri(PREFIX + "Association1")
-                    .label("Association1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var associationChange =
+                    SemanticAssociationChange.builder()
+                            .iri(PREFIX + "Association1")
+                            .label("Association1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultsToAssociations(List.of(associationChange), model);
 
@@ -283,11 +306,12 @@ class DefaultValueAssignerTest {
             assoc.addProperty(RDFS.range, targetClass);
             assoc.addProperty(CIMS.associationUsed, "Yes");
 
-            var associationChange = SemanticAssociationChange.builder()
-                    .iri(PREFIX + "Association1")
-                    .label("Association1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var associationChange =
+                    SemanticAssociationChange.builder()
+                            .iri(PREFIX + "Association1")
+                            .label("Association1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
             DefaultValueAssigner.assignDefaultsToAssociations(List.of(associationChange), model);
 
@@ -307,17 +331,19 @@ class DefaultValueAssignerTest {
             assoc2.addProperty(RDFS.range, targetClass2);
             assoc2.addProperty(CIMS.associationUsed, "No");
 
-            var change1 = SemanticAssociationChange.builder()
-                    .iri(PREFIX + "Association1")
-                    .label("Association1")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var change1 =
+                    SemanticAssociationChange.builder()
+                            .iri(PREFIX + "Association1")
+                            .label("Association1")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
-            var change2 = SemanticAssociationChange.builder()
-                    .iri(PREFIX + "Association2")
-                    .label("Association2")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var change2 =
+                    SemanticAssociationChange.builder()
+                            .iri(PREFIX + "Association2")
+                            .label("Association2")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
             DefaultValueAssigner.assignDefaultsToAssociations(List.of(change1, change2), model);
 
@@ -342,21 +368,25 @@ class DefaultValueAssignerTest {
             var enumEntry2 = model.createResource(PREFIX + "StatusEnum.INACTIVE");
             enumEntry2.addProperty(RDF.type, enumClass);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "StatusEnum")
-                    .label("StatusEnum")
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "StatusEnum")
+                            .label("StatusEnum")
+                            .build();
 
-            var enumEntryChange = SemanticEnumEntryChange.builder()
-                    .iri(PREFIX + "StatusEnum.ACTIVE")
-                    .label("ACTIVE")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var enumEntryChange =
+                    SemanticEnumEntryChange.builder()
+                            .iri(PREFIX + "StatusEnum.ACTIVE")
+                            .label("ACTIVE")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
-            DefaultValueAssigner.assignDefaultsToEnumEntries(classChange, List.of(enumEntryChange), model);
+            DefaultValueAssigner.assignDefaultsToEnumEntries(
+                    classChange, List.of(enumEntryChange), model);
 
             assertThat(enumEntryChange.getAllowedValues()).hasSize(2);
-            assertThat(enumEntryChange.getAllowedValues()).contains(PREFIX + "StatusEnum.ACTIVE", PREFIX + "StatusEnum.INACTIVE");
+            assertThat(enumEntryChange.getAllowedValues())
+                    .contains(PREFIX + "StatusEnum.ACTIVE", PREFIX + "StatusEnum.INACTIVE");
         }
 
         @Test
@@ -367,18 +397,21 @@ class DefaultValueAssignerTest {
             var enumEntry1 = model.createResource(PREFIX + "StatusEnum.ACTIVE");
             enumEntry1.addProperty(RDF.type, enumClass);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "StatusEnum")
-                    .label("StatusEnum")
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "StatusEnum")
+                            .label("StatusEnum")
+                            .build();
 
-            var enumEntryChange = SemanticEnumEntryChange.builder()
-                    .iri(PREFIX + "StatusEnum.INACTIVE")
-                    .label("INACTIVE")
-                    .semanticResourceChangeType(SemanticResourceChangeType.ADD)
-                    .build();
+            var enumEntryChange =
+                    SemanticEnumEntryChange.builder()
+                            .iri(PREFIX + "StatusEnum.INACTIVE")
+                            .label("INACTIVE")
+                            .semanticResourceChangeType(SemanticResourceChangeType.ADD)
+                            .build();
 
-            DefaultValueAssigner.assignDefaultsToEnumEntries(classChange, List.of(enumEntryChange), model);
+            DefaultValueAssigner.assignDefaultsToEnumEntries(
+                    classChange, List.of(enumEntryChange), model);
 
             assertThat(enumEntryChange.getAllowedValues()).isEmpty();
         }
@@ -397,24 +430,28 @@ class DefaultValueAssignerTest {
             var enumEntry3 = model.createResource(PREFIX + "StatusEnum.PENDING");
             enumEntry3.addProperty(RDF.type, enumClass);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "StatusEnum")
-                    .label("StatusEnum")
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "StatusEnum")
+                            .label("StatusEnum")
+                            .build();
 
-            var change1 = SemanticEnumEntryChange.builder()
-                    .iri(PREFIX + "StatusEnum.ACTIVE")
-                    .label("ACTIVE")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var change1 =
+                    SemanticEnumEntryChange.builder()
+                            .iri(PREFIX + "StatusEnum.ACTIVE")
+                            .label("ACTIVE")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
-            var change2 = SemanticEnumEntryChange.builder()
-                    .iri(PREFIX + "StatusEnum.INACTIVE")
-                    .label("INACTIVE")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var change2 =
+                    SemanticEnumEntryChange.builder()
+                            .iri(PREFIX + "StatusEnum.INACTIVE")
+                            .label("INACTIVE")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
-            DefaultValueAssigner.assignDefaultsToEnumEntries(classChange, List.of(change1, change2), model);
+            DefaultValueAssigner.assignDefaultsToEnumEntries(
+                    classChange, List.of(change1, change2), model);
 
             assertThat(change1.getAllowedValues()).hasSize(3);
             assertThat(change2.getAllowedValues()).hasSize(3);
@@ -425,21 +462,23 @@ class DefaultValueAssignerTest {
             var enumClass = model.createResource(PREFIX + "StatusEnum");
             enumClass.addProperty(CIMS.stereotype, CIMStereotypes.enumeration);
 
-            var classChange = SemanticClassChange.builder()
-                    .iri(PREFIX + "StatusEnum")
-                    .label("StatusEnum")
-                    .build();
+            var classChange =
+                    SemanticClassChange.builder()
+                            .iri(PREFIX + "StatusEnum")
+                            .label("StatusEnum")
+                            .build();
 
-            var enumEntryChange = SemanticEnumEntryChange.builder()
-                    .iri(PREFIX + "StatusEnum.ACTIVE")
-                    .label("ACTIVE")
-                    .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
-                    .build();
+            var enumEntryChange =
+                    SemanticEnumEntryChange.builder()
+                            .iri(PREFIX + "StatusEnum.ACTIVE")
+                            .label("ACTIVE")
+                            .semanticResourceChangeType(SemanticResourceChangeType.DELETE)
+                            .build();
 
-            DefaultValueAssigner.assignDefaultsToEnumEntries(classChange, List.of(enumEntryChange), model);
+            DefaultValueAssigner.assignDefaultsToEnumEntries(
+                    classChange, List.of(enumEntryChange), model);
 
             assertThat(enumEntryChange.getAllowedValues()).isEmpty();
         }
     }
 }
-

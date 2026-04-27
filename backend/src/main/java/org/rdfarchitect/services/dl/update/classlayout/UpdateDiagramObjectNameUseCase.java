@@ -27,8 +27,8 @@ public interface UpdateDiagramObjectNameUseCase {
      * Updates the names of all diagram objects associated with a specific class UUID
      *
      * @param graphIdentifier the identifier of the graph
-     * @param classUUID       the UUID of the class
-     * @param name            the new name of the class
+     * @param classUUID the UUID of the class
+     * @param name the new name of the class
      */
     void updateDiagramObjectName(GraphIdentifier graphIdentifier, UUID classUUID, String name);
 }

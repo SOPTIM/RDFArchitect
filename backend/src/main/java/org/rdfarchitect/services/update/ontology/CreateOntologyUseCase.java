@@ -24,6 +24,7 @@ public interface CreateOntologyUseCase {
 
     /**
      * Creates a new ontology in the specified graph.
+     *
      * @param graphIdentifier The identifier of the graph where the ontology will be created.
      * @param ontologyDTO The ontology data transfer object containing the ontology details.
      */

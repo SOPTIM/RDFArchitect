@@ -18,8 +18,8 @@
 package org.rdfarchitect.api.dto.rendering;
 
 /**
- * Base interface for all rendering DTOs.
- * Allows the use case to return different rendering formats polymorphically.
+ * Base interface for all rendering DTOs. Allows the use case to return different rendering formats
+ * polymorphically.
  */
 public interface RenderingDataDTO {
 

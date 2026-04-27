@@ -28,25 +28,34 @@ import java.util.UUID;
 public interface SHACLGetShapeUseCase {
     /**
      * Get SHACL shapes related to an attribute.
+     *
      * @param graphIdentifier Identifier to specify, which graph the attribute is in.
      * @param attributeUUID The uuid of the attribute to get SHACL shapes for.
-     * @return A List of {@link PropertyShape} objects containing the string representation of the SHACL shapes related to the attribute.
+     * @return A List of {@link PropertyShape} objects containing the string representation of the
+     *     SHACL shapes related to the attribute.
      */
-    CustomAndGeneratedTuple<List<PropertyShape>> getPropertyShapesForAttribute(GraphIdentifier graphIdentifier, UUID attributeUUID);
+    CustomAndGeneratedTuple<List<PropertyShape>> getPropertyShapesForAttribute(
+            GraphIdentifier graphIdentifier, UUID attributeUUID);
 
     /**
      * Get SHACL shapes related to an association.
+     *
      * @param graphIdentifier Identifier to specify, which graph the association is in.
      * @param associationUUID The UUID of the attribute to get SHACL shapes for.
-     * @return A List of {@link PropertyShape} objects containing the string representation of the SHACL shapes related to the association.
+     * @return A List of {@link PropertyShape} objects containing the string representation of the
+     *     SHACL shapes related to the association.
      */
-    CustomAndGeneratedTuple<List<PropertyShape>> getPropertyShapesForAssociation(GraphIdentifier graphIdentifier, UUID associationUUID);
+    CustomAndGeneratedTuple<List<PropertyShape>> getPropertyShapesForAssociation(
+            GraphIdentifier graphIdentifier, UUID associationUUID);
 
     /**
      * Get SHACL node shapes related to a class.
+     *
      * @param graphIdentifier Identifier to specify, which graph the class is in.
      * @param classUUID The uuid of the class to get SHACL node shapes for.
-     * @return A List of {@link NodeShape} objects containing the string representation of the SHACL node shapes related to the class.
+     * @return A List of {@link NodeShape} objects containing the string representation of the SHACL
+     *     node shapes related to the class.
      */
-    CustomAndGeneratedTuple<List<NodeShape>> getNodeShapesForClass(GraphIdentifier graphIdentifier, UUID classUUID);
+    CustomAndGeneratedTuple<List<NodeShape>> getNodeShapesForClass(
+            GraphIdentifier graphIdentifier, UUID classUUID);
 }

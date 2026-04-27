@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -44,44 +46,62 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OntologyGenerateEntriesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(OntologyGenerateEntriesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(OntologyGenerateEntriesRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final GenerateOntologyEntriesUseCase generateOntologyEntriesUseCase;
 
     @Operation(
-              summary = "Get generated ontology entries",
-              description = "Get the Ontology fields that can be automatically generated.",
-              tags = {"ontology"},
-              responses = {@ApiResponse(
+            summary = "Get generated ontology entries",
+            description = "Get the Ontology fields that can be automatically generated.",
+            tags = {"ontology"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(
-                                            schema = @Schema(implementation = OntologyEntry.class)
-                                  )
-                        )
-              )}
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                OntologyEntry
+                                                                                        .class))))
+            })
     @GetMapping
     public List<OntologyEntry> getOntology(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var ontologyEntries = generateOntologyEntriesUseCase.generateOntologyEntries(graphIdentifier);
+        var ontologyEntries =
+                generateOntologyEntriesUseCase.generateOntologyEntries(graphIdentifier);
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/ontology/generate\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return ontologyEntries;
     }
 }

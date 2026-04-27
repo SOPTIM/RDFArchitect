@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.rdf.model.wrapper;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
+
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.util.iterator.ClosableIterator;
@@ -33,9 +36,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.IntStream;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 class CimSortedModelTest {
 
@@ -143,7 +143,8 @@ class CimSortedModelTest {
         }
 
         @Test
-        void listStatementsWithSubjectPredicateObject_givenUnsortedStatements_returnsAlphabeticallySorted() {
+        void
+                listStatementsWithSubjectPredicateObject_givenUnsortedStatements_returnsAlphabeticallySorted() {
             // Arrange
             var model = createTestModel();
             var s = model.getResource("http://example.org/B");
@@ -284,8 +285,14 @@ class CimSortedModelTest {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/propBool");
-            model.add(model.createResource("http://example.org/J"), p, model.createTypedLiteral(true));
-            model.add(model.createResource("http://example.org/K"), p, model.createTypedLiteral(false));
+            model.add(
+                    model.createResource("http://example.org/J"),
+                    p,
+                    model.createTypedLiteral(true));
+            model.add(
+                    model.createResource("http://example.org/K"),
+                    p,
+                    model.createTypedLiteral(false));
             // Act
             var res = toStringList(model.listResourcesWithProperty(p, true));
             // Assert
@@ -297,8 +304,10 @@ class CimSortedModelTest {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/propLong");
-            model.add(model.createResource("http://example.org/L"), p, model.createTypedLiteral(1L));
-            model.add(model.createResource("http://example.org/M"), p, model.createTypedLiteral(2L));
+            model.add(
+                    model.createResource("http://example.org/L"), p, model.createTypedLiteral(1L));
+            model.add(
+                    model.createResource("http://example.org/M"), p, model.createTypedLiteral(2L));
             // Act
             var res = toStringList(model.listResourcesWithProperty(p, 1L));
             // Assert
@@ -310,8 +319,10 @@ class CimSortedModelTest {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/propChar");
-            model.add(model.createResource("http://example.org/N"), p, model.createTypedLiteral('a'));
-            model.add(model.createResource("http://example.org/O"), p, model.createTypedLiteral('b'));
+            model.add(
+                    model.createResource("http://example.org/N"), p, model.createTypedLiteral('a'));
+            model.add(
+                    model.createResource("http://example.org/O"), p, model.createTypedLiteral('b'));
             // Act
             var res = toStringList(model.listResourcesWithProperty(p, 'a'));
             // Assert
@@ -323,8 +334,14 @@ class CimSortedModelTest {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/propFloat");
-            model.add(model.createResource("http://example.org/P"), p, model.createTypedLiteral(1.1f));
-            model.add(model.createResource("http://example.org/Q"), p, model.createTypedLiteral(2.2f));
+            model.add(
+                    model.createResource("http://example.org/P"),
+                    p,
+                    model.createTypedLiteral(1.1f));
+            model.add(
+                    model.createResource("http://example.org/Q"),
+                    p,
+                    model.createTypedLiteral(2.2f));
             // Act
             var res = toStringList(model.listResourcesWithProperty(p, 1.1f));
             // Assert
@@ -336,8 +353,14 @@ class CimSortedModelTest {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/propDouble");
-            model.add(model.createResource("http://example.org/R"), p, model.createTypedLiteral(1.1d));
-            model.add(model.createResource("http://example.org/S"), p, model.createTypedLiteral(2.2d));
+            model.add(
+                    model.createResource("http://example.org/R"),
+                    p,
+                    model.createTypedLiteral(1.1d));
+            model.add(
+                    model.createResource("http://example.org/S"),
+                    p,
+                    model.createTypedLiteral(2.2d));
             // Act
             var res = toStringList(model.listResourcesWithProperty(p, 1.1d));
             // Assert
@@ -372,12 +395,19 @@ class CimSortedModelTest {
         }
 
         @Test
-        void listSubjectsWithPropertyStringLang_givenUnsortedSubjects_returnsAlphabeticallySorted() {
+        void
+                listSubjectsWithPropertyStringLang_givenUnsortedSubjects_returnsAlphabeticallySorted() {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/prop");
-            model.add(model.createResource("http://example.org/X"), p, model.createLiteral("foo", "en"));
-            model.add(model.createResource("http://example.org/Y"), p, model.createLiteral("foo", "en"));
+            model.add(
+                    model.createResource("http://example.org/X"),
+                    p,
+                    model.createLiteral("foo", "en"));
+            model.add(
+                    model.createResource("http://example.org/Y"),
+                    p,
+                    model.createLiteral("foo", "en"));
             // Act
             var res = toStringList(model.listSubjectsWithProperty(p, "foo", "en"));
             // Assert
@@ -385,12 +415,19 @@ class CimSortedModelTest {
         }
 
         @Test
-        void listSubjectsWithPropertyStringLangDir_givenUnsortedSubjects_returnsAlphabeticallySorted() {
+        void
+                listSubjectsWithPropertyStringLangDir_givenUnsortedSubjects_returnsAlphabeticallySorted() {
             // Arrange
             var model = createTestModel();
             var p = model.createProperty("http://example.org/prop");
-            model.add(model.createResource("http://example.org/Z"), p, model.createLiteral("foo", "en", "ltr"));
-            model.add(model.createResource("http://example.org/AA"), p, model.createLiteral("foo", "en", "ltr"));
+            model.add(
+                    model.createResource("http://example.org/Z"),
+                    p,
+                    model.createLiteral("foo", "en", "ltr"));
+            model.add(
+                    model.createResource("http://example.org/AA"),
+                    p,
+                    model.createLiteral("foo", "en", "ltr"));
             // Act
             var res = toStringList(model.listSubjectsWithProperty(p, "foo", "en", "ltr"));
             // Assert
@@ -475,7 +512,7 @@ class CimSortedModelTest {
             // Assert
             assertThat(subjects.getFirst()).isEqualTo("http://example.org/MyOntology");
             assertThat(subjects.subList(1, subjects.size()))
-                      .isEqualTo(subjects.subList(1, subjects.size()).stream().sorted().toList());
+                    .isEqualTo(subjects.subList(1, subjects.size()).stream().sorted().toList());
         }
 
         @Test
@@ -486,7 +523,10 @@ class CimSortedModelTest {
             var p = m.createProperty("http://example.org/ref");
             m.add(ontology, RDF.type, OWL2.Ontology);
             m.add(m.createResource("http://example.org/A"), p, ontology);
-            m.add(m.createResource("http://example.org/B"), p, m.createResource("http://example.org/AAA"));
+            m.add(
+                    m.createResource("http://example.org/B"),
+                    p,
+                    m.createResource("http://example.org/AAA"));
             var model = new CimSortedModel(m);
             // Act
             var objs = toStringList(model.listObjectsOfProperty(p));
@@ -504,7 +544,7 @@ class CimSortedModelTest {
             // Assert
             assertThat(res.getFirst()).isEqualTo("http://example.org/MyOntology");
             assertThat(res.subList(1, res.size()))
-                      .isEqualTo(res.subList(1, res.size()).stream().sorted().toList());
+                    .isEqualTo(res.subList(1, res.size()).stream().sorted().toList());
         }
 
         @Test
@@ -517,11 +557,12 @@ class CimSortedModelTest {
             // Assert
             assertThat(subjects.getFirst()).isEqualTo("http://example.org/MyOntology");
             assertThat(subjects.subList(1, subjects.size()))
-                      .isEqualTo(subjects.subList(1, subjects.size()).stream().sorted().toList());
+                    .isEqualTo(subjects.subList(1, subjects.size()).stream().sorted().toList());
         }
 
         @Test
-        void listSubjectsWithPropertyRDFNode_givenOntologyAndRegularResources_returnsOntologyFirst() {
+        void
+                listSubjectsWithPropertyRDFNode_givenOntologyAndRegularResources_returnsOntologyFirst() {
             // Arrange
             var m = ModelFactory.createDefaultModel();
             var ontology = m.createResource("http://example.org/ZZZOntology");
@@ -545,11 +586,8 @@ class CimSortedModelTest {
             // Act
             var stmts = toStringList(model.listStatements());
             // Assert
-            var nonOntologyStmts = stmts.stream()
-                                        .filter(s -> !s.contains("MyOntology"))
-                                        .toList();
-            assertThat(nonOntologyStmts)
-                      .isEqualTo(nonOntologyStmts.stream().sorted().toList());
+            var nonOntologyStmts = stmts.stream().filter(s -> !s.contains("MyOntology")).toList();
+            assertThat(nonOntologyStmts).isEqualTo(nonOntologyStmts.stream().sorted().toList());
         }
 
         @Test
@@ -571,15 +609,19 @@ class CimSortedModelTest {
             var p = m.createProperty("http://example.org/ref");
             m.add(ontology, RDF.type, OWL2.Ontology);
             m.add(m.createResource("http://example.org/A"), p, ontology);
-            m.add(m.createResource("http://example.org/B"), p, m.createResource("http://example.org/AAA"));
+            m.add(
+                    m.createResource("http://example.org/B"),
+                    p,
+                    m.createResource("http://example.org/AAA"));
             var model = new CimSortedModel(m);
             // Act
             var objs = toStringList(model.listObjects());
             // Assert
-            var resourceObjs = objs.stream()
-                                   .filter(o -> !o.contains("Ontology") || o.contains("ZZZOntology"))
-                                   .filter(o -> o.startsWith("http://"))
-                                   .toList();
+            var resourceObjs =
+                    objs.stream()
+                            .filter(o -> !o.contains("Ontology") || o.contains("ZZZOntology"))
+                            .filter(o -> o.startsWith("http://"))
+                            .toList();
             assertThat(resourceObjs.getFirst()).isEqualTo("http://example.org/ZZZOntology");
         }
 
@@ -592,19 +634,15 @@ class CimSortedModelTest {
             model.write(out, "N-TRIPLES");
             var result = out.toString(StandardCharsets.UTF_8);
             // Assert
-            var lines = result.lines()
-                              .filter(l -> !l.isBlank())
-                              .toList();
-            var firstOntologyLine = lines.stream()
-                                         .filter(l -> l.contains("MyOntology"))
-                                         .findFirst();
-            var firstNonOntologyLine = lines.stream()
-                                            .filter(l -> !l.contains("MyOntology"))
-                                            .findFirst();
+            var lines = result.lines().filter(l -> !l.isBlank()).toList();
+            var firstOntologyLine =
+                    lines.stream().filter(l -> l.contains("MyOntology")).findFirst();
+            var firstNonOntologyLine =
+                    lines.stream().filter(l -> !l.contains("MyOntology")).findFirst();
             assertThat(firstOntologyLine).isPresent();
             assertThat(firstNonOntologyLine).isPresent();
             assertThat(lines.indexOf(firstOntologyLine.get()))
-                      .isLessThan(lines.indexOf(firstNonOntologyLine.get()));
+                    .isLessThan(lines.indexOf(firstNonOntologyLine.get()));
         }
 
         @Test
@@ -648,21 +686,11 @@ class CimSortedModelTest {
             int indexB = serializedOutput.indexOf("rdf:about=\"B\"");
             int indexC = serializedOutput.indexOf("rdf:about=\"C\"");
 
-            assertThat(indexA)
-                      .as("Serialized output should contain resource A")
-                      .isNotNegative();
-            assertThat(indexB)
-                      .as("Serialized output should contain resource B")
-                      .isNotNegative();
-            assertThat(indexC)
-                      .as("Serialized output should contain resource C")
-                      .isNotNegative();
-            assertThat(indexA)
-                      .as("Resource A should appear before resource B")
-                      .isLessThan(indexB);
-            assertThat(indexB)
-                      .as("Resource B should appear before resource C")
-                      .isLessThan(indexC);
+            assertThat(indexA).as("Serialized output should contain resource A").isNotNegative();
+            assertThat(indexB).as("Serialized output should contain resource B").isNotNegative();
+            assertThat(indexC).as("Serialized output should contain resource C").isNotNegative();
+            assertThat(indexA).as("Resource A should appear before resource B").isLessThan(indexB);
+            assertThat(indexB).as("Resource B should appear before resource C").isLessThan(indexC);
         }
 
         @Test
@@ -678,8 +706,8 @@ class CimSortedModelTest {
             int indexOntology = serializedOutput.indexOf("MyOntology");
             int indexA = serializedOutput.indexOf("rdf:about=\"A\"");
             assertThat(indexOntology)
-                      .as("Ontology resource should appear before resource A")
-                      .isLessThan(indexA);
+                    .as("Ontology resource should appear before resource A")
+                    .isLessThan(indexA);
         }
 
         @Test
@@ -691,29 +719,33 @@ class CimSortedModelTest {
             var serializedOutput = outputStream.toString();
             // Assert
             assertThat(result).isSameAs(model);
-            assertThat(serializedOutput).isNotEmpty()
-                                        .containsIgnoringCase("prefix");
+            assertThat(serializedOutput).isNotEmpty().containsIgnoringCase("prefix");
 
-            var subjectLines = Arrays.stream(serializedOutput.split("\n"))
-                                     .filter(line -> line.contains("http://example.org/A") || line.contains("http://example.org/B") || line.contains("http://example.org/C"))
-                                     .filter(line -> !line.trim().startsWith("#"))
-                                     .toList();
+            var subjectLines =
+                    Arrays.stream(serializedOutput.split("\n"))
+                            .filter(
+                                    line ->
+                                            line.contains("http://example.org/A")
+                                                    || line.contains("http://example.org/B")
+                                                    || line.contains("http://example.org/C"))
+                            .filter(line -> !line.trim().startsWith("#"))
+                            .toList();
 
             var indexA = findFirstIndexContaining(subjectLines, "http://example.org/A");
             var indexB = findFirstIndexContaining(subjectLines, "http://example.org/B");
             var indexC = findFirstIndexContaining(subjectLines, "http://example.org/C");
 
             assertThat(indexA)
-                      .as("Resource A should appear before B and C")
-                      .isLessThan(indexB)
-                      .isLessThan(indexC);
+                    .as("Resource A should appear before B and C")
+                    .isLessThan(indexB)
+                    .isLessThan(indexC);
         }
 
         private int findFirstIndexContaining(List<String> lines, String substring) {
             return IntStream.range(0, lines.size())
-                            .filter(i -> lines.get(i).contains(substring))
-                            .findFirst()
-                            .orElse(-1);
+                    .filter(i -> lines.get(i).contains(substring))
+                    .findFirst()
+                    .orElse(-1);
         }
 
         @Test
@@ -727,24 +759,23 @@ class CimSortedModelTest {
             assertThat(result).isSameAs(model);
             assertThat(serializedOutput).isNotEmpty();
 
-            var tripleLines = Arrays.stream(serializedOutput.split("\n"))
-                                    .map(String::trim)
-                                    .filter(line -> line.endsWith(" ."))
-                                    .toList();
+            var tripleLines =
+                    Arrays.stream(serializedOutput.split("\n"))
+                            .map(String::trim)
+                            .filter(line -> line.endsWith(" ."))
+                            .toList();
 
             assertThat(tripleLines).as("Triple lines should not be empty").isNotEmpty();
 
-            var subjects = tripleLines.stream()
-                                      .map(line -> line.split(" ", 2)[0])
-                                      .distinct()
-                                      .toList();
+            var subjects =
+                    tripleLines.stream().map(line -> line.split(" ", 2)[0]).distinct().toList();
 
             var sortedSubjects = new ArrayList<>(subjects);
             sortedSubjects.sort(Comparator.naturalOrder());
 
             assertThat(subjects)
-                      .as("Subjects should appear in alphabetical order")
-                      .containsExactlyElementsOf(sortedSubjects);
+                    .as("Subjects should appear in alphabetical order")
+                    .containsExactlyElementsOf(sortedSubjects);
         }
 
         @Test
@@ -753,8 +784,8 @@ class CimSortedModelTest {
             var unsupportedLanguage = "UNSUPPORTED_FORMAT";
             // Act & Assert
             assertThatThrownBy(() -> model.write(outputStream, unsupportedLanguage, BASE_URI))
-                      .isInstanceOf(IllegalArgumentException.class)
-                      .hasMessageContaining("Unsupported language: " + unsupportedLanguage);
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Unsupported language: " + unsupportedLanguage);
         }
 
         @Test
@@ -777,8 +808,8 @@ class CimSortedModelTest {
             CimSortedModel result = (CimSortedModel) model.write(outputStream, language, BASE_URI);
             // Assert
             assertThat(result)
-                      .as("Method should return the same model instance for method chaining")
-                      .isSameAs(model);
+                    .as("Method should return the same model instance for method chaining")
+                    .isSameAs(model);
         }
 
         @Test
@@ -788,10 +819,11 @@ class CimSortedModelTest {
             model.write(outputStream, "RDF/XML");
             var result = outputStream.toString(StandardCharsets.UTF_8);
             // Assert
-            assertThat(result).contains("rdf:RDF")
-                              .contains("http://example.org/A")
-                              .contains("http://example.org/B")
-                              .contains("http://example.org/C");
+            assertThat(result)
+                    .contains("rdf:RDF")
+                    .contains("http://example.org/A")
+                    .contains("http://example.org/B")
+                    .contains("http://example.org/C");
         }
 
         @Test
@@ -801,10 +833,11 @@ class CimSortedModelTest {
             model.write(outputStream, "TURTLE");
             var result = outputStream.toString(StandardCharsets.UTF_8);
             // Assert
-            assertThat(result).contains("http://example.org/A")
-                              .contains("http://example.org/B")
-                              .contains("http://example.org/C")
-                              .contains("http://example.org/prop");
+            assertThat(result)
+                    .contains("http://example.org/A")
+                    .contains("http://example.org/B")
+                    .contains("http://example.org/C")
+                    .contains("http://example.org/prop");
         }
 
         @Test

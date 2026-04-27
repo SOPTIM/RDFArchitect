@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.api.controller.datasets;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
@@ -25,9 +28,6 @@ import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
 import org.springframework.http.HttpHeaders;
 
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class DatasetRESTControllerTest {
 

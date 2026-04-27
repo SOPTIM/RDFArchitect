@@ -17,13 +17,12 @@
 
 package org.rdfarchitect.services.schemamigration.scriptgeneration;
 
-/**
- * Interface for generating the migration actions when migrating between two schemas.
- */
+/** Interface for generating the migration actions when migrating between two schemas. */
 public interface GenerateMigrationScriptUseCase {
 
     /**
-     * Takes a List of MigrationActions and generates a SPARQL script that can be executed on instance data to migrate it to the new schema
+     * Takes a List of MigrationActions and generates a SPARQL script that can be executed on
+     * instance data to migrate it to the new schema
      *
      * @return A file containing the migration script
      */

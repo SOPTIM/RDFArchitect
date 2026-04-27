@@ -21,7 +21,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -38,54 +40,71 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}")
+@RequestMapping(
+        "api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations/{associationUUID}")
 @RequiredArgsConstructor
 public class ClassAssociationsRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClassAssociationsRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ClassAssociationsRESTController.class);
 
     private final UpdateAssociationsUseCase updateAssociationsUseCase;
     private final ExpandURIUseCase expandURIUseCase;
 
     @Operation(
-              summary = "Replace/Create association",
-              description = "Replaces an association of a specified class.",
-              tags = {"class"}
-    )
+            summary = "Replace/Create association",
+            description = "Replaces an association of a specified class.",
+            tags = {"class"})
     @PutMapping
     public AssociationsService.AssociationUUIDs replaceAssociation(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the class.")
-              @PathVariable
-              String classUUID,
-              @Parameter(description = "The old, to be replaced association.")
-              @PathVariable
-              String associationUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The new association", content = @Content(
-                        schema = @Schema(implementation = AssociationPairDTO.class)
-              ))
-              @RequestBody
-              AssociationPairDTO associationPairDTO) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".", datasetName, graphURI, classUUID, associationUUID,
-                    originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @Parameter(description = "The old, to be replaced association.") @PathVariable
+                    String associationUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The new association",
+                            content =
+                                    @Content(
+                                            schema =
+                                                    @Schema(
+                                                            implementation =
+                                                                    AssociationPairDTO.class)))
+                    @RequestBody
+                    AssociationPairDTO associationPairDTO) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                associationUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var newAssociationUUIDs = updateAssociationsUseCase.replaceAssociation(graphIdentifier, associationPairDTO);
+        var newAssociationUUIDs =
+                updateAssociationsUseCase.replaceAssociation(graphIdentifier, associationPairDTO);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".", datasetName, graphURI, classUUID,
-                    associationUUID, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations/{{}}\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                associationUUID,
+                originURL);
         return newAssociationUUIDs;
     }
 }

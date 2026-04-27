@@ -27,8 +27,7 @@ public interface ResolveIdentifierUseCase {
      * Resolves the IRI identifier of a CIM resource to its UUID.
      *
      * @param graphIdentifier The identifier of the graph.
-     * @param resourceIRI    The IRI of the resource to resolve.
-     *
+     * @param resourceIRI The IRI of the resource to resolve.
      * @return The UUID of the resource.
      */
     UUID resolveIRI(GraphIdentifier graphIdentifier, String resourceIRI);

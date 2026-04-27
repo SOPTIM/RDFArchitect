@@ -8,31 +8,31 @@
 
 ### Apache Commons Text
 - **Package:** org.apache.commons
-- **Version:** 1.14.0
+- **Version:** 1.15.0
 - **License:** Apache License 2.0
 - **URL:** [https://commons.apache.org/proper/commons-text](https://commons.apache.org/proper/commons-text)
 
 ### Apache Jena - Extras - Query Builder
 - **Package:** org.apache.jena
-- **Version:** 5.6.0
+- **Version:** 6.0.0
 - **License:** Apache License 2.0
-- **URL:** [https://jena.apache.org/jena-extras/jena-querybuilder/](https://jena.apache.org/jena-extras/jena-querybuilder/)
+- **URL:** [https://jena.apache.org/jena-querybuilder/](https://jena.apache.org/jena-querybuilder/)
 
 ### Apache Jena - Libraries POM
 - **Package:** org.apache.jena
-- **Version:** 5.6.0
+- **Version:** 6.0.0
 - **License:** Apache License 2.0
 - **URL:** [https://jena.apache.org/apache-jena-libs/](https://jena.apache.org/apache-jena-libs/)
 
 ### Jackson-dataformat-YAML
 - **Package:** com.fasterxml.jackson.dataformat
-- **Version:** 2.20.2
+- **Version:** 2.21.2
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/FasterXML/jackson-dataformats-text](https://github.com/FasterXML/jackson-dataformats-text)
 
 ### Jansi
 - **Package:** org.fusesource.jansi
-- **Version:** 2.4.2
+- **Version:** 2.4.3
 - **License:** Apache License 2.0
 - **URL:** [http://fusesource.github.io/jansi](http://fusesource.github.io/jansi)
 
@@ -50,37 +50,37 @@
 
 ### spring-boot-starter
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.5
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-log4j2
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.5
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-test
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.5
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-thymeleaf
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.5
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webflux
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.5
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webmvc
 - **Package:** org.springframework.boot
-- **Version:** 4.0.3
+- **Version:** 4.0.5
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
@@ -92,7 +92,7 @@
 
 ### springdoc-openapi-starter-webmvc-ui
 - **Package:** org.springdoc
-- **Version:** 3.0.2
+- **Version:** 3.0.3
 - **License:** Apache License 2.0
 - **URL:** [https://springdoc.org/springdoc-openapi-starter-webmvc-ui/](https://springdoc.org/springdoc-openapi-starter-webmvc-ui/)
 
@@ -104,7 +104,7 @@
 
 ### Project Lombok
 - **Package:** org.projectlombok
-- **Version:** 1.18.42
+- **Version:** 1.18.44
 - **License:** MIT License
 - **URL:** [https://projectlombok.org](https://projectlombok.org)
 

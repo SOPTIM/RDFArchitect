@@ -18,6 +18,7 @@
 package org.rdfarchitect.shacl.property;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -30,16 +31,17 @@ public class CIMPropertySHACLUtils {
     /**
      * fetches the shacl order of a specified property
      *
-     * @param ontology    the ontology
+     * @param ontology the ontology
      * @param propertyUri the property to get the order for
      * @return the order
      */
     public double getOrder(Model ontology, String propertyUri) {
-        var query = """
+        var query =
+                """
                 PREFIX cims:    <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
                 PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                 PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
-                
+
                 SELECT ?property ?class
                 WHERE {
                     <PROPERTY_URI> rdfs:domain ?class.
@@ -49,7 +51,8 @@ public class CIMPropertySHACLUtils {
                         ?property cims:AssociationUsed "No".
                     }
                 }ORDER BY LCASE(STR(?property))
-                """.replace("PROPERTY_URI", propertyUri);
+                """
+                        .replace("PROPERTY_URI", propertyUri);
         var propertyList = new ArrayList<String>();
         try (var quexec = QueryExecutionFactory.create(query, ontology)) {
             var resultSet = quexec.execSelect();
@@ -57,8 +60,9 @@ public class CIMPropertySHACLUtils {
                 var result = resultSet.next();
                 var resultUri = result.getResource("property").getURI();
                 var resultClass = result.getResource("class").getURI();
-                if (resultUri.equals(propertyUri) && new URI(resultClass).getSuffix().equals("IdentifiedObject")) {
-                    return 0.1; //special for identified Object class
+                if (resultUri.equals(propertyUri)
+                        && new URI(resultClass).getSuffix().equals("IdentifiedObject")) {
+                    return 0.1; // special for identified Object class
                 }
                 propertyList.add(resultUri);
             }

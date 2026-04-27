@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.snapshots;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.services.snapshot.CreateSnapshotUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,22 +43,20 @@ public class AllSnapshotsRESTController {
     private final CreateSnapshotUseCase createSnapshotUseCase;
 
     @Operation(
-              summary = "snapshot dataset",
-              description = "Creates a snapshot for a dataset and persists it in the database",
-              tags = {"snapshot", "dataset"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200")
-              }
-    )
+            summary = "snapshot dataset",
+            description = "Creates a snapshot for a dataset and persists it in the database",
+            tags = {"snapshot", "dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @PostMapping
     public String createSnapshot(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @RequestBody
-              String datasetName) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @RequestBody
+                    String datasetName) {
         logger.info("Received POST request: \"/api/snapshots\" from \"{}\".", originURL);
 
         var base64Token = createSnapshotUseCase.createSnapshot(datasetName);

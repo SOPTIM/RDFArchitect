@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.SNAPSHOT_PREFIX;
+import static org.rdfarchitect.database.snapshots.SnapshotUtils.findSnapshotName;
+
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
@@ -26,10 +29,10 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
-import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
@@ -39,17 +42,17 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static org.rdfarchitect.database.snapshots.SnapshotUtils.*;
-
 /**
- * Class that provides {@link GraphRewindableWithUUIDs GraphRewindables} belonging to a session. Write actions on this class are irreversible.
- * closing the provided {@link GraphRewindableWithUUIDs GraphRewindables} is mandatory.
+ * Class that provides {@link GraphRewindableWithUUIDs GraphRewindables} belonging to a session.
+ * Write actions on this class are irreversible. closing the provided {@link
+ * GraphRewindableWithUUIDs GraphRewindables} is mandatory.
  */
 public class SessionDataStoreImpl implements SessionDataStore {
 
-    private final ConcurrentHashMap<String, GraphWithContextCollection> graphCollections = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, GraphWithContextCollection> graphCollections =
+            new ConcurrentHashMap<>();
 
-    //lock to prohibit dirty reads/writes
+    // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
 
     private void createDataset(String datasetName) {
@@ -65,7 +68,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
             }
             var graphRewindableCollection = graphCollections.get(datasetName);
             for (String graphUri : graphRewindableCollection.listGraphUris()) {
-                GraphRewindableWithUUIDs graph = graphRewindableCollection.begin(graphUri, TxnType.WRITE);
+                GraphRewindableWithUUIDs graph =
+                        graphRewindableCollection.begin(graphUri, TxnType.WRITE);
                 graph.close();
                 graph.end();
             }
@@ -103,7 +107,9 @@ public class SessionDataStoreImpl implements SessionDataStore {
         lock.lock();
         try {
             createDataset(graphIdentifier.getDatasetName());
-            return graphCollections.get(graphIdentifier.getDatasetName()).getGraphWithContext(graphIdentifier.getGraphUri());
+            return graphCollections
+                    .get(graphIdentifier.getDatasetName())
+                    .getGraphWithContext(graphIdentifier.getGraphUri());
         } finally {
             lock.unlock();
         }
@@ -114,7 +120,9 @@ public class SessionDataStoreImpl implements SessionDataStore {
         lock.lock();
         try {
             createDataset(graphIdentifier.getDatasetName());
-            graphCollections.get(graphIdentifier.getDatasetName()).create(graphIdentifier.getGraphUri(), newGraph);
+            graphCollections
+                    .get(graphIdentifier.getDatasetName())
+                    .create(graphIdentifier.getGraphUri(), newGraph);
         } finally {
             lock.unlock();
         }
@@ -144,7 +152,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
         final String graphUri = graphIdentifier.getGraphUri();
         lock.lock();
         try {
-            return graphCollections.containsKey(datasetName) && graphCollections.get(datasetName).containsGraph(graphUri);
+            return graphCollections.containsKey(datasetName)
+                    && graphCollections.get(datasetName).containsGraph(graphUri);
         } finally {
             lock.unlock();
         }
@@ -186,7 +195,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public void writeToDatabase(DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
+    public void writeToDatabase(
+            DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.getDatasetName();
         final String graphUri = graphIdentifier.getGraphUri();
         lock.lock();
@@ -194,10 +204,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
         try {
             assertThatGraphExists(graphIdentifier);
             graph = begin(graphIdentifier, TxnType.READ);
-            var graphSource = new GraphSourceBuilderImpl()
-                      .setGraph(graph)
-                      .setGraphName(graphUri)
-                      .build();
+            var graphSource =
+                    new GraphSourceBuilderImpl().setGraph(graph).setGraphName(graphUri).build();
             databaseConnection.insertGraph(graphSource, datasetName);
         } finally {
             if (graph != null) {
@@ -252,32 +260,32 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Fetches a dataset from a {@link DatabaseConnection database}.
      *
      * @param databaseConnection The connection to the external Database.
-     * @param datasetName        The name of the dataset.
-     *
+     * @param datasetName The name of the dataset.
      * @return fetched {@link Graph}
      */
     private Dataset fetchDataset(DatabaseConnection databaseConnection, String datasetName) {
-        //build query
+        // build query
         var graphVar = "?graph";
-        var graphQuery = new SelectBuilder()
-                  .addVar(graphVar)
-                  .setDistinct(true)
-                  .addGraph(graphVar, "?s", "?p", "?o")
-                  .build();
+        var graphQuery =
+                new SelectBuilder()
+                        .addVar(graphVar)
+                        .setDistinct(true)
+                        .addGraph(graphVar, "?s", "?p", "?o")
+                        .build();
 
-        //fetch data
+        // fetch data
         var queryResultSet = databaseConnection.sendSelect(graphQuery, datasetName).asResultSet();
         var prefixMapping = databaseConnection.getPrefixMapping(datasetName);
 
-        //insert prefixes
+        // insert prefixes
         var dataset = DatasetFactory.createGeneral();
         dataset.getPrefixMapping().setNsPrefixes(prefixMapping);
 
-        //insert graphs
-        //default
+        // insert graphs
+        // default
         var graph = fetchGraph(databaseConnection, datasetName, "default");
         dataset.setDefaultModel(ModelFactory.createModelForGraph(graph));
-        //named
+        // named
         while (queryResultSet.hasNext()) {
             var graphURI = queryResultSet.next().get(graphVar).asNode();
             graph = fetchGraph(databaseConnection, datasetName, graphURI.getURI());
@@ -290,20 +298,21 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Fetches a single graph from a {@link DatabaseConnection database}.
      *
      * @param databaseConnection The connection to the external Database.
-     * @param datasetName        The name of the dataset.
-     * @param graphUri           The graphUri.
-     *
+     * @param datasetName The name of the dataset.
+     * @param graphUri The graphUri.
      * @return fetched {@link Graph}
      */
-    private Graph fetchGraph(DatabaseConnection databaseConnection, String datasetName, String graphUri) {
-        var query = new CIMBaseQueryBuilder()
-                  .setGraph(graphUri)
-                  .build()
-                  .addVar("?sub")
-                  .addVar("?pre")
-                  .addVar("?obj")
-                  .addWhere("?sub", "?pre", "?obj")
-                  .build();
+    private Graph fetchGraph(
+            DatabaseConnection databaseConnection, String datasetName, String graphUri) {
+        var query =
+                new CIMBaseQueryBuilder()
+                        .setGraph(graphUri)
+                        .build()
+                        .addVar("?sub")
+                        .addVar("?pre")
+                        .addVar("?obj")
+                        .addWhere("?sub", "?pre", "?obj")
+                        .build();
         var queryRes = databaseConnection.sendSelect(query, datasetName).asResultSet();
         var resGraph = GraphFactory.createDefaultGraph();
         while (queryRes.hasNext()) {
@@ -418,7 +427,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Throws an exceptions if the dataset does not exist
      *
      * @param datasetName The name of the dataset.
-     *
      * @throws DataAccessException if the dataset does not exist.
      */
     private void assertThatDatasetExists(String datasetName) {
@@ -430,8 +438,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
     /**
      * Throws an exceptions if the graph or its dataset does not exist
      *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the graph URI..
-     *
+     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
+     *     graph URI..
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
@@ -439,7 +447,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
         final String graphUri = graphIdentifier.getGraphUri();
         assertThatDatasetExists(datasetName);
         if (!graphCollections.get(datasetName).containsGraph(graphUri)) {
-            throw new DataAccessException("Graph " + graphUri + " does not exist in dataset " + datasetName);
+            throw new DataAccessException(
+                    "Graph " + graphUri + " does not exist in dataset " + datasetName);
         }
     }
 }

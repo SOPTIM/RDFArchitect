@@ -29,7 +29,7 @@ public interface ListSuperClassesUseCase {
      * List all super classes of a class.
      *
      * @param graphIdentifier The graph identifier of the graph.
-     * @param classUUID        The uuid of the class.
+     * @param classUUID The uuid of the class.
      * @return A list of super classes of the class.
      */
     List<ClassDTO> listSuperClasses(GraphIdentifier graphIdentifier, UUID classUUID);

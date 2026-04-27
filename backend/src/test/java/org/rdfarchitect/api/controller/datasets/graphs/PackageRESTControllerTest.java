@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.api.controller.datasets.graphs;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
@@ -30,9 +33,6 @@ import org.springframework.http.HttpHeaders;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
-
 class PackageRESTControllerTest {
 
     private ExpandURIUseCase expandURIUseCase;
@@ -45,7 +45,9 @@ class PackageRESTControllerTest {
         expandURIUseCase = mock(ExpandURIUseCase.class);
         replacePackageUseCase = mock(ReplacePackageUseCase.class);
         deletePackageUseCase = mock(DeletePackageUseCase.class);
-        controller = new PackageRESTController(expandURIUseCase, replacePackageUseCase, deletePackageUseCase);
+        controller =
+                new PackageRESTController(
+                        expandURIUseCase, replacePackageUseCase, deletePackageUseCase);
     }
 
     @Test
@@ -53,10 +55,12 @@ class PackageRESTControllerTest {
         when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
         UUID packageUuid = UUID.randomUUID();
 
-        var response = controller.deletePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUuid);
+        var response =
+                controller.deletePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUuid);
 
         assertThat(response).isEqualTo(Response.SUCCESS);
-        verify(deletePackageUseCase).deletePackage(new GraphIdentifier("dataset", "expanded-graph"), packageUuid);
+        verify(deletePackageUseCase)
+                .deletePackage(new GraphIdentifier("dataset", "expanded-graph"), packageUuid);
     }
 
     @Test
@@ -65,9 +69,12 @@ class PackageRESTControllerTest {
         var packageUUID = UUID.randomUUID();
         var dto = PackageDTO.builder().label("pkg").build();
 
-        var response = controller.replacePackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUUID.toString(), dto);
+        var response =
+                controller.replacePackage(
+                        HttpHeaders.ORIGIN, "dataset", "graph", packageUUID.toString(), dto);
 
         assertThat(response).isEqualTo(Response.SUCCESS);
-        verify(replacePackageUseCase).replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
+        verify(replacePackageUseCase)
+                .replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
     }
 }

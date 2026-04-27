@@ -45,10 +45,7 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
     @Override
     public boolean ping() {
         try (var client = HttpClient.newHttpClient()) {
-            var request = HttpRequest.newBuilder()
-                                     .uri(URI.create(url + "/$/ping"))
-                                     .GET()
-                                     .build();
+            var request = HttpRequest.newBuilder().uri(URI.create(url + "/$/ping")).GET().build();
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             return response.statusCode() == 200;
         } catch (IOException | InterruptedException e) {
@@ -63,10 +60,8 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
     @Override
     public List<String> listDatasets() {
         try (var client = HttpClient.newHttpClient()) {
-            var request = HttpRequest.newBuilder()
-                                     .uri(URI.create(url + "/$/datasets"))
-                                     .GET()
-                                     .build();
+            var request =
+                    HttpRequest.newBuilder().uri(URI.create(url + "/$/datasets")).GET().build();
 
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
@@ -96,46 +91,88 @@ public class FusekiHttpAdminProtocol implements DatabaseAdminProtocol {
     public void createDataset(String datasetName) {
         try (var client = HttpClient.newHttpClient()) {
             var requestBody = "dbName=" + datasetName + "&dbType=tdb2";
-            var request = HttpRequest.newBuilder()
-                                     .uri(URI.create(this.url + "/$/datasets"))
-                                     .header("Content-Type", "application/x-www-form-urlencoded")
-                                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                                     .build();
+            var request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(this.url + "/$/datasets"))
+                            .header("Content-Type", "application/x-www-form-urlencoded")
+                            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                            .build();
 
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == 200) {
-                logger.info("Successfully created dataset: \"{}\" at endpoint: \"{}\"", datasetName, this.url);
+                logger.info(
+                        "Successfully created dataset: \"{}\" at endpoint: \"{}\"",
+                        datasetName,
+                        this.url);
             } else {
-                throw new DataAccessException("Failed to create dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"");
+                throw new DataAccessException(
+                        "Failed to create dataset \""
+                                + datasetName
+                                + "\" at endpoint: \""
+                                + this.url
+                                + "\"");
             }
         } catch (IOException e) {
-            throw new DataAccessException("Failed to create dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
+            throw new DataAccessException(
+                    "Failed to create dataset \""
+                            + datasetName
+                            + "\" at endpoint: \""
+                            + this.url
+                            + "\"",
+                    e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DataAccessException("Failed to create dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
+            throw new DataAccessException(
+                    "Failed to create dataset \""
+                            + datasetName
+                            + "\" at endpoint: \""
+                            + this.url
+                            + "\"",
+                    e);
         }
     }
 
     @Override
     public void deleteDataset(String datasetName) {
         try (var client = HttpClient.newHttpClient()) {
-            var request = HttpRequest.newBuilder()
-                                     .uri(URI.create(this.url + "/$/datasets/" + datasetName))
-                                     .DELETE()
-                                     .build();
+            var request =
+                    HttpRequest.newBuilder()
+                            .uri(URI.create(this.url + "/$/datasets/" + datasetName))
+                            .DELETE()
+                            .build();
 
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
             if (response.statusCode() == 200) {
-                logger.info("Successfully deleted dataset: \"{}\" at endpoint: \"{}\"", datasetName, this.url);
+                logger.info(
+                        "Successfully deleted dataset: \"{}\" at endpoint: \"{}\"",
+                        datasetName,
+                        this.url);
             } else {
-                throw new DataAccessException("Failed to delete dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"");
+                throw new DataAccessException(
+                        "Failed to delete dataset \""
+                                + datasetName
+                                + "\" at endpoint: \""
+                                + this.url
+                                + "\"");
             }
         } catch (IOException e) {
-            throw new DataAccessException("Failed to delete dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
+            throw new DataAccessException(
+                    "Failed to delete dataset \""
+                            + datasetName
+                            + "\" at endpoint: \""
+                            + this.url
+                            + "\"",
+                    e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DataAccessException("Failed to delete dataset \"" + datasetName + "\" at endpoint: \"" + this.url + "\"", e);
+            throw new DataAccessException(
+                    "Failed to delete dataset \""
+                            + datasetName
+                            + "\" at endpoint: \""
+                            + this.url
+                            + "\"",
+                    e);
         }
     }
 }

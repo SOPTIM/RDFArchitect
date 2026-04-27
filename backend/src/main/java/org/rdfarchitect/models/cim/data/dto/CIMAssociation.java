@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.data.dto;
 
 import lombok.Builder;
 import lombok.Data;
+
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;

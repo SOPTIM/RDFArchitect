@@ -19,6 +19,7 @@ package org.rdfarchitect.shacl.property.shapebuilder;
 
 import lombok.Setter;
 import lombok.experimental.Accessors;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -46,14 +47,22 @@ public class NodeShapeBuilder {
     }
 
     public Resource build() {
-        var nodeShape = shaclModel.createResource(prefixEntry.getUri() + new URI(targetClassUri).getSuffix());
+        var nodeShape =
+                shaclModel.createResource(
+                        prefixEntry.getUri() + new URI(targetClassUri).getSuffix());
         nodeShape.addProperty(RDF.type, ResourceFactory.createResource(SHACL.NodeShape.getURI()));
-        nodeShape.addProperty(ResourceFactory.createProperty(SHACL.targetClass.getURI()), shaclModel.createResource(targetClassUri));
+        nodeShape.addProperty(
+                ResourceFactory.createProperty(SHACL.targetClass.getURI()),
+                shaclModel.createResource(targetClassUri));
 
         if (closed) {
             var ignoredPropertiesList = shaclModel.createList(RDF.type);
-            nodeShape.addProperty(ResourceFactory.createProperty(SHACL.ignoredProperties.getURI()), ignoredPropertiesList);
-            nodeShape.addProperty(ResourceFactory.createProperty(SHACL.closed.getURI()), shaclModel.createTypedLiteral(true));
+            nodeShape.addProperty(
+                    ResourceFactory.createProperty(SHACL.ignoredProperties.getURI()),
+                    ignoredPropertiesList);
+            nodeShape.addProperty(
+                    ResourceFactory.createProperty(SHACL.closed.getURI()),
+                    shaclModel.createTypedLiteral(true));
         }
         var shProperty = ResourceFactory.createProperty(SHACL.property.getURI());
         propertyShapes.forEach(propertyShape -> nodeShape.addProperty(shProperty, propertyShape));

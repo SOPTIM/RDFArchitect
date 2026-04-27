@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.schemamigration.defaults;
 
 import lombok.experimental.UtilityClass;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.rdfarchitect.models.changes.RenameCandidate;
@@ -39,13 +40,22 @@ import java.util.stream.Collectors;
 @UtilityClass
 public class InheritanceChangeHandler {
 
-    public void processInheritanceChanges(List<SemanticClassChange> classes, Model newModel, Model oldModel, List<RenameCandidate<SemanticClassChange>> classRenames) {
-        var classChangeMap = classes.stream()
-                                    .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
+    public void processInheritanceChanges(
+            List<SemanticClassChange> classes,
+            Model newModel,
+            Model oldModel,
+            List<RenameCandidate<SemanticClassChange>> classRenames) {
+        var classChangeMap =
+                classes.stream().collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
 
         for (var cls : classes) {
-            if (cls.getChanges().stream().anyMatch(change -> change.getSemanticFieldChangeType() == SemanticFieldChangeType.SUPERCLASS_CHANGE)) {
-                addPropertyChangesFromInheritance(cls, classes, classChangeMap, newModel, oldModel, classRenames);
+            if (cls.getChanges().stream()
+                    .anyMatch(
+                            change ->
+                                    change.getSemanticFieldChangeType()
+                                            == SemanticFieldChangeType.SUPERCLASS_CHANGE)) {
+                addPropertyChangesFromInheritance(
+                        cls, classes, classChangeMap, newModel, oldModel, classRenames);
             }
         }
 
@@ -53,24 +63,34 @@ public class InheritanceChangeHandler {
         classes.addAll(classChangeMap.values());
     }
 
-    public void addPropertyChangesFromInheritance(SemanticClassChange classChange, List<SemanticClassChange> allClassChanges, Map<String, SemanticClassChange> classChangeMap,
-                                                  Model newModel, Model oldModel, List<RenameCandidate<SemanticClassChange>> classRenames) {
-        var oldUri = classChange.getOldIRI() != null ? classChange.getOldIRI() : classChange.getIri();
+    public void addPropertyChangesFromInheritance(
+            SemanticClassChange classChange,
+            List<SemanticClassChange> allClassChanges,
+            Map<String, SemanticClassChange> classChangeMap,
+            Model newModel,
+            Model oldModel,
+            List<RenameCandidate<SemanticClassChange>> classRenames) {
+        var oldUri =
+                classChange.getOldIRI() != null ? classChange.getOldIRI() : classChange.getIri();
         var oldSuperClasses = CIMClassUtils.listSuperClasses(oldModel.getResource(oldUri));
-        var newSuperClasses = CIMClassUtils.listSuperClasses(newModel.getResource(classChange.getIri()));
+        var newSuperClasses =
+                CIMClassUtils.listSuperClasses(newModel.getResource(classChange.getIri()));
 
         var commonSuperClasses = new HashSet<>(oldSuperClasses);
         commonSuperClasses.retainAll(newSuperClasses);
         oldSuperClasses.removeAll(commonSuperClasses);
         newSuperClasses.removeAll(commonSuperClasses);
 
-        removeRenamedClassesFromSuperClassChanges(oldSuperClasses, newSuperClasses, classRenames, oldModel, newModel);
+        removeRenamedClassesFromSuperClassChanges(
+                oldSuperClasses, newSuperClasses, classRenames, oldModel, newModel);
 
         var propertiesToRemove = collectPropertiesToRemove(oldSuperClasses);
         var propertiesToAdd = collectPropertiesToAdd(newSuperClasses, allClassChanges);
-        var oldIRI = classChange.getOldIRI() != null ? classChange.getOldIRI() : classChange.getIri();
+        var oldIRI =
+                classChange.getOldIRI() != null ? classChange.getOldIRI() : classChange.getIri();
         var oldDerivingClasses = CIMClassUtils.findDerivingClasses(oldModel.getResource(oldIRI));
-        var newDerivingClasses = CIMClassUtils.findDerivingClasses(newModel.getResource(classChange.getIri()));
+        var newDerivingClasses =
+                CIMClassUtils.findDerivingClasses(newModel.getResource(classChange.getIri()));
 
         if (CIMClassUtils.isInstantiableClass(newModel.getResource(classChange.getIri()))) {
             newDerivingClasses.add(newModel.getResource(classChange.getIri()));
@@ -82,9 +102,12 @@ public class InheritanceChangeHandler {
         addNewInheritedProperties(newDerivingClasses, classChangeMap, propertiesToAdd);
     }
 
-    private void removeRenamedClassesFromSuperClassChanges(Set<Resource> oldSuperClasses, Set<Resource> newSuperClasses, List<RenameCandidate<SemanticClassChange>> classRenames,
-                                                           Model oldModel,
-                                                           Model newModel) {
+    private void removeRenamedClassesFromSuperClassChanges(
+            Set<Resource> oldSuperClasses,
+            Set<Resource> newSuperClasses,
+            List<RenameCandidate<SemanticClassChange>> classRenames,
+            Model oldModel,
+            Model newModel) {
         for (var rename : classRenames) {
             var oldResource = oldModel.getResource(rename.getOldResource().getIri());
             var newResource = newModel.getResource(rename.getNewResource().getIri());
@@ -95,7 +118,8 @@ public class InheritanceChangeHandler {
         }
     }
 
-    private void removeAddedClassesFromDerivingClasses(Set<Resource> derivingClasses, List<SemanticClassChange> allClassChanges) {
+    private void removeAddedClassesFromDerivingClasses(
+            Set<Resource> derivingClasses, List<SemanticClassChange> allClassChanges) {
         for (var classChange : allClassChanges) {
             if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.ADD) {
                 continue;
@@ -113,89 +137,118 @@ public class InheritanceChangeHandler {
         return propertiesToRemove;
     }
 
-    private Set<Resource> collectPropertiesToAdd(Set<Resource> newSuperClasses, List<SemanticClassChange> allClassChanges) {
+    private Set<Resource> collectPropertiesToAdd(
+            Set<Resource> newSuperClasses, List<SemanticClassChange> allClassChanges) {
         var propertiesToAdd = new HashSet<Resource>();
         for (var newSuperClass : newSuperClasses) {
-            var superClassChangeObject = allClassChanges.stream()
-                                                        .filter(c -> c.getIri().equals(newSuperClass.getURI()))
-                                                        .findFirst()
-                                                        .orElse(null);
+            var superClassChangeObject =
+                    allClassChanges.stream()
+                            .filter(c -> c.getIri().equals(newSuperClass.getURI()))
+                            .findFirst()
+                            .orElse(null);
 
             if (superClassChangeObject == null) {
                 propertiesToAdd.addAll(CIMClassUtils.listDirectProperties(newSuperClass));
             } else {
-                addPropertiesNotNewInSuperClass(propertiesToAdd, newSuperClass, superClassChangeObject);
+                addPropertiesNotNewInSuperClass(
+                        propertiesToAdd, newSuperClass, superClassChangeObject);
             }
         }
         return propertiesToAdd;
     }
 
-    private void addPropertiesNotNewInSuperClass(Set<Resource> propertiesToAdd, Resource newSuperClass, SemanticClassChange superClassChangeObject) {
+    private void addPropertiesNotNewInSuperClass(
+            Set<Resource> propertiesToAdd,
+            Resource newSuperClass,
+            SemanticClassChange superClassChangeObject) {
         for (var property : CIMClassUtils.listDirectProperties(newSuperClass)) {
-            boolean isNewInSuperClass = superClassChangeObject.getAttributes().stream()
-                                                              .anyMatch(attr -> attr.getIri().equals(property.getURI()) &&
-                                                                        attr.getSemanticResourceChangeType() == SemanticResourceChangeType.ADD) ||
-                      superClassChangeObject.getAssociations().stream()
-                                            .anyMatch(attr -> attr.getIri().equals(property.getURI()) &&
-                                                      attr.getSemanticResourceChangeType() == SemanticResourceChangeType.ADD);
+            boolean isNewInSuperClass =
+                    superClassChangeObject.getAttributes().stream()
+                                    .anyMatch(
+                                            attr ->
+                                                    attr.getIri().equals(property.getURI())
+                                                            && attr.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .ADD)
+                            || superClassChangeObject.getAssociations().stream()
+                                    .anyMatch(
+                                            attr ->
+                                                    attr.getIri().equals(property.getURI())
+                                                            && attr.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .ADD);
             if (!isNewInSuperClass) {
                 propertiesToAdd.add(property);
             }
         }
     }
 
-    private void removeOldInheritedProperties(Set<Resource> oldDerivingClasses, Map<String, SemanticClassChange> classChangesMap,
-                                              Set<Resource> propertiesToRemove) {
+    private void removeOldInheritedProperties(
+            Set<Resource> oldDerivingClasses,
+            Map<String, SemanticClassChange> classChangesMap,
+            Set<Resource> propertiesToRemove) {
         for (var derivingClass : oldDerivingClasses) {
             if (!CIMClassUtils.isInstantiableClass(derivingClass)) {
                 continue;
             }
 
-            var derivingClassChange = classChangesMap.computeIfAbsent(
-                      derivingClass.getURI(),
-                      _ -> new SemanticClassChange(derivingClass, SemanticResourceChangeType.CHANGE));
+            var derivingClassChange =
+                    classChangesMap.computeIfAbsent(
+                            derivingClass.getURI(),
+                            _ ->
+                                    new SemanticClassChange(
+                                            derivingClass, SemanticResourceChangeType.CHANGE));
 
             for (var property : propertiesToRemove) {
-                var propertyChange = new SemanticResourceChange(
-                          property,
-                          SemanticResourceChangeType.DELETED_FROM_INHERITANCE
-                );
+                var propertyChange =
+                        new SemanticResourceChange(
+                                property, SemanticResourceChangeType.DELETED_FROM_INHERITANCE);
                 propertyChange.setLabel(property.getURI().split("#")[1]);
 
                 if (CIMPropertyUtils.isAttribute(property)) {
-                    derivingClassChange.getAttributes().add(new SemanticAttributeChange(propertyChange));
+                    derivingClassChange
+                            .getAttributes()
+                            .add(new SemanticAttributeChange(propertyChange));
                 } else if (CIMPropertyUtils.isAssociation(property)) {
-                    derivingClassChange.getAssociations().add(new SemanticAssociationChange(propertyChange));
+                    derivingClassChange
+                            .getAssociations()
+                            .add(new SemanticAssociationChange(propertyChange));
                 }
             }
         }
     }
 
-    private void addNewInheritedProperties(Set<Resource> newDerivingClasses, Map<String, SemanticClassChange> classChangesMap,
-                                           Set<Resource> propertiesToAdd) {
+    private void addNewInheritedProperties(
+            Set<Resource> newDerivingClasses,
+            Map<String, SemanticClassChange> classChangesMap,
+            Set<Resource> propertiesToAdd) {
         for (var derivingClass : newDerivingClasses) {
             if (!CIMClassUtils.isInstantiableClass(derivingClass)) {
                 continue;
             }
 
-            var derivingClassChange = classChangesMap.computeIfAbsent(
-                      derivingClass.getURI(),
-                      _ -> new SemanticClassChange(derivingClass, SemanticResourceChangeType.CHANGE));
+            var derivingClassChange =
+                    classChangesMap.computeIfAbsent(
+                            derivingClass.getURI(),
+                            _ ->
+                                    new SemanticClassChange(
+                                            derivingClass, SemanticResourceChangeType.CHANGE));
 
             for (var property : propertiesToAdd) {
-                var propertyChange = new SemanticResourceChange(
-                          property,
-                          SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-                );
+                var propertyChange =
+                        new SemanticResourceChange(
+                                property, SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
                 propertyChange.setLabel(property.getURI().split("#")[1]);
                 if (CIMPropertyUtils.isAttribute(property)) {
-                    derivingClassChange.getAttributes().add(new SemanticAttributeChange(propertyChange));
+                    derivingClassChange
+                            .getAttributes()
+                            .add(new SemanticAttributeChange(propertyChange));
                 } else if (CIMPropertyUtils.isAssociation(property)) {
-                    derivingClassChange.getAssociations().add(new SemanticAssociationChange(propertyChange));
+                    derivingClassChange
+                            .getAssociations()
+                            .add(new SemanticAssociationChange(propertyChange));
                 }
             }
         }
     }
 }
-
-

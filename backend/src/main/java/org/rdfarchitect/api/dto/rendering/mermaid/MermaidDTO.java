@@ -20,9 +20,7 @@ package org.rdfarchitect.api.dto.rendering.mermaid;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingFormat;
 
-/**
- * DTO for Mermaid diagram rendering data.
- */
+/** DTO for Mermaid diagram rendering data. */
 public record MermaidDTO(String mermaidString) implements RenderingDataDTO {
 
     @Override

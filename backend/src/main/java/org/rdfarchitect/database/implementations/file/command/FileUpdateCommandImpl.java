@@ -69,34 +69,42 @@ public class FileUpdateCommandImpl implements DatabaseUpdateCommand {
     @Override
     public void execute() {
         if (update == null) {
-            throw new QueryException("Query is null. Execution against endpoint \"" + this.path + "\\" +
-                                               this.datasetName + "." + this.lang.getFileExtensions().get(0) + "\" skipped.");
+            throw new QueryException(
+                    "Query is null. Execution against endpoint \""
+                            + this.path
+                            + "\\"
+                            + this.datasetName
+                            + "."
+                            + this.lang.getFileExtensions().get(0)
+                            + "\" skipped.");
         }
 
         String hex = Integer.toHexString(this.update.hashCode());
-        logger.debug("Execute update@{} against endpoint \"{}/{}\":\n{}",
-                     hex,
-                     this.path,
-                     this.datasetName,
-                     this.update);
+        logger.debug(
+                "Execute update@{} against endpoint \"{}/{}\":\n{}",
+                hex,
+                this.path,
+                this.datasetName,
+                this.update);
 
         FileDatabase database = new FileDatabase(this.path, this.lang);
-        Dataset dataset = database
-                  .getDataset(this.datasetName);
+        Dataset dataset = database.getDataset(this.datasetName);
         try {
             UpdateExecutionFactory.create(this.update, dataset).execute();
             database.write(dataset, this.datasetName);
         } catch (Exception e) {
-            logger.debug("Failed to execute update@{} against endpoint \"{}/{}\"",
-                         hex,
-                         this.path,
-                         this.datasetName);
+            logger.debug(
+                    "Failed to execute update@{} against endpoint \"{}/{}\"",
+                    hex,
+                    this.path,
+                    this.datasetName);
             throw new UpdateException("Failed to execute update", e);
         }
-        logger.debug("Successfully executed update@{} against endpoint \"{}/{}\"",
-                     hex,
-                     this.path,
-                     this.datasetName);
+        logger.debug(
+                "Successfully executed update@{} against endpoint \"{}/{}\"",
+                hex,
+                this.path,
+                this.datasetName);
     }
 
     @Override
@@ -104,32 +112,47 @@ public class FileUpdateCommandImpl implements DatabaseUpdateCommand {
         Graph graph = graphSource.graph();
         String graphName = graphSource.graphName();
         var newGraphPrefixMapping = graph.getPrefixMapping().getNsPrefixMap();
-        var currentPrefixMapping = new FileSelectCommandImpl(lang)
-                  .setEndpoint(this.path)
-                  .setDatasetName(datasetName)
-                  .getCurrentPrefixMapping()
-                  .getNsPrefixMap();
+        var currentPrefixMapping =
+                new FileSelectCommandImpl(lang)
+                        .setEndpoint(this.path)
+                        .setDatasetName(datasetName)
+                        .getCurrentPrefixMapping()
+                        .getNsPrefixMap();
         for (var newPrefix : newGraphPrefixMapping.entrySet()) {
             if (currentPrefixMapping.containsKey(newPrefix.getKey())
-                      && !currentPrefixMapping.get(newPrefix.getKey()).equals(newPrefix.getValue())) {
-                throw new DataAccessException("Graph prefix '" + newPrefix.getKey() + "' already exists in combination with uri '" + newPrefix.getValue() + "' in dataset: '" + datasetName + "'.");
+                    && !currentPrefixMapping.get(newPrefix.getKey()).equals(newPrefix.getValue())) {
+                throw new DataAccessException(
+                        "Graph prefix '"
+                                + newPrefix.getKey()
+                                + "' already exists in combination with uri '"
+                                + newPrefix.getValue()
+                                + "' in dataset: '"
+                                + datasetName
+                                + "'.");
             }
         }
-        new FileDatabase(this.path, this.lang)
-                  .write(graph, this.datasetName, graphName);
+        new FileDatabase(this.path, this.lang).write(graph, this.datasetName, graphName);
     }
 
     @Override
     public void deleteGraph(String graphName) {
         FileDatabase database = new FileDatabase(this.path, this.lang);
         Dataset dataset = database.getDataset(this.datasetName);
-        if (graphName == null || graphName.isEmpty()) { //add default model
+        if (graphName == null || graphName.isEmpty()) { // add default model
             dataset.getDefaultModel().removeAll();
         } else if (dataset.containsNamedModel(graphName)) {
             dataset.removeNamedModel(graphName);
         } else {
-            logger.debug("Failed to delete graph \"{}\" from dataset \"{}\", because it doesnt exist", graphName, this.datasetName);
-            throw new DataAccessException("Failed to delete graph \"" + graphName + "\" from dataset \"" + this.datasetName + "\", because it doesnt exist");
+            logger.debug(
+                    "Failed to delete graph \"{}\" from dataset \"{}\", because it doesnt exist",
+                    graphName,
+                    this.datasetName);
+            throw new DataAccessException(
+                    "Failed to delete graph \""
+                            + graphName
+                            + "\" from dataset \""
+                            + this.datasetName
+                            + "\", because it doesnt exist");
         }
         database.write(dataset, this.datasetName);
         logger.info("Deleted graph \"{}\" from dataset \"{}\"", graphName, this.datasetName);
@@ -146,8 +169,7 @@ public class FileUpdateCommandImpl implements DatabaseUpdateCommand {
         FileDatabase database = new FileDatabase(this.path, this.lang);
         var dataset = database.getDataset(this.datasetName);
         dataset.getPrefixMapping().setNsPrefix(prefix, uri);
-        new FileDatabase(this.path, this.lang)
-                  .write(dataset, this.datasetName);
+        new FileDatabase(this.path, this.lang).write(dataset, this.datasetName);
     }
 
     @Override
@@ -155,7 +177,6 @@ public class FileUpdateCommandImpl implements DatabaseUpdateCommand {
         FileDatabase database = new FileDatabase(this.path, this.lang);
         var dataset = database.getDataset(this.datasetName);
         dataset.getPrefixMapping().removeNsPrefix(prefix);
-        new FileDatabase(this.path, this.lang)
-                  .write(dataset, this.datasetName);
+        new FileDatabase(this.path, this.lang).write(dataset, this.datasetName);
     }
 }

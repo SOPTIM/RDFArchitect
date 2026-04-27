@@ -17,44 +17,34 @@
 
 package org.rdfarchitect.config;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
 import java.util.Properties;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 class AppVersionResolverTest {
 
     @Test
     void resolveVersion_prefersConfiguredVersion() {
-        var resolver = new AppVersionResolver(
-                "2.3.4",
-                Optional::empty,
-                () -> Optional.of("9.9.9")
-        );
+        var resolver = new AppVersionResolver("2.3.4", Optional::empty, () -> Optional.of("9.9.9"));
 
         assertThat(resolver.resolveVersion()).isEqualTo("2.3.4");
     }
 
     @Test
     void resolveVersion_usesGitPropertiesBeforeGitCommand() {
-        var resolver = new AppVersionResolver(
-                "",
-                () -> Optional.of("1.2.3-7-gabc12345"),
-                () -> Optional.of("9.9.9")
-        );
+        var resolver =
+                new AppVersionResolver(
+                        "", () -> Optional.of("1.2.3-7-gabc12345"), () -> Optional.of("9.9.9"));
 
         assertThat(resolver.resolveVersion()).isEqualTo("1.2.3-7-gabc12345");
     }
 
     @Test
     void resolveVersion_fallsBackToDefaultWhenNoMetadataIsAvailable() {
-        var resolver = new AppVersionResolver(
-                "",
-                Optional::empty,
-                Optional::empty
-        );
+        var resolver = new AppVersionResolver("", Optional::empty, Optional::empty);
 
         assertThat(resolver.resolveVersion()).isEqualTo(AppVersionResolver.DEFAULT_VERSION);
     }
@@ -65,7 +55,8 @@ class AppVersionResolverTest {
         properties.setProperty("git.closest.tag.name", "v1.2.3");
         properties.setProperty("git.closest.tag.commit.count", "0");
 
-        assertThat(AppVersionResolver.resolveVersionFromGitProperties(properties)).hasValue("1.2.3");
+        assertThat(AppVersionResolver.resolveVersionFromGitProperties(properties))
+                .hasValue("1.2.3");
     }
 
     @Test
@@ -75,7 +66,8 @@ class AppVersionResolverTest {
         properties.setProperty("git.closest.tag.commit.count", "7");
         properties.setProperty("git.commit.id.abbrev", "abc12345");
 
-        assertThat(AppVersionResolver.resolveVersionFromGitProperties(properties)).hasValue("1.2.3-7-gabc12345");
+        assertThat(AppVersionResolver.resolveVersionFromGitProperties(properties))
+                .hasValue("1.2.3-7-gabc12345");
     }
 
     @Test

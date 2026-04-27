@@ -2,13 +2,13 @@
 
 ### @eslint/compat
 - **Package:** @eslint/compat
-- **Version:** 2.0.3
+- **Version:** 2.0.5
 - **License:** Apache-2.0
 - **URL:** [https://github.com/eslint/rewrite/tree/main/packages/compat#readme](https://github.com/eslint/rewrite/tree/main/packages/compat#readme)
 
 ### @eslint/js
 - **Package:** @eslint/js
-- **Version:** 9.39.4
+- **Version:** 10.0.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -80,13 +80,13 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.57.2
+- **Version:** 8.58.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.5.1
+- **Version:** 1.5.2
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
@@ -98,12 +98,12 @@
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.4.27
+- **Version:** 10.5.0
 - **License:** MIT
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.16.3
+- **Version:** 2.18.0
 - **License:** MIT
 
 ### codemirror
@@ -126,7 +126,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 9.39.4
+- **Version:** 10.2.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -136,15 +136,15 @@
 - **License:** MIT
 - **URL:** [https://github.com/prettier/eslint-config-prettier#readme](https://github.com/prettier/eslint-config-prettier#readme)
 
-### eslint-plugin-import
-- **Package:** eslint-plugin-import
-- **Version:** 2.32.0
+### eslint-plugin-import-x
+- **Package:** eslint-plugin-import-x
+- **Version:** 4.16.2
 - **License:** MIT
-- **URL:** [https://github.com/import-js/eslint-plugin-import](https://github.com/import-js/eslint-plugin-import)
+- **URL:** [https://github.com/un-ts/eslint-plugin-import-x#readme](https://github.com/un-ts/eslint-plugin-import-x#readme)
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.16.0
+- **Version:** 3.17.0
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -156,30 +156,30 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.4.0
+- **Version:** 17.5.0
 - **License:** MIT
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 29.0.1
+- **Version:** 29.0.2
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.13.0
+- **Version:** 11.14.0
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.8
+- **Version:** 8.5.10
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
 ### prettier
 - **Package:** prettier
-- **Version:** 3.8.1
+- **Version:** 3.8.3
 - **License:** MIT
 - **URL:** [https://prettier.io](https://prettier.io)
 
@@ -197,7 +197,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.55.0
+- **Version:** 5.55.4
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -231,9 +231,15 @@
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
+### typescript
+- **Package:** typescript
+- **Version:** 6.0.3
+- **License:** Apache-2.0
+- **URL:** [https://www.typescriptlang.org/](https://www.typescriptlang.org/)
+
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.57.2
+- **Version:** 8.58.2
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -257,7 +263,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.1
+- **Version:** 4.1.4
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 

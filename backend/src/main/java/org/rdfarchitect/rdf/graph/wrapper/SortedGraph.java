@@ -19,6 +19,7 @@ package org.rdfarchitect.rdf.graph.wrapper;
 
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.Delegate;
+
 import org.apache.jena.atlas.iterator.Iter;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
@@ -31,18 +32,17 @@ import java.util.Comparator;
 import java.util.stream.Stream;
 
 /**
- * A Graph wrapper that returns sorted triples when queried.
- * Note: The triples are only sorted when queried, the internal storage is not sorted.
- * This means that the performance of add and delete operations is not affected.
- * However, the performance of find operations may be affected due to the sorting step.
+ * A Graph wrapper that returns sorted triples when queried. Note: The triples are only sorted when
+ * queried, the internal storage is not sorted. This means that the performance of add and delete
+ * operations is not affected. However, the performance of find operations may be affected due to
+ * the sorting step.
  */
 @RequiredArgsConstructor
 public class SortedGraph implements Graph {
 
     private final Comparator<Triple> tripleComparator;
 
-    @Delegate
-    private final Graph graph;
+    @Delegate private final Graph graph;
 
     public SortedGraph(Comparator<Triple> tripleComparator) {
         this.graph = GraphFactory.createDefaultGraph();

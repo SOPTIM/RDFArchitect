@@ -27,8 +27,7 @@ import java.util.UUID;
 
 public class GraphChangeLog {
 
-    @Getter
-    private final List<ChangeLogEntry> entries = new ArrayList<>();
+    @Getter private final List<ChangeLogEntry> entries = new ArrayList<>();
     private final Deque<ChangeLogEntry> undoneDeque = new ArrayDeque<>();
 
     public void addEntry(ChangeLogEntry entry) {

@@ -23,7 +23,9 @@ import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -56,82 +58,111 @@ public class AllPackagesRESTController {
     private final ListInternalPackagesUseCase listInternalPackagesUseCase;
     private final ListExternalPackagesUseCase listExternalPackagesUseCase;
 
-    /**
-     * Record for response to frontend, contains two lists for internal and external packages.
-     */
+    /** Record for response to frontend, contains two lists for internal and external packages. */
     public record ListPackagesResponse(
-              List<PackageDTO> internalPackageList,
-              List<PackageDTO> externalPackageList
-    ) {
-
-    }
+            List<PackageDTO> internalPackageList, List<PackageDTO> externalPackageList) {}
 
     @Operation(
-              summary = "list packages",
-              description = "Get two lists of packages: internal and external packages.",
-              tags = {"graph"},
-              responses = {@ApiResponse(
+            summary = "list packages",
+            description = "Get two lists of packages: internal and external packages.",
+            tags = {"graph"},
+            responses = {
+                @ApiResponse(
                         responseCode = "200",
-                        content = @Content(
-                                  mediaType = "application/json",
-                                  array = @ArraySchema(schema = @Schema(implementation = ListPackagesResponse.class))
-                        ))
-              }
-    )
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        array =
+                                                @ArraySchema(
+                                                        schema =
+                                                                @Schema(
+                                                                        implementation =
+                                                                                ListPackagesResponse
+                                                                                        .class))))
+            })
     @GetMapping
     public ListPackagesResponse listPackages(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var internalPackageList = listInternalPackagesUseCase.listInternalPackages(new GraphIdentifier(datasetName, extendedGraphURI));
+        var internalPackageList =
+                listInternalPackagesUseCase.listInternalPackages(
+                        new GraphIdentifier(datasetName, extendedGraphURI));
 
-        var externalPackageList = listExternalPackagesUseCase.listExternalPackages(new GraphIdentifier(datasetName, extendedGraphURI));
+        var externalPackageList =
+                listExternalPackagesUseCase.listExternalPackages(
+                        new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return new ListPackagesResponse(internalPackageList, externalPackageList);
     }
 
     @Operation(
-              summary = "create new package",
-              description = "Create a new package with a given name and optional comment, sub-package relation is nulled",
-              tags = {"graph"}
-    )
+            summary = "create new package",
+            description =
+                    "Create a new package with a given name and optional comment, sub-package relation is nulled",
+            tags = {"graph"})
     @PostMapping
     public UUID addPackage(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        description = "DTO for the package to be created"
-              )
-              @RequestBody PackageDTO packageDTO) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            description = "DTO for the package to be created")
+                    @RequestBody
+                    PackageDTO packageDTO) {
 
-        logger.info("Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var extendedPackageURIPrefix = expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
+        var extendedPackageURIPrefix =
+                expandURIUseCase.expandUri(datasetName, packageDTO.getPrefix());
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
         packageDTO.setPrefix(extendedPackageURIPrefix);
 
         var newPackageUUID = addPackageUseCase.addPackage(graphIdentifier, packageDTO);
 
-        logger.info("Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" to \"{}\".",
+                datasetName,
+                graphURI,
+                originURL);
         return newPackageUUID;
     }
 }

@@ -22,7 +22,8 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.rdf.model.Model;
 
 /**
- * Formats an Object to different representations like {@link ResultSet}, {@link Graph}, {@link Model} or {@link String}.
+ * Formats an Object to different representations like {@link ResultSet}, {@link Graph}, {@link
+ * Model} or {@link String}.
  */
 public interface ResultFormatter {
 

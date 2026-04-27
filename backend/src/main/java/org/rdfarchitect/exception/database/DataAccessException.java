@@ -19,9 +19,7 @@ package org.rdfarchitect.exception.database;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Exception is thrown when accessing data from a database fails.
- */
+/** Exception is thrown when accessing data from a database fails. */
 public class DataAccessException extends DatabaseException {
 
     public DataAccessException() {

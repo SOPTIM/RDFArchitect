@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.api.dto;
 
+import static org.assertj.core.api.AssertionsForClassTypes.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,9 +35,6 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.UUID;
 
-import static org.assertj.core.api.AssertionsForClassTypes.*;
-import static org.junit.jupiter.api.Assertions.*;
-
 class EnumEntryMapperTest {
 
     private final EnumEntryMapper enumEntryMapper = Mappers.getMapper(EnumEntryMapper.class);
@@ -44,19 +44,24 @@ class EnumEntryMapperTest {
 
     @BeforeEach
     void setUp() {
-        cimEnumEntry = CIMEnumEntry.builder()
-                                   .uuid(UUID.randomUUID())
-                                   .uri(new URI("http://example.org#TestEnumEntry"))
-                                   .label(new RDFSLabel("TestEnumEntry", "en"))
-                                   .type(new RDFType(new URI("http://example.org#TestEnum"), new RDFSLabel("TestEnum", "en")))
-                                   .build();
+        cimEnumEntry =
+                CIMEnumEntry.builder()
+                        .uuid(UUID.randomUUID())
+                        .uri(new URI("http://example.org#TestEnumEntry"))
+                        .label(new RDFSLabel("TestEnumEntry", "en"))
+                        .type(
+                                new RDFType(
+                                        new URI("http://example.org#TestEnum"),
+                                        new RDFSLabel("TestEnum", "en")))
+                        .build();
 
-        enumEntryDTO = EnumEntryDTO.builder()
-                                   .uuid(UUID.randomUUID())
-                                   .prefix("http://example.org#")
-                                   .label("EnumEntry")
-                                   .type("http://example.org#TestEnum")
-                                   .build();
+        enumEntryDTO =
+                EnumEntryDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix("http://example.org#")
+                        .label("EnumEntry")
+                        .type("http://example.org#TestEnum")
+                        .build();
     }
 
     @Nested
@@ -67,30 +72,31 @@ class EnumEntryMapperTest {
             var dto = enumEntryMapper.toDTO(cimEnumEntry);
 
             assertAll(
-                      () -> assertThat(dto.getUuid()).isEqualTo(cimEnumEntry.getUuid()),
-                      () -> assertThat(dto.getPrefix()).isEqualTo("http://example.org#"),
-                      () -> assertThat(dto.getLabel()).isEqualTo("TestEnumEntry"),
-                      () -> assertThat(dto.getType()).isEqualTo("TestEnum"),
-                      () -> assertThat(dto.getComment()).isNull(),
-                      () -> assertThat(dto.getStereotype()).isNull()
-                     );
+                    () -> assertThat(dto.getUuid()).isEqualTo(cimEnumEntry.getUuid()),
+                    () -> assertThat(dto.getPrefix()).isEqualTo("http://example.org#"),
+                    () -> assertThat(dto.getLabel()).isEqualTo("TestEnumEntry"),
+                    () -> assertThat(dto.getType()).isEqualTo("TestEnum"),
+                    () -> assertThat(dto.getComment()).isNull(),
+                    () -> assertThat(dto.getStereotype()).isNull());
         }
 
         @Test
         void toDTO_fullEnumEntry() {
-            cimEnumEntry.setComment(new RDFSComment("Test comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
-            cimEnumEntry.setStereotype(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"));
+            cimEnumEntry.setComment(
+                    new RDFSComment(
+                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
+            cimEnumEntry.setStereotype(
+                    new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"));
 
             var dto = enumEntryMapper.toDTO(cimEnumEntry);
 
             assertAll(
-                      () -> assertThat(dto.getUuid()).isEqualTo(cimEnumEntry.getUuid()),
-                      () -> assertThat(dto.getPrefix()).isEqualTo("http://example.org#"),
-                      () -> assertThat(dto.getLabel()).isEqualTo("TestEnumEntry"),
-                      () -> assertThat(dto.getType()).isEqualTo("TestEnum"),
-                      () -> assertThat(dto.getComment()).isEqualTo("Test comment"),
-                      () -> assertThat(dto.getStereotype()).isEqualTo("enum")
-                     );
+                    () -> assertThat(dto.getUuid()).isEqualTo(cimEnumEntry.getUuid()),
+                    () -> assertThat(dto.getPrefix()).isEqualTo("http://example.org#"),
+                    () -> assertThat(dto.getLabel()).isEqualTo("TestEnumEntry"),
+                    () -> assertThat(dto.getType()).isEqualTo("TestEnum"),
+                    () -> assertThat(dto.getComment()).isEqualTo("Test comment"),
+                    () -> assertThat(dto.getStereotype()).isEqualTo("enum"));
         }
     }
 
@@ -102,13 +108,23 @@ class EnumEntryMapperTest {
             CIMEnumEntry mappedCIMEnumEntry = enumEntryMapper.toCIMObject(enumEntryDTO);
 
             assertAll(
-                      () -> assertThat(mappedCIMEnumEntry.getUuid()).isEqualTo(enumEntryDTO.getUuid()),
-                      () -> assertThat(mappedCIMEnumEntry.getUri()).isEqualTo(new URI("http://example.org#TestEnum.EnumEntry")),
-                      () -> assertThat(mappedCIMEnumEntry.getLabel()).isEqualTo(new RDFSLabel("EnumEntry", "en")),
-                      () -> assertThat(mappedCIMEnumEntry.getType()).isEqualTo(new RDFType(new URI("http://example.org#TestEnum"), new RDFSLabel("TestEnum", "en"))),
-                      () -> assertThat(mappedCIMEnumEntry.getComment()).isNull(),
-                      () -> assertThat(mappedCIMEnumEntry.getStereotype()).isNull()
-                     );
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getUuid())
+                                    .isEqualTo(enumEntryDTO.getUuid()),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getUri())
+                                    .isEqualTo(new URI("http://example.org#TestEnum.EnumEntry")),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getLabel())
+                                    .isEqualTo(new RDFSLabel("EnumEntry", "en")),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getType())
+                                    .isEqualTo(
+                                            new RDFType(
+                                                    new URI("http://example.org#TestEnum"),
+                                                    new RDFSLabel("TestEnum", "en"))),
+                    () -> assertThat(mappedCIMEnumEntry.getComment()).isNull(),
+                    () -> assertThat(mappedCIMEnumEntry.getStereotype()).isNull());
         }
 
         @Test
@@ -119,13 +135,33 @@ class EnumEntryMapperTest {
             CIMEnumEntry mappedCIMEnumEntry = enumEntryMapper.toCIMObject(enumEntryDTO);
 
             assertAll(
-                      () -> assertThat(mappedCIMEnumEntry.getUuid()).isEqualTo(enumEntryDTO.getUuid()),
-                      () -> assertThat(mappedCIMEnumEntry.getUri()).isEqualTo(new URI("http://example.org#TestEnum.EnumEntry")),
-                      () -> assertThat(mappedCIMEnumEntry.getLabel()).isEqualTo(new RDFSLabel("EnumEntry", "en")),
-                      () -> assertThat(mappedCIMEnumEntry.getType()).isEqualTo(new RDFType(new URI("http://example.org#TestEnum"), new RDFSLabel("TestEnum", "en"))),
-                      () -> assertThat(mappedCIMEnumEntry.getComment()).isEqualTo(new RDFSComment("Test comment", new URI("http://www.w3.org/2001/XMLSchema#String"))),
-                      () -> assertThat(mappedCIMEnumEntry.getStereotype()).isEqualTo(new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"))
-                     );
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getUuid())
+                                    .isEqualTo(enumEntryDTO.getUuid()),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getUri())
+                                    .isEqualTo(new URI("http://example.org#TestEnum.EnumEntry")),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getLabel())
+                                    .isEqualTo(new RDFSLabel("EnumEntry", "en")),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getType())
+                                    .isEqualTo(
+                                            new RDFType(
+                                                    new URI("http://example.org#TestEnum"),
+                                                    new RDFSLabel("TestEnum", "en"))),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getComment())
+                                    .isEqualTo(
+                                            new RDFSComment(
+                                                    "Test comment",
+                                                    new URI(
+                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                    () ->
+                            assertThat(mappedCIMEnumEntry.getStereotype())
+                                    .isEqualTo(
+                                            new CIMSStereotype(
+                                                    "http://iec.ch/TC57/NonStandard/UML#enumeration")));
         }
     }
 }

@@ -22,5 +22,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 
 public interface CreateAssociationUseCase {
 
-    AssociationsService.AssociationUUIDs createAssociation(GraphIdentifier graphIdentifier, AssociationPairDTO associationPair);
+    AssociationsService.AssociationUUIDs createAssociation(
+            GraphIdentifier graphIdentifier, AssociationPairDTO associationPair);
 }

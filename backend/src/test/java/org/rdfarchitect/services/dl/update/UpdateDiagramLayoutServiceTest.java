@@ -36,44 +36,45 @@ class UpdateDiagramLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @Test
     void createDiagramLayout_graphWithTwoPackages_createsLayout() {
-        //Arrange
+        // Arrange
         addGraphFromFile("full_graph.ttl");
 
-        //Act
+        // Act
         service.createDiagramLayout(graphIdentifier);
 
-        //Assert
+        // Assert
         assertDiagram((diagramLayout.getDefaultPackageMRID().getUuid()), DEFAULT_PACKAGE_LABEL);
         assertDiagram(PACKAGE_A_UUID, PACKAGE_A_LABEL);
         assertDiagram(PACKAGE_B_UUID, PACKAGE_B_LABEL);
         assertInitialClassLayoutData(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
         assertInitialClassLayoutData(CLASS_B_UUID, PACKAGE_B_UUID, CLASS_B_LABEL);
-        assertInitialClassLayoutData(CLASS_C_UUID, diagramLayout.getDefaultPackageMRID().getUuid(), CLASS_C_LABEL);
+        assertInitialClassLayoutData(
+                CLASS_C_UUID, diagramLayout.getDefaultPackageMRID().getUuid(), CLASS_C_LABEL);
     }
 
     @Test
     void ensureDiagramLayoutExists_emptyDiagramLayout_createsDiagram() {
-        //Arrange
+        // Arrange
         addGraphFromFile("package.ttl");
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, graphFilter);
         service.ensureDiagramLayoutExists(graphIdentifier, PACKAGE_A_UUID, cimCollection);
 
-        //Assert
+        // Assert
         assertDiagram(PACKAGE_A_UUID, PACKAGE_A_LABEL);
     }
 
     @Test
     void ensureDiagramLayoutExists_emptyDiagramLayout_createsClassLayout() {
-        //Arrange
+        // Arrange
         addGraphFromFile("package_and_class.ttl");
 
-        //Act
+        // Act
         var cimCollection = converter.convert(graphIdentifier, graphFilter);
         service.ensureDiagramLayoutExists(graphIdentifier, PACKAGE_A_UUID, cimCollection);
 
-        //Assert
+        // Assert
         assertInitialClassLayoutData(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
     }
 }

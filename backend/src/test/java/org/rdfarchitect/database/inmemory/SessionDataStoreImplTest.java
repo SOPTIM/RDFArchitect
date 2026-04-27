@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import static org.assertj.core.api.Assertions.*;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
@@ -34,13 +36,12 @@ import org.rdfarchitect.rdf.TestRDFUtils;
 import java.util.List;
 import java.util.Map;
 
-import static org.assertj.core.api.Assertions.*;
-
 class SessionDataStoreImplTest {
 
     private static final String DEFAULT_GRAPH_NAME = "default";
     private static final String NAME = "a";
-    private static final GraphIdentifier GRAPH_IDENTIFIER = new GraphIdentifier(NAME, DEFAULT_GRAPH_NAME);
+    private static final GraphIdentifier GRAPH_IDENTIFIER =
+            new GraphIdentifier(NAME, DEFAULT_GRAPH_NAME);
 
     private List<Graph> exampleGraphs;
 
@@ -75,25 +76,23 @@ class SessionDataStoreImplTest {
     @Test
     void wrapGraph_defaultGraph_datasetWithDefaultGraphInDataset() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
 
         // Act
-        var dataset = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), DEFAULT_GRAPH_NAME);
+        var dataset =
+                SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), DEFAULT_GRAPH_NAME);
         var datasetNullName = SessionDataStore.wrapGraphInDataset(exampleGraphs.getFirst(), null);
 
         // Assert
         assertThat(dataset.getDefaultModel().getGraph()).isEqualTo(exampleGraphs.getFirst());
-        assertThat(datasetNullName.getDefaultModel().getGraph()).isEqualTo(exampleGraphs.getFirst());
+        assertThat(datasetNullName.getDefaultModel().getGraph())
+                .isEqualTo(exampleGraphs.getFirst());
     }
 
     @Test
     void wrapGraph_NamedGraph_datasetWithNamedGraphInDataset() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         var graphName = "http://example.com/graph";
 
         // Act
@@ -107,12 +106,11 @@ class SessionDataStoreImplTest {
     @ValueSource(strings = {"a", "anyValid", DEFAULT_GRAPH_NAME})
     void create_validDatasetNameNames_createsEmptyCollections(String name) {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
         // Act
-        inMemoryDatabase.create(new GraphIdentifier(name, DEFAULT_GRAPH_NAME), exampleGraphs.getFirst());
+        inMemoryDatabase.create(
+                new GraphIdentifier(name, DEFAULT_GRAPH_NAME), exampleGraphs.getFirst());
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).contains(name);
@@ -121,9 +119,7 @@ class SessionDataStoreImplTest {
     @Test
     void deleteDataset_validName_removesDataset() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -136,10 +132,9 @@ class SessionDataStoreImplTest {
     @Test
     void deleteDataset_nonExistingName_doesNothing() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
-        inMemoryDatabase.create(new GraphIdentifier("any", DEFAULT_GRAPH_NAME), exampleGraphs.getFirst());
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
+        inMemoryDatabase.create(
+                new GraphIdentifier("any", DEFAULT_GRAPH_NAME), exampleGraphs.getFirst());
 
         // Act
         inMemoryDatabase.deleteDataset("other");
@@ -151,9 +146,7 @@ class SessionDataStoreImplTest {
     @Test
     void deleteDataset_validName_graphsAreClosed() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graph = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.READ);
         graph.end();
@@ -181,10 +174,8 @@ class SessionDataStoreImplTest {
     @Test
     void listDatasets_nonEmptyDatabase_returnsAllDatasets() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph(),
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs =
+                List.of(GraphFactory.createDefaultGraph(), GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         inMemoryDatabase.create(new GraphIdentifier("b", DEFAULT_GRAPH_NAME), exampleGraphs.get(1));
 
@@ -198,10 +189,7 @@ class SessionDataStoreImplTest {
     @Test
     void begin_validNameAndGraph_returnsGraph() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -232,15 +220,13 @@ class SessionDataStoreImplTest {
         // Act + Assert
         var identifier = new GraphIdentifier("a", "http://example.com/graph");
         assertThatThrownBy(() -> inMemoryDatabase.begin(identifier, TxnType.READ))
-                  .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void remove_existingGraphFromExistingDataset_removesGraph() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -253,9 +239,7 @@ class SessionDataStoreImplTest {
     @Test
     void remove_graphFromNonExistingDataset_doesNothing() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -268,9 +252,7 @@ class SessionDataStoreImplTest {
     @Test
     void remove_nonExistingGraphFromExistingDataset_doesNothing() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -283,9 +265,7 @@ class SessionDataStoreImplTest {
     @Test
     void remove_lastExistingGraph_removesDataset() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -298,9 +278,7 @@ class SessionDataStoreImplTest {
     @Test
     void containsGraph_validNameAndGraph_returnsTrue() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -313,13 +291,11 @@ class SessionDataStoreImplTest {
     @Test
     void listGraphUris_nonEmptyDataset_returnsAllGraphUris() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph(),
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
 
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        inMemoryDatabase.create(new GraphIdentifier(NAME, "http://example.com/graph"), exampleGraphs.get(1));
+        inMemoryDatabase.create(
+                new GraphIdentifier(NAME, "http://example.com/graph"), exampleGraphs.get(1));
 
         // Act
         var graphUris = inMemoryDatabase.listGraphUris(NAME);
@@ -334,24 +310,22 @@ class SessionDataStoreImplTest {
 
         // Act
         assertThatThrownBy(() -> inMemoryDatabase.listGraphUris("a"))
-                  .isInstanceOf(DataAccessException.class);
+                .isInstanceOf(DataAccessException.class);
     }
 
     @Test
     void getPrefixMapping_validDataset_returnsPrefixMapping() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
-        var prefixes = Map.of(
-                  "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-                  "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
-                  "xsd", "http://www.w3.org/2001/XMLSchema#",
-                  "owl", "http://www.w3.org/2002/07/owl#",
-                  "ex", "http://example.com/"
-                             );
+        var prefixes =
+                Map.of(
+                        "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                        "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
+                        "xsd", "http://www.w3.org/2001/XMLSchema#",
+                        "owl", "http://www.w3.org/2002/07/owl#",
+                        "ex", "http://example.com/");
 
         inMemoryDatabase.setPrefixMapping(NAME, new PrefixMappingImpl().setNsPrefixes(prefixes));
 
@@ -373,9 +347,7 @@ class SessionDataStoreImplTest {
     @Test
     void getPrefixMapping_emptyDataset_returnsEmptyPrefixMapping() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
 
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
@@ -389,9 +361,7 @@ class SessionDataStoreImplTest {
     @Test
     void setPrefixMapping_modifyPrefixMapping_hasNoChangeOnCollection() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
@@ -404,15 +374,14 @@ class SessionDataStoreImplTest {
 
         // Assert
         var storedPrefixes = inMemoryDatabase.getPrefixMapping(NAME);
-        assertThat(storedPrefixes.getNsPrefixMap()).containsExactlyEntriesOf(Map.of("ex", "http://example.com/"));
+        assertThat(storedPrefixes.getNsPrefixMap())
+                .containsExactlyEntriesOf(Map.of("ex", "http://example.com/"));
     }
 
     @Test
     void setPrefixMapping_emptyPrefixMapping_setsNoPrefixes() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
@@ -425,9 +394,7 @@ class SessionDataStoreImplTest {
     @Test
     void setPrefixMapping_emptyPrefixMappingIntoNonEmptyGraph_deletesPrefixes() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
@@ -446,9 +413,7 @@ class SessionDataStoreImplTest {
     @Test
     void setPrefixMapping_nonEmptyPrefixMapping_setsPrefixes() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
@@ -459,15 +424,14 @@ class SessionDataStoreImplTest {
 
         // Assert
         var storedPrefixes = inMemoryDatabase.getPrefixMapping(NAME);
-        assertThat(storedPrefixes.getNsPrefixMap()).containsExactlyEntriesOf(Map.of("ex", "http://example.com/"));
+        assertThat(storedPrefixes.getNsPrefixMap())
+                .containsExactlyEntriesOf(Map.of("ex", "http://example.com/"));
     }
 
     @Test
     void setPrefixMapping_nonEmptyPrefixMappingIntoNonEmptyGraph_overridesPrefixes() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         var prefixes = new PrefixMappingImpl();
@@ -483,7 +447,8 @@ class SessionDataStoreImplTest {
 
         // Assert
         var storedPrefixes = inMemoryDatabase.getPrefixMapping(NAME);
-        assertThat(storedPrefixes.getNsPrefixMap()).containsExactlyEntriesOf(Map.of("ex2", "http://example2.com/"));
+        assertThat(storedPrefixes.getNsPrefixMap())
+                .containsExactlyEntriesOf(Map.of("ex2", "http://example2.com/"));
     }
 
     @Test
@@ -492,34 +457,29 @@ class SessionDataStoreImplTest {
 
         // Act
         assertThatExceptionOfType(DataAccessException.class)
-                  .isThrownBy(() -> inMemoryDatabase.undo(GRAPH_IDENTIFIER));
+                .isThrownBy(() -> inMemoryDatabase.undo(GRAPH_IDENTIFIER));
     }
 
     @Test
     void undo_nonExistingGraph_doesNothing() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         assertThatExceptionOfType(Exception.class)
-                  .isThrownBy(() -> inMemoryDatabase.undo(GRAPH_IDENTIFIER));
+                .isThrownBy(() -> inMemoryDatabase.undo(GRAPH_IDENTIFIER));
     }
 
     @Test
     void undo_validGraph_undoesLastOperation() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
         graphRewindable.add(TestRDFUtils.triple("a a d"));
         graphRewindable.commit();
         graphRewindable.end();
-
 
         // Act
         inMemoryDatabase.undo(GRAPH_IDENTIFIER);
@@ -536,28 +496,24 @@ class SessionDataStoreImplTest {
 
         // Act
         assertThatExceptionOfType(DataAccessException.class)
-                  .isThrownBy(() -> inMemoryDatabase.redo(GRAPH_IDENTIFIER));
+                .isThrownBy(() -> inMemoryDatabase.redo(GRAPH_IDENTIFIER));
     }
 
     @Test
     void redo_nonExistingGraph_doesNothing() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         assertThatExceptionOfType(Exception.class)
-                  .isThrownBy(() -> inMemoryDatabase.redo(GRAPH_IDENTIFIER));
+                .isThrownBy(() -> inMemoryDatabase.redo(GRAPH_IDENTIFIER));
     }
 
     @Test
     void redo_validGraph_restoresLastUndoneOperation() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
         graphRewindable.add(TestRDFUtils.triple("a a d"));
@@ -581,28 +537,27 @@ class SessionDataStoreImplTest {
 
         // Act
         assertThatExceptionOfType(DataAccessException.class)
-                  .isThrownBy(() -> inMemoryDatabase.canUndo(GRAPH_IDENTIFIER));
+                .isThrownBy(() -> inMemoryDatabase.canUndo(GRAPH_IDENTIFIER));
     }
 
     @Test
     void canUndo_nonExistingGraph_throwsException() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act + Assert
         assertThatExceptionOfType(Exception.class)
-                  .isThrownBy(() -> inMemoryDatabase.canUndo(new GraphIdentifier("a", "http://example.com/graph")));
+                .isThrownBy(
+                        () ->
+                                inMemoryDatabase.canUndo(
+                                        new GraphIdentifier("a", "http://example.com/graph")));
     }
 
     @Test
     void canUndo_validGraphWithNoCommit_returnsFalse() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
         graphRewindable.add(TestRDFUtils.triple("a a d"));
@@ -618,9 +573,7 @@ class SessionDataStoreImplTest {
     @Test
     void canUndo_validGraphWithCommit_returnsTrue() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
         graphRewindable.add(TestRDFUtils.triple("a a d"));
@@ -640,28 +593,27 @@ class SessionDataStoreImplTest {
 
         // Act
         assertThatExceptionOfType(DataAccessException.class)
-                  .isThrownBy(() -> inMemoryDatabase.canRedo(GRAPH_IDENTIFIER));
+                .isThrownBy(() -> inMemoryDatabase.canRedo(GRAPH_IDENTIFIER));
     }
 
     @Test
     void canRedo_nonExistingGraph_throwsException() {
         // Arrange
-        exampleGraphs = List.of(
-                  GraphFactory.createDefaultGraph()
-                               );
+        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
         assertThatExceptionOfType(Exception.class)
-                  .isThrownBy(() -> inMemoryDatabase.canRedo(new GraphIdentifier("a", "http://example.com/graph")));
+                .isThrownBy(
+                        () ->
+                                inMemoryDatabase.canRedo(
+                                        new GraphIdentifier("a", "http://example.com/graph")));
     }
 
     @Test
     void canRedo_validGraphWithNoUndoneChange_returnsFalse() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
         graphRewindable.add(TestRDFUtils.triple("a a d"));
@@ -678,9 +630,7 @@ class SessionDataStoreImplTest {
     @Test
     void canRedo_validGraphAfterUndoneChange_returnsTrue() {
         // Arrange
-        exampleGraphs = List.of(
-                  createExampleGraph()
-                               );
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
         var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
         graphRewindable.add(TestRDFUtils.triple("a a d"));

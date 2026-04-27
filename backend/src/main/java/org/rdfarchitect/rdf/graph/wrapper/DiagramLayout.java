@@ -18,6 +18,7 @@
 package org.rdfarchitect.rdf.graph.wrapper;
 
 import lombok.Getter;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -28,11 +29,9 @@ import java.util.UUID;
 
 public class DiagramLayout {
 
-    @Getter
-    private final Model diagramLayoutModel;
+    @Getter private final Model diagramLayoutModel;
 
-    @Getter
-    private final MRID defaultPackageMRID;
+    @Getter private final MRID defaultPackageMRID;
 
     public DiagramLayout() {
         defaultPackageMRID = new MRID(UUID.randomUUID());

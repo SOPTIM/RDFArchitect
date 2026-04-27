@@ -20,7 +20,9 @@ package org.rdfarchitect.api.controller.datasets;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
@@ -47,20 +49,18 @@ public class DatasetRESTController {
     private final DeleteDatasetUseCase deleteDatasetUseCase;
 
     @Operation(
-              summary = "List datasets",
-              description = "Lists all non-snapshots datasets",
-              tags = {"dataset"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200"
-                        )
-              }
-    )
+            summary = "List datasets",
+            description = "Lists all non-snapshots datasets",
+            tags = {"dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
     public List<String> listDatasets(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL) {
         logger.info("Received GET request: \"/api/datasets\" from \"{}\".", originURL);
 
         var res = listDatasetsUseCase.listDatasets();
@@ -70,28 +70,31 @@ public class DatasetRESTController {
     }
 
     @Operation(
-              summary = "Delete dataset",
-              description = "Deletes a dataset including all of its graphs.",
-              tags = {"dataset"},
-              responses = {
-                        @ApiResponse(
-                                  responseCode = "200"
-                        )
-              }
-    )
+            summary = "Delete dataset",
+            description = "Deletes a dataset including all of its graphs.",
+            tags = {"dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
     @DeleteMapping("/{datasetName}")
     public String deleteDataset(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}\" from \"{}\".", datasetName, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}\" from \"{}\".",
+                datasetName,
+                originURL);
 
         deleteDatasetUseCase.deleteDataset(datasetName);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}\" to \"{}\".", datasetName, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}\" to \"{}\".",
+                datasetName,
+                originURL);
         return Response.SUCCESS;
     }
 }

@@ -18,6 +18,7 @@
 package org.rdfarchitect.api.dto.dl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 

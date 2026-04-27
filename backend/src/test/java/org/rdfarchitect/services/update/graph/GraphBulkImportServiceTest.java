@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.services.update.graph;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,9 +29,6 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class GraphBulkImportServiceTest {
 
@@ -40,7 +40,8 @@ class GraphBulkImportServiceTest {
     void setUp() {
         mockReplaceGraphUseCase = mock(ReplaceGraphUseCase.class);
         mockDatabasePort = mock(DatabasePort.class);
-        graphBulkImportService = new GraphBulkImportService(mockReplaceGraphUseCase, mockDatabasePort);
+        graphBulkImportService =
+                new GraphBulkImportService(mockReplaceGraphUseCase, mockDatabasePort);
     }
 
     @Test
@@ -51,19 +52,19 @@ class GraphBulkImportServiceTest {
         var file2 = mock(MultipartFile.class);
         when(file1.getOriginalFilename()).thenReturn("graph.ttl");
         when(file2.getOriginalFilename()).thenReturn("graph.ttl");
-        when(mockDatabasePort.listGraphUris(datasetName)).thenThrow(new RuntimeException("dataset does not exist"));
+        when(mockDatabasePort.listGraphUris(datasetName))
+                .thenThrow(new RuntimeException("dataset does not exist"));
 
         // Act
         graphBulkImportService.importGraphs(datasetName, List.of(file1, file2), null);
 
         // Assert
         var captor = ArgumentCaptor.forClass(GraphIdentifier.class);
-        verify(mockReplaceGraphUseCase, times(2)).replaceGraph(captor.capture(), any(MultipartFile.class));
+        verify(mockReplaceGraphUseCase, times(2))
+                .replaceGraph(captor.capture(), any(MultipartFile.class));
 
-        assertThat(captor.getAllValues()).extracting(GraphIdentifier::getGraphUri).containsExactly(
-                  RDFA.GRAPH_URI + "graph",
-                  RDFA.GRAPH_URI + "graph_1"
-                                                                                                  );
+        assertThat(captor.getAllValues())
+                .extracting(GraphIdentifier::getGraphUri)
+                .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
     }
 }
-

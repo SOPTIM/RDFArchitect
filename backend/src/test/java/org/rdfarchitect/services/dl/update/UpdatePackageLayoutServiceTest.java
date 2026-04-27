@@ -38,51 +38,62 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @Test
     void createPackageLayoutData_emptyGraph_createsDiagram() {
-        //Arrange
+        // Arrange
         addGraphFromFile("empty_graph.ttl");
 
-        //Act
-        var packageDTO = PackageDTO.builder()
-                                   .uuid(PACKAGE_A_UUID)
-                                   .label(PACKAGE_A_LABEL)
-                                   .prefix("ex")
-                                   .build();
+        // Act
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("ex")
+                        .build();
         service.createPackageLayoutData(graphIdentifier, packageDTO, PACKAGE_A_UUID);
 
-        //Assert
+        // Assert
         assertDiagram(PACKAGE_A_UUID, PACKAGE_A_LABEL);
     }
 
     @Test
     void deletePackageLayoutData_fullGraph_deletesSpecificPackageLayoutData() {
-        //Arrange
+        // Arrange
         addGraphFromFile("association.ttl");
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
-        var diagramAobjectsList = diagramLayout.getDiagramLayoutModel()
-                                               .listSubjectsWithProperty(
-                                                         DL.belongsToDiagram,
-                                                         ResourceFactory.createResource(new MRID(PACKAGE_A_UUID).getFullMRID())
-                                                                        )
-                                               .toList();
-        var doA = diagramAobjectsList.stream()
-                                     .filter(dobj -> dobj.hasProperty(
-                                               DL.belongsToIdentifiedObject,
-                                               ResourceFactory.createResource(new MRID(CLASS_A_UUID).getFullMRID())))
-                                     .findFirst()
-                                     .orElse(null);
-        var doB = diagramAobjectsList.stream()
-                                     .filter(dobj -> dobj.hasProperty(
-                                               DL.belongsToIdentifiedObject,
-                                               ResourceFactory.createResource(new MRID(CLASS_B_UUID).getFullMRID())))
-                                     .findFirst()
-                                     .orElse(null);
+        var diagramAobjectsList =
+                diagramLayout
+                        .getDiagramLayoutModel()
+                        .listSubjectsWithProperty(
+                                DL.belongsToDiagram,
+                                ResourceFactory.createResource(
+                                        new MRID(PACKAGE_A_UUID).getFullMRID()))
+                        .toList();
+        var doA =
+                diagramAobjectsList.stream()
+                        .filter(
+                                dobj ->
+                                        dobj.hasProperty(
+                                                DL.belongsToIdentifiedObject,
+                                                ResourceFactory.createResource(
+                                                        new MRID(CLASS_A_UUID).getFullMRID())))
+                        .findFirst()
+                        .orElse(null);
+        var doB =
+                diagramAobjectsList.stream()
+                        .filter(
+                                dobj ->
+                                        dobj.hasProperty(
+                                                DL.belongsToIdentifiedObject,
+                                                ResourceFactory.createResource(
+                                                        new MRID(CLASS_B_UUID).getFullMRID())))
+                        .findFirst()
+                        .orElse(null);
         var doAmRID = new MRID(DLUtils.extractUUIDFromMRID(doA.getURI()));
         var doBmRID = new MRID(DLUtils.extractUUIDFromMRID(doB.getURI()));
 
-        //Act
+        // Act
         service.deletePackageLayoutData(graphIdentifier, PACKAGE_A_UUID);
 
-        //Assert
+        // Assert
         assertDiagramDoesNotExist(PACKAGE_A_UUID);
         assertSpecificDiagramObjectDoesNotExist(CLASS_A_UUID, PACKAGE_A_UUID);
         assertSpecificDiagramObjectDoesNotExist(CLASS_B_UUID, PACKAGE_A_UUID);
@@ -95,14 +106,14 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @Test
     void replaceDiagram_diagramExists_replacesDiagram() {
-        //Arrange
+        // Arrange
         addGraphFromFile("package.ttl");
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
 
-        //Act
+        // Act
         service.replaceDiagram(graphIdentifier, PACKAGE_A_UUID, "newDiagramLabel");
 
-        //Assert
+        // Assert
         assertDiagram(PACKAGE_A_UUID, "newDiagramLabel");
     }
 }

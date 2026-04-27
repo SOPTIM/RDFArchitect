@@ -19,7 +19,9 @@ package org.rdfarchitect.api.controller.datasets.graphs.migration;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.migration.DefaultValueView;
 import org.rdfarchitect.services.schemamigration.defaults.GetDefaultValueViewsUseCase;
 import org.rdfarchitect.services.schemamigration.defaults.SubmitDefaultValuesUseCase;
@@ -45,41 +47,45 @@ public class DefaultValuesRESTController {
     private final SubmitDefaultValuesUseCase submitDefaultValuesUseCase;
 
     @Operation(
-              summary = "get default values overview",
-              description = "Provides an overview of attributes that require default values to be set for migration.",
-              tags = {"migration"}
-    )
+            summary = "get default values overview",
+            description =
+                    "Provides an overview of attributes that require default values to be set for migration.",
+            tags = {"migration"})
     @GetMapping
     public List<DefaultValueView> getDefaultValuesViews(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL) {
-        logger.info("Received GET request: \"/api/migrations/default-values\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL) {
+        logger.info(
+                "Received GET request: \"/api/migrations/default-values\" from \"{}\".", originURL);
 
         var result = getDefaultValueViewsUseCase.getDefaultValueViews();
 
-        logger.info("Sending response to GET request: \"/api/migrations/default-values\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/migrations/default-values\" from \"{}\".",
+                originURL);
         return result;
     }
 
     @Operation(
-              summary = "submit default values",
-              description = "Sets the default values for attributes as provided by the user.",
-              tags = {"migration"}
-    )
+            summary = "submit default values",
+            description = "Sets the default values for attributes as provided by the user.",
+            tags = {"migration"})
     @PostMapping
     public void submitDefaultValues(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The updated default values for attributes.")
-              @RequestBody
-              List<DefaultValueView> defaultValues) {
-        logger.info("Received POST request: \"/api/migrations/default-values\" from \"{}\".", originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The updated default values for attributes.") @RequestBody
+                    List<DefaultValueView> defaultValues) {
+        logger.info(
+                "Received POST request: \"/api/migrations/default-values\" from \"{}\".",
+                originURL);
 
         submitDefaultValuesUseCase.submitDefaultValues(defaultValues);
 
-        logger.info("Sending response to POST request: \"/api/migrations/default-values\" from \"{}\".", originURL);
+        logger.info(
+                "Sending response to POST request: \"/api/migrations/default-values\" from \"{}\".",
+                originURL);
     }
-
 }

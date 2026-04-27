@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 
 import java.util.UUID;
 
@@ -28,8 +28,9 @@ public interface GetClassesReferencingThisClassUseCase {
      * Get all classes referencing this class.
      *
      * @param graphIdentifier the graph identifier
-     * @param classUUID       the UUID of the class
+     * @param classUUID the UUID of the class
      * @return a ClassRelationsDTO containing the classes referencing this class
      */
-    ClassRelationsDTO getClassesReferencingThisClass(GraphIdentifier graphIdentifier, UUID classUUID);
+    ClassRelationsDTO getClassesReferencingThisClass(
+            GraphIdentifier graphIdentifier, UUID classUUID);
 }

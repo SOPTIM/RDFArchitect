@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.data.dto;
 
 import lombok.Builder;
 import lombok.Data;
+
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsDefault;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsFixed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
@@ -45,7 +46,8 @@ public class CIMAttribute {
 
     private CIMSMultiplicity multiplicity;
 
-    //no difference between dataType and range so we only use dataType since it's a more fitting name for an attribute
+    // no difference between dataType and range so we only use dataType since it's a more fitting
+    // name for an attribute
     private CIMSDataType dataType;
 
     private RDFSComment comment;

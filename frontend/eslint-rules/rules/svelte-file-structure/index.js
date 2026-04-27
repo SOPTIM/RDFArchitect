@@ -35,7 +35,7 @@ const svelteFileStructureRule = {
         schema: [],
     },
     create(context) {
-        const filename = context.getFilename();
+        const filename = context.filename;
         if (!filename.endsWith(".svelte")) return {};
 
         const expectedCopyright = getCopyrightNotice();
@@ -43,7 +43,7 @@ const svelteFileStructureRule = {
 
         return {
             Program(node) {
-                const sourceCode = context.getSourceCode();
+                const sourceCode = context.sourceCode;
                 const text = sourceCode.getText();
                 const leading = findLeadingHtmlComment(text);
 

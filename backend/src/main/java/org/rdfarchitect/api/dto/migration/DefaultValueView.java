@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.migration;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;

@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes.associations;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -39,12 +40,11 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
     private final AssociationPairMapper associationPairMapper;
     private final ChangeLogUseCase changeLogUseCase;
 
-    public record AssociationUUIDs(UUID fromUUID, UUID toUUID) {
-
-    }
+    public record AssociationUUIDs(UUID fromUUID, UUID toUUID) {}
 
     @Override
-    public AssociationUUIDs createAssociation(GraphIdentifier graphIdentifier, AssociationPairDTO associationPair) {
+    public AssociationUUIDs createAssociation(
+            GraphIdentifier graphIdentifier, AssociationPairDTO associationPair) {
         var cimAssociationPair = associationPairMapper.toCIMObject(associationPair);
         var from = cimAssociationPair.getFrom();
         var to = cimAssociationPair.getTo();
@@ -54,34 +54,64 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         if (to.getUuid() == null) {
             to.setUuid(UUID.randomUUID());
         }
-        var update = CIMUpdates.insertAssociation(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAssociationPair);
+        var update =
+                CIMUpdates.insertAssociation(
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        graphIdentifier.getGraphUri(),
+                        cimAssociationPair);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Created association from " + from.getUuid() + " to " + to.getUuid(), graph.getLastDelta()));
+        InMemorySparqlExecutor.executeSingleUpdate(
+                graph, update.build(), graphIdentifier.getGraphUri());
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry(
+                        "Created association from " + from.getUuid() + " to " + to.getUuid(),
+                        graph.getLastDelta()));
         return new AssociationUUIDs(from.getUuid(), to.getUuid());
     }
 
     @Override
-    public AssociationUUIDs replaceAssociation(GraphIdentifier graphIdentifier, AssociationPairDTO associationPair) {
+    public AssociationUUIDs replaceAssociation(
+            GraphIdentifier graphIdentifier, AssociationPairDTO associationPair) {
         var cimAssociationPair = associationPairMapper.toCIMObject(associationPair);
-        var update = CIMUpdates.replaceAssociation(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), cimAssociationPair);
+        var update =
+                CIMUpdates.replaceAssociation(
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        graphIdentifier.getGraphUri(),
+                        cimAssociationPair);
 
         var fromUUID = cimAssociationPair.getFrom().getUuid();
         var toUUID = cimAssociationPair.getTo().getUuid();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
-        changeLogUseCase.recordChange(graphIdentifier, new ChangeLogEntry("Replaced association from " + fromUUID + " to " + toUUID, graph.getLastDelta()));
+        InMemorySparqlExecutor.executeSingleUpdate(
+                graph, update.build(), graphIdentifier.getGraphUri());
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry(
+                        "Replaced association from " + fromUUID + " to " + toUUID,
+                        graph.getLastDelta()));
         return new AssociationUUIDs(fromUUID, toUUID);
     }
 
     @Override
-    public void replaceAllAssociations(GraphIdentifier graphIdentifier, String classUUID, List<AssociationPairDTO> associationPairList) {
+    public void replaceAllAssociations(
+            GraphIdentifier graphIdentifier,
+            String classUUID,
+            List<AssociationPairDTO> associationPairList) {
         var cimAssociationPairs = associationPairMapper.toCIMObjectList(associationPairList);
-        var update = CIMUpdates.replaceAssociations(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()), graphIdentifier.getGraphUri(), classUUID, cimAssociationPairs);
+        var update =
+                CIMUpdates.replaceAssociations(
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        graphIdentifier.getGraphUri(),
+                        classUUID,
+                        cimAssociationPairs);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(graph, update.build(), graphIdentifier.getGraphUri());
-        changeLogUseCase.recordChange(graphIdentifier,
-                                      new ChangeLogEntry("Replaced all associations for class " + classUUID, graph.getLastDelta()));
+        InMemorySparqlExecutor.executeSingleUpdate(
+                graph, update.build(), graphIdentifier.getGraphUri());
+        changeLogUseCase.recordChange(
+                graphIdentifier,
+                new ChangeLogEntry(
+                        "Replaced all associations for class " + classUUID, graph.getLastDelta()));
     }
 }

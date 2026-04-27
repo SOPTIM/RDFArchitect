@@ -19,9 +19,7 @@ package org.rdfarchitect.exception.database;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Exception is thrown when snapshot operations fail.
- */
+/** Exception is thrown when snapshot operations fail. */
 public class SnapshotException extends DatabaseException {
 
     public SnapshotException() {

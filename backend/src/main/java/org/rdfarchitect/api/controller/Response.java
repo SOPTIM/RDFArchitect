@@ -23,5 +23,4 @@ import lombok.experimental.UtilityClass;
 public class Response {
 
     public final String SUCCESS = "success";
-
 }

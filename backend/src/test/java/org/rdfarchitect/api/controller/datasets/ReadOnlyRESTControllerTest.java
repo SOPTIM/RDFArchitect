@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.api.controller.datasets;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
@@ -24,9 +27,6 @@ import org.rdfarchitect.services.readonly.DisableEditingUseCase;
 import org.rdfarchitect.services.readonly.EnableEditingUseCase;
 import org.rdfarchitect.services.readonly.IsReadOnlyUseCase;
 import org.springframework.http.HttpHeaders;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class ReadOnlyRESTControllerTest {
 
@@ -40,7 +40,9 @@ class ReadOnlyRESTControllerTest {
         isReadOnlyUseCase = mock(IsReadOnlyUseCase.class);
         enableEditingUseCase = mock(EnableEditingUseCase.class);
         disableEditingUseCase = mock(DisableEditingUseCase.class);
-        controller = new ReadOnlyRESTController(isReadOnlyUseCase, enableEditingUseCase, disableEditingUseCase);
+        controller =
+                new ReadOnlyRESTController(
+                        isReadOnlyUseCase, enableEditingUseCase, disableEditingUseCase);
     }
 
     @Test

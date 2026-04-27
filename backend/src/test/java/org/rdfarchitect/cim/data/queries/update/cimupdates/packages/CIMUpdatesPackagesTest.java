@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.cim.data.queries.update.cimupdates.packages;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -26,16 +29,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
 
@@ -43,22 +43,23 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
     private static final String PACKAGE_AND_CLASS_FILE_PATH = "packages/package_and_class.ttl";
 
     private static CIMPackage packageRequired;
-    /**
-     * New package but with all optionals, meaning comment
-     */
+
+    /** New package but with all optionals, meaning comment */
     private static CIMPackage packageOptional;
 
     @BeforeAll
     static void setUpPackageEnvironment() {
-        CIMPackage basePackage = CIMPackage.builder()
-                                           .uuid(MY_UUID)
-                                           .uri(new URI(PACKAGE_URI))
-                                           .label(new RDFSLabel(PACKAGE_LABEL, "en"))
-                                           .build();
+        CIMPackage basePackage =
+                CIMPackage.builder()
+                        .uuid(MY_UUID)
+                        .uri(new URI(PACKAGE_URI))
+                        .label(new RDFSLabel(PACKAGE_LABEL, "en"))
+                        .build();
         packageRequired = basePackage.toBuilder().build();
-        packageOptional = basePackage.toBuilder()
-                                     .comment(new RDFSComment(COMMENT, new URI(COMMENT_FORMAT)))
-                                     .build();
+        packageOptional =
+                basePackage.toBuilder()
+                        .comment(new RDFSComment(COMMENT, new URI(COMMENT_FORMAT)))
+                        .build();
     }
 
     @Nested
@@ -67,33 +68,63 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Replaces package with new package and updates belongsToCategory information")
         void replacePackage_packageAndClassExists_replacesPackage() {
-            //Arrange
+            // Arrange
             addGraphFromFile(PACKAGE_AND_CLASS_FILE_PATH);
-            var otherPackage = packageRequired.toBuilder()
-                                              .uri(new URI(OTHER_PACKAGE_URI))
-                                              .label(new RDFSLabel(OTHER_PACKAGE_LABEL, "en"))
-                                              .build();
+            var otherPackage =
+                    packageRequired.toBuilder()
+                            .uri(new URI(OTHER_PACKAGE_URI))
+                            .label(new RDFSLabel(OTHER_PACKAGE_LABEL, "en"))
+                            .build();
 
-            //Act
-            executeWriteTransaction(graph ->
-                                              CIMUpdates.replacePackage(
-                                                        graph,
-                                                        databasePort.getPrefixMapping(DATASET_NAME),
-                                                        otherPackage
-                                                                       )
-                                   );
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.replacePackage(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    otherPackage));
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                //isFalse
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDF.type.asNode(), CIMS.classCategory.asNode())).isFalse();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(PACKAGE_LABEL, "en"))).isFalse();
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_CLASS_URI), CIMS.belongsToCategory.asNode(), NodeFactory.createURI(PACKAGE_URI))).isFalse();
-                //isTrue
-                assertThat(testGraph.contains(NodeFactory.createURI(OTHER_PACKAGE_URI), RDF.type.asNode(), CIMS.classCategory.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(OTHER_PACKAGE_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(OTHER_PACKAGE_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(EXISTING_CLASS_URI), CIMS.belongsToCategory.asNode(), NodeFactory.createURI(OTHER_PACKAGE_URI))).isTrue();
+                // isFalse
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isFalse();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                        .isFalse();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_CLASS_URI),
+                                        CIMS.belongsToCategory.asNode(),
+                                        NodeFactory.createURI(PACKAGE_URI)))
+                        .isFalse();
+                // isTrue
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(OTHER_PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(OTHER_PACKAGE_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(OTHER_PACKAGE_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_CLASS_URI),
+                                        CIMS.belongsToCategory.asNode(),
+                                        NodeFactory.createURI(OTHER_PACKAGE_URI)))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }
@@ -106,22 +137,31 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Inserts package without comment into empty graph")
         void insertPackage_emptyGraph_addsPackageRequired() {
-            //Arrange
+            // Arrange
 
-            //Act
-            executeWriteTransaction(graph ->
-                                              CIMUpdates.insertPackage(
-                                                        graph,
-                                                        databasePort.getPrefixMapping(DATASET_NAME),
-                                                        packageRequired
-                                                                      )
-                                   );
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.insertPackage(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    packageRequired));
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDF.type.asNode(), CIMS.classCategory.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(PACKAGE_LABEL, "en"))).isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }
@@ -130,67 +170,93 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Inserts package with comment into empty graph")
         void insertPackage_emptyGraph_addsPackageOptional() {
-            //Arrange
+            // Arrange
 
-            //Act
-            executeWriteTransaction(graph ->
-                                              CIMUpdates.insertPackage(
-                                                        graph,
-                                                        databasePort.getPrefixMapping(DATASET_NAME),
-                                                        packageOptional
-                                                                      )
-                                   );
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.insertPackage(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    packageOptional));
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDF.type.asNode(), CIMS.classCategory.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(PACKAGE_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.comment.asNode(), new RDFSComment(COMMENT, new URI(COMMENT_FORMAT)).asTypedLiteral()
-                                                                                                                                                          .asNode())).isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.comment.asNode(),
+                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                .asTypedLiteral()
+                                                .asNode()))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }
         }
 
         @Test
-        @DisplayName("Throws exception if necessary arguments for the new enum entry have not been provided")
+        @DisplayName(
+                "Throws exception if necessary arguments for the new enum entry have not been provided")
         void insertPackage_invalidNewPackage_throwsException() {
-            //Arrange
-            CIMPackage newPackage = CIMPackage.builder()
-                                              .label(new RDFSLabel("invalid", "en"))
-                                              .build();
+            // Arrange
+            CIMPackage newPackage =
+                    CIMPackage.builder().label(new RDFSLabel("invalid", "en")).build();
 
-            //Act + Assert
-            assertThrows(Exception.class, () -> executeWriteTransaction(graph ->
-                                                                                  CIMUpdates.insertPackage(
-                                                                                            graph,
-                                                                                            databasePort.getPrefixMapping(DATASET_NAME),
-                                                                                            newPackage
-                                                                                                          )
-                                                                       ));
+            // Act + Assert
+            assertThrows(
+                    Exception.class,
+                    () ->
+                            executeWriteTransaction(
+                                    graph ->
+                                            CIMUpdates.insertPackage(
+                                                    graph,
+                                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                                    newPackage)));
         }
 
         @Test
         @DisplayName("Insert does nothing if same package without comment exists")
         void insertPackage_packageAlreadyExistsWithoutComment_doesNothing() {
-            //Arrange
+            // Arrange
             addGraphFromFile(PACKAGE_FILE_PATH);
 
-            //Act
-            executeWriteTransaction(graph ->
-                                              CIMUpdates.insertPackage(
-                                                        graph,
-                                                        databasePort.getPrefixMapping(DATASET_NAME),
-                                                        packageRequired
-                                                                      )
-                                   );
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.insertPackage(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    packageRequired));
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDF.type.asNode(), CIMS.classCategory.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(PACKAGE_LABEL, "en"))).isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }
@@ -199,25 +265,40 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Adds comment to package if package already exists but without comment")
         void insertPackage_packageAlreadyExistsWithoutCommentAddWithComment_addsComment() {
-            //Arrange
+            // Arrange
             addGraphFromFile(PACKAGE_FILE_PATH);
 
-            //Act
-            executeWriteTransaction(graph ->
-                                              CIMUpdates.insertPackage(
-                                                        graph,
-                                                        databasePort.getPrefixMapping(DATASET_NAME),
-                                                        packageOptional
-                                                                      )
-                                   );
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.insertPackage(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    packageOptional));
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDF.type.asNode(), CIMS.classCategory.asNode())).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.label.asNode(), NodeFactory.createLiteralLang(PACKAGE_LABEL, "en"))).isTrue();
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDFS.comment.asNode(), new RDFSComment(COMMENT, new URI(COMMENT_FORMAT)).asTypedLiteral()
-                                                                                                                                                          .asNode())).isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.label.asNode(),
+                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                        .isTrue();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDFS.comment.asNode(),
+                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                .asTypedLiteral()
+                                                .asNode()))
+                        .isTrue();
             } finally {
                 testGraph.end();
             }
@@ -230,22 +311,26 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
         @Test
         @DisplayName("Deletes package from graph")
         void deletePackage_packageExists_deletesPackage() {
-            //Arrange
+            // Arrange
             addGraphFromFile(PACKAGE_FILE_PATH);
 
-            //Act
-            executeWriteTransaction(graph ->
-                                              CIMUpdates.deletePackage(
-                                                        graph,
-                                                        databasePort.getPrefixMapping(DATASET_NAME),
-                                                        packageRequired.getUuid().toString()
-                                                                      )
-                                   );
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.deletePackage(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    packageRequired.getUuid().toString()));
 
-            //Assert
+            // Assert
             try {
                 testGraph.begin(TxnType.READ);
-                assertThat(testGraph.contains(NodeFactory.createURI(PACKAGE_URI), RDF.type.asNode(), Node.ANY)).isFalse();
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        Node.ANY))
+                        .isFalse();
             } finally {
                 testGraph.end();
             }

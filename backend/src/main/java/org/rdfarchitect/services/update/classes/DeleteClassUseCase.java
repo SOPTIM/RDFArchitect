@@ -19,16 +19,14 @@ package org.rdfarchitect.services.update.classes;
 
 import org.rdfarchitect.database.GraphIdentifier;
 
-/**
- * Use case for deleting a class from the graph.
- */
+/** Use case for deleting a class from the graph. */
 public interface DeleteClassUseCase {
 
     /**
      * Deletes the class with the given name from the graph.
      *
      * @param graphIdentifier Graph URI and dataset name of the class to be deleted
-     * @param classUUID       UUID of the class to be deleted
+     * @param classUUID UUID of the class to be deleted
      */
     void deleteClass(GraphIdentifier graphIdentifier, String classUUID);
 }

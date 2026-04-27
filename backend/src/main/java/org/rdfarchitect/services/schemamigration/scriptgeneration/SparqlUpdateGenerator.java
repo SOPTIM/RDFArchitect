@@ -18,12 +18,12 @@
 package org.rdfarchitect.services.schemamigration.scriptgeneration;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.datatypes.TypeMapper;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.context.MigrationSessionStore;
-import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
@@ -54,7 +54,8 @@ public class SparqlUpdateGenerator {
         return pss.toString();
     }
 
-    public String generateAddAttributeUpdate(SemanticAttributeChange attributeChange, String classIri) {
+    public String generateAddAttributeUpdate(
+            SemanticAttributeChange attributeChange, String classIri) {
         if (attributeChange.isOptional() && !attributeChange.isForceDefaultValue()) {
             return "";
         }
@@ -69,12 +70,14 @@ public class SparqlUpdateGenerator {
         return result.toString();
     }
 
-    public String generateAddAttributeToSingleClassUpdate(SemanticAttributeChange attributeChange, String classIri) {
+    public String generateAddAttributeToSingleClassUpdate(
+            SemanticAttributeChange attributeChange, String classIri) {
         if (attributeChange.isOptional() && !attributeChange.isForceDefaultValue()) {
             return "";
         }
 
-        var xsd = TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
+        var xsd =
+                TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
         var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-added");
         pss.setIri("domain", classIri);
         pss.setIri("attribute", attributeChange.getIri());
@@ -88,7 +91,8 @@ public class SparqlUpdateGenerator {
         return pss.toString();
     }
 
-    public String generateDeletePropertyFromSingleClassUpdate(SemanticResourceChange propertyChange, String classIri) {
+    public String generateDeletePropertyFromSingleClassUpdate(
+            SemanticResourceChange propertyChange, String classIri) {
         var pss = SparqlTemplateLoader.loadTemplate("migration/property-deleted");
         pss.setIri("property", propertyChange.getIri());
         pss.setIri("domain", classIri);
@@ -110,7 +114,8 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateDatatypeChangedUpdate(SemanticAttributeChange attributeChange) {
-        var xsd = TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
+        var xsd =
+                TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
         var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-datatype-changed");
         pss.setIri("attribute", attributeChange.getIri());
         pss.setLiteral("defaultValue", attributeChange.getDefaultValue(), xsd);
@@ -119,7 +124,8 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateFixedValueUpdate(SemanticAttributeChange attributeChange) {
-        var xsd = TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
+        var xsd =
+                TypeMapper.getInstance().getSafeTypeByName(attributeChange.getPrimitiveDataType());
         var pss = SparqlTemplateLoader.loadTemplate("migration/attribute-fixed-value-changed");
         pss.setIri("attribute", attributeChange.getIri());
         pss.setLiteral("newValue", attributeChange.getDefaultValue(), xsd);
@@ -141,9 +147,9 @@ public class SparqlUpdateGenerator {
     }
 
     public String generateAddAssociationUpdate(SemanticAssociationChange associationChange) {
-        if (!associationChange.isAssociationUsed() ||
-                associationChange.getMapping() == null ||
-                associationChange.getMapping().isBlank()) {
+        if (!associationChange.isAssociationUsed()
+                || associationChange.getMapping() == null
+                || associationChange.getMapping().isBlank()) {
             return "";
         }
 
@@ -158,10 +164,11 @@ public class SparqlUpdateGenerator {
         return updateString.replace("<mapping>", associationChange.getMapping());
     }
 
-    public String generateAddAssociationToSingleClassUpdate(SemanticAssociationChange associationChange, String classIri) {
-        if (!associationChange.isAssociationUsed() ||
-                associationChange.getMapping() == null ||
-                associationChange.getMapping().isBlank()) {
+    public String generateAddAssociationToSingleClassUpdate(
+            SemanticAssociationChange associationChange, String classIri) {
+        if (!associationChange.isAssociationUsed()
+                || associationChange.getMapping() == null
+                || associationChange.getMapping().isBlank()) {
             return "";
         }
 
@@ -179,8 +186,10 @@ public class SparqlUpdateGenerator {
         return pss.toString();
     }
 
-    public String generateAssociationTargetChangeUpdate(SemanticAssociationChange associationChange) {
-        return generateDeletePropertyUpdate(associationChange) + generateAddAssociationUpdate(associationChange);
+    public String generateAssociationTargetChangeUpdate(
+            SemanticAssociationChange associationChange) {
+        return generateDeletePropertyUpdate(associationChange)
+                + generateAddAssociationUpdate(associationChange);
     }
 
     private List<String> getClassHierarchy(String classIri) {
@@ -192,4 +201,3 @@ public class SparqlUpdateGenerator {
         return subclasses.stream().map(Resource::getURI).toList();
     }
 }
-

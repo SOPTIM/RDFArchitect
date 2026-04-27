@@ -41,70 +41,73 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     @Test
     void createClassLayoutData_diagramExists_createsClassLayoutData() {
-        //Arrange
+        // Arrange
         addGraphFromFile("package.ttl");
 
-        //Act
-        var packageDTO = PackageDTO.builder()
-                                   .uuid(PACKAGE_A_UUID)
-                                   .label(PACKAGE_A_LABEL)
-                                   .prefix("ex")
-                                   .build();
+        // Act
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("ex")
+                        .build();
         service.createClassLayoutData(graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID);
 
-        //Assert
+        // Assert
         assertInitialClassLayoutData(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
     }
 
     @Test
     void updateClassPositions_fullGraph_repositionsClasses() {
-        //Arrange
+        // Arrange
         addGraphFromFile("full_graph.ttl");
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
 
-        //Act
+        // Act
         var classAPositionDTO = new ClassPositionDTO();
         classAPositionDTO.setClassUUID(CLASS_A_UUID);
         classAPositionDTO.setXPosition(1.0F);
         classAPositionDTO.setYPosition(1.0F);
         service.updateClassPositions(graphIdentifier, PACKAGE_A_UUID, List.of(classAPositionDTO));
 
-        //Assert
+        // Assert
         assertDiagramObjectCoordinates(CLASS_A_UUID, 1.0F, 1.0F);
     }
 
     @Test
     void updateDiagramObjectName_classExists_updatesDiagramObjectName() {
-        //Arrange
+        // Arrange
         addGraphFromFile("package_and_class.ttl");
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
 
-        //Act
+        // Act
         service.updateDiagramObjectName(graphIdentifier, CLASS_A_UUID, "newClassLabel");
 
-        //Assert
+        // Assert
         assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, "newClassLabel");
     }
 
     @Test
     void deleteClassLayoutData_classExists_deletesClassLayoutData() {
-        //Arrange
+        // Arrange
         addGraphFromFile("association.ttl");
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
-        var diagramObjects = diagramLayout.getDiagramLayoutModel()
-                                          .listSubjectsWithProperty(
-                                                    DL.belongsToIdentifiedObject,
-                                                    ResourceFactory.createResource(new MRID(CLASS_A_UUID).getFullMRID())
-                                                                   );
+        var diagramObjects =
+                diagramLayout
+                        .getDiagramLayoutModel()
+                        .listSubjectsWithProperty(
+                                DL.belongsToIdentifiedObject,
+                                ResourceFactory.createResource(
+                                        new MRID(CLASS_A_UUID).getFullMRID()));
         var do1 = diagramObjects.next();
         var do2 = diagramObjects.next();
         var do1mRID = new MRID(DLUtils.extractUUIDFromMRID(do1.getURI()));
         var do2mRID = new MRID(DLUtils.extractUUIDFromMRID(do2.getURI()));
 
-        //Act
+        // Act
         service.deleteClassLayoutData(graphIdentifier, CLASS_A_UUID);
 
-        //Assert
+        // Assert
         assertClassDiagramObjectsDoNotExist(CLASS_A_UUID);
         assertDiagramObjectPointDoesNotExist(do1mRID);
         assertDiagramObjectPointDoesNotExist(do2mRID);

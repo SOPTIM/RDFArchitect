@@ -80,30 +80,38 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
     @Override
     public void execute() throws DataAccessException {
         if (update == null) {
-            throw new UpdateException("Update is null. Execution against endpoint " + this.endpoint + " skipped.");
+            throw new UpdateException(
+                    "Update is null. Execution against endpoint " + this.endpoint + " skipped.");
         }
         String hex = Integer.toHexString(this.update.hashCode());
-        logger.debug("Execute update@{} against endpoint \"{}\":\n{}",
-                     hex,
-                     this.endpoint,
-                     this.update);
+        logger.debug(
+                "Execute update@{} against endpoint \"{}\":\n{}", hex, this.endpoint, this.update);
         try {
-            UpdateExecutionHTTPBuilder
-                      .create()
-                      .endpoint(this.endpoint)
-                      .update(this.update)
-                      .build()
-                      .execute();
+            UpdateExecutionHTTPBuilder.create()
+                    .endpoint(this.endpoint)
+                    .update(this.update)
+                    .build()
+                    .execute();
         } catch (QueryExceptionHTTP e) {
-            throw new DataAccessException("Failed to execute update against endpoint " + this.endpoint + " due to " +
-                                                    "an incorrect SPARQL query or internal server error.", e);
+            throw new DataAccessException(
+                    "Failed to execute update against endpoint "
+                            + this.endpoint
+                            + " due to "
+                            + "an incorrect SPARQL query or internal server error.",
+                    e);
         } catch (HttpException e) {
-            throw new DataAccessException("Failed to execute update against endpoint " + this.endpoint + " due to " +
-                                                    "an HTTP communication error.", e);
+            throw new DataAccessException(
+                    "Failed to execute update against endpoint "
+                            + this.endpoint
+                            + " due to "
+                            + "an HTTP communication error.",
+                    e);
         } catch (JenaException e) {
-            throw new DataAccessException("Failed to execute update against endpoint" + this.endpoint + ".", e);
+            throw new DataAccessException(
+                    "Failed to execute update against endpoint" + this.endpoint + ".", e);
         }
-        logger.debug("Successfully executed update@{} against endpoint: \"{}\"", hex, this.endpoint);
+        logger.debug(
+                "Successfully executed update@{} against endpoint: \"{}\"", hex, this.endpoint);
     }
 
     @Override
@@ -111,19 +119,27 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
         if (!databaseAdminProtocol.listDatasets().contains(this.datasetName)) {
             databaseAdminProtocol.createDataset(this.datasetName);
         }
-        //insert graph into dataset/database
+        // insert graph into dataset/database
         String graphName = graphSource.graphName();
         Graph graph = graphSource.graph();
         var newGraphPrefixMapping = graph.getPrefixMapping().getNsPrefixMap();
-        var currentPrefixMapping = new HttpSelectCommandImpl()
-                  .setEndpoint(this.url)
-                  .setDatasetName(this.datasetName)
-                  .getCurrentPrefixMapping()
-                  .getNsPrefixMap();
+        var currentPrefixMapping =
+                new HttpSelectCommandImpl()
+                        .setEndpoint(this.url)
+                        .setDatasetName(this.datasetName)
+                        .getCurrentPrefixMapping()
+                        .getNsPrefixMap();
         for (var newPrefix : newGraphPrefixMapping.entrySet()) {
             if (currentPrefixMapping.containsKey(newPrefix.getKey())
-                      && !currentPrefixMapping.get(newPrefix.getKey()).equals(newPrefix.getValue())) {
-                throw new DataAccessException("Graph prefix '" + newPrefix.getKey() + "' already exists in combination with uri '" + newPrefix.getValue() + "' in dataset: '" + datasetName + "'.");
+                    && !currentPrefixMapping.get(newPrefix.getKey()).equals(newPrefix.getValue())) {
+                throw new DataAccessException(
+                        "Graph prefix '"
+                                + newPrefix.getKey()
+                                + "' already exists in combination with uri '"
+                                + newPrefix.getValue()
+                                + "' in dataset: '"
+                                + datasetName
+                                + "'.");
             }
         }
         if (graphName == null || graphName.isEmpty()) {
@@ -153,51 +169,81 @@ public class HttpUpdateCommandImpl implements DatabaseUpdateCommand {
 
     @Override
     public void addPrefix(String prefix, String uri) {
-        @SuppressWarnings("java:S2095")//warning doesn't make sense, since it's not closable
+        @SuppressWarnings("java:S2095") // warning doesn't make sense, since it's not closable
         HttpClient client = HttpClient.newHttpClient();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                                         .uri(URI.create(endpoint + "/prefixes-rw?prefix=" + prefix + "&uri=" + uri))
-                                         .POST(HttpRequest.BodyPublishers.ofString(""))
-                                         .build();
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(endpoint + "/prefixes-rw?prefix=" + prefix + "&uri=" + uri))
+                        .POST(HttpRequest.BodyPublishers.ofString(""))
+                        .build();
 
         try {
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == HttpStatus.BAD_REQUEST.value()) {
                 throw new DataAccessException(response.body());
             } else if (response.statusCode() != HttpStatus.OK.value()) {
-                throw new DataAccessException("Failed to update prefixes at endpoint \"" + this.endpoint + "/prefixes-rw\"" + ".");
+                throw new DataAccessException(
+                        "Failed to update prefixes at endpoint \""
+                                + this.endpoint
+                                + "/prefixes-rw\""
+                                + ".");
             }
         } catch (IOException e) {
-            throw new DataAccessException("I/O-Error! Failed to access prefixes from endpoint \"" + this.endpoint + "/prefixes\"" + ".", e);
+            throw new DataAccessException(
+                    "I/O-Error! Failed to access prefixes from endpoint \""
+                            + this.endpoint
+                            + "/prefixes\""
+                            + ".",
+                    e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DataAccessException("Thread interrupted! Failed to access prefixes from endpoint \"" + this.endpoint + "/prefixes\"" + ".", e);
+            throw new DataAccessException(
+                    "Thread interrupted! Failed to access prefixes from endpoint \""
+                            + this.endpoint
+                            + "/prefixes\""
+                            + ".",
+                    e);
         }
     }
 
     @Override
     public void deletePrefix(String prefix) {
-        @SuppressWarnings("java:S2095")//warning doesn't make sense, since it's not closable
+        @SuppressWarnings("java:S2095") // warning doesn't make sense, since it's not closable
         HttpClient client = HttpClient.newHttpClient();
 
-        HttpRequest request = HttpRequest.newBuilder()
-                                         .uri(URI.create(endpoint + "/prefixes-rw?prefix=" + prefix))
-                                         .DELETE()
-                                         .build();
+        HttpRequest request =
+                HttpRequest.newBuilder()
+                        .uri(URI.create(endpoint + "/prefixes-rw?prefix=" + prefix))
+                        .DELETE()
+                        .build();
 
         try {
             var response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() == HttpStatus.BAD_REQUEST.value()) {
                 throw new DataAccessException(response.body());
             } else if (response.statusCode() != HttpStatus.OK.value()) {
-                throw new DataAccessException("Failed to delete prefix at endpoint \"" + this.endpoint + "/prefixes-rw\"" + ".");
+                throw new DataAccessException(
+                        "Failed to delete prefix at endpoint \""
+                                + this.endpoint
+                                + "/prefixes-rw\""
+                                + ".");
             }
         } catch (IOException e) {
-            throw new DataAccessException("I/O-Error! Failed to access prefixes from endpoint \"" + this.endpoint + "/prefixes\"" + ".", e);
+            throw new DataAccessException(
+                    "I/O-Error! Failed to access prefixes from endpoint \""
+                            + this.endpoint
+                            + "/prefixes\""
+                            + ".",
+                    e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new DataAccessException("Thread interrupted! Failed to access prefixes from endpoint \"" + this.endpoint + "/prefixes\"" + ".", e);
+            throw new DataAccessException(
+                    "Thread interrupted! Failed to access prefixes from endpoint \""
+                            + this.endpoint
+                            + "/prefixes\""
+                            + ".",
+                    e);
         }
     }
 }

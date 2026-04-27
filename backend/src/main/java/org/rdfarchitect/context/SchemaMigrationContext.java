@@ -18,11 +18,11 @@
 package org.rdfarchitect.context;
 
 import lombok.Data;
+
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
-import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 
 import java.util.List;
 
@@ -44,13 +44,14 @@ public class SchemaMigrationContext {
     // list of detected/confirmed class renames
     private List<RenameCandidate<SemanticClassChange>> renameCandidates;
 
-    // list of semantic class changes after the class renames are confirmed and the change objects are merged
+    // list of semantic class changes after the class renames are confirmed and the change objects
+    // are merged
     private List<SemanticClassChange> diffAfterClassConfirm;
 
     // list of the semantic class changes after class properties etc. are confirmed and merged
     private List<SemanticClassChange> diffAfterPropertyConfirm;
 
-    //list of semantic class changes after attributes are enriched with default data
+    // list of semantic class changes after attributes are enriched with default data
     private List<SemanticClassChange> diffAfterDefaultValueConfirm;
 
     public void clear() {

@@ -25,6 +25,7 @@ public interface SHACLUpdateUseCase {
 
     /**
      * Update the SHACL associated with a class.
+     *
      * @param graphIdentifier the identifier of the graph
      * @param classUUID the UUID of the class
      * @param ttlShaclString the SHACL graph in TTL format
@@ -33,10 +34,11 @@ public interface SHACLUpdateUseCase {
 
     /**
      * Update the SHACL associated with a property.
+     *
      * @param graphIdentifier the identifier of the graph
      * @param propertyUUID the UUID of the property
      * @param ttlShaclString the SHACL graph in TTL format
      */
-    void updatePropertyShacl(GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString);
-
+    void updatePropertyShacl(
+            GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString);
 }

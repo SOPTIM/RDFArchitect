@@ -60,13 +60,13 @@ public class SHACLFromCIMGenerator {
 
     private final boolean closed;
 
-    private final List<PropertyShapeFromCIMPropertyGenerator> propertyConverters = List.of(
-            new CardinalityPropertyShapeFromCIMPropertyGenerator(),
-            new ValueTypePropertyShapeFromCIMAssociationGenerator(),
-            new CIMAssociationToHasTypePropertyShapeConverter(),
-            new InverseCardinalityPropertyShapeFromCIMAssociationGenerator(),
-            new DatatypePropertyShapeFromCIMAttributeGenerator()
-    );
+    private final List<PropertyShapeFromCIMPropertyGenerator> propertyConverters =
+            List.of(
+                    new CardinalityPropertyShapeFromCIMPropertyGenerator(),
+                    new ValueTypePropertyShapeFromCIMAssociationGenerator(),
+                    new CIMAssociationToHasTypePropertyShapeConverter(),
+                    new InverseCardinalityPropertyShapeFromCIMAssociationGenerator(),
+                    new DatatypePropertyShapeFromCIMAttributeGenerator());
 
     public SHACLFromCIMGenerator(Model ontology, PrefixEntry shaclPrefix, boolean closed) {
         this.ontology = ontology;
@@ -82,7 +82,7 @@ public class SHACLFromCIMGenerator {
      */
     public Model generate() {
         initResultModel();
-        //create propertyShapes and nodeShapes
+        // create propertyShapes and nodeShapes
         for (var instantiableClass : listInstantiableClasses()) {
             var propertyShapes = new HashSet<Resource>();
             for (var property : CIMClassUtils.listAllProperties(instantiableClass)) {
@@ -103,16 +103,20 @@ public class SHACLFromCIMGenerator {
      * @return a SHACL model
      */
     public Model generateForClassOnly(UUID classUUID) {
-        var classResource = ontology.listSubjectsWithProperty(RDFA.uuid, ontology.createLiteral(classUUID.toString())).next();
+        var classResource =
+                ontology.listSubjectsWithProperty(
+                                RDFA.uuid, ontology.createLiteral(classUUID.toString()))
+                        .next();
         initResultModel();
-        var instantiableDerivingClasses = CIMClassUtils.findDerivingClasses(classResource)
-                .stream()
-                .filter(CIMClassUtils::isInstantiableClass)
-                .collect(Collectors.toSet());
-        if (!CIMClassUtils.isInstantiableClass(classResource) && instantiableDerivingClasses.isEmpty()) {
+        var instantiableDerivingClasses =
+                CIMClassUtils.findDerivingClasses(classResource).stream()
+                        .filter(CIMClassUtils::isInstantiableClass)
+                        .collect(Collectors.toSet());
+        if (!CIMClassUtils.isInstantiableClass(classResource)
+                && instantiableDerivingClasses.isEmpty()) {
             return shacl;
         }
-        //create node shapes and property shapes
+        // create node shapes and property shapes
         var propertyShapes = new HashSet<Resource>();
         for (var property : CIMClassUtils.listAllProperties(classResource)) {
             propertyShapes.addAll(createPropertyShape(property));
@@ -139,9 +143,7 @@ public class SHACLFromCIMGenerator {
      * @return a set of resources
      */
     private Set<Resource> listInstantiableClasses() {
-        return ontology.listSubjectsWithProperty(RDF.type, RDFS.Class)
-                .toSet()
-                .stream()
+        return ontology.listSubjectsWithProperty(RDF.type, RDFS.Class).toSet().stream()
                 .filter(CIMClassUtils::isInstantiableClass)
                 .collect(Collectors.toSet());
     }
@@ -152,14 +154,15 @@ public class SHACLFromCIMGenerator {
      * @param classResource the class
      */
     private void createNodeShape(Resource classResource, Set<Resource> propertyShapes) {
-        //create node shapes
-        var nodeShape = new NodeShapeBuilder(shacl)
-                .setClosed(closed)
-                .setPrefixEntry(shaclPrefix)
-                .setTargetClassUri(classResource.getURI())
-                .setPropertyShapes(propertyShapes)
-                .build();
-        //add to shacl graph
+        // create node shapes
+        var nodeShape =
+                new NodeShapeBuilder(shacl)
+                        .setClosed(closed)
+                        .setPrefixEntry(shaclPrefix)
+                        .setTargetClassUri(classResource.getURI())
+                        .setPropertyShapes(propertyShapes)
+                        .build();
+        // add to shacl graph
         shacl.add(nodeShape.listProperties());
     }
 
@@ -170,36 +173,43 @@ public class SHACLFromCIMGenerator {
      * @return a set of property shapes
      */
     private Collection<Resource> createPropertyShape(Resource property) {
-        //early return if property shapes for this property are already created
+        // early return if property shapes for this property are already created
         if (propertyToPropertyShapesMapping.containsKey(property)) {
             return propertyToPropertyShapesMapping.get(property);
         }
         var propertyShapes = new HashSet<Resource>();
         for (var converter : propertyConverters) {
             try {
-                var propertyShape = converter.setOntologyModel(ontology)
-                                             .setShaclModel(shacl)
-                                             .setShaclPrefix(shaclPrefix)
-                                             .createPropertyShape(property);
+                var propertyShape =
+                        converter
+                                .setOntologyModel(ontology)
+                                .setShaclModel(shacl)
+                                .setShaclPrefix(shaclPrefix)
+                                .createPropertyShape(property);
                 if (propertyShape != null) {
-                    //create property shapes
+                    // create property shapes
                     shacl.add(propertyShape.listProperties());
                     propertyShapes.add(propertyShape);
                 }
             } catch (Exception e) {
-                logger.warn("Error creating property shape for property {} with converter {}: {}", property.getURI(), converter.getClass().getSimpleName(), e.getMessage());
-                shacl.add(shacl.createResource(RDFA.URI + "Errors"),
-                          RDFS.comment,
-                          String.format("Error creating property shape for property %s with converter %s: %s",
-                                        property.getURI(),
-                                        converter.getClass().getSimpleName(), e.getMessage()
-                                       )
-                         );
+                logger.warn(
+                        "Error creating property shape for property {} with converter {}: {}",
+                        property.getURI(),
+                        converter.getClass().getSimpleName(),
+                        e.getMessage());
+                shacl.add(
+                        shacl.createResource(RDFA.URI + "Errors"),
+                        RDFS.comment,
+                        String.format(
+                                "Error creating property shape for property %s with converter %s: %s",
+                                property.getURI(),
+                                converter.getClass().getSimpleName(),
+                                e.getMessage()));
             }
         }
-        //add property shapes to ontology
+        // add property shapes to ontology
         propertyShapes.forEach(shape -> shacl.add(shape.listProperties()));
-        //add to map to avoid duplicates
+        // add to map to avoid duplicates
         propertyToPropertyShapesMapping.put(property, new HashSet<>(propertyShapes));
         return propertyShapes;
     }

@@ -20,9 +20,7 @@ package org.rdfarchitect.exception.security;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-/**
- * Exception is thrown when access to a dataset is denied for a session.
- */
+/** Exception is thrown when access to a dataset is denied for a session. */
 public class DatasetAccessDeniedException extends ResponseStatusException {
 
     public DatasetAccessDeniedException(String datasetName) {
@@ -30,7 +28,9 @@ public class DatasetAccessDeniedException extends ResponseStatusException {
     }
 
     public DatasetAccessDeniedException(String sessionId, String datasetName) {
-        super(HttpStatus.FORBIDDEN, "Access denied for session " + sessionId + " to dataset: " + datasetName);
+        super(
+                HttpStatus.FORBIDDEN,
+                "Access denied for session " + sessionId + " to dataset: " + datasetName);
     }
 
     public DatasetAccessDeniedException(String datasetName, Throwable cause) {

@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.compare;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -37,13 +38,15 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public List<TriplePackageChange> compareSchemas(GraphIdentifier graphIdentifier, MultipartFile file) {
+    public List<TriplePackageChange> compareSchemas(
+            GraphIdentifier graphIdentifier, MultipartFile file) {
         var updatedGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        var originalGraph = new GraphFileSourceBuilderImpl()
-                  .setFile(file)
-                  .setGraphName(GRAPH_URI)
-                  .build()
-                  .graph();
+        var originalGraph =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(file)
+                        .setGraphName(GRAPH_URI)
+                        .build()
+                        .graph();
         List<TriplePackageChange> result;
 
         try {
@@ -57,22 +60,25 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
 
     @Override
     public List<TriplePackageChange> compareSchemas(MultipartFile file1, MultipartFile file2) {
-        var graph1 = new GraphFileSourceBuilderImpl()
-                  .setFile(file1)
-                  .setGraphName(GRAPH_URI + "/file1")
-                  .build()
-                  .graph();
-        var graph2 = new GraphFileSourceBuilderImpl()
-                  .setFile(file2)
-                  .setGraphName(GRAPH_URI + "/file2")
-                  .build()
-                  .graph();
+        var graph1 =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(file1)
+                        .setGraphName(GRAPH_URI + "/file1")
+                        .build()
+                        .graph();
+        var graph2 =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(file2)
+                        .setGraphName(GRAPH_URI + "/file2")
+                        .build()
+                        .graph();
 
         return TripleChangeAnalyser.compareGraphs(graph1, graph2);
     }
 
     @Override
-    public List<TriplePackageChange> compareSchemas(GraphIdentifier originalGraphIdentifier, GraphIdentifier updatedGraphIdentifier) {
+    public List<TriplePackageChange> compareSchemas(
+            GraphIdentifier originalGraphIdentifier, GraphIdentifier updatedGraphIdentifier) {
         var originalGraph = databasePort.getGraphWithContext(originalGraphIdentifier).getRdfGraph();
         var updatedGraph = databasePort.getGraphWithContext(updatedGraphIdentifier).getRdfGraph();
         List<TriplePackageChange> result;

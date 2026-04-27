@@ -18,9 +18,10 @@
 package org.rdfarchitect.services.update.dataset;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.shared.impl.PrefixMappingImpl;
-import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,12 +42,14 @@ public class UpdateDatasetService implements DeleteDatasetUseCase, ReplaceNamesp
     public void replaceNamespaces(String datasetName, List<CIMPrefixPair> namespaces) {
         var prefixMapping = new PrefixMappingImpl();
         for (var namespace : namespaces) {
-            var substitutedPrefix = Objects.requireNonNullElse(namespace.getSubstitutedPrefix(), "");
+            var substitutedPrefix =
+                    Objects.requireNonNullElse(namespace.getSubstitutedPrefix(), "");
             if (substitutedPrefix.endsWith(":")) {
                 substitutedPrefix = substitutedPrefix.substring(0, substitutedPrefix.length() - 1);
             }
-            if(prefixMapping.getNsPrefixURI(substitutedPrefix) != null){
-                throw new IllegalArgumentException("Duplicate namespace prefix detected: " + substitutedPrefix);
+            if (prefixMapping.getNsPrefixURI(substitutedPrefix) != null) {
+                throw new IllegalArgumentException(
+                        "Duplicate namespace prefix detected: " + substitutedPrefix);
             }
             prefixMapping.setNsPrefix(substitutedPrefix, namespace.getPrefix());
         }
