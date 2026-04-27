@@ -25,12 +25,13 @@
         faLink,
         faTrash,
         faEye,
+        faPaste,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { copyState, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -38,6 +39,8 @@
     import { isSelectedPackage } from "./packageNavigationUtils.svelte.js";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
+    import { saveCopyClass } from "./save-copy-class-to-backend.js";
+    import { Package } from "$lib/models/dto/index.ts";
 
     let {
         datasetNavEntry,
@@ -51,6 +54,10 @@
     let showDeletePackageDialog = $state(false);
 
     let wasPackageSelected = false;
+
+    let disablePasteButton = $derived(
+        readonly || !copyState.classUUID.getValue() || !copyState.graphURI.getValue() || !copyState.datasetName.getValue(),
+    );
 
     let isProtectedPackage = $derived(
         packageNavEntry?.id === "default" || packageNavEntry?.data.external,
@@ -107,6 +114,20 @@
         editorState.selectedGraph.updateValue(graphNavEntry.id);
         editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
     }
+
+    function pasteClass(copyAbstract) {
+        let packageDTO = new Package({
+            uuid: packageNavEntry.id,
+            label: packageNavEntry.label,
+            prefix: packageNavEntry.data?.prefix,
+        });
+        saveCopyClass(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+            packageDTO,
+            copyAbstract,
+        );
+    }
 </script>
 
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
@@ -138,6 +159,18 @@
                 faIcon={faPlus}
             >
                 New Class
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+            onSelect={() => pasteClass(false)}
+            disabled={disablePasteButton}
+            faIcon={faPaste}>
+                Paste class as duplicate
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => pasteClass(true)}
+                disabled={disablePasteButton}
+                faIcon={faPaste}>
+                Paste class as abstract
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button

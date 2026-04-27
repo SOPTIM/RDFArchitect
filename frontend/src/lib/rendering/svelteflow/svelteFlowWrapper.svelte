@@ -32,8 +32,9 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
+        copyState,
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
@@ -419,6 +420,12 @@
         closeContextMenus();
     }
 
+    function copyClass() {
+        copyState.classUUID.updateValue(contextMenuClass.uuid);
+        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
+        copyState.datasetName.updateValue(editorState.selectedDataset.getValue());
+    }
+
     function updateNodePositions(movedNodes) {
         let classPositionDTOList = [];
         for (const node of movedNodes) {
@@ -564,6 +571,7 @@
         request={classContextMenuRequest}
         disabled={isDatasetReadOnly || !contextMenuClass}
         onDeleteClass={openDeleteClassDialog}
+        onCopyClass={copyClass}
         onClose={closeContextMenus}
     />
 </div>

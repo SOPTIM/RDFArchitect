@@ -96,6 +96,16 @@ export const compareState = {
     changeList: new StateValuePair(null),
 };
 
+/**
+ * Stores the state for copying a class, which is used on paste.
+ * @type {{classUUID: StateValuePair<string | null>, graphURI: StateValuePair<string | null>, datasetName: StateValuePair<string | null>}}
+ */
+export const copyState = {
+    classUUID: new StateValuePair(),
+    graphURI: new StateValuePair(),
+    datasetName: new StateValuePair(),
+};
+
 export const migrationState = writable({
     compareMode: null,
     datasetA: null,

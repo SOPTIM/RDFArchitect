@@ -21,17 +21,19 @@
         faArrowUpRightFromSquare,
         faDiagramProject,
         faTrash,
+        faCopy,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { copyState, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteClassConfirmDialog from "../../DeleteClassConfirmDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import { read } from "$app/server";
 
     let {
         datasetNavEntry,
@@ -86,6 +88,12 @@
         selectClass();
         focusClassInDiagram();
     }
+
+    function copyClass() {
+        copyState.classUUID.updateValue(classNavEntry.id);
+        copyState.graphURI.updateValue(graphNavEntry.id);
+        copyState.datasetName.updateValue(datasetNavEntry.id);
+    }
 </script>
 
 <ContextMenu.Root>
@@ -105,6 +113,11 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
+        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}
+        disabled={readonly}>
+            Copy
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
         <ContextMenu.Item.Button
             onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}

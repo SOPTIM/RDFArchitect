@@ -16,7 +16,7 @@
   -->
 
 <script>
-    import { faTrash } from "@fortawesome/free-solid-svg-icons";
+    import { faCopy, faTrash } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
 
@@ -29,6 +29,7 @@
     let {
         request = null,
         disabled = false,
+        onCopyClass = () => {},
         onDeleteClass = () => {},
         onClose = () => {},
     } = $props();
@@ -54,6 +55,10 @@
     function handleDeleteClass() {
         onDeleteClass();
     }
+
+    function copyClass() {
+        onCopyClass();
+    }
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -64,6 +69,10 @@
         {disabled}
     />
     <ContextMenu.Content>
+        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}>
+            Copy
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
         <ContextMenu.Item.Button
             onSelect={handleDeleteClass}
             {disabled}
