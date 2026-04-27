@@ -189,7 +189,7 @@ public class CIMUpdates {
                         .addPrefixes(prefixMapping)
                         .setGraph(graphURI)
                         .build()
-                        .addOptional("?sub", "?pre", "?obj");
+                        .addBind("1", "?__insertAttribute");
 
         return appendInsertAttribute(baseUpdate, attribute);
     }
