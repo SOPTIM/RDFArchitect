@@ -60,7 +60,7 @@
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
     let showFilterViewDialog = $state(false);
-    let showDeleteDependenciesDialog = $state(false);
+    let ShowPackageDeleteDependenciesDialog = $state(false);
     let showOntologyDeleteDependenciesDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
@@ -155,7 +155,7 @@
         packageDialogTarget = { ...selectedPackageDetails };
         packageDialogDataset = selectedDataset;
         packageDialogGraph = selectedGraph;
-        showDeleteDependenciesDialog = true;
+        ShowPackageDeleteDependenciesDialog = true;
     }
 
     async function getPackages() {
@@ -373,9 +373,9 @@
         readonly={isDatasetReadOnly}
     />
 {/if}
-{#if packageDialogTarget && showDeleteDependenciesDialog}
+{#if packageDialogTarget && ShowPackageDeleteDependenciesDialog}
     <DeleteDependenciesDialog
-        bind:showDialog={showDeleteDependenciesDialog}
+        bind:showDialog={ShowPackageDeleteDependenciesDialog}
         datasetName={packageDialogDataset}
         graphUri={packageDialogGraph}
         resourceUuid={packageDialogTarget.uuid}
