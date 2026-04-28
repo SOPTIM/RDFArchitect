@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.select.ontology;
 
-import java.util.List;
 import org.rdfarchitect.api.dto.ontology.OntologyField;
+
+import java.util.List;
 
 public interface GetKnownOntologyFieldsUseCase {
 

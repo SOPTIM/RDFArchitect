@@ -17,5 +17,4 @@
 
 package org.rdfarchitect.database;
 
-public record GraphIdentifier(String datasetName, String graphUri) {
-}
+public record GraphIdentifier(String datasetName, String graphUri) {}

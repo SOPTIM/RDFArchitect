@@ -18,9 +18,9 @@
 package org.rdfarchitect.services.schemaComparison;
 
 import static org.assertj.core.api.Assertions.assertThat;
+
 import static utils.TestUtils.readMultipartFileFromFile;
 
-import java.util.List;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -38,6 +38,8 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.SchemaComparisonService;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 class SchemaComparisonServiceTest {
 

@@ -17,9 +17,8 @@
 
 package org.rdfarchitect.services.update.classes.attributes;
 
-import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -29,6 +28,9 @@ import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

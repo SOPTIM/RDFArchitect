@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.schemamigration.renamings;
 
-import java.util.List;
 import org.rdfarchitect.api.dto.migration.PropertyOverview;
+
+import java.util.List;
 
 public interface GetPropertyRenamingsUseCase {
     List<PropertyOverview> getPropertyRenamings();

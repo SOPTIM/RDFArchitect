@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.select;
 
-import java.io.ByteArrayOutputStream;
 import org.apache.jena.riot.RDFFormat;
+
+import java.io.ByteArrayOutputStream;
 
 public interface GetDatasetSchemaUseCase {
 

@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
@@ -39,6 +39,8 @@ import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseC
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor

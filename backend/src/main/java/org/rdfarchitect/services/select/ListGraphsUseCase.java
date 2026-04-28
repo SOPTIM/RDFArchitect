@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.select;
 
-import java.util.List;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+
+import java.util.List;
 
 public interface ListGraphsUseCase {
 

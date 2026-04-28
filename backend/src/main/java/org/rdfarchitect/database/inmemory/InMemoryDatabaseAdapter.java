@@ -17,9 +17,8 @@
 
 package org.rdfarchitect.database.inmemory;
 
-import java.util.List;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
@@ -29,6 +28,9 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+
+import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 public class InMemoryDatabaseAdapter implements DatabasePort {

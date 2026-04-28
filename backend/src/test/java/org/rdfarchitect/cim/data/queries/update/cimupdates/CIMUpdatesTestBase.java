@@ -17,11 +17,6 @@
 
 package org.rdfarchitect.cim.data.queries.update.cimupdates;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.UUID;
-import java.util.function.Consumer;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
@@ -35,6 +30,12 @@ import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.mock.web.MockMultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 public class CIMUpdatesTestBase {
 
