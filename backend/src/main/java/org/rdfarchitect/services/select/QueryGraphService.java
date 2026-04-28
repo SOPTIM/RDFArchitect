@@ -88,8 +88,7 @@ public class QueryGraphService
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .setGraph(graphIdentifier.graphUri())
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setOrder()
                         .setDistinct()
                         .setType(RDFS.Class)
@@ -153,8 +152,7 @@ public class QueryGraphService
         // build query
         var baseQuery =
                 new CIMBaseQueryBuilder()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .setOrder()
                         .setDistinct()
@@ -212,8 +210,7 @@ public class QueryGraphService
         var internalPackageBaseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .setType(CIMS.classCategory)
                         .build();
@@ -254,8 +251,7 @@ public class QueryGraphService
         var externalPackageBaseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .addWhereThisNotExists(RDF.type.getURI(), CIMS.classCategory.getURI())
                         .build()
@@ -317,8 +313,7 @@ public class QueryGraphService
                 new CIMBaseQueryBuilder()
                         .setOrder()
                         .setDistinct()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .buildWithoutUriVar();
 

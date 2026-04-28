@@ -174,8 +174,7 @@ public class SingletonPrimitiveSHACLStoringService
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var outStream = new ByteArrayOutputStream()) {
             var prefixModel = ModelFactory.createDefaultModel();
-            prefixModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            prefixModel.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             prefixModel.setNsPrefix(SHACL_NAMESPACE.getPrefix(), SHACL_NAMESPACE.getUri());
             prefixModel.write(outStream, format.getLang().getName());
             return outStream;

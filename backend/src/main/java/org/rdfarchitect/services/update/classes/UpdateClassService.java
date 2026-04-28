@@ -62,9 +62,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
             CIMUpdates.replaceClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                    cimClass);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), cimClass);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -137,9 +135,7 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             CIMUpdates.deleteClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                    classUUID);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), classUUID);
             graph.commit();
         } finally {
             if (graph != null) {
