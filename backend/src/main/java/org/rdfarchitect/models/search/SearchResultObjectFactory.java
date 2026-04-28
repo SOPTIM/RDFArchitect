@@ -17,9 +17,11 @@
 
 package org.rdfarchitect.models.search;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -30,10 +32,6 @@ import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.models.search.data.ResultType;
 import org.rdfarchitect.models.search.data.SearchResult;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 /** Factory class that provides static methods for creating SearchResults from queries */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -131,8 +129,8 @@ public class SearchResultObjectFactory {
         }
 
         return SearchResult.builder()
-                .datasetName(graphIdentifier.getDatasetName())
-                .graphUri(graphIdentifier.getGraphUri())
+                .datasetName(graphIdentifier.datasetName())
+                .graphUri(graphIdentifier.graphUri())
                 .uri(parser.getURI(CIMQueryVars.URI))
                 .uuid(parser.getUUID(CIMQueryVars.UUID))
                 .label(parser.getLabel(CIMQueryVars.LABEL))

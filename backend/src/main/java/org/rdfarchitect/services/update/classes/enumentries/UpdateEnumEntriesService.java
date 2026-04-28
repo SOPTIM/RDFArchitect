@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.update.classes.enumentries;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
@@ -29,8 +29,6 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -61,14 +59,14 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                 cimEnumEntry.setUuid(uuid);
                 CIMUpdates.insertEnumEntry(
                         graph,
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
                 message = "Enum entry " + uuid + " created";
             } else {
                 uuid = enumEntryDTO.getUuid();
                 CIMUpdates.replaceEnumEntry(
                         graph,
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
                 message = "Enum entry " + uuid + " replaced";
             }

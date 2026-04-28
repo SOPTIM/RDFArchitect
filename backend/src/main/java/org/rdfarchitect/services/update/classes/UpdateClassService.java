@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.update.classes;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
@@ -39,8 +39,6 @@ import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseC
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -65,7 +63,7 @@ public class UpdateClassService
             var cimClass = classMapper.toCIMObject(newClass);
             CIMUpdates.replaceClass(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     cimClass);
             graph.commit();
         } finally {
@@ -99,7 +97,7 @@ public class UpdateClassService
             newClassUUID =
                     CIMUpdates.insertClass(
                             graph,
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
             graph.commit();
         } finally {
@@ -140,7 +138,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
             CIMUpdates.deleteClass(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classUUID);
             graph.commit();
         } finally {

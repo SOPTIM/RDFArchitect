@@ -17,10 +17,10 @@
 
 package org.rdfarchitect.services.schemaComparison;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static utils.TestUtils.readMultipartFileFromFile;
 
-import static utils.TestUtils.*;
-
+import java.util.List;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.assertj.core.api.InstanceOfAssertFactories;
@@ -38,8 +38,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.SchemaComparisonService;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 class SchemaComparisonServiceTest {
 
@@ -63,7 +61,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(GRAPH_IDENTIFIER.getGraphUri())
+                        .setGraphName(GRAPH_IDENTIFIER.graphUri())
                         .build();
         databasePort.createGraph(GRAPH_IDENTIFIER, graphSource.graph());
     }
@@ -426,7 +424,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(otherGraphFile)
-                        .setGraphName(OTHER_GRAPH_IDENTIFIER.getGraphUri())
+                        .setGraphName(OTHER_GRAPH_IDENTIFIER.graphUri())
                         .build();
         databasePort.createGraph(OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 

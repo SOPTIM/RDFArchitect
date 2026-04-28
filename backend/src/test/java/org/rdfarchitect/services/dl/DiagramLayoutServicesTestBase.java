@@ -17,8 +17,12 @@
 
 package org.rdfarchitect.services.dl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.junit.jupiter.api.AfterEach;
@@ -40,11 +44,6 @@ import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutService;
 import org.springframework.mock.web.MockMultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.UUID;
 
 public class DiagramLayoutServicesTestBase {
 
@@ -92,7 +91,7 @@ public class DiagramLayoutServicesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);

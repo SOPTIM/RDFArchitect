@@ -17,26 +17,6 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import lombok.RequiredArgsConstructor;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.jena.graph.Graph;
-import org.apache.jena.riot.RDFLanguages;
-import org.jetbrains.annotations.NotNull;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.exception.database.DataAccessException;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ChangeLogUseCase;
-import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -54,6 +34,24 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import lombok.RequiredArgsConstructor;
+import org.apache.commons.io.FileUtils;
+import org.apache.jena.graph.Graph;
+import org.apache.jena.riot.RDFLanguages;
+import org.jetbrains.annotations.NotNull;
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 @RequiredArgsConstructor
@@ -130,7 +128,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         "Imported graph into dataset '"
                                 + datasetName
                                 + "' with graph URI '"
-                                + graphIdentifier.getGraphUri()
+                                + graphIdentifier.graphUri()
                                 + "'.",
                         databasePort
                                 .getGraphWithContext(graphIdentifier)

@@ -21,8 +21,14 @@ import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OP
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
 import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
@@ -57,14 +63,6 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.rdf.model.wrapper.CimSortedModel;
 import org.springframework.stereotype.Service;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
 @Service
 @RequiredArgsConstructor
 public class QueryGraphService
@@ -89,9 +87,9 @@ public class QueryGraphService
         // build query
         var baseQuery =
                 new CIMBaseQueryBuilder()
-                        .setGraph(graphIdentifier.getGraphUri())
+                        .setGraph(graphIdentifier.graphUri())
                         .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setOrder()
                         .setDistinct()
                         .setType(RDFS.Class)
@@ -110,7 +108,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         query,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -144,7 +142,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         query,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         // format results
         return CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -156,8 +154,8 @@ public class QueryGraphService
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
-                        .setGraph(graphIdentifier.getGraphUri())
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .setGraph(graphIdentifier.graphUri())
                         .setOrder()
                         .setDistinct()
                         .setType(RDFS.Class)
@@ -176,7 +174,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         query,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -194,7 +192,7 @@ public class QueryGraphService
             var copiedGraph = GraphUtils.deepCopy(graph);
             copiedGraph
                     .getPrefixMapping()
-                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             removeUUIDs(copiedGraph);
             var sortedModel = new CimSortedModel(ModelFactory.createModelForGraph(copiedGraph));
             sortedModel.write(out, format.getLang().getName());
@@ -215,8 +213,8 @@ public class QueryGraphService
                 new CIMBaseQueryBuilder()
                         .setDistinct()
                         .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
-                        .setGraph(graphIdentifier.getGraphUri())
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .setGraph(graphIdentifier.graphUri())
                         .setType(CIMS.classCategory)
                         .build();
 
@@ -233,7 +231,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         internalPackageQuery,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         // format results
         var cimPackageList = CIMObjectFactory.createCIMPackageList(internalPackageQueryResultSet);
@@ -257,8 +255,8 @@ public class QueryGraphService
                 new CIMBaseQueryBuilder()
                         .setDistinct()
                         .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
-                        .setGraph(graphIdentifier.getGraphUri())
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .setGraph(graphIdentifier.graphUri())
                         .addWhereThisNotExists(RDF.type.getURI(), CIMS.classCategory.getURI())
                         .build()
                         .addWhere(Node.ANY, CIMS.belongsToCategory.asNode(), CIMQueryVars.URI);
@@ -271,7 +269,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         externalPackageQuery,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         var cimExternalPackageList =
                 CIMObjectFactory.createExternalCIMPackageList(externalPackageQueryResultSet);
@@ -285,10 +283,10 @@ public class QueryGraphService
                 new CIMBaseQueryBuilder()
                         .setOrder()
                         .setDistinct()
-                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.getGraphUri()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.graphUri()))
                         .filterStereotypes(
                                 CIMStereotypes.primitiveString, CIMStereotypes.cimDatatypeString)
-                        .setGraph(graphIdentifier.getGraphUri())
+                        .setGraph(graphIdentifier.graphUri())
                         .setType(RDFS.Class)
                         .build();
         var query =
@@ -304,7 +302,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         query,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
@@ -320,8 +318,8 @@ public class QueryGraphService
                         .setOrder()
                         .setDistinct()
                         .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
-                        .setGraph(graphIdentifier.getGraphUri())
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .setGraph(graphIdentifier.graphUri())
                         .buildWithoutUriVar();
 
         var query = new CIMQueryBuilder(baseQuery).appendStereotypeQuery(REQUIRED).build();
@@ -331,7 +329,7 @@ public class QueryGraphService
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         query,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         // format results
         List<CIMSStereotype> resultList = new ArrayList<>();

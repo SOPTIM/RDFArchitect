@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.update.classes.associations;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -28,9 +29,6 @@ import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -56,13 +54,13 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         }
         var update =
                 CIMUpdates.insertAssociation(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
                         cimAssociationPair);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph, update.build(), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -77,15 +75,15 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var cimAssociationPair = associationPairMapper.toCIMObject(associationPair);
         var update =
                 CIMUpdates.replaceAssociation(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
                         cimAssociationPair);
 
         var fromUUID = cimAssociationPair.getFrom().getUuid();
         var toUUID = cimAssociationPair.getTo().getUuid();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph, update.build(), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -102,13 +100,13 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var cimAssociationPairs = associationPairMapper.toCIMObjectList(associationPairList);
         var update =
                 CIMUpdates.replaceAssociations(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
                         classUUID,
                         cimAssociationPairs);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph, update.build(), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
