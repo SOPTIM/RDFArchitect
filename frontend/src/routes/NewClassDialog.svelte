@@ -192,26 +192,32 @@
         const classNameLocal = className;
         const classURINamespaceLocal = classURINamespace;
         const selectedPackageUUID = classPackage?.uuid ?? "default";
-        const packageDTO = classPackage?.uuid ? classPackage : null;
-        let promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetNameLocal) +
-                "/graphs/" +
-                encodeURIComponent(graphURILocal) +
-                "/classes",
-            {
-                method: "POST",
-                headers: new Headers({ "Content-Type": "application/json" }),
-                body: JSON.stringify({
-                    packageDTO,
-                    classURIPrefix: classURINamespaceLocal.value,
-                    className: classNameLocal.value,
-                }),
-                credentials: "include",
-            },
-        ).then(res => {
+        let packageDTO = classPackage?.uuid === "default" ? null : classPackage;
+
+        try {
+            const res = await fetch(
+                PUBLIC_BACKEND_URL +
+                    "/datasets/" +
+                    encodeURIComponent(datasetNameLocal) +
+                    "/graphs/" +
+                    encodeURIComponent(graphURILocal) +
+                    "/classes",
+                {
+                    method: "POST",
+                    headers: new Headers({
+                        "Content-Type": "application/json",
+                    }),
+                    body: JSON.stringify({
+                        packageDTO,
+                        classURIPrefix: classURINamespaceLocal.value,
+                        className: classNameLocal.value,
+                    }),
+                    credentials: "include",
+                },
+            );
+
             if (res.ok) {
+                const uuid = await res.text();
                 console.log("successfully added class");
                 onClassCreated({
                     datasetName: datasetNameLocal,
@@ -219,29 +225,31 @@
                     packageUUID: selectedPackageUUID,
                     className: classNameLocal.value,
                 });
+                console.warn(
+                    "Received response text for new class UUID:",
+                    uuid,
+                    "Make sure the backend returns the new class UUID in the response body.",
+                );
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedPackageUUID.updateValue(
                     selectedPackageUUID,
                 );
-                editorState.selectedClassDataset.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClassUUID.updateValue(null);
+                editorState.selectedClassDataset.updateValue(datasetNameLocal);
+                editorState.selectedClassGraph.updateValue(graphURILocal);
+                editorState.selectedClassUUID.updateValue(uuid);
             } else {
                 console.log("failed to insert data");
             }
-        });
-        promise
-            .catch(e => {
-                console.log("failed to add class:", e);
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-                editorState.selectedDataset.trigger();
-                editorState.selectedGraph.trigger();
-                editorState.selectedPackageUUID.trigger();
-                editorState.selectedClassUUID.trigger();
-            });
+        } catch (e) {
+            console.log("failed to add class:", e);
+        } finally {
+            forceReloadTrigger.trigger();
+            editorState.selectedDataset.trigger();
+            editorState.selectedGraph.trigger();
+            editorState.selectedPackageUUID.trigger();
+            editorState.selectedClassUUID.trigger();
+        }
     }
 </script>
 

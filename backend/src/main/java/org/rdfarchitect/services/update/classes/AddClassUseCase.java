@@ -20,6 +20,8 @@ package org.rdfarchitect.services.update.classes;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
+import java.util.UUID;
+
 public interface AddClassUseCase {
 
     /**
@@ -31,8 +33,9 @@ public interface AddClassUseCase {
      * @param packageDTO The Package to which the class will be added.
      * @param classURIPrefix The prefix of the class to be added.
      * @param className The name of the class to be added.
+     * @return The UUID of the newly created class.
      */
-    void addClass(
+    UUID addClass(
             GraphIdentifier graphIdentifier,
             PackageDTO packageDTO,
             String classURIPrefix,
