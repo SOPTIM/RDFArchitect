@@ -17,10 +17,8 @@
 
 package org.rdfarchitect.services;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.QueryFactory;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -32,6 +30,10 @@ import org.rdfarchitect.models.search.SearchResultObjectFactory;
 import org.rdfarchitect.models.search.data.SearchResult;
 import org.rdfarchitect.models.search.data.SearchResults;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor

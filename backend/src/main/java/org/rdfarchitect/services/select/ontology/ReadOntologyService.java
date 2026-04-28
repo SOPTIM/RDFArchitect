@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.select.ontology;
 
-import java.util.List;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
@@ -29,6 +29,8 @@ import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
 import org.rdfarchitect.models.cim.ontology.OntologyFacade;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor

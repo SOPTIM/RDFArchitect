@@ -20,11 +20,6 @@ package org.rdfarchitect.database.inmemory;
 import static org.rdfarchitect.database.snapshots.SnapshotUtils.SNAPSHOT_PREFIX;
 import static org.rdfarchitect.database.snapshots.SnapshotUtils.findSnapshotName;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.ReentrantLock;
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
@@ -40,6 +35,12 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Class that provides {@link GraphRewindableWithUUIDs GraphRewindables} belonging to a session.

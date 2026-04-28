@@ -17,9 +17,10 @@
 
 package org.rdfarchitect.services.select;
 
-import java.io.ByteArrayOutputStream;
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.database.GraphIdentifier;
+
+import java.io.ByteArrayOutputStream;
 
 public interface GetSchemaUseCase {
 

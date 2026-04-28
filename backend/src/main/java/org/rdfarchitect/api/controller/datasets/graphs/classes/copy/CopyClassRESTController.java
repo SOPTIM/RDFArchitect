@@ -53,26 +53,26 @@ public class CopyClassRESTController {
     @PostMapping
     public String copyClass(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(
-                    value = HttpHeaders.ORIGIN,
-                    required = false,
-                    defaultValue = "unknown")
-            String originURL,
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-            String datasetName,
+                    String datasetName,
             @Parameter(
-                    description =
-                            "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI,
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    description =
-                            "Contains the information of the target where the class should be copied to. Also includes if the class should be copied only abstract or "
-                                    + "fully.")
-            @RequestBody
-            CopyClassRESTController.CopyClassRequest copyClassRequest) {
+                            required = true,
+                            description =
+                                    "Contains the information of the target where the class should be copied to. Also includes if the class should be copied only abstract or "
+                                            + "fully.")
+                    @RequestBody
+                    CopyClassRESTController.CopyClassRequest copyClassRequest) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" from \"{}\".",
                 datasetName,
@@ -131,6 +131,5 @@ public class CopyClassRESTController {
             String targetDatasetName,
             String targetGraphURI,
             PackageDTO targetPackage,
-            boolean copyAbstract) {
-    }
+            boolean copyAbstract) {}
 }

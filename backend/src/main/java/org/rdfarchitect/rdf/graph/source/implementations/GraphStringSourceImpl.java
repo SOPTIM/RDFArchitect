@@ -17,11 +17,12 @@
 
 package org.rdfarchitect.rdf.graph.source.implementations;
 
-import java.io.StringReader;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.rdfarchitect.rdf.graph.source.GraphSource;
+
+import java.io.StringReader;
 
 public class GraphStringSourceImpl implements GraphSource {
 

@@ -21,14 +21,8 @@ import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OP
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
 import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
@@ -63,6 +57,14 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.rdf.model.wrapper.CimSortedModel;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class QueryGraphService
@@ -88,8 +90,7 @@ public class QueryGraphService
         var baseQuery =
                 new CIMBaseQueryBuilder()
                         .setGraph(graphIdentifier.graphUri())
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setOrder()
                         .setDistinct()
                         .setType(RDFS.Class)
@@ -153,8 +154,7 @@ public class QueryGraphService
         // build query
         var baseQuery =
                 new CIMBaseQueryBuilder()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .setOrder()
                         .setDistinct()
@@ -212,8 +212,7 @@ public class QueryGraphService
         var internalPackageBaseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .setType(CIMS.classCategory)
                         .build();
@@ -254,8 +253,7 @@ public class QueryGraphService
         var externalPackageBaseQuery =
                 new CIMBaseQueryBuilder()
                         .setDistinct()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .addWhereThisNotExists(RDF.type.getURI(), CIMS.classCategory.getURI())
                         .build()
@@ -317,8 +315,7 @@ public class QueryGraphService
                 new CIMBaseQueryBuilder()
                         .setOrder()
                         .setDistinct()
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .setGraph(graphIdentifier.graphUri())
                         .buildWithoutUriVar();
 

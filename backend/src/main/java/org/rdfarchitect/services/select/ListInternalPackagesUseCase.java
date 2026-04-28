@@ -17,9 +17,10 @@
 
 package org.rdfarchitect.services.select;
 
-import java.util.List;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
+
+import java.util.List;
 
 public interface ListInternalPackagesUseCase {
 

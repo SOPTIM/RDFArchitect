@@ -20,9 +20,8 @@ package org.rdfarchitect.services;
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
 
-import java.util.ArrayList;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
@@ -50,6 +49,9 @@ import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /** Implementation of {@link GraphToCIMCollectionConverterUseCase}. */
 @Service
@@ -245,8 +247,8 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var classList =
                 new CIMObjectFetcher(
                                 graph,
-                        graphIdentifier.graphUri(),
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                graphIdentifier.graphUri(),
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMClassList(query.build());
         var classUUIDList = new ArrayList<String>();
         classList.forEach(
@@ -360,8 +362,8 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var attributeList =
                 new CIMObjectFetcher(
                                 graph,
-                        graphIdentifier.graphUri(),
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                graphIdentifier.graphUri(),
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMAttributeList(attributesQuery.build());
 
         attributeList.forEach(cimAttribute -> cimCollection.getAttributes().add(cimAttribute));
@@ -382,8 +384,8 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var enumList =
                 new CIMObjectFetcher(
                                 graph,
-                        graphIdentifier.graphUri(),
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                graphIdentifier.graphUri(),
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMClassList(enumsInPackageQueryBuilder.build());
         enumList.forEach(cimEnum -> cimCollection.getEnums().add(cimEnum));
         // fetch enum entries
@@ -414,8 +416,8 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var enumEntryList =
                 new CIMObjectFetcher(
                                 graph,
-                        graphIdentifier.graphUri(),
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                graphIdentifier.graphUri(),
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMEnumEntryList(enumEntriesQuery.build());
 
         enumEntryList.forEach(cimEnumEntry -> cimCollection.getEnumEntries().add(cimEnumEntry));
@@ -451,8 +453,8 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         var associationList =
                 new CIMObjectFetcher(
                                 graph,
-                        graphIdentifier.graphUri(),
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                                graphIdentifier.graphUri(),
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMAssociationList(associationsQuery.build());
 
         associationList.forEach(

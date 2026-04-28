@@ -17,11 +17,8 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -55,6 +52,11 @@ import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseC
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 public class UpdateClassService
@@ -79,9 +81,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
             CIMUpdates.replaceClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                    cimClass);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), cimClass);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -154,9 +154,7 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             CIMUpdates.deleteClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                    classUUID);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), classUUID);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -238,11 +236,12 @@ public class UpdateClassService
                 targetGraph.begin(TxnType.WRITE);
                 copyEnumEntries(cimClass.getEnumEntries(), newCimClass)
                         .forEach(
-                                cimEnumEntry -> CIMUpdates.insertEnumEntry(
-                                        finalTargetGraph,
-                                        databasePort.getPrefixMapping(
-                                                targetGraphIdentifier.datasetName()),
-                                        cimEnumEntry));
+                                cimEnumEntry ->
+                                        CIMUpdates.insertEnumEntry(
+                                                finalTargetGraph,
+                                                databasePort.getPrefixMapping(
+                                                        targetGraphIdentifier.datasetName()),
+                                                cimEnumEntry));
                 targetGraph.commit();
             }
         } finally {
@@ -272,13 +271,13 @@ public class UpdateClassService
                         .stereotypes(
                                 copyAbstract
                                         ? cimClass.getStereotypes().stream()
-                                          .filter(
-                                                  s ->
-                                                  !s.getStereotype()
-                                                   .equals(
-                                                           CIMStereotypes
-                                                           .concreteString))
-                                          .toList()
+                                                .filter(
+                                                        s ->
+                                                                !s.getStereotype()
+                                                                        .equals(
+                                                                                CIMStereotypes
+                                                                                        .concreteString))
+                                                .toList()
                                         : cimClass.getStereotypes());
         if (cimClass.getComment() != null) {
             newCimClass.comment(
