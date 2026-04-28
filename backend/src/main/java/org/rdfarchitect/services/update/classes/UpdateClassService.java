@@ -177,77 +177,24 @@ public class UpdateClassService
             GraphIdentifier targetGraphIdentifier,
             PackageDTO targetPackageDTO,
             boolean copyAbstract) {
-        GraphRewindableWithUUIDs graph = null, targetGraph = null;
-        CIMClassUMLAdapted cimClass;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            cimClass =
-                    CIMUMLObjectFactory.createCIMClassUMLAdapted(
-                            graph,
-                            graphIdentifier.graphUri(),
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                            classUUID);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
-        }
+
+        CIMClassUMLAdapted cimClass = readSourceClass(graphIdentifier, classUUID);
 
         RDFSLabel label =
-                constructCopyLabel(graph, graphIdentifier.graphUri(), cimClass.getLabel());
-        var cimPackage = packageMapper.toCIMObject(targetPackageDTO);
-        UUID newClassUUID;
-        var newCimClass = copyCimClass(cimClass, cimPackage, label, copyAbstract);
+                constructCopyLabel(
+                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        graphIdentifier.graphUri(),
+                        cimClass.getLabel());
+
         String className = label.getValue();
+        var cimPackage = packageMapper.toCIMObject(targetPackageDTO);
+        var newCimClass = copyCimClass(cimClass, cimPackage, label, copyAbstract);
 
-        try {
-            targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
-            targetGraph.begin(TxnType.WRITE);
-            newClassUUID =
-                    CIMUpdates.insertClass(
-                            targetGraph,
-                            databasePort.getPrefixMapping(targetGraphIdentifier.datasetName()),
-                            newCimClass);
-            targetGraph.commit();
-        } finally {
-            if (targetGraph != null) {
-                targetGraph.end();
-            }
-        }
+        UUID newClassUUID = insertClass(targetGraphIdentifier, newCimClass);
 
-        try {
-            if (!copyAbstract) {
-                GraphRewindableWithUUIDs finalTargetGraph = targetGraph;
-                copyAttributes(cimClass.getAttributes(), newCimClass)
-                        .forEach(
-                                cimAttribute -> {
-                                    var update =
-                                            CIMUpdates.insertAttribute(
-                                                    databasePort.getPrefixMapping(
-                                                            targetGraphIdentifier.datasetName()),
-                                                    targetGraphIdentifier.graphUri(),
-                                                    cimAttribute);
-                                    InMemorySparqlExecutor.executeSingleUpdate(
-                                            finalTargetGraph,
-                                            update.build(),
-                                            targetGraphIdentifier.graphUri());
-                                });
-                targetGraph.begin(TxnType.WRITE);
-                copyEnumEntries(cimClass.getEnumEntries(), newCimClass)
-                        .forEach(
-                                cimEnumEntry ->
-                                        CIMUpdates.insertEnumEntry(
-                                                finalTargetGraph,
-                                                databasePort.getPrefixMapping(
-                                                        targetGraphIdentifier.datasetName()),
-                                                cimEnumEntry));
-                targetGraph.commit();
-            }
-        } finally {
-            if (!copyAbstract) {
-                targetGraph.end();
-            }
+        if (!copyAbstract) {
+            insertAttributes(targetGraphIdentifier, cimClass, newCimClass);
+            insertEnumEntries(targetGraphIdentifier, cimClass, newCimClass);
         }
 
         createClassLayoutDataUseCase.createClassLayoutData(
@@ -255,7 +202,97 @@ public class UpdateClassService
 
         changeLogUseCase.recordChange(
                 targetGraphIdentifier,
-                new ChangeLogEntry("Added class " + className, targetGraph.getLastDelta()));
+                new ChangeLogEntry(
+                        "Added class " + className,
+                        databasePort
+                                .getGraphWithContext(targetGraphIdentifier)
+                                .getRdfGraph()
+                                .getLastDelta()));
+    }
+
+    private CIMClassUMLAdapted readSourceClass(GraphIdentifier graphIdentifier, String classUUID) {
+        GraphRewindableWithUUIDs graph = null;
+        boolean ended = false;
+        try {
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+            graph.begin(TxnType.READ);
+            var cimClass =
+                    CIMUMLObjectFactory.createCIMClassUMLAdapted(
+                            graph,
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            classUUID);
+            graph.end();
+            ended = true;
+            return cimClass;
+        } finally {
+            if (graph != null && !ended) {
+                graph.end();
+            }
+        }
+    }
+
+    private UUID insertClass(GraphIdentifier targetGraphIdentifier, CIMClass newCimClass) {
+        GraphRewindableWithUUIDs targetGraph = null;
+        try {
+            targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
+            targetGraph.begin(TxnType.WRITE);
+            UUID newClassUUID =
+                    CIMUpdates.insertClass(
+                            targetGraph,
+                            databasePort.getPrefixMapping(targetGraphIdentifier.datasetName()),
+                            newCimClass);
+            targetGraph.commit();
+            return newClassUUID;
+        } finally {
+            if (targetGraph != null) {
+                targetGraph.end();
+            }
+        }
+    }
+
+    private void insertAttributes(
+            GraphIdentifier targetGraphIdentifier,
+            CIMClassUMLAdapted sourceClass,
+            CIMClass targetClass) {
+        var targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
+        copyAttributes(sourceClass.getAttributes(), targetClass)
+                .forEach(
+                        cimAttribute -> {
+                            var update =
+                                    CIMUpdates.insertAttribute(
+                                            databasePort.getPrefixMapping(
+                                                    targetGraphIdentifier.datasetName()),
+                                            targetGraphIdentifier.graphUri(),
+                                            cimAttribute);
+                            InMemorySparqlExecutor.executeSingleUpdate(
+                                    targetGraph, update.build(), targetGraphIdentifier.graphUri());
+                        });
+    }
+
+    private void insertEnumEntries(
+            GraphIdentifier targetGraphIdentifier,
+            CIMClassUMLAdapted sourceClass,
+            CIMClass targetClass) {
+        GraphRewindableWithUUIDs targetGraph = null;
+        try {
+            targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
+            targetGraph.begin(TxnType.WRITE);
+            GraphRewindableWithUUIDs finalTargetGraph = targetGraph;
+            copyEnumEntries(sourceClass.getEnumEntries(), targetClass)
+                    .forEach(
+                            cimEnumEntry ->
+                                    CIMUpdates.insertEnumEntry(
+                                            finalTargetGraph,
+                                            databasePort.getPrefixMapping(
+                                                    targetGraphIdentifier.datasetName()),
+                                            cimEnumEntry));
+            targetGraph.commit();
+        } finally {
+            if (targetGraph != null) {
+                targetGraph.end();
+            }
+        }
     }
 
     private CIMClass copyCimClass(

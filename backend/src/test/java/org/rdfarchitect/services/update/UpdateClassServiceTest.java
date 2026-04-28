@@ -196,4 +196,76 @@ class UpdateClassServiceTest {
             graph.end();
         }
     }
+
+    @Test
+    void copyClass_copyExistingClass() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        updateClassService.copyClass(
+                graphIdentifier, CLASS_UUID, graphIdentifier, targetPackageDTO, false);
+
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.READ);
+
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isTrue();
+
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    RDFS.label.asNode(),
+                                    new RDFSLabel("oldLabel - Copy", "en")
+                                            .asLangLiteral()
+                                            .asNode()))
+                    .isTrue();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void copyClass_copyExistingClass_abstract() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        updateClassService.copyClass(
+                graphIdentifier, CLASS_UUID, graphIdentifier, targetPackageDTO, true);
+
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.READ);
+
+            // Klasse wurde kopiert
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isTrue();
+
+            // Keine Attribute für die neue Klasse
+            assertThat(
+                            graph.contains(
+                                    Node.ANY,
+                                    RDFS.domain.asNode(),
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy")))
+                    .isFalse();
+        } finally {
+            graph.end();
+        }
+    }
 }
