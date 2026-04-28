@@ -50,6 +50,9 @@ jobs:
             npm install
           fi
 
+      - name: Run setup
+        run: npm run prestart
+
       - name: Build site
         run: npm run build
 
