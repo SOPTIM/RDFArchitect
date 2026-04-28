@@ -31,6 +31,7 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
+    import { Package } from "$lib/models/dto/index.ts";
     import { copyState, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -40,7 +41,6 @@
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
     import { saveCopyClass } from "./save-copy-class-to-backend.js";
-    import { Package } from "$lib/models/dto/index.ts";
 
     let {
         datasetNavEntry,
@@ -56,7 +56,10 @@
     let wasPackageSelected = false;
 
     let disablePasteButton = $derived(
-        readonly || !copyState.classUUID.getValue() || !copyState.graphURI.getValue() || !copyState.datasetName.getValue(),
+        readonly ||
+            !copyState.classUUID.getValue() ||
+            !copyState.graphURI.getValue() ||
+            !copyState.datasetName.getValue(),
     );
 
     let isProtectedPackage = $derived(
@@ -161,15 +164,17 @@
                 New Class
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
-            onSelect={() => pasteClass(false)}
-            disabled={disablePasteButton}
-            faIcon={faPaste}>
+                onSelect={() => pasteClass(false)}
+                disabled={disablePasteButton}
+                faIcon={faPaste}
+            >
                 Paste class as duplicate
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => pasteClass(true)}
                 disabled={disablePasteButton}
-                faIcon={faPaste}>
+                faIcon={faPaste}
+            >
                 Paste class as abstract
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />

@@ -15,23 +15,33 @@
  *
  */
 
-import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-
-export async function saveCopyClass(datasetName, graphURI, packageDTO, copyAbstract) {
-    if (!copyState.classUUID || !copyState.graphURI || !copyState.datasetName) return false;
+export async function saveCopyClass(
+    datasetName,
+    graphURI,
+    packageDTO,
+    copyAbstract,
+) {
+    if (!copyState.classUUID || !copyState.graphURI || !copyState.datasetName)
+        return false;
     const payload = {
         targetDatasetName: datasetName,
         targetGraphURI: graphURI,
         targetPackage: packageDTO,
         copyAbstract: copyAbstract,
-    }
+    };
     try {
-        const res = await bec.postCopyClass(copyState.datasetName.getValue(), copyState.graphURI.getValue(), copyState.classUUID.getValue(), payload);
+        const res = await bec.postCopyClass(
+            copyState.datasetName.getValue(),
+            copyState.graphURI.getValue(),
+            copyState.classUUID.getValue(),
+            payload,
+        );
         if (!res.ok) {
             const errorText = await res.text();
             console.error("Could not copy class:", errorText);

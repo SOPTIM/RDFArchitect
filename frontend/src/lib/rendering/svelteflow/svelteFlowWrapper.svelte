@@ -34,7 +34,7 @@
     import {
         copyState,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
@@ -423,7 +423,9 @@
     function copyClass() {
         copyState.classUUID.updateValue(contextMenuClass.uuid);
         copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
-        copyState.datasetName.updateValue(editorState.selectedDataset.getValue());
+        copyState.datasetName.updateValue(
+            editorState.selectedDataset.getValue(),
+        );
     }
 
     function updateNodePositions(movedNodes) {

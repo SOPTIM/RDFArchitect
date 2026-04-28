@@ -33,7 +33,6 @@
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteClassConfirmDialog from "../../DeleteClassConfirmDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
-    import { read } from "$app/server";
 
     let {
         datasetNavEntry,
@@ -113,8 +112,11 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
-        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}
-        disabled={readonly}>
+        <ContextMenu.Item.Button
+            onSelect={copyClass}
+            faIcon={faCopy}
+            disabled={readonly}
+        >
             Copy
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />
