@@ -17,12 +17,6 @@
 
 package org.rdfarchitect.database;
 
-import lombok.Data;
+public record GraphIdentifier(String datasetName, String graphUri) {
 
-@Data
-public class GraphIdentifier {
-
-    private final String datasetName;
-
-    private final String graphUri;
 }

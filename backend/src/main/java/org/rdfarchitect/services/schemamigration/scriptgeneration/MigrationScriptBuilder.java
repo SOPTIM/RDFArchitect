@@ -17,9 +17,8 @@
 
 package org.rdfarchitect.services.schemamigration.scriptgeneration;
 
-import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
-
 import java.util.List;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 
 public interface MigrationScriptBuilder {
     String generateMigrationScript(List<SemanticClassChange> changes);

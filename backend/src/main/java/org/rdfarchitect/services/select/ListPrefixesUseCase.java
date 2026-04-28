@@ -17,9 +17,8 @@
 
 package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
-
 import java.util.List;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 
 public interface ListPrefixesUseCase {
 

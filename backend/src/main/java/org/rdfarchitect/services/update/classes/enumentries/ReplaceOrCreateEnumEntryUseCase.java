@@ -17,10 +17,9 @@
 
 package org.rdfarchitect.services.update.classes.enumentries;
 
+import java.util.UUID;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-
-import java.util.UUID;
 
 public interface ReplaceOrCreateEnumEntryUseCase {
 
