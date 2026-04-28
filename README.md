@@ -25,7 +25,7 @@ RDFArchitect also supports release workflows such as schema comparison, change r
 
 ![Editor](docs/assets/screenshots/editor.png)
 
-For the full screenshot gallery, see [docs/screenshots.md](docs/screenshots.md).
+For the complete documentation, see the [docs site](https://rdfarchitect.soptim.de/).
 
 ## Key Features
 
