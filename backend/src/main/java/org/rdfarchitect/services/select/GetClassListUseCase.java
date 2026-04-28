@@ -17,10 +17,9 @@
 
 package org.rdfarchitect.services.select;
 
+import java.util.List;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-
-import java.util.List;
 
 public interface GetClassListUseCase {
 

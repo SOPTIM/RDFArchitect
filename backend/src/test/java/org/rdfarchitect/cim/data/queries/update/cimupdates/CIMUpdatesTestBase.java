@@ -17,6 +17,11 @@
 
 package org.rdfarchitect.cim.data.queries.update.cimupdates;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
+import java.util.function.Consumer;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.TxnType;
@@ -30,12 +35,6 @@ import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.mock.web.MockMultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.UUID;
-import java.util.function.Consumer;
 
 public class CIMUpdatesTestBase {
 
@@ -125,7 +124,7 @@ public class CIMUpdatesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);
@@ -148,7 +147,7 @@ public class CIMUpdatesTestBase {
         InMemorySparqlExecutor.executeSingleUpdate(
                 databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                 update,
-                graphIdentifier.getGraphUri());
+                graphIdentifier.graphUri());
     }
 
     /** Use this method to execute write actions in a transaction using lambda expression */

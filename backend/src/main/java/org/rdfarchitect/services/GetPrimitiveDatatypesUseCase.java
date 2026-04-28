@@ -17,9 +17,8 @@
 
 package org.rdfarchitect.services;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-
 import java.util.List;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 public interface GetPrimitiveDatatypesUseCase {
 

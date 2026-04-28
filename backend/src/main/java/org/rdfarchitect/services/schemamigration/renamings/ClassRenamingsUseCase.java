@@ -17,10 +17,9 @@
 
 package org.rdfarchitect.services.schemamigration.renamings;
 
+import java.util.List;
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
-
-import java.util.List;
 
 public interface ClassRenamingsUseCase {
     void confirmClassRenamings(List<RenameCandidate<SemanticClassChange>> renames);

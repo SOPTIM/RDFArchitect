@@ -25,11 +25,19 @@ public interface CopyClassUseCase {
     /**
      * Constructs a class based on the given class and adds it to the specified graph.
      *
-     * @param graphIdentifier       The graph URI and database name of the graph of the class that will be copied.
-     * @param classUUID             The UUID of the class that will be copied.
-     * @param targetGraphIdentifier The graph URI and database name of the graph the new class will be added in.
-     * @param targetPackageDTO      The package the new class will be added in.
-     * @param copyAbstract          If true, only the class itself will be copied, if false, all attributes will also be copied.
+     * @param graphIdentifier The graph URI and database name of the graph of the class that will be
+     *     copied.
+     * @param classUUID The UUID of the class that will be copied.
+     * @param targetGraphIdentifier The graph URI and database name of the graph the new class will
+     *     be added in.
+     * @param targetPackageDTO The package the new class will be added in.
+     * @param copyAbstract If true, only the class itself will be copied, if false, all attributes
+     *     will also be copied.
      */
-    void copyClass(GraphIdentifier graphIdentifier, String classUUID, GraphIdentifier targetGraphIdentifier, PackageDTO targetPackageDTO, boolean copyAbstract);
+    void copyClass(
+            GraphIdentifier graphIdentifier,
+            String classUUID,
+            GraphIdentifier targetGraphIdentifier,
+            PackageDTO targetPackageDTO,
+            boolean copyAbstract);
 }

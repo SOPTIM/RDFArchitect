@@ -17,9 +17,8 @@
 
 package org.rdfarchitect.services.schemamigration.defaults;
 
-import org.rdfarchitect.api.dto.migration.DefaultValueView;
-
 import java.util.List;
+import org.rdfarchitect.api.dto.migration.DefaultValueView;
 
 public interface GetDefaultValueViewsUseCase {
     List<DefaultValueView> getDefaultValueViews();
