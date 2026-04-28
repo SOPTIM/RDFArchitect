@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.rdf.graph.wrapper;
 
-import org.apache.jena.graph.Capabilities;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphEventManager;
 import org.apache.jena.graph.Node;
@@ -281,27 +280,11 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
 
     // Graph
     @Override
-    public boolean dependsOn(Graph other) {
-        if (!isInTransaction()) {
-            throw new GraphNotInATransactionException();
-        }
-        return currentDelta.dependsOn(other);
-    }
-
-    @Override
     public TransactionHandler getTransactionHandler() {
         if (!isInTransaction()) {
             throw new GraphNotInATransactionException();
         }
         return currentDelta.getTransactionHandler();
-    }
-
-    @Override
-    public Capabilities getCapabilities() {
-        if (!isInTransaction()) {
-            throw new GraphNotInATransactionException();
-        }
-        return currentDelta.getCapabilities();
     }
 
     @Override

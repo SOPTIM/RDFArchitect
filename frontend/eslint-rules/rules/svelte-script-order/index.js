@@ -29,7 +29,7 @@ const svelteScriptOrderRule = {
         schema: [],
     },
     create(context) {
-        const filename = context.getFilename();
+        const filename = context.filename;
         const isSvelte = filename.endsWith(".svelte");
         const isSvelteJS = filename.endsWith(".svelte.js");
 
