@@ -11,7 +11,7 @@ sidebar_position: 4
 - **Vite** for build and dev server.
 - **Tailwind CSS** for styling, with project-specific design tokens (CSS variables) in `src/lib/styles/`.
 - **bits-ui** for headless dialog, menubar, and dropdown primitives, wrapped in project-local components under `src/lib/components/bitsui/`.
-- **@xyflow/svelte** (SvelteFlow) for diagram rendering, with **elkjs** for auto-layout.
+- **SvelteFlow** for diagram rendering, with **elkjs** for auto-layout.
 - **Mermaid** as the alternative renderer.
 - **CodeMirror 6** with `codemirror-lang-turtle` for the TTL editors.
 - **Asciidoctor.js** for rendering class comments.
@@ -58,7 +58,7 @@ A central pattern: every editable domain object has a **reactive wrapper** in `l
 `BackendConnection` in `lib/api/backend.js` is a hand-written class with one method per backend endpoint. Every method:
 
 - Builds the URL from `PUBLIC_BACKEND_URL`.
-- Uses `credentials: "include"` so the session cookie travels.
+- Uses `credentials: "include"` so the session cookie will be send.
 - Returns the raw `Response` — callers decide whether to `.json()`, `.text()`, or `.blob()`.
 
 When you add a new backend endpoint, add the matching method here. Do not call `fetch()` directly from a component — the indirection makes mocking in tests possible and keeps URLs in one place.
