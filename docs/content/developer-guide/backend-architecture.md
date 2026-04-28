@@ -36,8 +36,6 @@ public interface ListDatasetsUseCase {
 
 A controller depends only on the use case interface; a service implements one or many use cases. This is a deliberate design choice — it keeps controllers small, makes individual operations easy to test, and lets services compose multiple ports without becoming god classes.
 
-When you find yourself writing a private helper method on a controller that does any actual work, that's a signal it should be a new use case instead.
-
 ## Services
 
 Services live under `services/<feature>/` and typically implement multiple use cases when they share state, repositories, or transaction boundaries. The `services/select/QueryDatasetService` is a good representative example — it implements `GetDatasetSchemaUseCase`, `ListGraphsUseCase`, `ListPrefixesUseCase`, and `ListDatasetsUseCase`, all of which need the same `DatabasePort`.
