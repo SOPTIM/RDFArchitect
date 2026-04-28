@@ -16,6 +16,10 @@ RDFArchitect consists of three runtime components plus a triple store:
 - **Gateway** (optional) — an nginx reverse proxy that routes `/api/*` to the backend and everything else to the frontend, so that both can be served from a single origin.
 - **Triple store** — **Apache Jena Fuseki** (recommended). Stores all snapshots.
 
+## Data peristence
+
+RDFArchitect stores datasets and graphs in-memory. Only snapshots are stored in Apache Jena Fuseki and are persisted on restarts.
+
 ## Where to go next
 
 - [Installation](./installation) — how to deploy.

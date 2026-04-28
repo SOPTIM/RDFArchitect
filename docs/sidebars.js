@@ -55,7 +55,6 @@ const sidebars = {
     'admin-guide/installation',
     'admin-guide/configuration',
     'admin-guide/fuseki',
-    'admin-guide/backups',
     'admin-guide/security',
     'admin-guide/monitoring',
     'admin-guide/upgrading',
