@@ -20,6 +20,8 @@ package org.rdfarchitect.services.update.classes;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
+import java.util.UUID;
+
 public interface CopyClassUseCase {
 
     /**
@@ -34,7 +36,7 @@ public interface CopyClassUseCase {
      * @param copyAbstract If true, only the class itself will be copied, if false, all attributes
      *     will also be copied.
      */
-    void copyClass(
+    UUID copyClass(
             GraphIdentifier graphIdentifier,
             String classUUID,
             GraphIdentifier targetGraphIdentifier,

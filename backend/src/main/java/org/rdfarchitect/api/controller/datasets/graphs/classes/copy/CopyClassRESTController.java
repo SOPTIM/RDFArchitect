@@ -22,7 +22,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -80,18 +79,6 @@ public class CopyClassRESTController {
                 classUUID,
                 originURL);
 
-        logger.info("--- LOOK HERE---");
-        logger.info(
-                "datasetName: {}, graphURI: {}, classUUID: {}, targetDatasetName: {}, targetGraphURI: {}, targetPackage: {}, copyAbstract: {}",
-                datasetName,
-                graphURI,
-                classUUID,
-                copyClassRequest.targetDatasetName,
-                copyClassRequest.targetGraphURI,
-                copyClassRequest.targetPackage,
-                copyClassRequest.copyAbstract);
-        logger.info("--- LOOK HERE---");
-
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
@@ -101,12 +88,13 @@ public class CopyClassRESTController {
         var targetGraphIdentifier =
                 new GraphIdentifier(copyClassRequest.targetDatasetName, targetExtendedGraphURI);
 
-        copyClassUseCase.copyClass(
-                graphIdentifier,
-                classUUID,
-                targetGraphIdentifier,
-                copyClassRequest.targetPackage,
-                copyClassRequest.copyAbstract);
+        var newClassUUID =
+                copyClassUseCase.copyClass(
+                        graphIdentifier,
+                        classUUID,
+                        targetGraphIdentifier,
+                        copyClassRequest.targetPackage,
+                        copyClassRequest.copyAbstract);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" to \"{}\".",
@@ -115,7 +103,7 @@ public class CopyClassRESTController {
                 classUUID,
                 originURL);
 
-        return Response.SUCCESS;
+        return newClassUUID.toString();
     }
 
     /**

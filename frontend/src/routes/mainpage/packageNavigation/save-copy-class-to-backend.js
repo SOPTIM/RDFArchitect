@@ -17,7 +17,11 @@
 
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+import {
+    copyState,
+    editorState,
+    forceReloadTrigger,
+} from "$lib/sharedState.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -42,11 +46,21 @@ export async function saveCopyClass(
             copyState.classUUID.getValue(),
             payload,
         );
-        if (!res.ok) {
+        if (res.ok) {
+            const uuid = await res.text();
+            editorState.selectedClassDataset.updateValue(datasetName);
+            editorState.selectedClassGraph.updateValue(graphURI);
+            editorState.selectedPackageUUID.updateValue(packageDTO.uuid);
+            editorState.selectedClassUUID.updateValue(uuid);
+        } else {
             const errorText = await res.text();
             console.error("Could not copy class:", errorText);
         }
     } finally {
         forceReloadTrigger.trigger();
+        editorState.selectedDataset.trigger();
+        editorState.selectedGraph.trigger();
+        editorState.selectedPackageUUID.trigger();
+        editorState.selectedClassUUID.trigger();
     }
 }

@@ -171,7 +171,7 @@ public class UpdateClassService
     }
 
     @Override
-    public void copyClass(
+    public UUID copyClass(
             GraphIdentifier graphIdentifier,
             String classUUID,
             GraphIdentifier targetGraphIdentifier,
@@ -208,6 +208,7 @@ public class UpdateClassService
                                 .getGraphWithContext(targetGraphIdentifier)
                                 .getRdfGraph()
                                 .getLastDelta()));
+        return newClassUUID;
     }
 
     private CIMClassUMLAdapted readSourceClass(GraphIdentifier graphIdentifier, String classUUID) {
