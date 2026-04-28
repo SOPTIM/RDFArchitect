@@ -17,8 +17,10 @@
 
 package org.rdfarchitect.services.shacl;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -29,10 +31,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-
 @RequiredArgsConstructor
 public class SHACLGenerateService implements SHACLGenerateUseCase {
 
@@ -42,7 +40,7 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
     public String exportGeneratedSHACLGraph(
             GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
         GraphRewindable ontologyGraph = null;
-        var prefixes = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var prefixes = databasePort.getPrefixMapping(graphIdentifier.datasetName());
         try (var outStream = new ByteArrayOutputStream()) {
             ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             ontologyGraph.begin(TxnType.READ);

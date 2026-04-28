@@ -17,10 +17,9 @@
 
 package org.rdfarchitect.services.update.classes.attributes;
 
+import java.util.UUID;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-
-import java.util.UUID;
 
 public interface CreateAttributeUseCase {
 

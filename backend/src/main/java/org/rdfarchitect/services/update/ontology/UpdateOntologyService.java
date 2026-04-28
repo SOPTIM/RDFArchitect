@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.services.update.ontology;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
@@ -30,8 +30,6 @@ import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -45,13 +43,13 @@ public class UpdateOntologyService
     // CREATE
     @Override
     public void createOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
-        expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
+        expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
@@ -77,13 +75,13 @@ public class UpdateOntologyService
     // UPDATE
     @Override
     public void replaceOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
-        expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
+        expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
@@ -114,7 +112,7 @@ public class UpdateOntologyService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             var ontology = new OntologyFacade(model);
             ontology.deleteOntology();

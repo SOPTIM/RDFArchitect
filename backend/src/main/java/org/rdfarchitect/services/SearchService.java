@@ -17,8 +17,10 @@
 
 package org.rdfarchitect.services;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.QueryFactory;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -30,10 +32,6 @@ import org.rdfarchitect.models.search.SearchResultObjectFactory;
 import org.rdfarchitect.models.search.data.SearchResult;
 import org.rdfarchitect.models.search.data.SearchResults;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -253,16 +251,16 @@ public class SearchService implements SearchUseCase {
             List<SearchResult> externalSearchResults) {
         String specificInternalQuery;
         String specificExternalQuery;
-        if (Objects.equals(graphIdentifier.getGraphUri(), "default")) {
+        if (Objects.equals(graphIdentifier.graphUri(), "default")) {
             specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, "");
             specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, "");
         } else {
             specificInternalQuery =
                     SPARQL_INTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.getGraphUri() + ">");
+                            GRAPH, "FROM <" + graphIdentifier.graphUri() + ">");
             specificExternalQuery =
                     SPARQL_EXTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.getGraphUri() + ">");
+                            GRAPH, "FROM <" + graphIdentifier.graphUri() + ">");
         }
         specificInternalQuery = specificInternalQuery.replace("searchQuery", query);
         specificExternalQuery = specificExternalQuery.replace("searchQuery", query);
@@ -276,12 +274,12 @@ public class SearchService implements SearchUseCase {
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         internalQueryObject,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
         var externalResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         externalQueryObject,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         searchResults.addAll(
                 SearchResultObjectFactory.createSearchResultObjectList(

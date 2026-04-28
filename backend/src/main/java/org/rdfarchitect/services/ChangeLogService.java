@@ -17,8 +17,12 @@
 
 package org.rdfarchitect.services;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
 import org.rdfarchitect.context.SessionContext;
@@ -26,12 +30,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.springframework.stereotype.Service;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -45,8 +43,8 @@ public class ChangeLogService implements ChangeLogUseCase {
     private GraphChangeLog getChangeLog(GraphIdentifier graphIdentifier) {
         return changeLogs
                 .getOrDefault(SessionContext.getSessionId(), Collections.emptyMap())
-                .getOrDefault(graphIdentifier.getDatasetName(), Collections.emptyMap())
-                .getOrDefault(graphIdentifier.getGraphUri(), new GraphChangeLog());
+                .getOrDefault(graphIdentifier.datasetName(), Collections.emptyMap())
+                .getOrDefault(graphIdentifier.graphUri(), new GraphChangeLog());
     }
 
     @Override
@@ -56,8 +54,8 @@ public class ChangeLogService implements ChangeLogUseCase {
                         .computeIfAbsent(
                                 SessionContext.getSessionId(), _ -> new ConcurrentHashMap<>())
                         .computeIfAbsent(
-                                graphIdentifier.getDatasetName(), _ -> new ConcurrentHashMap<>())
-                        .computeIfAbsent(graphIdentifier.getGraphUri(), _ -> new GraphChangeLog());
+                                graphIdentifier.datasetName(), _ -> new ConcurrentHashMap<>())
+                        .computeIfAbsent(graphIdentifier.graphUri(), _ -> new GraphChangeLog());
         graphChangeLog.addEntry(entry);
     }
 

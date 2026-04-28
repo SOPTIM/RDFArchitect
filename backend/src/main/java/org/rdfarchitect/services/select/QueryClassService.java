@@ -17,8 +17,10 @@
 
 package org.rdfarchitect.services.select;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.TxnType;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
@@ -34,10 +36,6 @@ import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -61,8 +59,8 @@ public class QueryClassService
             var cimClass =
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
                             graph,
-                            graphIdentifier.getGraphUri(),
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             classUUID);
             return umlAdaptedClassMapper.toDTO(cimClass);
         } finally {
@@ -83,8 +81,8 @@ public class QueryClassService
             var cimObjectFetcher =
                     new CIMObjectFetcher(
                             graph,
-                            graphIdentifier.getGraphUri(),
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var baseClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
             superClassList.add(
                     cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));

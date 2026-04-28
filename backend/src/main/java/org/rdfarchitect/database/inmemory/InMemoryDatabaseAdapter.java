@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import java.util.List;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
@@ -28,9 +29,6 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
-
-import java.util.List;
-import java.util.UUID;
 
 @RequiredArgsConstructor
 public class InMemoryDatabaseAdapter implements DatabasePort {
@@ -60,14 +58,14 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
         database.create(graphIdentifier, graph);
         var currentPrefixMapping =
                 new PrefixMappingImpl()
-                        .setNsPrefixes(database.getPrefixMapping(graphIdentifier.getDatasetName()))
+                        .setNsPrefixes(database.getPrefixMapping(graphIdentifier.datasetName()))
                         .setNsPrefixes(graph.getPrefixMapping());
-        database.setPrefixMapping(graphIdentifier.getDatasetName(), currentPrefixMapping);
+        database.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
     }
 
     @Override
     public void createEmptyGraph(GraphIdentifier graphIdentifier) {
-        var datasetName = graphIdentifier.getDatasetName();
+        var datasetName = graphIdentifier.datasetName();
         var isNewDataset = !database.listDatasets().contains(datasetName);
         database.create(graphIdentifier, GraphFactory.createDefaultGraph());
         if (isNewDataset) {
@@ -77,7 +75,7 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
                             .setNsPrefixes(PrefixMapping.Standard)
                             .setNsPrefix(CIM_PREFIX, CIM.namespace)
                             .setNsPrefix(CIMS_PREFIX, CIMS.namespace);
-            database.setPrefixMapping(graphIdentifier.getDatasetName(), prefixMapping);
+            database.setPrefixMapping(graphIdentifier.datasetName(), prefixMapping);
         }
     }
 

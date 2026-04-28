@@ -17,8 +17,9 @@
 
 package org.rdfarchitect.services.dl.update;
 
+import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.Diagram;
@@ -32,9 +33,6 @@ import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.stereotype.Service;
-
-import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -66,7 +64,7 @@ public class UpdateDiagramLayoutService
                 diagramLayoutModel,
                 Diagram.builder()
                         .mRID(diagramLayout.getDefaultPackageMRID())
-                        .name(graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME)
+                        .name(graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME)
                         .orientation(OrientationKind.NEGATIVE)
                         .build());
         // create DOs and DOPs for the default package
@@ -121,7 +119,7 @@ public class UpdateDiagramLayoutService
 
             // finds the package name for the DL diagram to be added
             if (resolvedPackageUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
-                packageName = graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME;
+                packageName = graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME;
             } else {
                 for (var cimPackage : cimCollection.getPackages()) {
                     if (cimPackage.getUuid().equals(resolvedPackageUUID)) {

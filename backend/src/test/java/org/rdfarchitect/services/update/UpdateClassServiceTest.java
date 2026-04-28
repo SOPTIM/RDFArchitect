@@ -90,7 +90,7 @@ class UpdateClassServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build();
         databasePort.createGraph(graphIdentifier, graphSource.graph());
     }
