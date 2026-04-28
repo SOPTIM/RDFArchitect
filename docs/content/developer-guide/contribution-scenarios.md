@@ -29,15 +29,11 @@ Three steps:
 
 Documentation lives in `docs/`. Markdown files there are referenced from the README and from each other. PRs that improve documentation are *especially* welcome — they are the lowest-effort way to start contributing and they help everyone.
 
-## Internationalisation
-
-Not currently supported. Contributions that introduce a translation framework would be a meaningful change to the frontend architecture and are best discussed in an issue first.
-
 ## Where to ask questions
 
 - **Architecture or design questions**: open a discussion in [GitHub Discussions](https://github.com/SOPTIM/RDFArchitect/discussions). Maintainers prefer this channel for anything that does not yet correspond to a concrete bug or feature.
 - **Bugs**: open an issue with the bug report template. Include the version (visible on the homepage), browser, and a reproducer.
-- **Features**: open an issue with the feature request template, or — better — open a draft PR to start the conversation around concrete code.
+- **Features**: open an issue with the feature request template.
 - **Security issues**: do not use public channels. See [`SECURITY.md`](https://github.com/SOPTIM/RDFArchitect/blob/main/.github/SECURITY.md).
 
 ## Appendix: useful commands

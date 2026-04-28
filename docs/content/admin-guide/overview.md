@@ -26,6 +26,5 @@ RDFArchitect stores datasets and graphs in-memory. Only snapshots are stored in 
 - [Configuration](./configuration) — settings reference.
 - [Apache Jena Fuseki](./fuseki) — triple-store guidance.
 - [Security](./security) — trusted-network and reverse-proxy guidance.
-- [Monitoring](./monitoring) — health and metrics.
 - [Upgrading](./upgrading) — version-to-version notes.
 - [Troubleshooting](./troubleshooting) — operational issues.
