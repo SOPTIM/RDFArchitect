@@ -249,7 +249,6 @@ class UpdateClassServiceTest {
         try {
             graph.begin(TxnType.READ);
 
-            // Klasse wurde kopiert
             assertThat(
                             graph.contains(
                                     NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
@@ -257,7 +256,6 @@ class UpdateClassServiceTest {
                                     RDFS.Class.asNode()))
                     .isTrue();
 
-            // Keine Attribute für die neue Klasse
             assertThat(
                             graph.contains(
                                     Node.ANY,
