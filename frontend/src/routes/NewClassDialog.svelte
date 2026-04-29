@@ -225,11 +225,6 @@
                     packageUUID: selectedPackageUUID,
                     className: classNameLocal.value,
                 });
-                console.warn(
-                    "Received response text for new class UUID:",
-                    uuid,
-                    "Make sure the backend returns the new class UUID in the response body.",
-                );
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedPackageUUID.updateValue(
