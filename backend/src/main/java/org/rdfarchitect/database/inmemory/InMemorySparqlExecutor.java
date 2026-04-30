@@ -27,15 +27,36 @@ import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.update.Update;
 import org.apache.jena.update.UpdateExecutionFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+
+import java.util.function.Function;
 
 @UtilityClass
 public class InMemorySparqlExecutor {
 
     public void executeSingleUpdate(
+            GraphRewindableWithUUIDs graph, UpdateRequest update, String graphUri) {
+        executeSingleUpdate(graph, graphUri, g -> update);
+    }
+
+    public void executeSingleUpdate(
             GraphRewindableWithUUIDs graph, Update update, String graphUri) {
+        executeSingleUpdate(graph, graphUri, g -> new UpdateRequest().add(update));
+    }
+
+    /**
+     * Opens a single WRITE transaction, lets {@code updateBuilder} build the {@link UpdateRequest}
+     * with reads on the open transaction (so reads-then-writes happen atomically and stay
+     * consistent), and executes the resulting update.
+     */
+    public void executeSingleUpdate(
+            GraphRewindableWithUUIDs graph,
+            String graphUri,
+            Function<GraphRewindableWithUUIDs, UpdateRequest> updateBuilder) {
         try {
             graph.begin(TxnType.WRITE);
+            var update = updateBuilder.apply(graph);
             var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
             UpdateExecutionFactory.create(update, dataset).execute();
             graph.commit();

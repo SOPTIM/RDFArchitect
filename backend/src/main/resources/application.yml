@@ -28,3 +28,8 @@ server:
         path: /
         max-age: 365d
       timeout: 365d
+
+attributes:
+  # When true, new attribute fixed/default values are persisted as RDF blank-node wrappers
+  # instead of direct literals. Existing values keep their shape regardless of this flag.
+  newValuesBlankNode: false

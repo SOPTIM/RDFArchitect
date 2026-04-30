@@ -22,6 +22,7 @@ import lombok.NoArgsConstructor;
 
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
@@ -94,7 +95,21 @@ public class CIMObjectFactory {
      * @return The created attribute.
      */
     public static CIMAttribute createCIMAttribute(QuerySolution querySolution) {
-        var parser = new CIMQuerySolutionParser(querySolution);
+        return createCIMAttribute(querySolution, null);
+    }
+
+    /**
+     * Creates a {@link CIMAttribute} from a given query solution, using {@code valueNodeModel} to
+     * resolve blank-node fixed/default values.
+     *
+     * @param querySolution The query solution to create the attribute from.
+     * @param valueNodeModel Optional model used to enumerate blank-node properties when the
+     *     attribute fixed/default value is bound to a blank node.
+     * @return The created attribute.
+     */
+    public static CIMAttribute createCIMAttribute(
+            QuerySolution querySolution, Model valueNodeModel) {
+        var parser = new CIMQuerySolutionParser(querySolution, valueNodeModel);
         CIMSDataType dataType =
                 parser.getPrimitiveDataType(
                         CIMQueryVars.DATA_TYPE_URI, CIMQueryVars.DATA_TYPE_LABEL);
@@ -123,7 +138,20 @@ public class CIMObjectFactory {
      * @return a list containing {@link CIMAttribute CIMAttributes}.
      */
     public static List<CIMAttribute> createCIMAttributeList(ResultSet attributeResultSet) {
-        return createObjectList(attributeResultSet, CIMObjectFactory::createCIMAttribute);
+        return createCIMAttributeList(attributeResultSet, null);
+    }
+
+    /**
+     * Creates a List of {@link CIMAttribute CIMAttributes}, using {@code valueNodeModel} to resolve
+     * blank-node fixed/default values.
+     */
+    public static List<CIMAttribute> createCIMAttributeList(
+            ResultSet attributeResultSet, Model valueNodeModel) {
+        List<CIMAttribute> attributes = new ArrayList<>();
+        while (attributeResultSet.hasNext()) {
+            attributes.add(createCIMAttribute(attributeResultSet.next(), valueNodeModel));
+        }
+        return attributes;
     }
 
     /**

@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.api.dto.attributes;
 
+import org.apache.jena.datatypes.TypeMapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -31,6 +32,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.shacl.XSDDatatypeMapper;
 
 import java.util.List;
 
@@ -94,18 +96,14 @@ public interface AttributeMapper {
         if (dto.getFixedValue() == null) {
             return null;
         }
-        return new CIMSIsFixed(
-                dto.getFixedValue(),
-                new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
+        return new CIMSIsFixed(dto.getFixedValue(), buildXsdDatatype(dto));
     }
 
     default CIMSIsDefault buildDefaultValue(AttributeDTO dto) {
         if (dto.getDefaultValue() == null) {
             return null;
         }
-        return new CIMSIsDefault(
-                dto.getDefaultValue(),
-                new URI(dto.getDataType().getPrefix() + dto.getDataType().getLabel()));
+        return new CIMSIsDefault(dto.getDefaultValue(), buildXsdDatatype(dto));
     }
 
     default CIMSDataType buildDataType(DataTypeDTO dto) {
@@ -113,5 +111,25 @@ public interface AttributeMapper {
                 new URI(dto.getPrefix() + dto.getLabel()),
                 new RDFSLabel(dto.getLabel(), "en"),
                 CIMSDataType.Type.valueOf(dto.getType().toString()));
+    }
+
+    /**
+     * Resolves the canonical XSD datatype URI for an attribute fixed/default value. Only primitive
+     * datatypes map to an XSD URI; for non-primitive types (or unknown labels) the value is
+     * persisted without a typed datatype, leaving the type to be resolved server-side by {@link
+     * org.rdfarchitect.services.update.classes.attributes.AttributeFixedDefaultResolver}.
+     */
+    private static URI buildXsdDatatype(AttributeDTO dto) {
+        if (dto.getDataType() == null || dto.getDataType().getLabel() == null) {
+            return null;
+        }
+        if (dto.getDataType().getType() != DataTypeDTO.Type.PRIMITIVE) {
+            return null;
+        }
+        var datatype = XSDDatatypeMapper.classLabelToDatatype(dto.getDataType().getLabel());
+        if (TypeMapper.getInstance().getTypeByName(datatype.getURI()) == null) {
+            return null;
+        }
+        return new URI(datatype.getURI());
     }
 }
