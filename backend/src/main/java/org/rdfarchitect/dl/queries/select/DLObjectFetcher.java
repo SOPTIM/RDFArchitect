@@ -97,7 +97,7 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?ioMRID ?dopMRID ?doMRID ?xPosition ?yPosition
+                  SELECT ?ioMRID ?dopMRID ?doMRID ?xPosition ?yPosition ?zPosition
                   WHERE {
                       ?diagramMRID rdf:type cim:Diagram .
 
@@ -109,6 +109,9 @@ public class DLObjectFetcher {
                                       cim:DiagramObjectPoint.DiagramObject ?doMRID ;
                                       cim:DiagramObjectPoint.xPosition ?xPosition ;
                                       cim:DiagramObjectPoint.yPosition ?yPosition .
+                      OPTIONAL {
+                        ?dopMRID cim:DiagramObjectPoint.zPosition ?zPosition
+                      }
 
                       FILTER(STR(?diagramMRID) = "DIAGRAM_MRID")
                   }
@@ -147,12 +150,15 @@ public class DLObjectFetcher {
                   PREFIX  rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
                   PREFIX  cim:    <http://iec.ch/TC57/CIM100#>
 
-                  SELECT ?dopMRID ?xPosition ?yPosition
+                  SELECT ?dopMRID ?xPosition ?yPosition ?zPosition
                   WHERE {
                       ?dopMRID rdf:type cim:DiagramObjectPoint ;
                             cim:DiagramObjectPoint.DiagramObject ?doMRID ;
                             cim:DiagramObjectPoint.xPosition ?xPosition ;
                             cim:DiagramObjectPoint.yPosition ?yPosition .
+                      OPTIONAL {
+                        ?dopMRID cim:DiagramObjectPoint.zPosition ?zPosition
+                      }
 
                       FILTER(STR(?doMRID) = "DO_MRID")
                   }
