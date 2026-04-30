@@ -110,11 +110,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             addGraphFromFile(ATTRIBUTE_FILE_PATH);
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttribute(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            attributeRequired));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeRequired,
+                                    false));
 
             // Assert
             try {
@@ -176,11 +179,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             addGraphFromFile(ATTRIBUTE_OPTIONAL_FILE_PATH);
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttribute(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            attributeOptional));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeOptional,
+                                    false));
 
             // Assert
             try {
@@ -266,11 +272,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             assertThrows(
                     Exception.class,
                     () ->
-                            executeUpdateOnTestGraph(
-                                    CIMUpdates.replaceAttribute(
-                                            databasePort.getPrefixMapping(DATASET_NAME),
-                                            GRAPH_URI,
-                                            newAttribute)));
+                            executeUpdateBuiltAgainstTestGraph(
+                                    g ->
+                                            CIMUpdates.replaceAttribute(
+                                                    g,
+                                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                                    GRAPH_URI,
+                                                    newAttribute,
+                                                    false)));
         }
 
         @Test
@@ -281,11 +290,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             addGraphFromFile(ATTRIBUTE_FILE_PATH);
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttribute(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            attributePrimitive));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributePrimitive,
+                                    false));
 
             // Assert
             try {
@@ -347,11 +359,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             addGraphFromFile(ATTRIBUTE_FILE_PATH);
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttribute(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            attributeOptional));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeOptional,
+                                    false));
 
             // Assert
             try {
@@ -437,11 +452,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             .build();
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttribute(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            attributeWithBlankNodeValue));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttribute(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    attributeWithBlankNodeValue,
+                                    false));
 
             // Assert
             try {
@@ -479,8 +497,7 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.deleteAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME), GRAPH_URI, MY_UUID)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME), GRAPH_URI, MY_UUID));
 
             // Assert
             try {
@@ -506,10 +523,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.deleteAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    nonExistingUUID)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            nonExistingUUID));
 
             // Assert
             try {
@@ -566,10 +582,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.deleteAttribute(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    nonExistingUUID)
-                            .build());
+                            databasePort.getPrefixMapping(DATASET_NAME),
+                            GRAPH_URI,
+                            nonExistingUUID));
 
             // Assert
             try {
@@ -597,12 +612,15 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             .build();
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttributes(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            MY_UUID.toString(),
-                            List.of(newAttributeOne)));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttributes(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    MY_UUID.toString(),
+                                    List.of(newAttributeOne),
+                                    false));
 
             // Assert
             try {
@@ -677,12 +695,15 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             .build();
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttributes(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            MY_UUID.toString(),
-                            List.of(newAttributeOne)));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttributes(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    MY_UUID.toString(),
+                                    List.of(newAttributeOne),
+                                    false));
 
             // Assert
             try {
@@ -785,12 +806,15 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             addGraphFromFile(MULTIPLE_ATTRIBUTES_FILE_PATH);
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttributes(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            MY_UUID.toString(),
-                            List.of()));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttributes(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    MY_UUID.toString(),
+                                    List.of(),
+                                    false));
 
             // Assert
             try {
@@ -821,12 +845,15 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
             addGraphFromFile(MULTIPLE_ATTRIBUTES_FILE_PATH);
 
             // Act
-            executeUpdateOnTestGraph(
-                    CIMUpdates.replaceAttributes(
-                            databasePort.getPrefixMapping(DATASET_NAME),
-                            GRAPH_URI,
-                            "does not exist",
-                            List.of()));
+            executeUpdateBuiltAgainstTestGraph(
+                    g ->
+                            CIMUpdates.replaceAttributes(
+                                    g,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    GRAPH_URI,
+                                    "does not exist",
+                                    List.of(),
+                                    false));
 
             // Assert
             try {

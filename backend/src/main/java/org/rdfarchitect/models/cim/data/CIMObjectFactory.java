@@ -22,7 +22,6 @@ import lombok.NoArgsConstructor;
 
 import org.apache.jena.query.QuerySolution;
 import org.apache.jena.query.ResultSet;
-import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
@@ -89,27 +88,15 @@ public class CIMObjectFactory {
     }
 
     /**
-     * Creates a {@link CIMAttribute} from a given query solution.
+     * Creates a {@link CIMAttribute} from a given query solution. The query is expected to bind
+     * both the outer and the inner value-node variables for {@code isFixed} / {@code isDefault} so
+     * blank-node value wrappers can be resolved without a separate model lookup.
      *
      * @param querySolution The query solution to create the attribute from.
      * @return The created attribute.
      */
     public static CIMAttribute createCIMAttribute(QuerySolution querySolution) {
-        return createCIMAttribute(querySolution, null);
-    }
-
-    /**
-     * Creates a {@link CIMAttribute} from a given query solution, using {@code valueNodeModel} to
-     * resolve blank-node fixed/default values.
-     *
-     * @param querySolution The query solution to create the attribute from.
-     * @param valueNodeModel Optional model used to enumerate blank-node properties when the
-     *     attribute fixed/default value is bound to a blank node.
-     * @return The created attribute.
-     */
-    public static CIMAttribute createCIMAttribute(
-            QuerySolution querySolution, Model valueNodeModel) {
-        var parser = new CIMQuerySolutionParser(querySolution, valueNodeModel);
+        var parser = new CIMQuerySolutionParser(querySolution);
         CIMSDataType dataType =
                 parser.getPrimitiveDataType(
                         CIMQueryVars.DATA_TYPE_URI, CIMQueryVars.DATA_TYPE_LABEL);
@@ -125,8 +112,9 @@ public class CIMObjectFactory {
                 .dataType(dataType)
                 .stereotype(parser.getStereotype(CIMQueryVars.STEREOTYPE))
                 .comment(parser.getComment(CIMQueryVars.COMMENT))
-                .fixedValue(parser.getIsFixed(CIMQueryVars.IS_FIXED))
-                .defaultValue(parser.getIsDefault(CIMQueryVars.IS_DEFAULT))
+                .fixedValue(parser.getIsFixed(CIMQueryVars.IS_FIXED, CIMQueryVars.IS_FIXED_INNER))
+                .defaultValue(
+                        parser.getIsDefault(CIMQueryVars.IS_DEFAULT, CIMQueryVars.IS_DEFAULT_INNER))
                 .build();
     }
 
@@ -138,20 +126,7 @@ public class CIMObjectFactory {
      * @return a list containing {@link CIMAttribute CIMAttributes}.
      */
     public static List<CIMAttribute> createCIMAttributeList(ResultSet attributeResultSet) {
-        return createCIMAttributeList(attributeResultSet, null);
-    }
-
-    /**
-     * Creates a List of {@link CIMAttribute CIMAttributes}, using {@code valueNodeModel} to resolve
-     * blank-node fixed/default values.
-     */
-    public static List<CIMAttribute> createCIMAttributeList(
-            ResultSet attributeResultSet, Model valueNodeModel) {
-        List<CIMAttribute> attributes = new ArrayList<>();
-        while (attributeResultSet.hasNext()) {
-            attributes.add(createCIMAttribute(attributeResultSet.next(), valueNodeModel));
-        }
-        return attributes;
+        return createObjectList(attributeResultSet, CIMObjectFactory::createCIMAttribute);
     }
 
     /**

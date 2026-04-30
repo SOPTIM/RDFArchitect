@@ -15,9 +15,12 @@
  *
  */
 
-package org.rdfarchitect.services.update.classes.attributes;
+package org.rdfarchitect.models.cim.queries.update;
+
+import lombok.experimental.UtilityClass;
 
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
@@ -25,7 +28,6 @@ import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDFS;
 import org.apache.jena.vocabulary.XSD;
-import org.rdfarchitect.models.cim.ValueNodeParser;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.relations.AttributeValueNode;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
@@ -33,10 +35,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.shacl.XSDDatatypeMapper;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,16 +43,17 @@ import java.util.UUID;
 
 /**
  * Resolves the {@code blankNode} flag and the XSD {@code dataType} for an attribute's fixed/default
- * value before it is written to the graph.
+ * value before it is written to the graph. Used internally by {@link CIMUpdates} so callers don't
+ * have to invoke the resolver themselves.
  *
  * <p>Resolution rules:
  *
  * <ul>
  *   <li>If the attribute already exists in the graph and its existing fixed/default value is a
  *       blank-node wrapper, the new value keeps {@code blankNode = true} regardless of the
- *       configured default. Symmetrically, an existing direct literal stays a literal.
+ *       caller-supplied default. Symmetrically, an existing direct literal stays a literal.
  *   <li>For new attributes (or attributes with no existing value of the matching predicate), the
- *       {@code blankNode} flag defaults to the value of {@code attributes.newValuesBlankNode}.
+ *       {@code blankNode} flag defaults to the caller-supplied {@code newValuesAsBlankNode} flag.
  *   <li>The XSD datatype is derived from the attribute's {@link CIMSDataType} (direct XSD,
  *       primitive stereotype, CIMDatatype {@code value} attribute) with a fallback to {@code
  *       xsd:string}.
@@ -62,48 +62,56 @@ import java.util.UUID;
  * <p>Reading from the graph requires an open Jena transaction. The caller is responsible for
  * opening one.
  */
-@Service
-public class AttributeFixedDefaultResolver {
+@UtilityClass
+class AttributeFixedDefaultResolver {
 
-    private final boolean newValuesBlankNode;
-
-    public AttributeFixedDefaultResolver(
-            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesBlankNode) {
-        this.newValuesBlankNode = newValuesBlankNode;
-    }
-
-    public void resolve(GraphRewindableWithUUIDs graph, CIMAttribute attribute) {
+    void resolve(Graph graph, CIMAttribute attribute, boolean newValuesAsBlankNode) {
         if (graph == null || attribute == null) {
             return;
         }
-        resolveAttribute(ModelFactory.createModelForGraph(graph), attribute);
+        resolveAttribute(ModelFactory.createModelForGraph(graph), attribute, newValuesAsBlankNode);
     }
 
-    public void resolve(GraphRewindableWithUUIDs graph, List<CIMAttribute> attributes) {
+    void resolve(Graph graph, List<CIMAttribute> attributes, boolean newValuesAsBlankNode) {
         if (graph == null || attributes == null || attributes.isEmpty()) {
             return;
         }
         var model = ModelFactory.createModelForGraph(graph);
         for (var attribute : attributes) {
-            resolveAttribute(model, attribute);
+            resolveAttribute(model, attribute, newValuesAsBlankNode);
         }
     }
 
-    private void resolveAttribute(Model model, CIMAttribute attribute) {
+    private void resolveAttribute(
+            Model model, CIMAttribute attribute, boolean newValuesAsBlankNode) {
         if (attribute.getFixedValue() != null) {
-            resolveValueMetadata(model, attribute, attribute.getFixedValue(), CIMS.isFixed);
+            resolveValueMetadata(
+                    model,
+                    attribute,
+                    attribute.getFixedValue(),
+                    CIMS.isFixed,
+                    newValuesAsBlankNode);
         }
         if (attribute.getDefaultValue() != null) {
-            resolveValueMetadata(model, attribute, attribute.getDefaultValue(), CIMS.isDefault);
+            resolveValueMetadata(
+                    model,
+                    attribute,
+                    attribute.getDefaultValue(),
+                    CIMS.isDefault,
+                    newValuesAsBlankNode);
         }
     }
 
     private void resolveValueMetadata(
-            Model model, CIMAttribute attribute, AttributeValueNode value, Property predicate) {
+            Model model,
+            CIMAttribute attribute,
+            AttributeValueNode value,
+            Property predicate,
+            boolean newValuesAsBlankNode) {
         var existingBlankNode = readExistingBlankNodeFlag(model, attribute.getUuid(), predicate);
         if (existingBlankNode.isPresent()) {
             value.setBlankNode(existingBlankNode.get());
-        } else if (newValuesBlankNode) {
+        } else if (newValuesAsBlankNode) {
             value.setBlankNode(true);
         }
         value.setDataType(resolveFixedDefaultDatatype(model, attribute.getDataType()));
@@ -112,8 +120,7 @@ public class AttributeFixedDefaultResolver {
     /**
      * Returns whether the attribute identified by {@code attributeUuid} currently has a blank-node
      * wrapper for {@code predicate} in the graph, or {@link Optional#empty()} if there is no such
-     * attribute / no such value triple. Delegates blank-node validation to {@link ValueNodeParser}
-     * so the shape rules stay in a single place.
+     * attribute / no such value triple.
      */
     private Optional<Boolean> readExistingBlankNodeFlag(
             Model model, UUID attributeUuid, Property predicate) {
@@ -125,7 +132,7 @@ public class AttributeFixedDefaultResolver {
         if (stmt == null) {
             return Optional.empty();
         }
-        return Optional.of(ValueNodeParser.parse(stmt.getObject(), model).blankNode());
+        return Optional.of(stmt.getObject().isAnon());
     }
 
     private Resource findAttributeResource(Model model, UUID attributeUuid) {

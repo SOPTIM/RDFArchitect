@@ -37,6 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class CIMUpdatesTestBase {
 
@@ -146,10 +147,7 @@ public class CIMUpdatesTestBase {
 
     /** Use this method to execute write actions per Update class by bulding the UpdateBuilder */
     protected void executeUpdateOnTestGraph(Update update) {
-        InMemorySparqlExecutor.executeSingleUpdate(
-                databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
-                update,
-                graphIdentifier.getGraphUri());
+        executeUpdateOnTestGraph(new UpdateRequest().add(update));
     }
 
     /** Use this method to execute a multi-operation {@link UpdateRequest} on the test graph. */
@@ -170,6 +168,27 @@ public class CIMUpdatesTestBase {
             if (testGraph != null) {
                 testGraph.end();
             }
+        }
+    }
+
+    /**
+     * Test-only helper for {@link org.rdfarchitect.models.cim.queries.update.CIMUpdates} factories
+     * that need graph access (resolver lookups). Opens a single WRITE transaction, lets the
+     * supplier build the {@link UpdateRequest} against {@code testGraph}, then executes it.
+     */
+    protected void executeUpdateBuiltAgainstTestGraph(
+            Function<GraphRewindableWithUUIDs, UpdateRequest> updateBuilder) {
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.WRITE);
+            var update = updateBuilder.apply(graph);
+            var dataset =
+                    org.rdfarchitect.database.inmemory.SessionDataStore.wrapGraphInDataset(
+                            graph, graphIdentifier.getGraphUri());
+            org.apache.jena.update.UpdateExecutionFactory.create(update, dataset).execute();
+            graph.commit();
+        } finally {
+            graph.end();
         }
     }
 }

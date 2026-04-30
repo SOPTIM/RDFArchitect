@@ -117,7 +117,7 @@ public interface AttributeMapper {
      * Resolves the canonical XSD datatype URI for an attribute fixed/default value. Only primitive
      * datatypes map to an XSD URI; for non-primitive types (or unknown labels) the value is
      * persisted without a typed datatype, leaving the type to be resolved server-side by {@link
-     * org.rdfarchitect.services.update.classes.attributes.AttributeFixedDefaultResolver}.
+     * org.rdfarchitect.models.cim.queries.update.AttributeFixedDefaultResolver}.
      */
     private static URI buildXsdDatatype(AttributeDTO dto) {
         if (dto.getDataType() == null || dto.getDataType().getLabel() == null) {

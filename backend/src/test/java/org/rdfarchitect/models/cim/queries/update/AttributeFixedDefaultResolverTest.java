@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services.update.classes.attributes;
+package org.rdfarchitect.models.cim.queries.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -48,26 +48,25 @@ class AttributeFixedDefaultResolverTest {
     @Test
     @DisplayName("does nothing when attribute has no fixed/default value")
     void resolve_noFixedOrDefault_doesNothing() {
-        var resolver = new AttributeFixedDefaultResolver(false);
         var attribute = baseAttribute().build();
 
-        resolveInTxn(resolver, emptyGraph(), attribute);
+        resolveInTxn(emptyGraph(), attribute, false);
 
         assertThat(attribute.getFixedValue()).isNull();
         assertThat(attribute.getDefaultValue()).isNull();
     }
 
     @Test
-    @DisplayName("with newValuesBlankNode=false and no existing graph match, blankNode stays false")
+    @DisplayName(
+            "with newValuesAsBlankNode=false and no existing graph match, blankNode stays false")
     void resolve_newValueWithLiteralDefault_blankNodeStaysFalse() {
-        var resolver = new AttributeFixedDefaultResolver(false);
         var attribute =
                 baseAttribute()
                         .fixedValue(new CIMSIsFixed("fixed"))
                         .defaultValue(new CIMSIsDefault("default"))
                         .build();
 
-        resolveInTxn(resolver, emptyGraph(), attribute);
+        resolveInTxn(emptyGraph(), attribute, false);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isFalse();
         assertThat(attribute.getDefaultValue().isBlankNode()).isFalse();
@@ -78,16 +77,15 @@ class AttributeFixedDefaultResolverTest {
     }
 
     @Test
-    @DisplayName("with newValuesBlankNode=true and no existing graph match, blankNode is true")
+    @DisplayName("with newValuesAsBlankNode=true and no existing graph match, blankNode is true")
     void resolve_newValueWithBlankNodeDefault_blankNodeBecomesTrue() {
-        var resolver = new AttributeFixedDefaultResolver(true);
         var attribute =
                 baseAttribute()
                         .fixedValue(new CIMSIsFixed("fixed"))
                         .defaultValue(new CIMSIsDefault("default"))
                         .build();
 
-        resolveInTxn(resolver, emptyGraph(), attribute);
+        resolveInTxn(emptyGraph(), attribute, true);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isTrue();
         assertThat(attribute.getDefaultValue().isBlankNode()).isTrue();
@@ -96,10 +94,9 @@ class AttributeFixedDefaultResolverTest {
     @Test
     @DisplayName("existing blank-node fixed value preserves blankNode=true regardless of config")
     void resolve_existingBlankNode_preservesBlankNodeTrue() {
-        var resolver = new AttributeFixedDefaultResolver(false);
         var attribute = baseAttribute().fixedValue(new CIMSIsFixed("new")).build();
 
-        resolveInTxn(resolver, graphWithBlankNodeFixedValue(), attribute);
+        resolveInTxn(graphWithBlankNodeFixedValue(), attribute, false);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isTrue();
     }
@@ -107,21 +104,18 @@ class AttributeFixedDefaultResolverTest {
     @Test
     @DisplayName("existing literal fixed value preserves blankNode=false regardless of config")
     void resolve_existingLiteral_preservesBlankNodeFalse() {
-        var resolver = new AttributeFixedDefaultResolver(true);
         var attribute = baseAttribute().fixedValue(new CIMSIsFixed("new")).build();
 
-        resolveInTxn(resolver, graphWithLiteralFixedValue(), attribute);
+        resolveInTxn(graphWithLiteralFixedValue(), attribute, true);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isFalse();
     }
 
     private static void resolveInTxn(
-            AttributeFixedDefaultResolver resolver,
-            GraphRewindableWithUUIDs graph,
-            CIMAttribute attribute) {
+            GraphRewindableWithUUIDs graph, CIMAttribute attribute, boolean newValuesAsBlankNode) {
         try {
             graph.begin(TxnType.READ);
-            resolver.resolve(graph, attribute);
+            AttributeFixedDefaultResolver.resolve(graph, attribute, newValuesAsBlankNode);
         } finally {
             graph.end();
         }

@@ -17,9 +17,12 @@
 
 package org.rdfarchitect.models.cim;
 
+import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QuerySolution;
-import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Literal;
+import org.apache.jena.rdf.model.RDFNode;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
@@ -41,25 +44,10 @@ import java.util.UUID;
 /**
  * Parses a {@link QuerySolution} to extract the values of the variables used in the context of CIM.
  */
+@RequiredArgsConstructor
 public class CIMQuerySolutionParser {
 
     private final QuerySolution qs;
-
-    /**
-     * Optional model used by {@link #getIsFixed(String)}/{@link #getIsDefault(String)} to look up
-     * the properties of an attribute fixed/default value that was returned from the query as a
-     * blank node. May be {@code null} when blank-node values are not expected.
-     */
-    private final Model valueNodeModel;
-
-    public CIMQuerySolutionParser(QuerySolution qs) {
-        this(qs, null);
-    }
-
-    public CIMQuerySolutionParser(QuerySolution qs, Model valueNodeModel) {
-        this.qs = qs;
-        this.valueNodeModel = valueNodeModel;
-    }
 
     /**
      * Helper record to store a URI, Label pair
@@ -174,31 +162,72 @@ public class CIMQuerySolutionParser {
     }
 
     /**
-     * Extracts the {@link CIMSIsDefault} from the query solution.
+     * Extracts the {@link CIMSIsDefault} from the query solution. The outer variable is bound
+     * either directly to the literal or to a blank-node wrapper; in the blank-node case the inner
+     * variable holds the wrapper's {@code rdfs:Literal} object (see {@link
+     * org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder#appendIsDefaultQuery}).
      *
-     * @param isDefaultVar The variable name of the isDefault.
-     * @return The is default or null, if the given variables doesn't exist in the solution.
+     * @param isDefaultVar Outer variable name (literal or blank node).
+     * @param isDefaultInnerVar Inner variable name (literal inside the blank-node wrapper).
+     * @return The is default or {@code null} when the outer variable is not bound.
      */
-    public CIMSIsDefault getIsDefault(String isDefaultVar) {
-        if (!qs.contains(isDefaultVar)) {
+    public CIMSIsDefault getIsDefault(String isDefaultVar, String isDefaultInnerVar) {
+        var parsed = parseValueNode(isDefaultVar, isDefaultInnerVar);
+        if (parsed == null) {
             return null;
         }
-        var parsed = ValueNodeParser.parse(qs.get(isDefaultVar), valueNodeModel);
         return new CIMSIsDefault(parsed.value(), parsed.dataType(), parsed.blankNode());
     }
 
     /**
-     * Extracts the {@link CIMSIsFixed} from the query solution.
+     * Extracts the {@link CIMSIsFixed} from the query solution. The outer variable is bound either
+     * directly to the literal or to a blank-node wrapper; in the blank-node case the inner variable
+     * holds the wrapper's {@code rdfs:Literal} object (see {@link
+     * org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder#appendIsFixedQuery}).
      *
-     * @param isFixedVar The variable name of the isFixed.
-     * @return The is fixed or null, if the given variables doesn't exist in the solution.
+     * @param isFixedVar Outer variable name (literal or blank node).
+     * @param isFixedInnerVar Inner variable name (literal inside the blank-node wrapper).
+     * @return The is fixed or {@code null} when the outer variable is not bound.
      */
-    public CIMSIsFixed getIsFixed(String isFixedVar) {
-        if (!qs.contains(isFixedVar)) {
+    public CIMSIsFixed getIsFixed(String isFixedVar, String isFixedInnerVar) {
+        var parsed = parseValueNode(isFixedVar, isFixedInnerVar);
+        if (parsed == null) {
             return null;
         }
-        var parsed = ValueNodeParser.parse(qs.get(isFixedVar), valueNodeModel);
         return new CIMSIsFixed(parsed.value(), parsed.dataType(), parsed.blankNode());
+    }
+
+    private record ParsedValueNode(String value, URI dataType, boolean blankNode) {}
+
+    /**
+     * Resolves an attribute value-node from its outer/inner variable bindings:
+     *
+     * <ul>
+     *   <li>outer literal → direct shape, datatype taken from the literal,
+     *   <li>outer blank node + bound inner literal → blank-node shape, datatype from the inner
+     *       literal,
+     *   <li>outer blank node without inner literal → ignored (malformed wrapper),
+     *   <li>outer not bound → {@code null}.
+     * </ul>
+     */
+    private ParsedValueNode parseValueNode(String outerVar, String innerVar) {
+        if (!qs.contains(outerVar)) {
+            return null;
+        }
+        RDFNode outer = qs.get(outerVar);
+        if (outer.isLiteral()) {
+            return fromLiteral(outer.asLiteral(), false);
+        }
+        if (outer.isAnon() && qs.contains(innerVar) && qs.get(innerVar).isLiteral()) {
+            return fromLiteral(qs.get(innerVar).asLiteral(), true);
+        }
+        return null;
+    }
+
+    private ParsedValueNode fromLiteral(Literal literal, boolean blankNode) {
+        var dataTypeUri = literal.getDatatypeURI();
+        var dataType = dataTypeUri == null || dataTypeUri.isEmpty() ? null : new URI(dataTypeUri);
+        return new ParsedValueNode(literal.getLexicalForm(), dataType, blankNode);
     }
 
     /**
