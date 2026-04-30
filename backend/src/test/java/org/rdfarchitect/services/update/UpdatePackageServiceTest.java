@@ -90,8 +90,7 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri())
-                    .isEqualTo(new URI("http://example.com#Package_TestPackage"));
+            assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("TestPackage", "en"));
             assertThat(captured.getComment()).isNull();
             assertThat(captured.getBelongsToCategory()).isNull();
@@ -119,8 +118,7 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri())
-                    .isEqualTo(new URI("http://example.com#Package_TestPackage"));
+            assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("TestPackage", "en"));
             assertThat(captured.getBelongsToCategory()).isNull();
             assertThat(captured.getUuid()).isNotNull();
@@ -172,8 +170,7 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri())
-                    .isEqualTo(new URI("http://other.org#Package_otherPackage"));
+            assertThat(captured.getUri()).isEqualTo(new URI("http://other.org#otherPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("otherPackage", "en"));
             assertThat(captured.getUuid()).isEqualTo(dto.getUuid());
         }

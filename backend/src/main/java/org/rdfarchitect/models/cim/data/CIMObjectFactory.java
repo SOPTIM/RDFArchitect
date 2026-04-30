@@ -268,7 +268,7 @@ public class CIMObjectFactory {
                     CIMPackage.builder()
                             .uuid(parser.getUUID(CIMQueryVars.UUID))
                             .uri(uri)
-                            .label(new RDFSLabel(uri.getSuffix().replace("Package_", "")))
+                            .label(new RDFSLabel(uri.getSuffix()))
                             .build();
             externalPackageObjectList.add(packageObject);
         }
