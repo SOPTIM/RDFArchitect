@@ -25,13 +25,13 @@
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
         createClassListForGraph,
-        createPackageListForGraph,
+        createPackageListForGraph
     } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
 
@@ -41,7 +41,7 @@
         diagramName = "",
         diagramId = crypto.randomUUID(),
         selectedClasses = [],
-        allDiagrams = [],
+        allDiagrams = []
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -61,6 +61,8 @@
 
     function onClose() {
         diagramName = "";
+        diagramId = null;
+        selectedClasses = [];
     }
 
     async function getGraphs(datasetName) {
@@ -76,7 +78,7 @@
                     return {
                         ...graph,
                         selected: false,
-                        expanded: false,
+                        expanded: false
                     };
                 })
                 .sort((a, b) => getUri(a).localeCompare(getUri(b)));
@@ -91,7 +93,7 @@
             const graphUri = getUri(graph);
             packagesByGraph[graphUri] = await createPackageListForGraph(
                 lockedDatasetName,
-                graphUri,
+                graphUri
             );
         }
     }
@@ -105,27 +107,27 @@
                 result[graphUri] = await createClassListForGraph(
                     lockedDatasetName,
                     graphUri,
-                    selectedClasses,
+                    selectedClasses
                 );
-            }),
+            })
         );
 
         classesByPackageAndGraph = result;
     }
 
-    function deselectAll() {
-        graphs.forEach(g => (g.selected = false));
+    function toggleAll(newState) {
+        graphs.forEach(g => (g.selected = newState));
 
         Object.entries(classesByPackageAndGraph).forEach(
             ([graphUri, packages]) => {
                 const graphPackages = packagesByGraph[graphUri] ?? [];
 
-                graphPackages.forEach(pack => (pack.selected = false));
+                graphPackages.forEach(pack => (pack.selected = newState));
 
                 Object.values(packages).forEach(classes =>
-                    classes.forEach(cls => (cls.selected = false)),
+                    classes.forEach(cls => (cls.selected = newState))
                 );
-            },
+            }
         );
     }
 
@@ -154,28 +156,28 @@
 
     async function submitDiagramClasses() {
         const selectedClassList = Object.entries(
-            classesByPackageAndGraph,
+            classesByPackageAndGraph
         ).flatMap(([graphUri, packages]) =>
             Object.values(packages)
                 .flat()
                 .filter(cls => cls.selected === true)
                 .map(cls => ({
                     uuid: cls.uuid,
-                    graphUri: graphUri,
-                })),
+                    graphUri: graphUri
+                }))
         );
 
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
-            classes: selectedClassList,
+            classes: selectedClassList
         };
 
         try {
             const res = await bec.putCustomDatasetDiagram(
                 lockedDatasetName,
                 diagramId,
-                diagramData,
+                diagramData
             );
 
             if (res.ok) {
@@ -196,6 +198,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
+    title="Create custom diagram for dataset"
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}
@@ -212,20 +215,27 @@
 
         <div class="flex justify-between">
             <label for="class-tree" class="mt-2 mb-1">Selected Classes</label>
-            <div class="w-26">
-                <ButtonControl callOnClick={deselectAll}>
-                    Deselect All
-                </ButtonControl>
+            <div class="flex space-x-2">
+                <div class="w-26">
+                    <ButtonControl callOnClick={() => toggleAll(true)}>
+                        Select All
+                    </ButtonControl>
+                </div>
+                <div class="w-26">
+                    <ButtonControl callOnClick={() => toggleAll(false)}>
+                        Deselect All
+                    </ButtonControl>
+                </div>
             </div>
         </div>
         <div
             id="class-tree"
             class="h-full max-h-[55vh] items-stretch gap-[0.1rem] overflow-y-auto empty:hidden"
         >
-            {#each graphs as graph (getUri(graph))}
+            {#each graphs as graph, index (getUri(graph))}
                 <GraphSelectSection
-                    {graph}
-                    packages={packagesByGraph[getUri(graph)] ?? []}
+                    bind:graph={graphs[index]}
+                    bind:packages={packagesByGraph[getUri(graph)]}
                     classesByPackage={classesByPackageAndGraph[getUri(graph)] ??
                         []}
                 />

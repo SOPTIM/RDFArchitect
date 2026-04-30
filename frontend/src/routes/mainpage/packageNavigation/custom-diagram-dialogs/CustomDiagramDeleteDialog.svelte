@@ -18,26 +18,26 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
+    import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         forceReloadTrigger,
-        editorState,
+        editorState
     } from "$lib/sharedState.svelte.js";
 
     let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
 
-    async function deletePackage() {
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+
+    async function deleteCustomDiagram() {
         try {
-            const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/diagrams/${encodeURIComponent(diagram.diagramId)}`;
-            const res = await fetch(url, {
-                method: "DELETE",
-                credentials: "include",
-            });
+            const res = graphUri ?
+                await bec.deleteCustomGraphDiagram(datasetName, graphUri, diagram.diagramId) : await bec.deleteCustomDatasetDiagram(datasetName, diagram.diagramId);
             if (!res.ok) {
-                console.error("Failed to delete package");
+                console.error("Failed to delete custom diagram", await res.text());
             }
-            if (editorState.selectedPackageUUID.getValue() === diagram.uuid) {
+            if (editorState.selectedCustomDiagramUUID.getValue() === diagram.diagramId) {
                 editorState.selectedPackageUUID.updateValue(null);
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
@@ -53,7 +53,7 @@
     bind:showDialog
     size="w-full max-w-lg"
     primaryLabel="Delete Custom Diagram"
-    onPrimary={deletePackage}
+    onPrimary={deleteCustomDiagram}
     primaryVariant="danger"
     title={diagram?.label
         ? `Delete custom Diagram "${diagram.label}"?`

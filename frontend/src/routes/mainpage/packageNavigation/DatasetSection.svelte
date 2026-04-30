@@ -24,7 +24,7 @@
         faDatabase,
         faPenToSquare,
         faLock,
-        faDiagramProject,
+        faDiagramProject, faPlus
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -44,6 +44,7 @@
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
+    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
 
@@ -51,6 +52,7 @@
 
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
+    let showNewDiagramDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
@@ -160,6 +162,15 @@
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
+                showNewDiagramDialog = true;
+            }}
+                faIcon={faPlus}
+            >
+                New Dataset Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
                     selectDataset();
                     showNamespacesDialog = true;
                 }}
@@ -237,6 +248,10 @@
 <NewGraphDialog
     bind:showDialog={showNewGraphDialog}
     lockedDatasetName={datasetNavEntry.label}
+/>
+<CustomDatasetDiagramDialog
+    bind:showDialog={showNewDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
 />
 <SnapshotDialog
     bind:showDialog={showSnapshotDialog}

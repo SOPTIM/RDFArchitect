@@ -19,18 +19,19 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
     import {
         createPackageListForGraph,
-        createClassListForGraph,
+        createClassListForGraph
     } from "./customDiagramDialogUtils.js";
     import PackageSelectSection from "./PackageSelectSection.svelte";
 
@@ -41,7 +42,7 @@
         diagramName = "",
         diagramId = crypto.randomUUID(),
         selectedClasses = [],
-        allDiagrams,
+        allDiagrams
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -54,25 +55,26 @@
     async function onOpen() {
         packages = await createPackageListForGraph(
             lockedDatasetName,
-            lockedGraphUri,
+            lockedGraphUri
         );
         classesByPackage = await createClassListForGraph(
             lockedDatasetName,
             lockedGraphUri,
-            selectedClasses,
+            selectedClasses
         );
         initializePackageSelectionState();
     }
 
     function onClose() {
         diagramName = "";
+        diagramId = null;
     }
 
-    function deselectAll() {
+    function toggleAll(newState) {
         packages.forEach(pack => {
-            pack.selected = false;
+            pack.selected = newState;
             classesByPackage[getPackageId(pack)]?.forEach(cls => {
-                cls.selected = false;
+                cls.selected = newState;
             });
         });
     }
@@ -99,12 +101,12 @@
             .filter(cls => cls.selected === true)
             .map(cls => ({
                 uuid: cls.uuid,
-                graphUri: lockedGraphUri,
+                graphUri: lockedGraphUri
             }));
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
-            classes: selectedClassList,
+            classes: selectedClassList
         };
 
         try {
@@ -112,7 +114,7 @@
                 lockedDatasetName,
                 lockedGraphUri,
                 diagramId,
-                diagramData,
+                diagramData
             );
 
             if (res.ok) {
@@ -133,6 +135,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
+    title="Create custom diagram for profile"
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}
@@ -143,23 +146,32 @@
             id="diagram-name-input"
             placeholder="Enter diagram name"
             bind:value={diagramName}
+            warn={violations.length > 0}
         />
+        <ViolationMessages {violations} />
 
         <div class="flex justify-between">
             <label for="class-tree" class="mt-2 mb-1">Selected Classes</label>
-            <div class="w-26">
-                <ButtonControl callOnClick={deselectAll}>
-                    Deselect All
-                </ButtonControl>
+            <div class="flex space-x-2">
+                <div class="w-26">
+                    <ButtonControl callOnClick={() => toggleAll(true)}>
+                        Select All
+                    </ButtonControl>
+                </div>
+                <div class="w-26">
+                    <ButtonControl callOnClick={() => toggleAll(false)}>
+                        Deselect All
+                    </ButtonControl>
+                </div>
             </div>
         </div>
         <div
             id="class-tree"
             class="h-full max-h-[55vh] items-stretch gap-[0.1rem] overflow-y-auto empty:hidden"
         >
-            {#each packages as pack (pack.uuid)}
+            {#each packages as pack, index (pack.uuid)}
                 <PackageSelectSection
-                    {pack}
+                    bind:pack={packages[index]}
                     classes={classesByPackage[pack.uuid] ?? []}
                 />
             {/each}

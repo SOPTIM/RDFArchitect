@@ -36,7 +36,7 @@
         datasetNavEntry,
         graphNavEntry,
         allGraphNavEntries,
-        diagram,
+        diagram = $bindable(),
         classes,
         readOnly,
         level = 4,

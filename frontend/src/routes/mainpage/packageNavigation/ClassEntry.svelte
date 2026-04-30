@@ -61,7 +61,9 @@
     });
 
     function selectClass() {
-        classNavEntry.parent?.open();
+        if (!diagramId) {
+            classNavEntry.parent?.open();
+        }
         onPackChange();
         if (!editorState.selectedClassUUID.getValue()) {
             eventStack.executeNewestEvent(classNavEntry.id);

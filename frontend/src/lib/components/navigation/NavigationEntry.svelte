@@ -18,9 +18,11 @@
 <script>
     import {
         faCaretDown,
-        faCaretRight,
+        faCaretRight
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
+
+    import { Checkbox } from "$lib/components/bitsui/checkbox";
 
     let {
         label,
@@ -46,17 +48,34 @@
     const badgeClassMap = {
         default: "",
         external: "nav-entry__badge--external",
-        readonly: "nav-entry__badge--readonly",
+        readonly: "nav-entry__badge--readonly"
     };
+
+    let clickTimeout;
 
     function handleClick(event) {
         if (disabled) {
             event.preventDefault();
             return;
         }
-        onclick?.(event);
-        if (onToggle && event?.detail % 2 === 0) {
-            onToggle(event);
+        if (event.target.type === "checkbox" || event.target.closest("[role=\"checkbox\"]")) {
+            return;
+        }
+
+        if (event?.detail === 2) {
+            clearTimeout(clickTimeout);
+            if (onToggle) {
+                onToggle(event);
+            }
+        } else if (event?.detail === 1) {
+            clearTimeout(clickTimeout);
+            clickTimeout = setTimeout(() => {
+                if (showCheckbox) {
+                    selected = !selected;
+                    onSelect?.(event);
+                }
+                onclick?.(event);
+            }, 250);
         }
     }
 
@@ -68,15 +87,6 @@
         event.preventDefault();
         event.stopPropagation();
         onToggle(event);
-    }
-
-    function handleCheckbox(event) {
-        if (disabled) {
-            event.preventDefault();
-            return;
-        }
-        event.stopPropagation();
-        onSelect(event);
     }
 
     function badgeClass(variant) {
@@ -117,7 +127,10 @@
         </span>
     {/if}
     {#if showCheckbox}
-        <input type="checkbox" checked={selected} onchange={handleCheckbox} />
+        <Checkbox
+            bind:checked={selected}
+            onCheckedChange={() => onSelect?.()}
+        />
     {/if}
 </button>
 

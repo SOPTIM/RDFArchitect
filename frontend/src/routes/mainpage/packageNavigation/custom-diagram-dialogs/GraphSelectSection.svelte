@@ -26,7 +26,11 @@
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import PackageSelectSection from "./PackageSelectSection.svelte";
 
-    let { graph, packages, classesByPackage } = $props();
+    let {
+        graph = $bindable(),
+        packages = $bindable(),
+        classesByPackage
+    } = $props();
 
     let graphIcon = $derived(graph.showContents ? faFolderOpen : faFolder);
     const hasPackages = $derived(packages?.length > 0);
@@ -68,9 +72,9 @@
         <div
             class="flex w-full flex-col items-stretch gap-[0.1rem] empty:hidden"
         >
-            {#each packages as pack}
+            {#each packages as pack, index}
                 <PackageSelectSection
-                    {pack}
+                    bind:pack={packages[index]}
                     classes={classesByPackage[pack.uuid]}
                     level={2}
                 />

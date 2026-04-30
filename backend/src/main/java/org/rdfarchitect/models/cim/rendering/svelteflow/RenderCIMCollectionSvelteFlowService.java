@@ -65,21 +65,20 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
             ensureDiagramLayoutForCIMCollectionUseCase;
 
     @Override
-    public RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
+    public RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return createEmptyDiagram();
         }
 
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, packageUUID, cimCollection);
-        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(graphIdentifier, packageUUID);
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, diagramId, cimCollection);
+        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(graphIdentifier, diagramId);
         return renderUML(cimCollection, renderingLayoutData);
     }
 
     @Override
-    public RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID packageUUID) {
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(datasetName, packageUUID, cimCollection);
-        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(datasetName, packageUUID);
+    public RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID diagramId) {
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(datasetName, diagramId, cimCollection);
+        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(datasetName, diagramId);
         return renderUML(cimCollection, renderingLayoutData);
     }
 

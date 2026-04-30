@@ -25,6 +25,7 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -51,6 +52,10 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
 
     @Override
     public void replaceCustomDiagram(String datasetName, String diagramId, CustomDiagram diagram) {
+        if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
+            throw new IllegalArgumentException(
+                      "Diagram ID mismatch: URL parameter '" + diagramId + "' does not match diagram object ID '" + diagram.getDiagramId() + "'");
+        }
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.put(UUID.fromString(diagramId), diagram);
     }
@@ -82,6 +87,10 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
 
     @Override
     public void replaceCustomDiagram(GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram) {
+        if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
+            throw new IllegalArgumentException(
+                      "Diagram ID mismatch: URL parameter '" + diagramId + "' does not match diagram object ID '" + diagram.getDiagramId() + "'");
+        }
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         graphWithContext.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
     }

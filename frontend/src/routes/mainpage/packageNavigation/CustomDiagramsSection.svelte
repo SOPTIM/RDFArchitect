@@ -16,24 +16,21 @@
   -->
 
 <script>
-    import { faObjectGroup, faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { faObjectGroup } from "@fortawesome/free-solid-svg-icons";
     import { onMount } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
-    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
-    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
-    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import {
         isSelectedDataset,
-        isSelectedGraph,
+        isSelectedGraph
     } from "./packageNavigationUtils.svelte.js";
 
     let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
@@ -45,18 +42,17 @@
     let diagrams = $state([]);
     let classesByDiagram = $state({});
 
-    let showNewDiagramDialog = $state(false);
     let isSelected = $derived(
         graphNavEntry
             ? isSelectedGraph(datasetNavEntry.id, graphNavEntry.id) &&
-                  editorState.selectedCustomDiagramUUID.getValue()
+            editorState.selectedCustomDiagramUUID.getValue()
             : !editorState.selectedGraph.getValue() &&
-                  isSelectedDataset(datasetNavEntry.id) &&
-                  editorState.selectedCustomDiagramUUID.getValue(),
+            isSelectedDataset(datasetNavEntry.id) &&
+            editorState.selectedCustomDiagramUUID.getValue()
     );
     let level = $derived(graphNavEntry ? 3 : 2);
     let label = $derived(
-        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams",
+        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams"
     );
 
     $effect(() => {
@@ -86,7 +82,7 @@
             if (graphNavEntry) {
                 diagramList = await getGraphDiagrams(
                     datasetNavEntry.id,
-                    graphNavEntry.id,
+                    graphNavEntry.id
                 );
             } else {
                 diagramList = await getDatasetDiagrams(datasetNavEntry.id);
@@ -95,36 +91,40 @@
             const selectedDiagramId =
                 editorState.selectedCustomDiagramUUID.getValue();
 
-            diagrams = diagramList.map(diagram => {
-                const prev = previous.find(
-                    p => diagram.diagramId === p.diagramId,
-                );
-                const keepExpanded = prev?.showContents ?? false;
-                const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
-                const isSelected = graphNavEntry
-                    ? isSelectedGraph(datasetNavEntry, graphNavEntry) &&
-                      selectedDiagramId === diagram.diagramId
-                    : isSelectedDataset(datasetNavEntry) &&
-                      selectedDiagramId === diagram.diagramId;
-
-                return {
-                    ...diagram,
-                    userCollapsed,
-                    showContents: userCollapsed
-                        ? false
-                        : keepExpanded || isSelected,
-                };
-            });
+            diagrams = ensureProperDiagramExpansion(diagramList, previous, selectedDiagramId);
 
             //reset classes after potential removal
             classesByDiagram = {};
             const expandedDiagrams = diagrams.filter(d => d.showContents);
             await Promise.all(
-                expandedDiagrams.map(d => ensureClassesLoaded(d)),
+                expandedDiagrams.map(d => ensureClassesLoaded(d))
             );
         } catch (err) {
             console.error("Failed to load diagrams:", err);
         }
+    }
+
+    function ensureProperDiagramExpansion(diagramList, previous, selectedDiagramId) {
+        return diagramList.map(diagram => {
+            const prev = previous.find(
+                p => diagram.diagramId === p.diagramId
+            );
+            const keepExpanded = prev?.showContents ?? false;
+            const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
+            const isSelected = graphNavEntry
+                ? isSelectedGraph(datasetNavEntry, graphNavEntry) &&
+                selectedDiagramId === diagram.diagramId
+                : isSelectedDataset(datasetNavEntry) &&
+                selectedDiagramId === diagram.diagramId;
+
+            return {
+                ...diagram,
+                userCollapsed,
+                showContents: userCollapsed
+                    ? false
+                    : keepExpanded || isSelected
+            };
+        });
     }
 
     async function ensureClassesLoaded(diagram) {
@@ -137,8 +137,8 @@
             classes = graphNavEntry.children
                 .map(pack =>
                     pack.children.filter(cls =>
-                        diagram.classes.some(dc => dc.uuid === cls.id),
-                    ),
+                        diagram.classes.some(dc => dc.uuid === cls.id)
+                    )
                 )
                 .flat();
         } else {
@@ -146,8 +146,8 @@
                 let classesInGraph = graph.children
                     .map(pack =>
                         pack.children.filter(cls =>
-                            diagram.classes.some(dc => dc.uuid === cls.id),
-                        ),
+                            diagram.classes.some(dc => dc.uuid === cls.id)
+                        )
                     )
                     .flat();
 
@@ -168,9 +168,9 @@
     }
 </script>
 
-<div class="bg-border my-1 ml-14 h-0.5"></div>
-<ContextMenu.Root>
-    <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
+{#if diagrams.length > 0}
+    <div class="bg-border my-1 ml-14 h-0.5"></div>
+    <div class="flex w-full flex-col items-stretch">
         <NavigationEntry
             {level}
             {label}
@@ -180,42 +180,19 @@
             {isSelected}
             onToggle={() => (diagramsExpanded = !diagramsExpanded)}
         />
-    </ContextMenu.TriggerArea>
-    <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                showNewDiagramDialog = true;
-            }}
-            faIcon={faPlus}
-        >
-            New Diagram
-        </ContextMenu.Item.Button>
-    </ContextMenu.Content>
-</ContextMenu.Root>
-{#if diagramsExpanded && diagrams.length > 0}
-    {#each diagrams as diagram (diagram.diagramId)}
-        <CustomDiagramButton
-            {datasetNavEntry}
-            {graphNavEntry}
-            {allGraphNavEntries}
-            {diagram}
-            classes={classesByDiagram[diagram.diagramId]}
-            {readOnly}
-            level={graphNavEntry ? 4 : 3}
-            onToggle={() => ensureClassesLoaded(diagram)}
-        />
-    {/each}
-{/if}
-
-{#if graphNavEntry}
-    <CustomGraphDiagramDialog
-        bind:showDialog={showNewDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
-        lockedGraphUri={graphNavEntry.id}
-    />
-{:else}
-    <CustomDatasetDiagramDialog
-        bind:showDialog={showNewDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
-    />
+    </div>
+    {#if diagramsExpanded && diagrams.length > 0}
+        {#each diagrams as diagram, index (diagram.diagramId)}
+            <CustomDiagramButton
+                {datasetNavEntry}
+                {graphNavEntry}
+                {allGraphNavEntries}
+                bind:diagram={diagrams[index]}
+                classes={classesByDiagram[diagram.diagramId]}
+                {readOnly}
+                level={graphNavEntry ? 4 : 3}
+                onToggle={() => ensureClassesLoaded(diagram)}
+            />
+        {/each}
+    {/if}
 {/if}

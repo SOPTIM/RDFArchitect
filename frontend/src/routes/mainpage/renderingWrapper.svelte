@@ -30,7 +30,7 @@
     import {
         editorState,
         graphViewState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
@@ -55,7 +55,7 @@
     let diagramRequestKey = null;
     let showSvelteFlowEmptyState = $derived(
         renderingFormat === SVELTEFLOW_FORMAT &&
-            (response?.nodes?.length ?? 0) === 0,
+        (response?.nodes?.length ?? 0) === 0
     );
 
     $effect(async () => {
@@ -150,7 +150,7 @@
         try {
             const res = await bec.getCustomDatasetDiagramRenderingData(
                 editorState.selectedDataset.getValue(),
-                diagramId,
+                diagramId
             );
 
             const responseText = await res.text();
@@ -175,7 +175,7 @@
             const res = await bec.getCustomGraphDiagramRenderingData(
                 editorState.selectedDataset.getValue(),
                 editorState.selectedGraph.getValue(),
-                diagramId,
+                diagramId
             );
 
             const responseText = await res.text();
@@ -233,14 +233,16 @@
                             reset view
                         </ButtonControl>
                     </div>
-                    <div class="h-9 w-28">
-                        <ButtonControl
-                            variant="default"
-                            callOnClick={() => (showFilterDialog = true)}
-                        >
-                            filter view
-                        </ButtonControl>
-                    </div>
+                    {#if editorState.selectedPackageUUID.getValue()}
+                        <div class="h-9 w-28">
+                            <ButtonControl
+                                variant="default"
+                                callOnClick={() => (showFilterDialog = true)}
+                            >
+                                filter view
+                            </ButtonControl>
+                        </div>
+                    {/if}
                     {#if !isDatasetReadOnly && renderingFormat === SVELTEFLOW_FORMAT}
                         <div class="h-9 w-28">
                             <ButtonControl

@@ -18,7 +18,7 @@
 <script>
     import {
         faDiagramProject,
-        faRightLeft,
+        faRightLeft
     } from "@fortawesome/free-solid-svg-icons";
     import {
         faFileExport,
@@ -32,7 +32,7 @@
         faEye,
         faRotateLeft,
         faRotateRight,
-        faGear,
+        faGear
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -40,7 +40,7 @@
         undo,
         fetchCanUndo,
         redo,
-        fetchCanRedo,
+        fetchCanRedo
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -48,7 +48,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -60,6 +60,7 @@
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
@@ -71,7 +72,7 @@
         datasetNavEntry,
         graphNavEntry,
         namespaces = [],
-        readonly = false,
+        readonly = false
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -80,6 +81,7 @@
     let showExportDialog = $state(false);
     let showDeleteDialog = $state(false);
     let showNewPackageDialog = $state(false);
+    let showNewDiagramDialog = $state(false);
     let showCompareDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showSHACLExportDialog = $state(false);
@@ -92,11 +94,11 @@
     let wasGraphSelected = false;
 
     let graphHighlightLabel = $derived(
-        shortenIri(namespaces, graphNavEntry.id),
+        shortenIri(namespaces, graphNavEntry.id)
     );
 
     const isGraphSelected = $derived(
-        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
+        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)
     );
     $effect(() => {
         if (isGraphSelected && !wasGraphSelected) {
@@ -115,10 +117,11 @@
         canUndo = await fetchCanUndo(datasetNavEntry.id, graphNavEntry.id);
         canRedo = await fetchCanRedo(datasetNavEntry.id, graphNavEntry.id);
     }
+
     async function getOntology() {
         const res = await bec.getOntology(
             datasetNavEntry.label,
-            graphNavEntry.id,
+            graphNavEntry.id
         );
         let content = await res.text();
         if (!content) {
@@ -169,6 +172,14 @@
                 faIcon={faPlus}
             >
                 New Package
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                showNewDiagramDialog = true;
+            }}
+                faIcon={faPlus}
+            >
+                New Profile Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -353,6 +364,11 @@
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+/>
+<CustomGraphDiagramDialog
+    bind:showDialog={showNewDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
