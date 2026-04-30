@@ -101,15 +101,18 @@
 
 <svelte:window onkeydown|capture={handleConfirmShortcut} />
 <DialogBase bind:showDialog {onOpen} {onClose} {...restProps}>
-    <div class="flex h-full flex-col">
-        <div class="flex h-full w-full flex-col">
-            <div class="mb-1 ml-2 flex shrink-0 items-center justify-between">
-                <div class="flex items-center space-x-2">
+    <div class="flex min-h-0 flex-1 flex-col">
+        <div class="flex min-h-0 w-full flex-1 flex-col">
+            <div class="mb-1 ml-2 flex shrink-0 items-start justify-between">
+                <div class="flex min-w-0 items-center space-x-2">
                     <p
-                        class="text-default-text flex items-center gap-2 text-lg"
+                        class="text-default-text mr-2 flex min-w-0 items-center gap-2 text-lg break-all"
                     >
                         {#if titleIcon}
-                            <Fa class={titleIconStyle} icon={titleIcon} />
+                            <Fa
+                                class="{titleIconStyle} mr-2 inline"
+                                icon={titleIcon}
+                            />
                         {/if}
                         {#if title}
                             {title}
@@ -128,7 +131,7 @@
                     />
                 </div>
             </div>
-            <div class="min-h-0 grow overflow-auto">
+            <div class="min-h-0 flex-1">
                 {@render children?.()}
             </div>
             {#if !readonly && (secondaryButtonExists || primaryButtonExists)}

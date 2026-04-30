@@ -14,6 +14,7 @@
  *    limitations under the License.
  *
  */
+import { URI } from "$lib/models/dto/index.ts";
 import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
 import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
 import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
@@ -119,17 +120,22 @@ export function mapReactiveAttributeToAttributeDto(
         attribute.multiplicityUpperBound,
     );
     const datatype = getDatatypeByUri(attribute.datatype);
+    const uri = new URI(attribute.datatype);
+
+    const dtoDatatype = datatype
+        ? {
+              prefix: datatype.prefix,
+              label: datatype.label,
+              type: datatype.type,
+          }
+        : { prefix: uri.prefix, label: uri.suffix, type: "UNKNOWN" };
     return {
         uuid: attribute.uuid,
         label: attribute.label,
         prefix: attribute.namespace,
         multiplicity: multiplicityString,
         domain: domainIri,
-        dataType: {
-            prefix: datatype.prefix,
-            label: datatype.label,
-            type: datatype.type,
-        },
+        dataType: dtoDatatype,
         comment: attribute.comment,
         fixedValue: attribute.fixedValue,
         defaultValue: attribute.defaultValue,

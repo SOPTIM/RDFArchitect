@@ -34,8 +34,8 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
-    import PackageDeleteDialog from "./PackageDeleteDialog.svelte";
     import { isSelectedPackage } from "./packageNavigationUtils.svelte.js";
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
 
@@ -48,7 +48,7 @@
     } = $props();
     let showNewClassDialog = $state(false);
     let showPackageEditorDialog = $state(false);
-    let showDeletePackageDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
 
     let wasPackageSelected = false;
 
@@ -155,7 +155,7 @@
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    showDeletePackageDialog = true;
+                    showDeleteDependenciesDialog = true;
                 }}
                 disabled={readonly || isProtectedPackage}
                 faIcon={faTrash}
@@ -197,9 +197,9 @@
     {readonly}
 />
 
-<PackageDeleteDialog
-    bind:showDialog={showDeletePackageDialog}
+<DeleteDependenciesDialog
+    bind:showDialog={showDeleteDependenciesDialog}
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}
-    pack={packageNavEntry.data}
+    resourceUuid={packageNavEntry.id}
 />

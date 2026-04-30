@@ -15,22 +15,22 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.services.delete;
 
-import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
+import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
 
-import java.util.List;
+import java.util.UUID;
 
-public interface GetClassListUseCase {
+public interface FindDeleteDependenciesUseCase {
 
     /**
-     * Gets the list of classes in the graph.
+     * Finds the resources that would be affected by deleting a specified resource.
      *
-     * @param graphIdentifier The graph to getClassDefinition.
-     * @param includeExternalClasses Whether to include external classes in the result.
-     * @return The list of classes in the graph.
+     * @param graphIdentifier The identifier of the graph.
+     * @param uuid The resource to find dependencies for.
+     * @return An {@link AffectedResource} containing the affected resources with and their
+     *     relations.
      */
-    List<ClassUMLAdaptedDTO> getClassList(
-            GraphIdentifier graphIdentifier, boolean includeExternalClasses);
+    AffectedResource getDeleteDependencies(GraphIdentifier graphIdentifier, UUID uuid);
 }
