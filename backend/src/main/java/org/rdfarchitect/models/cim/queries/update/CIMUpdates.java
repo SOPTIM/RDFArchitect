@@ -308,8 +308,8 @@ public class CIMUpdates {
             List.of(CIMS.isFixed, CIMS.isDefault);
 
     /**
-     * Builds SPARQL updates that remove any blank-node fixed/default value wrappers attached to
-     * the attribute identified by {@code attributeUUID}. Uses {@link UpdateBuilder} so {@code
+     * Builds SPARQL updates that remove any blank-node fixed/default value wrappers attached to the
+     * attribute identified by {@code attributeUUID}. Uses {@link UpdateBuilder} so {@code
      * attributeUUID} flows through Jena's node coercion rather than being interpolated into a
      * SPARQL string. One operation is emitted per value predicate (UpdateBuilder has no VALUES
      * clause primitive), and they are bundled into a single {@link UpdateRequest}.
