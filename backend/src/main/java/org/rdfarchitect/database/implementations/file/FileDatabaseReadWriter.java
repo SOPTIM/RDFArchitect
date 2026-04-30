@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -37,6 +36,30 @@ public class FileDatabaseReadWriter {
     private static final Logger logger = LoggerFactory.getLogger(FileDatabaseReadWriter.class);
 
     private FileDatabaseReadWriter() {}
+
+    /**
+     * Resolves the path of a dataset file inside the database directory and ensures it cannot
+     * escape the database directory via path traversal.
+     */
+    private static Path resolveDatasetPath(Path pathDatabase, String datasetName, Lang lang) {
+        if (datasetName == null || datasetName.isEmpty()) {
+            throw new DataAccessException("Dataset name must not be empty.");
+        }
+        if (datasetName.contains("/")
+                || datasetName.contains("\\")
+                || datasetName.contains("\0")
+                || datasetName.equals(".")
+                || datasetName.equals("..")) {
+            throw new DataAccessException("Invalid dataset name: " + datasetName);
+        }
+        Path baseDir = pathDatabase.toAbsolutePath().normalize();
+        Path resolved =
+                baseDir.resolve(datasetName + "." + lang.getFileExtensions().get(0)).normalize();
+        if (!resolved.startsWith(baseDir) || !resolved.getParent().equals(baseDir)) {
+            throw new DataAccessException("Invalid dataset name: " + datasetName);
+        }
+        return resolved;
+    }
 
     /**
      * created a Database directory if it doesn't exist yet
@@ -60,10 +83,7 @@ public class FileDatabaseReadWriter {
      * @return true if it exists, otherwise false
      */
     public static boolean datasetExists(Path pathDatabase, String datasetName, Lang lang) {
-        Path pathDataset =
-                Paths.get(
-                        pathDatabase.toString(),
-                        datasetName + "." + lang.getFileExtensions().get(0));
+        Path pathDataset = resolveDatasetPath(pathDatabase, datasetName, lang);
         if (!Files.exists(pathDataset)) {
             logger.debug("dataset file \"{}\" doesnt exist", pathDataset);
             return false;
@@ -81,10 +101,7 @@ public class FileDatabaseReadWriter {
      */
     public static void writeToFile(
             Dataset dataset, Path pathDatabase, String datasetName, Lang lang) {
-        Path pathDataset =
-                Paths.get(
-                        pathDatabase.toString(),
-                        datasetName + "." + lang.getFileExtensions().get(0));
+        Path pathDataset = resolveDatasetPath(pathDatabase, datasetName, lang);
         try {
             OutputStream out = Files.newOutputStream(pathDataset);
             RDFDataMgr.write(out, dataset, lang);
@@ -102,10 +119,7 @@ public class FileDatabaseReadWriter {
      * @return the Dataset
      */
     public static Dataset readDataset(Path pathDatabase, String datasetName, Lang lang) {
-        Path pathDataset =
-                Paths.get(
-                        pathDatabase.toString(),
-                        datasetName + "." + lang.getFileExtensions().get(0));
+        Path pathDataset = resolveDatasetPath(pathDatabase, datasetName, lang);
         try {
             return RDFDataMgr.loadDataset(pathDataset.toString(), lang);
         } catch (Exception e) {
@@ -154,10 +168,7 @@ public class FileDatabaseReadWriter {
      * @param datasetName Name of the dataset to be created
      */
     public static void createDataset(Path databasePath, String datasetName, Lang lang) {
-        Path datasetPath =
-                Paths.get(
-                        databasePath.toString(),
-                        datasetName + "." + lang.getFileExtensions().get(0));
+        Path datasetPath = resolveDatasetPath(databasePath, datasetName, lang);
         try {
             Files.createFile(datasetPath);
             logger.info("Successfully created dataset {}", datasetPath);
@@ -174,10 +185,7 @@ public class FileDatabaseReadWriter {
      * @param datasetName Name of the dataset to be deleted
      */
     public static void deleteDataset(Path databasePath, String datasetName, Lang lang) {
-        Path path =
-                Paths.get(
-                        databasePath.toString(),
-                        datasetName + "." + lang.getFileExtensions().get(0));
+        Path path = resolveDatasetPath(databasePath, datasetName, lang);
         try {
             Files.delete(path);
         } catch (IOException e) {
