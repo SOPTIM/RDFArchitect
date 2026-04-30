@@ -68,7 +68,7 @@
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.2.2
+- **Version:** 4.2.4
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.58.2
+- **Version:** 8.59.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -144,7 +144,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.17.0
+- **Version:** 3.17.1
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -191,7 +191,7 @@
 
 ### prettier-plugin-tailwindcss
 - **Package:** prettier-plugin-tailwindcss
-- **Version:** 0.7.2
+- **Version:** 0.7.3
 - **License:** MIT
 - **URL:** [https://github.com/tailwindlabs/prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss)
 
@@ -227,7 +227,7 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.2.2
+- **Version:** 4.2.4
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -239,7 +239,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.58.2
+- **Version:** 8.59.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -263,7 +263,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.4
+- **Version:** 4.1.5
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
