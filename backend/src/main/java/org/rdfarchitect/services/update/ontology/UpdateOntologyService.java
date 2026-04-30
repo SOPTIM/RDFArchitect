@@ -45,13 +45,13 @@ public class UpdateOntologyService
     // CREATE
     @Override
     public void createOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
-        expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
+        expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
@@ -77,13 +77,13 @@ public class UpdateOntologyService
     // UPDATE
     @Override
     public void replaceOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
-        expandOntologyIris(graphIdentifier.getDatasetName(), ontologyDTO);
+        expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
         GraphRewindableWithUUIDs graph = null;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             if (ontologyDTO.getUuid() == null) {
                 ontologyDTO.setUuid(UUID.randomUUID().toString());
@@ -114,7 +114,7 @@ public class UpdateOntologyService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             var ontology = new OntologyFacade(model);
             ontology.deleteOntology();

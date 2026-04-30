@@ -61,14 +61,14 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                 cimEnumEntry.setUuid(uuid);
                 CIMUpdates.insertEnumEntry(
                         graph,
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
                 message = "Enum entry " + uuid + " created";
             } else {
                 uuid = enumEntryDTO.getUuid();
                 CIMUpdates.replaceEnumEntry(
                         graph,
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
                 message = "Enum entry " + uuid + " replaced";
             }

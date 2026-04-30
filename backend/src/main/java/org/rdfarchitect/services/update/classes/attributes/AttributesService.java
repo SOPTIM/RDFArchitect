@@ -48,13 +48,13 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         }
         var update =
                 CIMUpdates.insertAttribute(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
                         cimAttribute);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph, update.build(), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -67,12 +67,12 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var update =
                 CIMUpdates.replaceAttribute(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
                         cimAttribute);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph, update.build(), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -86,13 +86,13 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var update =
                 CIMUpdates.replaceAttributes(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
                         classUUID,
                         attributeCIMObjects);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph, update.build(), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(

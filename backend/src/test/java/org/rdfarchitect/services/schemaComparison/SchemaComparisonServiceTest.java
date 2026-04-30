@@ -17,9 +17,9 @@
 
 package org.rdfarchitect.services.schemaComparison;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static utils.TestUtils.*;
+import static utils.TestUtils.readMultipartFileFromFile;
 
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -63,7 +63,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(GRAPH_IDENTIFIER.getGraphUri())
+                        .setGraphName(GRAPH_IDENTIFIER.graphUri())
                         .build();
         databasePort.createGraph(GRAPH_IDENTIFIER, graphSource.graph());
     }
@@ -426,7 +426,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(otherGraphFile)
-                        .setGraphName(OTHER_GRAPH_IDENTIFIER.getGraphUri())
+                        .setGraphName(OTHER_GRAPH_IDENTIFIER.graphUri())
                         .build();
         databasePort.createGraph(OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 

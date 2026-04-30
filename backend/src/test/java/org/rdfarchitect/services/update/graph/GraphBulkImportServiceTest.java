@@ -17,8 +17,12 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -64,7 +68,7 @@ class GraphBulkImportServiceTest {
                 .replaceGraph(captor.capture(), any(MultipartFile.class));
 
         assertThat(captor.getAllValues())
-                .extracting(GraphIdentifier::getGraphUri)
+                .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
     }
 }

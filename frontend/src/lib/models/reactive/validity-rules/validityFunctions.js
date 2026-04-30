@@ -50,6 +50,71 @@ export function isInvalidClassLabel(label, namespace, compareClasses) {
     return violations;
 }
 
+export function isInvalidAssociationLabel(association, associations) {
+    const violations = isNotEmptyValidation(association?.label?.value);
+    const assocList = Array.isArray(associations)
+        ? associations
+        : (associations?.values ?? []);
+    if (violations.length === 0) {
+        if (
+            assocList.filter(
+                a =>
+                    a.label.value === association?.label?.value &&
+                    a.namespace.value === association.namespace?.value &&
+                    a !== association,
+            ).length > 0
+        ) {
+            violations.push("must be unique");
+        } else if (
+            association &&
+            association.domain &&
+            association.target &&
+            association.inverse &&
+            association.label
+        ) {
+            if (
+                association.domain?.value === association.target?.value &&
+                association.inverse?.label?.value === association.label?.value
+            ) {
+                violations.push("must be unique");
+            }
+        }
+    }
+    return violations;
+}
+
+export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
+    const violations = isNotEmptyValidation(association?.inverse?.label?.value);
+    const targetClassDto = getClassByUuid(association.target?.value);
+    const assocList = targetClassDto?.associationPairs?.map(pair => pair) ?? [];
+    if (violations.length === 0) {
+        if (
+            assocList.filter(
+                a =>
+                    a.from.label === association?.inverse?.label?.value &&
+                    a.from.prefix === association.inverse?.namespace?.value &&
+                    a.from.uuid !== association.inverse?.uuid?.value,
+            ).length > 0
+        ) {
+            violations.push("must be unique");
+        } else if (
+            association &&
+            association.domain &&
+            association.target &&
+            association.inverse &&
+            association.label
+        ) {
+            if (
+                association.domain?.value === association.target?.value &&
+                association.inverse?.label?.value === association.label?.value
+            ) {
+                violations.push("must be unique");
+            }
+        }
+    }
+    return violations;
+}
+
 export function isInvalidNamespace(namespace) {
     return isNotEmptyValidation(namespace);
 }

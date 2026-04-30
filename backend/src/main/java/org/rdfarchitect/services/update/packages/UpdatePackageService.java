@@ -59,7 +59,7 @@ public class UpdatePackageService
             var newPackage = packageMapper.toCIMObject(packageDTO);
             CIMUpdates.insertPackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
             graph.commit();
         } finally {
@@ -86,7 +86,7 @@ public class UpdatePackageService
             var newPackage = packageMapper.toCIMObject(packageDTO);
             CIMUpdates.replacePackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
             graph.commit();
         } finally {
@@ -112,7 +112,7 @@ public class UpdatePackageService
             graph.begin(TxnType.WRITE);
             CIMUpdates.deletePackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID.toString());
             graph.commit();
         } finally {

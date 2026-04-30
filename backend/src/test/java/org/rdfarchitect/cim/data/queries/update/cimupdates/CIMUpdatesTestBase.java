@@ -125,7 +125,7 @@ public class CIMUpdatesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);
@@ -148,7 +148,7 @@ public class CIMUpdatesTestBase {
         InMemorySparqlExecutor.executeSingleUpdate(
                 databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                 update,
-                graphIdentifier.getGraphUri());
+                graphIdentifier.graphUri());
     }
 
     /** Use this method to execute write actions in a transaction using lambda expression */

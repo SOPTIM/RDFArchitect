@@ -91,8 +91,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             createDataset(datasetName);
@@ -106,10 +106,10 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         lock.lock();
         try {
-            createDataset(graphIdentifier.getDatasetName());
+            createDataset(graphIdentifier.datasetName());
             return graphCollections
-                    .get(graphIdentifier.getDatasetName())
-                    .getGraphWithContext(graphIdentifier.getGraphUri());
+                    .get(graphIdentifier.datasetName())
+                    .getGraphWithContext(graphIdentifier.graphUri());
         } finally {
             lock.unlock();
         }
@@ -119,10 +119,10 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
         lock.lock();
         try {
-            createDataset(graphIdentifier.getDatasetName());
+            createDataset(graphIdentifier.datasetName());
             graphCollections
-                    .get(graphIdentifier.getDatasetName())
-                    .create(graphIdentifier.getGraphUri(), newGraph);
+                    .get(graphIdentifier.datasetName())
+                    .create(graphIdentifier.graphUri(), newGraph);
         } finally {
             lock.unlock();
         }
@@ -130,8 +130,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public void remove(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             if (!graphCollections.containsKey(datasetName)) {
@@ -148,8 +148,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean containsGraph(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             return graphCollections.containsKey(datasetName)
@@ -197,8 +197,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
     @Override
     public void writeToDatabase(
             DatabaseConnection databaseConnection, GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         GraphRewindableWithUUIDs graph = null;
         try {
@@ -327,8 +327,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public void undo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
@@ -340,8 +340,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public void redo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
@@ -353,8 +353,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean canUndo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
@@ -366,8 +366,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public boolean canRedo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
@@ -379,8 +379,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
 
     @Override
     public void restore(GraphIdentifier graphIdentifier, UUID versionId) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         lock.lock();
         try {
             assertThatGraphExists(graphIdentifier);
@@ -443,8 +443,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.getDatasetName();
-        final String graphUri = graphIdentifier.getGraphUri();
+        final String datasetName = graphIdentifier.datasetName();
+        final String graphUri = graphIdentifier.graphUri();
         assertThatDatasetExists(datasetName);
         if (!graphCollections.get(datasetName).containsGraph(graphUri)) {
             throw new DataAccessException(
