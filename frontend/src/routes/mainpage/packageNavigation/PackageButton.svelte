@@ -224,9 +224,7 @@
     bind:showDialog={showNewClassDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
-    lockedPackage={packageNavEntry.data?.uuid === "default"
-        ? null
-        : packageNavEntry.data}
+    lockedPackage={packageNavEntry.data}
 />
 
 <PackageEditorDialog

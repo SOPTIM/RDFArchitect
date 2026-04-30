@@ -53,6 +53,8 @@ mvn -B test
 mvn -B verify
 ```
 
+Use `mvn -B spotless:apply` for automatic formatting.
+
 ### Frontend checks
 
 ```bash
@@ -61,6 +63,8 @@ npm run test
 npm run lint
 npm run build
 ```
+
+Use `npm run format` for automatic formatting.
 
 CI runs these checks through GitHub Actions and must pass.
 
