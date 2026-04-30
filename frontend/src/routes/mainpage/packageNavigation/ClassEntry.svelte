@@ -20,6 +20,7 @@
     import {
         faArrowUpRightFromSquare,
         faDiagramProject,
+        faFileExport,
         faMinus,
         faObjectGroup,
         faTrash,
@@ -37,6 +38,7 @@
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import ExtendClassDialog from "./ExtendClassDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -51,6 +53,7 @@
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
+    let showExtendClassDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
     let showAddToDatasetDiagramDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
@@ -132,6 +135,15 @@
         >
             Constraints
         </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
+        <ContextMenu.Item.Button
+            onSelect={() => {
+                showExtendClassDialog = true;
+            }}
+            faIcon={faFileExport}
+        >
+            Extend Class
+        </ContextMenu.Item.Button>
         {#if !diagramId}
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -208,4 +220,11 @@
     {diagramId}
     classId={classNavEntry.id}
     classLabel={classNavEntry.label}
+/>
+
+<ExtendClassDialog
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    classUuid={classNavEntry.id}
+    bind:showDialog={showExtendClassDialog}
 />
