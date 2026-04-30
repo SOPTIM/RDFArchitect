@@ -44,6 +44,9 @@
     const classEditorKey = $derived(
         `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClassUUID.getValue() ?? ""}::${editorState.selectedClassUUID.subscribe()}`,
     );
+    const renderingKey = $derived(
+        `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedPackageUUID.getValue() ?? ""}`,
+    );
 
     $effect(() => {
         editorState.selectedDataset.subscribe();
@@ -95,7 +98,7 @@
             size={isClassSelected ? 100 - classEditorPaneWidth : 100}
             class="bg-window-background h-full overflow-hidden"
         >
-            {#key editorState.selectedPackageUUID.subscribe()}
+            {#key renderingKey}
                 <div class="h-full">
                     <RenderingWrapper />
                 </div>
