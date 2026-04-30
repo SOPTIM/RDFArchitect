@@ -172,8 +172,14 @@
             }
             const packagesJSON = await response.json();
             return [
-                ...(packagesJSON.internalPackageList ?? []),
-                ...(packagesJSON.externalPackageList ?? []),
+                ...(packagesJSON.internalPackageList ?? []).map(p => ({
+                    ...p,
+                    external: false,
+                })),
+                ...(packagesJSON.externalPackageList ?? []).map(p => ({
+                    ...p,
+                    external: true,
+                })),
             ];
         } catch (error) {
             console.error("Failed to fetch packages", error);
@@ -229,6 +235,7 @@
     async function disableEditing(datasetName) {
         await bec.disableEditing(datasetName);
     }
+    $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>
 
 <Menubar.Menu value="edit">
