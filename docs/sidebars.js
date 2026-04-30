@@ -31,6 +31,7 @@ const sidebars = {
         'reference/features',
         'reference/cim-mapping',
         'reference/faq',
+        'reference/bachelor-theses',
         'reference/changelog',
       ],
     },
