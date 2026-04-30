@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim;
 
 import lombok.experimental.UtilityClass;
 
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
@@ -66,7 +67,7 @@ public class ValueNodeParser {
     public ParsedValue parse(RDFNode node, Model lookupModel) {
         Objects.requireNonNull(node, "value node must not be null");
         if (node.isLiteral()) {
-            return parseLiteral(node);
+            return parseLiteral(node.asLiteral());
         }
         if (node.isURIResource()) {
             throw new IllegalArgumentException(
@@ -115,12 +116,11 @@ public class ValueNodeParser {
             throw new IllegalArgumentException(
                     "Invalid value node shape: rdfs:Literal object must be a literal");
         }
-        var parsedLiteral = parseLiteral(onlyStatement.getObject());
+        var parsedLiteral = parseLiteral(onlyStatement.getObject().asLiteral());
         return new ParsedValue(parsedLiteral.value(), parsedLiteral.dataType(), true);
     }
 
-    private ParsedValue parseLiteral(RDFNode node) {
-        var literal = node.asLiteral();
+    private ParsedValue parseLiteral(Literal literal) {
         var dataTypeUri = literal.getDatatypeURI();
         var datatype = dataTypeUri == null || dataTypeUri.isEmpty() ? null : new URI(dataTypeUri);
         return new ParsedValue(literal.getLexicalForm(), datatype, false);

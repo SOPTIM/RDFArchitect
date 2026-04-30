@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.classes.attributes;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -48,14 +49,18 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             cimAttribute.setUuid(UUID.randomUUID());
         }
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        fixedDefaultResolver.resolve(graph, cimAttribute);
-        var update =
-                CIMUpdates.insertAttribute(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
-                        cimAttribute);
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var graphUri = graphIdentifier.getGraphUri();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+                graph,
+                graphUri,
+                g -> {
+                    fixedDefaultResolver.resolve(g, cimAttribute);
+                    return new UpdateRequest()
+                            .add(
+                                    CIMUpdates.insertAttribute(prefixMapping, graphUri, cimAttribute)
+                                            .build());
+                });
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -67,13 +72,15 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        fixedDefaultResolver.resolve(graph, cimAttribute);
-        var update =
-                CIMUpdates.replaceAttribute(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
-                        cimAttribute);
-        InMemorySparqlExecutor.executeSingleUpdate(graph, update, graphIdentifier.getGraphUri());
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var graphUri = graphIdentifier.getGraphUri();
+        InMemorySparqlExecutor.executeSingleUpdate(
+                graph,
+                graphUri,
+                g -> {
+                    fixedDefaultResolver.resolve(g, cimAttribute);
+                    return CIMUpdates.replaceAttribute(prefixMapping, graphUri, cimAttribute);
+                });
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -86,14 +93,16 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        fixedDefaultResolver.resolve(graph, attributeCIMObjects);
-        var update =
-                CIMUpdates.replaceAttributes(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
-                        classUUID,
-                        attributeCIMObjects);
-        InMemorySparqlExecutor.executeSingleUpdate(graph, update, graphIdentifier.getGraphUri());
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var graphUri = graphIdentifier.getGraphUri();
+        InMemorySparqlExecutor.executeSingleUpdate(
+                graph,
+                graphUri,
+                g -> {
+                    fixedDefaultResolver.resolve(g, attributeCIMObjects);
+                    return CIMUpdates.replaceAttributes(
+                            prefixMapping, graphUri, classUUID, attributeCIMObjects);
+                });
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(

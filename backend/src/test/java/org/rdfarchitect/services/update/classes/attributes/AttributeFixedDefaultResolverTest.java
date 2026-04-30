@@ -20,6 +20,7 @@ package org.rdfarchitect.services.update.classes.attributes;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.graph.GraphMemFactory;
+import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -50,7 +51,7 @@ class AttributeFixedDefaultResolverTest {
         var resolver = new AttributeFixedDefaultResolver(false);
         var attribute = baseAttribute().build();
 
-        resolver.resolve(emptyGraph(), attribute);
+        resolveInTxn(resolver, emptyGraph(), attribute);
 
         assertThat(attribute.getFixedValue()).isNull();
         assertThat(attribute.getDefaultValue()).isNull();
@@ -66,7 +67,7 @@ class AttributeFixedDefaultResolverTest {
                         .defaultValue(new CIMSIsDefault("default"))
                         .build();
 
-        resolver.resolve(emptyGraph(), attribute);
+        resolveInTxn(resolver, emptyGraph(), attribute);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isFalse();
         assertThat(attribute.getDefaultValue().isBlankNode()).isFalse();
@@ -86,7 +87,7 @@ class AttributeFixedDefaultResolverTest {
                         .defaultValue(new CIMSIsDefault("default"))
                         .build();
 
-        resolver.resolve(emptyGraph(), attribute);
+        resolveInTxn(resolver, emptyGraph(), attribute);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isTrue();
         assertThat(attribute.getDefaultValue().isBlankNode()).isTrue();
@@ -98,7 +99,7 @@ class AttributeFixedDefaultResolverTest {
         var resolver = new AttributeFixedDefaultResolver(false);
         var attribute = baseAttribute().fixedValue(new CIMSIsFixed("new")).build();
 
-        resolver.resolve(graphWithBlankNodeFixedValue(), attribute);
+        resolveInTxn(resolver, graphWithBlankNodeFixedValue(), attribute);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isTrue();
     }
@@ -109,9 +110,21 @@ class AttributeFixedDefaultResolverTest {
         var resolver = new AttributeFixedDefaultResolver(true);
         var attribute = baseAttribute().fixedValue(new CIMSIsFixed("new")).build();
 
-        resolver.resolve(graphWithLiteralFixedValue(), attribute);
+        resolveInTxn(resolver, graphWithLiteralFixedValue(), attribute);
 
         assertThat(attribute.getFixedValue().isBlankNode()).isFalse();
+    }
+
+    private static void resolveInTxn(
+            AttributeFixedDefaultResolver resolver,
+            GraphRewindableWithUUIDs graph,
+            CIMAttribute attribute) {
+        try {
+            graph.begin(TxnType.READ);
+            resolver.resolve(graph, attribute);
+        } finally {
+            graph.end();
+        }
     }
 
     private static CIMAttribute.CIMAttributeBuilder baseAttribute() {
