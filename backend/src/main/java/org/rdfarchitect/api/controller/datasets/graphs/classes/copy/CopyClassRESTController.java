@@ -94,7 +94,7 @@ public class CopyClassRESTController {
                         classUUID,
                         targetGraphIdentifier,
                         copyClassRequest.targetPackage,
-                        copyClassRequest.copyAbstract);
+                        copyClassRequest.copyAsAbstract);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" to \"{}\".",
@@ -112,12 +112,12 @@ public class CopyClassRESTController {
      * @param targetDatasetName the name of the dataset where the class should be copied to
      * @param targetGraphURI the graph URI where the class should be copied to
      * @param targetPackage the package where the class should be copied to
-     * @param copyAbstract if true, only the class itself will be copied, if false, all attributes
+     * @param copyAsAbstract if true, only the class itself will be copied, if false, all attributes
      *     will also be copied
      */
     public record CopyClassRequest(
             String targetDatasetName,
             String targetGraphURI,
             PackageDTO targetPackage,
-            boolean copyAbstract) {}
+            boolean copyAsAbstract) {}
 }

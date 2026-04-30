@@ -54,7 +54,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -176,23 +175,23 @@ public class UpdateClassService
             String classUUID,
             GraphIdentifier targetGraphIdentifier,
             PackageDTO targetPackageDTO,
-            boolean copyAbstract) {
+            boolean copyAsAbstract) {
 
-        CIMClassUMLAdapted cimClass = readSourceClass(graphIdentifier, classUUID);
+        var cimClass = readSourceClass(graphIdentifier, classUUID);
 
-        RDFSLabel label =
+        var label =
                 constructCopyLabel(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         graphIdentifier.graphUri(),
                         cimClass.getLabel());
 
-        String className = label.getValue();
+        var className = label.getValue();
         var cimPackage = packageMapper.toCIMObject(targetPackageDTO);
-        var newCimClass = copyCimClass(cimClass, cimPackage, label, copyAbstract);
+        var newCimClass = copyCimClass(cimClass, cimPackage, label, copyAsAbstract);
 
-        UUID newClassUUID = insertClass(targetGraphIdentifier, newCimClass);
+        var newClassUUID = insertClass(targetGraphIdentifier, newCimClass);
 
-        if (!copyAbstract) {
+        if (!copyAsAbstract) {
             insertAttributes(targetGraphIdentifier, cimClass, newCimClass);
             insertEnumEntries(targetGraphIdentifier, cimClass, newCimClass);
         }
@@ -300,14 +299,14 @@ public class UpdateClassService
             CIMClassUMLAdapted cimClass,
             CIMPackage cimPackage,
             RDFSLabel label,
-            boolean copyAbstract) {
+            boolean copyAsAbstract) {
         var newCimClass =
                 CIMClassUMLAdapted.builder()
                         .uri(new URI(cimClass.getUri().getPrefix() + label.getValue()))
                         .label(label)
                         .superClass(cimClass.getSuperClass())
                         .stereotypes(
-                                copyAbstract
+                                copyAsAbstract
                                         ? cimClass.getStereotypes().stream()
                                                 .filter(
                                                         s ->
@@ -355,27 +354,30 @@ public class UpdateClassService
 
     private RDFSLabel constructCopyLabel(
             GraphRewindableWithUUIDs graph, String graphUri, RDFSLabel label) {
+        var baseValue = label.getValue() + " - Copy";
+
         var query =
                 new SelectBuilder()
                         .addVar("?label")
                         .addGraph(
                                 NodeFactory.createURI(graphUri),
-                                new SelectBuilder().addWhere("?s", RDFS.label, "?label"))
+                                new SelectBuilder()
+                                        .addWhere("?s", RDFS.label, "?label")
+                                        .addFilter("STRSTARTS(STR(?label), \"" + baseValue + "\")"))
                         .build();
         var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, graphUri);
 
-        Set<String> existingLabels = new HashSet<>();
+        var existingLabels = new HashSet<>();
         while (resultSet.hasNext()) {
             var solution = resultSet.nextSolution();
             existingLabels.add(solution.getLiteral("label").getString());
         }
 
-        String baseValue = label.getValue() + " - Copy";
         if (!existingLabels.contains(baseValue)) {
             return new RDFSLabel(baseValue, label.getLang());
         }
 
-        int counter = 1;
+        var counter = 1;
         while (existingLabels.contains(baseValue + "(" + counter + ")")) {
             counter++;
         }

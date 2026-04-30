@@ -37,7 +37,7 @@ export async function saveCopyClass(
         targetDatasetName: datasetName,
         targetGraphURI: graphURI,
         targetPackage: packageDTO,
-        copyAbstract: copyAbstract,
+        copyAsAbstract: copyAbstract,
     };
     try {
         const res = await bec.postCopyClass(
@@ -58,9 +58,5 @@ export async function saveCopyClass(
         }
     } finally {
         forceReloadTrigger.trigger();
-        editorState.selectedDataset.trigger();
-        editorState.selectedGraph.trigger();
-        editorState.selectedPackageUUID.trigger();
-        editorState.selectedClassUUID.trigger();
     }
 }

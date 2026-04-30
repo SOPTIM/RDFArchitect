@@ -33,7 +33,7 @@ public interface CopyClassUseCase {
      * @param targetGraphIdentifier The graph URI and database name of the graph the new class will
      *     be added in.
      * @param targetPackageDTO The package the new class will be added in.
-     * @param copyAbstract If true, only the class itself will be copied, if false, all attributes
+     * @param copyAsAbstract If true, only the class itself will be copied, if false, all attributes
      *     will also be copied.
      */
     UUID copyClass(
@@ -41,5 +41,5 @@ public interface CopyClassUseCase {
             String classUUID,
             GraphIdentifier targetGraphIdentifier,
             PackageDTO targetPackageDTO,
-            boolean copyAbstract);
+            boolean copyAsAbstract);
 }

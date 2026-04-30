@@ -95,6 +95,16 @@ export class BackendConnection {
         });
     }
 
+    async getPackage(datasetName, graphURI, packageUUID) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}`;
+        return fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async getClasses(datasetName, graphURI) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
         return fetch(url, {

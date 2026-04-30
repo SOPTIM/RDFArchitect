@@ -55,10 +55,6 @@
     function handleDeleteClass() {
         onDeleteClass();
     }
-
-    function copyClass() {
-        onCopyClass();
-    }
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -69,7 +65,7 @@
         {disabled}
     />
     <ContextMenu.Content>
-        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}>
+        <ContextMenu.Item.Button onSelect={onCopyClass} faIcon={faCopy}>
             Copy
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />

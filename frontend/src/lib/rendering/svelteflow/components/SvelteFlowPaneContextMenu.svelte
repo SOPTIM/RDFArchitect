@@ -67,27 +67,21 @@
         onAddClass();
     }
 
-    async function getPackages(datasetName, graphURI) {
+    async function getPackage(datasetName, graphURI, packageUUID) {
         if (!datasetName || !graphURI) {
             return [];
         }
-        const res = await bec.getPackages(datasetName, graphURI);
-        const packagesJSON = await res.json();
-        return [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+        const res = await bec.getPackage(datasetName, graphURI, packageUUID);
+        return await res.json();
     }
 
     async function pasteClass(copyAbstract) {
-        let packages = await getPackages(
+        let packageDTO = await getPackage(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
+            editorState.selectedPackageUUID.getValue(),
         );
-        let packageDTO =
-            packages.find(
-                pkg => pkg.uuid === editorState.selectedPackageUUID.getValue(),
-            ) ?? null;
+
         await saveCopyClass(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
