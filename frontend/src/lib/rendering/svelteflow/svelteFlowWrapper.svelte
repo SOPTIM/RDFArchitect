@@ -32,7 +32,6 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
-        copyState,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -552,14 +551,6 @@
         persistNodeOrder(nodeOrder, [...nodeOrder]);
     }
 
-    function copyClass() {
-        copyState.classUUID.updateValue(contextMenuClass.uuid);
-        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
-        copyState.datasetName.updateValue(
-            editorState.selectedDataset.getValue(),
-        );
-    }
-
     function updateNodePositions(movedNodes) {
         let classPositionDTOList = [];
         for (const node of movedNodes) {
@@ -708,7 +699,6 @@
     <SvelteFlowClassContextMenu
         request={classContextMenuRequest}
         disabled={isDatasetReadOnly || !contextMenuClass}
-        onCopyClass={copyClass}
         {contextMenuClass}
         datasetName={editorState.selectedDataset.getValue()}
         graphUri={editorState.selectedGraph.getValue()}

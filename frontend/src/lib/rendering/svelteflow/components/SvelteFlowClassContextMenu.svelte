@@ -27,6 +27,7 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { copyState, editorState } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -38,7 +39,6 @@
     let {
         request = null,
         disabled = false,
-        onCopyClass = () => {},
         contextMenuClass = null,
         datasetName = "",
         graphUri = "",
@@ -118,6 +118,14 @@
         // Debounced API call
         onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
+
+    function copyClass() {
+        copyState.classUUID.updateValue(contextMenuClass.uuid);
+        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
+        copyState.datasetName.updateValue(
+            editorState.selectedDataset.getValue(),
+        );
+    }
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -128,7 +136,7 @@
         {disabled}
     />
     <ContextMenu.Content>
-        <ContextMenu.Item.Button onSelect={onCopyClass} faIcon={faCopy}>
+        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}>
             Copy
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />
