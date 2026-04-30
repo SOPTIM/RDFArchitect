@@ -22,6 +22,8 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
+    import { Checkbox } from "$lib/components/bitsui/checkbox/index.js";
+
     let {
         label,
         level = 1,
@@ -55,6 +57,9 @@
             return;
         }
         onclick?.(event);
+        if (showCheckbox && event?.detail === 1) {
+            onSelect?.(event);
+        }
         if (onToggle && event?.detail % 2 === 0) {
             onToggle(event);
         }
@@ -72,11 +77,19 @@
 
     function handleCheckbox(event) {
         if (disabled) {
-            event.preventDefault();
+            event?.preventDefault?.();
             return;
         }
-        event.stopPropagation();
-        onSelect(event);
+        event?.stopPropagation?.();
+        onSelect?.(event);
+    }
+
+    function handleKeydown(event) {
+        if (disabled) return;
+        if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            handleClick(event);
+        }
     }
 
     function badgeClass(variant) {
@@ -84,17 +97,25 @@
     }
 </script>
 
-<button
-    type="button"
+<div
+    role="button"
+    tabindex={disabled ? -1 : 0}
+    aria-disabled={disabled}
     class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}
-    {disabled}
     title={highlightLabel || title}
+    onmousedown={e => e.preventDefault()}
     onclick={handleClick}
+    onkeydown={handleKeydown}
     {...restProps}
 >
     <span
+        role="button"
+        tabindex={hasChildren ? 0 : -1}
         class={`nav-entry__chevron ${hasChildren ? "" : "nav-entry__chevron--empty"}`}
         onclick={handleToggle}
+        onkeydown={e => {
+            if (e.key === "Enter" || e.key === " ") handleToggle(e);
+        }}
     >
         {#if hasChildren}
             <Fa icon={expanded ? faCaretDown : faCaretRight} />
@@ -117,9 +138,19 @@
         </span>
     {/if}
     {#if showCheckbox}
-        <input type="checkbox" checked={selected} onchange={handleCheckbox} />
+        <span
+            onclick={e => e.stopPropagation()}
+            onkeydown={e => e.stopPropagation()}
+            role="presentation"
+        >
+            <Checkbox
+                checked={selected}
+                {disabled}
+                onCheckedChange={() => handleCheckbox()}
+            />
+        </span>
     {/if}
-</button>
+</div>
 
 <style>
     @import "./navigation.css";
