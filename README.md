@@ -128,6 +128,17 @@ npm run lint
 npm run build
 ```
 
+### Pre-commit Hooks
+
+After installing `pre-commit`, enable the repo-local hooks with:
+
+```bash
+pre-commit install
+```
+
+Backend hooks run for staged backend changes. Frontend hooks run for staged frontend changes.
+Hooks call `mvn` and `npm` directly. Make sure `mvn`, `npm`, and `pre-commit` are available on `PATH`.
+
 ## Contributing
 
 Please see [CONTRIBUTING.md](.github/CONTRIBUTING.md) for development and pull request guidelines.
