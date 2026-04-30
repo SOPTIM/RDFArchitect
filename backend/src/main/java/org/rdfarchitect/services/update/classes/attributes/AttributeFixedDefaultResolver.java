@@ -18,7 +18,6 @@
 package org.rdfarchitect.services.update.classes.attributes;
 
 import org.apache.jena.datatypes.TypeMapper;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
@@ -60,8 +59,8 @@ import java.util.UUID;
  *       xsd:string}.
  * </ul>
  *
- * <p>Reading from the graph requires a Jena transaction. {@link #resolve} self-manages a {@link
- * TxnType#READ} transaction when no transaction is currently open, and reads inline otherwise.
+ * <p>Reading from the graph requires an open Jena transaction. The caller is responsible for
+ * opening one.
  */
 @Service
 public class AttributeFixedDefaultResolver {
@@ -77,37 +76,16 @@ public class AttributeFixedDefaultResolver {
         if (graph == null || attribute == null) {
             return;
         }
-        runInReadTxn(graph, model -> resolveAttribute(model, attribute));
+        resolveAttribute(ModelFactory.createModelForGraph(graph), attribute);
     }
 
     public void resolve(GraphRewindableWithUUIDs graph, List<CIMAttribute> attributes) {
         if (graph == null || attributes == null || attributes.isEmpty()) {
             return;
         }
-        runInReadTxn(
-                graph,
-                model -> {
-                    for (var attribute : attributes) {
-                        resolveAttribute(model, attribute);
-                    }
-                });
-    }
-
-    /**
-     * Runs {@code action} against the model backed by {@code graph}, opening a READ transaction
-     * when none is currently active.
-     */
-    private void runInReadTxn(
-            GraphRewindableWithUUIDs graph, java.util.function.Consumer<Model> action) {
-        if (graph.isInTransaction()) {
-            action.accept(ModelFactory.createModelForGraph(graph));
-            return;
-        }
-        try {
-            graph.begin(TxnType.READ);
-            action.accept(ModelFactory.createModelForGraph(graph));
-        } finally {
-            graph.end();
+        var model = ModelFactory.createModelForGraph(graph);
+        for (var attribute : attributes) {
+            resolveAttribute(model, attribute);
         }
     }
 

@@ -30,7 +30,6 @@ import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.update.UpdateExecutionFactory;
-import org.apache.jena.update.UpdateFactory;
 import org.apache.jena.update.UpdateRequest;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -189,6 +188,9 @@ public class CIMUpdates {
                         .addPrefixes(prefixMapping)
                         .setGraph(graphURI)
                         .build()
+                        // Force the WHERE clause to match exactly once. Without this, the INSERT
+                        // would fire for every triple in the graph and duplicate any blank-node
+                        // value wrappers (which produce a fresh blank-node id per match).
                         .addBind("1", "?__insertAttribute");
 
         return appendInsertAttribute(baseUpdate, attribute);
@@ -296,78 +298,67 @@ public class CIMUpdates {
         return updateRequest;
     }
 
+    private static final String VAR_ATTRIBUTE = "?__attribute";
+    private static final String VAR_CLASS = "?__class";
+    private static final String VAR_BLANK = "?__blank";
+    private static final String VAR_BLANK_P = "?__blankP";
+    private static final String VAR_BLANK_O = "?__blankO";
+
+    private static final List<Property> VALUE_NODE_PREDICATES =
+            List.of(CIMS.isFixed, CIMS.isDefault);
+
     /**
-     * Builds a SPARQL update that removes any blank-node fixed/default value wrappers attached to
-     * the attribute identified by {@code attributeUUID}. The {@link UpdateBuilder} fluent API does
-     * not offer a primitive for {@code FILTER(isBlank(...))} so the query is assembled as a raw
-     * SPARQL string.
+     * Builds SPARQL updates that remove any blank-node fixed/default value wrappers attached to
+     * the attribute identified by {@code attributeUUID}. Uses {@link UpdateBuilder} so {@code
+     * attributeUUID} flows through Jena's node coercion rather than being interpolated into a
+     * SPARQL string. One operation is emitted per value predicate (UpdateBuilder has no VALUES
+     * clause primitive), and they are bundled into a single {@link UpdateRequest}.
      */
     private UpdateRequest deleteAttributeValueNodes(String graphURI, UUID attributeUUID) {
+        var request = new UpdateRequest();
         if (attributeUUID == null) {
-            return new UpdateRequest();
+            return request;
         }
-        var whereBody =
-                "?attribute <"
-                        + RDFA.uuid.getURI()
-                        + "> \""
-                        + attributeUUID
-                        + "\" .\n"
-                        + "?attribute ?valuePredicate ?blank .\n"
-                        + "VALUES ?valuePredicate { <"
-                        + CIMS.isFixed.getURI()
-                        + "> <"
-                        + CIMS.isDefault.getURI()
-                        + "> }\n"
-                        + "FILTER(isBlank(?blank))\n"
-                        + "?blank ?p ?o .\n";
-        return buildBlankNodeDeleteUpdate(graphURI, whereBody);
+        for (var predicate : VALUE_NODE_PREDICATES) {
+            request.add(
+                    new CIMBaseUpdateBuilder()
+                            .setGraph(graphURI)
+                            .build()
+                            .addDelete(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addWhere(VAR_ATTRIBUTE, RDFA.uuid, attributeUUID.toString())
+                            .addWhere(VAR_ATTRIBUTE, predicate, VAR_BLANK)
+                            .addWhere(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addFilter(new ExprFactory().isBlank(VAR_BLANK))
+                            .build());
+        }
+        return request;
     }
 
     /**
      * Same as {@link #deleteAttributeValueNodes(String, UUID)} but for every attribute belonging to
-     * the given class.
+     * the given class. {@code classUUID} is passed through Jena's node coercion rather than
+     * interpolated.
      */
     private UpdateRequest deleteAttributeValueNodesForClass(String graphURI, String classUUID) {
+        var request = new UpdateRequest();
         if (classUUID == null || classUUID.isBlank()) {
-            return new UpdateRequest();
+            return request;
         }
-        var whereBody =
-                "?class <"
-                        + RDFA.uuid.getURI()
-                        + "> \""
-                        + classUUID
-                        + "\" .\n"
-                        + "?attribute <"
-                        + RDFS.domain.getURI()
-                        + "> ?class .\n"
-                        + "?attribute <"
-                        + CIMS.stereotype.getURI()
-                        + "> <"
-                        + CIMStereotypes.attribute.getURI()
-                        + "> .\n"
-                        + "?attribute ?valuePredicate ?blank .\n"
-                        + "VALUES ?valuePredicate { <"
-                        + CIMS.isFixed.getURI()
-                        + "> <"
-                        + CIMS.isDefault.getURI()
-                        + "> }\n"
-                        + "FILTER(isBlank(?blank))\n"
-                        + "?blank ?p ?o .\n";
-        return buildBlankNodeDeleteUpdate(graphURI, whereBody);
-    }
-
-    private UpdateRequest buildBlankNodeDeleteUpdate(String graphURI, String whereBody) {
-        var deleteClause = wrapGraphPattern(graphURI, "?blank ?p ?o .");
-        var whereClause = wrapGraphPattern(graphURI, whereBody);
-        return UpdateFactory.create(
-                "DELETE { " + deleteClause + " } WHERE { " + whereClause + " }");
-    }
-
-    private String wrapGraphPattern(String graphURI, String patternBody) {
-        if (graphURI != null && !"default".equals(graphURI)) {
-            return "GRAPH <" + graphURI + "> {\n" + patternBody + "\n}";
+        for (var predicate : VALUE_NODE_PREDICATES) {
+            request.add(
+                    new CIMBaseUpdateBuilder()
+                            .setGraph(graphURI)
+                            .build()
+                            .addDelete(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addWhere(VAR_CLASS, RDFA.uuid, classUUID)
+                            .addWhere(VAR_ATTRIBUTE, RDFS.domain, VAR_CLASS)
+                            .addWhere(VAR_ATTRIBUTE, CIMS.stereotype, CIMStereotypes.attribute)
+                            .addWhere(VAR_ATTRIBUTE, predicate, VAR_BLANK)
+                            .addWhere(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addFilter(new ExprFactory().isBlank(VAR_BLANK))
+                            .build());
         }
-        return patternBody;
+        return request;
     }
 
     public UpdateBuilder deleteAssociation(
