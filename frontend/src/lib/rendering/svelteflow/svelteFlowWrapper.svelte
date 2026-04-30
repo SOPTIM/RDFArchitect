@@ -705,17 +705,17 @@
         onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
-            request={classContextMenuRequest}
-            disabled={isDatasetReadOnly || !contextMenuClass}
-            {contextMenuClass}
-            datasetName={editorState.selectedDataset.getValue()}
-            graphUri={editorState.selectedGraph.getValue()}
-            {nodeOrder}
-            nodeCount={nodes.length}
-            onClose={closeContextMenus}
-            onMoveClass={handleMoveClass}
-            onSetLayer={handleSetLayer}
-            onPersistLayer={handlePersistLayer}
+        request={classContextMenuRequest}
+        disabled={isDatasetReadOnly || !contextMenuClass}
+        {contextMenuClass}
+        datasetName={editorState.selectedDataset.getValue()}
+        graphUri={editorState.selectedGraph.getValue()}
+        {nodeOrder}
+        nodeCount={nodes.length}
+        onClose={closeContextMenus}
+        onMoveClass={handleMoveClass}
+        onSetLayer={handleSetLayer}
+        onPersistLayer={handlePersistLayer}
     />
 </div>
 
@@ -732,4 +732,3 @@
     resourceUuid={deleteClassTarget?.uuid}
     bind:showDialog={showDeleteDependenciesDialog}
 />
-
