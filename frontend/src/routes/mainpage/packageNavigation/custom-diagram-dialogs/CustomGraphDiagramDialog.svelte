@@ -68,13 +68,23 @@
         diagramName = "";
     }
 
-    function deselectAll() {
+    let hasAnySelection = $derived(
+        Object.values(classesByPackage).some(classes =>
+            classes.some(cls => cls.selected),
+        ),
+    );
+
+    function setAll(value) {
         packages.forEach(pack => {
-            pack.selected = false;
+            pack.selected = value;
             classesByPackage[getPackageId(pack)]?.forEach(cls => {
-                cls.selected = false;
+                cls.selected = value;
             });
         });
+    }
+
+    function toggleSelectAll() {
+        setAll(!hasAnySelection);
     }
 
     function initializePackageSelectionState() {
@@ -148,8 +158,8 @@
         <div class="flex justify-between">
             <label for="class-tree" class="mt-2 mb-1">Selected Classes</label>
             <div class="w-26">
-                <ButtonControl callOnClick={deselectAll}>
-                    Deselect All
+                <ButtonControl callOnClick={toggleSelectAll}>
+                    {hasAnySelection ? "Deselect All" : "Select All"}
                 </ButtonControl>
             </div>
         </div>

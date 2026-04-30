@@ -113,20 +113,32 @@
         classesByPackageAndGraph = result;
     }
 
-    function deselectAll() {
-        graphs.forEach(g => (g.selected = false));
+    let hasAnySelection = $derived(
+        Object.values(classesByPackageAndGraph).some(packages =>
+            Object.values(packages).some(classes =>
+                classes.some(cls => cls.selected),
+            ),
+        ),
+    );
+
+    function setAll(value) {
+        graphs.forEach(g => (g.selected = value));
 
         Object.entries(classesByPackageAndGraph).forEach(
             ([graphUri, packages]) => {
                 const graphPackages = packagesByGraph[graphUri] ?? [];
 
-                graphPackages.forEach(pack => (pack.selected = false));
+                graphPackages.forEach(pack => (pack.selected = value));
 
                 Object.values(packages).forEach(classes =>
-                    classes.forEach(cls => (cls.selected = false)),
+                    classes.forEach(cls => (cls.selected = value)),
                 );
             },
         );
+    }
+
+    function toggleSelectAll() {
+        setAll(!hasAnySelection);
     }
 
     function initialiseSelectionState() {
@@ -213,8 +225,8 @@
         <div class="flex justify-between">
             <label for="class-tree" class="mt-2 mb-1">Selected Classes</label>
             <div class="w-26">
-                <ButtonControl callOnClick={deselectAll}>
-                    Deselect All
+                <ButtonControl callOnClick={toggleSelectAll}>
+                    {hasAnySelection ? "Deselect All" : "Select All"}
                 </ButtonControl>
             </div>
         </div>
