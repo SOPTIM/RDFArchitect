@@ -55,7 +55,8 @@ public class FileDatabaseReadWriter {
         Path baseDir = pathDatabase.toAbsolutePath().normalize();
         Path resolved =
                 baseDir.resolve(datasetName + "." + lang.getFileExtensions().get(0)).normalize();
-        if (!resolved.startsWith(baseDir) || !resolved.getParent().equals(baseDir)) {
+        Path parent = resolved.getParent();
+        if (!resolved.startsWith(baseDir) || parent == null || !parent.equals(baseDir)) {
             throw new DataAccessException("Invalid dataset name: " + datasetName);
         }
         return resolved;

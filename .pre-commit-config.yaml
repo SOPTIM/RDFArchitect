@@ -1,0 +1,45 @@
+repos:
+  - repo: local
+    hooks:
+      - id: backend-format
+        name: Formatting backend files
+        entry: mvn -f backend/pom.xml -B spotless:apply
+        language: system
+        pass_filenames: false
+        files: ^(backend/|\.pre-commit-config\.yaml$)
+      - id: backend-lint
+        name: Verifying backend linting
+        entry: mvn -f backend/pom.xml -B -Plint -DskipTests verify
+        language: system
+        pass_filenames: false
+        files: ^(backend/|\.pre-commit-config\.yaml$)
+      - id: backend-test
+        name: Running backend tests
+        entry: mvn -f backend/pom.xml -B test
+        language: system
+        pass_filenames: false
+        files: ^(backend/|\.pre-commit-config\.yaml$)
+      - id: backend-verify
+        name: Verifying backend
+        entry: mvn -f backend/pom.xml -B verify
+        language: system
+        pass_filenames: false
+        files: ^(backend/|\.pre-commit-config\.yaml$)
+      - id: frontend-format
+        name: Formatting frontend
+        entry: npm --prefix frontend run format
+        language: system
+        pass_filenames: false
+        files: ^(frontend/|\.pre-commit-config\.yaml$)
+      - id: frontend-test
+        name: Running frontend tests
+        entry: npm --prefix frontend run test
+        language: system
+        pass_filenames: false
+        files: ^(frontend/|\.pre-commit-config\.yaml$)
+      - id: frontend-lint
+        name: Verifying frontend linting
+        entry: npm --prefix frontend run lint
+        language: system
+        pass_filenames: false
+        files: ^(frontend/|\.pre-commit-config\.yaml$)
