@@ -53,14 +53,8 @@
         </span>
     </div>
 
-    <!-- Row 2: UUID -->
+    <!-- Row 2: Namespace -->
     <div class="col-start-1 row-start-2 pl-2">
-        <span class="mb-1">UUID:</span>
-        <p class="w-full">{association.uuid.value}</p>
-    </div>
-
-    <!-- Row 3: Namespace -->
-    <div class="col-start-1 row-start-3 pl-2">
         <span class="mb-1">Namespace:</span>
         <SearchableSelect
             placeholder="namespace..."
@@ -84,8 +78,8 @@
         <ViolationMessages violations={association.namespace.violations} />
     </div>
 
-    <!-- Row 4: Label -->
-    <div class="col-start-1 row-start-4 pl-2">
+    <!-- Row 3: Label -->
+    <div class="col-start-1 row-start-3 pl-2">
         <TextEditControl
             label="Label:"
             placeholder="association label..."
@@ -101,8 +95,8 @@
         <ViolationMessages violations={association.label.violations} />
     </div>
 
-    <!-- Row 5: Target -->
-    <div class="col-start-1 row-start-5 pl-2">
+    <!-- Row 4: Target -->
+    <div class="col-start-1 row-start-4 pl-2">
         <SearchableSelect
             label="Target:"
             placeholder="Target"
@@ -130,8 +124,8 @@
         <ViolationMessages violations={association.target.violations} />
     </div>
 
-    <!-- Row 6: Multiplicity LowerBound -->
-    <div class="col-start-1 row-start-6 pl-2">
+    <!-- Row 5: Multiplicity LowerBound -->
+    <div class="col-start-1 row-start-5 pl-2">
         <NumberInputControl
             label="Multiplicity LowerBound:"
             placeholder="multiplicity LowerBound..."
@@ -149,8 +143,8 @@
         />
     </div>
 
-    <!-- Row 7: Multiplicity UpperBound -->
-    <div class="col-start-1 row-start-7 pl-2">
+    <!-- Row 6: Multiplicity UpperBound -->
+    <div class="col-start-1 row-start-6 pl-2">
         <NumberInputControl
             label="Multiplicity UpperBound:"
             placeholder="multiplicity UpperBound..."
@@ -168,8 +162,8 @@
         />
     </div>
 
-    <!-- Row 8: Use association checkbox -->
-    <div class="col-start-1 row-start-8 pl-2">
+    <!-- Row 7: Use association checkbox -->
+    <div class="col-start-1 row-start-7 pl-2">
         <div class="relative flex items-end space-x-1">
             <CheckBoxEditControl
                 label="Use association?"
@@ -186,8 +180,8 @@
         <ViolationMessages violations={association.isUsed.violations} />
     </div>
 
-    <!-- Row 9: Comment -->
-    <div class="col-start-1 row-start-9 pl-2">
+    <!-- Row 8: Comment -->
+    <div class="col-start-1 row-start-8 pl-2">
         <label for="association-edit-dialog-direct-comment-text-area">
             Comment:
         </label>
