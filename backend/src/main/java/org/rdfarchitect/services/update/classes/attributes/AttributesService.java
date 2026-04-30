@@ -58,7 +58,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
                     fixedDefaultResolver.resolve(g, cimAttribute);
                     return new UpdateRequest()
                             .add(
-                                    CIMUpdates.insertAttribute(prefixMapping, graphUri, cimAttribute)
+                                    CIMUpdates.insertAttribute(
+                                                    prefixMapping, graphUri, cimAttribute)
                                             .build());
                 });
         changeLogUseCase.recordChange(
