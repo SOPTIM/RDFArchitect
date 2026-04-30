@@ -103,6 +103,7 @@
     aria-disabled={disabled}
     class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}
     title={highlightLabel || title}
+    onmousedown={e => e.preventDefault()}
     onclick={handleClick}
     onkeydown={handleKeydown}
     {...restProps}
