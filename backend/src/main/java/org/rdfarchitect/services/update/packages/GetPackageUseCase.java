@@ -15,6 +15,13 @@
  *
  */
 
-package org.rdfarchitect.database;
+package org.rdfarchitect.services.update.packages;
 
-public record GraphIdentifier(String datasetName, String graphUri) {}
+import org.rdfarchitect.api.dto.packages.PackageDTO;
+import org.rdfarchitect.database.GraphIdentifier;
+
+import java.util.UUID;
+
+public interface GetPackageUseCase {
+    PackageDTO getPackage(GraphIdentifier graphIdentifier, UUID packageUUID);
+}

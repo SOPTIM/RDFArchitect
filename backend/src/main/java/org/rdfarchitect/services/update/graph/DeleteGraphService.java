@@ -47,7 +47,7 @@ public class DeleteGraphService implements DeleteGraphUseCase, ReplaceGraphUseCa
             var graph =
                     new GraphFileSourceBuilderImpl()
                             .setFile(file)
-                            .setGraphName(graphIdentifier.getGraphUri())
+                            .setGraphName(graphIdentifier.graphUri())
                             .build()
                             .graph();
             databasePort.createGraph(graphIdentifier, graph);

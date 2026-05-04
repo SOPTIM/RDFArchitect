@@ -28,6 +28,7 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.packages.DeletePackageUseCase;
+import org.rdfarchitect.services.update.packages.GetPackageUseCase;
 import org.rdfarchitect.services.update.packages.ReplacePackageUseCase;
 import org.springframework.http.HttpHeaders;
 
@@ -38,6 +39,7 @@ class PackageRESTControllerTest {
     private ExpandURIUseCase expandURIUseCase;
     private ReplacePackageUseCase replacePackageUseCase;
     private DeletePackageUseCase deletePackageUseCase;
+    private GetPackageUseCase getPackageUseCase;
     private PackageRESTController controller;
 
     @BeforeEach
@@ -45,9 +47,13 @@ class PackageRESTControllerTest {
         expandURIUseCase = mock(ExpandURIUseCase.class);
         replacePackageUseCase = mock(ReplacePackageUseCase.class);
         deletePackageUseCase = mock(DeletePackageUseCase.class);
+        getPackageUseCase = mock(GetPackageUseCase.class);
         controller =
                 new PackageRESTController(
-                        expandURIUseCase, replacePackageUseCase, deletePackageUseCase);
+                        expandURIUseCase,
+                        replacePackageUseCase,
+                        deletePackageUseCase,
+                        getPackageUseCase);
     }
 
     @Test
@@ -76,5 +82,26 @@ class PackageRESTControllerTest {
         assertThat(response).isEqualTo(Response.SUCCESS);
         verify(replacePackageUseCase)
                 .replacePackage(new GraphIdentifier("dataset", "expanded-graph"), dto);
+    }
+
+    @Test
+    void getPackage_returnsPackageDTOFromUseCase() {
+        when(expandURIUseCase.expandUri("dataset", "graph")).thenReturn("expanded-graph");
+        var packageUUID = UUID.randomUUID();
+        var expectedDTO =
+                PackageDTO.builder()
+                        .uuid(packageUUID)
+                        .label("myPackage")
+                        .prefix("http://example.org#")
+                        .build();
+        when(getPackageUseCase.getPackage(
+                        new GraphIdentifier("dataset", "expanded-graph"), packageUUID))
+                .thenReturn(expectedDTO);
+
+        var result = controller.getPackage(HttpHeaders.ORIGIN, "dataset", "graph", packageUUID);
+
+        assertThat(result).isEqualTo(expectedDTO);
+        verify(getPackageUseCase)
+                .getPackage(new GraphIdentifier("dataset", "expanded-graph"), packageUUID);
     }
 }

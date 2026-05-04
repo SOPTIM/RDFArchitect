@@ -130,7 +130,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
                         "Imported graph into dataset '"
                                 + datasetName
                                 + "' with graph URI '"
-                                + graphIdentifier.getGraphUri()
+                                + graphIdentifier.graphUri()
                                 + "'.",
                         databasePort
                                 .getGraphWithContext(graphIdentifier)

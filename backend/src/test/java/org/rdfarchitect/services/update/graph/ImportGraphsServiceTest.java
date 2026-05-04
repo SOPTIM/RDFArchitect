@@ -17,9 +17,13 @@
 
 package org.rdfarchitect.services.update.graph;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import org.apache.jena.graph.Graph;
 import org.junit.jupiter.api.BeforeEach;
@@ -92,7 +96,7 @@ class ImportGraphsServiceTest {
         verify(databasePortMock, times(2)).createGraph(captor.capture(), any(Graph.class));
 
         assertThat(captor.getAllValues())
-                .extracting(GraphIdentifier::getGraphUri)
+                .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
 
         verify(changeLogUseCaseMock, times(2)).recordChange(any(GraphIdentifier.class), any());

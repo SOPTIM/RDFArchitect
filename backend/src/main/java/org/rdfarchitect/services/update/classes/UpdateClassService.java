@@ -19,20 +19,33 @@ package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.arq.querybuilder.ExprFactory;
+import org.apache.jena.arq.querybuilder.SelectBuilder;
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.attributes.AttributeMapper;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
+import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
@@ -40,17 +53,21 @@ import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseC
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UpdateClassService
-        implements AddClassUseCase, ReplaceClassUseCase, DeleteClassUseCase {
+        implements AddClassUseCase, ReplaceClassUseCase, DeleteClassUseCase, CopyClassUseCase {
 
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper classMapper;
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
+    private final AttributeMapper attributeMapper;
+    private final EnumEntryMapper enumEntryMapper;
 
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
@@ -64,9 +81,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
             CIMUpdates.replaceClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                    cimClass);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), cimClass);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -99,7 +114,7 @@ public class UpdateClassService
             newClassUUID =
                     CIMUpdates.insertClass(
                             graph,
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
             graph.commit();
         } finally {
@@ -141,9 +156,7 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             CIMUpdates.deleteClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                    classUUID);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), classUUID);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -157,5 +170,221 @@ public class UpdateClassService
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry("Deleted class: " + classUUID, graph.getLastDelta()));
+    }
+
+    @Override
+    public UUID copyClass(
+            GraphIdentifier graphIdentifier,
+            String classUUID,
+            GraphIdentifier targetGraphIdentifier,
+            PackageDTO targetPackageDTO,
+            boolean copyAsAbstract) {
+
+        var cimClass = readSourceClass(graphIdentifier, classUUID);
+
+        var label =
+                constructCopyLabel(
+                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        graphIdentifier.graphUri(),
+                        cimClass.getLabel());
+
+        var className = label.getValue();
+        var cimPackage = packageMapper.toCIMObject(targetPackageDTO);
+        var newCimClass = copyCimClass(cimClass, cimPackage, label, copyAsAbstract);
+
+        var newClassUUID = insertClass(targetGraphIdentifier, newCimClass);
+
+        if (!copyAsAbstract) {
+            insertAttributes(targetGraphIdentifier, cimClass, newCimClass);
+            insertEnumEntries(targetGraphIdentifier, cimClass, newCimClass);
+        }
+
+        changeLogUseCase.recordChange(
+                targetGraphIdentifier,
+                new ChangeLogEntry(
+                        "Added class " + className,
+                        databasePort
+                                .getGraphWithContext(targetGraphIdentifier)
+                                .getRdfGraph()
+                                .getLastDelta()));
+        return newClassUUID;
+    }
+
+    private CIMClassUMLAdapted readSourceClass(GraphIdentifier graphIdentifier, String classUUID) {
+        GraphRewindableWithUUIDs graph = null;
+        boolean ended = false;
+        try {
+            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+            graph.begin(TxnType.READ);
+            var cimClass =
+                    CIMUMLObjectFactory.createCIMClassUMLAdapted(
+                            graph,
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            classUUID);
+            graph.end();
+            ended = true;
+            return cimClass;
+        } finally {
+            if (graph != null && !ended) {
+                graph.end();
+            }
+        }
+    }
+
+    private UUID insertClass(GraphIdentifier targetGraphIdentifier, CIMClass newCimClass) {
+        GraphRewindableWithUUIDs targetGraph = null;
+        try {
+            targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
+            targetGraph.begin(TxnType.WRITE);
+            var newClassUUID =
+                    CIMUpdates.insertClass(
+                            targetGraph,
+                            databasePort.getPrefixMapping(targetGraphIdentifier.datasetName()),
+                            newCimClass);
+            targetGraph.commit();
+            return newClassUUID;
+        } finally {
+            if (targetGraph != null) {
+                targetGraph.end();
+            }
+        }
+    }
+
+    private void insertAttributes(
+            GraphIdentifier targetGraphIdentifier,
+            CIMClassUMLAdapted sourceClass,
+            CIMClass targetClass) {
+        var targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
+        copyAttributes(sourceClass.getAttributes(), targetClass)
+                .forEach(
+                        cimAttribute -> {
+                            var update =
+                                    CIMUpdates.insertAttribute(
+                                            databasePort.getPrefixMapping(
+                                                    targetGraphIdentifier.datasetName()),
+                                            targetGraphIdentifier.graphUri(),
+                                            cimAttribute);
+                            InMemorySparqlExecutor.executeSingleUpdate(
+                                    targetGraph, update.build(), targetGraphIdentifier.graphUri());
+                        });
+    }
+
+    private void insertEnumEntries(
+            GraphIdentifier targetGraphIdentifier,
+            CIMClassUMLAdapted sourceClass,
+            CIMClass targetClass) {
+        GraphRewindableWithUUIDs targetGraph = null;
+        try {
+            targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
+            targetGraph.begin(TxnType.WRITE);
+            GraphRewindableWithUUIDs finalTargetGraph = targetGraph;
+            copyEnumEntries(sourceClass.getEnumEntries(), targetClass)
+                    .forEach(
+                            cimEnumEntry ->
+                                    CIMUpdates.insertEnumEntry(
+                                            finalTargetGraph,
+                                            databasePort.getPrefixMapping(
+                                                    targetGraphIdentifier.datasetName()),
+                                            cimEnumEntry));
+            targetGraph.commit();
+        } finally {
+            if (targetGraph != null) {
+                targetGraph.end();
+            }
+        }
+    }
+
+    private CIMClassUMLAdapted copyCimClass(
+            CIMClassUMLAdapted cimClass,
+            CIMPackage cimPackage,
+            RDFSLabel label,
+            boolean copyAsAbstract) {
+        var newCimClass =
+                CIMClassUMLAdapted.builder()
+                        .uri(new URI(cimClass.getUri().getPrefix() + label.getValue()))
+                        .label(label)
+                        .superClass(cimClass.getSuperClass())
+                        .stereotypes(
+                                copyAsAbstract
+                                        ? cimClass.getStereotypes().stream()
+                                                .filter(
+                                                        s ->
+                                                                !s.getStereotype()
+                                                                        .equals(
+                                                                                CIMStereotypes
+                                                                                        .concreteString))
+                                                .toList()
+                                        : cimClass.getStereotypes());
+        if (cimClass.getComment() != null) {
+            newCimClass.comment(
+                    new RDFSComment(
+                            cimClass.getComment().getValue(), cimClass.getComment().getFormat()));
+        }
+        if (cimPackage != null) {
+            newCimClass.belongsToCategory(
+                    new CIMSBelongsToCategory(
+                            cimPackage.getUri(), cimPackage.getLabel(), cimPackage.getUuid()));
+        }
+
+        return newCimClass.build();
+    }
+
+    private List<CIMAttribute> copyAttributes(List<CIMAttribute> attributes, CIMClass cimClass) {
+        return attributeMapper.toDTOList(attributes).stream()
+                .map(
+                        dto -> {
+                            dto.setUuid(UUID.randomUUID());
+                            dto.setDomain(cimClass.getUri().toString());
+                            return attributeMapper.toCIMObject(dto);
+                        })
+                .toList();
+    }
+
+    private List<CIMEnumEntry> copyEnumEntries(List<CIMEnumEntry> enumEntries, CIMClass cimClass) {
+        return enumEntryMapper.toDTOList(enumEntries).stream()
+                .map(
+                        dto -> {
+                            dto.setUuid(UUID.randomUUID());
+                            dto.setType(cimClass.getUri().toString());
+                            return enumEntryMapper.toCIMObject(dto);
+                        })
+                .toList();
+    }
+
+    private RDFSLabel constructCopyLabel(
+            GraphRewindableWithUUIDs graph, String graphUri, RDFSLabel label) {
+        var baseValue = label.getValue() + " - Copy";
+
+        var exprFactory = new ExprFactory();
+        var query =
+                new SelectBuilder()
+                        .addVar("?label")
+                        .addGraph(
+                                NodeFactory.createURI(graphUri),
+                                new SelectBuilder()
+                                        .addWhere("?s", RDFS.label, "?label")
+                                        .addFilter(
+                                                exprFactory.strstarts(
+                                                        exprFactory.str("?label"), baseValue)))
+                        .build();
+        var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, graphUri);
+
+        var existingLabels = new HashSet<>();
+        while (resultSet.hasNext()) {
+            var solution = resultSet.nextSolution();
+            existingLabels.add(solution.getLiteral("label").getString());
+        }
+
+        if (!existingLabels.contains(baseValue)) {
+            return new RDFSLabel(baseValue, label.getLang());
+        }
+
+        var counter = 1;
+        while (existingLabels.contains(baseValue + "(" + counter + ")")) {
+            counter++;
+        }
+
+        return new RDFSLabel(baseValue + "(" + counter + ")", label.getLang());
     }
 }

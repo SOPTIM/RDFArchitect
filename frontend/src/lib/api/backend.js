@@ -95,6 +95,16 @@ export class BackendConnection {
         });
     }
 
+    async getPackage(datasetName, graphURI, packageUUID) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}`;
+        return fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async getClasses(datasetName, graphURI) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
         return fetch(url, {
@@ -449,6 +459,17 @@ export class BackendConnection {
             method: "GET",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async postCopyClass(datasetName, graphURI, classUUID, targetInfo) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/copy`;
+        return await fetch(url, {
+            method: "POST",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(targetInfo),
             credentials: "include",
         });
     }

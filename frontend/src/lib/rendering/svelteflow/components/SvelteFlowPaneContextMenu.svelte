@@ -16,15 +16,19 @@
   -->
 
 <script>
-    import { faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { faPaste, faPlus } from "@fortawesome/free-solid-svg-icons";
 
+    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import { copyState, editorState } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
+    import { saveCopyClass } from "../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
 
     let {
@@ -36,11 +40,19 @@
         onClose = () => {},
     } = $props();
 
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+
     let triggerRef = $state(null);
     let open = $state(false);
     let showNewClassDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    let disablePasteButton = $derived(
+        !copyState.classUUID.getValue() ||
+            !copyState.graphURI.getValue() ||
+            !copyState.datasetName.getValue(),
+    );
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -59,6 +71,29 @@
         showNewClassDialog = true;
         onClose();
     }
+
+    async function getPackage(datasetName, graphURI, packageUUID) {
+        if (!datasetName || !graphURI) {
+            return [];
+        }
+        const res = await bec.getPackage(datasetName, graphURI, packageUUID);
+        return await res.json();
+    }
+
+    async function pasteClass(copyAbstract) {
+        let packageDTO = await getPackage(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            editorState.selectedPackageUUID.getValue(),
+        );
+
+        await saveCopyClass(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            packageDTO,
+            copyAbstract,
+        );
+    }
 </script>
 
 <ContextMenu.Root bind:open onOpenChange={handleOpenChange}>
@@ -69,6 +104,21 @@
         {disabled}
     />
     <ContextMenu.Content>
+        <ContextMenu.Item.Button
+            onSelect={() => pasteClass(false)}
+            disabled={disablePasteButton}
+            faIcon={faPaste}
+        >
+            Paste class as duplicate
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={() => pasteClass(true)}
+            disabled={disablePasteButton}
+            faIcon={faPaste}
+        >
+            Paste class as abstract
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
         <ContextMenu.Item.Button
             onSelect={openNewClassDialog}
             {disabled}

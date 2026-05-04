@@ -46,7 +46,7 @@ public class ReadOntologyService implements ReadOntologyUseCase, GetKnownOntolog
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
             var model = ModelFactory.createModelForGraph(graph);
-            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             var ontology = new OntologyFacade(model);
             return ontology.getOntology();

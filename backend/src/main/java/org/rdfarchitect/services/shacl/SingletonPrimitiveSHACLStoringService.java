@@ -101,7 +101,7 @@ public class SingletonPrimitiveSHACLStoringService
             ontologyGraph.begin(TxnType.READ);
             var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
             ontologyModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var generatedShacl =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
 
@@ -138,7 +138,7 @@ public class SingletonPrimitiveSHACLStoringService
             ontologyGraph.begin(TxnType.READ);
             var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
             ontologyModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var generatedShacl =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true).generate();
 
@@ -176,8 +176,7 @@ public class SingletonPrimitiveSHACLStoringService
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var outStream = new ByteArrayOutputStream()) {
             var prefixModel = ModelFactory.createDefaultModel();
-            prefixModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+            prefixModel.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             prefixModel.setNsPrefix(SHACL_NAMESPACE.getPrefix(), SHACL_NAMESPACE.getUri());
             prefixModel.write(outStream, format.getLang().getName());
             return outStream;
@@ -195,7 +194,7 @@ public class SingletonPrimitiveSHACLStoringService
             ontologyGraph.begin(TxnType.READ);
             var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
             ontologyModel.setNsPrefixes(
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var generatedSHACL =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
