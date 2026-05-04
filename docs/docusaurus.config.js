@@ -59,6 +59,12 @@ const config = {
         items: [
           {
             type: 'docSidebar',
+            sidebarId: 'overviewSidebar',
+            position: 'left',
+            label: 'Overview',
+          },
+          {
+            type: 'docSidebar',
             sidebarId: 'userSidebar',
             position: 'left',
             label: 'User Guide',
@@ -89,6 +95,7 @@ const config = {
             title: 'Documentation',
             items: [
               { label: 'Introduction', to: '/' },
+              { label: 'Getting Started', to: '/getting-started' },
               { label: 'User Guide', to: '/user-guide/overview' },
               { label: 'Developer Guide', to: '/developer-guide/overview' },
               { label: 'Administration', to: '/admin-guide/installation' },

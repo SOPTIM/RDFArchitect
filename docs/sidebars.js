@@ -2,28 +2,9 @@
 
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
-  userSidebar: [
+  overviewSidebar: [
     'intro',
-    {
-      type: 'category',
-      label: 'User Guide',
-      collapsed: false,
-      items: [
-        'user-guide/overview',
-        'user-guide/workspace-and-importing',
-        'user-guide/organising-schemas',
-        'user-guide/editing-classes',
-        'user-guide/namespaces',
-        'user-guide/profile-header',
-        'user-guide/shacl',
-        'user-guide/history',
-        'user-guide/comparing-schemas',
-        'user-guide/migration',
-        'user-guide/sharing-and-exporting',
-        'user-guide/read-only-mode',
-        'user-guide/search-and-tips',
-      ],
-    },
+    'getting-started',
     {
       type: 'category',
       label: 'Reference',
@@ -35,6 +16,22 @@ const sidebars = {
         'reference/changelog',
       ],
     },
+  ],
+
+  userSidebar: [
+    'user-guide/overview',
+    'user-guide/workspace-and-importing',
+    'user-guide/organising-schemas',
+    'user-guide/editing-classes',
+    'user-guide/namespaces',
+    'user-guide/profile-header',
+    'user-guide/shacl',
+    'user-guide/history',
+    'user-guide/comparing-schemas',
+    'user-guide/migration',
+    'user-guide/sharing-and-exporting',
+    'user-guide/read-only-mode',
+    'user-guide/search-and-tips',
   ],
 
   developerSidebar: [

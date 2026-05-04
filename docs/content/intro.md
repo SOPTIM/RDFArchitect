@@ -14,7 +14,7 @@ RDFArchitect is a web-based tool for **visualising, editing, and sharing RDFS sc
 
 ## Who should read what
 
-If you are new to RDFArchitect, start with the **User Guide**. Otherwise, the table below points you to the most relevant section for your role.
+If you are new to RDFArchitect, start with **[Getting Started](/getting-started)**. Otherwise, the table below points you to the most relevant section for your role.
 
 | If you are…                                  | Start with                                                            | Then read                                                                                        |
 | -------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
