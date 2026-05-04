@@ -138,9 +138,9 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Feature                             | Location                                         |
 | ----------------------------------- | ------------------------------------------------ |
 | Import schema (RDFS)                | File → Import → Schema (RDFS)                    |
-| Import SHACL                        | File → Import → Constrains (SHACL)               |
+| Import SHACL                        | File → Import → Constraints (SHACL)               |
 | Export schema                       | File → Export → Schema (RDFS)                    |
-| Export SHACL                        | File → Export → Constrains (SHACL)               |
+| Export SHACL                        | File → Export → Constraints (SHACL)               |
 | Share snapshot                      | File → Share Snapshot                            |
 | Delete schema                       | File → Delete → Schema (RDFS)                    |
 | Delete dataset                      | File → Delete → Dataset                          |
@@ -157,7 +157,7 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Changelog                           | View → Changelog                                 |
 | Compare schemas                     | View → Compare Schemas                           |
 | Migrate schema (5-step wizard)      | View → Migrate Schema                            |
-| Full SHACL view (generated+custom)  | View → Constrains (SHACL)                        |
+| Full SHACL view (generated+custom)  | View → Constraints (SHACL)                        |
 | Help / feedback / about             | Help menu                                        |
 | Search across the dataset           | Search bar at the top                            |
 | Property-specific SHACL             | Class editor → SHACL icon next to each row       |

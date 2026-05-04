@@ -97,7 +97,7 @@
     <td>
         <FaIconButton
             callOnClick={() => openPropertySHACLRulesDialog(attribute)}
-            title={readonly ? "View" : "Edit" + " Constrains (SHACL)"}
+            title={readonly ? "View" : "Edit" + " Constraints (SHACL)"}
             icon={faDiagramProject}
         />
     </td>

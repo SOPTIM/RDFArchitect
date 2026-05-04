@@ -89,7 +89,7 @@
     primaryLabel="Import"
     disablePrimary={disableSubmit}
     onPrimary={importGraph}
-    title="Import Constrains (SHACL)"
+    title="Import Constraints (SHACL)"
 >
     <div class="mx-2 flex h-full flex-col">
         <DatasetAndGraphSelection

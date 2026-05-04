@@ -20,7 +20,7 @@ When you view SHACL for a graph, both sets are shown and clearly labelled.
 
 ## Viewing SHACL at graph level
 
-**View → Constrains (SHACL)** opens the full-view dialog. Two tabs: **Generated** (read-only TTL output) and **Custom** (editable TTL). The custom tab has inline TTL syntax highlighting and validates as you type; the save button stays disabled until the TTL parses.
+**View → Constraints (SHACL)** opens the full-view dialog. Two tabs: **Generated** (read-only TTL output) and **Custom** (editable TTL). The custom tab has inline TTL syntax highlighting and validates as you type; the save button stays disabled until the TTL parses.
 
 ## Viewing SHACL at class level
 
@@ -30,8 +30,8 @@ A similar dialog exists at the class level to inspect the full `NodeShape` of th
 
 ## Importing custom SHACL
 
-**File → Import → Constrains (SHACL)** uploads a SHACL file into the currently selected graph. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended format.
+**File → Import → Constraints (SHACL)** uploads a SHACL file into the currently selected graph. Supported formats are the same as for schema import (TTL, RDF/XML, N-Triples); TTL is the default and recommended format.
 
 ## Exporting SHACL
 
-**File → Export → Constrains (SHACL)** downloads a SHACL file. The dialog asks which dataset and graph to use, which parts to include (generated, custom, or both), and in which format. TTL is the default.
+**File → Export → Constraints (SHACL)** downloads a SHACL file. The dialog asks which dataset and graph to use, which parts to include (generated, custom, or both), and in which format. TTL is the default.

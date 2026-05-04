@@ -267,7 +267,7 @@
             </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>
-                    Constrains
+                    Constraints
                 </ContextMenu.SubMenu.Trigger>
                 <ContextMenu.SubMenu.Content>
                     <ContextMenu.Item.Button

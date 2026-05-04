@@ -87,7 +87,7 @@
     bind:showDialog
     {onOpen}
     size="w-3/5 h-4/5"
-    title={`Constrains (SHACL) for: "${reactiveClass.label.value}"`}
+    title={`Constraints (SHACL) for: "${reactiveClass.label.value}"`}
     primaryLabel={null}
 >
     <div class="flex h-full flex-col space-y-2">
@@ -102,7 +102,7 @@
                             callOnClick={() => (showGeneratedShacl = true)}
                             variant={showGeneratedShacl ? "" : "inline"}
                         >
-                            Generated Constrains
+                            Generated Constraints
                         </ButtonControl>
                     </div>
                     <div class="text-nowrap">
@@ -110,7 +110,7 @@
                             callOnClick={() => (showGeneratedShacl = false)}
                             variant={showGeneratedShacl ? "inline" : ""}
                         >
-                            Custom Constrains
+                            Custom Constraints
                         </ButtonControl>
                     </div>
                 </div>

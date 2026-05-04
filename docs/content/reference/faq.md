@@ -86,7 +86,7 @@ The TTL parser rejects the file. The dialog highlights the offending line; most 
 
 ### How do I validate instance data against the SHACL RDFArchitect produces?
 
-RDFArchitect does not run SHACL validation itself — it produces and manages the SHACL. To validate instance data, export the SHACL (File → Export → Constrains (SHACL)) and run it against your data with any SHACL engine (Apache Jena's `shacl` CLI, TopBraid, pySHACL, etc.).
+RDFArchitect does not run SHACL validation itself — it produces and manages the SHACL. To validate instance data, export the SHACL (File → Export → Constraints (SHACL)) and run it against your data with any SHACL engine (Apache Jena's `shacl` CLI, TopBraid, pySHACL, etc.).
 
 ## Migration
 
