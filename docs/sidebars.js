@@ -29,8 +29,10 @@ const sidebars = {
       label: 'Reference',
       items: [
         'reference/features',
+        'reference/cim-evaluation',
         'reference/cim-mapping',
         'reference/faq',
+        'reference/bachelor-theses',
         'reference/changelog',
       ],
     },

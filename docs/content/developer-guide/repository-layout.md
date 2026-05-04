@@ -11,7 +11,7 @@ sidebar_position: 2
 │   ├── src/main/java/org/rdfarchitect/
 │   │   ├── api/              # REST layer: controllers + DTOs
 │   │   ├── services/         # Use cases and service implementations
-│   │   ├── database/         # Database port + Fuseki/in-memory adapters
+│   │   ├── database/         # In-memory data store + Fuseki snapshot support
 │   │   ├── rdf/              # RDF/Jena helpers (graph wrappers, formatting, merging)
 │   │   ├── shacl/            # SHACL generation engine
 │   │   ├── dl/               # Diagram-layout persistence (positions, sizes)

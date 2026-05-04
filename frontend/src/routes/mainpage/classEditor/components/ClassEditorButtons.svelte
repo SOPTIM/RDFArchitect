@@ -111,8 +111,8 @@
         <FaIconButton
             callOnClick={() => (showSHACLClassDialog = true)}
             icon={faDiagramProject}
-            text="Constrains"
-            title="View Constrains (SHACL)"
+            text="Constraints"
+            title="View Constraints (SHACL)"
         />
 
         <SHACLClassSpecificPopUp

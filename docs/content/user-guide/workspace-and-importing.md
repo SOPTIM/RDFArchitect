@@ -31,7 +31,7 @@ Supported input formats are **RDF/XML (.rdf)**, **Turtle (.ttl)**, and **N-Tripl
 
 ![Import schema dialog](/img/screenshots/import-schema.png)
 
-### Import a SHACL file (File → Import → Constrains (SHACL))
+### Import a SHACL file (File → Import → Constraints (SHACL))
 
 A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
 

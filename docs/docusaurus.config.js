@@ -106,6 +106,7 @@ const config = {
           {
             title: 'Reference',
             items: [
+              { label: 'CIM Evaluation', to: '/reference/cim-evaluation' },
               { label: 'CIM/CGMES Mapping', to: '/reference/cim-mapping' },
               { label: 'FAQ & Troubleshooting', to: '/reference/faq' },
               { label: 'License', href: 'https://github.com/SOPTIM/RDFArchitect/blob/main/LICENSE' },

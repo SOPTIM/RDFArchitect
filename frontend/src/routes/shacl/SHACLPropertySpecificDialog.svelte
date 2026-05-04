@@ -187,7 +187,7 @@
     bind:showDialog
     {onOpen}
     size="w-2/5 h-3/5"
-    title={`Constrains (SHACL) for: "${property?.label?.value}"`}
+    title={`Constraints (SHACL) for: "${property?.label?.value}"`}
     primaryLabel={null}
 >
     <div class="flex h-full flex-col space-y-2">
@@ -199,7 +199,7 @@
                             callOnClick={() => (showGeneratedShacl = true)}
                             variant={showGeneratedShacl ? "" : "inline"}
                         >
-                            Generated Constrains
+                            Generated Constraints
                         </ButtonControl>
                     </div>
                     <div class="text-nowrap">
@@ -207,7 +207,7 @@
                             callOnClick={() => (showGeneratedShacl = false)}
                             variant={showGeneratedShacl ? "inline" : ""}
                         >
-                            Custom Constrains
+                            Custom Constraints
                         </ButtonControl>
                     </div>
                 </div>
@@ -235,7 +235,7 @@
                         {/if}
                         <div class="my-2 space-y-2">
                             {#if generatedShacl.propertyShapes.length === 0}
-                                <p class="">No Constrains (SHACL) found.</p>
+                                <p class="">No Constraints (SHACL) found.</p>
                             {/if}
                             {#each generatedShacl.propertyShapes as propertyShape}
                                 <div>
@@ -276,7 +276,7 @@
                         {/if}
                         <div class="my-2 space-y-2">
                             {#if customShacl.propertyShapes.length === 0}
-                                <p class="">No Constrains (SHACL) found.</p>
+                                <p class="">No Constraints (SHACL) found.</p>
                             {/if}
                             {#each customShacl.propertyShapes as propertyShape}
                                 <div>

@@ -135,9 +135,9 @@
             <div
                 class="bg-window-background border-border text-default-text rounded-lg border p-5 shadow-sm"
             >
-                <h3 class="text-base font-semibold">Constrains (SHACL)</h3>
+                <h3 class="text-base font-semibold">Constraints (SHACL)</h3>
                 <p class="mt-2 text-sm opacity-80">
-                    Generate constrains and display them contextually.
+                    Generate constraints and display them contextually.
                 </p>
             </div>
             <div

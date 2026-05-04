@@ -10,7 +10,7 @@ sidebar_position: 6
 - **Unit tests** — `mvn -B test`. Surefire runs everything matching `*Test.java`.
 - **Integration tests** — `mvn -B verify`. Failsafe runs everything matching `*IT.java`. Integration tests typically spin up Spring with `@SpringBootTest`.
 - **Coverage** — JaCoCo runs as part of `verify`. The report is at `backend/target/site/jacoco/index.html`. There is no enforced threshold; aim for new code to be at least as well-covered as the area it sits in.
-- **Test resources** — RDF fixtures live under `src/test/resources/`. Tests that need a triple store use `InMemoryDatabaseImpl`, which is faster and isolated.
+- **Test resources** — RDF fixtures live under `src/test/resources/`. Tests that need a dataset store use `InMemoryDatabaseImpl`, which is fast and isolated.
 
 The largest test suites today are around CIM-graph-to-DTO conversion (`cim/data/...`) and SHACL generation (`shacl/SHACLFromCIMGeneratorTest`); these are the canonical references for "what does a good RDFArchitect test look like".
 

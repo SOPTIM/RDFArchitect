@@ -60,7 +60,7 @@ Either update the existing class-list reactive store or read on demand from a co
 
 ## Step 7 — Tests
 
-Vitest unit tests for any new logic in `lib/`. Manual smoke test through the UI against a live Fuseki instance.
+Vitest unit tests for any new logic in `lib/`. Manual smoke test through the UI; include a live Fuseki instance when the feature touches snapshots.
 
 ## Step 8 — PR
 
