@@ -68,6 +68,18 @@ Use `npm run format` for automatic formatting.
 
 CI runs these checks through GitHub Actions and must pass.
 
+## Pre-commit Hooks
+
+This repository includes local pre-commit hooks for the backend and frontend
+checks. After installing `pre-commit`, enable them with:
+
+```bash
+pre-commit install
+```
+
+Backend hooks run for staged backend changes. Frontend hooks run for staged frontend changes.
+Hooks call `mvn` and `npm` directly. Make sure `mvn`, `npm`, and `pre-commit` are available on `PATH`.
+
 ## Code Quality Expectations
 
 - Follow existing code style and naming conventions.

@@ -49,7 +49,6 @@
     import Package from "./components/Package.svelte";
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
-    import Uuid from "./components/Uuid.svelte";
 
     const { datasetName, graphUri, classUuid } = $props();
 
@@ -260,7 +259,6 @@
                                 class="border-separate border-spacing-x-1.5 border-spacing-y-1"
                             >
                                 <tbody>
-                                    <Uuid uuid={reactiveClass.uuid} />
                                     <Label label={reactiveClass.label} />
                                     <Namespace
                                         namespace={reactiveClass.namespace}

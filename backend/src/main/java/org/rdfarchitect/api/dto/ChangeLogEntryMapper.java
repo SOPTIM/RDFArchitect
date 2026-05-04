@@ -22,6 +22,7 @@ import org.apache.jena.graph.Triple;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -41,7 +42,10 @@ public interface ChangeLogEntryMapper {
         if (graph == null) {
             return new ArrayList<>();
         }
-        return graph.stream().map(this::mapTriple).toList();
+        return graph.stream()
+                .filter(triple -> !triple.getPredicate().equals(RDFA.uuid.asNode()))
+                .map(this::mapTriple)
+                .toList();
     }
 
     default TripleDTO mapTriple(Triple triple) {
