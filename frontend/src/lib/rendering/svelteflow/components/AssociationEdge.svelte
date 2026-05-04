@@ -39,32 +39,78 @@
         }
     });
 
-    let path = $derived(
-        getStraightPath({
+    let path = $derived.by(() => {
+        if (!edgeParams) return "";
+
+        if (target === source && sourceNode.current) {
+            const pos = sourceNode.current.internals.positionAbsolute ?? {
+                x: 0,
+                y: 0,
+            };
+            const w = sourceNode.current.measured.width ?? 100;
+
+            const x1 = pos.x + w * 0.25;
+            const y1 = pos.y;
+            const x2 = pos.x + w * 0.75;
+            const y2 = pos.y;
+
+            const loopHeight = 70;
+            return `M ${x1} ${y1} C ${x1} ${y1 - loopHeight}, ${x2} ${y2 - loopHeight}, ${x2} ${y2}`;
+        }
+
+        return getStraightPath({
             sourceX: edgeParams.sx,
             sourceY: edgeParams.sy,
             targetX: edgeParams.tx,
             targetY: edgeParams.ty,
-        })[0],
-    );
+        })[0];
+    });
 </script>
 
 <BaseEdge {id} {path} {markerStart} {markerEnd} {style} />
 <EdgeLabel>
     {#if data.fromMultiplicity}
-        <div
-            style:transform={`translate(-50%, -50%) translate(${edgeParams.sx + edgeParams.startX}px, ${edgeParams.sy + edgeParams.startY}px)`}
-            class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
-        >
-            {data.fromMultiplicity}
-        </div>
+        {#if target === source && sourceNode.current}
+            {@const pos = sourceNode.current.internals.positionAbsolute ?? {
+                x: 0,
+                y: 0,
+            }}
+            {@const w = sourceNode.current.measured.width ?? 100}
+            <div
+                style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.25 - 12}px, ${pos.y - 30}px)`}
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+            >
+                {data.fromMultiplicity}
+            </div>
+        {:else}
+            <div
+                style:transform={`translate(-50%, -50%) translate(${edgeParams.sx + edgeParams.startX}px, ${edgeParams.sy + edgeParams.startY}px)`}
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+            >
+                {data.fromMultiplicity}
+            </div>
+        {/if}
     {/if}
     {#if data.toMultiplicity}
-        <div
-            style:transform={`translate(-50%, -50%) translate(${edgeParams.tx + edgeParams.endX}px, ${edgeParams.ty + edgeParams.endY}px)`}
-            class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
-        >
-            {data.toMultiplicity}
-        </div>
+        {#if target === source && targetNode.current}
+            {@const pos = targetNode.current.internals.positionAbsolute ?? {
+                x: 0,
+                y: 0,
+            }}
+            {@const w = targetNode.current.measured.width ?? 100}
+            <div
+                style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.75 + 12}px, ${pos.y - 30}px)`}
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+            >
+                {data.toMultiplicity}
+            </div>
+        {:else}
+            <div
+                style:transform={`translate(-50%, -50%) translate(${edgeParams.tx + edgeParams.endX}px, ${edgeParams.ty + edgeParams.endY}px)`}
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+            >
+                {data.toMultiplicity}
+            </div>
+        {/if}
     {/if}
 </EdgeLabel>
