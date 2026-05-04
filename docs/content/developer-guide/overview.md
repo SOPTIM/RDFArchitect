@@ -18,9 +18,9 @@ This guide complements [`.github/CONTRIBUTING.md`](https://github.com/SOPTIM/RDF
 | Node.js     | 24              |                                                               |
 | npm         | 11              |                                                               |
 | Docker      | recent          | Optional, only needed for the Compose-based local stack.      |
-| Apache Jena Fuseki | 5.x      | Required at runtime — see [Installation](/admin-guide/installation). |
+| Apache Jena Fuseki | 5.x      | Required for snapshot storage — see [Installation](/admin-guide/installation). |
 
-A working Fuseki at `http://localhost:3030` with a writable dataset called `default` is the simplest way to develop locally. The [installation guide](/admin-guide/installation#fuseki-quickstart) has a one-line Docker invocation.
+A working Fuseki at `http://localhost:3030` is the simplest way to develop snapshot flows locally. The [installation guide](/admin-guide/installation#fuseki-quickstart) has a one-line Docker invocation.
 
 ## Clone, build, run
 

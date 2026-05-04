@@ -49,11 +49,11 @@ Every attribute and association row in the class editor has a SHACL icon that op
 
 ### Dataset / graph / package model
 
-One triple store, many datasets, many graphs per dataset, many packages per graph. The hierarchy is enforced by the UI and by the REST API, and every edit is scoped by it.
+Many in-memory datasets, many graphs per dataset, many packages per graph. The hierarchy is enforced by the UI and by the REST API, and every edit is scoped by it.
 
 ### Namespace management
 
-Per-dataset namespace table with validation for unique prefixes and warnings for namespaces that are still in use. Export honours the active namespace table.
+Per-dataset namespace table with validation for unique prefixes. Prefixes can be added, renamed, and deleted. Export honours the active namespace table.
 
 ### Undo, redo, and version history
 
@@ -93,11 +93,11 @@ Import the official SHACL of a CGMES/ENTSO-E release and store it next to the ge
 
 ### Read-only datasets
 
-A toggle that locks a dataset against all editing actions. Used to protect released profiles and to make shared snapshots safe.
+A toggle that locks a dataset against all editing actions. Imported datasets and snapshot views are read-only by default, and can be unlocked with **Enable Editing** when changes are needed.
 
 ### Snapshots
 
-One-click immutable copy of a dataset, stored in the triple store, reachable by a URL with a base64 token. Anyone with the URL can view the full dataset — navigation, diagrams, SHACL — in read-only mode without installing anything.
+One-click immutable copy of a dataset, stored in Fuseki, reachable by a URL with a base64 token. Anyone with the URL can load the full dataset — navigation, diagrams, SHACL — as a read-only dataset without installing anything. The loaded dataset can be made editable, but the stored snapshot is not modified.
 
 ### Export
 
@@ -127,7 +127,7 @@ The migration wizard externalises every decision that has to be made to migrate 
 
 ### No vendor lock-in
 
-Apache 2.0 licence. Data is RDF throughout; imports and exports are standard W3C formats. The triple store is Apache Jena Fuseki. The generated migration scripts are plain SPARQL. Nothing in the tool chain is proprietary.
+Apache 2.0 licence. Data is RDF throughout; imports and exports are standard W3C formats. Snapshots are stored in Apache Jena Fuseki. The generated migration scripts are plain SPARQL. Nothing in the tool chain is proprietary.
 
 ### Predictable dependencies
 
@@ -168,5 +168,4 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 
 - The migration script generator does **not** yet handle every edge case; multiplicity changes on associations in particular need manual review. It is strongly recommended to validate migrated data against the target profile's SHACL after running the script.
 - Snapshots cannot currently be deleted via the UI.
-- There is no multi-user conflict resolution; two people editing the same graph simultaneously will see last-write-wins behaviour.
 - Access control is per-snapshot-link; there is no built-in user management. For multi-user deployments this is typically handled by putting the service behind an SSO-capable reverse proxy.

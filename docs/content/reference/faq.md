@@ -23,7 +23,7 @@ Yes. RDFArchitect is released under the Apache License 2.0. There is no paid tie
 
 ### Where is my data stored?
 
-In the triple store you configure — **Apache Jena Fuseki** by default. If you run everything locally, everything stays on your machine. RDFArchitect does not send data anywhere external.
+Uploaded datasets, graphs, namespaces, and edits are kept in memory on the backend. **Apache Jena Fuseki** is only used for snapshots, so a shared snapshot persists there until it is deleted from Fuseki. RDFArchitect does not send data anywhere external.
 
 ### Is there a public hosted version?
 
@@ -41,7 +41,7 @@ Yes, its possible to select multiple profiles at once during the import. You can
 
 ### My import says the dataset is read-only. What now?
 
-The dataset has been locked against edits. Select the dataset and use **Edit → Enable Editing** in the menu. If the menu entry is not available, the dataset is a snapshot and is read-only by design — create or choose a different dataset for the import.
+The dataset has been locked against edits. Select the dataset and use **Edit → Enable Editing** in the menu. Snapshot links are opened as read-only datasets by default, but that imported dataset can also be made editable. The original snapshot stored in Fuseki is not changed.
 
 ### The imported file does not show all classes I expected.
 
@@ -63,7 +63,7 @@ Three possibilities:
 
 1. The **dataset is read-only** — enable editing (Edit → Enable Editing) or choose a different dataset.
 2. The class belongs to an **external package** — an imported dependency. By design these are not editable from the current graph; edit them in their owning graph instead.
-3. You are viewing a **snapshot**. Snapshots are read-only by construction.
+3. You are viewing a **snapshot import** — it opens read-only by default, but you can enable editing for the imported dataset. The stored snapshot itself remains unchanged.
 
 ### What is the "default" package?
 
@@ -102,7 +102,7 @@ No. Always run it against a test dataset first, then validate the result with th
 
 Yes. The output is plain SPARQL 1.1 UPDATE and can be opened, inspected, and modified in any text editor before execution.
 
-## Sharing and collaboration
+## Sharing
 
 ### I shared a snapshot but the recipient can't open it.
 
@@ -110,11 +110,7 @@ The recipient needs network access to the same RDFArchitect instance. Snapshots 
 
 ### Can I un-share a snapshot?
 
-Not from the UI as of 1.0.0. Snapshots are stored as datasets in the triple store; an administrator can delete the corresponding dataset from Fuseki directly. See the [administrator's guide](/admin-guide/security#snapshot-links).
-
-### Two people are editing the same graph at the same time. What happens?
-
-Last write wins. RDFArchitect does not currently have multi-user conflict resolution. In practice, teams coordinate per-graph ownership (one editor per profile at a time) or use the snapshot + review workflow for collaborative work.
+Not from the UI as of 1.0.0. Snapshots are stored as datasets in Fuseki; an administrator can delete the corresponding dataset from Fuseki directly. See the [administrator's guide](/admin-guide/security#snapshot-links).
 
 ## Performance
 
@@ -126,11 +122,7 @@ The changelog of a long-lived graph can contain thousands of entries. Older entr
 
 ### The backend cannot reach Fuseki.
 
-Check `database.http.endpoint` in the backend config. From inside the backend container, `curl http://<endpoint>/$/ping` should return `pong`. If it does not, check container networking — the Docker Compose file uses `host.docker.internal:3030` on the assumption that Fuseki runs on the host.
-
-### I want to move from the file-based store to Fuseki.
-
-Export every dataset as RDF/XML, switch `database.databaseType` to `http`, point `database.http.endpoint` at Fuseki, restart, create the datasets you need in Fuseki, and re-import the files. File-based storage is explicitly a development-only option.
+Fuseki is required for creating and loading snapshots. Check `database.http.endpoint` in the backend config. From inside the backend container, `curl http://<endpoint>/$/ping` should return `pong`. If it does not, check container networking — the Docker Compose file uses `host.docker.internal:3030` on the assumption that Fuseki runs on the host.
 
 ### I'm getting 413 Payload Too Large on large imports.
 

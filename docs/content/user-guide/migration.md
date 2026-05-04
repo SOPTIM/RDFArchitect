@@ -29,4 +29,4 @@ Various properties require default values during the migration, for example new 
 
 The wizard produces a zip folder containing a `.sparql` file with all the `DELETE/INSERT WHERE` blocks, in the correct order and a SHACL file. This SHACL file can be used after running the migration script to confirm that the resulting data is still valid for your schema.
 
-The generated script is plain SPARQL and runs on any SPARQL 1.1-compliant endpoint (e.g. Apache Jena Fuseki, the triple store RDFArchitect uses itself).
+The generated script is plain SPARQL and runs on any SPARQL 1.1-compliant endpoint, for example Apache Jena Fuseki.

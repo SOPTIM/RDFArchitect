@@ -11,7 +11,7 @@ Three ways to get RDFArchitect running, in order of effort.
 2. [Local development setup](#2-local-development-setup)
 3. [Production deployment notes](#3-production-deployment-notes)
 
-All three options assume that a **SPARQL 1.1-compliant triple store** is reachable from the backend. RDFArchitect is developed against **Apache Jena Fuseki** and that is the recommended choice.
+All three options assume that a **SPARQL 1.1-endpoint** is reachable from the backend. RDFArchitect is developed against **Apache Jena Fuseki** and that is the recommended choice.
 
 ## 1. Docker Compose
 
@@ -20,7 +20,7 @@ The repository ships a `docker-compose.yaml` that builds the backend and fronten
 ### Prerequisites
 
 - **Docker** and **Docker Compose** (any recent version).
-- A running **Apache Jena Fuseki** on the host at `http://localhost:3030` with a writable dataset called `default`. The compose file expects this Fuseki to be reachable from inside the containers at `host.docker.internal:3030`. See [Fuseki quickstart](#fuseki-quickstart) below if you do not have one yet.
+- A running **Apache Jena Fuseki** on the host at `http://localhost:3030`. The compose file expects this Fuseki to be reachable from inside the containers at `host.docker.internal:3030`. See [Fuseki quickstart](#fuseki-quickstart) below if you do not have one yet.
 
 ### Starting
 
@@ -48,7 +48,7 @@ docker compose down
 
 ### Fuseki quickstart
 
-If you do not yet have a triple store, the simplest way to get one is:
+If you do not yet have Fuseki for snapshot storage, the simplest way to get one is:
 
 ```bash
 docker run --rm -p 3030:3030 \
@@ -56,9 +56,7 @@ docker run --rm -p 3030:3030 \
   stain/jena-fuseki
 ```
 
-Then create a dataset called `default` via the Fuseki UI at `http://localhost:3030`. (Any TDB2-backed dataset will do.)
-
-For a more durable setup, mount a volume under `/fuseki` in the Fuseki container so that the data survives restarts.
+For a more durable setup, mount a volume under `/fuseki` in the Fuseki container so that snapshots survive restarts.
 
 ## 2. Local development setup
 
@@ -70,7 +68,7 @@ Useful if you want to modify the source, build from a branch, or run without Doc
 - **Maven 3.9.9** or higher
 - **Node.js 24** or higher
 - **npm 11** or higher
-- A running **Apache Jena Fuseki** at `http://localhost:3030` with a dataset called `default`.
+- A running **Apache Jena Fuseki** at `http://localhost:3030` for snapshot storage.
 
 ### Backend
 
@@ -101,7 +99,7 @@ RDFArchitect has no built-in authentication or authorisation. For a production d
 
 - Deploy backend, frontend, nginx, and Fuseki as four services (the compose file is a useful starting template).
 - Put an SSO-capable reverse proxy in front of the nginx gateway. OAuth2 Proxy, Traefik with forward-auth, or Kubernetes Ingress with an OIDC sidecar all work.
-- Configure Fuseki to persist to a mounted volume and include that volume in your backup policy.
+- Configure Fuseki to persist to a mounted volume and include that volume in your snapshot backup policy.
 - Set the cookie flags in `application.yml` (`same-site`, `secure`, `http-only`) for a production environment — the defaults in the repository are development values.
 
 ### File upload size
@@ -119,7 +117,7 @@ Once the application is up:
 
 1. Open the homepage at `http://localhost:3000` (Docker) or `http://localhost:1407` (local dev).
 2. Click **Open Editor**.
-3. The left navigation should show a dataset called `default`. If it does, the backend is talking to the triple store.
-4. Import a small test file (TTL or RDF/XML). If it shows up in the navigation tree, the end-to-end path is working.
+3. Import a small test file (TTL or RDF/XML). If it shows up in the navigation tree, the in-memory backend path is working.
+4. Create a snapshot. If a snapshot link is returned, the backend is talking to Fuseki.
 
 If any of these steps fail, see [Troubleshooting](./troubleshooting) and the [FAQ](/reference/faq).

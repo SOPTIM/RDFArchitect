@@ -39,7 +39,7 @@ If you are new to RDFArchitect, start with the **User Guide**. Otherwise, the ta
 
 - **Frontend** — SvelteKit single-page application
 - **Backend** — Spring Boot REST service
-- **Triple store** — Apache Jena Fuseki (any SPARQL 1.1 endpoint works)
+- **Snapshot store** — Apache Jena Fuseki
 
 Everything is open-source, Apache 2.0 licensed.
 
