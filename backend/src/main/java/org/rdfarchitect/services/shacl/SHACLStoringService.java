@@ -47,12 +47,15 @@ import org.rdfarchitect.shacl.dto.NodeShape;
 import org.rdfarchitect.shacl.dto.PropertyShape;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
 import org.rdfarchitect.shacl.dto.SHACLToClassRelations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -61,7 +64,7 @@ import java.util.UUID;
  * the core concept of storing multiple shacl files.
  */
 @RequiredArgsConstructor
-public class SingletonPrimitiveSHACLStoringService
+public class SHACLStoringService
         implements SHACLInsertUseCase,
                 SHACLExportUseCase,
                 SHACLGetClassRelationsUseCase,
@@ -69,6 +72,8 @@ public class SingletonPrimitiveSHACLStoringService
                 SHACLReplaceShapeUseCase,
                 SHACLDeleteShapeUseCase,
                 SHACLUpdateUseCase {
+
+    private static final Logger logger = LoggerFactory.getLogger(SHACLStoringService.class);
 
     public static final PrefixEntry SHACL_NAMESPACE =
             PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL);
@@ -88,8 +93,9 @@ public class SingletonPrimitiveSHACLStoringService
         try (var outStream = new ByteArrayOutputStream()) {
             customSHACL.write(outStream, format.getLang().getName());
             return outStream;
-        } catch (IOException e) {
-            throw new DataAccessException("Error while writing SHACL graph to output stream", e);
+        } catch (Exception e) {
+            logger.warn("Error while writing SHACL graph to output stream", e);
+            return new ByteArrayOutputStream();
         }
     }
 
@@ -161,21 +167,25 @@ public class SingletonPrimitiveSHACLStoringService
     }
 
     @Override
-    public ByteArrayOutputStream exportCustomSHACLPrefixes(
+    public ByteArrayOutputStream exportCustomSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
+        if (customSHACL == null) {
+            return new ByteArrayOutputStream();
+        }
         try (var outStream = new ByteArrayOutputStream()) {
             var prefixModel = ModelFactory.createDefaultModel();
             prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());
             prefixModel.write(outStream, format.getLang().getName());
             return outStream;
-        } catch (IOException e) {
-            throw new DataAccessException("Error while writing SHACL prefixes to output stream", e);
+        } catch (Exception e) {
+            logger.warn("Error while writing SHACL prefixes to output stream", e);
+            return new ByteArrayOutputStream();
         }
     }
 
     @Override
-    public ByteArrayOutputStream exportGeneratedSHACLPrefixes(
+    public ByteArrayOutputStream exportGeneratedSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format) {
         try (var outStream = new ByteArrayOutputStream()) {
             var prefixModel = ModelFactory.createDefaultModel();
@@ -183,8 +193,9 @@ public class SingletonPrimitiveSHACLStoringService
             prefixModel.setNsPrefix(SHACL_NAMESPACE.getPrefix(), SHACL_NAMESPACE.getUri());
             prefixModel.write(outStream, format.getLang().getName());
             return outStream;
-        } catch (IOException e) {
-            throw new DataAccessException("Error while writing SHACL prefixes to output stream", e);
+        } catch (Exception e) {
+            logger.warn("Error while writing SHACL prefixes to output stream", e);
+            return new ByteArrayOutputStream();
         }
     }
 
@@ -203,7 +214,10 @@ public class SingletonPrimitiveSHACLStoringService
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
             var shaclResult = new CustomAndGeneratedTuple<SHACLToClassRelations>();
-            shaclResult.setCustom(getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
+            if (customSHACL != null) {
+                shaclResult.setCustom(
+                        getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
+            }
             shaclResult.setGenerated(
                     getSHACLToClassRelations(ontologyModel, generatedSHACL, classUUID));
             return shaclResult;
@@ -227,7 +241,7 @@ public class SingletonPrimitiveSHACLStoringService
         var shaclShapesFetcher = new SHACLShapesFetcher(shaclModel);
         var shaclToClassAssigner = new PropertyShapeToClassAssigner(shaclModel, ontologyModel);
         return SHACLToClassRelations.builder()
-                .prefixes(prefixMappingToTtlString(prefixMapping))
+                .namespaces(prefixMappingToTtlString(prefixMapping))
                 .nodeShapes(shaclShapesFetcher.getNodeShapesOfClass(classUri))
                 .propertyShapes(shaclToClassAssigner.getPropertyShapes(classUUID))
                 .derivedPropertyShapes(
@@ -276,9 +290,13 @@ public class SingletonPrimitiveSHACLStoringService
             var generatedShacl =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(UUID.fromString(classUUID));
-            var customPropertyShapes =
-                    new SHACLShapesFetcher(customSHACL)
-                            .getPropertyShapesOfProperty(ontologyModel, property.getURI());
+
+            List<PropertyShape> customPropertyShapes = Collections.emptyList();
+            if (customSHACL != null) {
+                customPropertyShapes =
+                        new SHACLShapesFetcher(customSHACL)
+                                .getPropertyShapesOfProperty(ontologyModel, property.getURI());
+            }
             var generatedPropertyShapes =
                     new SHACLShapesFetcher(generatedShacl)
                             .getPropertyShapesOfProperty(ontologyModel, property.getURI());

@@ -65,17 +65,23 @@
         return "";
     }
 
+    function buildBaseUrl() {
+        return (
+            PUBLIC_BACKEND_URL +
+            "/datasets/" +
+            encodeURIComponent(classDatasetName) +
+            "/graphs/" +
+            encodeURIComponent(classGraphUri)
+        );
+    }
+
     /**
      * fetches the SHACL rules for the selected class.
      */
-    function fetchShacl(newViewedClassUUID, viewedPropertyUUID) {
-        let type = getType();
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
+    async function fetchShacl(newViewedClassUUID, viewedPropertyUUID) {
+        const type = getType();
+        const res = await fetch(
+            buildBaseUrl() +
                 "/classes/" +
                 encodeURIComponent(newViewedClassUUID) +
                 "/" +
@@ -87,90 +93,66 @@
                 method: "GET",
                 credentials: "include",
             },
-        )
-            .then(res => res.json())
-            .then(res => {
-                customShacl.propertyShapes = res.custom;
-                generatedShacl.propertyShapes = res.generated;
-                console.log(res);
-            })
-            .then(() => {
-                fetchFormattedNamespaces();
-            });
+        );
+        const data = await res.json();
+        customShacl.propertyShapes = data.custom;
+        generatedShacl.propertyShapes = data.generated;
+        console.log(data);
+
+        await fetchFormattedNamespaces();
     }
 
-    function fetchFormattedNamespaces() {
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/shacl/generated/namespaces/ttl",
-            {
+    async function fetchFormattedNamespaces() {
+        const [generatedRes, customRes] = await Promise.all([
+            fetch(buildBaseUrl() + "/shacl/generated/namespaces/ttl", {
                 method: "GET",
                 credentials: "include",
-            },
-        )
-            .then(res => res.text())
-            .then(res => {
-                generatedShacl.prefixes = res;
-            });
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/shacl/custom/namespaces/ttl",
-            {
+            }),
+            fetch(buildBaseUrl() + "/shacl/custom/namespaces/ttl", {
                 method: "GET",
                 credentials: "include",
-            },
-        )
-            .then(res => res.text())
-            .then(res => {
-                customShacl.prefixes = res;
-            })
-            .then(() => (customShaclBackUp = buildTtlString(customShacl)));
+            }),
+        ]);
+
+        generatedShacl.namespaces = await generatedRes.text();
+        customShacl.namespaces = await customRes.text();
+        customShaclBackUp = buildTtlString(customShacl);
     }
 
-    function saveChanges() {
-        let ttlString = buildTtlString(customShacl);
-        let type = getType();
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/classes/" +
-                encodeURIComponent(editorState.selectedClassUUID.getValue()) +
-                "/" +
-                type +
-                "/" +
-                encodeURIComponent(property.uuid.value) +
-                "/shacl",
-            {
-                method: "PUT",
-                body: ttlString,
-                credentials: "include",
-            },
-        )
-            .then(res => {
-                if (res.ok) {
-                    console.log("successfully updated custom SHACL rules.");
-                } else {
-                    console.log("failed to update custom SHACL rules.");
-                }
-            })
-            .finally(() => {
-                fetchShacl(
-                    editorState.selectedClassUUID.getValue(),
-                    property.uuid.value,
-                );
-            });
+    async function saveChanges() {
+        const ttlString = buildTtlString(customShacl);
+        const type = getType();
+        try {
+            const res = await fetch(
+                buildBaseUrl() +
+                    "/classes/" +
+                    encodeURIComponent(
+                        editorState.selectedClassUUID.getValue(),
+                    ) +
+                    "/" +
+                    type +
+                    "/" +
+                    encodeURIComponent(property.uuid.value) +
+                    "/shacl",
+                {
+                    method: "PUT",
+                    body: ttlString,
+                    credentials: "include",
+                },
+            );
+            if (res.ok) {
+                console.log("successfully updated custom SHACL rules.");
+            } else {
+                console.log("failed to update custom SHACL rules.");
+            }
+        } finally {
+            await fetchShacl(
+                editorState.selectedClassUUID.getValue(),
+                property.uuid.value,
+            );
+        }
     }
+
     function buildTtlString(shacl) {
         let ttlString = "";
         if (shacl.namespaces) {

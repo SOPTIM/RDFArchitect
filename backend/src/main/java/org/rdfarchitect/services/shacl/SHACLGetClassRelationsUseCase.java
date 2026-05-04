@@ -28,7 +28,7 @@ import java.util.UUID;
 public interface SHACLGetClassRelationsUseCase {
 
     /**
-     * Get shacl shapes with they relations to a class.
+     * Get shacl shapes with their relations to a class.
      *
      * @param graphIdentifier The graph identifier of the graph.
      * @param classUUID The uri of the class.

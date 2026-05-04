@@ -44,8 +44,8 @@
         }
     }
 
-    function fetchGeneratedShacl() {
-        fetch(
+    async function fetchGeneratedShacl() {
+        let res = await fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
                 encodeURIComponent(editorState.selectedDataset.getValue()) +
@@ -56,21 +56,19 @@
                 method: "GET",
                 credentials: "include",
             },
-        )
-            .then(res => {
-                if (!res.ok) {
-                    return "No Constraints (SHACL) found.";
-                }
-                return res.text();
-            })
-            .then(res => (generatedShacl = res));
+        );
+        let text = await res.text();
+        if (!res.ok || text.trim() === "") {
+            text = "No Constraints (SHACL) found.";
+        }
+        generatedShacl = text;
     }
 
     /**
      * fetches the custom SHACL rules for the selected class.
      */
-    function fetchCustomShacl() {
-        fetch(
+    async function fetchCustomShacl() {
+        let res = await fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
                 encodeURIComponent(editorState.selectedDataset.getValue()) +
@@ -81,17 +79,13 @@
                 method: "GET",
                 credentials: "include",
             },
-        )
-            .then(res => {
-                if (!res.ok) {
-                    return "No Constraints (SHACL) found.";
-                }
-                return res.text();
-            })
-            .then(res => {
-                customSHACL = res;
-                customSHACLBackup = res;
-            });
+        );
+        let text = await res.text();
+        if (!res.ok || text.trim() === "") {
+            text = "No Constraints (SHACL) found.";
+        }
+        customSHACL = text;
+        customSHACLBackup = text;
     }
 
     function submitChanges() {

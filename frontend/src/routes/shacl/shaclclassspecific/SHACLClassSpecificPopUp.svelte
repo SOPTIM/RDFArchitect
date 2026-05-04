@@ -52,8 +52,8 @@
     /**
      * fetches the SHACL rules for the selected class.
      */
-    function fetchShacl() {
-        fetch(
+    async function fetchShacl() {
+        const res = await fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
                 encodeURIComponent(datasetName) +
@@ -66,13 +66,10 @@
                 method: "GET",
                 credentials: "include",
             },
-        )
-            .then(res => res.text())
-            .then(res => {
-                let resultObj = JSON.parse(res);
-                customShacl = resultObj.custom;
-                generatedShacl = resultObj.generated;
-            });
+        );
+        const resultObj = JSON.parse(await res.text());
+        customShacl = resultObj.custom;
+        generatedShacl = resultObj.generated;
     }
 
     function goToClass(classUUID) {

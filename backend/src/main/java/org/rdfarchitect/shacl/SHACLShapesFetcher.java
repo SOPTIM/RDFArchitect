@@ -29,6 +29,7 @@ import org.rdfarchitect.shacl.dto.PropertyShape;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class SHACLShapesFetcher {
@@ -47,6 +48,9 @@ public class SHACLShapesFetcher {
      *     SHACL shapes referencing the property
      */
     public List<PropertyShape> getPropertyShapesOfProperty(Model ontology, String propertyUri) {
+        if (ontology == null) {
+            return Collections.emptyList();
+        }
         var query =
                 """
                 PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
