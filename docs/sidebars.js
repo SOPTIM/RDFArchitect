@@ -29,7 +29,6 @@ const sidebars = {
       label: 'Reference',
       items: [
         'reference/features',
-        'reference/cim-evaluation',
         'reference/cim-mapping',
         'reference/faq',
         'reference/bachelor-theses',
@@ -48,6 +47,7 @@ const sidebars = {
     'developer-guide/code-style',
     'developer-guide/api-stability',
     'developer-guide/rdf-shacl-sparql',
+    'developer-guide/cim-evaluation',
     'developer-guide/ci-and-releases',
     'developer-guide/contribution-scenarios',
   ],

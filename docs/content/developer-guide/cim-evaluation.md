@@ -1,4 +1,9 @@
-# CIM - Evaluation
+---
+title: CIM Evaluation
+sidebar_position: 10
+---
+
+# CIM Evaluation
 
 ## Defined IRIs in use
 
@@ -51,35 +56,35 @@ Namespace: `https://iec.ch/TC57/1999/rdf-schema-extensions-19990926#`
 
 Standard CGMES 3.0 entries used in the Ontology Header
 
-- dct:conformsTo		
-- dct:creator		
-- dct:description		
-- dct:identifier		
-- dct:issued		
-- dct:language		
-- dct:modified		
-- dct:publisher		
-- dct:rights		
-- dct:rightsHolder		
-- dct:title		
-- owl:backwardCompatibleWith		
-- owl:incompatibleWith		
-- owl:priorVersion		
-- owl:versionIRI		
-- owl:versionInfo		
-- dcat:keyword		
-- dcat:landingPage		
+- dct:conformsTo
+- dct:creator
+- dct:description
+- dct:identifier
+- dct:issued
+- dct:language
+- dct:modified
+- dct:publisher
+- dct:rights
+- dct:rightsHolder
+- dct:title
+- owl:backwardCompatibleWith
+- owl:incompatibleWith
+- owl:priorVersion
+- owl:versionIRI
+- owl:versionInfo
+- dcat:keyword
+- dcat:landingPage
 - dcat:theme
 
 ##  CIM Object structure
 
-- package:<br>
+- package:&lt;br&gt;
   ``` 
   pre:Package_{packageName}         rdf:type                cims:ClassCategory                                #required
                                     rdfs:label              "{packageName}"@en                                #required
                                     rdfs:comment            "{comment}"^^{format}                             #optional     
   ```                           
-- #### class:<br>                           
+- #### class:&lt;br&gt;
   ```                           
   pre:{className}                   rdf:type                rdfs:Class                                        #required
                                     rdfs:label              "{className}"@en                                  #required
@@ -105,8 +110,8 @@ Standard CGMES 3.0 entries used in the Ontology Header
                                     cims:isDefault          {value}^^                                      
                                                             | [ rdfs:Literal {value}^^{datatype}]             #optional
   ```
-  - prefix of the attribute does not have to be the same as class prefix
-  - multiplicity of attributes is most commonly either `M:0..1` or `M:1..1` to indicate optional or required attributes
+    - prefix of the attribute does not have to be the same as class prefix
+    - multiplicity of attributes is most commonly either `M:0..1` or `M:1..1` to indicate optional or required attributes
 - #### association:
   ``` 
   pre:{classLabel}.{label}          rdf:type                rdf:Property                                      #required
@@ -128,7 +133,7 @@ Standard CGMES 3.0 entries used in the Ontology Header
                                     cims:inverseRoleName    {classIRI}.{label}                                #required
                                     cims:multiplicity       cims:M:[0-9]+(..(n|[0-9]+))?                      #required
   ```   
-  - prefix of the association or inverse association does not have to be the same as domain or range prefix
+    - prefix of the association or inverse association does not have to be the same as domain or range prefix
 - #### enumEntry:
   ``` 
   pre:{classLabel}.{enumEntryName}  rdf:type                {enumClassIRI}                                    #required
