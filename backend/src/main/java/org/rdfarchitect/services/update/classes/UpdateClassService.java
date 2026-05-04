@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.arq.querybuilder.ExprFactory;
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
@@ -198,9 +199,6 @@ public class UpdateClassService
             insertEnumEntries(targetGraphIdentifier, cimClass, newCimClass);
         }
 
-        createClassLayoutDataUseCase.createClassLayoutData(
-                targetGraphIdentifier, targetPackageDTO, className, newClassUUID);
-
         changeLogUseCase.recordChange(
                 targetGraphIdentifier,
                 new ChangeLogEntry(
@@ -239,7 +237,7 @@ public class UpdateClassService
         try {
             targetGraph = databasePort.getGraphWithContext(targetGraphIdentifier).getRdfGraph();
             targetGraph.begin(TxnType.WRITE);
-            UUID newClassUUID =
+            var newClassUUID =
                     CIMUpdates.insertClass(
                             targetGraph,
                             databasePort.getPrefixMapping(targetGraphIdentifier.datasetName()),
@@ -297,7 +295,7 @@ public class UpdateClassService
         }
     }
 
-    private CIMClass copyCimClass(
+    private CIMClassUMLAdapted copyCimClass(
             CIMClassUMLAdapted cimClass,
             CIMPackage cimPackage,
             RDFSLabel label,
@@ -358,6 +356,7 @@ public class UpdateClassService
             GraphRewindableWithUUIDs graph, String graphUri, RDFSLabel label) {
         var baseValue = label.getValue() + " - Copy";
 
+        var exprFactory = new ExprFactory();
         var query =
                 new SelectBuilder()
                         .addVar("?label")
@@ -365,7 +364,9 @@ public class UpdateClassService
                                 NodeFactory.createURI(graphUri),
                                 new SelectBuilder()
                                         .addWhere("?s", RDFS.label, "?label")
-                                        .addFilter("STRSTARTS(STR(?label), \"" + baseValue + "\")"))
+                                        .addFilter(
+                                                exprFactory.strstarts(
+                                                        exprFactory.str("?label"), baseValue)))
                         .build();
         var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, graphUri);
 
