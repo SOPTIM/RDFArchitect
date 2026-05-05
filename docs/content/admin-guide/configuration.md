@@ -11,7 +11,7 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 
 | Purpose                            | Property                                | Default                      |
 | ---------------------------------- | --------------------------------------- | ---------------------------- |
-| Triple store endpoint              | `database.http.endpoint`                | `http://localhost:3030`      |
+| Snapshot store endpoint            | `database.http.endpoint`                | `http://localhost:3030`      |
 | Default dataset name               | `database.defaultDataset`               | `default`                    |
 | Frontend URL (CORS allow-list)     | `frontend.url`                          | `http://localhost:1407`      |
 | API base path                      | `frontend.accessRoute`                  | `/api`                       |

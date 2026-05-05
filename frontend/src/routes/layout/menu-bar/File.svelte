@@ -75,7 +75,7 @@
                     onSelect={() => (showSHACLUploadDialog = true)}
                     faIcon={faUpload}
                 >
-                    Constrains (SHACL)
+                    Constraints (SHACL)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -94,7 +94,7 @@
                     onSelect={() => (showSHACLExportDialog = true)}
                     faIcon={faDownload}
                 >
-                    Constrains (SHACL)
+                    Constraints (SHACL)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>

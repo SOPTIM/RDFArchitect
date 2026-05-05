@@ -56,7 +56,7 @@
         associations.
         <br />
         It is strongly recommended that you validate migrated data using the provided
-        constrains (SHACL) after executing the script, and manually adjust any inconsistencies
+        constraints (SHACL) after executing the script, and manually adjust any inconsistencies
         if necessary.
     </InfoBox>
 
@@ -80,7 +80,7 @@
             <ol class="ml-2 list-inside list-decimal space-y-2 text-sm">
                 <li>
                     <span class="font-medium">Verify old data:</span>
-                    Validate your source data against the old schema's constrains
+                    Validate your source data against the old schema's constraints
                     (SHACL) to ensure data quality before migration
                 </li>
                 <li>
@@ -93,7 +93,7 @@
                 </li>
                 <li>
                     <span class="font-medium">Verify the resulting data:</span>
-                    Validate the migrated data against the new schema's constrains
+                    Validate the migrated data against the new schema's constraints
                     (SHACL) to ensure successful migration
                 </li>
             </ol>

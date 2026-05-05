@@ -15,7 +15,7 @@ Typical deployment patterns include:
 - **Traefik with forward-auth**, if Traefik is already part of your platform.
 - **Kubernetes Ingress** with OIDC authentication, commonly via an `oauth2-proxy` sidecar or middleware.
 
-Keep Fuseki on a private network reachable only by the backend. RDFArchitect's read-only model is enforced by the backend, not by Fuseki; a user with direct Fuseki access can still modify datasets.
+Keep Fuseki on a private network reachable only by the backend. Snapshot links load datasets as read-only by default, but that protection is enforced by the backend, not by Fuseki; a user with direct Fuseki access can still modify snapshot datasets.
 
 ## Snapshot links
 

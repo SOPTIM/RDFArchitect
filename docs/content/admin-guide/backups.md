@@ -5,7 +5,7 @@ sidebar_position: 5
 
 # Backups
 
-RDFArchitect does not hold long-term state. Backup = Fuseki backup.
+RDFArchitect keeps uploaded datasets and edits in backend memory. Fuseki backups cover snapshots only.
 
 ## Recommended routine
 
@@ -15,7 +15,7 @@ Fuseki has a built-in backup API:
 curl -XPOST http://<fuseki-host>:3030/$/backup/<dataset>
 ```
 
-This produces a gzipped N-Quads dump under Fuseki's `backups/` directory. A cron job that calls this once a day for each active dataset and rotates the last N dumps covers the standard disaster-recovery case.
+This produces a gzipped N-Quads dump under Fuseki's `backups/` directory. A cron job that calls this once a day for each snapshot dataset and rotates the last N dumps covers snapshot recovery.
 
 ## Restoring
 
@@ -30,11 +30,11 @@ curl -XPOST -H 'Content-Type: application/n-quads' \
 
 ## What to back up
 
-- **Every dataset** RDFArchitect knows about. In practice: `default`, plus every snapshot dataset.
-- **Namespace and configuration state** is stored inside each dataset, so no separate backup is needed for it.
+- **Every snapshot dataset** in Fuseki.
 
 ## What does not need to be backed up
 
 - The backend itself — stateless, can be rebuilt from the image.
 - The frontend — stateless, can be rebuilt from the image.
 - The gateway configuration — in version control.
+- Uploaded datasets and edits — they live in backend memory and should be exported from RDFArchitect if they need to be kept outside the running session.

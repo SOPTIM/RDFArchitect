@@ -14,7 +14,7 @@ RDFArchitect is a web-based tool for **visualising, editing, and sharing RDFS sc
 
 ## Who should read what
 
-If you are new to RDFArchitect, start with the **User Guide**. Otherwise, the table below points you to the most relevant section for your role.
+If you are new to RDFArchitect, start with **[Getting Started](/getting-started)**. Otherwise, the table below points you to the most relevant section for your role.
 
 | If you are…                                  | Start with                                                            | Then read                                                                                        |
 | -------------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -28,7 +28,7 @@ If you are new to RDFArchitect, start with the **User Guide**. Otherwise, the ta
 
 - **Import and export** CGMES and ENTSO-E profiles in RDF/XML, Turtle, or N-Triples.
 - **Visualise** classes, attributes, associations, and inheritance as UML-style diagrams, organised by package.
-- **Edit** every aspect of a profile — classes, attributes, associations, enum entries, stereotypes, comments, namespaces, and the profile header — through a validating UI.
+- **Edit** every aspect of a profile — classes, attributes, associations, enum entries, stereotypes, comments, namespaces, and the profile header — through a guided UI.
 - **Generate SHACL** automatically from the schema, and manage imported SHACL alongside it.
 - **Track changes** with an edit changelog, undo/redo, and the ability to restore any previous state.
 - **Compare** two versions of a profile and see a structured list of additions, removals, and modifications.
@@ -37,9 +37,9 @@ If you are new to RDFArchitect, start with the **User Guide**. Otherwise, the ta
 
 ## Architecture, briefly
 
-- **Frontend** — SvelteKit single-page application
+- **Frontend** — SvelteKit web frontend
 - **Backend** — Spring Boot REST service
-- **Triple store** — Apache Jena Fuseki (any SPARQL 1.1 endpoint works)
+- **Snapshot store** — Apache Jena Fuseki
 
 Everything is open-source, Apache 2.0 licensed.
 
