@@ -436,9 +436,6 @@
         event.preventDefault();
         event.stopPropagation();
         closeContextMenus();
-        if (isDatasetReadOnly) {
-            return;
-        }
         contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
@@ -698,7 +695,8 @@
     />
     <SvelteFlowClassContextMenu
         request={classContextMenuRequest}
-        disabled={isDatasetReadOnly || !contextMenuClass}
+        disabled={!contextMenuClass}
+        readOnly={isDatasetReadOnly}
         {contextMenuClass}
         datasetName={editorState.selectedDataset.getValue()}
         graphUri={editorState.selectedGraph.getValue()}

@@ -39,6 +39,7 @@
     let {
         request = null,
         disabled = false,
+        readOnly = false,
         contextMenuClass = null,
         datasetName = "",
         graphUri = "",
@@ -62,6 +63,7 @@
     );
     let isAtFront = $derived(classZIndex >= nodeCount - 1);
     let isAtBack = $derived(classZIndex <= 0);
+    let classActionsDisabled = $derived(disabled || readOnly);
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -77,7 +79,7 @@
     }
 
     function openDeleteClassDialog() {
-        if (!contextMenuClass) {
+        if (classActionsDisabled || !contextMenuClass) {
             return;
         }
         deleteClassTarget = contextMenuClass;
@@ -86,34 +88,34 @@
     }
 
     function handleMoveUp() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "up" });
     }
 
     function handleMoveDown() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "down" });
     }
 
     function handleMoveToTop() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "top" });
     }
 
     function handleMoveToBottom() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "bottom" });
     }
 
     function handleLayerChange(newLayer) {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
         // Immediate local update
         onSetLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
 
     function handleLayerPersist(newLayer) {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
         // Debounced API call
         onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
@@ -142,14 +144,17 @@
         <ContextMenu.Separator />
         <ContextMenu.Item.Button
             onSelect={openDeleteClassDialog}
-            {disabled}
+            disabled={classActionsDisabled}
             faIcon={faTrash}
             variant="danger"
         >
             Delete class
         </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
-            <ContextMenu.SubMenu.Trigger faIcon={faLayerGroup}>
+            <ContextMenu.SubMenu.Trigger
+                faIcon={faLayerGroup}
+                disabled={classActionsDisabled}
+            >
                 Move
             </ContextMenu.SubMenu.Trigger>
             <ContextMenu.SubMenu.Content>
@@ -159,7 +164,7 @@
                         handleMoveToTop();
                     }}
                     faIcon={faAnglesUp}
-                    disabled={isAtFront}
+                    disabled={classActionsDisabled || isAtFront}
                 >
                     Move to front
                 </ContextMenu.Item.Button>
@@ -169,7 +174,7 @@
                         handleMoveUp();
                     }}
                     faIcon={faAngleUp}
-                    disabled={isAtFront}
+                    disabled={classActionsDisabled || isAtFront}
                 >
                     Move up
                 </ContextMenu.Item.Button>
@@ -177,7 +182,7 @@
                     value={classZIndex}
                     min={0}
                     max={nodeCount - 1}
-                    {disabled}
+                    disabled={classActionsDisabled}
                     onchange={handleLayerChange}
                     onpersist={handleLayerPersist}
                 >
@@ -189,7 +194,7 @@
                         handleMoveDown();
                     }}
                     faIcon={faAngleDown}
-                    disabled={isAtBack}
+                    disabled={classActionsDisabled || isAtBack}
                 >
                     Move down
                 </ContextMenu.Item.Button>
@@ -199,7 +204,7 @@
                         handleMoveToBottom();
                     }}
                     faIcon={faAnglesDown}
-                    disabled={isAtBack}
+                    disabled={classActionsDisabled || isAtBack}
                 >
                     Move to bottom
                 </ContextMenu.Item.Button>
