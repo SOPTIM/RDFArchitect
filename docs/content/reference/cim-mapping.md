@@ -9,21 +9,21 @@ RDFArchitect uses a small, deliberately generic vocabulary so that it works equa
 
 ## Vocabulary map
 
-| RDFArchitect term   | Typical CIM / CGMES meaning                                                                                |
-| ------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **Dataset**         | A workspace in the triple store. Often one dataset per CGMES release you are working with.                 |
-| **Graph** / **Schema** | One *profile*. E.g. `EquipmentProfile`, `TopologyProfile`, `SteadyStateHypothesisProfile`, `StateVariablesProfile` — each becomes one graph. |
-| **Package**         | A UML package within a profile. Corresponds to the `uml:Package` hierarchy used in the CIM UML, e.g. `Core`, `Wires`, `Generation::Production`. |
-| **Class**           | An RDFS `Class`. For CGMES: every `IdentifiedObject` subtype, every `«CIMDatatype»`, every `«Compound»`, every `«enumeration»`. |
-| **Attribute**       | An `rdf:Property` with a literal datatype — an RDFS datatype property. Cardinalities are carried as SHACL.  |
-| **Association**     | An `rdf:Property` with a class as its range — an RDFS object property. Cardinalities and inverse roles carried as SHACL. |
-| **Enum entry**      | An instance of an `«enumeration»` class. In SHACL this becomes an `sh:in` list on properties that point at the enum. |
-| **Stereotype**      | A CIM UML stereotype applied to a class. Common values: `«enumeration»`, `«CIMDatatype»`, `«Primitive»`, `«Compound»`, `«NetworkCodeProfile»`, `«Package»`. |
+| RDFArchitect term   | Typical CIM / CGMES meaning                                                                                                                                                       |
+| ------------------- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **Dataset**         | An in-memory workspace. Often one dataset per CGMES release you are working with.                                                                                                 |
+| **Graph** / **Schema** | One *profile*. E.g. `EquipmentProfile`, `TopologyProfile`, `SteadyStateHypothesisProfile`, `StateVariablesProfile` — each becomes one graph.                                   |
+| **Package**         | A UML package within a profile. Corresponds to the `uml:Package` hierarchy used in the CIM UML, e.g. `Core`, `Wires`, `Generation::Production`.                                   |
+| **Class**           | An RDFS `Class`. For CGMES: every `IdentifiedObject` subtype, every `«CIMDatatype»`, every `«Compound»`, every `«enumeration»`.                                                   |
+| **Attribute**       | An `rdf:Property` with a literal datatype — an RDFS datatype property. Cardinalities are carried as SHACL.                                                                        |
+| **Association**     | An `rdf:Property` with a class as its range — an RDFS object property. Cardinalities and inverse roles carried as SHACL.                                                          |
+| **Enum entry**      | An instance of an `«enumeration»` class. In SHACL this becomes an `sh:in` list on properties that point at the enum.                                                              |
+| **Stereotype**      | A CIM UML stereotype applied to a class. Common values: `«enumeration»`, `«CIMDatatype»`, `«Primitive»`, `«Compound»`, `«NetworkCodeProfile»`, `«Package»`.                       |
 | **Profile header**  | The `cim:Ontology` resource (or equivalent ENTSO-E / DCAT resource) placed at the top of a profile file, carrying title, version, conformsTo, keyword, license, description, etc. |
-| **Namespace**       | The prefix/URI pair used to name resources. For CGMES: `cim:` → `http://iec.ch/TC57/CIM100#`, `entsoe:` → `http://entsoe.eu/CIM/SchemaExtension/3/1#`, etc. |
-| **Snapshot**        | A read-only share of a dataset via URL. Useful for review cycles.                                           |
-| **Changelog**       | The edit history of a graph (= of a profile).                                                              |
-| **Migration script**| A SPARQL UPDATE that transforms instance data from source profile version to target profile version.      |
+| **Namespace**       | The prefix/URI pair used to name resources. For CGMES: `cim:` → `http://iec.ch/TC57/CIM100#`, `entsoe:` → `http://entsoe.eu/CIM/SchemaExtension/3/1#`, etc.                       |
+| **Snapshot**        | An immutable Fuseki-backed copy of a dataset shared via URL.                                                                                                                      |
+| **Changelog**       | The edit history of a graph (= of a profile).                                                                                                                                     |
+| **Migration script**| A SPARQL UPDATE that transforms instance data from source profile version to target profile version.                                                                              |
 
 ## A CGMES release in RDFArchitect
 
