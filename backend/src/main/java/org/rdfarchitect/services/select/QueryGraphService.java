@@ -35,6 +35,7 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
@@ -84,6 +85,8 @@ public class QueryGraphService
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper classMapper;
     private final PackageMapper packageMapper;
+
+    private final SchemaConfig schemaConfig;
 
     @Override
     public List<ClassUMLAdaptedDTO> getClassList(
@@ -368,6 +371,13 @@ public class QueryGraphService
         while (queryResult.hasNext()) {
             var parser = new CIMQuerySolutionParser(queryResult.next());
             resultList.add(parser.getStereotype(CIMQueryVars.STEREOTYPE));
+        }
+
+        for (String s : schemaConfig.getStereotypes()) {
+            var stereotype = new CIMSStereotype(s);
+            if (!resultList.contains(stereotype)) {
+                resultList.add(stereotype);
+            }
         }
 
         return resultList;

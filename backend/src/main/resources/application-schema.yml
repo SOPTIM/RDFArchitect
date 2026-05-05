@@ -1,0 +1,11 @@
+schema:
+    stereotypes:
+        - "http://iec.ch/TC57/NonStandard/UML#concrete"
+        - "http://iec.ch/TC57/NonStandard/UML#enumeration"
+        - "Primitive"
+        - "CIMDatatype"
+        - "Entsoe"
+    namespaces: # default namespaces like "rdf" or "rdfs" are always defined, but can be overridden here
+        uml: "http://iec.ch/TC57/NonStandard/UML#"
+        cim: "http://iec.ch/TC57/CIM100#"
+        cims: "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#"
