@@ -18,6 +18,7 @@
 <script>
     import { faBoxOpen } from "@fortawesome/free-solid-svg-icons";
     import { SvelteFlowProvider } from "@xyflow/svelte";
+    import { untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
@@ -51,6 +52,7 @@
     let svelteFlowWrapper = $state();
 
     let displayDiagram = $state(true);
+    let diagramRequestKey = null;
     let showSvelteFlowEmptyState = $derived(
         renderingFormat === SVELTEFLOW_FORMAT &&
             (response?.nodes?.length ?? 0) === 0,
@@ -64,13 +66,27 @@
     });
 
     $effect(async () => {
-        isLoading = true;
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedPackageUUID.subscribe();
 
-        if (!editorState.selectedPackageUUID.getValue()) {
+        const datasetName = editorState.selectedDataset.getValue();
+        const graphUri = editorState.selectedGraph.getValue();
+        const packageUUID = editorState.selectedPackageUUID.getValue();
+        const filter = graphViewState.filter.getValue();
+        const nextDiagramRequestKey = getDiagramRequestKey(
+            datasetName,
+            graphUri,
+            packageUUID,
+            filter,
+        );
+        const hasCurrentResponse = untrack(() => !!response);
+        const showBlockingLoading =
+            nextDiagramRequestKey !== diagramRequestKey || !hasCurrentResponse;
+        diagramRequestKey = nextDiagramRequestKey;
+
+        if (!packageUUID) {
             response = null;
             renderingFormat = null;
             displayDiagram = false;
@@ -78,25 +94,24 @@
             return;
         }
 
+        if (showBlockingLoading) {
+            isLoading = true;
+        }
+
         let graphFilter = {
-            packageUUID: editorState.selectedPackageUUID.getValue(),
-            includeEnumEntries:
-                graphViewState.filter.getValue().includeEnumEntries,
-            includeAttributes:
-                graphViewState.filter.getValue().includeAttributes,
-            includeAssociations:
-                graphViewState.filter.getValue().includeAssociations,
-            includeInheritance:
-                graphViewState.filter.getValue().includeInheritance,
+            packageUUID,
+            includeEnumEntries: filter.includeEnumEntries,
+            includeAttributes: filter.includeAttributes,
+            includeAssociations: filter.includeAssociations,
+            includeInheritance: filter.includeInheritance,
             includeRelationsToExternalPackages:
-                graphViewState.filter.getValue()
-                    .includeRelationsToExternalPackages,
+                filter.includeRelationsToExternalPackages,
         };
 
         try {
             const res = await bec.fetchFilteredRenderingData(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
+                datasetName,
+                graphUri,
                 graphFilter,
             );
 
@@ -120,6 +135,15 @@
             isLoading = false;
         }
     });
+
+    function getDiagramRequestKey(datasetName, graphUri, packageUUID, filter) {
+        return JSON.stringify({
+            datasetName,
+            graphUri,
+            packageUUID,
+            filter,
+        });
+    }
 
     async function isReadOnly(datasetName) {
         const res = await bec.isReadOnly(datasetName);
