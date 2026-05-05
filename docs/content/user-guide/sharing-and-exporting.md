@@ -7,10 +7,10 @@ sidebar_position: 11
 
 ## Exporting a schema
 
-**File → Export → Schema (RDFS)** exports the currently selected graph to a file. The dialog lets you choose:
+**File → Export → Schema (RDFS)** exports the currently selected graph to a file. The dialog includes:
 
 - **Format** — RDF/XML (`.rdf`), Turtle (`.ttl`), or N-Triples (`.nt`). RDF/XML is the default for CGMES/ENTSO-E compatibility.
-- **Namespaces** — which prefixes to include in the exported file's header.
+- **Namespaces** — the exported file uses the active namespace table for its prefixes.
 - **Profile header** — whether to emit the ontology block first (matching the ENTSO-E release convention) and, if so, whether to auto-generate any missing standard entries from the graph metadata.
 
 The exported file is self-contained: it can be re-imported into RDFArchitect, loaded into any SPARQL engine, or handed to downstream CIM tooling.

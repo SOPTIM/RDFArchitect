@@ -25,7 +25,7 @@ sidebar_position: 2
 │       ├── application*.yml  # Configuration
 │       └── sparql-templates/ # Parameterised SPARQL used by services
 │
-├── frontend/                 # SvelteKit single-page app (Svelte 5 runes)
+├── frontend/                 # SvelteKit frontend (Svelte 5 runes)
 │   └── src/
 │       ├── routes/           # SvelteKit pages (homepage, /mainpage, /changelog, /compare, /migrate, /shacl)
 │       └── lib/

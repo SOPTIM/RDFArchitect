@@ -55,14 +55,14 @@ The default upload limit is 50 MB. For larger files, an administrator can raise 
 
 ### I made a mistake — how do I undo it?
 
-**Ctrl+Z** or **Edit → Undo**. Undo works across every kind of edit (classes, attributes, associations, packages, namespaces, ontology, SHACL). Up to 256 steps of history per graph.
+**Ctrl+Z** or **Edit → Undo**. Undo works across tracked graph edits such as classes, attributes, associations, packages, and ontology changes. Up to 256 steps of history per graph.
 
 ### Why can't I edit this class / package?
 
 Three possibilities:
 
 1. The **dataset is read-only** — enable editing (Edit → Enable Editing) or choose a different dataset.
-2. The class belongs to an **external package** — an imported dependency. By design these are not editable from the current graph; edit them in their owning graph instead.
+2. The class belongs to an **external package** — a package referenced by the schema but not defined in it. By design these are not editable from the current graph.
 3. You are viewing a **snapshot import** — it opens read-only by default, but you can enable editing for the imported dataset. The stored snapshot itself remains unchanged.
 
 ### What is the "default" package?
@@ -80,9 +80,9 @@ Because they answer two different questions.
 
 Keeping them separate means you can see where a given constraint came from, and you can freely edit the schema without clobbering imported SHACL.
 
-### My custom SHACL file won't save — what's wrong?
+### Can I edit custom SHACL in RDFArchitect?
 
-The TTL parser rejects the file. The dialog highlights the offending line; most often it is an unknown prefix or a dangling comma. Fix the TTL and the Save button re-enables.
+Yes. Open **View → Constraints (SHACL)** and edit the **Custom** tab. Generated SHACL is read-only because it is derived from the current graph.
 
 ### How do I validate instance data against the SHACL RDFArchitect produces?
 
@@ -96,7 +96,7 @@ As of 1.0.0, multiplicity changes on associations are the known gap. If a proper
 
 ### Should I trust the migration script blindly?
 
-No. Always run it against a test dataset first, then validate the result with the target profile's SHACL, and only then run it against production data. This is true of any mechanical migration, not specific to RDFArchitect.
+No. Always run it against a test dataset first, then validate the result with the target profile's SHACL in an external validator, and only then run it against production data. This is true of any mechanical migration, not specific to RDFArchitect.
 
 ### Can I edit the migration script before running it?
 

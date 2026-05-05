@@ -11,6 +11,6 @@ Namespaces are managed per dataset from **Edit → Manage Namespaces** (or **Vie
 
 <img src={manageNamespacesScreenshot} alt="Manage namespaces" className="screenshot--medium" />
 
-Prefix uniqueness is enforced: the save button stays disabled while two rows share a prefix, and the offending rows are highlighted.
+Prefix uniqueness is enforced: the save button stays disabled while two rows share a prefix, and the offending rows are highlighted. Multiple prefixes may point to the same URI.
 
-Namespaces are also surfaced in every place where a URI is entered (new class dialog, attribute editor, import/export dialogs) so that you rarely need to type the full namespace by hand.
+Namespaces are also surfaced in every place where a URI namespace is needed, such as the new class dialog and attribute editor, so you select a known namespace instead of typing it manually.

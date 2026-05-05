@@ -11,7 +11,7 @@ The main editor, reachable from the **Open Editor** button on the homepage or vi
 
 - **Left — navigation tree.** Datasets, graphs inside each dataset, and packages inside each graph. Classes live under their packages and can be opened from here.
 - **Centre — diagram canvas.** A UML-style class diagram of the currently selected package: classes with their attributes and associations, inheritance arrows, and links that leave the package. The diagram is rendered with SvelteFlow by default and supports pan, zoom, and auto-layout; a Mermaid rendering is also available.
-- **Right — class editor.** When a class is selected, its full definition is available here: label, URI namespace, package, super class, stereotypes, comment, attributes, associations, enum entries, and class-level SHACL.
+- **Right — class editor.** When a class is selected, its full definition is available here: label, URI namespace, package, super class, stereotypes, comment, attributes, associations, enum entries, and class-level constraints (SHACL).
 
 Across the top there is a **menu bar** (File, Edit, View, Help), a **search bar** for finding classes/attributes/packages across datasets, and indicators for read-only status and unsaved changes.
 

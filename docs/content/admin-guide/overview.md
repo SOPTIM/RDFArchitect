@@ -11,7 +11,7 @@ Topics for the person operating RDFArchitect for a team: configuration, snapshot
 
 RDFArchitect consists of three runtime components plus snapshot storage:
 
-- **Frontend** — a SvelteKit single-page application served as static files behind an nginx process.
+- **Frontend** — a SvelteKit web frontend served as static files behind an nginx process.
 - **Backend** — a Spring Boot REST service. Holds uploaded datasets and edits in memory.
 - **Gateway** (optional) — an nginx reverse proxy that routes `/api/*` to the backend and everything else to the frontend, so that both can be served from a single origin.
 - **Snapshot store** — **Apache Jena Fuseki**. Stores all snapshots.

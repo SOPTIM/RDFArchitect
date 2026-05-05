@@ -28,7 +28,7 @@ If you are new to RDFArchitect, start with **[Getting Started](/getting-started)
 
 - **Import and export** CGMES and ENTSO-E profiles in RDF/XML, Turtle, or N-Triples.
 - **Visualise** classes, attributes, associations, and inheritance as UML-style diagrams, organised by package.
-- **Edit** every aspect of a profile — classes, attributes, associations, enum entries, stereotypes, comments, namespaces, and the profile header — through a validating UI.
+- **Edit** every aspect of a profile — classes, attributes, associations, enum entries, stereotypes, comments, namespaces, and the profile header — through a guided UI.
 - **Generate SHACL** automatically from the schema, and manage imported SHACL alongside it.
 - **Track changes** with an edit changelog, undo/redo, and the ability to restore any previous state.
 - **Compare** two versions of a profile and see a structured list of additions, removals, and modifications.
@@ -37,7 +37,7 @@ If you are new to RDFArchitect, start with **[Getting Started](/getting-started)
 
 ## Architecture, briefly
 
-- **Frontend** — SvelteKit single-page application
+- **Frontend** — SvelteKit web frontend
 - **Backend** — Spring Boot REST service
 - **Snapshot store** — Apache Jena Fuseki
 
