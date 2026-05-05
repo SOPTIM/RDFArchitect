@@ -20,16 +20,12 @@ package org.rdfarchitect.config;
 import lombok.Getter;
 import lombok.Setter;
 
-import org.apache.jena.riot.Lang;
 import org.rdfarchitect.database.DatabaseConnection;
-import org.rdfarchitect.database.implementations.file.FileConnectionImpl;
 import org.rdfarchitect.database.implementations.http.FusekiHttpAdminProtocol;
 import org.rdfarchitect.database.implementations.http.HttpConnectionImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.util.Locale;
 
 /** Parses the database config and provides access to its contents */
 @Getter
@@ -37,41 +33,15 @@ import java.util.Locale;
 @Configuration
 public class DatabaseConfig {
 
-    @Value("${database.databaseType:file}")
-    private String databaseType;
-
     @Value("${database.defaultDataset:default}")
     private String defaultDataset;
 
-    // http
     @Value("${database.http.endpoint}")
     private String httpEndpoint;
 
-    // file
-    @Value("${database.file.endpoint:C:/fileDatabase}")
-    private String fileEndpoint;
-
-    @Value("${database.file.dataType:trig}")
-    private String dataType;
-
     @Bean
     public DatabaseConnection databaseConnection() {
-        if ("http".equals(databaseType)) {
-            return new HttpConnectionImpl(
-                    httpEndpoint, defaultDataset, new FusekiHttpAdminProtocol(httpEndpoint));
-        }
-        return new FileConnectionImpl(
-                fileEndpoint,
-                defaultDataset,
-                getFileLang(dataType)); // all options must return a DatabaseConnection even if the
-        // option doesn't happen.
-    }
-
-    private static Lang getFileLang(String dataType) {
-        dataType = dataType.toUpperCase(Locale.ROOT);
-        if ("N-QUADS".equals(dataType)) {
-            return Lang.NQUADS;
-        }
-        return Lang.TRIG;
+        return new HttpConnectionImpl(
+                httpEndpoint, defaultDataset, new FusekiHttpAdminProtocol(httpEndpoint));
     }
 }

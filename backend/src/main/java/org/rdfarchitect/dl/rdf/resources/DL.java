@@ -53,6 +53,10 @@ public class DL {
             ResourceFactory.createProperty(
                     constructDLNamespacedTerm("DiagramObjectPoint.yPosition"));
 
+    public final Property zPosition =
+            ResourceFactory.createProperty(
+                    constructDLNamespacedTerm("DiagramObjectPoint.zPosition"));
+
     // OBJECTS
     public final Resource diagramType =
             ResourceFactory.createResource(constructDLNamespacedTerm("Diagram"));

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
-import org.rdfarchitect.dl.data.dto.relations.XYPosition;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
@@ -68,7 +68,7 @@ class RenderCIMCollectionTestBase {
         EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase =
                 mock(EnsureDiagramLayoutForCIMCollectionUseCase.class);
 
-        var mockXYPosition = mock(XYPosition.class);
+        var mockXYPosition = mock(XYZPosition.class);
         when(mockXYPosition.getX()).thenReturn(0f);
         when(mockXYPosition.getY()).thenReturn(0f);
 

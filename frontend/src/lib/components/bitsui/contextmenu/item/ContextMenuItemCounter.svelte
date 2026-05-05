@@ -14,22 +14,31 @@
   -    limitations under the License.
   -
   -->
-
 <script>
-    import { v4 as uuid } from "uuid";
+    import ItemCounterBase from "$lib/components/bitsui/base/menu/item/ItemCounterBase.svelte";
 
-    import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ContextMenuItem from "./ContextMenuItem.svelte";
 
-    let { uuid: uuidProp } = $props();
-
-    const id = uuid();
+    let {
+        children,
+        value = $bindable(),
+        disabled = false,
+        min = undefined,
+        max = undefined,
+        onchange = () => {},
+        onpersist = () => {},
+        ...other
+    } = $props();
 </script>
 
-<tr>
-    <td class="text-blue whitespace-nowrap">
-        <label for={id}>UUID</label>
-    </td>
-    <td class="w-full">
-        <TextEditControl {id} value={uuidProp.value} readonly={true} />
-    </td>
-</tr>
+<ContextMenuItem {disabled} closeOnSelect={false} {...other}>
+    <ItemCounterBase
+        bind:value
+        {disabled}
+        {min}
+        {max}
+        {onchange}
+        {onpersist}
+        center={children}
+    />
+</ContextMenuItem>

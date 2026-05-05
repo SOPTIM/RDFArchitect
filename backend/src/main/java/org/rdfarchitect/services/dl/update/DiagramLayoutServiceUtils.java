@@ -25,8 +25,9 @@ import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
-import org.rdfarchitect.dl.data.dto.relations.XYPosition;
+import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
+import org.rdfarchitect.dl.rdf.resources.DL;
 
 import java.util.UUID;
 
@@ -83,10 +84,20 @@ public class DiagramLayoutServiceUtils {
      * @param diagramObjectMRID the mRID of the diagram object the point belongs to
      */
     public void insertDiagramObjectPoint(Model diagramLayoutModel, MRID diagramObjectMRID) {
+        var maxZPosition =
+                diagramLayoutModel.listObjectsOfProperty(DL.zPosition).toSet().stream()
+                        .max(
+                                (o1, o2) -> {
+                                    var z1 = o1.asLiteral().getInt();
+                                    var z2 = o2.asLiteral().getInt();
+                                    return Integer.compare(z1, z2);
+                                })
+                        .map(o -> o.asLiteral().getInt())
+                        .orElse(0);
         var diagramObjectPoint =
                 DiagramObjectPoint.builder()
                         .mRID(new MRID(UUID.randomUUID()))
-                        .position(new XYPosition(0, 0))
+                        .position(new XYZPosition(0, 0, maxZPosition + 1))
                         .belongsToDiagramObject(diagramObjectMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);

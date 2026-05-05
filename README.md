@@ -25,7 +25,7 @@ RDFArchitect also supports release workflows such as schema comparison, change r
 
 ![Editor](docs/assets/screenshots/editor.png)
 
-For the full screenshot gallery, see [docs/screenshots.md](docs/screenshots.md).
+For the complete documentation, see the [docs site](https://rdfarchitect.soptim.de/).
 
 ## Key Features
 
@@ -127,6 +127,17 @@ npm run test
 npm run lint
 npm run build
 ```
+
+### Pre-commit Hooks
+
+After installing `pre-commit`, enable the repo-local hooks with:
+
+```bash
+pre-commit install
+```
+
+Backend hooks run for staged backend changes. Frontend hooks run for staged frontend changes.
+Hooks call `mvn` and `npm` directly. Make sure `mvn`, `npm`, and `pre-commit` are available on `PATH`.
 
 ## Contributing
 

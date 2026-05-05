@@ -101,6 +101,10 @@ public class DLUpdates {
                 ResourceFactory.createPlainLiteral(
                         String.valueOf(diagramObjectPoint.getPosition().getY())));
         newDiagramObjectPoint.addProperty(
+                DL.zPosition,
+                ResourceFactory.createPlainLiteral(
+                        String.valueOf(diagramObjectPoint.getPosition().getZ())));
+        newDiagramObjectPoint.addProperty(
                 DL.belongsToDiagramObject,
                 ResourceFactory.createResource(
                         diagramObjectPoint.getBelongsToDiagramObject().getFullMRID()));

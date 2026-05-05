@@ -1,0 +1,47 @@
+:root {
+  --ifm-color-primary: #2a6ebb;
+  --ifm-color-primary-dark: #2562a8;
+  --ifm-color-primary-darker: #235d9e;
+  --ifm-color-primary-darkest: #1c4c82;
+  --ifm-color-primary-light: #3a7ec5;
+  --ifm-color-primary-lighter: #4486c8;
+  --ifm-color-primary-lightest: #6299d1;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #6ea7e0;
+  --ifm-color-primary-dark: #4d92d8;
+  --ifm-color-primary-darker: #3d88d4;
+  --ifm-color-primary-darkest: #266bb1;
+  --ifm-color-primary-light: #8fbce8;
+  --ifm-color-primary-lighter: #9fc6ec;
+  --ifm-color-primary-lightest: #cce0f6;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.markdown img {
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  max-width: 100%;
+}
+
+.markdown img.screenshot--medium,
+.markdown img.screenshot--narrow {
+  display: block;
+  margin: 1rem 0 1.5rem;
+}
+
+.markdown img.screenshot--medium {
+  width: min(100%, 620px);
+}
+
+.markdown img.screenshot--narrow {
+  width: min(100%, 460px);
+}
+
+.markdown h1 + p,
+.markdown h2 + p {
+  color: var(--ifm-color-emphasis-700);
+}

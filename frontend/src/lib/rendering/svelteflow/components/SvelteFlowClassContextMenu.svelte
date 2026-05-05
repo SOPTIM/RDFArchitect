@@ -16,7 +16,14 @@
   -->
 
 <script>
-    import { faTrash } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faAngleDown,
+        faAnglesDown,
+        faAnglesUp,
+        faAngleUp,
+        faLayerGroup,
+        faTrash,
+    } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
 
@@ -25,18 +32,34 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
+    import DeleteClassConfirmDialog from "../../../../routes/DeleteClassConfirmDialog.svelte";
 
     let {
         request = null,
         disabled = false,
-        onDeleteClass = () => {},
+        contextMenuClass = null,
+        datasetName = "",
+        graphUri = "",
+        nodeOrder = [],
+        nodeCount = 0,
         onClose = () => {},
+        onMoveClass = () => {},
+        onSetLayer = () => {},
+        onPersistLayer = () => {},
     } = $props();
 
     let triggerRef = $state(null);
     let open = $state(false);
+    let deleteClassTarget = $state(null);
+    let showDeleteClassDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    let classZIndex = $derived(
+        contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
+    );
+    let isAtFront = $derived(classZIndex >= nodeCount - 1);
+    let isAtBack = $derived(classZIndex <= 0);
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -51,8 +74,47 @@
         handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
     }
 
-    function handleDeleteClass() {
-        onDeleteClass();
+    function openDeleteClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        deleteClassTarget = contextMenuClass;
+        showDeleteClassDialog = true;
+        onClose();
+    }
+
+    function handleMoveUp() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "up" });
+    }
+
+    function handleMoveDown() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "down" });
+    }
+
+    function handleMoveToTop() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "top" });
+    }
+
+    function handleMoveToBottom() {
+        if (!contextMenuClass) return;
+        onMoveClass({ classUuid: contextMenuClass.uuid, direction: "bottom" });
+    }
+
+    function handleLayerChange(newLayer) {
+        if (!contextMenuClass) return;
+        const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
+        // Immediate local update
+        onSetLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
+    }
+
+    function handleLayerPersist(newLayer) {
+        if (!contextMenuClass) return;
+        const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
+        // Debounced API call
+        onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
 </script>
 
@@ -65,12 +127,77 @@
     />
     <ContextMenu.Content>
         <ContextMenu.Item.Button
-            onSelect={handleDeleteClass}
+            onSelect={openDeleteClassDialog}
             {disabled}
             faIcon={faTrash}
             variant="danger"
         >
             Delete class
         </ContextMenu.Item.Button>
+        <ContextMenu.SubMenu.Root>
+            <ContextMenu.SubMenu.Trigger faIcon={faLayerGroup}>
+                Move
+            </ContextMenu.SubMenu.Trigger>
+            <ContextMenu.SubMenu.Content>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToTop();
+                    }}
+                    faIcon={faAnglesUp}
+                    disabled={isAtFront}
+                >
+                    Move to front
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveUp();
+                    }}
+                    faIcon={faAngleUp}
+                    disabled={isAtFront}
+                >
+                    Move up
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Counter
+                    value={classZIndex}
+                    min={0}
+                    max={nodeCount - 1}
+                    {disabled}
+                    onchange={handleLayerChange}
+                    onpersist={handleLayerPersist}
+                >
+                    Layer
+                </ContextMenu.Item.Counter>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveDown();
+                    }}
+                    faIcon={faAngleDown}
+                    disabled={isAtBack}
+                >
+                    Move down
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToBottom();
+                    }}
+                    faIcon={faAnglesDown}
+                    disabled={isAtBack}
+                >
+                    Move to bottom
+                </ContextMenu.Item.Button>
+            </ContextMenu.SubMenu.Content>
+        </ContextMenu.SubMenu.Root>
     </ContextMenu.Content>
 </ContextMenu.Root>
+
+<DeleteClassConfirmDialog
+    bind:showDialog={showDeleteClassDialog}
+    {datasetName}
+    {graphUri}
+    classUuid={deleteClassTarget?.uuid}
+    classLabel={deleteClassTarget?.label}
+/>

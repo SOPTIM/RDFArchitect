@@ -81,7 +81,7 @@ public class UpdateClassService
     }
 
     @Override
-    public void addClass(
+    public UUID addClass(
             GraphIdentifier graphIdentifier,
             PackageDTO packageDTO,
             String classURIPrefix,
@@ -112,6 +112,8 @@ public class UpdateClassService
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry("Added class " + className, graph.getLastDelta()));
+
+        return newClassUUID;
     }
 
     private CIMClass constructClass(

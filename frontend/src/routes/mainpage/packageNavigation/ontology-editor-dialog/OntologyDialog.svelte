@@ -195,14 +195,6 @@
     <div class="mx-2 flex h-full flex-col">
         {#key ontologyObject}
             {#if ontologyObject}
-                <p>UUID:</p>
-                <span class="mb-2">
-                    {#if !ontologyObject.uuid.value}
-                        <em class="text-muted-text">not assigned yet</em>
-                    {:else}
-                        {ontologyObject.uuid.value}
-                    {/if}
-                </span>
                 <div class="mb-2 w-150">
                     <SearchableSelect
                         label="Namespace:"

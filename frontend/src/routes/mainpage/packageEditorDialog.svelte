@@ -136,15 +136,6 @@
 >
     {#if pkg}
         <div class="mx-2 flex h-full flex-col">
-            <span class="mb-1 font-semibold">UUID:</span>
-            <p class="mb-2 w-full">
-                {#if pkg.uuid.value}
-                    {pkg.uuid.value}
-                {:else}
-                    not yet assigned
-                {/if}
-            </p>
-
             <!-- LABEL -->
             <TextEditControl
                 label="Label:"

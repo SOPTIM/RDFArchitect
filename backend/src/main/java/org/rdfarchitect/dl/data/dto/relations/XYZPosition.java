@@ -25,9 +25,11 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class XYPosition {
+public class XYZPosition {
 
     @Getter private float x;
 
     @Getter private float y;
+
+    @Getter private int z;
 }

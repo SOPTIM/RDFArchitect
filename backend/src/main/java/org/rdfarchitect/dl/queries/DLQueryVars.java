@@ -42,4 +42,5 @@ public class DLQueryVars {
     public static final String DOP_MRID = "?dopMRID";
     public static final String X_POSITION = "?xPosition";
     public static final String Y_POSITION = "?yPosition";
+    public static final String Z_POSITION = "?zPosition";
 }

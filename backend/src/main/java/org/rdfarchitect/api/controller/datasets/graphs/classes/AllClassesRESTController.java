@@ -26,7 +26,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -107,11 +106,12 @@ public class AllClassesRESTController {
                 expandURIUseCase.expandUri(datasetName, addNewClassRequest.classURIPrefix);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        addClassUseCase.addClass(
-                graphIdentifier,
-                addNewClassRequest.packageDTO,
-                extendedClassURIPrefix,
-                addNewClassRequest.className);
+        var classUUID =
+                addClassUseCase.addClass(
+                        graphIdentifier,
+                        addNewClassRequest.packageDTO,
+                        extendedClassURIPrefix,
+                        addNewClassRequest.className);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",
@@ -119,7 +119,7 @@ public class AllClassesRESTController {
                 graphURI,
                 originURL);
 
-        return Response.SUCCESS;
+        return classUUID.toString();
     }
 
     @Operation(

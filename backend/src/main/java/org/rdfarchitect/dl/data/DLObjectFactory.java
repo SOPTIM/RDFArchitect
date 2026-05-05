@@ -78,7 +78,7 @@ public class DLObjectFactory {
         var parser = new DLQuerySolutionParser(querySolution);
         return DiagramObjectPoint.builder()
                 .mRID(parser.getMRID(DLQueryVars.DOP_MRID))
-                .position(parser.getXYPosition())
+                .position(parser.getXYZPosition())
                 .belongsToDiagramObject(parser.getMRID(DLQueryVars.DO_MRID))
                 .build();
     }

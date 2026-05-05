@@ -25,8 +25,8 @@
         useSvelteFlow,
     } from "@xyflow/svelte";
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
-    import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
-    import { onMount } from "svelte";
+    import ELK from "elkjs/lib/elk.bundled.js";
+    import { onMount, untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -42,8 +42,6 @@
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
-    import DeleteClassConfirmDialog from "../../../routes/DeleteClassConfirmDialog.svelte";
-    import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
         nodes: inputNodes,
@@ -61,6 +59,8 @@
         inheritance: InheritanceEdge,
     };
 
+    const EDGE_Z_INDEX = -1;
+
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
@@ -68,10 +68,14 @@
     let paneContextMenuRequest = $state(null);
     let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
-    let deleteClassTarget = $state(null);
-    let showDeleteClassDialog = $state(false);
-    let showNewClassDialog = $state(false);
     let pendingNewClassPlacement = null;
+
+    // Ordered list of node IDs from back (index 0) to front (index n-1).
+    // Each node's zIndex equals its position in this array.
+    let nodeOrder = $state([]);
+
+    // Temporarily elevated node (not persisted) — shown in front during click/drag/search
+    let temporaryFrontNodeId = $state(null);
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
@@ -81,7 +85,14 @@
     );
 
     $effect(() => {
-        syncDiagramElements();
+        // Track only the inputs
+        if (!inputNodes || !inputEdges) {
+            return;
+        }
+        // Don't track the internal state writes
+        untrack(() => {
+            syncDiagramElements();
+        });
     });
 
     $effect(async () => {
@@ -105,6 +116,16 @@
         focusRequestedClassInDiagram();
     });
 
+    $effect(() => {
+        editorState.selectedClassUUID.subscribe();
+        const selectedUUID = editorState.selectedClassUUID.getValue();
+        untrack(() => {
+            if (!selectedUUID) {
+                resetTemporaryFront();
+            }
+        });
+    });
+
     onMount(() => {
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
@@ -121,30 +142,68 @@
         );
     }
 
+    /**
+     * Initializes nodeOrder from inputNodes on first load.
+     * Sorts by position.z from the backend so persisted order is restored.
+     * No need to handle add/remove since the diagram reloads in those cases.
+     */
+    function syncNodeOrder(nextNodes) {
+        if (nodeOrder.length === 0) {
+            nodeOrder = [...nextNodes]
+                .sort((a, b) => (a.position?.z ?? 0) - (b.position?.z ?? 0))
+                .map(n => n.id);
+        }
+    }
+
+    function applyZIndicesFromOrder(diagramNodes) {
+        const zIndexLookup = new Map();
+        for (let i = 0; i < nodeOrder.length; i++) {
+            zIndexLookup.set(nodeOrder[i], i);
+        }
+        // Temporary front node gets a zIndex above all other nodes
+        const tempFrontZ = nodeOrder.length + 1;
+        return diagramNodes.map(node => ({
+            ...node,
+            zIndex:
+                node.id === temporaryFrontNodeId
+                    ? tempFrontZ
+                    : (zIndexLookup.get(node.id) ?? 0),
+        }));
+    }
+
+    function bringToFrontTemporarily(nodeId) {
+        if (temporaryFrontNodeId === nodeId) return;
+        temporaryFrontNodeId = nodeId;
+        nodes = applyZIndicesFromOrder(nodes);
+    }
+
+    function resetTemporaryFront() {
+        if (temporaryFrontNodeId === null) return;
+        temporaryFrontNodeId = null;
+        nodes = applyZIndicesFromOrder(nodes);
+    }
+
     function syncDiagramElements() {
         const nextNodes = syncDiagramNodes();
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
-        nodes = nextNodes;
+        syncNodeOrder(nextNodes);
+        nodes = applyZIndicesFromOrder(nextNodes);
         edges = buildDiagramEdges();
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
     function syncDiagramNodes() {
-        const nextNodes = [...inputNodes];
-        if (!shouldApplyPendingNewClassPlacement()) {
-            return nextNodes;
+        let nextNodes = [...inputNodes];
+        if (shouldApplyPendingNewClassPlacement()) {
+            const addedNode = findAddedNodeForPlacement(nextNodes);
+            if (addedNode) {
+                persistPendingNewClassPosition(addedNode);
+                nextNodes = placePendingNewClassNode(nextNodes, addedNode);
+                pendingNewClassPlacement = null;
+            }
         }
-
-        const addedNode = findAddedNodeForPlacement(nextNodes);
-        if (!addedNode) {
-            return nextNodes;
-        }
-
-        persistPendingNewClassPosition(addedNode);
-        const syncedNodes = placePendingNewClassNode(nextNodes, addedNode);
-        pendingNewClassPlacement = null;
-        return syncedNodes;
+        return nextNodes;
     }
 
     function shouldApplyPendingNewClassPlacement() {
@@ -212,12 +271,14 @@
     }
 
     function decorateEdgeForDiagram(edge) {
+        const decorated = { ...edge, zIndex: EDGE_Z_INDEX };
+
         if (!shouldOffsetInheritanceEdge(edge)) {
-            return edge;
+            return decorated;
         }
 
         return {
-            ...edge,
+            ...decorated,
             data: {
                 ...(edge.data || {}),
                 offsetEdge: true,
@@ -274,6 +335,7 @@
         }
 
         queueMicrotask(() => {
+            bringToFrontTemporarily(focusNode.id);
             svelteFlowAPI.svelteFlow.fitView({
                 nodes: [focusNode],
                 padding: 0.4,
@@ -294,6 +356,8 @@
         if (nodeClickEvent.node.type === "class") {
             const id = nodeClickEvent.node.id;
             console.log("selecting class: ", id);
+
+            bringToFrontTemporarily(id);
 
             if (!editorState.selectedClassUUID.getValue()) {
                 eventStack.executeNewestEvent(id);
@@ -383,12 +447,6 @@
             x: event.clientX,
             y: event.clientY,
         };
-        editorState.selectedClassUUID.updateValue(node.id);
-    }
-
-    function openNewClassDialog() {
-        showNewClassDialog = true;
-        closeContextMenus();
     }
 
     function handleClassCreated({
@@ -410,13 +468,87 @@
         };
     }
 
-    function openDeleteClassDialog() {
-        if (!contextMenuClass) {
-            return;
+    function handleMoveClass({ classUuid, direction }) {
+        const idx = nodeOrder.indexOf(classUuid);
+        if (idx === -1) return;
+
+        const next = [...nodeOrder];
+        let changedIds;
+
+        if (direction === "up") {
+            // Swap with the one above (higher zIndex)
+            if (idx >= next.length - 1) return;
+            [next[idx], next[idx + 1]] = [next[idx + 1], next[idx]];
+            changedIds = [next[idx], next[idx + 1]];
+        } else if (direction === "down") {
+            // Swap with the one below (lower zIndex)
+            if (idx <= 0) return;
+            [next[idx], next[idx - 1]] = [next[idx - 1], next[idx]];
+            changedIds = [next[idx], next[idx - 1]];
+        } else if (direction === "top") {
+            // Move to front: remove and append at end
+            if (idx >= next.length - 1) return;
+            const [removed] = next.splice(idx, 1);
+            next.push(removed);
+            // All indices from idx onward shifted
+            changedIds = next.slice(idx);
+        } else if (direction === "bottom") {
+            // Move to back: remove and prepend at start
+            if (idx <= 0) return;
+            const [removed] = next.splice(idx, 1);
+            next.unshift(removed);
+            // All indices up to and including original idx shifted
+            changedIds = next.slice(0, idx + 1);
         }
-        deleteClassTarget = contextMenuClass;
-        showDeleteClassDialog = true;
-        closeContextMenus();
+
+        nodeOrder = next;
+        nodes = applyZIndicesFromOrder(nodes);
+
+        persistNodeOrder(nodeOrder, changedIds);
+    }
+
+    function persistNodeOrder(order, changedIds) {
+        const classPositionDTOList = changedIds.map(id => {
+            const node = nodes.find(n => n.id === id);
+            return {
+                classUUID: id,
+                xPosition: node?.position.x ?? 0,
+                yPosition: node?.position.y ?? 0,
+                zPosition: order.indexOf(id),
+            };
+        });
+
+        bec.updateClassPositions(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            editorState.selectedPackageUUID.getValue(),
+            classPositionDTOList,
+        );
+    }
+
+    function moveToLayer(classUuid, layer) {
+        const currentIdx = nodeOrder.indexOf(classUuid);
+        if (currentIdx === -1 || currentIdx === layer) return;
+
+        const next = [...nodeOrder];
+        const [removed] = next.splice(currentIdx, 1);
+        next.splice(layer, 0, removed);
+
+        nodeOrder = next;
+        nodes = applyZIndicesFromOrder(nodes);
+    }
+
+    function handleSetLayer({ classUuid, layer }) {
+        moveToLayer(classUuid, layer);
+    }
+
+    function handlePersistLayer({ classUuid }) {
+        // nodeOrder is already updated by handleSetLayer
+        const currentIdx = nodeOrder.indexOf(classUuid);
+        if (currentIdx === -1) return;
+
+        // Persist all nodes since we don't know intermediate states
+        persistNodeOrder(nodeOrder, [...nodeOrder]);
     }
 
     function updateNodePositions(movedNodes) {
@@ -426,6 +558,7 @@
                 classUUID: node.id,
                 xPosition: node.position.x,
                 yPosition: node.position.y,
+                zPosition: node.zIndex ?? nodeOrder.indexOf(node.id),
             };
             classPositionDTOList.push(classPositionDTO);
         }
@@ -543,6 +676,7 @@
         onpaneclick={closeContextMenus}
         onpanecontextmenu={handlePaneContextMenu}
         onedgecontextmenu={handleEdgeContextMenu}
+        onnodedragstart={({ node }) => bringToFrontTemporarily(node.id)}
         onnodedragstop={handleNodeMove}
         selectionMode={"full"}
         connectionMode={"loose"}
@@ -557,28 +691,22 @@
     <SvelteFlowPaneContextMenu
         request={paneContextMenuRequest}
         disabled={isDatasetReadOnly}
-        onAddClass={openNewClassDialog}
+        lockedDatasetName={editorState.selectedDataset.getValue()}
+        lockedGraphUri={editorState.selectedGraph.getValue()}
+        onClassCreated={handleClassCreated}
         onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
         request={classContextMenuRequest}
         disabled={isDatasetReadOnly || !contextMenuClass}
-        onDeleteClass={openDeleteClassDialog}
+        {contextMenuClass}
+        datasetName={editorState.selectedDataset.getValue()}
+        graphUri={editorState.selectedGraph.getValue()}
+        {nodeOrder}
+        nodeCount={nodes.length}
         onClose={closeContextMenus}
+        onMoveClass={handleMoveClass}
+        onSetLayer={handleSetLayer}
+        onPersistLayer={handlePersistLayer}
     />
 </div>
-
-<NewClassDialog
-    bind:showDialog={showNewClassDialog}
-    lockedDatasetName={editorState.selectedDataset.getValue()}
-    lockedGraphUri={editorState.selectedGraph.getValue()}
-    onClassCreated={handleClassCreated}
-/>
-
-<DeleteClassConfirmDialog
-    bind:showDialog={showDeleteClassDialog}
-    datasetName={editorState.selectedDataset.getValue()}
-    graphUri={editorState.selectedGraph.getValue()}
-    classUuid={deleteClassTarget?.uuid}
-    classLabel={deleteClassTarget?.label}
-/>
