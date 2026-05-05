@@ -129,7 +129,7 @@
     {readonly}
     title={isNewAssociation
         ? "Create new association"
-        : `Edit association: '${association.label.backup}' to '${association.inverse.label.backup}'`}
+        : `Edit association: '${association?.label.backup}' to '${association?.inverse.label.backup}'`}
 >
     {#if association}
         <div
