@@ -95,7 +95,6 @@ public class QueryGraphService
                         .setOrder()
                         .setDistinct()
                         .setType(RDFS.Class)
-                        .addWhereThisNotExists(RDF.type.getURI(), CIMS.classCategory.getURI())
                         .build();
         var query =
                 new CIMQueryBuilder(baseQuery)

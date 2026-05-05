@@ -40,7 +40,9 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogService;
@@ -115,6 +117,48 @@ class UpdateClassServiceTest {
                                     RDFS.label.asNode(),
                                     new RDFSLabel("newClass", "en").asLangLiteral().asNode()))
                     .isTrue();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void addClass_packageWithSameIriExists_throwsConflict() {
+        var packageUri = PREFIX + "packageCollision";
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.WRITE);
+            graph.add(
+                    NodeFactory.createURI(packageUri),
+                    RDF.type.asNode(),
+                    CIMS.classCategory.asNode());
+            graph.commit();
+        } finally {
+            graph.end();
+        }
+
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix(PREFIX)
+                        .label("default")
+                        .build();
+
+        assertThatThrownBy(
+                        () ->
+                                updateClassService.addClass(
+                                        graphIdentifier, packageDTO, PREFIX, "packageCollision"))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("package with the same IRI");
+
+        try {
+            graph.begin(TxnType.READ);
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(packageUri),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isFalse();
         } finally {
             graph.end();
         }

@@ -20,12 +20,14 @@ package org.rdfarchitect.services.update.classes;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.TxnType;
+import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -33,6 +35,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
@@ -63,6 +66,7 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
+            assertNoPackageWithSameIri(graph, cimClass);
             CIMUpdates.replaceClass(
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
@@ -96,6 +100,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
 
             var newClass = constructClass(cimPackage, classURIPrefix, className);
+            assertNoPackageWithSameIri(graph, newClass);
             newClassUUID =
                     CIMUpdates.insertClass(
                             graph,
@@ -132,6 +137,16 @@ public class UpdateClassService
                             cimPackage.getUri(), cimPackage.getLabel(), cimPackage.getUuid()));
         }
         return cimClass.build();
+    }
+
+    private void assertNoPackageWithSameIri(GraphRewindableWithUUIDs graph, CIMClass newClass) {
+        var classUri = newClass.getUri().toNode();
+        if (graph.contains(classUri, RDF.type.asNode(), CIMS.classCategory.asNode())) {
+            throw new ResourceConflictException(
+                    "Cannot save class "
+                            + newClass.getUri()
+                            + " because a package with the same IRI already exists.");
+        }
     }
 
     @Override
