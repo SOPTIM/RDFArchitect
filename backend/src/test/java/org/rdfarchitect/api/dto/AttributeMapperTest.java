@@ -238,14 +238,14 @@ class AttributeMapperTest {
                                             new CIMSIsFixed(
                                                     "FixedValue",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                                                            "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
                             assertThat(mappedCIMAttribute.getDefaultValue())
                                     .isEqualTo(
                                             new CIMSIsDefault(
                                                     "DefaultValue",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))));
+                                                            "http://www.w3.org/2001/XMLSchema#string"))));
         }
 
         @Test
