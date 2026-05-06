@@ -59,8 +59,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         if (cimAttribute.getUuid() == null) {
             cimAttribute.setUuid(UUID.randomUUID());
         }
-        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
-        var graphUri = graphIdentifier.getGraphUri();
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var graphUri = graphIdentifier.graphUri();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.WRITE);
@@ -91,8 +91,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     @Override
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
-        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
-        var graphUri = graphIdentifier.getGraphUri();
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var graphUri = graphIdentifier.graphUri();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.WRITE);
@@ -117,8 +117,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public void replaceAllAttributes(
             GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
-        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
-        var graphUri = graphIdentifier.getGraphUri();
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var graphUri = graphIdentifier.graphUri();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
             graph.begin(TxnType.WRITE);

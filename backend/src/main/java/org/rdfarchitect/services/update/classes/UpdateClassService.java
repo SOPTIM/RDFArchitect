@@ -82,7 +82,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
             CIMUpdates.replaceClass(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     classMapper.toCIMObject(newClass),
                     newValuesAsBlankNode);
             graph.commit();
