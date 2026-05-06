@@ -205,7 +205,10 @@
                 );
                 editorState.selectedDataset.updateValue(ds);
                 editorState.selectedGraph.updateValue(graph);
-                editorState.selectedDiagram.updateValue({ type: DiagramType.PACKAGE, id: uuid });
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.PACKAGE,
+                    id: uuid,
+                });
             });
         promise
             .catch(e => {

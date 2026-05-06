@@ -18,7 +18,7 @@
 <script>
     import {
         faCaretDown,
-        faCaretRight
+        faCaretRight,
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
@@ -48,7 +48,7 @@
     const badgeClassMap = {
         default: "",
         external: "nav-entry__badge--external",
-        readonly: "nav-entry__badge--readonly"
+        readonly: "nav-entry__badge--readonly",
     };
 
     let clickTimeout;
@@ -58,7 +58,10 @@
             event.preventDefault();
             return;
         }
-        if (event.target.type === "checkbox" || event.target.closest("[role=\"checkbox\"]")) {
+        if (
+            event.target.type === "checkbox" ||
+            event.target.closest('[role="checkbox"]')
+        ) {
             return;
         }
 

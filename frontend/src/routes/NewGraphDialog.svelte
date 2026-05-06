@@ -26,7 +26,7 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
 
     let { showDialog = $bindable(), lockedDatasetName } = $props();
@@ -128,7 +128,10 @@
             if (res.ok) {
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({ type: DiagramType.PACKAGE, id: "default" });
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.PACKAGE,
+                    id: "default",
+                });
                 editorState.selectedClassUUID.updateValue(null);
             } else {
                 console.log("failed to create graph");

@@ -29,7 +29,7 @@
     let {
         graph = $bindable(),
         packages = $bindable(),
-        classesByPackage
+        classesByPackage,
     } = $props();
 
     let graphIcon = $derived(graph.showContents ? faFolderOpen : faFolder);

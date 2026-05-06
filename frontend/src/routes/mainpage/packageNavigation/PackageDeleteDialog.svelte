@@ -39,7 +39,10 @@
                 console.error("Failed to delete package");
             }
             if (editorState.selectedDiagram.getProperty("id") === pack.uuid) {
-                editorState.selectedDiagram.updateValue({ type: null, id: null });
+                editorState.selectedDiagram.updateValue({
+                    type: null,
+                    id: null,
+                });
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);

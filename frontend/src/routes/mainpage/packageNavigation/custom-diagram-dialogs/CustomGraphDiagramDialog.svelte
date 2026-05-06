@@ -26,13 +26,13 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
     import {
         createPackageListForGraph,
-        createClassListForGraph
+        createClassListForGraph,
     } from "./customDiagramDialogUtils.js";
     import PackageSelectSection from "./PackageSelectSection.svelte";
 
@@ -43,7 +43,7 @@
         diagramName = "",
         diagramId = crypto.randomUUID(),
         selectedClasses = [],
-        allDiagrams
+        allDiagrams,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -56,12 +56,12 @@
     async function onOpen() {
         packages = await createPackageListForGraph(
             lockedDatasetName,
-            lockedGraphUri
+            lockedGraphUri,
         );
         classesByPackage = await createClassListForGraph(
             lockedDatasetName,
             lockedGraphUri,
-            selectedClasses
+            selectedClasses,
         );
         initializePackageSelectionState();
     }
@@ -102,12 +102,12 @@
             .filter(cls => cls.selected === true)
             .map(cls => ({
                 uuid: cls.uuid,
-                graphUri: lockedGraphUri
+                graphUri: lockedGraphUri,
             }));
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
-            classes: selectedClassList
+            classes: selectedClassList,
         };
 
         try {
@@ -115,13 +115,16 @@
                 lockedDatasetName,
                 lockedGraphUri,
                 diagramId,
-                diagramData
+                diagramData,
             );
 
             if (res.ok) {
                 editorState.selectedDataset.updateValue(lockedDatasetName);
                 editorState.selectedGraph.updateValue(lockedGraphUri);
-                editorState.selectedDiagram.updateValue({ type: DiagramType.CUSTOM_DIAGRAM, id: diagramId });
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.CUSTOM_DIAGRAM,
+                    id: diagramId,
+                });
             } else {
                 console.error("Failed to save diagram");
             }

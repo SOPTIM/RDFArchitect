@@ -42,7 +42,10 @@
         if (pack !== "default" && !validate(pack)) {
             pack = await resolveIRI(dataset, graph, pack);
         }
-        editorState.selectedDiagram.updateValue({type: DiagramType.PACKAGE, id: pack});
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: pack,
+        });
     }
 
     async function resolveIRI(dataset, graph, iri) {

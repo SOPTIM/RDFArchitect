@@ -28,7 +28,7 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
@@ -48,9 +48,10 @@
     function selectSubject(searchResult) {
         editorState.selectedDataset.updateValue(searchResult.datasetName);
         editorState.selectedGraph.updateValue(searchResult.graphUri);
-        editorState.selectedDiagram.updateValue({ type:
-            DiagramType.PACKAGE, id: searchResult.packageUUID ?? "default",
-         });
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: searchResult.packageUUID ?? "default",
+        });
 
         if (searchResult.type === "CLASS") {
             editorState.selectedClassDataset.updateValue(
@@ -62,7 +63,10 @@
         } else if (searchResult.type === "PACKAGE") {
             editorState.selectedClassUUID.updateValue(null);
             editorState.focusedClassUUID.updateValue(null);
-            editorState.selectedDiagram.updateValue({ type: DiagramType.PACKAGE, id: searchResult.uuid });
+            editorState.selectedDiagram.updateValue({
+                type: DiagramType.PACKAGE,
+                id: searchResult.uuid,
+            });
         } else {
             editorState.selectedClassDataset.updateValue(
                 searchResult.datasetName,

@@ -30,7 +30,8 @@
     import {
         editorState,
         graphViewState,
-        forceReloadTrigger, DiagramType
+        forceReloadTrigger,
+        DiagramType,
     } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
@@ -55,7 +56,7 @@
     let diagramRequestKey = null;
     let showSvelteFlowEmptyState = $derived(
         renderingFormat === SVELTEFLOW_FORMAT &&
-        (response?.nodes?.length ?? 0) === 0
+            (response?.nodes?.length ?? 0) === 0,
     );
 
     $effect(async () => {
@@ -74,11 +75,13 @@
         const datasetName = editorState.selectedDataset.getValue();
         const graphUri = editorState.selectedGraph.getValue();
         const diagramId = editorState.selectedDiagram.getProperty("id");
-                const diagramType = editorState.selectedDiagram.getProperty("type");
+        const diagramType = editorState.selectedDiagram.getProperty("type");
+        const filter = graphViewState.filter.getValue();
+
         const nextDiagramRequestKey = getDiagramRequestKey(
             datasetName,
             graphUri,
-            packageUUID,
+            diagramId,
             filter,
         );
         const hasCurrentResponse = untrack(() => !!response);
@@ -92,13 +95,18 @@
 
         if (diagramId) {
             if (diagramType === DiagramType.CUSTOM_DIAGRAM) {
-                if (graph) {
+                if (graphUri) {
                     await fetchGraphDiagramRenderingData(diagramId);
                 } else {
                     await fetchDatasetDiagramRenderingData(diagramId);
                 }
             } else {
-                await fetchPackageRenderingData(diagramId);
+                await fetchPackageRenderingData(
+                    datasetName,
+                    graphUri,
+                    diagramId,
+                    filter,
+                );
             }
         } else {
             response = null;
@@ -108,15 +116,20 @@
         }
     });
 
-    async function fetchPackageRenderingData(packageUUID) {
-        const filter = graphViewState.filter.getValue();
+    async function fetchPackageRenderingData(
+        datasetName,
+        graphUri,
+        packageUUID,
+        filter,
+    ) {
         let graphFilter = {
             packageUUID,
             includeEnumEntries: filter.includeEnumEntries,
             includeAttributes: filter.includeAttributes,
             includeAssociations: filter.includeAssociations,
             includeInheritance: filter.includeInheritance,
-            includeRelationsToExternalPackages: filter.includeRelationsToExternalPackages,
+            includeRelationsToExternalPackages:
+                filter.includeRelationsToExternalPackages,
         };
 
         try {
@@ -151,7 +164,7 @@
         try {
             const res = await bec.getCustomDatasetDiagramRenderingData(
                 editorState.selectedDataset.getValue(),
-                diagramId
+                diagramId,
             );
 
             const responseText = await res.text();
@@ -176,7 +189,7 @@
             const res = await bec.getCustomGraphDiagramRenderingData(
                 editorState.selectedDataset.getValue(),
                 editorState.selectedGraph.getValue(),
-                diagramId
+                diagramId,
             );
 
             const responseText = await res.text();

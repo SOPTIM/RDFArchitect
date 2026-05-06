@@ -24,7 +24,8 @@
         faDatabase,
         faPenToSquare,
         faLock,
-        faDiagramProject, faPlus
+        faDiagramProject,
+        faPlus,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -161,8 +162,8 @@
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
-                showNewDiagramDialog = true;
-            }}
+                    showNewDiagramDialog = true;
+                }}
                 faIcon={faPlus}
             >
                 New Dataset Diagram

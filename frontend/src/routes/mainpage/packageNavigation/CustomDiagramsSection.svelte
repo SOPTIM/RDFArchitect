@@ -25,13 +25,13 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import {
         isSelectedDataset,
-        isSelectedGraph
+        isSelectedGraph,
     } from "./packageNavigationUtils.svelte.js";
 
     let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
@@ -46,14 +46,16 @@
     let isSelected = $derived(
         graphNavEntry
             ? isSelectedGraph(datasetNavEntry.id, graphNavEntry.id) &&
-            editorState.selectedDiagram.getProperty("type") === DiagramType.CUSTOM_DIAGRAM
+                  editorState.selectedDiagram.getProperty("type") ===
+                      DiagramType.CUSTOM_DIAGRAM
             : !editorState.selectedGraph.getValue() &&
-            isSelectedDataset(datasetNavEntry.id) &&
-            editorState.selectedDiagram.getProperty("type") === DiagramType.CUSTOM_DIAGRAM
+                  isSelectedDataset(datasetNavEntry.id) &&
+                  editorState.selectedDiagram.getProperty("type") ===
+                      DiagramType.CUSTOM_DIAGRAM,
     );
     let level = $derived(graphNavEntry ? 3 : 2);
     let label = $derived(
-        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams"
+        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams",
     );
 
     $effect(() => {
@@ -63,8 +65,7 @@
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        const selectedDiagramId =
-            editorState.selectedDiagram.getProperty("id");
+        const selectedDiagramId = editorState.selectedDiagram.getProperty("id");
 
         if (selectedDiagramId) {
             if (diagrams.some(d => d.diagramId === selectedDiagramId)) {
@@ -83,7 +84,7 @@
             if (graphNavEntry) {
                 diagramList = await getGraphDiagrams(
                     datasetNavEntry.id,
-                    graphNavEntry.id
+                    graphNavEntry.id,
                 );
             } else {
                 diagramList = await getDatasetDiagrams(datasetNavEntry.id);
@@ -92,38 +93,44 @@
             const selectedDiagramId =
                 editorState.selectedDiagram.getProperty("id");
 
-            diagrams = ensureProperDiagramExpansion(diagramList, previous, selectedDiagramId);
+            diagrams = ensureProperDiagramExpansion(
+                diagramList,
+                previous,
+                selectedDiagramId,
+            );
 
             //reset classes after potential removal
             classesByDiagram = {};
             const expandedDiagrams = diagrams.filter(d => d.showContents);
             await Promise.all(
-                expandedDiagrams.map(d => ensureClassesLoaded(d))
+                expandedDiagrams.map(d => ensureClassesLoaded(d)),
             );
         } catch (err) {
             console.error("Failed to load diagrams:", err);
         }
     }
 
-    function ensureProperDiagramExpansion(diagramList, previous, selectedDiagramId) {
+    function ensureProperDiagramExpansion(
+        diagramList,
+        previous,
+        selectedDiagramId,
+    ) {
         return diagramList.map(diagram => {
-            const prev = previous.find(
-                p => diagram.diagramId === p.diagramId
-            );
+            const prev = previous.find(p => diagram.diagramId === p.diagramId);
             const keepExpanded = prev?.showContents ?? false;
             const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
             const isSelected = graphNavEntry
                 ? isSelectedGraph(datasetNavEntry, graphNavEntry) &&
-                selectedDiagramId === diagram.diagramId
+                  selectedDiagramId === diagram.diagramId
                 : isSelectedDataset(datasetNavEntry) &&
-                selectedDiagramId === diagram.diagramId;
+                  selectedDiagramId === diagram.diagramId;
 
             return {
                 ...diagram,
                 userCollapsed,
                 showContents: userCollapsed
                     ? false
-                    : keepExpanded || isSelected
+                    : keepExpanded || isSelected,
             };
         });
     }
@@ -138,8 +145,8 @@
             classes = graphNavEntry.children
                 .map(pack =>
                     pack.children.filter(cls =>
-                        diagram.classes.some(dc => dc.uuid === cls.id)
-                    )
+                        diagram.classes.some(dc => dc.uuid === cls.id),
+                    ),
                 )
                 .flat();
         } else {
@@ -147,8 +154,8 @@
                 let classesInGraph = graph.children
                     .map(pack =>
                         pack.children.filter(cls =>
-                            diagram.classes.some(dc => dc.uuid === cls.id)
-                        )
+                            diagram.classes.some(dc => dc.uuid === cls.id),
+                        ),
                     )
                     .flat();
 

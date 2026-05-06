@@ -60,7 +60,10 @@
                 console.log("successfully deleted data");
                 editorState.selectedDataset.updateValue(null);
                 editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({ type: null, id: null });
+                editorState.selectedDiagram.updateValue({
+                    type: null,
+                    id: null,
+                });
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);

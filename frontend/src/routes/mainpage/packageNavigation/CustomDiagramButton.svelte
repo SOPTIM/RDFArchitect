@@ -92,7 +92,10 @@
         editorState.selectedGraph.updateValue(
             graphNavEntry ? graphNavEntry.id : null,
         );
-        editorState.selectedDiagram.updateValue({ type: DiagramType.CUSTOM_DIAGRAM, id: diagram.diagramId });
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CUSTOM_DIAGRAM,
+            id: diagram.diagramId,
+        });
     }
 </script>
 

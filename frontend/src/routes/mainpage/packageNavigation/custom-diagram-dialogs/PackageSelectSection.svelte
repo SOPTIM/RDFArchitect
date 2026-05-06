@@ -24,11 +24,7 @@
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
 
-    let {
-        pack = $bindable(),
-        classes,
-        level = 1
-    } = $props();
+    let { pack = $bindable(), classes, level = 1 } = $props();
 
     let packageIcon = $derived(pack.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(classes?.length > 0);

@@ -23,7 +23,7 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         forceReloadTrigger,
-        editorState
+        editorState,
     } from "$lib/sharedState.svelte.js";
 
     let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
@@ -32,13 +32,30 @@
 
     async function deleteCustomDiagram() {
         try {
-            const res = graphUri ?
-                await bec.deleteCustomGraphDiagram(datasetName, graphUri, diagram.diagramId) : await bec.deleteCustomDatasetDiagram(datasetName, diagram.diagramId);
+            const res = graphUri
+                ? await bec.deleteCustomGraphDiagram(
+                      datasetName,
+                      graphUri,
+                      diagram.diagramId,
+                  )
+                : await bec.deleteCustomDatasetDiagram(
+                      datasetName,
+                      diagram.diagramId,
+                  );
             if (!res.ok) {
-                console.error("Failed to delete custom diagram", await res.text());
+                console.error(
+                    "Failed to delete custom diagram",
+                    await res.text(),
+                );
             }
-            if (editorState.selectedDiagram.getProperty("id") === diagram.diagramId) {
-                editorState.selectedDiagram.updateValue({ type: null, id: null });
+            if (
+                editorState.selectedDiagram.getProperty("id") ===
+                diagram.diagramId
+            ) {
+                editorState.selectedDiagram.updateValue({
+                    type: null,
+                    id: null,
+                });
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);

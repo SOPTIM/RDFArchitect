@@ -34,7 +34,7 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
 
@@ -238,9 +238,10 @@
                 });
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({ type:
-                    DiagramType.PACKAGE, id: selectedPackageUUID,
-                 });
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.PACKAGE,
+                    id: selectedPackageUUID,
+                });
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);
                 editorState.selectedClassUUID.updateValue(uuid);

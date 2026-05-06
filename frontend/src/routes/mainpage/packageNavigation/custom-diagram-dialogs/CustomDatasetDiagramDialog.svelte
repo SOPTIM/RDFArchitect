@@ -26,13 +26,13 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
         createClassListForGraph,
-        createPackageListForGraph
+        createPackageListForGraph,
     } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
 
@@ -42,7 +42,7 @@
         diagramName = "",
         diagramId = crypto.randomUUID(),
         selectedClasses = [],
-        allDiagrams = []
+        allDiagrams = [],
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -79,7 +79,7 @@
                     return {
                         ...graph,
                         selected: false,
-                        expanded: false
+                        expanded: false,
                     };
                 })
                 .sort((a, b) => getUri(a).localeCompare(getUri(b)));
@@ -94,7 +94,7 @@
             const graphUri = getUri(graph);
             packagesByGraph[graphUri] = await createPackageListForGraph(
                 lockedDatasetName,
-                graphUri
+                graphUri,
             );
         }
     }
@@ -108,9 +108,9 @@
                 result[graphUri] = await createClassListForGraph(
                     lockedDatasetName,
                     graphUri,
-                    selectedClasses
+                    selectedClasses,
                 );
-            })
+            }),
         );
 
         classesByPackageAndGraph = result;
@@ -126,9 +126,9 @@
                 graphPackages.forEach(pack => (pack.selected = newState));
 
                 Object.values(packages).forEach(classes =>
-                    classes.forEach(cls => (cls.selected = newState))
+                    classes.forEach(cls => (cls.selected = newState)),
                 );
-            }
+            },
         );
     }
 
@@ -157,34 +157,37 @@
 
     async function submitDiagramClasses() {
         const selectedClassList = Object.entries(
-            classesByPackageAndGraph
+            classesByPackageAndGraph,
         ).flatMap(([graphUri, packages]) =>
             Object.values(packages)
                 .flat()
                 .filter(cls => cls.selected === true)
                 .map(cls => ({
                     uuid: cls.uuid,
-                    graphUri: graphUri
-                }))
+                    graphUri: graphUri,
+                })),
         );
 
         const diagramData = {
             diagramId: diagramId,
             name: diagramName,
-            classes: selectedClassList
+            classes: selectedClassList,
         };
 
         try {
             const res = await bec.putCustomDatasetDiagram(
                 lockedDatasetName,
                 diagramId,
-                diagramData
+                diagramData,
             );
 
             if (res.ok) {
                 editorState.selectedDataset.updateValue(lockedDatasetName);
                 editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({ type: DiagramType.CUSTOM_DIAGRAM, id: diagramId });
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.CUSTOM_DIAGRAM,
+                    id: diagramId,
+                });
             } else {
                 console.error("Failed to save diagram");
             }

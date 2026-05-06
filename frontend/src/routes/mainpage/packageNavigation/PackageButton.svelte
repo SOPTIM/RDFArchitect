@@ -110,7 +110,10 @@
     function selectPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedDiagram.updateValue({ type: DiagramType.PACKAGE, id: packageNavEntry.id });
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: packageNavEntry.id,
+        });
         console.log(editorState.selectedDiagram.getValue());
     }
 </script>

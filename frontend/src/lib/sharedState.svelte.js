@@ -57,7 +57,7 @@ export const editorState = {
     selectedDataset: new StateValuePair(),
     selectedGraph: new StateValuePair(),
     //can either be a package uuid or a custom diagram uuid
-    selectedDiagram: new StateObjectPair({type: null, id: null}),
+    selectedDiagram: new StateObjectPair({ type: null, id: null }),
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),

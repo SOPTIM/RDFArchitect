@@ -18,7 +18,7 @@
 <script>
     import {
         faDiagramProject,
-        faRightLeft
+        faRightLeft,
     } from "@fortawesome/free-solid-svg-icons";
     import {
         faFileExport,
@@ -32,7 +32,7 @@
         faEye,
         faRotateLeft,
         faRotateRight,
-        faGear
+        faGear,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -40,7 +40,7 @@
         undo,
         fetchCanUndo,
         redo,
-        fetchCanRedo
+        fetchCanRedo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -48,7 +48,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -72,7 +72,7 @@
         datasetNavEntry,
         graphNavEntry,
         namespaces = [],
-        readonly = false
+        readonly = false,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -94,11 +94,11 @@
     let wasGraphSelected = false;
 
     let graphHighlightLabel = $derived(
-        shortenIri(namespaces, graphNavEntry.id)
+        shortenIri(namespaces, graphNavEntry.id),
     );
 
     const isGraphSelected = $derived(
-        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)
+        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
     );
     $effect(() => {
         if (isGraphSelected && !wasGraphSelected) {
@@ -121,7 +121,7 @@
     async function getOntology() {
         const res = await bec.getOntology(
             datasetNavEntry.label,
-            graphNavEntry.id
+            graphNavEntry.id,
         );
         let content = await res.text();
         if (!content) {
@@ -175,8 +175,8 @@
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
-                showNewDiagramDialog = true;
-            }}
+                    showNewDiagramDialog = true;
+                }}
                 faIcon={faPlus}
             >
                 New Profile Diagram
