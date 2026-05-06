@@ -15,22 +15,21 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.services.delete;
 
-import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
+import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;
 
-public interface GetClassListUseCase {
+public interface DeleteResourcesUseCase {
 
     /**
-     * Gets the list of classes in the graph.
+     * Executes a list of delete requests on a specified graph.
      *
-     * @param graphIdentifier The graph to getClassDefinition.
-     * @param includeExternalClasses Whether to include external classes in the result.
-     * @return The list of classes in the graph.
+     * @param graphIdentifier The identifier of the graph where the change occurred.
+     * @param deleteRequests The List of deleteRequests.
      */
-    List<ClassUMLAdaptedDTO> getClassList(
-            GraphIdentifier graphIdentifier, boolean includeExternalClasses);
+    void executeDeleteRequests(
+            GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests);
 }

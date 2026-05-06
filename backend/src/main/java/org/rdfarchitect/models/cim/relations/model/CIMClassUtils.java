@@ -28,6 +28,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 @UtilityClass
@@ -61,11 +62,24 @@ public class CIMClassUtils {
      * @param classResource class resource to find deriving classes for
      * @return a set of directly deriving classes
      */
-    private Set<Resource> findDirectlyDerivingClasses(Resource classResource) {
+    public Set<Resource> findDirectlyDerivingClasses(Resource classResource) {
         var ontology = classResource.getModel();
         return ontology.listResourcesWithProperty(RDFS.subClassOf, classResource)
                 .mapWith(RDFNode::asResource)
                 .toSet();
+    }
+
+    /**
+     * Lists all directly deriving classes as a list.
+     *
+     * @param classResource class resource to find deriving classes for
+     * @return a list of directly deriving classes
+     */
+    public List<Resource> listDirectlyDerivingClasses(Resource classResource) {
+        return classResource
+                .getModel()
+                .listSubjectsWithProperty(RDFS.subClassOf, classResource)
+                .toList();
     }
 
     /**
