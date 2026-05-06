@@ -36,6 +36,7 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -71,7 +72,7 @@ class UpdateClassServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         var mockChangeLogService = mock(ChangeLogService.class);
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         updateClassService =

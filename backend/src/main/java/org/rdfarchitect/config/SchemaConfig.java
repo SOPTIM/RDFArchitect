@@ -23,6 +23,8 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +34,7 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "schema")
 public class SchemaConfig {
 
-    private List<String> stereotypes;
+    private List<String> stereotypes = new ArrayList<>();
 
-    private Map<String, String> namespaces;
+    private Map<String, String> namespaces = new HashMap<>();
 }
