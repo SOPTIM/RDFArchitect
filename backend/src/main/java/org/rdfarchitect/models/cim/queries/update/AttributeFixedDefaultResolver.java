@@ -37,7 +37,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.shacl.XSDDatatypeMapper;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -70,16 +69,6 @@ class AttributeFixedDefaultResolver {
             return;
         }
         resolveAttribute(ModelFactory.createModelForGraph(graph), attribute, newValuesAsBlankNode);
-    }
-
-    void resolve(Graph graph, List<CIMAttribute> attributes, boolean newValuesAsBlankNode) {
-        if (graph == null || attributes == null || attributes.isEmpty()) {
-            return;
-        }
-        var model = ModelFactory.createModelForGraph(graph);
-        for (var attribute : attributes) {
-            resolveAttribute(model, attribute, newValuesAsBlankNode);
-        }
     }
 
     private void resolveAttribute(
