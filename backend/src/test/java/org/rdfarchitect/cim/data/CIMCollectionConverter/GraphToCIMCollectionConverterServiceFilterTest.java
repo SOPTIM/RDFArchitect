@@ -43,7 +43,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-class GraphToCIMCollectionConverterImplFilterTest {
+class GraphToCIMCollectionConverterServiceFilterTest {
 
     private final InMemoryDatabase database = new InMemoryDatabaseImpl();
 
