@@ -108,7 +108,8 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                             CIMUpdates.replaceClass(
                                     graph,
                                     databasePort.getPrefixMapping(DATASET_NAME),
-                                    new CIMClassUMLAdapted(classRequired)));
+                                    new CIMClassUMLAdapted(classRequired),
+                                    false));
 
             // Assert
             try {
@@ -162,7 +163,8 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                             CIMUpdates.replaceClass(
                                     graph,
                                     databasePort.getPrefixMapping(DATASET_NAME),
-                                    new CIMClassUMLAdapted(classOptional)));
+                                    new CIMClassUMLAdapted(classOptional),
+                                    false));
 
             // Assert
             try {

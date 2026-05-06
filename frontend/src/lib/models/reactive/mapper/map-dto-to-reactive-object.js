@@ -88,6 +88,8 @@ function mapAttributeDtoToReactiveAttribute(attributeDto) {
         multiplicityUpperBound: multiplicity.upperBound,
         isDerived: attributeDto.isDerived,
         comment: attributeDto.comment,
+        fixedValue: attributeDto.fixedValue,
+        defaultValue: attributeDto.defaultValue,
         stereotypes: attributeDto.stereotypes,
     };
 }
