@@ -175,12 +175,14 @@ public class UpdateClassService
     @Override
     public UUID copyClass(
             GraphIdentifier graphIdentifier,
-            String classUUID,
+            UUID classUUID,
             GraphIdentifier targetGraphIdentifier,
             PackageDTO targetPackageDTO,
-            boolean copyAsAbstract) {
+            boolean copyAsAbstract,
+            boolean copyAttributes,
+            boolean copyAssociations) {
 
-        var cimClass = readSourceClass(graphIdentifier, classUUID);
+        var cimClass = readSourceClass(graphIdentifier, classUUID.toString());
 
         var label =
                 constructCopyLabel(
@@ -194,7 +196,7 @@ public class UpdateClassService
 
         var newClassUUID = insertClass(targetGraphIdentifier, newCimClass);
 
-        if (!copyAsAbstract) {
+        if (copyAttributes) {
             insertAttributes(targetGraphIdentifier, cimClass, newCimClass);
             insertEnumEntries(targetGraphIdentifier, cimClass, newCimClass);
         }
@@ -300,22 +302,21 @@ public class UpdateClassService
             CIMPackage cimPackage,
             RDFSLabel label,
             boolean copyAsAbstract) {
+        var stereotypes =
+                copyAsAbstract
+                        ? cimClass.getStereotypes().stream()
+                                .filter(
+                                        s ->
+                                                !s.getStereotype()
+                                                        .equals(CIMStereotypes.concreteString))
+                                .toList()
+                        : cimClass.getStereotypes();
         var newCimClass =
                 CIMClassUMLAdapted.builder()
                         .uri(new URI(cimClass.getUri().getPrefix() + label.getValue()))
                         .label(label)
                         .superClass(cimClass.getSuperClass())
-                        .stereotypes(
-                                copyAsAbstract
-                                        ? cimClass.getStereotypes().stream()
-                                                .filter(
-                                                        s ->
-                                                                !s.getStereotype()
-                                                                        .equals(
-                                                                                CIMStereotypes
-                                                                                        .concreteString))
-                                                .toList()
-                                        : cimClass.getStereotypes());
+                        .stereotypes(stereotypes);
         if (cimClass.getComment() != null) {
             newCimClass.comment(
                     new RDFSComment(
@@ -354,7 +355,7 @@ public class UpdateClassService
 
     private RDFSLabel constructCopyLabel(
             GraphRewindableWithUUIDs graph, String graphUri, RDFSLabel label) {
-        var baseValue = label.getValue() + " - Copy";
+        var baseValue = label.getValue();
 
         var exprFactory = new ExprFactory();
         var query =
@@ -376,6 +377,11 @@ public class UpdateClassService
             existingLabels.add(solution.getLiteral("label").getString());
         }
 
+        if (!existingLabels.contains(baseValue)) {
+            return new RDFSLabel(baseValue, label.getLang());
+        }
+
+        baseValue = label.getValue() + " - Copy";
         if (!existingLabels.contains(baseValue)) {
             return new RDFSLabel(baseValue, label.getLang());
         }

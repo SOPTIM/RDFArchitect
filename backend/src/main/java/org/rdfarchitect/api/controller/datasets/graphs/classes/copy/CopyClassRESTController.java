@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.packages.PackageDTO;
+import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.CopyClassUseCase;
@@ -35,6 +35,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/copy")
@@ -71,7 +73,7 @@ public class CopyClassRESTController {
                                     "Contains the information of the target where the class should be copied to. Also includes if the class should be copied only abstract or "
                                             + "fully.")
                     @RequestBody
-                    CopyClassRESTController.CopyClassRequest copyClassRequest) {
+                    CopyClassRequestDTO copyClassRequest) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" from \"{}\".",
                 datasetName,
@@ -84,17 +86,21 @@ public class CopyClassRESTController {
 
         var targetExtendedGraphURI =
                 expandURIUseCase.expandUri(
-                        copyClassRequest.targetDatasetName, copyClassRequest.targetGraphURI);
+                        copyClassRequest.getTargetDatasetName(),
+                        copyClassRequest.getTargetGraphURI());
         var targetGraphIdentifier =
-                new GraphIdentifier(copyClassRequest.targetDatasetName, targetExtendedGraphURI);
+                new GraphIdentifier(
+                        copyClassRequest.getTargetDatasetName(), targetExtendedGraphURI);
 
         var newClassUUID =
                 copyClassUseCase.copyClass(
                         graphIdentifier,
-                        classUUID,
+                        UUID.fromString(classUUID),
                         targetGraphIdentifier,
-                        copyClassRequest.targetPackage,
-                        copyClassRequest.copyAsAbstract);
+                        copyClassRequest.getTargetPackage(),
+                        copyClassRequest.isCopyAsAbstract(),
+                        copyClassRequest.isCopyAttributes(),
+                        copyClassRequest.isCopyAssociations());
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" to \"{}\".",
@@ -105,19 +111,4 @@ public class CopyClassRESTController {
 
         return newClassUUID.toString();
     }
-
-    /**
-     * Helper record, functions as DTO for accepting the necessary information for copying a class
-     *
-     * @param targetDatasetName the name of the dataset where the class should be copied to
-     * @param targetGraphURI the graph URI where the class should be copied to
-     * @param targetPackage the package where the class should be copied to
-     * @param copyAsAbstract if true, only the class itself will be copied, if false, all attributes
-     *     will also be copied
-     */
-    public record CopyClassRequest(
-            String targetDatasetName,
-            String targetGraphURI,
-            PackageDTO targetPackage,
-            boolean copyAsAbstract) {}
 }

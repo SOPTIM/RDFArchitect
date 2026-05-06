@@ -207,7 +207,13 @@ class UpdateClassServiceTest {
                         .build();
 
         updateClassService.copyClass(
-                graphIdentifier, CLASS_UUID, graphIdentifier, targetPackageDTO, false);
+                graphIdentifier,
+                UUID.fromString(CLASS_UUID),
+                graphIdentifier,
+                targetPackageDTO,
+                false,
+                true,
+                false);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
@@ -243,7 +249,13 @@ class UpdateClassServiceTest {
                         .build();
 
         updateClassService.copyClass(
-                graphIdentifier, CLASS_UUID, graphIdentifier, targetPackageDTO, true);
+                graphIdentifier,
+                UUID.fromString(CLASS_UUID),
+                graphIdentifier,
+                targetPackageDTO,
+                true,
+                false,
+                false);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {

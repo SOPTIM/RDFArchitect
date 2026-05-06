@@ -112,11 +112,7 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={copyClass}
-            faIcon={faCopy}
-            disabled={readonly}
-        >
+        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}>
             Copy
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />

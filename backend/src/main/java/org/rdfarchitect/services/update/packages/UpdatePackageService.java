@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.services.update.packages;
 
-import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
 
 import lombok.RequiredArgsConstructor;
@@ -156,8 +155,6 @@ public class UpdatePackageService
                 new CIMQueryBuilder(baseQuery)
                         .appendUUIDQuery(REQUIRED)
                         .appendLabelQuery(REQUIRED)
-                        .appendPackageQuery(OPTIONAL)
-                        .appendCommentQuery(OPTIONAL)
                         .build();
 
         var resultSet =
@@ -166,10 +163,11 @@ public class UpdatePackageService
                         query,
                         graphIdentifier.graphUri());
 
-        var cimPackageList = CIMObjectFactory.createCIMPackageList(resultSet);
-        if (cimPackageList.isEmpty()) {
+        if (!resultSet.hasNext()) {
             throw new DataAccessException("Package not found: " + packageUUID);
         }
-        return packageMapper.toDTO(cimPackageList.getFirst());
+
+        var cimPackage = CIMObjectFactory.createCIMPackage(resultSet.nextSolution());
+        return packageMapper.toDTO(cimPackage);
     }
 }

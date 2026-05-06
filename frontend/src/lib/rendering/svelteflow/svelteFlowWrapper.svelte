@@ -673,7 +673,7 @@
         onpaneclick={closeContextMenus}
         onpanecontextmenu={handlePaneContextMenu}
         onedgecontextmenu={handleEdgeContextMenu}
-        onnodedragstart={({ node }) => bringToFrontTemporarily(node.id)}
+        onnodedragstart={({ node }) => bringToFrontTemporarily(node?.id)}
         onnodedragstop={handleNodeMove}
         selectionMode={"full"}
         connectionMode={"loose"}

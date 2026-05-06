@@ -30,6 +30,8 @@ export async function saveCopyClass(
     graphURI,
     packageDTO,
     copyAbstract,
+    copyAttributes,
+    copyAssociations,
 ) {
     if (!copyState.classUUID || !copyState.graphURI || !copyState.datasetName)
         return false;
@@ -38,6 +40,8 @@ export async function saveCopyClass(
         targetGraphURI: graphURI,
         targetPackage: packageDTO,
         copyAsAbstract: copyAbstract,
+        copyAttributes: copyAttributes,
+        copyAssociations: copyAssociations,
     };
     try {
         const res = await bec.postCopyClass(

@@ -38,8 +38,10 @@ public interface CopyClassUseCase {
      */
     UUID copyClass(
             GraphIdentifier graphIdentifier,
-            String classUUID,
+            UUID classUUID,
             GraphIdentifier targetGraphIdentifier,
             PackageDTO targetPackageDTO,
-            boolean copyAsAbstract);
+            boolean copyAsAbstract,
+            boolean copyAttributes,
+            boolean copyAssociations);
 }
