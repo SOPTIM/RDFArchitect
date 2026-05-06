@@ -184,7 +184,7 @@ public class CIMUpdatesTestBase {
             var update = updateBuilder.apply(graph);
             var dataset =
                     org.rdfarchitect.database.inmemory.SessionDataStore.wrapGraphInDataset(
-                            graph, graphIdentifier.getGraphUri());
+                            graph, graphIdentifier.graphUri());
             org.apache.jena.update.UpdateExecutionFactory.create(update, dataset).execute();
             graph.commit();
         } finally {

@@ -63,7 +63,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, new UpdateRequest().add(update.build()), graphIdentifier.getGraphUri());
+                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -86,7 +86,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var toUUID = cimAssociationPair.getTo().getUuid();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, new UpdateRequest().add(update.build()), graphIdentifier.getGraphUri());
+                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -109,7 +109,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         cimAssociationPairs);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, new UpdateRequest().add(update.build()), graphIdentifier.getGraphUri());
+                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
