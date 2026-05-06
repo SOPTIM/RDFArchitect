@@ -56,7 +56,7 @@ class GraphToCIMCollectionConverterImplFilterTest {
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
     private static final String PATH =
-            "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverterImpl/";
+            "src/test/java/org/rdfarchitect/cim/data/CIMCollectionConverter/";
 
     @BeforeEach
     void setUp() {

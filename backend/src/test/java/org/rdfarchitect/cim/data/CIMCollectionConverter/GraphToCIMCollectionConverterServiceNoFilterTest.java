@@ -58,7 +58,7 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
     private static final String PATH =
-            "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverter/";
+            "src/test/java/org/rdfarchitect/cim/data/CIMCollectionConverter/";
 
     private static final String ENTSOE_RDFS_PATH =
             "../external/entsoe-application-profiles-library/CGMES/CurrentRelease/RDFS/";
@@ -145,12 +145,12 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         assertThat(cimCollection.getEnumEntries()).isEmpty();
 
         assertThat(cimCollection.getPackages()).hasSize(1);
-        assertThat(cimCollection.getPackages().iterator().next().getUri())
+        assertThat(cimCollection.getPackages().getFirst().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cim") + "Package_Infrastruktur"));
 
         assertThat(cimCollection.getClasses()).hasSize(1);
 
-        var cimClass = cimCollection.getClasses().iterator().next();
+        var cimClass = cimCollection.getClasses().getFirst();
         assertThat(cimClass.getUri()).isEqualTo(new URI(prefixMapping.get("cim") + "ChildClass"));
         assertThat(cimClass.getLabel()).isEqualTo(new RDFSLabel("ChildClass", "en"));
         assertThat(cimClass.getSuperClass()).isNull();
@@ -177,7 +177,7 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         assertThat(cimCollection.getClasses()).isEmpty();
 
         assertThat(cimCollection.getPackages()).hasSize(1);
-        assertThat(cimCollection.getPackages().iterator().next().getUri())
+        assertThat(cimCollection.getPackages().getFirst().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cim") + "Package_Infrastruktur"));
     }
 
@@ -274,7 +274,7 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
         assertThat(cimCollection.getClasses()).isEmpty();
 
         assertThat(cimCollection.getEnums()).hasSize(1);
-        var enumClass = cimCollection.getEnums().iterator().next();
+        var enumClass = cimCollection.getEnums().getFirst();
         assertThat(enumClass.getUri()).isEqualTo(new URI(prefixMapping.get("cim") + "EnumClass"));
         assertThat(enumClass.getLabel()).isEqualTo(new RDFSLabel("EnumClass", "en"));
         assertThat(enumClass.getSuperClass()).isNull();
