@@ -81,8 +81,6 @@ class UpdateClassServiceTest {
                         classMapper,
                         packageMapper,
                         mockChangeLogService,
-                        attributeMapper,
-                        enumEntryMapper,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService);

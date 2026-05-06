@@ -26,8 +26,6 @@ import org.apache.jena.query.TxnType;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
-import org.rdfarchitect.api.dto.attributes.AttributeMapper;
-import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -72,8 +70,6 @@ public class UpdateClassService
     private final ClassUMLAdaptedMapper classMapper;
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
-    private final AttributeMapper attributeMapper;
-    private final EnumEntryMapper enumEntryMapper;
 
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
