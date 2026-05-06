@@ -118,7 +118,7 @@
         editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
     }
 
-    function pasteClass(copyAbstract) {
+    function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
         let packageDTO = new Package({
             uuid: packageNavEntry.id,
             label: packageNavEntry.label,
@@ -129,6 +129,8 @@
             graphNavEntry.id,
             packageDTO,
             copyAbstract,
+            copyAttributes,
+            copyAssociations,
         );
     }
 </script>
@@ -163,20 +165,41 @@
             >
                 New Class
             </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={() => pasteClass(false)}
-                disabled={disablePasteButton}
-                faIcon={faPaste}
-            >
-                Paste class as duplicate
-            </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={() => pasteClass(true)}
-                disabled={disablePasteButton}
-                faIcon={faPaste}
-            >
-                Paste class as abstract
-            </ContextMenu.Item.Button>
+            <ContextMenu.SubMenu.Root>
+                <ContextMenu.SubMenu.Trigger faIcon={faPaste} disabled={false}>
+                    Paste
+                </ContextMenu.SubMenu.Trigger>
+                <ContextMenu.SubMenu.Content>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(false, true, true)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                    >
+                        Paste
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(false, false, true)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                    >
+                        Paste without attributes
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(false, true, false)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                    >
+                        Paste without associations
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(true, false, false)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                    >
+                        Paste bare
+                    </ContextMenu.Item.Button>
+                </ContextMenu.SubMenu.Content>
+            </ContextMenu.SubMenu.Root>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {

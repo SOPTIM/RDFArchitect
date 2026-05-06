@@ -50,11 +50,11 @@
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
     import PackageDeleteDialog from "../../mainpage/packageNavigation/PackageDeleteDialog.svelte";
+    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
 
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
 
@@ -99,6 +99,9 @@
     );
     let graphHasOntology = $derived(!!ontology);
 
+    let disableCopyClassButton = $derived(
+        !editorState.selectedClassUUID.getValue(),
+    );
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
             !hasGraphSelected ||
@@ -242,6 +245,18 @@
         await bec.disableEditing(datasetName);
     }
 
+    function copyClass() {
+        copyState.classUUID.updateValue(
+            editorState.selectedClassUUID.getValue(),
+        );
+        copyState.graphURI.updateValue(
+            editorState.selectedClassGraph.getValue(),
+        );
+        copyState.datasetName.updateValue(
+            editorState.selectedClassDataset.getValue(),
+        );
+    }
+
     function pasteClass(copyAsAbstract, copyAttributes, copyAssociations) {
         saveCopyClass(
             editorState.selectedDataset.getValue(),
@@ -308,7 +323,13 @@
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
-        <Menubar.Item.Button faIcon={faCopy}>Copy Class</Menubar.Item.Button>
+        <Menubar.Item.Button
+            onSelect={copyClass}
+            disabled={disableCopyClassButton}
+            faIcon={faCopy}
+        >
+            Copy Class
+        </Menubar.Item.Button>
         <Menubar.SubMenu.Root>
             <Menubar.SubMenu.Trigger faIcon={faPaste}>
                 Paste
@@ -326,21 +347,21 @@
                     disabled={disablePasteButton}
                     faIcon={faPaste}
                 >
-                    Paste without Attributes
+                    Paste without attributes
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(false, true, false)}
                     disabled={disablePasteButton}
                     faIcon={faPaste}
                 >
-                    Paste without Associations
+                    Paste without associations
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(true, false, false)}
                     disabled={disablePasteButton}
                     faIcon={faPaste}
                 >
-                    Paste Bare
+                    Paste bare
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
