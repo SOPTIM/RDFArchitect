@@ -27,8 +27,8 @@ public interface RemoveFromDiagramUseCase {
      * Removes a class from a specified custom diagram.
      *
      * @param graphIdentifier the graph of the custom diagram
-     * @param diagramId       the id of the custom diagram
-     * @param classId         the uuid of the class to remove from the custom diagram
+     * @param diagramId the id of the custom diagram
+     * @param classId the uuid of the class to remove from the custom diagram
      */
     void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId);
 
@@ -36,8 +36,8 @@ public interface RemoveFromDiagramUseCase {
      * Removes a class from a specified custom diagram.
      *
      * @param datasetName the dataset of the custom diagram
-     * @param diagramId   the id of the custom diagram
-     * @param classId     the uuid of the class to remove from the custom diagram
+     * @param diagramId the id of the custom diagram
+     * @param classId the uuid of the class to remove from the custom diagram
      */
     void removeFromDiagram(String datasetName, String diagramId, UUID classId);
 
@@ -45,7 +45,7 @@ public interface RemoveFromDiagramUseCase {
      * Removes a class from all diagrams
      *
      * @param graphIdentifier the graph of the custom diagram
-     * @param classId         the uuid of the class to be removed
+     * @param classId the uuid of the class to be removed
      */
     void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId);
 }

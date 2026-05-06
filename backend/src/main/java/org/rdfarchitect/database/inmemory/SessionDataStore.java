@@ -79,7 +79,6 @@ public interface SessionDataStore {
      * Get all {@link CustomDiagram} for a dataset.
      *
      * @param datasetName literal dataset name
-     *
      * @return map of custom diagrams belonging to the dataset
      */
     Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
@@ -88,7 +87,6 @@ public interface SessionDataStore {
      * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset
      *
      * @param datasetName literal dataset name
-     *
      * @return diagram layout for the dataset
      */
     DiagramLayout getDatasetDiagramLayout(String datasetName);

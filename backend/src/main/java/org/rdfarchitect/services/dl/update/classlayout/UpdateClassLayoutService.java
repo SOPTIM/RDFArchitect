@@ -88,19 +88,22 @@ public class UpdateClassLayoutService
     }
 
     @Override
-    public void updateClassPositions(String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
+    public void updateClassPositions(
+            String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList) {
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
         updateDiagramObjects(diagramUUID, classPositionDTOList, diagramLayoutModel);
     }
 
-    private void updateDiagramObjects(UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList, Model diagramLayoutModel) {
+    private void updateDiagramObjects(
+            UUID diagramUUID,
+            List<ClassPositionDTO> classPositionDTOList,
+            Model diagramLayoutModel) {
         for (var classPositionDTO : classPositionDTOList) {
-            var diagramObject = DLObjectFetcher.fetchDiagramDOForClass(
-                      diagramLayoutModel,
-                      diagramUUID,
-                      classPositionDTO.getClassUUID());
+            var diagramObject =
+                    DLObjectFetcher.fetchDiagramDOForClass(
+                            diagramLayoutModel, diagramUUID, classPositionDTO.getClassUUID());
 
             var doMRID = diagramObject.getMRID();
 

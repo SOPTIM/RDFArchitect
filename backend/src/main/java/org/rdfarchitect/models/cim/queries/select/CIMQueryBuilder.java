@@ -65,9 +65,10 @@ public class CIMQueryBuilder {
     }
 
     /**
-     * Constructor for the {@link CIMQueryBuilder}, provide a {@link SelectBuilder baseQuery} and a list of subject UUIDs
+     * Constructor for the {@link CIMQueryBuilder}, provide a {@link SelectBuilder baseQuery} and a
+     * list of subject UUIDs
      *
-     * @param baseQuery    {@link SelectBuilder}
+     * @param baseQuery {@link SelectBuilder}
      * @param subjectUUIDs List of UUIDs that the uuid variable can be assigned to
      */
     public CIMQueryBuilder(SelectBuilder baseQuery, List<String> subjectUUIDs) {

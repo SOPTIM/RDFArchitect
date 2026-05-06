@@ -18,7 +18,9 @@
 package org.rdfarchitect.api.controller.datasets.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
@@ -45,7 +47,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CustomDatasetDiagramsRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CustomDatasetDiagramsRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(CustomDatasetDiagramsRESTController.class);
 
     private final DiagramToCIMCollectionConverterUseCase converter;
 
@@ -57,63 +60,87 @@ public class CustomDatasetDiagramsRESTController {
 
     @GetMapping
     public RenderingDataDTO getDiagramRenderingData(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"", datasetName, diagramId, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
 
         var cimCollection = converter.convert(datasetName, diagramId);
 
-        var result = renderer.renderGlobalUML(cimCollection, datasetName, UUID.fromString(diagramId));
+        var result =
+                renderer.renderGlobalUML(cimCollection, datasetName, UUID.fromString(diagramId));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"", datasetName, diagramId, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
         return result;
     }
 
     @PutMapping
     public String replaceDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId,
-              @Parameter(description = "DTO for the diagram to be replaced.")
-              @RequestBody
-              CustomDiagram diagram) {
-        logger.info("Received PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"", datasetName, diagramId, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
+            @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
+                    CustomDiagram diagram) {
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
 
         replaceCustomDiagram.replaceCustomDiagram(datasetName, diagramId, diagram);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"", datasetName, diagramId, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
         return Response.SUCCESS;
     }
 
     @DeleteMapping
     public String deleteDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"", datasetName, diagramId, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
 
         deleteCustomDiagram.deleteCustomDiagram(datasetName, diagramId);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"", datasetName, diagramId, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
         return Response.SUCCESS;
     }
 }

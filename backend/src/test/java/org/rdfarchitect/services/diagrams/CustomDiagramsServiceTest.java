@@ -17,6 +17,10 @@
 
 package org.rdfarchitect.services.diagrams;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
@@ -30,10 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class CustomDiagramsServiceTest {
 
@@ -150,7 +150,8 @@ class CustomDiagramsServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        var classInDiagram = new ClassInDiagram(UUID.randomUUID(), new URI("http://example.org#graph"));
+        var classInDiagram =
+                new ClassInDiagram(UUID.randomUUID(), new URI("http://example.org#graph"));
 
         service.addToDiagram("dataset", diagramId.toString(), List.of(classInDiagram));
 
@@ -161,7 +162,8 @@ class CustomDiagramsServiceTest {
     void addToDiagram_nonExistingDatasetDiagram_doesNotFail() {
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(new ConcurrentHashMap<>());
 
-        assertDoesNotThrow(() -> service.addToDiagram("dataset", UUID.randomUUID().toString(), List.of()));
+        assertDoesNotThrow(
+                () -> service.addToDiagram("dataset", UUID.randomUUID().toString(), List.of()));
     }
 
     @Test

@@ -63,8 +63,8 @@ public class GraphWithContextCollection {
 
     @Getter
     private final ConcurrentMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
-    @Getter
-    private final DiagramLayout diagramLayout = new DiagramLayout();
+
+    @Getter private final DiagramLayout diagramLayout = new DiagramLayout();
 
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();

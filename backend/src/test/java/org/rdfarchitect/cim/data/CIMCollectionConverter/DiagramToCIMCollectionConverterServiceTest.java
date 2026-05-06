@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,9 +40,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 class DiagramToCIMCollectionConverterServiceTest {
 
@@ -72,12 +72,10 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         var graph = mockGraph(map);
 
-        when(databasePort.getGraphWithContext(graphIdentifier))
-                  .thenReturn(graph);
+        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
         var expected = new CIMCollection();
-        when(converter.convert(eq(graphIdentifier), any()))
-                  .thenReturn(expected);
+        when(converter.convert(eq(graphIdentifier), any())).thenReturn(expected);
 
         var result = service.convert(graphIdentifier, diagramId.toString());
 
@@ -89,10 +87,8 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         var filter = captor.getValue();
         assertThat(filter.getAllowedUUIDs())
-                  .containsExactlyInAnyOrder(
-                            class1.getUuid().toString(),
-                            class2.getUuid().toString()
-                                            );
+                .containsExactlyInAnyOrder(
+                        class1.getUuid().toString(), class2.getUuid().toString());
         assertThat(filter.isIncludeRelationsToExternalPackages()).isFalse();
     }
 
@@ -101,14 +97,12 @@ class DiagramToCIMCollectionConverterServiceTest {
         var diagramId = UUID.randomUUID();
         var emptyDiagrams = new ConcurrentHashMap<UUID, CustomDiagram>();
 
-        when(databasePort.getDatasetDiagrams("dataset"))
-                  .thenReturn(emptyDiagrams);
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(emptyDiagrams);
 
         var idString = diagramId.toString();
-        assertThatThrownBy(() ->
-                                     service.convert("dataset", idString))
-                  .isInstanceOf(IllegalArgumentException.class)
-                  .hasMessageContaining("Diagram with ID");
+        assertThatThrownBy(() -> service.convert("dataset", idString))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Diagram with ID");
     }
 
     @Test
@@ -125,8 +119,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset"))
-                  .thenReturn(map);
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
         var cimClass1 = createTestClass("TestClass1");
         var cimClass2 = createTestClass("TestClass2");
@@ -135,8 +128,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         partial.getClasses().add(cimClass1);
         partial.getClasses().add(cimClass2);
 
-        when(converter.convert(any(), any()))
-                  .thenReturn(partial);
+        when(converter.convert(any(), any())).thenReturn(partial);
 
         var result = service.convert("dataset", diagramId.toString());
 
@@ -159,8 +151,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset"))
-                  .thenReturn(map);
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
         var cimClassA = createTestClass("ClassA");
         var cimClassB = createTestClass("ClassB");
@@ -171,13 +162,11 @@ class DiagramToCIMCollectionConverterServiceTest {
         var partial2 = new CIMCollection();
         partial2.getClasses().add(cimClassB);
 
-        when(converter.convert(any(), any()))
-                  .thenReturn(partial1, partial2);
+        when(converter.convert(any(), any())).thenReturn(partial1, partial2);
 
         var result = service.convert("dataset", diagramId.toString());
 
-        assertThat(result.getClasses())
-                  .containsExactlyInAnyOrder(cimClassA, cimClassB);
+        assertThat(result.getClasses()).containsExactlyInAnyOrder(cimClassA, cimClassB);
 
         verify(converter, times(2)).convert(any(), any());
     }
@@ -189,44 +178,39 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
-        diagram.setClasses(List.of(
-                  new ClassInDiagram(UUID.randomUUID(), uri1),
-                  new ClassInDiagram(UUID.randomUUID(), uri2)
-                                  ));
+        diagram.setClasses(
+                List.of(
+                        new ClassInDiagram(UUID.randomUUID(), uri1),
+                        new ClassInDiagram(UUID.randomUUID(), uri2)));
 
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset"))
-                  .thenReturn(map);
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        when(converter.convert(any(), any()))
-                  .thenReturn(new CIMCollection());
+        when(converter.convert(any(), any())).thenReturn(new CIMCollection());
 
         service.convert("dataset", diagramId.toString());
 
-        ArgumentCaptor<GraphIdentifier> captor =
-                  ArgumentCaptor.forClass(GraphIdentifier.class);
+        ArgumentCaptor<GraphIdentifier> captor = ArgumentCaptor.forClass(GraphIdentifier.class);
 
-        verify(converter, times(2))
-                  .convert(captor.capture(), any());
+        verify(converter, times(2)).convert(captor.capture(), any());
 
         var identifiers = captor.getAllValues();
 
         assertThat(identifiers)
-                  .extracting(GraphIdentifier::getGraphUri)
-                  .containsExactlyInAnyOrder("http://example.org#graph1", "http://example.org#graph2");
+                .extracting(GraphIdentifier::getGraphUri)
+                .containsExactlyInAnyOrder(
+                        "http://example.org#graph1", "http://example.org#graph2");
     }
 
     @Test
     void convert_datasetDiagramNotFound_throwsIllegalArgumentException() {
-        when(databasePort.getDatasetDiagrams("dataset"))
-                  .thenReturn(new ConcurrentHashMap<>());
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(new ConcurrentHashMap<>());
 
         var id = UUID.randomUUID().toString();
-        assertThatThrownBy(() ->
-                                     service.convert("dataset", id))
-                  .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.convert("dataset", id))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -238,8 +222,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        when(databasePort.getDatasetDiagrams("dataset"))
-                  .thenReturn(map);
+        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
         var result = service.convert("dataset", diagramId.toString());
 
@@ -249,9 +232,8 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     @Test
     void convert_invalidUUID_throwsIllegalArgumentException() {
-        assertThatThrownBy(() ->
-                                     service.convert("dataset", "not-a-uuid"))
-                  .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.convert("dataset", "not-a-uuid"))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private GraphWithContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
@@ -262,9 +244,9 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     private CIMClass createTestClass(String label) {
         return CIMClass.builder()
-                       .uuid(UUID.randomUUID())
-                       .uri(new URI("http://example.org#" + label))
-                       .label(new RDFSLabel(label))
-                       .build();
+                .uuid(UUID.randomUUID())
+                .uri(new URI("http://example.org#" + label))
+                .label(new RDFSLabel(label))
+                .build();
     }
 }

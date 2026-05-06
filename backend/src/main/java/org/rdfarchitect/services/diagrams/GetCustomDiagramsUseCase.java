@@ -28,18 +28,15 @@ public interface GetCustomDiagramsUseCase {
      * Lists the custom diagrams belonging to a single graph.
      *
      * @param graphIdentifier The graph identifier.
-     *
      * @return The custom diagrams for the graph.
      */
     List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
 
-     /**
+    /**
      * Lists the custom diagrams belonging to a single dataset.
      *
      * @param datasetName The name of the dataset.
-     *
      * @return The custom diagrams for the dataset.
      */
     List<CustomDiagram> getCustomDiagramsForDataset(String datasetName);
-
 }

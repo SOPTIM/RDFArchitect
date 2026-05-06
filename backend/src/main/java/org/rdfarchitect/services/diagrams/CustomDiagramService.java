@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.diagrams;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -30,13 +31,23 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCustomDiagramUseCase, DeleteCustomDiagramUseCase, AddToDiagramUseCase, RemoveFromDiagramUseCase {
+public class CustomDiagramService
+        implements GetCustomDiagramsUseCase,
+                ReplaceCustomDiagramUseCase,
+                DeleteCustomDiagramUseCase,
+                AddToDiagramUseCase,
+                RemoveFromDiagramUseCase {
 
     private final DatabasePort databasePort;
 
     @Override
     public List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
-        return databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values().stream().toList();
+        return databasePort
+                .getGraphWithContext(graphIdentifier)
+                .getCustomDiagrams()
+                .values()
+                .stream()
+                .toList();
     }
 
     @Override
@@ -54,7 +65,11 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
     public void replaceCustomDiagram(String datasetName, String diagramId, CustomDiagram diagram) {
         if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
             throw new IllegalArgumentException(
-                      "Diagram ID mismatch: URL parameter '" + diagramId + "' does not match diagram object ID '" + diagram.getDiagramId() + "'");
+                    "Diagram ID mismatch: URL parameter '"
+                            + diagramId
+                            + "' does not match diagram object ID '"
+                            + diagram.getDiagramId()
+                            + "'");
         }
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.put(UUID.fromString(diagramId), diagram);
@@ -86,17 +101,23 @@ public class CustomDiagramService implements GetCustomDiagramsUseCase, ReplaceCu
     }
 
     @Override
-    public void replaceCustomDiagram(GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram) {
+    public void replaceCustomDiagram(
+            GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram) {
         if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
             throw new IllegalArgumentException(
-                      "Diagram ID mismatch: URL parameter '" + diagramId + "' does not match diagram object ID '" + diagram.getDiagramId() + "'");
+                    "Diagram ID mismatch: URL parameter '"
+                            + diagramId
+                            + "' does not match diagram object ID '"
+                            + diagram.getDiagramId()
+                            + "'");
         }
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         graphWithContext.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
     }
 
     @Override
-    public void addToDiagram(GraphIdentifier graphIdentifier, String diagramId, List<ClassInDiagram> classes) {
+    public void addToDiagram(
+            GraphIdentifier graphIdentifier, String diagramId, List<ClassInDiagram> classes) {
         var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
         var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
         if (diagram != null) {

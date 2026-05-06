@@ -59,38 +59,56 @@ public class ClassLayoutDataRESTController {
             tags = {"diagram", "layout", "class"})
     @PutMapping
     public String updateClassPositions(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The UUID of the package or custom diagram being updated.")
-              @PathVariable
-              String diagramUUID,
-              @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                        required = true,
-                        description = "The DTO with necessary information for class reposition",
-                        content = @Content(
-                                  array = @ArraySchema(schema = @Schema(implementation = ClassPositionDTO.class))
-                        ))
-              @RequestBody
-              List<ClassPositionDTO> classPositionDTOList) {
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The UUID of the package or custom diagram being updated.")
+                    @PathVariable
+                    String diagramUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The DTO with necessary information for class reposition",
+                            content =
+                                    @Content(
+                                            array =
+                                                    @ArraySchema(
+                                                            schema =
+                                                                    @Schema(
+                                                                            implementation =
+                                                                                    ClassPositionDTO
+                                                                                            .class))))
+                    @RequestBody
+                    List<ClassPositionDTO> classPositionDTOList) {
 
-        logger.info("Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".", datasetName, graphURI, diagramUUID, originURL);
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                diagramUUID,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var resolvedPackageUUID = !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
+        var resolvedPackageUUID =
+                !diagramUUID.equals("default") ? UUID.fromString(diagramUUID) : null;
 
         updateClassPositionsUseCase.updateClassPositions(
                 new GraphIdentifier(datasetName, extendedGraphURI),
                 resolvedPackageUUID,
                 classPositionDTOList);
 
-        logger.info("Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".", datasetName, graphURI, diagramUUID, originURL);
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/layout/{{}}/classes\" from \"{}\".",
+                datasetName,
+                graphURI,
+                diagramUUID,
+                originURL);
         return "success";
     }
 }

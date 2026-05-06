@@ -78,8 +78,16 @@ class UpdateClassServiceTest {
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         var mockCustomDiagramService = mock(CustomDiagramService.class);
         updateClassService =
-                  new UpdateClassService(databasePort, classMapper, packageMapper, mockChangeLogService, mockUpdateClassLayoutService, mockUpdateClassLayoutService,
-                                         mockUpdateClassLayoutService, false, mockCustomDiagramService);
+                new UpdateClassService(
+                        databasePort,
+                        classMapper,
+                        packageMapper,
+                        mockChangeLogService,
+                        mockUpdateClassLayoutService,
+                        mockUpdateClassLayoutService,
+                        mockUpdateClassLayoutService,
+                        false,
+                        mockCustomDiagramService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()

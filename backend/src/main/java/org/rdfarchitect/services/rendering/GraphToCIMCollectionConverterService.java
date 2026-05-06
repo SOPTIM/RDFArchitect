@@ -157,8 +157,12 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         }
     }
 
-    //classes
-    private void fetchClasses(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter, CIMCollection cimCollection) {
+    // classes
+    private void fetchClasses(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
         if (filter.getAllowedUUIDs() != null && !filter.getAllowedUUIDs().isEmpty()) {
             fetchSpecifiedClasses(graph, graphIdentifier, filter, cimCollection);
         } else {
@@ -257,19 +261,29 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         fetchAttributes(graph, graphIdentifier, filter, cimCollection, classUUIDList);
     }
 
-    private void fetchSpecifiedClasses(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter,  CIMCollection cimCollection) {
-        var classQueryBuilder = CIMQueries.getSpecifiedClassesQuery(
-                  databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                  graphIdentifier.graphUri(),
-                  filter.getAllowedUUIDs());
+    private void fetchSpecifiedClasses(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
+        var classQueryBuilder =
+                CIMQueries.getSpecifiedClassesQuery(
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        graphIdentifier.graphUri(),
+                        filter.getAllowedUUIDs());
         fetchClasses(graph, graphIdentifier, filter, cimCollection, classQueryBuilder);
     }
 
-    private void fetchClassesInPackage(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter, CIMCollection cimCollection) {
-        //classQuery
-        var classesInPackageQueryBuilder = CIMQueries.getClassesQuery(
-                  databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                  graphIdentifier.graphUri());
+    private void fetchClassesInPackage(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
+        // classQuery
+        var classesInPackageQueryBuilder =
+                CIMQueries.getClassesQuery(
+                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                        graphIdentifier.graphUri());
         appendPackageConstraint(filter, classesInPackageQueryBuilder, CIMQueryVars.URI, true);
         fetchClasses(graph, graphIdentifier, filter, cimCollection, classesInPackageQueryBuilder);
     }
@@ -283,17 +297,21 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             return;
         }
 
-        //classQuery
+        // classQuery
         var inPackageClassUri = "?inPackageClassUri";
         var associationUri = "?associationUri";
-        var associatedClassesQueryBuilder = CIMQueries.getClassesQuery(
-                                                                databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                                                                graphIdentifier.graphUri())
-                                                      .addWhere(inPackageClassUri, RDF.type, RDFS.Class)
-                                                      .addWhere(associationUri, RDF.type, RDF.Property)
-                                                      .addWhere(associationUri, CIMS.associationUsed, "?_") //every association has this triple
-                                                      .addWhere(associationUri, RDFS.domain, inPackageClassUri)
-                                                      .addWhere(associationUri, RDFS.range, CIMQueryVars.URI);
+        var associatedClassesQueryBuilder =
+                CIMQueries.getClassesQuery(
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                                graphIdentifier.graphUri())
+                        .addWhere(inPackageClassUri, RDF.type, RDFS.Class)
+                        .addWhere(associationUri, RDF.type, RDF.Property)
+                        .addWhere(
+                                associationUri,
+                                CIMS.associationUsed,
+                                "?_") // every association has this triple
+                        .addWhere(associationUri, RDFS.domain, inPackageClassUri)
+                        .addWhere(associationUri, RDFS.range, CIMQueryVars.URI);
         appendPackageConstraint(filter, associatedClassesQueryBuilder, inPackageClassUri, true);
         appendPackageConstraint(filter, associatedClassesQueryBuilder, CIMQueryVars.URI, false);
         fetchClasses(graph, graphIdentifier, filter, cimCollection, associatedClassesQueryBuilder);
@@ -308,16 +326,25 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             return;
         }
 
-        //classQuery
+        // classQuery
         var inPackageClassUri = "?inPackageClassUri";
-        var associatedClassesQueryBuilder = CIMQueries.getClassesQuery(
-                                                                databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                                                                graphIdentifier.graphUri())
-                                                      .addWhere(inPackageClassUri, RDF.type, RDFS.Class)
-                                                      .addWhere(new SelectBuilder()
-                                                                          .addWhere(CIMQueryVars.URI, RDFS.subClassOf, inPackageClassUri)
-                                                                          .addUnion(new SelectBuilder().addWhere(inPackageClassUri, RDFS.subClassOf, CIMQueryVars.URI))
-                                                               );
+        var associatedClassesQueryBuilder =
+                CIMQueries.getClassesQuery(
+                                databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                                graphIdentifier.graphUri())
+                        .addWhere(inPackageClassUri, RDF.type, RDFS.Class)
+                        .addWhere(
+                                new SelectBuilder()
+                                        .addWhere(
+                                                CIMQueryVars.URI,
+                                                RDFS.subClassOf,
+                                                inPackageClassUri)
+                                        .addUnion(
+                                                new SelectBuilder()
+                                                        .addWhere(
+                                                                inPackageClassUri,
+                                                                RDFS.subClassOf,
+                                                                CIMQueryVars.URI)));
         appendPackageConstraint(filter, associatedClassesQueryBuilder, inPackageClassUri, true);
         appendPackageConstraint(filter, associatedClassesQueryBuilder, CIMQueryVars.URI, false);
         fetchClasses(graph, graphIdentifier, filter, cimCollection, associatedClassesQueryBuilder);
@@ -351,8 +378,12 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         attributeList.forEach(cimAttribute -> cimCollection.getAttributes().add(cimAttribute));
     }
 
-    //enums
-    private void fetchEnums(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter, CIMCollection cimCollection) {
+    // enums
+    private void fetchEnums(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
         if (filter.getAllowedUUIDs() != null && !filter.getAllowedUUIDs().isEmpty()) {
             fetchSpecifiedEnums(graph, graphIdentifier, filter, cimCollection);
         } else {
@@ -360,29 +391,45 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
         }
     }
 
-    private void fetchSpecifiedEnums(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter, CIMCollection cimCollection) {
-        var enumQueryBuilder = CIMQueries.getSpecifiedEnumClassesQuery(
-                  databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                  graphIdentifier.graphUri(),
-                  filter.getAllowedUUIDs());
+    private void fetchSpecifiedEnums(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
+        var enumQueryBuilder =
+                CIMQueries.getSpecifiedEnumClassesQuery(
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
+                        filter.getAllowedUUIDs());
         collectEnums(graph, graphIdentifier, filter, cimCollection, enumQueryBuilder);
     }
 
-    private void fetchEnumsInPackage(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter, CIMCollection cimCollection) {
-        var enumsInPackageQueryBuilder = CIMQueries.getEnumClassesQuery(
-                  databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                  graphIdentifier.graphUri(),
-                  null);
+    private void fetchEnumsInPackage(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
+        var enumsInPackageQueryBuilder =
+                CIMQueries.getEnumClassesQuery(
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri(),
+                        null);
         appendPackageConstraint(filter, enumsInPackageQueryBuilder, CIMQueryVars.URI, true);
         collectEnums(graph, graphIdentifier, filter, cimCollection, enumsInPackageQueryBuilder);
     }
 
-    private void collectEnums(Graph graph, GraphIdentifier graphIdentifier, GraphFilter filter, CIMCollection cimCollection, SelectBuilder queryBuilder) {
-        var enumList = new CIMObjectFetcher(
-                  graph,
-                  graphIdentifier.getGraphUri(),
-                  databasePort.getPrefixMapping(graphIdentifier.getDatasetName())
-        ).fetchCIMClassList(queryBuilder.build());
+    private void collectEnums(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection,
+            SelectBuilder queryBuilder) {
+        var enumList =
+                new CIMObjectFetcher(
+                                graph,
+                                graphIdentifier.getGraphUri(),
+                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
+                        .fetchCIMClassList(queryBuilder.build());
         enumList.forEach(cimEnum -> cimCollection.getEnums().add(cimEnum));
 
         var enumUUIDList = new ArrayList<String>();

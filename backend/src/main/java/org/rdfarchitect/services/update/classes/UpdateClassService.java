@@ -69,7 +69,8 @@ public class UpdateClassService
             CreateClassLayoutDataUseCase createClassLayoutDataUseCase,
             UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase,
             DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
-            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
+            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
+            RemoveFromDiagramUseCase removeFromDiagramUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -78,6 +79,7 @@ public class UpdateClassService
         this.updateDiagramObjectNameUseCase = updateDiagramObjectNameUseCase;
         this.deleteClassLayoutDataUseCase = deleteClassLayoutDataUseCase;
         this.newValuesAsBlankNode = newValuesAsBlankNode;
+        this.removeFromDiagramUseCase = removeFromDiagramUseCase;
     }
 
     @Override
@@ -187,7 +189,8 @@ public class UpdateClassService
             }
         }
 
-        deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, UUID.fromString(classUUID));
+        deleteClassLayoutDataUseCase.deleteClassLayoutData(
+                graphIdentifier, UUID.fromString(classUUID));
         removeFromDiagramUseCase.removeFromAllDiagrams(graphIdentifier, UUID.fromString(classUUID));
 
         changeLogUseCase.recordChange(

@@ -103,7 +103,8 @@ public class CIMObjectFetcher {
         // fetch stereotypes
         if (classObject != null) {
             classObject.setGraphUri(graphURI);
-            var stereotypeQuery = CIMQueries.getStereotypesQuery(prefixMapping, classUUID, graphURI).build();
+            var stereotypeQuery =
+                    CIMQueries.getStereotypesQuery(prefixMapping, classUUID, graphURI).build();
             classObject.setStereotypes(fetchCIMStereotypeList(stereotypeQuery));
         }
         return classObject;
@@ -125,11 +126,11 @@ public class CIMObjectFetcher {
             while (classQueryResultSet.hasNext()) {
                 var classObject = CIMObjectFactory.createCIMClass(classQueryResultSet.next());
                 classObject.setGraphUri(graphURI);
-                //fetch stereotypes
-                var stereotypeQuery = CIMQueries.getStereotypesQuery(prefixMapping,
-                                                                     classObject.getUuid().toString(),
-                                                                     graphURI
-                                                                    ).build();
+                // fetch stereotypes
+                var stereotypeQuery =
+                        CIMQueries.getStereotypesQuery(
+                                        prefixMapping, classObject.getUuid().toString(), graphURI)
+                                .build();
                 classObject.setStereotypes(fetchCIMStereotypeList(stereotypeQuery));
                 classObjectList.add(classObject);
             }

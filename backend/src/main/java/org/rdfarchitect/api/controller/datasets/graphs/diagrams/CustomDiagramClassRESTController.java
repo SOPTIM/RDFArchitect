@@ -18,7 +18,9 @@
 package org.rdfarchitect.api.controller.datasets.graphs.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -35,11 +37,13 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes/{classId}")
+@RequestMapping(
+        "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes/{classId}")
 @RequiredArgsConstructor
 public class CustomDiagramClassRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CustomDiagramClassRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(CustomDiagramClassRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -47,28 +51,42 @@ public class CustomDiagramClassRESTController {
 
     @DeleteMapping
     public String removeFromDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId,
-              @Parameter(description = "The uuid of the class to be removed from the diagram.")
-              @PathVariable
-              UUID classId) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"", datasetName, graphURI, diagramId, classId, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
+            @Parameter(description = "The uuid of the class to be removed from the diagram.")
+                    @PathVariable
+                    UUID classId) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",
+                datasetName,
+                graphURI,
+                diagramId,
+                classId,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        removeFromDiagramUseCase.removeFromDiagram(new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classId);
+        removeFromDiagramUseCase.removeFromDiagram(
+                new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classId);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"", datasetName, graphURI, diagramId, classId,
-                    originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",
+                datasetName,
+                graphURI,
+                diagramId,
+                classId,
+                originURL);
         return Response.SUCCESS;
     }
 }

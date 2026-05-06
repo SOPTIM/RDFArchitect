@@ -18,7 +18,9 @@
 package org.rdfarchitect.api.controller.datasets.graphs.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -41,7 +43,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CustomDiagramAllClassesRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CustomDiagramAllClassesRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(CustomDiagramAllClassesRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -49,26 +52,40 @@ public class CustomDiagramAllClassesRESTController {
 
     @PostMapping
     public String addToDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId,
-              @Parameter(description = "The list of the classes to be added to the diagram")
-              @RequestBody List<ClassInDiagram> classes) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"", datasetName, graphURI, diagramId, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
+            @Parameter(description = "The list of the classes to be added to the diagram")
+                    @RequestBody
+                    List<ClassInDiagram> classes) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                datasetName,
+                graphURI,
+                diagramId,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        addToDiagramUseCase.addToDiagram(new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classes);
+        addToDiagramUseCase.addToDiagram(
+                new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classes);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"", datasetName, graphURI, diagramId, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                datasetName,
+                graphURI,
+                diagramId,
+                originURL);
         return Response.SUCCESS;
     }
 }

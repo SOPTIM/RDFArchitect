@@ -97,8 +97,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
         // Assert
-        var nodeDTO = result.getNodes().get(0);
-        var attr1DTO = nodeDTO.getData().getAttributes().get(0);
+        var nodeDTO = result.getNodes().getFirst();
+        var attr1DTO = nodeDTO.getData().getAttributes().getFirst();
         var attr2DTO = nodeDTO.getData().getAttributes().get(1);
         assertThat(result.getNodes()).hasSize(1);
         assertThat(nodeDTO.getId()).isNotNull();
@@ -128,7 +128,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
         // Assert
-        var nodeDTO = result.getNodes().get(0);
+        var nodeDTO = result.getNodes().getFirst();
         assertThat(result.getNodes()).hasSize(1);
         assertThat(nodeDTO.getData().getStereotypes())
                 .hasSize(2)
@@ -155,8 +155,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
         // Assert
-        var inheritanceEdgeDTO = result.getEdges().get(0);
-        var subClassUUID = result.getNodes().get(0).getId();
+        var inheritanceEdgeDTO = result.getEdges().getFirst();
+        var subClassUUID = result.getNodes().getFirst().getId();
         var superClassUUID = result.getNodes().get(1).getId();
         assertThat(result.getEdges()).hasSize(1);
         assertThat(inheritanceEdgeDTO.getType()).isEqualTo("inheritance");
@@ -186,7 +186,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
 
         // Assert
-        var associationEdgeDTO = result.getEdges().get(0);
+        var associationEdgeDTO = result.getEdges().getFirst();
         assertThat(result.getEdges()).hasSize(1);
         assertThat(associationEdgeDTO.getData().getFromMultiplicity()).isEqualTo("0...n");
         assertThat(associationEdgeDTO.getData().getToMultiplicity()).isEqualTo("1...1");
@@ -196,7 +196,9 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderGlobalUML_emptyCollection_emptyArrays() {
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
+        var result =
+                (SvelteFlowDTO)
+                        svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
 
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
@@ -204,7 +206,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderGlobalUML_nullCollection_throwsException() {
-        assertThatException().isThrownBy(() -> svelteFlowRenderer.renderGlobalUML(null, "myDataset", null));
+        assertThatException()
+                .isThrownBy(() -> svelteFlowRenderer.renderGlobalUML(null, "myDataset", null));
     }
 
     @Test
@@ -212,10 +215,12 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         addPackage("package_package1");
         addClass("package_package1", "class1");
 
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
+        var result =
+                (SvelteFlowDTO)
+                        svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
 
         assertThat(result.getNodes()).hasSize(1);
-        assertThat(result.getNodes().get(0).getData().getLabel()).isEqualTo("class1");
+        assertThat(result.getNodes().getFirst().getData().getLabel()).isEqualTo("class1");
         assertThat(result.getEdges()).isEmpty();
     }
 }

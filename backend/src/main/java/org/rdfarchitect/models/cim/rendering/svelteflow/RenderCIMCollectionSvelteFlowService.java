@@ -65,30 +65,35 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
             ensureDiagramLayoutForCIMCollectionUseCase;
 
     @Override
-    public RenderingDataDTO renderUML(CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
+    public RenderingDataDTO renderUML(
+            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return createEmptyDiagram();
         }
 
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(graphIdentifier, diagramId, cimCollection);
-        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(graphIdentifier, diagramId);
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
+                graphIdentifier, diagramId, cimCollection);
+        var renderingLayoutData =
+                fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
+                        graphIdentifier, diagramId);
         return renderUML(cimCollection, renderingLayoutData);
     }
 
     @Override
-    public RenderingDataDTO renderGlobalUML(CIMCollection cimCollection, String datasetName, UUID diagramId) {
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(datasetName, diagramId, cimCollection);
-        var renderingLayoutData = fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(datasetName, diagramId);
+    public RenderingDataDTO renderGlobalUML(
+            CIMCollection cimCollection, String datasetName, UUID diagramId) {
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
+                datasetName, diagramId, cimCollection);
+        var renderingLayoutData =
+                fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
+                        datasetName, diagramId);
         return renderUML(cimCollection, renderingLayoutData);
     }
 
-    private RenderingDataDTO renderUML(CIMCollection cimCollection, RenderingLayoutData renderingLayoutData) {
+    private RenderingDataDTO renderUML(
+            CIMCollection cimCollection, RenderingLayoutData renderingLayoutData) {
         var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
-        var renderContext = new RenderContext(
-                  cimCollection,
-                  uriToUUIDMap,
-                  renderingLayoutData
-        );
+        var renderContext = new RenderContext(cimCollection, uriToUUIDMap, renderingLayoutData);
 
         var nodes = assembleNodeDTOList(renderContext);
         var edges = assembleEdgeDTOList(renderContext);
@@ -136,16 +141,18 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                         .build();
         nodeDTO.position(positionDTO);
 
-        var nodeDataDTO = NodeDataDTO.builder()
-                                     .graphUri(cimClass.getGraphUri())
-                                     .label(cimClass.getLabel().getValue())
-                                     .belongsToCategory(cimClass.getBelongsToCategory() != null
-                                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
-                                                        : null)
-                                     .stereotypes(stereotypes)
-                                     .attributes(attributes)
-                                     .enumEntries(enumEntries)
-                                     .build();
+        var nodeDataDTO =
+                NodeDataDTO.builder()
+                        .graphUri(cimClass.getGraphUri())
+                        .label(cimClass.getLabel().getValue())
+                        .belongsToCategory(
+                                cimClass.getBelongsToCategory() != null
+                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
+                                        : null)
+                        .stereotypes(stereotypes)
+                        .attributes(attributes)
+                        .enumEntries(enumEntries)
+                        .build();
 
         nodeDTO.data(nodeDataDTO);
 

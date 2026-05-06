@@ -18,7 +18,9 @@
 package org.rdfarchitect.api.controller.datasets.graphs.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -39,30 +41,44 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AllCustomDiagramsRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(AllCustomDiagramsRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(AllCustomDiagramsRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @GetMapping
     public List<CustomDiagram> getCustomDiagramList(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The url encoded uri of the graph, or \"default\" to access the default graph.")
-              @PathVariable
-              String graphURI) {
-        logger.info("Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"", datasetName, graphURI, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
+        logger.info(
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"",
+                datasetName,
+                graphURI,
+                originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var result = getCustomDiagramsUseCase.getCustomDiagramsForGraph(new GraphIdentifier(datasetName, extendedGraphURI));
+        var result =
+                getCustomDiagramsUseCase.getCustomDiagramsForGraph(
+                        new GraphIdentifier(datasetName, extendedGraphURI));
 
-        logger.info("Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"", datasetName, graphURI, originURL);
+        logger.info(
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams\" from \"{}\"",
+                datasetName,
+                graphURI,
+                originURL);
         return result;
     }
-
 }

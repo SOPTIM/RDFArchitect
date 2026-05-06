@@ -19,6 +19,7 @@ package org.rdfarchitect.database.inmemory.diagrams;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.UUID;

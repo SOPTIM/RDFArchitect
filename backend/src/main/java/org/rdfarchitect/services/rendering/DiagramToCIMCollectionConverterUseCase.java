@@ -20,17 +20,14 @@ package org.rdfarchitect.services.rendering;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
-/**
- * Converts a Diagram to a {@link CIMCollection}.
- */
+/** Converts a Diagram to a {@link CIMCollection}. */
 public interface DiagramToCIMCollectionConverterUseCase {
 
     /**
      * Converts a Diagram to a {@link CIMCollection}.
      *
      * @param graphIdentifier The graph containing the diagram
-     * @param diagramId       The ID of the diagram to be converted.
-     *
+     * @param diagramId The ID of the diagram to be converted.
      * @return The {@link CIMCollection}.
      */
     CIMCollection convert(GraphIdentifier graphIdentifier, String diagramId);
@@ -39,8 +36,7 @@ public interface DiagramToCIMCollectionConverterUseCase {
      * Converts a Diagram to a {@link CIMCollection}.
      *
      * @param datasetName The dataset containing the diagram
-     * @param diagramId   The ID of the diagram to be converted.
-     *
+     * @param diagramId The ID of the diagram to be converted.
      * @return The {@link CIMCollection}.
      */
     CIMCollection convert(String datasetName, String diagramId);

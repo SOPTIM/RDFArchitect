@@ -18,7 +18,9 @@
 package org.rdfarchitect.api.controller.datasets.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
 import org.slf4j.Logger;
@@ -37,29 +39,40 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CustomDatasetDiagramClassRESTController {
 
-    private static final Logger logger = LoggerFactory.getLogger(CustomDatasetDiagramClassRESTController.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(CustomDatasetDiagramClassRESTController.class);
 
     private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
 
     @DeleteMapping
     public String removeFromDiagram(
-              @Parameter(description = "The name/url of the inquirer.")
-              @RequestHeader(value = HttpHeaders.ORIGIN, required = false, defaultValue = "unknown")
-              String originURL,
-              @Parameter(description = "The literal name of the dataset.")
-              @PathVariable
-              String datasetName,
-              @Parameter(description = "The uuid of the diagram.")
-              @PathVariable
-              String diagramId,
-              @Parameter(description = "The uuid of the class to be removed from the diagram.")
-              @PathVariable
-              UUID classId) {
-        logger.info("Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"", datasetName, diagramId, classId, originURL);
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
+            @Parameter(description = "The uuid of the class to be removed from the diagram.")
+                    @PathVariable
+                    UUID classId) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                classId,
+                originURL);
 
         removeFromDiagramUseCase.removeFromDiagram(datasetName, diagramId, classId);
 
-        logger.info("Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"", datasetName, diagramId, classId, originURL);
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",
+                datasetName,
+                diagramId,
+                classId,
+                originURL);
         return Response.SUCCESS;
     }
 }

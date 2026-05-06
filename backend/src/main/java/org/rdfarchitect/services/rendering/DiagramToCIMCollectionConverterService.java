@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.rendering;
 
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -30,7 +31,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class DiagramToCIMCollectionConverterService implements DiagramToCIMCollectionConverterUseCase {
+public class DiagramToCIMCollectionConverterService
+        implements DiagramToCIMCollectionConverterUseCase {
 
     private final DatabasePort databasePort;
 
@@ -42,11 +44,13 @@ public class DiagramToCIMCollectionConverterService implements DiagramToCIMColle
         var diagrams = graphWithContext.getCustomDiagrams();
         var diagramUUID = UUID.fromString(diagramId);
         if (!diagrams.containsKey(diagramUUID)) {
-            throw new IllegalArgumentException("Diagram with ID " + diagramId + " not found in graph " + graphIdentifier);
+            throw new IllegalArgumentException(
+                    "Diagram with ID " + diagramId + " not found in graph " + graphIdentifier);
         }
 
         var diagram = diagrams.get(diagramUUID);
-        var classUUIDs = diagram.getClasses().stream().map(cls -> cls.getUuid().toString()).toList();
+        var classUUIDs =
+                diagram.getClasses().stream().map(cls -> cls.getUuid().toString()).toList();
         var filter = new GraphFilter(true);
         filter.setIncludeRelationsToExternalPackages(false);
         filter.setAllowedUUIDs(classUUIDs);
@@ -58,21 +62,21 @@ public class DiagramToCIMCollectionConverterService implements DiagramToCIMColle
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         var diagramUUID = UUID.fromString(diagramId);
         if (!diagrams.containsKey(diagramUUID)) {
-            throw new IllegalArgumentException("Diagram with ID " + diagramId + " not found in dataset " + datasetName);
+            throw new IllegalArgumentException(
+                    "Diagram with ID " + diagramId + " not found in dataset " + datasetName);
         }
 
         var diagram = diagrams.get(diagramUUID);
         // Group ClassInDiagram entries by graphUri
-        var classesByGraph = diagram.getClasses().stream()
-                                    .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri));
+        var classesByGraph =
+                diagram.getClasses().stream()
+                        .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri));
 
         var mergedCollection = new CIMCollection();
 
         for (var entry : classesByGraph.entrySet()) {
             var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey().toString());
-            var classUUIDs = entry.getValue().stream()
-                                  .map(c -> c.getUuid().toString())
-                                  .toList();
+            var classUUIDs = entry.getValue().stream().map(c -> c.getUuid().toString()).toList();
 
             var filter = new GraphFilter(true);
             filter.setIncludeRelationsToExternalPackages(false);

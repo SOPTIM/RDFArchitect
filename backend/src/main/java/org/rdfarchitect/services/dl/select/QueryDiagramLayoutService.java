@@ -52,13 +52,17 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
         return fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, diagramId);
     }
 
-    private RenderingLayoutData fetchRenderingLayoutData(DiagramLayout diagramLayout, Model diagramLayoutModel, UUID diagramId) {
+    private RenderingLayoutData fetchRenderingLayoutData(
+            DiagramLayout diagramLayout, Model diagramLayoutModel, UUID diagramId) {
 
         Map<UUID, DiagramObjectPoint> classLayoutingData;
         if (diagramId == null) {
-            classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid());
+            classLayoutingData =
+                    DLObjectFetcher.fetchDiagramDOPPerClass(
+                            diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid());
         } else {
-            classLayoutingData = DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramId);
+            classLayoutingData =
+                    DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramId);
         }
 
         return RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
