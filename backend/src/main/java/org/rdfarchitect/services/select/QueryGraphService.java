@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Node;
+import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.RDFFormat;
@@ -85,32 +86,65 @@ public class QueryGraphService
     private final PackageMapper packageMapper;
 
     @Override
-    public List<ClassUMLAdaptedDTO> getClassList(GraphIdentifier graphIdentifier) {
-        // build query
-        var baseQuery =
-                new CIMBaseQueryBuilder()
-                        .setGraph(graphIdentifier.getGraphUri())
-                        .addPrefixes(
-                                databasePort.getPrefixMapping(graphIdentifier.getDatasetName()))
-                        .setOrder()
-                        .setDistinct()
-                        .setType(RDFS.Class)
-                        .build();
+    public List<ClassUMLAdaptedDTO> getClassList(
+            GraphIdentifier graphIdentifier, boolean includeExternalClasses) {
+        var classFilter =
+                includeExternalClasses
+                        ? """
+            {
+                ?uri rdf:type rdfs:Class .
+            }
+            UNION
+            {
+                ?_any rdfs:domain ?uri .
+            }
+          """
+                        : "?uri rdf:type rdfs:Class .";
+
         var query =
-                new CIMQueryBuilder(baseQuery)
-                        .appendUUIDQuery(OPTIONAL)
-                        .appendLabelQuery(OPTIONAL)
-                        .appendPackageQuery(OPTIONAL)
-                        .appendCommentQuery(OPTIONAL)
-                        .appendSuperClassQuery(OPTIONAL)
-                        .build();
+                """
+              PREFIX  cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+              PREFIX  rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+              PREFIX  owl:  <http://www.w3.org/2002/07/owl#>
+              PREFIX  cim:  <http://iec.ch/TC57/CIM100#>
+              PREFIX  xsd:  <http://www.w3.org/2001/XMLSchema#>
+              PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+              PREFIX  dc:   <http://purl.org/dc/elements/1.1/>
+
+              SELECT DISTINCT ?uri ?uuid ?label ?packageURI ?packageLabel ?packageUUID ?comment ?superClassURI ?superClassLabel
+              WHERE
+                {
+              """
+                        + classFilter
+                        + """
+          ?uri  <http://example.org#uuid>  ?uuid
+          OPTIONAL
+            { ?uri  rdfs:label  ?label}
+          OPTIONAL
+            { ?uri  cims:belongsToCategory  ?packageURI
+              OPTIONAL
+                { ?packageURI  rdfs:label  ?packageLabel}
+              OPTIONAL
+                { ?packageURI  <http://example.org#uuid>  ?packageUUID}
+            }
+          OPTIONAL
+            { ?uri  rdfs:comment  ?comment}
+          OPTIONAL
+            { ?uri  rdfs:subClassOf  ?superClassURI
+              OPTIONAL
+                { ?superClassURI
+                            rdfs:label  ?superClassLabel}
+            }
+        }
+      ORDER BY ?uri
+      """;
 
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
-                        query,
-                        graphIdentifier.getGraphUri());
+                        QueryFactory.create(query),
+                        null);
 
         // format results
         var cimClassList = CIMUMLObjectFactory.createCIMClassUMLAdaptedList(queryResultSet);
