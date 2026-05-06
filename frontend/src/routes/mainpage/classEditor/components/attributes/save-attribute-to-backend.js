@@ -45,6 +45,6 @@ export async function saveApiAttributeToBackend(
         return { ok: false, errorText };
     } finally {
         editorState.selectedClassUUID.trigger();
-        editorState.selectedPackageUUID.trigger();
+        editorState.selectedDiagram.trigger();
     }
 }

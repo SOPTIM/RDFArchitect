@@ -24,6 +24,7 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
+        DiagramType,
         editorState,
         forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
@@ -120,8 +121,7 @@
             if (res.ok) {
                 editorState.selectedDataset.updateValue(lockedDatasetName);
                 editorState.selectedGraph.updateValue(lockedGraphUri);
-                editorState.selectedPackageUUID.updateValue(null);
-                editorState.selectedCustomDiagramUUID.updateValue(diagramId);
+                editorState.selectedDiagram.updateValue({ type: DiagramType.CUSTOM_DIAGRAM, id: diagramId });
             } else {
                 console.error("Failed to save diagram");
             }

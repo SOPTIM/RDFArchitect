@@ -37,8 +37,8 @@
             if (!res.ok) {
                 console.error("Failed to delete custom diagram", await res.text());
             }
-            if (editorState.selectedCustomDiagramUUID.getValue() === diagram.diagramId) {
-                editorState.selectedPackageUUID.updateValue(null);
+            if (editorState.selectedDiagram.getProperty("id") === diagram.diagramId) {
+                editorState.selectedDiagram.updateValue({ type: null, id: null });
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);

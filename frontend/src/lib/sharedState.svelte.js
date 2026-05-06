@@ -24,14 +24,27 @@ import { writable } from "svelte/store";
  * The trigger can also be toggled manually.
  */
 
-import { SimpleTrigger, StateValuePair } from "./statePrimitives.svelte.js";
+import {
+    SimpleTrigger,
+    StateObjectPair,
+    StateValuePair,
+} from "./statePrimitives.svelte.js";
+
+/**
+ * Defines the possible values that the type property of selectedDiagam can have.
+ * @type {{CUSTOM_DIAGRAM: string, PACKAGE: string}}
+ */
+export const DiagramType = {
+    CUSTOM_DIAGRAM: "customDiagram",
+    PACKAGE: "package",
+};
 
 /**
  * The editorState object contains the state of the editor. Content might expand in the future.
  * @type {{
  *  selectedDataset: StateValuePair<string | null>,
  *  selectedGraph: StateValuePair<string | null>,
- *  selectedPackageUUID: StateValuePair<string | null>,
+ *  selectedDiagram: StateObjectPair<Object | null>,
  *  selectedClassDataset: StateValuePair<string | null>,
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClassUUID: StateValuePair<string | null>,
@@ -43,8 +56,8 @@ import { SimpleTrigger, StateValuePair } from "./statePrimitives.svelte.js";
 export const editorState = {
     selectedDataset: new StateValuePair(),
     selectedGraph: new StateValuePair(),
-    selectedPackageUUID: new StateValuePair(),
-    selectedCustomDiagramUUID: new StateValuePair(),
+    //can either be a package uuid or a custom diagram uuid
+    selectedDiagram: new StateObjectPair({type: null, id: null}),
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
@@ -54,8 +67,7 @@ export const editorState = {
     reset() {
         this.selectedDataset.updateValue(null);
         this.selectedGraph.updateValue(null);
-        this.selectedPackageUUID.updateValue(null);
-        this.selectedCustomDiagramUUID.updateValue(null);
+        this.selectedDiagram.updateValue({ type: null, id: null });
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
         this.selectedClassUUID.updateValue(null);

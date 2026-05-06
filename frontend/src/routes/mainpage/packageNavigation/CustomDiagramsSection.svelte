@@ -23,6 +23,7 @@
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
+        DiagramType,
         editorState,
         forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
@@ -45,10 +46,10 @@
     let isSelected = $derived(
         graphNavEntry
             ? isSelectedGraph(datasetNavEntry.id, graphNavEntry.id) &&
-            editorState.selectedCustomDiagramUUID.getValue()
+            editorState.selectedDiagram.getProperty("type") === DiagramType.CUSTOM_DIAGRAM
             : !editorState.selectedGraph.getValue() &&
             isSelectedDataset(datasetNavEntry.id) &&
-            editorState.selectedCustomDiagramUUID.getValue()
+            editorState.selectedDiagram.getProperty("type") === DiagramType.CUSTOM_DIAGRAM
     );
     let level = $derived(graphNavEntry ? 3 : 2);
     let label = $derived(
@@ -61,9 +62,9 @@
     });
 
     $effect(() => {
-        editorState.selectedCustomDiagramUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         const selectedDiagramId =
-            editorState.selectedCustomDiagramUUID.getValue();
+            editorState.selectedDiagram.getProperty("id");
 
         if (selectedDiagramId) {
             if (diagrams.some(d => d.diagramId === selectedDiagramId)) {
@@ -89,7 +90,7 @@
             }
             const previous = diagrams ?? [];
             const selectedDiagramId =
-                editorState.selectedCustomDiagramUUID.getValue();
+                editorState.selectedDiagram.getProperty("id");
 
             diagrams = ensureProperDiagramExpansion(diagramList, previous, selectedDiagramId);
 

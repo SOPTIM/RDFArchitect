@@ -19,7 +19,7 @@ import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
-import { editorState } from "$lib/sharedState.svelte.js";
+import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -257,7 +257,7 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
 
     for (const classNavEntry of packageNavObject.children) {
         if (
-            !editorState.selectedCustomDiagramUUID.getValue() &&
+            editorState.selectedDiagram.getProperty("type") !== DiagramType.CUSTOM_DIAGRAM &&
             isSelectedClass(datasetId, graphId, classNavEntry.id)
         ) {
             classNavEntry.parent?.open();

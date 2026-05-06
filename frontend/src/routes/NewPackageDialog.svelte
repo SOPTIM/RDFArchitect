@@ -26,6 +26,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { Package } from "$lib/models/dto";
+    import { DiagramType } from "$lib/sharedState.svelte.js";
 
     import {
         editorState,
@@ -204,8 +205,7 @@
                 );
                 editorState.selectedDataset.updateValue(ds);
                 editorState.selectedGraph.updateValue(graph);
-                editorState.selectedPackageUUID.updateValue(uuid);
-                editorState.selectedCustomDiagramUUID.updateValue(null);
+                editorState.selectedDiagram.updateValue({ type: DiagramType.PACKAGE, id: uuid });
             });
         promise
             .catch(e => {

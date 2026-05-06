@@ -30,7 +30,7 @@
     import {
         editorState,
         graphViewState,
-        forceReloadTrigger
+        forceReloadTrigger, DiagramType
     } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
@@ -69,13 +69,12 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedPackageUUID.subscribe();
-        editorState.selectedCustomDiagramUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
 
         const datasetName = editorState.selectedDataset.getValue();
         const graphUri = editorState.selectedGraph.getValue();
-        const packageUUID = editorState.selectedPackageUUID.getValue();
-        const diagramId = editorState.selectedCustomDiagramUUID.getValue();
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+                const diagramType = editorState.selectedDiagram.getProperty("type");
         const nextDiagramRequestKey = getDiagramRequestKey(
             datasetName,
             graphUri,
@@ -92,13 +91,15 @@
         }
 
         if (diagramId) {
-            if (graph) {
-                await fetchGraphDiagramRenderingData(diagramId);
+            if (diagramType === DiagramType.CUSTOM_DIAGRAM) {
+                if (graph) {
+                    await fetchGraphDiagramRenderingData(diagramId);
+                } else {
+                    await fetchDatasetDiagramRenderingData(diagramId);
+                }
             } else {
-                await fetchDatasetDiagramRenderingData(diagramId);
+                await fetchPackageRenderingData(diagramId);
             }
-        } else if (packageUUID) {
-            await fetchPackageRenderingData(packageUUID);
         } else {
             response = null;
             renderingFormat = null;
@@ -218,7 +219,7 @@
     }
 </script>
 
-{#if editorState.selectedPackageUUID.getValue() || editorState.selectedCustomDiagramUUID.getValue()}
+{#if editorState.selectedDiagram.getProperty("id")}
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             {#if displayDiagram}
@@ -233,7 +234,7 @@
                             reset view
                         </ButtonControl>
                     </div>
-                    {#if editorState.selectedPackageUUID.getValue()}
+                    {#if editorState.selectedDiagram.getProperty("id")}
                         <div class="h-9 w-28">
                             <ButtonControl
                                 variant="default"

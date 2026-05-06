@@ -95,8 +95,7 @@
             return;
         }
         editorState.selectedGraph.updateValue(null);
-        editorState.selectedPackageUUID.updateValue(null);
-        editorState.selectedCustomDiagramUUID.updateValue(null);
+        editorState.selectedDiagram.updateValue({ type: null, id: null });
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
     }
 

@@ -28,7 +28,7 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
@@ -91,9 +91,9 @@
     function showClassInPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedPackageUUID.updateValue(
-            classNavEntry.parent?.id ?? "default",
-        );
+        editorState.selectedDiagram.updateValue({ type:
+            DiagramType.PACKAGE, id: classNavEntry.parent?.id ?? "default",
+         });
         selectClass();
         focusClassInDiagram();
     }

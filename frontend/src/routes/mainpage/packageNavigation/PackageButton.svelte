@@ -31,7 +31,7 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -64,7 +64,7 @@
     const selectionTrigger = $derived([
         editorState.selectedDataset.subscribe(),
         editorState.selectedGraph.subscribe(),
-        editorState.selectedPackageUUID.subscribe(),
+        editorState.selectedDiagram.subscribe(),
         getContext("packageNavigation").reloadTrigger?.subscribe(),
     ]);
 
@@ -110,8 +110,8 @@
     function selectPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
-        editorState.selectedCustomDiagramUUID.updateValue(null);
+        editorState.selectedDiagram.updateValue({ type: DiagramType.PACKAGE, id: packageNavEntry.id });
+        console.log(editorState.selectedDiagram.getValue());
     }
 </script>
 

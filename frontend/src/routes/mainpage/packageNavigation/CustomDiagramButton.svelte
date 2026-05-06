@@ -24,7 +24,7 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
     import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
@@ -92,8 +92,7 @@
         editorState.selectedGraph.updateValue(
             graphNavEntry ? graphNavEntry.id : null,
         );
-        editorState.selectedPackageUUID.updateValue(null);
-        editorState.selectedCustomDiagramUUID.updateValue(diagram.diagramId);
+        editorState.selectedDiagram.updateValue({ type: DiagramType.CUSTOM_DIAGRAM, id: diagram.diagramId });
     }
 </script>
 

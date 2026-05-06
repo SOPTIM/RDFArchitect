@@ -141,7 +141,7 @@
         editorState.selectedDataset.updateValue(nextDataset);
         editorState.selectedGraph.updateValue(nextGraph);
         if (graphChanged) {
-            editorState.selectedPackageUUID.updateValue(null);
+            editorState.selectedDiagram.updateValue({ type: null, id: null });
         }
     }
 </script>

@@ -469,7 +469,7 @@
             classPositionDTOList.push(classPositionDTO);
         }
 
-        const diagramUUID = editorState.selectedPackageUUID.getValue() ?? editorState.selectedCustomDiagramUUID.getValue();
+        const diagramUUID = editorState.selectedDiagram.getProperty("id");
 
         if (editorState.selectedGraph.getValue()) {
             bec.updateClassPositions(

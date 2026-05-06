@@ -32,8 +32,9 @@
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
+        DiagramType,
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
 
@@ -158,9 +159,9 @@
         }
         await getPackages(datasetName, graphURI);
         const selectedPackageUUID =
-            editorState.selectedPackageUUID.getValue() === "default"
+            editorState.selectedDiagram.getProperty("id") === "default"
                 ? null
-                : editorState.selectedPackageUUID.getValue();
+                : editorState.selectedDiagram.getProperty("id");
         classPackage =
             packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
     }
@@ -237,9 +238,9 @@
                 });
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedPackageUUID.updateValue(
-                    selectedPackageUUID,
-                );
+                editorState.selectedDiagram.updateValue({ type:
+                    DiagramType.PACKAGE, id: selectedPackageUUID,
+                 });
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);
                 editorState.selectedClassUUID.updateValue(uuid);
@@ -252,7 +253,7 @@
             forceReloadTrigger.trigger();
             editorState.selectedDataset.trigger();
             editorState.selectedGraph.trigger();
-            editorState.selectedPackageUUID.trigger();
+            editorState.selectedDiagram.trigger();
             editorState.selectedClassUUID.trigger();
         }
     }

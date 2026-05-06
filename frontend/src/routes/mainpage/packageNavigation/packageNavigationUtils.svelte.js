@@ -34,17 +34,17 @@ export function isSelectedGraph(dataset, graph) {
 export function isSelectedPackage(dataset, graph, pack) {
     return (
         isSelectedGraph(dataset, graph) &&
-        editorState.selectedPackageUUID.getValue() === getPackageId(pack)
+        editorState.selectedDiagram.getProperty("id") === getPackageId(pack)
     );
 }
 
 export function isSelectedCustomDiagram(dataset, graph, diagram) {
     return graph
         ? isSelectedGraph(dataset, graph) &&
-              editorState.selectedCustomDiagramUUID.getValue() ===
+              editorState.selectedDiagram.getProperty("id") ===
                   diagram.diagramId
         : isSelectedDataset(dataset) &&
-              editorState.selectedCustomDiagramUUID.getValue() ===
+              editorState.selectedDiagram.getProperty("id") ===
                   diagram.diagramId;
 }
 
