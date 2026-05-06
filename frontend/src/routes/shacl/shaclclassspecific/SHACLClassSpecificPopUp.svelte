@@ -31,45 +31,62 @@
         showDialog = $bindable(),
     } = $props();
 
-    let customShacl = $state({
-        namespaces: "",
-        nodeShapes: [],
-        propertyShapes: [],
-        derivedPropertyShapes: [],
-    });
-    let generatedShacl = $state({
-        namespaces: "",
-        nodeShapes: [],
-        propertyShapes: [],
-        derivedPropertyShapes: [],
-    });
+    let customShacl = $state(defaultShacl());
+    let generatedShacl = $state(defaultShacl());
     let showGeneratedShacl = $state(false);
+    let fetchKey = $state(0);
+
+    const defaultShacl = () => ({
+        namespaces: "",
+        nodeShapes: [],
+        propertyShapes: [],
+        derivedPropertyShapes: [],
+    });
 
     function onOpen() {
         fetchShacl();
+    }
+
+    function onClose() {
+        customShacl = defaultShacl();
+        generatedShacl = defaultShacl();
+        fetchKey = 0;
     }
 
     /**
      * fetches the SHACL rules for the selected class.
      */
     async function fetchShacl() {
-        const res = await fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetName) +
-                "/graphs/" +
-                encodeURIComponent(graphUri) +
-                "/classes/" +
-                encodeURIComponent(reactiveClass.uuid.value) +
-                "/shacl",
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        );
-        const resultObj = JSON.parse(await res.text());
-        customShacl = resultObj.custom;
-        generatedShacl = resultObj.generated;
+        try {
+            const res = await fetch(
+                PUBLIC_BACKEND_URL +
+                    "/datasets/" +
+                    encodeURIComponent(datasetName) +
+                    "/graphs/" +
+                    encodeURIComponent(graphUri) +
+                    "/classes/" +
+                    encodeURIComponent(reactiveClass.uuid.value) +
+                    "/shacl",
+                {
+                    method: "GET",
+                    credentials: "include",
+                },
+            );
+            if (!res.ok) {
+                console.warn(
+                    "Failed to fetch SHACL:",
+                    res.status,
+                    res.statusText,
+                );
+                return;
+            }
+            const resultObj = JSON.parse(await res.text());
+            customShacl = resultObj.custom;
+            generatedShacl = resultObj.generated;
+            fetchKey++;
+        } catch (error) {
+            console.warn("Failed to fetch SHACL:", error);
+        }
     }
 
     function goToClass(classUUID) {
@@ -83,6 +100,7 @@
 <ActionDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     size="w-3/5 h-4/5"
     title={`Constraints (SHACL) for: "${reactiveClass.label.value}"`}
     primaryLabel={null}
@@ -114,7 +132,7 @@
 
                 <!-- scrollable content area -->
                 <div class="min-h-0 w-full flex-1 overflow-y-auto">
-                    {#key generatedShacl || customShacl}
+                    {#key fetchKey}
                         {#if showGeneratedShacl}
                             <SHACLShapeTtlRenderer
                                 namespaces={generatedShacl.namespaces}
