@@ -165,6 +165,15 @@
         classesByDiagram[diagram.diagramId] = classes;
     }
 
+    function handleClick() {
+        editorState.selectedDataset.updateValue(datasetNavEntry.id);
+        editorState.selectedGraph.updateValue(graphNavEntry?.id);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CUSTOM_DIAGRAM,
+            id: null,
+        });
+    }
+
     async function getGraphDiagrams(datasetName, graphURI) {
         const res = await bec.getCustomDiagramsForGraph(datasetName, graphURI);
         return await res.json();
@@ -187,6 +196,7 @@
             expanded={diagramsExpanded}
             {isSelected}
             onToggle={() => (diagramsExpanded = !diagramsExpanded)}
+            onclick={handleClick}
         />
     </div>
     {#if diagramsExpanded && diagrams.length > 0}
