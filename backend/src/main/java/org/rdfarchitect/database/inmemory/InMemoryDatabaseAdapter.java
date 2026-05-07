@@ -27,8 +27,6 @@ import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.rdf.resources.CIM;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
 import java.util.UUID;
