@@ -22,11 +22,15 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.arq.querybuilder.ExprFactory;
 import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.update.UpdateExecutionFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
@@ -36,6 +40,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.data.dto.relations.AttributeValueNode;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -63,19 +68,26 @@ public class CIMUpdates {
      * @param graph The graph to replace the class in.
      * @param prefixMapping The {@link PrefixMapping} of the graph.
      * @param newClass The new {@link CIMClassUMLAdapted} to replace.
+     * @param newValuesAsBlankNode whether to persist new attribute fixed/default values as
+     *     blank-node wrappers (existing attributes always keep their existing shape).
      */
     public void replaceClass(
-            Graph graph, PrefixMapping prefixMapping, CIMClassUMLAdapted newClass) {
+            Graph graph,
+            PrefixMapping prefixMapping,
+            CIMClassUMLAdapted newClass,
+            boolean newValuesAsBlankNode) {
         assertNoPackageWithSameIri(graph, newClass.getUri());
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         // replace attributes in database
         var updateAttributes =
                 replaceAttributes(
+                        graph,
                         prefixMapping,
                         null,
                         newClass.getUuid().toString(),
-                        newClass.getAttributes());
-        UpdateExecutionFactory.create(updateAttributes.build(), dataset).execute();
+                        newClass.getAttributes(),
+                        newValuesAsBlankNode);
+        UpdateExecutionFactory.create(updateAttributes, dataset).execute();
         // replace associations in database
         var updateAssociations =
                 replaceAssociations(
@@ -153,8 +165,8 @@ public class CIMUpdates {
 
     public void deleteClass(Graph graph, PrefixMapping prefixMapping, String classUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
-        var deleteAttributes = deleteAttributes(prefixMapping, null, classUUID);
-        UpdateExecutionFactory.create(deleteAttributes.build(), dataset).execute();
+        UpdateExecutionFactory.create(deleteAttributes(prefixMapping, null, classUUID), dataset)
+                .execute();
         var deleteEnumEntries = deleteEnumEntries(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(deleteEnumEntries.build(), dataset).execute();
         var classBaseDelete = deleteBase(prefixMapping, null, classUUID);
@@ -163,33 +175,74 @@ public class CIMUpdates {
         deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(classUUID));
     }
 
-    public UpdateBuilder deleteAttribute(
+    /**
+     * Deletes a single attribute and any blank-node fixed/default value wrappers attached to it.
+     * The wrapper sub-triples ({@code _:b rdfs:Literal "..."}) are not reachable via {@code
+     * attribute SPO}, so they are removed by separate operations bundled into the same {@link
+     * UpdateRequest}.
+     */
+    public UpdateRequest deleteAttribute(
             PrefixMapping prefixMapping, String graphURI, UUID attributeUUID) {
-        return new CIMBaseUpdateBuilder()
-                .addPrefixes(prefixMapping)
-                .setGraph(graphURI)
-                .build()
-                .addWhere(CIMQueryVars.URI, RDFA.uuid, attributeUUID.toString())
-                .addDelete(CIMQueryVars.URI, "?pre", "?obj")
-                .addWhere(CIMQueryVars.URI, "?pre", "?obj");
+        var request = deleteAttributeValueNodes(graphURI, attributeUUID);
+        request.add(
+                new CIMBaseUpdateBuilder()
+                        .addPrefixes(prefixMapping)
+                        .setGraph(graphURI)
+                        .build()
+                        .addWhere(CIMQueryVars.URI, RDFA.uuid, attributeUUID.toString())
+                        .addDelete(CIMQueryVars.URI, "?pre", "?obj")
+                        .addWhere(CIMQueryVars.URI, "?pre", "?obj")
+                        .build());
+        return request;
     }
 
+    /**
+     * Builds the SPARQL update that inserts {@code attribute}. {@link
+     * AttributeFixedDefaultResolver} is consulted on the open graph transaction to fix the
+     * fixed/default value shape and XSD datatype before the INSERT triples are assembled.
+     *
+     * @param graph The graph the update will be executed against (used for the existing-shape
+     *     lookup; the caller must already hold an open transaction).
+     * @param newValuesAsBlankNode default {@code blankNode} flag for fresh values; existing values
+     *     always keep their existing shape.
+     */
     public UpdateBuilder insertAttribute(
-            PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
+            Graph graph,
+            PrefixMapping prefixMapping,
+            String graphURI,
+            CIMAttribute attribute,
+            boolean newValuesAsBlankNode) {
+        AttributeFixedDefaultResolver.resolve(graph, attribute, newValuesAsBlankNode);
         var baseUpdate =
                 new CIMBaseUpdateBuilder()
                         .addPrefixes(prefixMapping)
                         .setGraph(graphURI)
                         .build()
-                        .addOptional("?sub", "?pre", "?obj");
+                        // Force the WHERE clause to match exactly once. Without this, the INSERT
+                        // would fire for every triple in the graph and duplicate any blank-node
+                        // value wrappers (which produce a fresh blank-node id per match).
+                        .addBind("1", "?__insertAttribute");
 
         return appendInsertAttribute(baseUpdate, attribute);
     }
 
-    public UpdateBuilder replaceAttribute(
-            PrefixMapping prefixMapping, String graphURI, CIMAttribute attribute) {
-        var baseUpdate = deleteAttribute(prefixMapping, graphURI, attribute.getUuid());
-        return appendInsertAttribute(baseUpdate, attribute);
+    /**
+     * Replaces a single attribute: delete (including any blank-node value wrappers) followed by
+     * insert. See {@link #deleteAttribute} for why the blank-node cleanup is part of the delete.
+     * The fixed/default value shape and XSD datatype are resolved against {@code graph} via {@link
+     * AttributeFixedDefaultResolver} (caller must hold an open transaction).
+     */
+    public UpdateRequest replaceAttribute(
+            Graph graph,
+            PrefixMapping prefixMapping,
+            String graphURI,
+            CIMAttribute attribute,
+            boolean newValuesAsBlankNode) {
+        var request = deleteAttribute(prefixMapping, graphURI, attribute.getUuid());
+        request.add(
+                insertAttribute(graph, prefixMapping, graphURI, attribute, newValuesAsBlankNode)
+                        .build());
+        return request;
     }
 
     private UpdateBuilder appendInsertAttribute(UpdateBuilder baseUpdate, CIMAttribute attribute) {
@@ -214,39 +267,143 @@ public class CIMUpdates {
             baseUpdate.addInsert(newURI, RDFS.comment, attribute.getComment().asTypedLiteral());
         }
         // isFixed
-        if (attribute.getFixedValue() != null) {
-            baseUpdate.addInsert(newURI, CIMS.isFixed, attribute.getFixedValue().asLiteral());
-        }
+        appendValueNode(baseUpdate, newURI, CIMS.isFixed, attribute.getFixedValue());
         // isDefault
-        if (attribute.getDefaultValue() != null) {
-            baseUpdate.addInsert(newURI, CIMS.isDefault, attribute.getDefaultValue().asLiteral());
-        }
+        appendValueNode(baseUpdate, newURI, CIMS.isDefault, attribute.getDefaultValue());
         return baseUpdate;
     }
 
-    private UpdateBuilder deleteAttributes(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
-        return new CIMBaseUpdateBuilder()
-                .addPrefixes(prefixMapping)
-                .setGraph(graphURI)
-                .build()
-                .addDelete(CIMQueryVars.URI, ANY_1, ANY_2)
-                .addWhere(CIMQueryVars.DOMAIN_URI, RDFA.uuid, classUUID)
-                .addWhere(CIMQueryVars.URI, RDFS.domain, CIMQueryVars.DOMAIN_URI)
-                .addWhere(CIMQueryVars.URI, CIMS.stereotype, CIMStereotypes.attribute)
-                .addWhere(CIMQueryVars.URI, ANY_1, ANY_2);
+    /**
+     * Appends an attribute fixed/default value to {@code baseUpdate}, either as a direct literal
+     * triple or as a blank-node wrapper ({@code subject -> predicate -> _:blank ; _:blank ->
+     * rdfs:Literal -> literal}) depending on {@link AttributeValueNode#isBlankNode()}.
+     */
+    private void appendValueNode(
+            UpdateBuilder baseUpdate, Node subject, Property predicate, AttributeValueNode value) {
+        if (value == null || value.getValue() == null) {
+            return;
+        }
+        if (!value.isBlankNode()) {
+            baseUpdate.addInsert(subject, predicate, value.asLiteral());
+            return;
+        }
+        var blankNode = NodeFactory.createBlankNode();
+        baseUpdate.addInsert(subject, predicate, blankNode);
+        baseUpdate.addInsert(
+                blankNode,
+                ResourceFactory.createProperty(RDFS.Literal.getURI()),
+                value.asLiteral());
     }
 
-    public UpdateBuilder replaceAttributes(
+    /**
+     * Deletes every attribute of the given class together with any blank-node fixed/default value
+     * wrappers attached to those attributes. The wrapper sub-triples are not reachable via {@code
+     * attribute SPO}, so they are removed by separate operations bundled into the same {@link
+     * UpdateRequest}.
+     */
+    private UpdateRequest deleteAttributes(
+            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+        var request = deleteAttributeValueNodesForClass(graphURI, classUUID);
+        request.add(
+                new CIMBaseUpdateBuilder()
+                        .addPrefixes(prefixMapping)
+                        .setGraph(graphURI)
+                        .build()
+                        .addDelete(CIMQueryVars.URI, ANY_1, ANY_2)
+                        .addWhere(CIMQueryVars.DOMAIN_URI, RDFA.uuid, classUUID)
+                        .addWhere(CIMQueryVars.URI, RDFS.domain, CIMQueryVars.DOMAIN_URI)
+                        .addWhere(CIMQueryVars.URI, CIMS.stereotype, CIMStereotypes.attribute)
+                        .addWhere(CIMQueryVars.URI, ANY_1, ANY_2)
+                        .build());
+        return request;
+    }
+
+    /**
+     * Replaces all attributes of the given class: delete (including any blank-node value wrappers)
+     * followed by one insert per new attribute. See {@link #deleteAttributes} for why the
+     * blank-node cleanup is part of the delete. Each attribute's fixed/default value shape and XSD
+     * datatype are resolved against {@code graph} via {@link AttributeFixedDefaultResolver} (caller
+     * must hold an open transaction).
+     */
+    public UpdateRequest replaceAttributes(
+            Graph graph,
             PrefixMapping prefixMapping,
             String graphURI,
             String classUUID,
-            List<CIMAttribute> attributes) {
-        var baseUpdate = CIMUpdates.deleteAttributes(prefixMapping, graphURI, classUUID);
+            List<CIMAttribute> attributes,
+            boolean newValuesAsBlankNode) {
+        var request = deleteAttributes(prefixMapping, graphURI, classUUID);
         for (CIMAttribute attribute : attributes) {
-            appendInsertAttribute(baseUpdate, attribute);
+            // Reuse the already-resolved attribute shape; pass the same flag for symmetry but the
+            // resolver's existing-shape branch makes this a no-op for already-resolved nodes.
+            request.add(
+                    insertAttribute(graph, prefixMapping, graphURI, attribute, newValuesAsBlankNode)
+                            .build());
         }
-        return baseUpdate;
+        return request;
+    }
+
+    private static final String VAR_ATTRIBUTE = "?__attribute";
+    private static final String VAR_CLASS = "?__class";
+    private static final String VAR_BLANK = "?__blank";
+    private static final String VAR_BLANK_P = "?__blankP";
+    private static final String VAR_BLANK_O = "?__blankO";
+
+    private static final List<Property> VALUE_NODE_PREDICATES =
+            List.of(CIMS.isFixed, CIMS.isDefault);
+
+    /**
+     * Builds SPARQL updates that remove any blank-node fixed/default value wrappers attached to the
+     * attribute identified by {@code attributeUUID}. Uses {@link UpdateBuilder} so {@code
+     * attributeUUID} flows through Jena's node coercion rather than being interpolated into a
+     * SPARQL string. One operation is emitted per value predicate (UpdateBuilder has no VALUES
+     * clause primitive), and they are bundled into a single {@link UpdateRequest}.
+     */
+    private UpdateRequest deleteAttributeValueNodes(String graphURI, UUID attributeUUID) {
+        var request = new UpdateRequest();
+        if (attributeUUID == null) {
+            return request;
+        }
+        for (var predicate : VALUE_NODE_PREDICATES) {
+            request.add(
+                    new CIMBaseUpdateBuilder()
+                            .setGraph(graphURI)
+                            .build()
+                            .addDelete(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addWhere(VAR_ATTRIBUTE, RDFA.uuid, attributeUUID.toString())
+                            .addWhere(VAR_ATTRIBUTE, predicate, VAR_BLANK)
+                            .addWhere(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addFilter(new ExprFactory().isBlank(VAR_BLANK))
+                            .build());
+        }
+        return request;
+    }
+
+    /**
+     * Same as {@link #deleteAttributeValueNodes(String, UUID)} but for every attribute belonging to
+     * the given class. {@code classUUID} is passed through Jena's node coercion rather than
+     * interpolated.
+     */
+    private UpdateRequest deleteAttributeValueNodesForClass(String graphURI, String classUUID) {
+        var request = new UpdateRequest();
+        if (classUUID == null || classUUID.isBlank()) {
+            return request;
+        }
+        for (var predicate : VALUE_NODE_PREDICATES) {
+            request.add(
+                    new CIMBaseUpdateBuilder()
+                            .setGraph(graphURI)
+                            .build()
+                            .addDelete(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addWhere(VAR_CLASS, RDFA.uuid, classUUID)
+                            .addWhere(VAR_ATTRIBUTE, RDFS.domain, VAR_CLASS)
+                            .addWhere(VAR_ATTRIBUTE, CIMS.stereotype, CIMStereotypes.attribute)
+                            .addWhere(VAR_ATTRIBUTE, predicate, VAR_BLANK)
+                            .addWhere(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
+                            .addFilter(new ExprFactory().isBlank(VAR_BLANK))
+                            .build());
+        }
+        return request;
     }
 
     public UpdateBuilder deleteAssociation(

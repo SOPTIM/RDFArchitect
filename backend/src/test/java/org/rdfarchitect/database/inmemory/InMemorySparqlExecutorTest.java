@@ -26,6 +26,7 @@ import org.apache.jena.graph.Node;
 import org.apache.jena.query.QueryFactory;
 import org.apache.jena.query.TxnType;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -200,7 +201,8 @@ class InMemorySparqlExecutorTest {
                             .addInsert(t)
                             .addOptional(Node.ANY, Node.ANY, Node.ANY)
                             .build();
-            InMemorySparqlExecutor.executeSingleUpdate(graphRewindable, update, graphUri);
+            InMemorySparqlExecutor.executeSingleUpdate(
+                    graphRewindable, new UpdateRequest().add(update), graphUri);
         }
 
         // Assert

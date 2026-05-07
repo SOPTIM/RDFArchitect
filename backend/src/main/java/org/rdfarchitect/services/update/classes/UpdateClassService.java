@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import lombok.RequiredArgsConstructor;
-
 import org.apache.jena.query.TxnType;
 import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
@@ -41,12 +39,12 @@ import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class UpdateClassService
         implements AddClassUseCase, ReplaceClassUseCase, DeleteClassUseCase {
 
@@ -54,10 +52,30 @@ public class UpdateClassService
     private final ClassUMLAdaptedMapper classMapper;
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
+    private final boolean newValuesAsBlankNode;
 
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+
+    public UpdateClassService(
+            DatabasePort databasePort,
+            ClassUMLAdaptedMapper classMapper,
+            PackageMapper packageMapper,
+            ChangeLogUseCase changeLogUseCase,
+            CreateClassLayoutDataUseCase createClassLayoutDataUseCase,
+            UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase,
+            DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
+            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
+        this.databasePort = databasePort;
+        this.classMapper = classMapper;
+        this.packageMapper = packageMapper;
+        this.changeLogUseCase = changeLogUseCase;
+        this.createClassLayoutDataUseCase = createClassLayoutDataUseCase;
+        this.updateDiagramObjectNameUseCase = updateDiagramObjectNameUseCase;
+        this.deleteClassLayoutDataUseCase = deleteClassLayoutDataUseCase;
+        this.newValuesAsBlankNode = newValuesAsBlankNode;
+    }
 
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
@@ -70,7 +88,8 @@ public class UpdateClassService
             CIMUpdates.replaceClass(
                     graph,
                     databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                    cimClass);
+                    cimClass,
+                    newValuesAsBlankNode);
             graph.commit();
         } finally {
             if (graph != null) {

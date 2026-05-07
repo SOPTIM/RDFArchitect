@@ -17,28 +17,41 @@
 
 package org.rdfarchitect.services.update.classes.attributes;
 
-import lombok.RequiredArgsConstructor;
-
+import org.apache.jena.query.TxnType;
+import org.apache.jena.update.UpdateExecutionFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
+import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class AttributesService implements CreateAttributeUseCase, UpdateAttributesUseCase {
 
     private final DatabasePort databasePort;
     private final AttributeMapper attributeMapper;
     private final ChangeLogUseCase changeLogUseCase;
+    private final boolean newValuesAsBlankNode;
+
+    public AttributesService(
+            DatabasePort databasePort,
+            AttributeMapper attributeMapper,
+            ChangeLogUseCase changeLogUseCase,
+            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
+        this.databasePort = databasePort;
+        this.attributeMapper = attributeMapper;
+        this.changeLogUseCase = changeLogUseCase;
+        this.newValuesAsBlankNode = newValuesAsBlankNode;
+    }
 
     @Override
     public UUID createAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
@@ -46,15 +59,28 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         if (cimAttribute.getUuid() == null) {
             cimAttribute.setUuid(UUID.randomUUID());
         }
-        var update =
-                CIMUpdates.insertAttribute(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
-                        cimAttribute);
-
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var graphUri = graphIdentifier.getGraphUri();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+        try {
+            graph.begin(TxnType.WRITE);
+            var update =
+                    new UpdateRequest()
+                            .add(
+                                    CIMUpdates.insertAttribute(
+                                                    graph,
+                                                    prefixMapping,
+                                                    graphUri,
+                                                    cimAttribute,
+                                                    newValuesAsBlankNode)
+                                            .build());
+            UpdateExecutionFactory.create(
+                            update, SessionDataStore.wrapGraphInDataset(graph, graphUri))
+                    .execute();
+            graph.commit();
+        } finally {
+            graph.end();
+        }
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -65,14 +91,21 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     @Override
     public UUID replaceAttribute(GraphIdentifier graphIdentifier, AttributeDTO attributeDTO) {
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
-        var update =
-                CIMUpdates.replaceAttribute(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
-                        cimAttribute);
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var graphUri = graphIdentifier.getGraphUri();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+        try {
+            graph.begin(TxnType.WRITE);
+            var update =
+                    CIMUpdates.replaceAttribute(
+                            graph, prefixMapping, graphUri, cimAttribute, newValuesAsBlankNode);
+            UpdateExecutionFactory.create(
+                            update, SessionDataStore.wrapGraphInDataset(graph, graphUri))
+                    .execute();
+            graph.commit();
+        } finally {
+            graph.end();
+        }
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -84,15 +117,26 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     public void replaceAllAttributes(
             GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
-        var update =
-                CIMUpdates.replaceAttributes(
-                        databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                        graphIdentifier.getGraphUri(),
-                        classUUID,
-                        attributeCIMObjects);
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.getDatasetName());
+        var graphUri = graphIdentifier.getGraphUri();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.getGraphUri());
+        try {
+            graph.begin(TxnType.WRITE);
+            var update =
+                    CIMUpdates.replaceAttributes(
+                            graph,
+                            prefixMapping,
+                            graphUri,
+                            classUUID,
+                            attributeCIMObjects,
+                            newValuesAsBlankNode);
+            UpdateExecutionFactory.create(
+                            update, SessionDataStore.wrapGraphInDataset(graph, graphUri))
+                    .execute();
+            graph.commit();
+        } finally {
+            graph.end();
+        }
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(

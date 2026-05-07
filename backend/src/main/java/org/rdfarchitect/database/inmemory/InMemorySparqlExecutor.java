@@ -25,15 +25,19 @@ import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.query.TxnType;
-import org.apache.jena.update.Update;
 import org.apache.jena.update.UpdateExecutionFactory;
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 @UtilityClass
 public class InMemorySparqlExecutor {
 
+    /**
+     * Opens a single WRITE transaction on {@code graph} and runs {@code update}. Use this only when
+     * the {@link UpdateRequest} can be fully prepared <em>before</em> the transaction opens.
+     */
     public void executeSingleUpdate(
-            GraphRewindableWithUUIDs graph, Update update, String graphUri) {
+            GraphRewindableWithUUIDs graph, UpdateRequest update, String graphUri) {
         try {
             graph.begin(TxnType.WRITE);
             var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
