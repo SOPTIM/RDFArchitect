@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.dl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -92,7 +92,7 @@ public class DiagramLayoutServicesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);

@@ -66,7 +66,7 @@ public class UpdateDiagramLayoutService
                 diagramLayoutModel,
                 Diagram.builder()
                         .mRID(diagramLayout.getDefaultPackageMRID())
-                        .name(graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME)
+                        .name(graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME)
                         .orientation(OrientationKind.NEGATIVE)
                         .build());
         // create DOs and DOPs for the default package
@@ -121,7 +121,7 @@ public class UpdateDiagramLayoutService
 
             // finds the package name for the DL diagram to be added
             if (resolvedPackageUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
-                packageName = graphIdentifier.getGraphUri() + "/" + DEFAULT_PACKAGE_NAME;
+                packageName = graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME;
             } else {
                 for (var cimPackage : cimCollection.getPackages()) {
                     if (cimPackage.getUuid().equals(resolvedPackageUUID)) {

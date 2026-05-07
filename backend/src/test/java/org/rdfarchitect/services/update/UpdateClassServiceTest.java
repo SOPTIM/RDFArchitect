@@ -17,10 +17,11 @@
 
 package org.rdfarchitect.services.update;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
-import static utils.TestUtils.*;
+import static utils.TestUtils.readMultipartFileFromFile;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
@@ -87,7 +88,7 @@ class UpdateClassServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build();
         databasePort.createGraph(graphIdentifier, graphSource.graph());
     }

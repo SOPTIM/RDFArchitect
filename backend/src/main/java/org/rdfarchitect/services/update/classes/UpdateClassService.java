@@ -87,7 +87,7 @@ public class UpdateClassService
             assertNoPackageWithSameIri(graph, cimClass);
             CIMUpdates.replaceClass(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     cimClass,
                     newValuesAsBlankNode);
             graph.commit();
@@ -123,7 +123,7 @@ public class UpdateClassService
             newClassUUID =
                     CIMUpdates.insertClass(
                             graph,
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             newClass);
             graph.commit();
         } finally {
@@ -175,9 +175,7 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             CIMUpdates.deleteClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
-                    classUUID);
+                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), classUUID);
             graph.commit();
         } finally {
             if (graph != null) {
