@@ -26,17 +26,17 @@
 
     let { showDialog = $bindable(), property } = $props();
 
-    let customShacl = $state({
+    let defaultShacl = () => ({
         namespaces: "",
         propertyShapes: [],
     });
+
+    let customShacl = $state(defaultShacl());
     let customShaclBackUp = $state("");
-    let generatedShacl = $state({
-        namespaces: "",
-        propertyShapes: [],
-    });
+    let generatedShacl = $state(defaultShacl());
     let showGeneratedShacl = $state(false);
-    let showNamespaces = $state(false);
+    let showGeneratedNamespaces = $state(false);
+    let showCustomNamespaces = $state(false);
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
             editorState.selectedDataset.getValue(),
@@ -56,6 +56,15 @@
         );
     }
 
+    function onClose() {
+        customShacl = defaultShacl();
+        customShaclBackUp = "";
+        generatedShacl = defaultShacl();
+        showGeneratedShacl = false;
+        showGeneratedNamespaces = false;
+        showCustomNamespaces = false;
+    }
+
     function getType() {
         if (property instanceof ReactiveAttribute) {
             return "attributes";
@@ -65,112 +74,131 @@
         return "";
     }
 
+    function buildBaseUrl() {
+        return (
+            PUBLIC_BACKEND_URL +
+            "/datasets/" +
+            encodeURIComponent(classDatasetName) +
+            "/graphs/" +
+            encodeURIComponent(classGraphUri)
+        );
+    }
+
     /**
      * fetches the SHACL rules for the selected class.
      */
-    function fetchShacl(newViewedClassUUID, viewedPropertyUUID) {
-        let type = getType();
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/classes/" +
-                encodeURIComponent(newViewedClassUUID) +
-                "/" +
-                type +
-                "/" +
-                encodeURIComponent(viewedPropertyUUID) +
-                "/shacl",
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        )
-            .then(res => res.json())
-            .then(res => {
-                customShacl.propertyShapes = res.custom;
-                generatedShacl.propertyShapes = res.generated;
-                console.log(res);
-            })
-            .then(() => {
-                fetchFormattedNamespaces();
-            });
-    }
-
-    function fetchFormattedNamespaces() {
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/shacl/generated/namespaces/ttl",
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        )
-            .then(res => res.text())
-            .then(res => {
-                generatedShacl.prefixes = res;
-            });
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/shacl/custom/namespaces/ttl",
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        )
-            .then(res => res.text())
-            .then(res => {
-                customShacl.prefixes = res;
-            })
-            .then(() => (customShaclBackUp = buildTtlString(customShacl)));
-    }
-
-    function saveChanges() {
-        let ttlString = buildTtlString(customShacl);
-        let type = getType();
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/classes/" +
-                encodeURIComponent(editorState.selectedClassUUID.getValue()) +
-                "/" +
-                type +
-                "/" +
-                encodeURIComponent(property.uuid.value) +
-                "/shacl",
-            {
-                method: "PUT",
-                body: ttlString,
-                credentials: "include",
-            },
-        )
-            .then(res => {
-                if (res.ok) {
-                    console.log("successfully updated custom SHACL rules.");
-                } else {
-                    console.log("failed to update custom SHACL rules.");
-                }
-            })
-            .finally(() => {
-                fetchShacl(
-                    editorState.selectedClassUUID.getValue(),
-                    property.uuid.value,
+    async function fetchShacl(newViewedClassUUID, viewedPropertyUUID) {
+        try {
+            const type = getType();
+            const res = await fetch(
+                buildBaseUrl() +
+                    "/classes/" +
+                    encodeURIComponent(newViewedClassUUID) +
+                    "/" +
+                    type +
+                    "/" +
+                    encodeURIComponent(viewedPropertyUUID) +
+                    "/shacl",
+                {
+                    method: "GET",
+                    credentials: "include",
+                },
+            );
+            if (!res.ok) {
+                console.warn(
+                    "Failed to fetch SHACL:",
+                    res.status,
+                    res.statusText,
                 );
-            });
+                return;
+            }
+            const data = await res.json();
+            customShacl.propertyShapes = data.custom;
+            generatedShacl.propertyShapes = data.generated;
+
+            await fetchFormattedNamespaces();
+        } catch (error) {
+            console.warn("Failed to fetch SHACL:", error);
+        }
     }
+
+    async function fetchFormattedNamespaces() {
+        try {
+            const [generatedRes, customRes] = await Promise.all([
+                fetch(buildBaseUrl() + "/shacl/generated/namespaces/ttl", {
+                    method: "GET",
+                    credentials: "include",
+                }),
+                fetch(buildBaseUrl() + "/shacl/custom/namespaces/ttl", {
+                    method: "GET",
+                    credentials: "include",
+                }),
+            ]);
+
+            if (!generatedRes.ok) {
+                console.warn(
+                    "Failed to fetch generated namespaces:",
+                    generatedRes.status,
+                    generatedRes.statusText,
+                );
+            } else {
+                generatedShacl.namespaces = await generatedRes.text();
+            }
+
+            if (!customRes.ok) {
+                console.warn(
+                    "Failed to fetch custom namespaces:",
+                    customRes.status,
+                    customRes.statusText,
+                );
+            } else {
+                customShacl.namespaces = await customRes.text();
+            }
+
+            customShaclBackUp = buildTtlString(customShacl);
+        } catch (error) {
+            console.warn("Failed to fetch namespaces:", error);
+        }
+    }
+
+    async function saveChanges() {
+        const ttlString = buildTtlString(customShacl);
+        const type = getType();
+        try {
+            const res = await fetch(
+                buildBaseUrl() +
+                    "/classes/" +
+                    encodeURIComponent(
+                        editorState.selectedClassUUID.getValue(),
+                    ) +
+                    "/" +
+                    type +
+                    "/" +
+                    encodeURIComponent(property.uuid.value) +
+                    "/shacl",
+                {
+                    method: "PUT",
+                    body: ttlString,
+                    credentials: "include",
+                },
+            );
+            if (!res.ok) {
+                console.warn(
+                    "Failed to save custom SHACL:",
+                    res.status,
+                    res.statusText,
+                );
+            }
+        } catch (error) {
+            console.warn("Failed to save custom SHACL:", error);
+        } finally {
+            await fetchShacl(
+                editorState.selectedClassUUID.getValue(),
+                property.uuid.value,
+            );
+        }
+    }
+
     function buildTtlString(shacl) {
         let ttlString = "";
         if (shacl.namespaces) {
@@ -186,6 +214,7 @@
 <ActionDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     size="w-2/5 h-3/5"
     title={`Constraints (SHACL) for: "${property?.label?.value}"`}
     primaryLabel={null}
@@ -221,13 +250,14 @@
                             <button
                                 class="w-fit font-bold hover:cursor-pointer hover:underline"
                                 onclick={() => {
-                                    showNamespaces = !showNamespaces;
+                                    showGeneratedNamespaces =
+                                        !showGeneratedNamespaces;
                                 }}
                             >
                                 namespaces:
                             </button>
                         {/if}
-                        {#if showNamespaces}
+                        {#if showGeneratedNamespaces}
                             <TtlCodeEditor
                                 value={generatedShacl.namespaces}
                                 readOnly={true}
@@ -262,13 +292,14 @@
                             <button
                                 class="w-fit font-bold hover:underline"
                                 onclick={() => {
-                                    showNamespaces = !showNamespaces;
+                                    showCustomNamespaces =
+                                        !showCustomNamespaces;
                                 }}
                             >
                                 namespaces:
                             </button>
                         {/if}
-                        {#if showNamespaces}
+                        {#if showCustomNamespaces}
                             <TtlCodeEditor
                                 bind:value={customShacl.namespaces}
                                 readOnly={false}

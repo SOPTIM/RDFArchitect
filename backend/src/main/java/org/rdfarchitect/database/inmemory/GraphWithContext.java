@@ -20,6 +20,7 @@ package org.rdfarchitect.database.inmemory;
 import lombok.Getter;
 import lombok.Setter;
 
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
@@ -31,6 +32,8 @@ public class GraphWithContext {
 
     @Getter private final GraphRewindableWithUUIDs rdfGraph;
     @Getter @Setter private DiagramLayout diagramLayout;
+
+    @Getter @Setter private Model customSHACL;
 
     public GraphWithContext(GraphRewindableWithUUIDs rdfGraph) {
         this.rdfGraph = rdfGraph;

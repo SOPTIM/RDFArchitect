@@ -40,21 +40,21 @@ import org.springframework.web.bind.annotation.RestController;
 import java.nio.charset.StandardCharsets;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/generated/prefixes")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/shacl/generated/namespaces")
 @RequiredArgsConstructor
-public class SHACLGeneratedPrefixesRestController {
+public class SHACLGeneratedNamespacesRestController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(SHACLGeneratedPrefixesRestController.class);
+            LoggerFactory.getLogger(SHACLGeneratedNamespacesRestController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
 
     private final SHACLExportUseCase shaclExportUseCase;
 
     @Operation(
-            summary = "export generated SHACL prefixes",
+            summary = "export generated SHACL namespaces",
             description =
-                    "Export the prefixes of the generated SHACL graph for a given graph identifier.",
+                    "Export the namespaces of the generated SHACL graph for a given graph identifier.",
             tags = {"shacl"},
             responses = {
                 @ApiResponse(
@@ -64,7 +64,7 @@ public class SHACLGeneratedPrefixesRestController {
                         })
             })
     @GetMapping("/ttl")
-    public String getGeneratedSHACLPrefixesAsString(
+    public String getGeneratedSHACLNamespacesAsString(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -79,7 +79,7 @@ public class SHACLGeneratedPrefixesRestController {
                     @PathVariable
                     String graphURI) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/prefixes/ttl\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" from \"{}\".",
                 datasetName,
                 graphURI,
                 originURL);
@@ -89,13 +89,13 @@ public class SHACLGeneratedPrefixesRestController {
         // fetch data
         var shaclString =
                 shaclExportUseCase
-                        .exportGeneratedSHACLPrefixes(
+                        .exportGeneratedSHACLNamespaces(
                                 new GraphIdentifier(datasetName, extendedGraphURI),
                                 RDFFormat.TURTLE)
                         .toString(StandardCharsets.UTF_8);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/prefixes/ttl\" to \"{}\".",
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generated/namespaces/ttl\" to \"{}\".",
                 datasetName,
                 graphURI,
                 originURL);

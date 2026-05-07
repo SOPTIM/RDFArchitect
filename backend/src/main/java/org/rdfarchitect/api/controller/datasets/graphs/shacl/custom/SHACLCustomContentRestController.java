@@ -25,7 +25,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
-import org.apache.jena.shacl.ShaclException;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -253,9 +252,6 @@ public class SHACLCustomContentRestController {
                 datasetName,
                 graphURI,
                 originURL);
-        if (shaclString.isEmpty()) {
-            throw new ShaclException("SHACL graph is empty for graph: " + extendedGraphURI);
-        }
         return shaclString;
     }
 

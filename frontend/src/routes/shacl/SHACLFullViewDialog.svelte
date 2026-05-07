@@ -27,7 +27,7 @@
     let customSHACL = $state();
     let customSHACLBackup = $state("");
     let readOnly = $state(false);
-    let generatedShacl = $state("");
+    let generatedShacl = $state();
     let showGeneratedShacl = $state(false);
 
     function onOpen() {
@@ -44,80 +44,101 @@
         }
     }
 
-    function fetchGeneratedShacl() {
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(editorState.selectedDataset.getValue()) +
-                "/graphs/" +
-                encodeURIComponent(editorState.selectedGraph.getValue()) +
-                "/shacl/generate/string",
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        )
-            .then(res => {
-                if (!res.ok) {
-                    return "No Constraints (SHACL) found.";
-                }
-                return res.text();
-            })
-            .then(res => (generatedShacl = res));
+    function onClose() {
+        customSHACL = undefined;
+        customSHACLBackup = "";
+        generatedShacl = undefined;
+    }
+
+    async function fetchGeneratedShacl() {
+        try {
+            let res = await fetch(
+                PUBLIC_BACKEND_URL +
+                    "/datasets/" +
+                    encodeURIComponent(editorState.selectedDataset.getValue()) +
+                    "/graphs/" +
+                    encodeURIComponent(editorState.selectedGraph.getValue()) +
+                    "/shacl/generate/string",
+                {
+                    method: "GET",
+                    credentials: "include",
+                },
+            );
+            let text = await res.text();
+            if (!res.ok || text.trim() === "") {
+                text = "No Constraints (SHACL) found.";
+            }
+            generatedShacl = text;
+        } catch (error) {
+            console.warn("Failed to fetch generated SHACL:", error);
+            generatedShacl = "Failed to load generated constraints.";
+        }
     }
 
     /**
      * fetches the custom SHACL rules for the selected class.
      */
-    function fetchCustomShacl() {
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(editorState.selectedDataset.getValue()) +
-                "/graphs/" +
-                encodeURIComponent(editorState.selectedGraph.getValue()) +
-                "/shacl/custom/string",
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        )
-            .then(res => {
-                if (!res.ok) {
-                    return "No Constraints (SHACL) found.";
-                }
-                return res.text();
-            })
-            .then(res => {
-                customSHACL = res;
-                customSHACLBackup = res;
-            });
+    async function fetchCustomShacl() {
+        try {
+            let res = await fetch(
+                PUBLIC_BACKEND_URL +
+                    "/datasets/" +
+                    encodeURIComponent(editorState.selectedDataset.getValue()) +
+                    "/graphs/" +
+                    encodeURIComponent(editorState.selectedGraph.getValue()) +
+                    "/shacl/custom/string",
+                {
+                    method: "GET",
+                    credentials: "include",
+                },
+            );
+            let text = await res.text();
+            if (!res.ok || text.trim() === "") {
+                text = "No Constraints (SHACL) found.";
+            }
+            customSHACL = text;
+            customSHACLBackup = text;
+        } catch (error) {
+            console.warn("Failed to fetch custom SHACL:", error);
+            customSHACL = "Failed to load custom constraints.";
+            customSHACLBackup = customSHACL;
+        }
     }
 
-    function submitChanges() {
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(editorState.selectedDataset.getValue()) +
-                "/graphs/" +
-                encodeURIComponent(editorState.selectedGraph.getValue()) +
-                "/shacl/custom/string",
-            {
-                method: "PUT",
-                body: customSHACL,
-                credentials: "include",
-            },
-        ).then(res => {
+    async function submitChanges() {
+        try {
+            let res = await fetch(
+                PUBLIC_BACKEND_URL +
+                    "/datasets/" +
+                    encodeURIComponent(editorState.selectedDataset.getValue()) +
+                    "/graphs/" +
+                    encodeURIComponent(editorState.selectedGraph.getValue()) +
+                    "/shacl/custom/string",
+                {
+                    method: "PUT",
+                    body: customSHACL ? customSHACL : " ",
+                    credentials: "include",
+                },
+            );
             if (res.ok) {
                 customSHACLBackup = customSHACL;
+            } else {
+                console.warn(
+                    "Failed to save custom SHACL:",
+                    res.status,
+                    res.statusText,
+                );
             }
-        });
+        } catch (error) {
+            console.warn("Failed to save custom SHACL:", error);
+        }
     }
 </script>
 
 <ActionDialog
     bind:showDialog
     {onOpen}
+    {onClose}
     size="w-2/3 h-4/5"
     title={`Constraints (SHACL) for: "${editorState.selectedDataset.getValue()}/${editorState.selectedGraph.getValue()}"`}
     primaryLabel={null}
@@ -146,14 +167,14 @@
         <!-- Scrollable content area -->
         <div class="min-h-0 flex-1 overflow-y-auto">
             {#if showGeneratedShacl}
-                {#if customSHACL !== undefined}
+                {#if generatedShacl !== undefined}
                     <TtlCodeEditor
                         bind:value={generatedShacl}
                         readOnly={true}
                     />
                 {/if}
             {:else}
-                {#if customSHACLBackup !== customSHACL}
+                {#if customSHACL !== undefined && customSHACLBackup !== customSHACL}
                     <div class="mb-2 h-8 w-fit">
                         <ButtonControl callOnClick={submitChanges}>
                             Save Changes

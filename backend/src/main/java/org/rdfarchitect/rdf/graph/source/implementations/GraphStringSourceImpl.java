@@ -45,7 +45,7 @@ public class GraphStringSourceImpl implements GraphSource {
     @Override
     public Graph graph() {
         var model = ModelFactory.createDefaultModel();
-        try (StringReader reader = new StringReader(graphString)) {
+        try (StringReader reader = new StringReader(graphString.trim())) {
             model.read(reader, null, Lang.TURTLE.getName());
         }
         return model.getGraph();
