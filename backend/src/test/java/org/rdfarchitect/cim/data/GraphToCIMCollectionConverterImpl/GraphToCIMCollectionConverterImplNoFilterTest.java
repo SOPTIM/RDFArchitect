@@ -60,9 +60,13 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
     private static final String PATH =
             "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverterImpl/";
 
+    private static final String ENTSOE_RDFS_PATH =
+            "../external/entsoe-application-profiles-library/CGMES/CurrentRelease/RDFS/";
+
     private final Map<String, String> prefixMapping =
             Map.of(
                     "cim", "http://iec.ch/TC57/2013/CIM-schema-cim16#",
+                    "cim100", "http://iec.ch/TC57/CIM100#",
                     "cims", "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#",
                     "example", "http://example.com#",
                     "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
@@ -87,7 +91,8 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
         try {
             var graph = GraphFactory.createDefaultGraph();
             InputStream in = Files.newInputStream(Path.of(fileName));
-            RDFDataMgr.read(graph, in, Lang.TTL);
+            Lang lang = fileName.endsWith(".rdf") ? Lang.RDFXML : Lang.TTL;
+            RDFDataMgr.read(graph, in, lang);
             graphRewindable = database.begin(graphIdentifier, TxnType.WRITE);
             for (var triple : graph.find().toList()) {
                 graphRewindable.add(triple);
@@ -103,9 +108,8 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
     @Test
     void convert_onlyPackage_collectionWithOnlyOnePackage() throws IOException {
         // Arrange
-        addFileGraphToDatabase(PATH + "package.ttl");
+        addFileGraphToDatabase(ENTSOE_RDFS_PATH + "61970-600-2_Header-AP-Voc-RDFS2020.rdf");
         var filter = new GraphFilter(true);
-        filter.setPackageUUID("123e4567-e89b-12d3-a456-426614174000");
 
         // Act
         var cimCollection = converter.convert(graphIdentifier, filter);
@@ -117,9 +121,11 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
         assertThat(cimCollection.getEnumEntries()).isEmpty();
         assertThat(cimCollection.getClasses()).isEmpty();
 
-        assertThat(cimCollection.getPackages()).hasSize(1);
-        assertThat(cimCollection.getPackages().iterator().next().getUri())
-                .isEqualTo(new URI(prefixMapping.get("cim") + "Package_Infrastruktur"));
+        assertThat(cimCollection.getPackages())
+                .extracting(p -> p.getUri().toString())
+                .containsExactlyInAnyOrder(
+                        prefixMapping.get("cim100") + "Package_FileHeaderProfile",
+                        prefixMapping.get("cim100") + "Package_DomainProfile");
     }
 
     @Test

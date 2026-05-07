@@ -52,6 +52,16 @@ For the complete documentation, see the [docs site](https://rdfarchitect.soptim.
   - `/` routes to frontend
   - `/api` routes to backend
 
+## External Data
+
+This repository includes the [ENTSO-E application-profiles-library](https://github.com/entsoe/application-profiles-library) as a git submodule under `external/entsoe-application-profiles-library`. It provides the official RDFS / SHACL artifacts for CGMES and NC profiles, and is used by backend tests as realistic input data. The library is published by ENTSO-E under the Apache License 2.0 (see `external/entsoe-application-profiles-library/LICENSE.txt` and `NOTICE.txt`).
+
+When cloning this repository, initialize the submodule with:
+
+```bash
+git submodule update --init --recursive
+```
+
 ## Prerequisites
 
 - Java 25 or higher
