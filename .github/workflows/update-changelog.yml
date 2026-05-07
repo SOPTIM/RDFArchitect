@@ -1,0 +1,79 @@
+name: Update Changelog
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "New version (semver, no leading v), e.g. 1.1.0"
+        required: true
+        type: string
+      date:
+        description: "Release date (YYYY-MM-DD). Defaults to today."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Validate version
+        run: |
+          if [[ ! "${{ inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::version must be semver X.Y.Z"
+            exit 1
+          fi
+
+      - name: Update CHANGELOG.md
+        id: changelog
+        run: |
+          set -euo pipefail
+          DATE_ARG=()
+          if [[ -n "${{ inputs.date }}" ]]; then
+            DATE_ARG=(--date "${{ inputs.date }}")
+          fi
+          {
+            echo 'notes<<__RELEASE_NOTES__'
+            python3 .github/scripts/update_changelog.py \
+              --version "${{ inputs.version }}" \
+              "${DATE_ARG[@]}"
+            echo '__RELEASE_NOTES__'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          NOTES: ${{ steps.changelog.outputs.notes }}
+          BASE_REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          BRANCH="chore/changelog-v${VERSION}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add CHANGELOG.md
+          git commit -m "chore(changelog): prepare v${VERSION}"
+          git push --force-with-lease origin "$BRANCH"
+
+          if existing=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number'); [[ -n "$existing" ]]; then
+            gh pr edit "$existing" --title "chore(changelog): prepare v${VERSION}" --body "$NOTES"
+            echo "Updated existing PR #$existing"
+          else
+            gh pr create \
+              --base "$BASE_REF" \
+              --head "$BRANCH" \
+              --title "chore(changelog): prepare v${VERSION}" \
+              --body "$NOTES"
+          fi
