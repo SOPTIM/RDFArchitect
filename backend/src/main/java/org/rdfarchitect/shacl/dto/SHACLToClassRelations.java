@@ -26,7 +26,7 @@ import java.util.List;
 @Data
 public class SHACLToClassRelations {
 
-    private String prefixes;
+    private String namespaces;
 
     private List<NodeShape> nodeShapes;
 

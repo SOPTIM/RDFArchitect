@@ -23,11 +23,10 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
-import org.rdfarchitect.cim.rdf.resources.CIM;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
 import java.util.UUID;
@@ -35,10 +34,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InMemoryDatabaseAdapter implements DatabasePort {
 
-    private static final String CIM_PREFIX = "cim";
-    private static final String CIMS_PREFIX = "cims";
-
     private final InMemoryDatabase database;
+
+    private final SchemaConfig schemaConfig;
 
     @Override
     public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
@@ -60,24 +58,24 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
         database.create(graphIdentifier, graph);
         var currentPrefixMapping =
                 new PrefixMappingImpl()
-                        .setNsPrefixes(database.getPrefixMapping(graphIdentifier.getDatasetName()))
+                        .setNsPrefixes(database.getPrefixMapping(graphIdentifier.datasetName()))
                         .setNsPrefixes(graph.getPrefixMapping());
-        database.setPrefixMapping(graphIdentifier.getDatasetName(), currentPrefixMapping);
+        database.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
     }
 
     @Override
     public void createEmptyGraph(GraphIdentifier graphIdentifier) {
-        var datasetName = graphIdentifier.getDatasetName();
+        var datasetName = graphIdentifier.datasetName();
         var isNewDataset = !database.listDatasets().contains(datasetName);
         database.create(graphIdentifier, GraphFactory.createDefaultGraph());
         if (isNewDataset) {
             database.enableEditing(datasetName);
-            var prefixMapping =
-                    new PrefixMappingImpl()
-                            .setNsPrefixes(PrefixMapping.Standard)
-                            .setNsPrefix(CIM_PREFIX, CIM.namespace)
-                            .setNsPrefix(CIMS_PREFIX, CIMS.namespace);
-            database.setPrefixMapping(graphIdentifier.getDatasetName(), prefixMapping);
+            var configNamespaces = schemaConfig.getNamespaces();
+            var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
+            for (var entry : configNamespaces.entrySet()) {
+                prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
+            }
+            database.setPrefixMapping(graphIdentifier.datasetName(), prefixMapping);
         }
     }
 

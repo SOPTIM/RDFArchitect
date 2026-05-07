@@ -122,9 +122,9 @@ public class SearchService implements SearchUseCase {
                       PREFIX  cim:  <http://iec.ch/TC57/2013/CIM-schema-cim16#>
 
                       SELECT DISTINCT ?uri ?uuid ?label ?typeURI ?typeUUID ?typeLabel ?packageURI
-                              (IF(CONTAINS(STR(?packageURI), "Package_"),
-                                  STRAFTER(STR(?packageURI), "Package_"),
-                                  STRAFTER(STR(?packageURI), "#")) AS ?packageLabel)
+                              (IF(CONTAINS(STR(?packageURI), "#"),
+                                  STRAFTER(STR(?packageURI), "#"),
+                                  STR(?packageURI)) AS ?packageLabel)
                               ?packageUUID ?domainURI ?domainLabel ?domainUUID ?stereotype
                       graph
                       WHERE
@@ -142,9 +142,9 @@ public class SearchService implements SearchUseCase {
                           BIND(?uuid AS ?packageUUID)
                           BIND(<http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#ClassCategory> AS ?typeURI)
                           BIND("ClassCategory" AS ?typeLabel)
-                          BIND(IF(CONTAINS(STR(?uri), "Package_"),
-                                  STRAFTER(STR(?uri), "Package_"),
-                                  STRAFTER(STR(?uri), "#")) AS ?label)
+                          BIND(IF(CONTAINS(STR(?uri), "#"),
+                                  STRAFTER(STR(?uri), "#"),
+                                  STR(?uri)) AS ?label)
 
                           FILTER contains(lcase(str(?label)), lcase("searchQuery"))
                         }
@@ -253,16 +253,16 @@ public class SearchService implements SearchUseCase {
             List<SearchResult> externalSearchResults) {
         String specificInternalQuery;
         String specificExternalQuery;
-        if (Objects.equals(graphIdentifier.getGraphUri(), "default")) {
+        if (Objects.equals(graphIdentifier.graphUri(), "default")) {
             specificInternalQuery = SPARQL_INTERNAL_QUERY.replace(GRAPH, "");
             specificExternalQuery = SPARQL_EXTERNAL_QUERY.replace(GRAPH, "");
         } else {
             specificInternalQuery =
                     SPARQL_INTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.getGraphUri() + ">");
+                            GRAPH, "FROM <" + graphIdentifier.graphUri() + ">");
             specificExternalQuery =
                     SPARQL_EXTERNAL_QUERY.replace(
-                            GRAPH, "FROM <" + graphIdentifier.getGraphUri() + ">");
+                            GRAPH, "FROM <" + graphIdentifier.graphUri() + ">");
         }
         specificInternalQuery = specificInternalQuery.replace("searchQuery", query);
         specificExternalQuery = specificExternalQuery.replace("searchQuery", query);
@@ -276,12 +276,12 @@ public class SearchService implements SearchUseCase {
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         internalQueryObject,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
         var externalResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
                         databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
                         externalQueryObject,
-                        graphIdentifier.getGraphUri());
+                        graphIdentifier.graphUri());
 
         searchResults.addAll(
                 SearchResultObjectFactory.createSearchResultObjectList(

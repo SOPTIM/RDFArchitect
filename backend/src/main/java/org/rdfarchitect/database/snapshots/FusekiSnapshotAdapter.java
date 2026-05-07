@@ -110,11 +110,11 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
             var copiedGraph = GraphUtils.deepCopy(graph);
             copiedGraph
                     .getPrefixMapping()
-                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                    .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             removeUUIDs(copiedGraph);
 
-            conn.put(graphIdentifier.getGraphUri(), ModelFactory.createModelForGraph(copiedGraph));
+            conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
         } finally {

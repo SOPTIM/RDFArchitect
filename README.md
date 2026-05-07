@@ -1,4 +1,8 @@
-# RDFArchitect
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/static/img/logo-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="./docs/static/img/logo.svg">
+  <img alt="Projektlogo" src="./docs/static/img/logo.svg" width="500">
+</picture>
 
 [![Backend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/backend-ci.yml)
 [![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)

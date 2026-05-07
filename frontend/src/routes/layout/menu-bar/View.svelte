@@ -75,7 +75,7 @@
             disabled={!hasGraphSelected}
             faIcon={faEye}
         >
-            Constrains (SHACL)
+            Constraints (SHACL)
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>

@@ -41,6 +41,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -155,7 +156,10 @@ public class AllClassesRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphURI,
+            @Parameter(description = "Whether to include external classes.")
+                    @RequestParam(required = false, defaultValue = "false")
+                    boolean includeExternalClasses) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" from \"{}\".",
                 datasetName,
@@ -166,7 +170,7 @@ public class AllClassesRESTController {
 
         var cimClassList =
                 getClassListUseCase.getClassList(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphURI), includeExternalClasses);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",

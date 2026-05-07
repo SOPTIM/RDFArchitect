@@ -23,6 +23,8 @@ import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/rea
 import {
     hasUniqueIRI,
     hasUniqueLabel,
+    isInvalidAssociationLabel,
+    isInvalidInverseAssociationLabel,
     isInvalidClassLabel,
     isInvalidNamespace,
     isInvalidStereotype,
@@ -32,6 +34,19 @@ import {
 function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
     stereotype.violationChecks.push(stereotype =>
         isInvalidStereotype(stereotype, stereotypesArray),
+    );
+}
+
+function initializeAssociationViolationChecks(
+    association,
+    associationsArray,
+    getClassByUuid,
+) {
+    association.label.violationChecks.push(() =>
+        isInvalidAssociationLabel(association, associationsArray),
+    );
+    association.inverse.label.violationChecks.push(() =>
+        isInvalidInverseAssociationLabel(association, getClassByUuid),
     );
 }
 
@@ -53,6 +68,7 @@ export class ReactiveClass {
         attributes = [],
         associations = [],
         enumEntries = [],
+        getClassByUuid = () => undefined,
         compareClasses = [],
     ) {
         compareClasses = compareClasses.filter(c => c.uuid !== uuid);
@@ -89,7 +105,12 @@ export class ReactiveClass {
         this.associations = new ReactiveObjectsArrayWrapper(
             associations,
             ReactiveAssociation,
-            initializeUniqueLabelChecks,
+            (association, associationsArray) =>
+                initializeAssociationViolationChecks(
+                    association,
+                    associationsArray,
+                    getClassByUuid,
+                ),
         );
         this.enumEntries = new ReactiveObjectsArrayWrapper(
             enumEntries,

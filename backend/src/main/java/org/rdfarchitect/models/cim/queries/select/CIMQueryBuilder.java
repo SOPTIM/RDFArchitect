@@ -19,6 +19,7 @@ package org.rdfarchitect.models.cim.queries.select;
 
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.query.Query;
+import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
@@ -233,23 +234,49 @@ public class CIMQueryBuilder {
     }
 
     /**
-     * Appends query for isFixed as {@link CIMQueryVars IS_FIXED}.
+     * Appends query for isFixed as {@link CIMQueryVars IS_FIXED} and, when the value is bound to a
+     * blank-node wrapper, the inner literal as {@link CIMQueryVars IS_FIXED_INNER}.
      *
      * @param mode Whether the result of this is mode.
      * @return {@link CIMQueryBuilder this}
      */
     public CIMQueryBuilder appendIsFixedQuery(Mode mode) {
-        return appendSingleQuery(CIMS.isFixed, CIMQueryVars.IS_FIXED, mode);
+        return appendValueNodeQuery(
+                CIMS.isFixed, CIMQueryVars.IS_FIXED, CIMQueryVars.IS_FIXED_INNER, mode);
     }
 
     /**
-     * Appends query for isDefault as {@link CIMQueryVars IS_DEFAULT}.
+     * Appends query for isDefault as {@link CIMQueryVars IS_DEFAULT} and, when the value is bound
+     * to a blank-node wrapper, the inner literal as {@link CIMQueryVars IS_DEFAULT_INNER}.
      *
      * @param mode Whether the result of this is mode.
      * @return {@link CIMQueryBuilder this}
      */
     public CIMQueryBuilder appendIsDefaultQuery(Mode mode) {
-        return appendSingleQuery(CIMS.isDefault, CIMQueryVars.IS_DEFAULT, mode);
+        return appendValueNodeQuery(
+                CIMS.isDefault, CIMQueryVars.IS_DEFAULT, CIMQueryVars.IS_DEFAULT_INNER, mode);
+    }
+
+    /**
+     * Appends query for an attribute fixed/default value, supporting both shapes — direct literal
+     * and blank-node wrapper. The outer variable holds either the literal or the blank node; the
+     * inner variable is bound to the {@code rdfs:Literal} object only in the blank-node shape.
+     */
+    private CIMQueryBuilder appendValueNodeQuery(
+            Object predicate, String outerVar, String innerVar, Mode mode) {
+        baseQuery.addVar(outerVar);
+        baseQuery.addVar(innerVar);
+        var innerProperty = ResourceFactory.createProperty(RDFS.Literal.getURI());
+        if (mode == Mode.REQUIRED) {
+            baseQuery.addWhere(CIMQueryVars.URI, predicate, outerVar);
+            baseQuery.addOptional(outerVar, innerProperty, innerVar);
+        } else {
+            baseQuery.addOptional(
+                    new SelectBuilder()
+                            .addWhere(CIMQueryVars.URI, predicate, outerVar)
+                            .addOptional(outerVar, innerProperty, innerVar));
+        }
+        return this;
     }
 
     /**
@@ -333,6 +360,17 @@ public class CIMQueryBuilder {
     }
 
     // inverse
+
+    /**
+     * Appends query for the uuid of objects connected via "cims:inverseRoleName" as {@link
+     * CIMQueryVars Inverse.UUID}.
+     *
+     * @param mode Whether the result of this is mode.
+     * @return {@link CIMQueryBuilder this}
+     */
+    public CIMQueryBuilder appendInverseUuidQuery(Mode mode) {
+        return appendInverseSingleQuery(RDFA.uuid, CIMQueryVars.Inverse.UUID, mode);
+    }
 
     /**
      * Appends query for the label of objects connected via "cims:inverseRoleName" as {@link

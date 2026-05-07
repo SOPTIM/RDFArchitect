@@ -108,7 +108,8 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                             CIMUpdates.replaceClass(
                                     graph,
                                     databasePort.getPrefixMapping(DATASET_NAME),
-                                    new CIMClassUMLAdapted(classRequired)));
+                                    new CIMClassUMLAdapted(classRequired),
+                                    false));
 
             // Assert
             try {
@@ -162,7 +163,8 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                             CIMUpdates.replaceClass(
                                     graph,
                                     databasePort.getPrefixMapping(DATASET_NAME),
-                                    new CIMClassUMLAdapted(classOptional)));
+                                    new CIMClassUMLAdapted(classOptional),
+                                    false));
 
             // Assert
             try {
@@ -311,6 +313,43 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                         CIMS.stereotype.asNode(),
                                         CIMStereotypes.concrete.asNode()))
                         .isTrue();
+            } finally {
+                testGraph.end();
+            }
+        }
+
+        @Test
+        @DisplayName("Rejects class if a package with the same IRI exists")
+        void insertClass_packageWithSameIriExists_throwsException() {
+            // Arrange
+            addGraphFromFile("packages/package.ttl");
+            var classWithPackageIri =
+                    classRequired.toBuilder()
+                            .uri(new URI(PACKAGE_URI))
+                            .label(new RDFSLabel(PACKAGE_LABEL, "en"))
+                            .build();
+
+            // Act + Assert
+            assertThatThrownBy(
+                            () ->
+                                    executeWriteTransaction(
+                                            graph ->
+                                                    CIMUpdates.insertClass(
+                                                            graph,
+                                                            databasePort.getPrefixMapping(
+                                                                    DATASET_NAME),
+                                                            classWithPackageIri)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("package with the same IRI");
+
+            try {
+                testGraph.begin(TxnType.READ);
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        RDFS.Class.asNode()))
+                        .isFalse();
             } finally {
                 testGraph.end();
             }

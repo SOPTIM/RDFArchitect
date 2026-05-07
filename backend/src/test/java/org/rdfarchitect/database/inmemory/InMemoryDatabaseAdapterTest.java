@@ -23,9 +23,8 @@ import static org.mockito.Mockito.*;
 import org.apache.jena.shared.PrefixMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.cim.rdf.resources.CIM;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 import java.util.List;
 
@@ -37,7 +36,7 @@ class InMemoryDatabaseAdapterTest {
     @BeforeEach
     void setUp() {
         database = mock(InMemoryDatabase.class);
-        adapter = new InMemoryDatabaseAdapter(database);
+        adapter = new InMemoryDatabaseAdapter(database, new SchemaConfig());
     }
 
     @Test
@@ -55,16 +54,11 @@ class InMemoryDatabaseAdapterTest {
                         argThat(
                                 prefixMapping ->
                                         prefixMapping
-                                                        .getNsPrefixMap()
-                                                        .entrySet()
-                                                        .containsAll(
-                                                                PrefixMapping.Standard
-                                                                        .getNsPrefixMap()
-                                                                        .entrySet())
-                                                && CIM.namespace.equals(
-                                                        prefixMapping.getNsPrefixURI("cim"))
-                                                && CIMS.namespace.equals(
-                                                        prefixMapping.getNsPrefixURI("cims"))));
+                                                .getNsPrefixMap()
+                                                .entrySet()
+                                                .containsAll(
+                                                        PrefixMapping.Standard.getNsPrefixMap()
+                                                                .entrySet())));
     }
 
     @Test

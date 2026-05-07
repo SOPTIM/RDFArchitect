@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RDFArchitect">
+  <rect x="2" y="2" width="60" height="60" rx="12" ry="12" fill="#2a6ebb"/>
+  <text x="32" y="32"
+        text-anchor="middle"
+        dominant-baseline="central"
+        font-family="Helvetica Neue, Arial, sans-serif"
+        font-weight="700"
+        font-size="28"
+        letter-spacing="-1"
+        fill="#ffffff">RA</text>
+</svg>

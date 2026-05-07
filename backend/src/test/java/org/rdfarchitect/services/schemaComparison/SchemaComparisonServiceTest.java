@@ -17,15 +17,16 @@
 
 package org.rdfarchitect.services.schemaComparison;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import static utils.TestUtils.*;
+import static utils.TestUtils.readMultipartFileFromFile;
 
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
@@ -56,14 +57,14 @@ class SchemaComparisonServiceTest {
 
     @BeforeEach
     void setUp() {
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         service = new SchemaComparisonService(databasePort);
 
         var file = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(GRAPH_IDENTIFIER.getGraphUri())
+                        .setGraphName(GRAPH_IDENTIFIER.graphUri())
                         .build();
         databasePort.createGraph(GRAPH_IDENTIFIER, graphSource.graph());
     }
@@ -426,7 +427,7 @@ class SchemaComparisonServiceTest {
         var graphSource =
                 new GraphFileSourceBuilderImpl()
                         .setFile(otherGraphFile)
-                        .setGraphName(OTHER_GRAPH_IDENTIFIER.getGraphUri())
+                        .setGraphName(OTHER_GRAPH_IDENTIFIER.graphUri())
                         .build();
         databasePort.createGraph(OTHER_GRAPH_IDENTIFIER, graphSource.graph());
 

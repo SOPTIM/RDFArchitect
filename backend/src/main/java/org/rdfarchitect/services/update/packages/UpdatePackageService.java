@@ -20,11 +20,15 @@ package org.rdfarchitect.services.update.packages;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.TxnType;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
@@ -57,9 +61,10 @@ public class UpdatePackageService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var newPackage = packageMapper.toCIMObject(packageDTO);
+            assertNoClassWithSameIri(graph, newPackage);
             CIMUpdates.insertPackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
             graph.commit();
         } finally {
@@ -84,9 +89,10 @@ public class UpdatePackageService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var newPackage = packageMapper.toCIMObject(packageDTO);
+            assertNoClassWithSameIri(graph, newPackage);
             CIMUpdates.replacePackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     newPackage);
             graph.commit();
         } finally {
@@ -112,7 +118,7 @@ public class UpdatePackageService
             graph.begin(TxnType.WRITE);
             CIMUpdates.deletePackage(
                     graph,
-                    databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                     packageUUID.toString());
             graph.commit();
         } finally {
@@ -126,5 +132,15 @@ public class UpdatePackageService
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry("Deleted package " + packageUUID, graph.getLastDelta()));
+    }
+
+    private void assertNoClassWithSameIri(GraphRewindableWithUUIDs graph, CIMPackage newPackage) {
+        var packageUri = newPackage.getUri().toNode();
+        if (graph.contains(packageUri, RDF.type.asNode(), RDFS.Class.asNode())) {
+            throw new ResourceConflictException(
+                    "Cannot save package "
+                            + newPackage.getUri()
+                            + " because a class with the same IRI already exists.");
+        }
     }
 }

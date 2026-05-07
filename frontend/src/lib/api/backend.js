@@ -95,8 +95,8 @@ export class BackendConnection {
         });
     }
 
-    async getClasses(datasetName, graphURI) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
+    async getClasses(datasetName, graphURI, includeExternalClasses = false) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes?includeExternalClasses=${includeExternalClasses}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -190,11 +190,29 @@ export class BackendConnection {
         });
     }
 
+    async getDeleteRelation(datasetName, graphURI, resourceUuid) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/uuid/${encodeURIComponent(resourceUuid)}/deletion-impact`;
+        return await fetch(url, {
+            method: "GET",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
     async deleteClass(datasetName, graphURI, classUUID) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return await fetch(url, {
             method: "DELETE",
             headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async deleteResources(datasetName, graphURI, deleteRequests) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/delete-requests`;
+        return await fetch(url, {
+            method: "POST",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(deleteRequests),
             credentials: "include",
         });
     }

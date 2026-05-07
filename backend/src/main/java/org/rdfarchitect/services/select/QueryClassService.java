@@ -61,8 +61,8 @@ public class QueryClassService
             var cimClass =
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
                             graph,
-                            graphIdentifier.getGraphUri(),
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()),
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             classUUID);
             return umlAdaptedClassMapper.toDTO(cimClass);
         } finally {
@@ -83,8 +83,8 @@ public class QueryClassService
             var cimObjectFetcher =
                     new CIMObjectFetcher(
                             graph,
-                            graphIdentifier.getGraphUri(),
-                            databasePort.getPrefixMapping(graphIdentifier.getDatasetName()));
+                            graphIdentifier.graphUri(),
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var baseClass = cimObjectFetcher.fetchCIMClass(classUUID.toString());
             superClassList.add(
                     cimObjectFetcher.fetchCIMClass(baseClass.getSuperClass().getUri().toString()));

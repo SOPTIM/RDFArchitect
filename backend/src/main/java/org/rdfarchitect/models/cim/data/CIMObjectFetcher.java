@@ -137,7 +137,10 @@ public class CIMObjectFetcher {
     }
 
     /**
-     * Fetches a List of {@link CIMAttribute CIMAttributes}.
+     * Fetches a List of {@link CIMAttribute CIMAttributes}. Blank-node fixed/default values are
+     * resolved by the SPARQL query itself (see {@link
+     * org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder#appendIsFixedQuery}), so the
+     * factory only needs the {@link ResultSet}.
      *
      * @param query {@link Query} to fetch attributes.
      * @return List of {@link CIMAttribute CIMAttributes}.

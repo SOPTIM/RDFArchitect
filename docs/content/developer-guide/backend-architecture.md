@@ -18,9 +18,8 @@ The backend follows a deliberate **hexagonal / ports-and-adapters** layout. The 
    │     │                                                    │
    │     ▼                                                    │
    │ database/DatabasePort  ← port interface                  │
-   │ database/inmemory/     ┐                                 │
-   │ database/implementations/http/  ← Fuseki adapter         │
-   │ database/implementations/file/  ← file adapter           │
+   │ database/inmemory/     ← active dataset store            │
+   │ database/implementations/http/  ← Fuseki connection      │
    └──────────────────────────────────────────────────────────┘
 ```
 
@@ -42,12 +41,11 @@ Services live under `services/<feature>/` and typically implement multiple use c
 
 ## The database port
 
-`DatabasePort` is the only direct contact with persistent storage. There are two adapters:
+`DatabasePort` is the only direct contact with the active dataset store. Runtime datasets live in the in-memory adapter; Fuseki is used through the database connection and snapshot port when snapshots are created or loaded:^
 
-- **`database/implementations/http`** — talks to Fuseki over the SPARQL 1.1 protocol + Graph Store Protocol. The default in production.
-- **`database/implementations/file`** — reads/writes TriG or N-Quads files on disk. Development-only.
+- **`database/implementations/http`** — talks to Fuseki over the SPARQL 1.1 protocol + Graph Store Protocol for snapshot operations.
 
-Plus an **in-memory** path (`database/inmemory`) used heavily in tests and as a per-session working buffer for unsaved edits.
+The **in-memory** path (`database/inmemory`) is used heavily in tests and as the per-session working buffer for uploaded datasets and edits.
 
 ## REST controllers
 

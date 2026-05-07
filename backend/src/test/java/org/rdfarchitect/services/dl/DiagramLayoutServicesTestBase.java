@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.dl;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -25,6 +25,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
@@ -75,7 +76,7 @@ public class DiagramLayoutServicesTestBase {
     @BeforeAll
     static void setUpEnvironment() {
         diagramLayout = new DiagramLayout();
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         converter = new GraphToCIMCollectionConverterService(databasePort);
         packageMapper = Mappers.getMapper(PackageMapper.class);
         updateDiagramLayoutService = new UpdateDiagramLayoutService(databasePort, converter);
@@ -92,7 +93,7 @@ public class DiagramLayoutServicesTestBase {
         var graph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
-                        .setGraphName(graphIdentifier.getGraphUri())
+                        .setGraphName(graphIdentifier.graphUri())
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);

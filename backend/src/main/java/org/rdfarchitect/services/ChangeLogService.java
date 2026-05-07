@@ -45,8 +45,8 @@ public class ChangeLogService implements ChangeLogUseCase {
     private GraphChangeLog getChangeLog(GraphIdentifier graphIdentifier) {
         return changeLogs
                 .getOrDefault(SessionContext.getSessionId(), Collections.emptyMap())
-                .getOrDefault(graphIdentifier.getDatasetName(), Collections.emptyMap())
-                .getOrDefault(graphIdentifier.getGraphUri(), new GraphChangeLog());
+                .getOrDefault(graphIdentifier.datasetName(), Collections.emptyMap())
+                .getOrDefault(graphIdentifier.graphUri(), new GraphChangeLog());
     }
 
     @Override
@@ -56,8 +56,8 @@ public class ChangeLogService implements ChangeLogUseCase {
                         .computeIfAbsent(
                                 SessionContext.getSessionId(), _ -> new ConcurrentHashMap<>())
                         .computeIfAbsent(
-                                graphIdentifier.getDatasetName(), _ -> new ConcurrentHashMap<>())
-                        .computeIfAbsent(graphIdentifier.getGraphUri(), _ -> new GraphChangeLog());
+                                graphIdentifier.datasetName(), _ -> new ConcurrentHashMap<>())
+                        .computeIfAbsent(graphIdentifier.graphUri(), _ -> new GraphChangeLog());
         graphChangeLog.addEntry(entry);
     }
 
