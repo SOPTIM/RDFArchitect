@@ -20,7 +20,10 @@ package org.rdfarchitect.services.update;
 import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.shared.PrefixMapping;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -31,6 +34,7 @@ import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.GraphWithContext;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
@@ -90,8 +94,7 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri())
-                    .isEqualTo(new URI("http://example.com#Package_TestPackage"));
+            assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("TestPackage", "en"));
             assertThat(captured.getComment()).isNull();
             assertThat(captured.getBelongsToCategory()).isNull();
@@ -119,8 +122,7 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri())
-                    .isEqualTo(new URI("http://example.com#Package_TestPackage"));
+            assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("TestPackage", "en"));
             assertThat(captured.getBelongsToCategory()).isNull();
             assertThat(captured.getUuid()).isNotNull();
@@ -152,6 +154,24 @@ class UpdatePackageServiceTest {
     }
 
     @Test
+    void addPackage_classWithSameIriExists_throwsConflict() {
+        var dto = PackageDTO.builder().prefix("http://example.com#").label("ExistingClass").build();
+        when(mockGraph.contains(
+                        NodeFactory.createURI("http://example.com#ExistingClass"),
+                        RDF.type.asNode(),
+                        RDFS.Class.asNode()))
+                .thenReturn(true);
+
+        assertThatThrownBy(() -> service.addPackage(new GraphIdentifier("default", "test"), dto))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("class with the same IRI");
+
+        verify(mockGraph, never()).commit();
+        verify(mockGraph).end();
+        verifyNoInteractions(changeLogUseCase);
+    }
+
+    @Test
     void replacePackage_validPackage_replacesPackage() {
         var dto =
                 PackageDTO.builder()
@@ -172,8 +192,7 @@ class UpdatePackageServiceTest {
             verify(mockGraph).end();
 
             CIMPackage captured = captor.getValue();
-            assertThat(captured.getUri())
-                    .isEqualTo(new URI("http://other.org#Package_otherPackage"));
+            assertThat(captured.getUri()).isEqualTo(new URI("http://other.org#otherPackage"));
             assertThat(captured.getLabel()).isEqualTo(new RDFSLabel("otherPackage", "en"));
             assertThat(captured.getUuid()).isEqualTo(dto.getUuid());
         }

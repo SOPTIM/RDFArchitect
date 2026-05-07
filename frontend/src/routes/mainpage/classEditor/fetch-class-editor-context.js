@@ -97,7 +97,7 @@ export async function getDataTypes(datasetName, graphUri) {
 }
 
 export async function getClasses(datasetName, graphUri) {
-    const res = await bec.getClasses(datasetName, graphUri);
+    const res = await bec.getClasses(datasetName, graphUri, true);
     let classesDto = await res.json();
     let classes = classesDto.map(cls => new Class(cls));
     console.log("CLASSES:", classes);

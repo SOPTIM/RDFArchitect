@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.cim.rdf.resources;
+package org.rdfarchitect.models.cim.rdf.resources;
 
 import lombok.experimental.UtilityClass;
 

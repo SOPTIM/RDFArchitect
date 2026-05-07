@@ -11,7 +11,7 @@ sidebar_position: 2
 │   ├── src/main/java/org/rdfarchitect/
 │   │   ├── api/              # REST layer: controllers + DTOs
 │   │   ├── services/         # Use cases and service implementations
-│   │   ├── database/         # Database port + Fuseki/in-memory adapters
+│   │   ├── database/         # In-memory data store + Fuseki snapshot support
 │   │   ├── rdf/              # RDF/Jena helpers (graph wrappers, formatting, merging)
 │   │   ├── shacl/            # SHACL generation engine
 │   │   ├── dl/               # Diagram-layout persistence (positions, sizes)
@@ -25,7 +25,7 @@ sidebar_position: 2
 │       ├── application*.yml  # Configuration
 │       └── sparql-templates/ # Parameterised SPARQL used by services
 │
-├── frontend/                 # SvelteKit single-page app (Svelte 5 runes)
+├── frontend/                 # SvelteKit frontend (Svelte 5 runes)
 │   └── src/
 │       ├── routes/           # SvelteKit pages (homepage, /mainpage, /changelog, /compare, /migrate, /shacl)
 │       └── lib/

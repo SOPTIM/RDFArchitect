@@ -19,6 +19,7 @@ package org.rdfarchitect.services.update.classes.associations;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -62,7 +63,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.graphUri());
+                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -85,7 +86,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
         var toUUID = cimAssociationPair.getTo().getUuid();
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.graphUri());
+                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(
@@ -108,7 +109,7 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         cimAssociationPairs);
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         InMemorySparqlExecutor.executeSingleUpdate(
-                graph, update.build(), graphIdentifier.graphUri());
+                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
         changeLogUseCase.recordChange(
                 graphIdentifier,
                 new ChangeLogEntry(

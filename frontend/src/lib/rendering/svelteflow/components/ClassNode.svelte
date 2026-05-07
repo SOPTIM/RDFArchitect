@@ -19,6 +19,7 @@
     import { Handle, Position } from "@xyflow/svelte";
 
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
 
@@ -64,7 +65,7 @@
 
         {#if data.belongsToCategory}
             <div class="text-default-text mb-0.5 text-sm italic">
-                {data.belongsToCategory} ::
+                {getPackageDisplayLabel(data.belongsToCategory)} ::
             </div>
         {/if}
 

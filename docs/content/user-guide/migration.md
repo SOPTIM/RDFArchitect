@@ -5,7 +5,7 @@ sidebar_position: 10
 
 # Schema Migration
 
-RDFArchitect ships a guided **Schema Migration** workflow — **View → Migrate Schema** — that turns the differences between two schema versions into an executable **SPARQL UPDATE** script. This script, when run against an exchange dataset that conforms to the *source* schema, transforms it into a dataset that conforms to the *target* schema.
+RDFArchitect ships a guided **Schema Migration** workflow — **View → Migrate Schema** — that turns the differences between two schema versions into an executable **SPARQL UPDATE** script. This script, when run against instance data that conforms to the *source* schema, migrates the data to conform to the *target* schema.
 
 Migration runs as a five-step wizard.
 
@@ -23,10 +23,10 @@ Same logic, applied to attributes, associations, and enum entries, shown in thre
 
 ## Step 4 — Review Default Values
 
-For every property that exists in the *target* schema but not in the *source*, RDFArchitect asks what value to insert when migrating existing instances. Sub-tabs for attributes, associations, and enum entries. You can specify a fixed value, the result of a SPARQL expression, or leave it blank (in which case the target property simply has no value for migrated instances, which may itself be a SHACL violation you need to review).
+Various properties require default values during the migration, for example new required attributes or attributes with a changed datatype, which can be set in this step. Sub-tabs for attributes, associations, and enum entries. In case of association default values are provided by SPARQL patterns which will be inserted into the final script.
 
 ## Step 5 — Generate Script
 
-The wizard produces a single `.sparql` file containing all the `DELETE/INSERT WHERE` blocks, in the correct order. A warning is shown that multiplicity changes on associations are not yet handled automatically, and that the migrated data should be validated against the target profile's SHACL afterwards.
+The wizard produces a zip folder containing a `.sparql` file with all the `DELETE/INSERT WHERE` blocks, in the correct order and a SHACL file. This SHACL file can be used after running the migration script to confirm that the resulting data is still valid for your schema.
 
-The generated script is plain SPARQL and runs on any SPARQL 1.1-compliant endpoint (e.g. Apache Jena Fuseki, the triple store RDFArchitect uses itself).
+The generated script is plain SPARQL and runs on any SPARQL 1.1-compliant endpoint, for example Apache Jena Fuseki.

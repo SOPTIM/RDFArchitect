@@ -26,6 +26,10 @@
     import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        getPackageDisplayLabel,
+        restorePackageLabelPrefix,
+    } from "$lib/utils/package-label.js";
 
     import {
         getNamespaces,
@@ -58,7 +62,7 @@
             isNewPackage = false;
             pkg = new ReactivePackage({
                 uuid: pack.uuid,
-                label: pack.label,
+                label: getPackageDisplayLabel(pack.label),
                 namespace: pack.prefix,
                 comment: pack.comment,
             });
@@ -69,7 +73,9 @@
         pkg.label.violationChecks.push(value => {
             if (
                 packages.some(
-                    p => p.label === value && p.uuid !== pkg.uuid.value,
+                    p =>
+                        getPackageDisplayLabel(p.label) === value &&
+                        p.uuid !== pkg.uuid.value,
                 )
             ) {
                 return ["must be unique"];
@@ -105,6 +111,10 @@
         }
 
         const apiPackage = mapReactivePackageToPackageDto(pkg);
+        apiPackage.label = restorePackageLabelPrefix(
+            apiPackage.label,
+            pack?.label,
+        );
         const res = await bec.putPackage(datasetName, graphUri, apiPackage);
 
         if (res.ok) {

@@ -35,7 +35,9 @@ public class CIMQueryVars {
     public static final String SUPER_CLASS_LABEL = "?superClassLabel";
     public static final String MULTIPLICITY = "?multiplicity";
     public static final String IS_FIXED = "?isFixed";
+    public static final String IS_FIXED_INNER = "?isFixedInner";
     public static final String IS_DEFAULT = "?isDefault";
+    public static final String IS_DEFAULT_INNER = "?isDefaultInner";
     public static final String DATA_TYPE_URI = "?typeURI";
     public static final String DATA_TYPE_LABEL = "?typeLabel";
     public static final String RANGE_URI = "?rangeURI";

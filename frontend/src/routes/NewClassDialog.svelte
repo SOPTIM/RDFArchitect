@@ -29,6 +29,7 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
         editorState,
@@ -107,10 +108,10 @@
         }
         untrack(
             () =>
-                (className = new ReactiveValueWrapper(className.value, label =>
+                (className = new ReactiveValueWrapper(className?.value, label =>
                     isInvalidClassLabel(
                         label,
-                        classURINamespace.value,
+                        classURINamespace?.value,
                         compareClasses,
                     ),
                 )),
@@ -125,7 +126,11 @@
         classURINamespace = new ReactiveValueWrapper(null);
 
         className = new ReactiveValueWrapper("", label =>
-            isInvalidClassLabel(label, classURINamespace.value, compareClasses),
+            isInvalidClassLabel(
+                label,
+                classURINamespace?.value,
+                compareClasses,
+            ),
         );
 
         if (!datasetName) {
@@ -209,13 +214,12 @@
                     }),
                     body: JSON.stringify({
                         packageDTO,
-                        classURIPrefix: classURINamespaceLocal.value,
-                        className: classNameLocal.value,
+                        classURIPrefix: classURINamespaceLocal?.value,
+                        className: classNameLocal?.value,
                     }),
                     credentials: "include",
                 },
             );
-
             if (res.ok) {
                 const uuid = await res.text();
                 console.log("successfully added class");
@@ -277,13 +281,13 @@
             placeholder={datasetName && graphURI
                 ? "Select package"
                 : "Select a schema first"}
-            getOptionLabel={pkg => pkg.label}
+            getOptionLabel={pkg => getPackageDisplayLabel(pkg.label)}
         />
 
         <label for={domIds.classURINamespace} class="mt-3 mb-1 block text-sm">
             Namespace
         </label>
-        {#if className}
+        {#if className && classURINamespace}
             <SelectEditControl
                 id={domIds.classURINamespace}
                 bind:value={classURINamespace.value}

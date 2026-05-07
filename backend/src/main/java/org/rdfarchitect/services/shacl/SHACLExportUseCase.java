@@ -59,21 +59,22 @@ public interface SHACLExportUseCase {
     ByteArrayOutputStream exportGeneratedSHACLGraph(Graph graph, RDFFormat format);
 
     /**
-     * Export the SHACL graph for a given graph identifier with a specific shape URI.
+     * Export the custom SHACL namespaces for a given graph identifier.
      *
-     * @param graphIdentifier The identifier of the graph to export SHACL for.
-     * @return A ByteArrayOutputStream containing the exported SHACL graph.
+     * @param graphIdentifier The identifier of the graph to export SHACL namespaces for.
+     * @param format The format to export the SHACL namespaces in.
+     * @return A ByteArrayOutputStream containing the exported SHACL namespaces.
      */
-    ByteArrayOutputStream exportCustomSHACLPrefixes(
+    ByteArrayOutputStream exportCustomSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format);
 
     /**
-     * Export the generated SHACL prefixes for a given graph identifier.
+     * Export the generated SHACL namespaces for a given graph identifier.
      *
-     * @param graphIdentifier The identifier of the graph to export SHACL prefixes for.
-     * @param format The format to export the SHACL prefixes in.
-     * @return A ByteArrayOutputStream containing the exported SHACL prefixes.
+     * @param graphIdentifier The identifier of the graph to export SHACL namespaces for.
+     * @param format The format to export the SHACL namespaces in.
+     * @return A ByteArrayOutputStream containing the exported SHACL namespaces.
      */
-    ByteArrayOutputStream exportGeneratedSHACLPrefixes(
+    ByteArrayOutputStream exportGeneratedSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format);
 }

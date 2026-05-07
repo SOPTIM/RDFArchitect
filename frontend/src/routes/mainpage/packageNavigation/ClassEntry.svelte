@@ -31,7 +31,7 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
-    import DeleteClassConfirmDialog from "../../DeleteClassConfirmDialog.svelte";
+    import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
@@ -43,7 +43,7 @@
         onPackChange = () => {},
     } = $props();
 
-    let showDeleteDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
@@ -128,13 +128,13 @@
             }}
             faIcon={faDiagramProject}
         >
-            Constrains
+            Constraints
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />
         <ContextMenu.Item.Button
             onSelect={() => {
                 selectClass();
-                showDeleteDialog = true;
+                showDeleteDependenciesDialog = true;
             }}
             disabled={readonly}
             faIcon={faTrash}
@@ -145,13 +145,13 @@
     </ContextMenu.Content>
 </ContextMenu.Root>
 
-<DeleteClassConfirmDialog
-    bind:showDialog={showDeleteDialog}
+<DeleteDependenciesDialog
+    bind:showDialog={showDeleteDependenciesDialog}
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}
-    classUuid={classNavEntry.id}
-    classLabel={classNavEntry.label}
+    resourceUuid={classNavEntry.id}
 />
+
 <SHACLClassSpecificPopUp
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}

@@ -18,7 +18,9 @@
 package org.rdfarchitect.services.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
@@ -37,12 +39,15 @@ import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogService;
@@ -72,7 +77,7 @@ class UpdateClassServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         var mockChangeLogService = mock(ChangeLogService.class);
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         updateClassService =
@@ -83,7 +88,8 @@ class UpdateClassServiceTest {
                         mockChangeLogService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
-                        mockUpdateClassLayoutService);
+                        mockUpdateClassLayoutService,
+                        false);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()
@@ -119,6 +125,48 @@ class UpdateClassServiceTest {
                                     RDFS.label.asNode(),
                                     new RDFSLabel("newClass", "en").asLangLiteral().asNode()))
                     .isTrue();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void addClass_packageWithSameIriExists_throwsConflict() {
+        var packageUri = PREFIX + "packageCollision";
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.WRITE);
+            graph.add(
+                    NodeFactory.createURI(packageUri),
+                    RDF.type.asNode(),
+                    CIMS.classCategory.asNode());
+            graph.commit();
+        } finally {
+            graph.end();
+        }
+
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix(PREFIX)
+                        .label("default")
+                        .build();
+
+        assertThatThrownBy(
+                        () ->
+                                updateClassService.addClass(
+                                        graphIdentifier, packageDTO, PREFIX, "packageCollision"))
+                .isInstanceOf(ResourceConflictException.class)
+                .hasMessageContaining("package with the same IRI");
+
+        try {
+            graph.begin(TxnType.READ);
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(packageUri),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isFalse();
         } finally {
             graph.end();
         }

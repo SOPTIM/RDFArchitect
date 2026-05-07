@@ -16,7 +16,6 @@
  */
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
-    isInvalidLabel,
     isInvalidMultiplicityLowerBound,
     isInvalidMultiplicityUpperBound,
     isInvalidNamespace,
@@ -50,7 +49,7 @@ export class ReactiveAssociation {
 
         // Set top-level properties
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
-        this.label = new ReactiveValueWrapper(label, isInvalidLabel);
+        this.label = new ReactiveValueWrapper(label);
         this.namespace = new ReactiveValueWrapper(
             namespace,
             isInvalidNamespace,
@@ -79,7 +78,7 @@ export class ReactiveAssociation {
         // Set inverse properties
         this.inverse = {
             uuid: new ReactiveValueWrapper(inverseUuid, isInvalidUuid),
-            label: new ReactiveValueWrapper(inverseLabel, isInvalidLabel),
+            label: new ReactiveValueWrapper(inverseLabel),
             namespace: new ReactiveValueWrapper(
                 inverseNamespace,
                 isInvalidNamespace,

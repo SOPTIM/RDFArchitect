@@ -23,6 +23,7 @@ import org.apache.jena.arq.querybuilder.ExprFactory;
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.TxnType;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
@@ -30,6 +31,7 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
@@ -49,11 +51,13 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -62,7 +66,6 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 public class UpdateClassService
         implements AddClassUseCase, ReplaceClassUseCase, DeleteClassUseCase, CopyClassUseCase {
 
@@ -70,10 +73,30 @@ public class UpdateClassService
     private final ClassUMLAdaptedMapper classMapper;
     private final PackageMapper packageMapper;
     private final ChangeLogUseCase changeLogUseCase;
+    private final boolean newValuesAsBlankNode;
 
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+
+    public UpdateClassService(
+            DatabasePort databasePort,
+            ClassUMLAdaptedMapper classMapper,
+            PackageMapper packageMapper,
+            ChangeLogUseCase changeLogUseCase,
+            CreateClassLayoutDataUseCase createClassLayoutDataUseCase,
+            UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase,
+            DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
+            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
+        this.databasePort = databasePort;
+        this.classMapper = classMapper;
+        this.packageMapper = packageMapper;
+        this.changeLogUseCase = changeLogUseCase;
+        this.createClassLayoutDataUseCase = createClassLayoutDataUseCase;
+        this.updateDiagramObjectNameUseCase = updateDiagramObjectNameUseCase;
+        this.deleteClassLayoutDataUseCase = deleteClassLayoutDataUseCase;
+        this.newValuesAsBlankNode = newValuesAsBlankNode;
+    }
 
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
@@ -82,8 +105,12 @@ public class UpdateClassService
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.WRITE);
             var cimClass = classMapper.toCIMObject(newClass);
+            assertNoPackageWithSameIri(graph, cimClass);
             CIMUpdates.replaceClass(
-                    graph, databasePort.getPrefixMapping(graphIdentifier.datasetName()), cimClass);
+                    graph,
+                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                    cimClass,
+                    newValuesAsBlankNode);
             graph.commit();
         } finally {
             if (graph != null) {
@@ -113,6 +140,7 @@ public class UpdateClassService
             graph.begin(TxnType.WRITE);
 
             var newClass = constructClass(cimPackage, classURIPrefix, className);
+            assertNoPackageWithSameIri(graph, newClass);
             newClassUUID =
                     CIMUpdates.insertClass(
                             graph,
@@ -149,6 +177,16 @@ public class UpdateClassService
                             cimPackage.getUri(), cimPackage.getLabel(), cimPackage.getUuid()));
         }
         return cimClass.build();
+    }
+
+    private void assertNoPackageWithSameIri(GraphRewindableWithUUIDs graph, CIMClass newClass) {
+        var classUri = newClass.getUri().toNode();
+        if (graph.contains(classUri, RDF.type.asNode(), CIMS.classCategory.asNode())) {
+            throw new ResourceConflictException(
+                    "Cannot save class "
+                            + newClass.getUri()
+                            + " because a package with the same IRI already exists.");
+        }
     }
 
     @Override

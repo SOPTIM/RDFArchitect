@@ -26,6 +26,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
@@ -56,7 +57,7 @@ class SchemaComparisonServiceTest {
 
     @BeforeEach
     void setUp() {
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         service = new SchemaComparisonService(databasePort);
 
         var file = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");

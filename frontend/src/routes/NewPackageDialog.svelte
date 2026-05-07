@@ -22,6 +22,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { Package } from "$lib/models/dto";
@@ -53,13 +54,22 @@
 
     let namespaces = $state([]);
     let packages = $state([]);
+    let classes = $state([]);
+
+    let packageIri = $derived(getPackageIri(packageURINamespace, packageLabel));
+    let resourceIriAlreadyExists = $derived(
+        !!packageIri &&
+            [...packages, ...classes].some(
+                resource => getResourceIri(resource) === packageIri,
+            ),
+    );
 
     let disableSubmit = $derived(
         !selectedDatasetName ||
             !selectedGraphURI ||
             !packageURINamespace ||
             !packageLabel ||
-            packages?.some(pkg => pkg.label.values === packageLabel),
+            resourceIriAlreadyExists,
     );
 
     $effect(async () => {
@@ -68,7 +78,7 @@
     });
 
     $effect(async () => {
-        await getPackages(selectedDatasetName, selectedGraphURI);
+        await getResources(selectedDatasetName, selectedGraphURI);
     });
 
     async function onOpen() {
@@ -87,9 +97,10 @@
         namespaces = await getNamespaces(selectedDatasetName);
 
         if (selectedGraphURI) {
-            await getPackages(selectedDatasetName, selectedGraphURI);
+            await getResources(selectedDatasetName, selectedGraphURI);
         } else {
             packages = [];
+            classes = [];
         }
     }
 
@@ -99,8 +110,16 @@
         namespaces = [];
         packageURINamespace = null;
         packages = [];
+        classes = [];
         packageLabel = null;
         packageComment = null;
+    }
+
+    async function getResources(datasetName, graphURI) {
+        await Promise.all([
+            getPackages(datasetName, graphURI),
+            getClasses(datasetName, graphURI),
+        ]);
     }
 
     async function getPackages(datasetName, graphURI) {
@@ -114,6 +133,33 @@
             ...packagesJSON.internalPackageList,
             ...packagesJSON.externalPackageList,
         ];
+    }
+
+    async function getClasses(datasetName, graphURI) {
+        if (!datasetName || !graphURI) {
+            classes = [];
+            return;
+        }
+        const res = await bec.getClasses(datasetName, graphURI);
+        classes = await res.json();
+    }
+
+    function getExpandedNamespace(namespace) {
+        return (
+            namespaces.find(n => n.substitutedPrefix === namespace)?.prefix ??
+            namespace
+        );
+    }
+
+    function getPackageIri(namespace, label) {
+        if (!namespace || !label) {
+            return null;
+        }
+        return getExpandedNamespace(namespace) + label;
+    }
+
+    function getResourceIri(resource) {
+        return (resource.prefix ?? "") + (resource.label ?? "");
     }
 
     async function newPackage(
@@ -145,13 +191,12 @@
                 credentials: "include",
             },
         )
-            .then(res => {
+            .then(async res => {
                 if (res.ok) {
                     console.log("successfully added package");
                     return res.json();
-                } else {
-                    console.log("failed to insert data");
                 }
+                throw new Error(await res.text());
             })
             .then(uuid => {
                 console.log(
@@ -221,6 +266,12 @@
             id={domIds.packageLabel}
             placeholder="Add a label"
             bind:value={packageLabel}
+            warn={resourceIriAlreadyExists}
+        />
+        <ViolationMessages
+            violations={resourceIriAlreadyExists
+                ? ["IRI already exists as a class or package"]
+                : []}
         />
 
         <label for={domIds.packageComment} class="mt-3 mb-1 block text-sm">

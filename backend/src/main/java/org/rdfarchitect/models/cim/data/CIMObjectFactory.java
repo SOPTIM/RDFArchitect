@@ -88,7 +88,9 @@ public class CIMObjectFactory {
     }
 
     /**
-     * Creates a {@link CIMAttribute} from a given query solution.
+     * Creates a {@link CIMAttribute} from a given query solution. The query is expected to bind
+     * both the outer and the inner value-node variables for {@code isFixed} / {@code isDefault} so
+     * blank-node value wrappers can be resolved without a separate model lookup.
      *
      * @param querySolution The query solution to create the attribute from.
      * @return The created attribute.
@@ -110,8 +112,9 @@ public class CIMObjectFactory {
                 .dataType(dataType)
                 .stereotype(parser.getStereotype(CIMQueryVars.STEREOTYPE))
                 .comment(parser.getComment(CIMQueryVars.COMMENT))
-                .fixedValue(parser.getIsFixed(CIMQueryVars.IS_FIXED))
-                .defaultValue(parser.getIsDefault(CIMQueryVars.IS_DEFAULT))
+                .fixedValue(parser.getIsFixed(CIMQueryVars.IS_FIXED, CIMQueryVars.IS_FIXED_INNER))
+                .defaultValue(
+                        parser.getIsDefault(CIMQueryVars.IS_DEFAULT, CIMQueryVars.IS_DEFAULT_INNER))
                 .build();
     }
 
@@ -158,7 +161,7 @@ public class CIMObjectFactory {
             QuerySolution associationQuerySolution) {
         var parser = new CIMQuerySolutionParser(associationQuerySolution);
         return CIMAssociation.builder()
-                .uuid(parser.getUUID(CIMQueryVars.UUID))
+                .uuid(parser.getUUID(CIMQueryVars.Inverse.UUID))
                 .uri(parser.getURI(CIMQueryVars.INVERSE_ROLE_NAME))
                 .label(parser.getLabel(CIMQueryVars.Inverse.LABEL))
                 .multiplicity(parser.getMultiplicity(CIMQueryVars.Inverse.MULTIPLICITY))
@@ -268,7 +271,7 @@ public class CIMObjectFactory {
                     CIMPackage.builder()
                             .uuid(parser.getUUID(CIMQueryVars.UUID))
                             .uri(uri)
-                            .label(new RDFSLabel(uri.getSuffix().replace("Package_", "")))
+                            .label(new RDFSLabel(uri.getSuffix()))
                             .build();
             externalPackageObjectList.add(packageObject);
         }

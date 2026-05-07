@@ -16,7 +16,7 @@ For major releases, review the changelog for breaking changes before upgrading. 
 
 ## Data compatibility
 
-RDFS and SHACL artefacts stored in the triple store are standard RDF; they are forward and backward compatible across RDFArchitect versions.
+Exported RDFS and SHACL artefacts, and snapshots stored in Fuseki, are standard RDF; they are forward and backward compatible across RDFArchitect versions.
 
 ## Frontend caching
 

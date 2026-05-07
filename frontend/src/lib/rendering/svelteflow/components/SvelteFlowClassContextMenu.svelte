@@ -34,7 +34,7 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import DeleteClassConfirmDialog from "../../../../routes/DeleteClassConfirmDialog.svelte";
+    import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
 
     let {
         request = null,
@@ -54,7 +54,7 @@
     let triggerRef = $state(null);
     let open = $state(false);
     let deleteClassTarget = $state(null);
-    let showDeleteClassDialog = $state(false);
+    let showDeleteDependenciesDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -83,7 +83,7 @@
             return;
         }
         deleteClassTarget = contextMenuClass;
-        showDeleteClassDialog = true;
+        showDeleteDependenciesDialog = true;
         onClose();
     }
 
@@ -213,10 +213,9 @@
     </ContextMenu.Content>
 </ContextMenu.Root>
 
-<DeleteClassConfirmDialog
-    bind:showDialog={showDeleteClassDialog}
+<DeleteDependenciesDialog
+    bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
     {graphUri}
-    classUuid={deleteClassTarget?.uuid}
-    classLabel={deleteClassTarget?.label}
+    resourceUuid={deleteClassTarget?.uuid}
 />
