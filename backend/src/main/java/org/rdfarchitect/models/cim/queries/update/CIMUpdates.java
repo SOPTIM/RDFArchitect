@@ -163,6 +163,66 @@ public class CIMUpdates {
         return classBaseUpdate;
     }
 
+    public UUID insertUMLAdaptedClass(
+            Graph graph,
+            PrefixMapping prefixMapping,
+            CIMClassUMLAdapted newClass,
+            boolean newValuesAsBlankNode) {
+
+        assertNoPackageWithSameIri(graph, newClass.getUri());
+
+        var uuid = UUID.randomUUID();
+        var model = ModelFactory.createModelForGraph(graph);
+        var existingResource = model.getResource(newClass.getUri().toString());
+        if (existingResource != null && existingResource.hasProperty(RDFA.uuid)) {
+            var existingUUIDLiteral = existingResource.getProperty(RDFA.uuid).getObject();
+            if (existingUUIDLiteral != null) {
+                uuid = UUID.fromString(existingUUIDLiteral.asLiteral().getString());
+            }
+        }
+        newClass.setUuid(uuid);
+
+        var request = new UpdateRequest();
+
+        request.add(insertClass(prefixMapping, null, newClass).build());
+
+        if (newClass.getAttributes() != null) {
+            for (CIMAttribute attribute : newClass.getAttributes()) {
+                AttributeFixedDefaultResolver.resolve(graph, attribute, newValuesAsBlankNode);
+                request.add(
+                        insertAttribute(graph, prefixMapping, null, attribute, newValuesAsBlankNode)
+                                .build());
+            }
+        }
+
+        if (newClass.getEnumEntries() != null && !newClass.getEnumEntries().isEmpty()) {
+            var enumUpdate =
+                    new CIMBaseUpdateBuilder().addPrefixes(prefixMapping).setGraph(null).build();
+            for (CIMEnumEntry enumEntry : newClass.getEnumEntries()) {
+                appendInsertEnumEntry(enumUpdate, enumEntry);
+            }
+            request.add(enumUpdate.build());
+        }
+
+        if (newClass.getAssociationPairs() != null && !newClass.getAssociationPairs().isEmpty()) {
+            var assocUpdate =
+                    new CIMBaseUpdateBuilder()
+                            .addPrefixes(prefixMapping)
+                            .setGraph(null)
+                            .build()
+                            .addOptional("?sub", "?pre", "?obj");
+            for (CIMAssociationPair pair : newClass.getAssociationPairs()) {
+                appendInsertAssociationPair(assocUpdate, pair);
+            }
+            request.add(assocUpdate.build());
+        }
+
+        var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
+        UpdateExecutionFactory.create(request, dataset).execute();
+
+        return uuid;
+    }
+
     public void deleteClass(Graph graph, PrefixMapping prefixMapping, String classUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         UpdateExecutionFactory.create(deleteAttributes(prefixMapping, null, classUUID), dataset)

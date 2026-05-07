@@ -50,7 +50,6 @@
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
-    import PackageDeleteDialog from "../../mainpage/packageNavigation/PackageDeleteDialog.svelte";
     import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
