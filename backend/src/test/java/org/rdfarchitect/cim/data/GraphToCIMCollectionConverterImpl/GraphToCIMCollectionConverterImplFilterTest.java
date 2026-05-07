@@ -26,6 +26,7 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabase;
@@ -46,8 +47,11 @@ class GraphToCIMCollectionConverterImplFilterTest {
 
     private final InMemoryDatabase database = new InMemoryDatabaseImpl();
 
+    private final SchemaConfig schemaConfig = new SchemaConfig();
+
     private final GraphToCIMCollectionConverterUseCase converter =
-            new GraphToCIMCollectionConverterService(new InMemoryDatabaseAdapter(database));
+            new GraphToCIMCollectionConverterService(
+                    new InMemoryDatabaseAdapter(database, schemaConfig));
 
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 

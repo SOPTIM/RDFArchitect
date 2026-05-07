@@ -30,8 +30,8 @@ import org.springframework.context.annotation.Configuration;
 public class PortConfig {
 
     @Bean
-    public DatabasePort databasePort(InMemoryDatabase inMemoryDatabase) {
-        return new InMemoryDatabaseAdapter(inMemoryDatabase);
+    public DatabasePort databasePort(InMemoryDatabase inMemoryDatabase, SchemaConfig schemaConfig) {
+        return new InMemoryDatabaseAdapter(inMemoryDatabase, schemaConfig);
     }
 
     @Bean

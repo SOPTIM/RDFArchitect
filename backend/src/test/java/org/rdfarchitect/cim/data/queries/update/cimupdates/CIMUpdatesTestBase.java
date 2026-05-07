@@ -23,6 +23,7 @@ import org.apache.jena.query.TxnType;
 import org.apache.jena.update.Update;
 import org.apache.jena.update.UpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
@@ -112,7 +113,7 @@ public class CIMUpdatesTestBase {
 
     @BeforeEach
     void setUpEnvironment() {
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         addGraphFromFile(BASE_FILENAME);
     }
 
