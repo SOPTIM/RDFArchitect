@@ -16,7 +16,6 @@
   -->
 
 <script>
-    import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
     import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
@@ -104,19 +103,6 @@
         } else {
             compareClasses = [];
         }
-        if (!className || !classURINamespace) {
-            return;
-        }
-        untrack(
-            () =>
-                (className = new ReactiveValueWrapper(className?.value, label =>
-                    isInvalidClassLabel(
-                        label,
-                        classURINamespace?.value,
-                        compareClasses,
-                    ),
-                )),
-        );
     });
 
     async function onOpen() {
@@ -146,7 +132,6 @@
 
         if (graphURI) {
             await getPackages(datasetName, graphURI);
-            compareClasses = await getClasses(datasetName, graphURI);
         } else {
             packages = [];
         }
