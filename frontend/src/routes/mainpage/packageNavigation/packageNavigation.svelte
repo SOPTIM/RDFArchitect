@@ -77,7 +77,9 @@
                             </div>
                         {:else if initialDatasetsLoaded}
                             <div class="text-default-text px-4 py-2 text-sm">
-                                Not yet loaded
+                                No schemas imported yet.
+                                <br />
+                                Right-click to add or import a schema.
                             </div>
                         {/if}
                     </div>
