@@ -76,6 +76,7 @@ public class CIMUpdates {
             PrefixMapping prefixMapping,
             CIMClassUMLAdapted newClass,
             boolean newValuesAsBlankNode) {
+        assertNoPackageWithSameIri(graph, newClass.getUri());
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         // replace attributes in database
         var updateAttributes =
@@ -115,6 +116,7 @@ public class CIMUpdates {
         var uuid = UUID.randomUUID();
         var model = ModelFactory.createModelForGraph(graph);
         var existingResource = model.getResource(newClass.getUri().toString());
+        assertNoPackageWithSameIri(graph, newClass.getUri());
         if (existingResource != null && existingResource.hasProperty(RDFA.uuid)) {
             var existingUUIDLiteral = existingResource.getProperty(RDFA.uuid).getObject();
             if (existingUUIDLiteral != null) {
@@ -615,6 +617,7 @@ public class CIMUpdates {
     }
 
     public void replacePackage(Graph graph, PrefixMapping prefixMapping, CIMPackage newPackage) {
+        assertNoClassWithSameIri(graph, newPackage.getUri());
         // update belongsToCategory references from classes
         updateReferences(graph, prefixMapping, newPackage.getUuid(), newPackage.getUri());
 
@@ -629,6 +632,7 @@ public class CIMUpdates {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
 
         var newPackageURI = newPackage.getUri().toNode();
+        assertNoClassWithSameIri(graph, newPackage.getUri());
         var packageUpdateBuilder =
                 new CIMBaseUpdateBuilder().addPrefixes(prefixMapping).setGraph(null).build();
         packageUpdateBuilder
@@ -667,6 +671,24 @@ public class CIMUpdates {
                         .addWhere(CIMQueryVars.URI, "?pre", "?ref")
                         .addInsert(CIMQueryVars.URI, "?pre", newURI.toNode());
         UpdateExecutionFactory.create(updateReferencesToThis.build(), dataset).execute();
+    }
+
+    private void assertNoClassWithSameIri(Graph graph, URI packageUri) {
+        if (graph.contains(packageUri.toNode(), RDF.type.asNode(), RDFS.Class.asNode())) {
+            throw new IllegalArgumentException(
+                    "Cannot create package "
+                            + packageUri
+                            + " because a class with the same IRI already exists.");
+        }
+    }
+
+    private void assertNoPackageWithSameIri(Graph graph, URI classUri) {
+        if (graph.contains(classUri.toNode(), RDF.type.asNode(), CIMS.classCategory.asNode())) {
+            throw new IllegalArgumentException(
+                    "Cannot create class "
+                            + classUri
+                            + " because a package with the same IRI already exists.");
+        }
     }
 
     private void deleteUuidIfNotReferencedAnyWhereElse(Graph graph, UUID uuid) {

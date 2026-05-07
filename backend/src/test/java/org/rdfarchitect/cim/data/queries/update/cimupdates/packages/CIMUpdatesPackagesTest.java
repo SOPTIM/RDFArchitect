@@ -229,6 +229,43 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
         }
 
         @Test
+        @DisplayName("Rejects package if a class with the same IRI exists")
+        void insertPackage_classWithSameIriExists_throwsException() {
+            // Arrange
+            addGraphFromFile(PACKAGE_AND_CLASS_FILE_PATH);
+            var packageWithClassIri =
+                    packageRequired.toBuilder()
+                            .uri(new URI(EXISTING_CLASS_URI))
+                            .label(new RDFSLabel(EXISTING_CLASS_LABEL, "en"))
+                            .build();
+
+            // Act + Assert
+            assertThatThrownBy(
+                            () ->
+                                    executeWriteTransaction(
+                                            graph ->
+                                                    CIMUpdates.insertPackage(
+                                                            graph,
+                                                            databasePort.getPrefixMapping(
+                                                                    DATASET_NAME),
+                                                            packageWithClassIri)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("class with the same IRI");
+
+            try {
+                testGraph.begin(TxnType.READ);
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(EXISTING_CLASS_URI),
+                                        RDF.type.asNode(),
+                                        CIMS.classCategory.asNode()))
+                        .isFalse();
+            } finally {
+                testGraph.end();
+            }
+        }
+
+        @Test
         @DisplayName("Insert does nothing if same package without comment exists")
         void insertPackage_packageAlreadyExistsWithoutComment_doesNothing() {
             // Arrange

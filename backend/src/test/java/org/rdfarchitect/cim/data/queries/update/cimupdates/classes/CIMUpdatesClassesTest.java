@@ -317,6 +317,43 @@ public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                 testGraph.end();
             }
         }
+
+        @Test
+        @DisplayName("Rejects class if a package with the same IRI exists")
+        void insertClass_packageWithSameIriExists_throwsException() {
+            // Arrange
+            addGraphFromFile("packages/package.ttl");
+            var classWithPackageIri =
+                    classRequired.toBuilder()
+                            .uri(new URI(PACKAGE_URI))
+                            .label(new RDFSLabel(PACKAGE_LABEL, "en"))
+                            .build();
+
+            // Act + Assert
+            assertThatThrownBy(
+                            () ->
+                                    executeWriteTransaction(
+                                            graph ->
+                                                    CIMUpdates.insertClass(
+                                                            graph,
+                                                            databasePort.getPrefixMapping(
+                                                                    DATASET_NAME),
+                                                            classWithPackageIri)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("package with the same IRI");
+
+            try {
+                testGraph.begin(TxnType.READ);
+                assertThat(
+                                testGraph.contains(
+                                        NodeFactory.createURI(PACKAGE_URI),
+                                        RDF.type.asNode(),
+                                        RDFS.Class.asNode()))
+                        .isFalse();
+            } finally {
+                testGraph.end();
+            }
+        }
     }
 
     @Nested

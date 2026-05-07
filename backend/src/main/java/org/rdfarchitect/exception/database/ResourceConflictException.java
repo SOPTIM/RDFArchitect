@@ -15,17 +15,14 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rdf.resources;
+package org.rdfarchitect.exception.database;
 
-import lombok.experimental.UtilityClass;
+import org.springframework.http.HttpStatus;
 
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.ResourceFactory;
+/** Exception is thrown when a write would create conflicting RDF resources. */
+public class ResourceConflictException extends DatabaseException {
 
-@UtilityClass
-public class CIM {
-
-    public final Resource root = ResourceFactory.createResource("http://iec.ch/TC57/CIM100#");
-
-    public final String namespace = root.getNameSpace();
+    public ResourceConflictException(String errorMessage) {
+        super(HttpStatus.CONFLICT, errorMessage);
+    }
 }

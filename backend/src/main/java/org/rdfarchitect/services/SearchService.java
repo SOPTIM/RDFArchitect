@@ -122,9 +122,9 @@ public class SearchService implements SearchUseCase {
                       PREFIX  cim:  <http://iec.ch/TC57/2013/CIM-schema-cim16#>
 
                       SELECT DISTINCT ?uri ?uuid ?label ?typeURI ?typeUUID ?typeLabel ?packageURI
-                              (IF(CONTAINS(STR(?packageURI), "Package_"),
-                                  STRAFTER(STR(?packageURI), "Package_"),
-                                  STRAFTER(STR(?packageURI), "#")) AS ?packageLabel)
+                              (IF(CONTAINS(STR(?packageURI), "#"),
+                                  STRAFTER(STR(?packageURI), "#"),
+                                  STR(?packageURI)) AS ?packageLabel)
                               ?packageUUID ?domainURI ?domainLabel ?domainUUID ?stereotype
                       graph
                       WHERE
@@ -142,9 +142,9 @@ public class SearchService implements SearchUseCase {
                           BIND(?uuid AS ?packageUUID)
                           BIND(<http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#ClassCategory> AS ?typeURI)
                           BIND("ClassCategory" AS ?typeLabel)
-                          BIND(IF(CONTAINS(STR(?uri), "Package_"),
-                                  STRAFTER(STR(?uri), "Package_"),
-                                  STRAFTER(STR(?uri), "#")) AS ?label)
+                          BIND(IF(CONTAINS(STR(?uri), "#"),
+                                  STRAFTER(STR(?uri), "#"),
+                                  STR(?uri)) AS ?label)
 
                           FILTER contains(lcase(str(?label)), lcase("searchQuery"))
                         }
