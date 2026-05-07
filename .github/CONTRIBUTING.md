@@ -87,6 +87,20 @@ Hooks call `mvn` and `npm` directly. Make sure `mvn`, `npm`, and `pre-commit` ar
 - Keep public behavior and API changes documented.
 - Avoid unrelated refactors in feature/fix PRs.
 
+## Developer Certificate of Origin (DCO)
+
+External contributors must sign off every commit with a DCO sign-off.
+Add `-s` to your commit command:
+
+```bash
+git commit -s -m "feat: my change"
+```
+
+This appends a `Signed-off-by: Your Name <email@example.com>` to the commit message, certifying
+that you wrote the change and have the right to submit it under the project license (see [DCO](../DCO)).
+
+For amended or rebased commits, use `git commit --amend -s` or `git rebase --signoff`.
+
 ## Licensing and Headers
 
 - This repository is Apache-2.0 licensed.
