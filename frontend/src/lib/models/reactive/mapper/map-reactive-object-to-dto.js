@@ -159,6 +159,7 @@ export function mapReactiveAssociationListToAssociationDtoList(
             assoc,
             cls,
             getClassByUuid,
+            associationArray,
         );
     });
 }
@@ -168,12 +169,14 @@ export function mapReactiveAssociationListToAssociationDtoList(
  * @param {ReactiveAssociation | Object} association - The reactive association instance or a plain object of it
  * @param {ReactiveClass | Object} cls - The domain class or a plain object of it
  * @param {function(string)} getClassByUuid - A function that returns the class object of a given uuid
+ * @param {Array<ReactiveAssociation | Object>} associationArray - Array of reactive association instances or plain objects of them
  * @returns {Object} The association pair DTO with 'from' and 'to' properties
  */
 export function mapReactiveAssociationToAssociationDto(
     association,
     cls,
     getClassByUuid,
+    associationArray = [],
 ) {
     if (cls instanceof ReactiveClass) {
         const labelBackup = cls.label.backup;
@@ -185,14 +188,28 @@ export function mapReactiveAssociationToAssociationDto(
     if (association instanceof ReactiveAssociation) {
         association = association.getPlainObject();
     }
+
+    const isSelfAssociation = association.target === cls.uuid;
+    const partnerAssociation = isSelfAssociation
+        ? associationArray
+              .map(a =>
+                  a instanceof ReactiveAssociation ? a.getPlainObject() : a,
+              )
+              .find(a => a.uuid === association.inverse.uuid)
+        : null;
+
     const targetClass = getClassByUuid(association.target);
     const fromMultiplicityString = formatMultiplicity(
         association.multiplicityLowerBound,
         association.multiplicityUpperBound,
     );
     const inverseMultiplicityString = formatMultiplicity(
-        association.inverse.multiplicityLowerBound,
-        association.inverse.multiplicityUpperBound,
+        isSelfAssociation && partnerAssociation
+            ? partnerAssociation.multiplicityLowerBound
+            : association.inverse.multiplicityLowerBound,
+        isSelfAssociation && partnerAssociation
+            ? partnerAssociation.multiplicityUpperBound
+            : association.inverse.multiplicityUpperBound,
     );
     const domainClass = {
         label: cls.label,
