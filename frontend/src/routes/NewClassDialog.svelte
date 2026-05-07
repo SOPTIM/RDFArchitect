@@ -16,7 +16,6 @@
   -->
 
 <script>
-    import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
     import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
@@ -85,6 +84,7 @@
         const ds = datasetName;
         const graph = graphURI;
 
+        //TODO AAAAAAAA ich habe hier das gesamte untrack entfernt
         await untrack(async () => {
             namespaces = await getNamespaces(ds);
             if (classURINamespace) classURINamespace.value = null;
@@ -142,7 +142,6 @@
 
         if (graphURI) {
             await getPackages(datasetName, graphURI);
-            compareClasses = await getClasses(datasetName, graphURI);
         } else {
             packages = [];
         }
