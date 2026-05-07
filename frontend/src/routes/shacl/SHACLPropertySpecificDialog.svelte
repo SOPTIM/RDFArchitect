@@ -26,6 +26,11 @@
 
     let { showDialog = $bindable(), property } = $props();
 
+    let defaultShacl = () => ({
+        namespaces: "",
+        propertyShapes: [],
+    });
+
     let customShacl = $state(defaultShacl());
     let customShaclBackUp = $state("");
     let generatedShacl = $state(defaultShacl());
@@ -40,11 +45,6 @@
         editorState.selectedClassGraph.getValue() ??
             editorState.selectedGraph.getValue(),
     );
-
-    const defaultShacl = () => ({
-        namespaces: "",
-        propertyShapes: [],
-    });
 
     function onOpen() {
         if (!editorState.selectedClassUUID.getValue() || !property) {

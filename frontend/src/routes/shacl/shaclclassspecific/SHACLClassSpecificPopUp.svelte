@@ -31,17 +31,17 @@
         showDialog = $bindable(),
     } = $props();
 
-    let customShacl = $state(defaultShacl());
-    let generatedShacl = $state(defaultShacl());
-    let showGeneratedShacl = $state(false);
-    let fetchKey = $state(0);
-
-    const defaultShacl = () => ({
+    let defaultShacl = () => ({
         namespaces: "",
         nodeShapes: [],
         propertyShapes: [],
         derivedPropertyShapes: [],
     });
+
+    let customShacl = $state(defaultShacl());
+    let generatedShacl = $state(defaultShacl());
+    let showGeneratedShacl = $state(false);
+    let fetchKey = $state(0);
 
     function onOpen() {
         fetchShacl();
