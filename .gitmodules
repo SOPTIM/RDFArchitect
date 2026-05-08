@@ -1,0 +1,3 @@
+[submodule "external/entsoe-application-profiles-library"]
+	path = external/entsoe-application-profiles-library
+	url = https://github.com/entsoe/application-profiles-library.git
