@@ -38,7 +38,7 @@ export async function saveCopyClass(
     const payload = {
         targetDatasetName: datasetName,
         targetGraphURI: graphURI,
-        targetPackage: packageDTO,
+        targetPackage: packageDTO?.uuid === "default" ? null : packageDTO,
         copyAsAbstract: copyAbstract,
         copyAttributes: copyAttributes,
         copyAssociations: copyAssociations,

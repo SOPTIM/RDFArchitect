@@ -112,6 +112,14 @@
             !copyState.classUUID.getValue(),
     );
 
+    let disablePasteAssociations = $derived(
+        disablePasteButton ||
+            editorState.selectedClassDataset.getValue() !==
+                copyState.datasetName.getValue() ||
+            editorState.selectedClassGraph.getValue() !==
+                copyState.graphURI.getValue(),
+    );
+
     $effect(async () => {
         editorState.selectedPackageUUID.subscribe();
         editorState.selectedClassUUID.subscribe();
@@ -345,14 +353,14 @@
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(false, true, true)}
-                    disabled={disablePasteButton}
+                    disabled={disablePasteAssociations}
                     faIcon={faPaste}
                 >
                     Paste
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(false, false, true)}
-                    disabled={disablePasteButton}
+                    disabled={disablePasteAssociations}
                     faIcon={faPaste}
                 >
                     Paste without attributes

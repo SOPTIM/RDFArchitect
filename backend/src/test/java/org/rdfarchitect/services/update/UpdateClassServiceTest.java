@@ -266,16 +266,16 @@ class UpdateClassServiceTest {
 
             assertThat(
                             graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    NodeFactory.createURI(PREFIX + "oldLabel"),
                                     RDF.type.asNode(),
                                     RDFS.Class.asNode()))
                     .isTrue();
 
             assertThat(
                             graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    NodeFactory.createURI(PREFIX + "oldLabel"),
                                     RDFS.label.asNode(),
-                                    new RDFSLabel("oldLabel - Copy", "en")
+                                    new RDFSLabel("oldLabel", "en")
                                             .asLangLiteral()
                                             .asNode()))
                     .isTrue();
@@ -308,7 +308,7 @@ class UpdateClassServiceTest {
 
             assertThat(
                             graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    NodeFactory.createURI(PREFIX + "oldLabel"),
                                     RDF.type.asNode(),
                                     RDFS.Class.asNode()))
                     .isTrue();
@@ -317,7 +317,7 @@ class UpdateClassServiceTest {
                             graph.contains(
                                     Node.ANY,
                                     RDFS.domain.asNode(),
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy")))
+                                    NodeFactory.createURI(PREFIX + "oldLabel")))
                     .isFalse();
         } finally {
             graph.end();

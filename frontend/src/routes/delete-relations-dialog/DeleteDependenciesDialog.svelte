@@ -21,7 +21,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
@@ -144,6 +144,7 @@
     async function submitDeleteRequest() {
         if (!deleteDependencies) return;
         const payload = buildPayload(deleteDependencies);
+        checkSelectedCopyClass(payload);
         console.log("Submit delete with selections:", payload);
         let res = await bec.deleteResources(datasetName, graphUri, payload);
         if (!res.ok) {
@@ -154,6 +155,19 @@
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClassUUID.updateValue(null);
+        }
+    }
+
+    function checkSelectedCopyClass(payload) {
+        if (!copyState.classUUID.getValue()) return;
+        for (const entry of payload) {
+            if (
+                entry.action === "DELETE" &&
+                entry.uuid === copyState.classUUID.getValue()
+            ) {
+                copyState.reset();
+                return;
+            }
         }
     }
 

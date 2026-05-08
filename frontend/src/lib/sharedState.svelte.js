@@ -104,6 +104,12 @@ export const copyState = {
     classUUID: new StateValuePair(),
     graphURI: new StateValuePair(),
     datasetName: new StateValuePair(),
+
+    reset() {
+        this.classUUID.updateValue(null);
+        this.graphURI.updateValue(null);
+        this.datasetName.updateValue(null);
+    },
 };
 
 export const migrationState = writable({

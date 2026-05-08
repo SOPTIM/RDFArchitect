@@ -226,7 +226,9 @@ public class UpdateClassService
                 constructUniqueLabel(
                         cimClass.getLabel(),
                         getExistingClassLabels(
-                                databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                                databasePort
+                                        .getGraphWithContext(targetGraphIdentifier)
+                                        .getRdfGraph(),
                                 graphIdentifier.graphUri(),
                                 cimClass.getLabel()));
 
@@ -449,7 +451,7 @@ public class UpdateClassService
                                             .label(newToLabel)
                                             .uri(
                                                     new URI(
-                                                            pair.getTo().getDomain()
+                                                            pair.getTo().getDomain().getUri()
                                                                     + "."
                                                                     + newToLabel.getValue()))
                                             .range(

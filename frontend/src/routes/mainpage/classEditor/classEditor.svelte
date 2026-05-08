@@ -62,6 +62,7 @@
         datatypes: [],
         packages: [],
         classes: [],
+        graphClasses: [],
         targetClassInfos: [],
     };
 
@@ -136,14 +137,22 @@
     }
 
     async function loadContext() {
+        console.log(
+            "loading context datasetName=",
+            datasetName,
+            " graphUri=",
+            graphUri,
+        );
         [
             context.classes,
+            context.graphClasses,
             context.packages,
             context.datatypes,
             context.stereotypes,
             context.namespaces,
         ] = await Promise.all([
             getClasses(datasetName, graphUri),
+            getClasses(datasetName, graphUri, false),
             getPackages(datasetName, graphUri),
             getDataTypes(datasetName, graphUri),
             getStereotypes(datasetName, graphUri),
@@ -160,7 +169,7 @@
         if (cancelled.cancelled) return;
         const newReactiveClass = mapClassDtoToReactiveClass(
             classDto,
-            context.classes,
+            context.graphClasses,
             uuid => context.targetClassInfos.find(cls => cls.uuid === uuid),
         );
         reactiveClass = adoptUnsavedClassChanges(
@@ -213,6 +222,9 @@
         },
         get classes() {
             return context.classes;
+        },
+        get graphClasses() {
+            return context.graphClasses;
         },
         get packages() {
             return context.packages;
