@@ -66,8 +66,6 @@ class UpdateClassServiceTest {
 
     @Autowired private ClassUMLAdaptedMapper classMapper;
     @Autowired private PackageMapper packageMapper;
-    @Autowired private AttributeMapper attributeMapper;
-    @Autowired private EnumEntryMapper enumEntryMapper;
 
     private static final String PATH = "src/test/java/org/rdfarchitect/services/update/";
     private static final String PREFIX = "http://example.org#";
