@@ -34,8 +34,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
-import org.rdfarchitect.api.dto.attributes.AttributeMapper;
-import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
