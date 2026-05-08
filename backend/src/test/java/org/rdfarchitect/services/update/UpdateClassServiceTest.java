@@ -103,7 +103,7 @@ class UpdateClassServiceTest {
                         .label("default")
                         .build();
 
-        updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass");
+        updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass", null);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
@@ -150,7 +150,11 @@ class UpdateClassServiceTest {
         assertThatThrownBy(
                         () ->
                                 updateClassService.addClass(
-                                        graphIdentifier, packageDTO, PREFIX, "packageCollision"))
+                                        graphIdentifier,
+                                        packageDTO,
+                                        PREFIX,
+                                        "packageCollision",
+                                        null))
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("package with the same IRI");
 

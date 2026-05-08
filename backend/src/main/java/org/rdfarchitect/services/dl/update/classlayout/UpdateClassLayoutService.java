@@ -19,6 +19,7 @@ package org.rdfarchitect.services.dl.update.classlayout;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -50,7 +51,8 @@ public class UpdateClassLayoutService
             GraphIdentifier graphIdentifier,
             PackageDTO packageDTO,
             String className,
-            UUID classUUID) {
+            UUID classUUID,
+            ClassLayoutPositionDTO classLayoutPosition) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
         UUID packageUUID;
@@ -65,7 +67,10 @@ public class UpdateClassLayoutService
         MRID doMRID =
                 DiagramLayoutServiceUtils.insertDiagramObject(
                         diagramLayoutModel, packageUUID, className, classUUID);
-        DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, doMRID);
+        float xPosition = classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0;
+        float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
+        DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                diagramLayoutModel, doMRID, xPosition, yPosition);
     }
 
     @Override

@@ -27,6 +27,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -65,9 +66,13 @@ public class AllClassesRESTController {
      *     added
      * @param classURIPrefix URI Prefix of the new class
      * @param className Label of the new class
+     * @param classLayoutPosition Initial position of the new class in the diagram
      */
     public record AddNewClassRequest(
-            PackageDTO packageDTO, String classURIPrefix, String className) {}
+            PackageDTO packageDTO,
+            String classURIPrefix,
+            String className,
+            ClassLayoutPositionDTO classLayoutPosition) {}
 
     @Operation(
             summary = "create new class",
@@ -112,7 +117,8 @@ public class AllClassesRESTController {
                         graphIdentifier,
                         addNewClassRequest.packageDTO,
                         extendedClassURIPrefix,
-                        addNewClassRequest.className);
+                        addNewClassRequest.className,
+                        addNewClassRequest.classLayoutPosition);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes\" to \"{}\".",

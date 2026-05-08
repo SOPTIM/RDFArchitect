@@ -42,7 +42,6 @@
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
     import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
     import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
-    import NewClassDialog from "../../../routes/NewClassDialog.svelte";
 
     let {
         nodes: inputNodes,
@@ -65,12 +64,9 @@
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
-    let contextMenuFlowPosition = $state({ x: 0, y: 0 });
     let paneContextMenuRequest = $state(null);
     let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
-    let showNewClassDialog = $state(false);
-    let pendingNewClassPlacement = null;
 
     // Ordered list of node IDs from back (index 0) to front (index n-1).
     // Each node's zIndex equals its position in this array.
@@ -186,86 +182,13 @@
     }
 
     function syncDiagramElements() {
-        const nextNodes = syncDiagramNodes();
+        const nextNodes = [...inputNodes];
         const nextHasDefaultLayout = hasDefaultNodeLayout(nextNodes);
 
         syncNodeOrder(nextNodes);
         nodes = applyZIndicesFromOrder(nextNodes);
         edges = buildDiagramEdges();
         resetDiagramSyncState(nextHasDefaultLayout);
-    }
-
-    function syncDiagramNodes() {
-        let nextNodes = [...inputNodes];
-        if (shouldApplyPendingNewClassPlacement()) {
-            const addedNode = findAddedNodeForPlacement(nextNodes);
-            if (addedNode) {
-                persistPendingNewClassPosition(addedNode);
-                nextNodes = placePendingNewClassNode(nextNodes, addedNode);
-                pendingNewClassPlacement = null;
-            }
-        }
-        return nextNodes;
-    }
-
-    function shouldApplyPendingNewClassPlacement() {
-        return (
-            !!pendingNewClassPlacement &&
-            editorState.selectedPackageUUID.getValue() ===
-                pendingNewClassPlacement.packageUUID
-        );
-    }
-
-    function findAddedNodeForPlacement(diagramNodes) {
-        const addedNodes = diagramNodes.filter(
-            node => !pendingNewClassPlacement.existingNodeIds.has(node.id),
-        );
-
-        return (
-            addedNodes.find(
-                node =>
-                    node.data?.label === pendingNewClassPlacement.className &&
-                    node.position.x === 0 &&
-                    node.position.y === 0,
-            ) ??
-            addedNodes.find(
-                node => node.data?.label === pendingNewClassPlacement.className,
-            ) ??
-            (addedNodes.length === 1 ? addedNodes[0] : null)
-        );
-    }
-
-    function placePendingNewClassNode(diagramNodes, addedNode) {
-        const { x, y } = pendingNewClassPlacement.position;
-        return diagramNodes.map(node =>
-            node.id === addedNode.id
-                ? {
-                      ...node,
-                      position: { x, y },
-                  }
-                : node,
-        );
-    }
-
-    function persistPendingNewClassPosition(addedNode) {
-        const { x, y } = pendingNewClassPlacement.position;
-        bec.updateClassPositions(
-            pendingNewClassPlacement.datasetName,
-            pendingNewClassPlacement.graphURI,
-            pendingNewClassPlacement.packageUUID,
-            [
-                {
-                    classUUID: addedNode.id,
-                    xPosition: x,
-                    yPosition: y,
-                },
-            ],
-        ).catch(error => {
-            console.error(
-                "Could not persist newly created class position:",
-                error,
-            );
-        });
     }
 
     function buildDiagramEdges() {
@@ -407,15 +330,15 @@
 
         contextMenuClass = null;
         if (!svelteFlowAPI?.svelteFlow) {
-            contextMenuFlowPosition = { x: 0, y: 0 };
             paneContextMenuRequest = {
                 x: event.clientX,
                 y: event.clientY,
+                flowPosition: { x: 0, y: 0 },
             };
             return;
         }
 
-        contextMenuFlowPosition = svelteFlowAPI.svelteFlow.screenToFlowPosition(
+        const flowPosition = svelteFlowAPI.svelteFlow.screenToFlowPosition(
             {
                 x: event.clientX,
                 y: event.clientY,
@@ -425,6 +348,7 @@
         paneContextMenuRequest = {
             x: event.clientX,
             y: event.clientY,
+            flowPosition,
         };
     }
 
@@ -448,25 +372,6 @@
         classContextMenuRequest = {
             x: event.clientX,
             y: event.clientY,
-        };
-    }
-
-    function handleClassCreated({
-        datasetName,
-        graphURI,
-        packageUUID,
-        className,
-    }) {
-        pendingNewClassPlacement = {
-            datasetName,
-            graphURI,
-            packageUUID,
-            className,
-            existingNodeIds: new Set(nodes.map(node => node.id)),
-            position: {
-                x: contextMenuFlowPosition.x,
-                y: contextMenuFlowPosition.y,
-            },
         };
     }
 
@@ -694,7 +599,6 @@
         disabled={isDatasetReadOnly}
         lockedDatasetName={editorState.selectedDataset.getValue()}
         lockedGraphUri={editorState.selectedGraph.getValue()}
-        onClassCreated={handleClassCreated}
         onClose={closeContextMenus}
     />
     <SvelteFlowClassContextMenu
@@ -711,10 +615,3 @@
         onPersistLayer={handlePersistLayer}
     />
 </div>
-
-<NewClassDialog
-    bind:showDialog={showNewClassDialog}
-    lockedDatasetName={editorState.selectedDataset.getValue()}
-    lockedGraphUri={editorState.selectedGraph.getValue()}
-    onClassCreated={handleClassCreated}
-/>
