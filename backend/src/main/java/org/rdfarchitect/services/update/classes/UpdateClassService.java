@@ -325,7 +325,9 @@ public class UpdateClassService
                         .uri(new URI(cimClass.getUri().getPrefix() + label.getValue()))
                         .label(label)
                         .stereotypes(stereotypes);
-        if (!copyAsAbstract) newCimClass.superClass(cimClass.getSuperClass());
+        if (!copyAsAbstract) {
+            newCimClass.superClass(cimClass.getSuperClass());
+        }
         if (cimClass.getComment() != null) {
             newCimClass.comment(
                     new RDFSComment(
