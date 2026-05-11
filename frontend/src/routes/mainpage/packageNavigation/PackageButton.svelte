@@ -62,12 +62,6 @@
             !copyState.datasetName.getValue(),
     );
 
-    let disablePasteAssociations = $derived(
-        disablePasteButton ||
-            datasetNavEntry.id !== copyState.datasetName.getValue() ||
-            graphNavEntry.id !== copyState.graphURI.getValue(),
-    );
-
     let isProtectedPackage = $derived(
         packageNavEntry?.id === "default" || packageNavEntry?.data.external,
     );
@@ -179,14 +173,14 @@
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(false, true, true)}
                         faIcon={faPaste}
-                        disabled={disablePasteAssociations}
+                        disabled={disablePasteButton}
                     >
                         Paste
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(false, false, true)}
                         faIcon={faPaste}
-                        disabled={disablePasteAssociations}
+                        disabled={disablePasteButton}
                     >
                         Paste without attributes
                     </ContextMenu.Item.Button>
