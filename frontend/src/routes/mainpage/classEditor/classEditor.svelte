@@ -137,12 +137,6 @@
     }
 
     async function loadContext() {
-        console.log(
-            "loading context datasetName=",
-            datasetName,
-            " graphUri=",
-            graphUri,
-        );
         [
             context.classes,
             context.graphClasses,

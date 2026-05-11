@@ -324,8 +324,8 @@ public class UpdateClassService
                         .uuid(UUID.randomUUID())
                         .uri(new URI(cimClass.getUri().getPrefix() + label.getValue()))
                         .label(label)
-                        .superClass(cimClass.getSuperClass())
                         .stereotypes(stereotypes);
+        if (!copyAsAbstract) newCimClass.superClass(cimClass.getSuperClass());
         if (cimClass.getComment() != null) {
             newCimClass.comment(
                     new RDFSComment(

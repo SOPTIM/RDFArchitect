@@ -56,8 +56,10 @@
 
     let disablePasteAssociations = $derived(
         disablePasteButton ||
-            editorState.selectedDataset !== copyState.datasetName ||
-            editorState.selectedGraph !== copyState.graphURI,
+            editorState.selectedDataset.getValue() !==
+                copyState.datasetName.getValue() ||
+            editorState.selectedGraph.getValue() !==
+                copyState.graphURI.getValue(),
     );
 
     $effect(() => {
@@ -87,11 +89,14 @@
     }
 
     async function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
-        let packageDTO = await getPackage(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            editorState.selectedPackageUUID.getValue(),
-        );
+        let packageDTO =
+            editorState.selectedPackageUUID.getValue() === "default"
+                ? null
+                : await getPackage(
+                      editorState.selectedDataset.getValue(),
+                      editorState.selectedGraph.getValue(),
+                      editorState.selectedPackageUUID.getValue(),
+                  );
 
         await saveCopyClass(
             editorState.selectedDataset.getValue(),

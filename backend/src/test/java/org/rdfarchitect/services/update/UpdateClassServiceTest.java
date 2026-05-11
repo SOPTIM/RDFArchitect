@@ -317,4 +317,57 @@ class UpdateClassServiceTest {
             graph.end();
         }
     }
+
+    @Test
+    void copyClass_copyAsAbstract_doesNotCopySuperClass() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        updateClassService.copyClass(
+                graphIdentifier,
+                UUID.fromString(CLASS_UUID),
+                graphIdentifier,
+                targetPackageDTO,
+                true,
+                false,
+                false);
+
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.READ);
+
+            var copyUri = NodeFactory.createURI(PREFIX + "oldLabel - Copy");
+
+            assertThat(graph.contains(copyUri, RDFS.subClassOf.asNode(), Node.ANY)).isFalse();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void copyClass_returnsNewClassUUID() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var newClassUUID =
+                updateClassService.copyClass(
+                        graphIdentifier,
+                        UUID.fromString(CLASS_UUID),
+                        graphIdentifier,
+                        targetPackageDTO,
+                        false,
+                        false,
+                        false);
+
+        assertThat(newClassUUID).isNotNull();
+        assertThat(newClassUUID).isNotEqualTo(UUID.fromString(CLASS_UUID));
+    }
 }
