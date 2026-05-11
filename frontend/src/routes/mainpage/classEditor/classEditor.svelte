@@ -214,9 +214,6 @@
         get classes() {
             return context.classes;
         },
-        get graphClasses() {
-            return context.graphClasses;
-        },
         get packages() {
             return context.packages;
         },
