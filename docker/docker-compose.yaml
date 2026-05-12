@@ -1,17 +1,19 @@
 services:
     backend:
         build:
-            context: ./backend
+            context: ../backend
         environment:
             DATABASE_DATABASETYPE: http
             DATABASE_DEFAULTDATASET: default
             DATABASE_HTTP_ENDPOINT: http://host.docker.internal:3030
+            FRONTEND_URL: http://localhost:3000
+            FRONTEND_ACCESS_ROUTE: /api
         expose:
             - "8080"
 
     frontend:
         build:
-            context: ./frontend
+            context: ../frontend
         environment:
             PUBLIC_BACKEND_URL: "/api"
         expose:
