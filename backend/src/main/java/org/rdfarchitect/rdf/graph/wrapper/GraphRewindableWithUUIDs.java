@@ -30,6 +30,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
@@ -132,5 +133,92 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
 
     public static void removeUUIDs(Graph graph) {
         graph.find(Node.ANY, RDFA.uuid.asNode(), Node.ANY).toList().forEach(graph::delete);
+    }
+
+    public static void correctPackagePrefix(Graph graph, boolean usePackagePrefix) {
+        var model = ModelFactory.createModelForGraph(graph);
+        var packages = model.listResourcesWithProperty(RDF.type, CIMS.classCategory).toList();
+
+        final var PREFIX = "Package_";
+
+        for (var packageResource : packages) {
+            var labelStmt = packageResource.getProperty(RDFS.label);
+            if (labelStmt == null) {
+                continue;
+            }
+
+            var currentLabel = labelStmt.getString();
+            var currentUri = packageResource.getURI();
+            int sepIdx = Math.max(currentUri.lastIndexOf('#'), currentUri.lastIndexOf('/'));
+            var uriBase = currentUri.substring(0, sepIdx + 1);
+            var uriSuffix = currentUri.substring(sepIdx + 1);
+
+            String newLabel;
+            String newUriSuffix;
+
+            if (usePackagePrefix) {
+                newLabel = currentLabel.startsWith(PREFIX) ? currentLabel : PREFIX + currentLabel;
+                newUriSuffix = uriSuffix.startsWith(PREFIX) ? uriSuffix : PREFIX + uriSuffix;
+            } else {
+                newLabel =
+                        currentLabel.startsWith(PREFIX)
+                                ? currentLabel.substring(PREFIX.length())
+                                : currentLabel;
+                newUriSuffix =
+                        uriSuffix.startsWith(PREFIX)
+                                ? uriSuffix.substring(PREFIX.length())
+                                : uriSuffix;
+            }
+
+            var newUri = uriBase + newUriSuffix;
+            var uriChanged = !newUri.equals(currentUri);
+            var labelChanged = !newLabel.equals(currentLabel);
+
+            if (!uriChanged && !labelChanged) {
+                continue;
+            }
+
+            if (uriChanged) {
+                var newResource = model.createResource(newUri);
+
+                packageResource
+                        .listProperties()
+                        .toList()
+                        .forEach(
+                                stmt -> {
+                                    if (stmt.getPredicate().equals(RDFS.label) && labelChanged) {
+                                        var lang = stmt.getLanguage();
+                                        if (lang != null && !lang.isEmpty()) {
+                                            newResource.addProperty(RDFS.label, newLabel, lang);
+                                        } else {
+                                            newResource.addProperty(RDFS.label, newLabel);
+                                        }
+                                    } else {
+                                        newResource.addProperty(
+                                                stmt.getPredicate(), stmt.getObject());
+                                    }
+                                });
+
+                model.listStatements(null, null, packageResource)
+                        .toList()
+                        .forEach(
+                                stmt ->
+                                        model.add(
+                                                stmt.getSubject(),
+                                                stmt.getPredicate(),
+                                                newResource));
+                model.listStatements(null, null, packageResource).toList().forEach(model::remove);
+
+                model.removeAll(packageResource, null, null);
+            } else {
+                var lang = labelStmt.getLanguage();
+                packageResource.removeAll(RDFS.label);
+                if (lang != null && !lang.isEmpty()) {
+                    packageResource.addProperty(RDFS.label, newLabel, lang);
+                } else {
+                    packageResource.addProperty(RDFS.label, newLabel);
+                }
+            }
+        }
     }
 }

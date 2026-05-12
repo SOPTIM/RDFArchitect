@@ -15,15 +15,15 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+import UserSettingsSelectItem from "$lib/components/bitsui/usersettings/item/UserSettingsSelectItem.svelte";
 
-import org.apache.jena.riot.RDFFormat;
-import org.rdfarchitect.database.GraphIdentifier;
+import UserSettingsCheckboxItem from "./item/UserSettingsCheckboxItem.svelte";
+import UserSettingsSection from "./UserSettingsSection.svelte";
 
-import java.io.ByteArrayOutputStream;
-
-public interface GetSchemaUseCase {
-
-    ByteArrayOutputStream getSchema(
-            GraphIdentifier graphIdentifier, RDFFormat format, boolean usePackagePrefix);
-}
+export const UserSettingsComponents = {
+    Section: UserSettingsSection,
+    Item: {
+        CheckBox: UserSettingsCheckboxItem,
+        SingleSelect: UserSettingsSelectItem,
+    },
+};

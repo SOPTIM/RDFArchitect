@@ -19,6 +19,7 @@ package org.rdfarchitect.services.select;
 
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
+import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.correctPackagePrefix;
 import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
 import lombok.RequiredArgsConstructor;
@@ -222,7 +223,8 @@ public class QueryGraphService
     }
 
     @Override
-    public ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format) {
+    public ByteArrayOutputStream getSchema(
+            GraphIdentifier graphIdentifier, RDFFormat format, boolean usePackagePrefix) {
         GraphRewindableWithUUIDs graph = null;
         try (var out = new ByteArrayOutputStream()) {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
@@ -232,6 +234,7 @@ public class QueryGraphService
                     .getPrefixMapping()
                     .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             removeUUIDs(copiedGraph);
+            correctPackagePrefix(copiedGraph, usePackagePrefix);
             var sortedModel = new CimSortedModel(ModelFactory.createModelForGraph(copiedGraph));
             sortedModel.write(out, format.getLang().getName());
             return out;

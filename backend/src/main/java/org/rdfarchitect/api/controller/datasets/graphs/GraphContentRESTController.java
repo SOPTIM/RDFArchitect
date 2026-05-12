@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -93,7 +94,8 @@ public class GraphContentRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphURI,
+            @CookieValue(value = "RDFA_USER_SETTINGS", required = false) String[] userSettings) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/content\" from \"{}\".",
                 datasetName,
@@ -102,11 +104,14 @@ public class GraphContentRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var format = getRdfFormat(acceptHeader);
+        var usePackagePrefix = extractUsePackagePrefixFromCookie(userSettings);
 
         // fetch data
         var outStream =
                 getSchemaUseCase.getSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI), format);
+                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        format,
+                        usePackagePrefix);
 
         // add suggested file name to response
         var fileName = "default";
@@ -144,6 +149,21 @@ public class GraphContentRESTController {
             }
         }
         throw new IllegalArgumentException("unsupported Media Type");
+    }
+
+    private boolean extractUsePackagePrefixFromCookie(String[] userSettings) {
+        if (userSettings == null) {
+            return true;
+        }
+
+        for (String setting : userSettings) {
+            setting = setting.replace("{", "").replace("}", "");
+            if (setting.startsWith("\"usePackagePrefix\":")) {
+                String value = setting.substring("\"usePackagePrefix:\"".length());
+                return Boolean.parseBoolean(value);
+            }
+        }
+        return true;
     }
 
     @Operation(
