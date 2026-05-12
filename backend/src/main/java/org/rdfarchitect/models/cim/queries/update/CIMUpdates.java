@@ -51,6 +51,7 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.rdf.RDFUtils;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -508,8 +509,12 @@ public class CIMUpdates {
             String classUUID,
             List<CIMAssociationPair> associationPairs) {
         var baseUpdate = CIMUpdates.deleteAssociations(prefixMapping, graphURI, classUUID);
+        var seenFromUUIDs = new HashSet<UUID>();
         for (CIMAssociationPair associationPair : associationPairs) {
-            appendInsertAssociationPair(baseUpdate, associationPair);
+            seenFromUUIDs.add(associationPair.getFrom().getUuid());
+            if (!seenFromUUIDs.contains(associationPair.getTo().getUuid())) {
+                appendInsertAssociationPair(baseUpdate, associationPair);
+            }
         }
         return baseUpdate;
     }
