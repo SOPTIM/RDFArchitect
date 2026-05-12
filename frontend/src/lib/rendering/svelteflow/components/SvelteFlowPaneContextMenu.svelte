@@ -39,6 +39,7 @@
     let triggerRef = $state(null);
     let open = $state(false);
     let showNewClassDialog = $state(false);
+    let classLayoutPosition = $state(null);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -56,6 +57,12 @@
     }
 
     function openNewClassDialog() {
+        classLayoutPosition = request?.flowPosition
+            ? {
+                  xPosition: request.flowPosition.x,
+                  yPosition: request.flowPosition.y,
+              }
+            : null;
         showNewClassDialog = true;
         onClose();
     }
@@ -83,5 +90,6 @@
     bind:showDialog={showNewClassDialog}
     {lockedDatasetName}
     {lockedGraphUri}
+    {classLayoutPosition}
     {onClassCreated}
 />
