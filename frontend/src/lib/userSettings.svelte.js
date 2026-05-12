@@ -15,9 +15,8 @@
  *
  */
 
-
-
-export const userSettings = createUserSettings();function getCookie(name) {
+export const userSettings = createUserSettings();
+function getCookie(name) {
     if (typeof document === "undefined") return {};
     const match = document.cookie
         .split("; ")
