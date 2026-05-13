@@ -149,7 +149,7 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
 
             var currentLabel = labelStmt.getString();
             var currentUri = packageResource.getURI();
-            int sepIdx = Math.max(currentUri.lastIndexOf('#'), currentUri.lastIndexOf('/'));
+            var sepIdx = Math.max(currentUri.lastIndexOf('#'), currentUri.lastIndexOf('/'));
             var uriBase = currentUri.substring(0, sepIdx + 1);
             var uriSuffix = currentUri.substring(sepIdx + 1);
 
@@ -174,51 +174,54 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
             var uriChanged = !newUri.equals(currentUri);
             var labelChanged = !newLabel.equals(currentLabel);
 
-            if (!uriChanged && !labelChanged) {
-                continue;
-            }
-
             if (uriChanged) {
-                var newResource = model.createResource(newUri);
-
-                packageResource
-                        .listProperties()
-                        .toList()
-                        .forEach(
-                                stmt -> {
-                                    if (stmt.getPredicate().equals(RDFS.label) && labelChanged) {
-                                        var lang = stmt.getLanguage();
-                                        if (lang != null && !lang.isEmpty()) {
-                                            newResource.addProperty(RDFS.label, newLabel, lang);
-                                        } else {
-                                            newResource.addProperty(RDFS.label, newLabel);
-                                        }
-                                    } else {
-                                        newResource.addProperty(
-                                                stmt.getPredicate(), stmt.getObject());
-                                    }
-                                });
-
-                model.listStatements(null, null, packageResource)
-                        .toList()
-                        .forEach(
-                                stmt ->
-                                        model.add(
-                                                stmt.getSubject(),
-                                                stmt.getPredicate(),
-                                                newResource));
-                model.listStatements(null, null, packageResource).toList().forEach(model::remove);
-
-                model.removeAll(packageResource, null, null);
-            } else {
-                var lang = labelStmt.getLanguage();
-                packageResource.removeAll(RDFS.label);
-                if (lang != null && !lang.isEmpty()) {
-                    packageResource.addProperty(RDFS.label, newLabel, lang);
-                } else {
-                    packageResource.addProperty(RDFS.label, newLabel);
-                }
+                changeURIAndLabel(packageResource, labelChanged, newUri, newLabel, model);
+            } else if (labelChanged) {
+                changeLabel(packageResource, labelStmt, newLabel);
             }
+        }
+    }
+
+    private static void changeURIAndLabel(
+            Resource packageResource,
+            boolean labelChanged,
+            String newUri,
+            String newLabel,
+            Model model) {
+        var newResource = model.createResource(newUri);
+        packageResource
+                .listProperties()
+                .toList()
+                .forEach(
+                        stmt -> {
+                            if (stmt.getPredicate().equals(RDFS.label) && labelChanged) {
+                                var lang = stmt.getLanguage();
+                                if (lang != null && !lang.isEmpty()) {
+                                    newResource.addProperty(RDFS.label, newLabel, lang);
+                                } else {
+                                    newResource.addProperty(RDFS.label, newLabel);
+                                }
+                            } else {
+                                newResource.addProperty(stmt.getPredicate(), stmt.getObject());
+                            }
+                        });
+
+        model.listStatements(null, null, packageResource)
+                .toList()
+                .forEach(stmt -> model.add(stmt.getSubject(), stmt.getPredicate(), newResource));
+        model.listStatements(null, null, packageResource).toList().forEach(model::remove);
+
+        model.removeAll(packageResource, null, null);
+    }
+
+    private static void changeLabel(
+            Resource packageResource, Statement labelStmt, String newLabel) {
+        var lang = labelStmt.getLanguage();
+        packageResource.removeAll(RDFS.label);
+        if (lang != null && !lang.isEmpty()) {
+            packageResource.addProperty(RDFS.label, newLabel, lang);
+        } else {
+            packageResource.addProperty(RDFS.label, newLabel);
         }
     }
 }

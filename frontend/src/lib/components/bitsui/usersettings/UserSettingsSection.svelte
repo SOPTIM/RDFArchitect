@@ -21,11 +21,14 @@
 
 <div class="flex flex-col gap-2">
     {#if title}
-        <span
-            class="text-default-text text-xs font-semibold uppercase opacity-60"
-        >
-            {title}
-        </span>
+        <div class="flex items-center gap-2">
+            <span
+                class="text-default-text text-xs font-semibold whitespace-nowrap uppercase opacity-80"
+            >
+                {title}
+            </span>
+            <hr class="flex-1 border-t border-gray-600" />
+        </div>
     {/if}
     {@render children?.()}
 </div>
