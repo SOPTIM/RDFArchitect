@@ -20,8 +20,8 @@ package org.rdfarchitect.database.inmemory;
 import lombok.Getter;
 import lombok.Setter;
 
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.apache.jena.rdf.model.Model;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 

@@ -19,8 +19,8 @@ package org.rdfarchitect.services.dl.update.classlayout;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.apache.jena.rdf.model.Model;
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;

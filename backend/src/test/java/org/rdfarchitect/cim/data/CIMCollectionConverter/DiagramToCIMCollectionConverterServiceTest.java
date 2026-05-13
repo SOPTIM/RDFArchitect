@@ -199,7 +199,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         var identifiers = captor.getAllValues();
 
         assertThat(identifiers)
-                .extracting(GraphIdentifier::getGraphUri)
+                .extracting(GraphIdentifier::graphUri)
                 .containsExactlyInAnyOrder(
                         "http://example.org#graph1", "http://example.org#graph2");
     }

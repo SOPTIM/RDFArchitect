@@ -140,7 +140,7 @@ public class CustomDiagramService
         for (var diagram : graphWithContext.getCustomDiagrams().values()) {
             diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
-        var datasetDiagrams = databasePort.getDatasetDiagrams(graphIdentifier.getDatasetName());
+        var datasetDiagrams = databasePort.getDatasetDiagrams(graphIdentifier.datasetName());
         for (var diagram : datasetDiagrams.values()) {
             diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }

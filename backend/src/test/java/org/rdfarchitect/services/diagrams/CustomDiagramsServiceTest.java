@@ -48,8 +48,8 @@ class CustomDiagramsServiceTest {
         service = new CustomDiagramService(databasePort);
 
         graphIdentifier = mock(GraphIdentifier.class);
-        when(graphIdentifier.getGraphUri()).thenReturn("http://example.org#graph");
-        when(graphIdentifier.getDatasetName()).thenReturn("dataset");
+        when(graphIdentifier.graphUri()).thenReturn("http://example.org#graph");
+        when(graphIdentifier.datasetName()).thenReturn("dataset");
     }
 
     @Test
