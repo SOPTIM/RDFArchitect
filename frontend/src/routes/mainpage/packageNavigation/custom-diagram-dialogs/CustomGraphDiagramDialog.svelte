@@ -41,19 +41,27 @@
         lockedDatasetName,
         lockedGraphUri,
         diagramName = "",
-        diagramId = crypto.randomUUID(),
+        diagramId,
         selectedClasses = [],
         allDiagrams,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+    let localDiagramName = $state("");
+    let localDiagramId = $state();
+
     let packages = $state([]);
     let classesByPackage = $state({});
 
-    let violations = $derived(isValidDiagramName(diagramName, allDiagrams));
+    let violations = $derived(
+        isValidDiagramName(localDiagramName, allDiagrams),
+    );
     let disableSubmit = $derived(violations.length > 0);
 
     async function onOpen() {
+        localDiagramName = diagramName;
+        localDiagramId = diagramId ? diagramId : crypto.randomUUID();
+
         packages = await createPackageListForGraph(
             lockedDatasetName,
             lockedGraphUri,
@@ -67,8 +75,8 @@
     }
 
     function onClose() {
-        diagramName = "";
-        diagramId = null;
+        localDiagramName = "";
+        localDiagramId = crypto.randomUUID();
     }
 
     function toggleAll(newState) {
@@ -105,8 +113,8 @@
                 graphUri: lockedGraphUri,
             }));
         const diagramData = {
-            diagramId: diagramId,
-            name: diagramName,
+            diagramId: localDiagramId,
+            name: localDiagramName,
             classes: selectedClassList,
         };
 
@@ -114,7 +122,7 @@
             const res = await bec.putCustomDiagram(
                 lockedDatasetName,
                 lockedGraphUri,
-                diagramId,
+                localDiagramId,
                 diagramData,
             );
 
@@ -122,8 +130,8 @@
                 editorState.selectedDataset.updateValue(lockedDatasetName);
                 editorState.selectedGraph.updateValue(lockedGraphUri);
                 editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CUSTOM_DIAGRAM,
-                    id: diagramId,
+                    type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
+                    id: localDiagramId,
                 });
             } else {
                 console.error("Failed to save diagram");
@@ -138,7 +146,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Create custom diagram for profile"
+    title={"Create/Edit custom diagram for profile"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}
@@ -148,7 +156,7 @@
         <TextEditControl
             id="diagram-name-input"
             placeholder="Enter diagram name"
-            bind:value={diagramName}
+            bind:value={localDiagramName}
             warn={violations.length > 0}
         />
         <ViolationMessages {violations} />

@@ -43,6 +43,7 @@
         graphNavEntry,
         classNavEntry,
         diagramId,
+        diagramGraphUri,
         namespaces = [],
         readonly = false,
         onPackChange = () => {},
@@ -203,7 +204,8 @@
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
+    graphUri={diagramGraphUri}
     {diagramId}
-    cls={classNavEntry}
+    classId={classNavEntry.id}
+    classLabel={classNavEntry.label}
 />

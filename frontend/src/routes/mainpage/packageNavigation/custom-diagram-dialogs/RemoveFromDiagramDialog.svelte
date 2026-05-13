@@ -21,34 +21,32 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import {
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
         lockedDatasetName,
         graphUri,
         diagramId,
-        cls,
+        classId,
+        classLabel,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     async function removeFromDiagram() {
-        if (editorState.selectedGraph.getValue()) {
+        if (graphUri) {
             await bec.removeFromCustomGraphDiagram(
                 lockedDatasetName,
                 graphUri,
                 diagramId,
-                cls.id,
+                classId,
             );
         } else {
             await bec.removeFromCustomDatasetDiagram(
                 lockedDatasetName,
                 diagramId,
-                cls.id,
+                classId,
             );
         }
         forceReloadTrigger.trigger();
@@ -61,7 +59,7 @@
     primaryLabel="Remove Class from Diagram"
     onPrimary={removeFromDiagram}
     primaryVariant="danger"
-    title={cls?.label ? `Remove class "${cls.label}"?` : "Remove class?"}
+    title={classLabel ? `Remove class "${classLabel}"?` : "Remove class?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >

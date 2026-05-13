@@ -92,8 +92,11 @@
         editorState.selectedGraph.updateValue(
             graphNavEntry ? graphNavEntry.id : null,
         );
+        let diagramType = graphNavEntry
+            ? DiagramType.CUSTOM_GRAPH_DIAGRAM
+            : DiagramType.CUSTOM_DATASET_DIAGRAM;
         editorState.selectedDiagram.updateValue({
-            type: DiagramType.CUSTOM_DIAGRAM,
+            type: diagramType,
             id: diagram.diagramId,
         });
     }
@@ -148,6 +151,7 @@
                     graphNavEntry={getGraphNavEntryForClass(cls.id)}
                     classNavEntry={cls}
                     diagramId={diagram.diagramId}
+                    diagramGraphUri={graphNavEntry?.id}
                     {readOnly}
                 />
             {/each}

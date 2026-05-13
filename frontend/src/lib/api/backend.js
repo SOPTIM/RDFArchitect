@@ -576,6 +576,10 @@ export class BackendConnection {
         diagramId,
         classId,
     ) {
+        console.log(
+            `Removing class ${classId} from diagram ${diagramId} in dataset ${datasetName}`,
+        );
+
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
         return await fetch(url, {
             method: "DELETE",

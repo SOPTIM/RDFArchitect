@@ -40,20 +40,28 @@
         showDialog = $bindable(),
         lockedDatasetName,
         diagramName = "",
-        diagramId = crypto.randomUUID(),
+        diagramId,
         selectedClasses = [],
         allDiagrams = [],
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+    let localDiagramName = $state();
+    let localDiagramId = $state();
+
     let graphs = $state([]);
     let classesByPackageAndGraph = $state({});
     let packagesByGraph = $state({});
 
-    let violations = $derived(isValidDiagramName(diagramName, allDiagrams));
+    let violations = $derived(
+        isValidDiagramName(localDiagramName, allDiagrams),
+    );
     let disableSubmit = $derived(violations.length > 0);
 
     async function onOpen() {
+        localDiagramName = diagramName;
+        localDiagramId = diagramId ? diagramId : crypto.randomUUID();
+
         await fetchGraphs();
         await createPackageMap();
         await createClassMap();
@@ -61,9 +69,8 @@
     }
 
     function onClose() {
-        diagramName = "";
-        diagramId = null;
-        selectedClasses = [];
+        localDiagramName = "";
+        localDiagramId = crypto.randomUUID();
     }
 
     async function getGraphs(datasetName) {
@@ -140,18 +147,23 @@
         graphs.forEach(graph => {
             const graphURI = getUri(graph);
             const packages = packagesByGraph[graphURI];
+            let classesSelectedInGraph = false;
             packages.forEach(pack => {
                 const packageId = pack.uuid;
                 const classesInPackage =
                     classesByPackageAndGraph[graphURI][packageId] ?? [];
 
                 if (classesInPackage.length > 0) {
-                    pack.expanded =
+                    const classesSelectedInPackage =
                         classesInPackage.find(cls => cls.selected) !==
                         undefined;
+                    pack.expanded = classesSelectedInPackage;
+                    if (classesSelectedInPackage) {
+                        classesSelectedInGraph = true;
+                    }
                 }
             });
-            graph.expanded = packages.find(pack => pack.selected) !== undefined;
+            graph.expanded = classesSelectedInGraph;
         });
     }
 
@@ -169,15 +181,15 @@
         );
 
         const diagramData = {
-            diagramId: diagramId,
-            name: diagramName,
+            diagramId: localDiagramId,
+            name: localDiagramName,
             classes: selectedClassList,
         };
 
         try {
             const res = await bec.putCustomDatasetDiagram(
                 lockedDatasetName,
-                diagramId,
+                localDiagramId,
                 diagramData,
             );
 
@@ -185,8 +197,8 @@
                 editorState.selectedDataset.updateValue(lockedDatasetName);
                 editorState.selectedGraph.updateValue(null);
                 editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CUSTOM_DIAGRAM,
-                    id: diagramId,
+                    type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+                    id: localDiagramId,
                 });
             } else {
                 console.error("Failed to save diagram");
@@ -201,7 +213,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Create custom diagram for dataset"
+    title="Create/Edit custom diagram for dataset"
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}
@@ -211,7 +223,7 @@
         <TextEditControl
             id="diagram-name-input"
             placeholder="Enter diagram name"
-            bind:value={diagramName}
+            bind:value={localDiagramName}
             warn={violations.length > 0}
         />
         <ViolationMessages {violations} />

@@ -256,9 +256,9 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     }
 
     for (const classNavEntry of packageNavObject.children) {
+        let diagramType = editorState.selectedDiagram.getProperty("type");
         if (
-            editorState.selectedDiagram.getProperty("type") !==
-                DiagramType.CUSTOM_DIAGRAM &&
+            diagramType === DiagramType.PACKAGE &&
             isSelectedClass(datasetId, graphId, classNavEntry.id)
         ) {
             classNavEntry.parent?.open();

@@ -36,7 +36,11 @@
     const hasPackages = $derived(packages?.length > 0);
 
     $effect(() => {
-        graph.selected = packages?.every(pack => pack.selected === true);
+        graph.selected =
+            packages?.every(pack => {
+                const classCount = classesByPackage[pack.uuid]?.length ?? 0;
+                return classCount === 0 || pack.selected === true;
+            }) ?? false;
     });
 
     function toggleGraphContentsVisibility() {

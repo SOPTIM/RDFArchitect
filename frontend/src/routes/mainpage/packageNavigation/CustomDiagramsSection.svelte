@@ -47,11 +47,11 @@
         graphNavEntry
             ? isSelectedGraph(datasetNavEntry.id, graphNavEntry.id) &&
                   editorState.selectedDiagram.getProperty("type") ===
-                      DiagramType.CUSTOM_DIAGRAM
+                      DiagramType.CUSTOM_GRAPH_DIAGRAM
             : !editorState.selectedGraph.getValue() &&
                   isSelectedDataset(datasetNavEntry.id) &&
                   editorState.selectedDiagram.getProperty("type") ===
-                      DiagramType.CUSTOM_DIAGRAM,
+                      DiagramType.CUSTOM_DATASET_DIAGRAM,
     );
     let level = $derived(graphNavEntry ? 3 : 2);
     let label = $derived(
@@ -166,10 +166,13 @@
     }
 
     function handleClick() {
+        const diagramType = graphNavEntry
+            ? DiagramType.CUSTOM_GRAPH_DIAGRAM
+            : DiagramType.CUSTOM_DATASET_DIAGRAM;
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry?.id);
         editorState.selectedDiagram.updateValue({
-            type: DiagramType.CUSTOM_DIAGRAM,
+            type: diagramType,
             id: null,
         });
     }
@@ -186,8 +189,16 @@
 </script>
 
 {#if diagrams.length > 0}
-    <div class="bg-border my-1 ml-14 h-0.5"></div>
-    <div class="flex w-full flex-col items-stretch">
+    <div
+        class="bg-border my-1 ml-14 h-0.5"
+        role="presentation"
+        oncontextmenu={e => e.stopPropagation()}
+    ></div>
+    <div
+        class="flex w-full flex-col items-stretch"
+        role="presentation"
+        oncontextmenu={e => e.stopPropagation()}
+    >
         <NavigationEntry
             {level}
             {label}

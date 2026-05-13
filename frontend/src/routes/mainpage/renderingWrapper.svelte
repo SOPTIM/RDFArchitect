@@ -94,12 +94,10 @@
         }
 
         if (diagramId) {
-            if (diagramType === DiagramType.CUSTOM_DIAGRAM) {
-                if (graphUri) {
-                    await fetchGraphDiagramRenderingData(diagramId);
-                } else {
-                    await fetchDatasetDiagramRenderingData(diagramId);
-                }
+            if (diagramType === DiagramType.CUSTOM_GRAPH_DIAGRAM) {
+                await fetchGraphDiagramRenderingData(diagramId);
+            } else if (diagramType === DiagramType.CUSTOM_DATASET_DIAGRAM) {
+                await fetchDatasetDiagramRenderingData(diagramId);
             } else {
                 await fetchPackageRenderingData(
                     datasetName,
@@ -247,7 +245,7 @@
                             reset view
                         </ButtonControl>
                     </div>
-                    {#if editorState.selectedDiagram.getProperty("id")}
+                    {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
                         <div class="h-9 w-28">
                             <ButtonControl
                                 variant="default"

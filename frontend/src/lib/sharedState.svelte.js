@@ -35,7 +35,8 @@ import {
  * @type {{CUSTOM_DIAGRAM: string, PACKAGE: string}}
  */
 export const DiagramType = {
-    CUSTOM_DIAGRAM: "customDiagram",
+    CUSTOM_GRAPH_DIAGRAM: "customGraphDiagram",
+    CUSTOM_DATASET_DIAGRAM: "customDatasetDiagram",
     PACKAGE: "package",
 };
 

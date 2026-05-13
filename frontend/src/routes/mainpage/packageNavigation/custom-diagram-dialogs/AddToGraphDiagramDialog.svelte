@@ -40,7 +40,18 @@
             lockedDatasetName,
             lockedGraphUri,
         );
-        diagramList = await res.json();
+        const allDiagrams = await res.json();
+        diagramList = allDiagrams.filter(diagram => {
+            const classesToAddIds = new Set(classes.map(cls => cls.id));
+            const diagramClassIds = new Set(
+                diagram.classes.map(cls => cls.uuid),
+            );
+
+            // only keep entries where at least on of the classes to add is not already in the diagram
+            return Array.from(classesToAddIds).some(
+                id => !diagramClassIds.has(id),
+            );
+        });
     }
 
     function onOpen() {
@@ -83,7 +94,9 @@
             id="diagram-select"
             bind:value={selectedDiagram}
             options={diagramList}
-            placeholder={"Select diagram"}
+            placeholder={diagramList.length > 0
+                ? "Select diagram"
+                : "No diagrams available"}
             getOptionLabel={diagram => diagram.name}
         />
     </div>
