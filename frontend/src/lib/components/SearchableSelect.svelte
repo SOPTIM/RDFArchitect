@@ -41,8 +41,21 @@
         buttons = [],
     } = $props();
 
-    let lastSavedValue = value;
+    let lastValidInput = $state(value);
     let datalistID = crypto.randomUUID();
+
+    $effect(() => {
+        if (!value) {
+            lastValidInput = value;
+            return;
+        }
+        for (let optionObj of optionObjectList) {
+            if (accessDisplayData(optionObj) === value) {
+                lastValidInput = accessDisplayData(optionObj);
+                return;
+            }
+        }
+    });
 
     function verifyInput() {
         if (!value) {
@@ -52,13 +65,13 @@
         }
         for (let optionObj of optionObjectList) {
             if (accessIdentifier(optionObj) === value) {
-                lastSavedValue = accessDisplayData(optionObj);
-                value = lastSavedValue;
+                lastValidInput = accessDisplayData(optionObj);
+                value = lastValidInput;
                 callOnValidChange(optionObj);
                 return;
             }
         }
-        value = lastSavedValue;
+        value = lastValidInput;
     }
 </script>
 
