@@ -84,6 +84,19 @@ public class DiagramLayoutServiceUtils {
      * @param diagramObjectMRID the mRID of the diagram object the point belongs to
      */
     public void insertDiagramObjectPoint(Model diagramLayoutModel, MRID diagramObjectMRID) {
+        insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID, 0, 0);
+    }
+
+    /**
+     * Helper method for creating and inserting a {@link DiagramObjectPoint} at a given position.
+     *
+     * @param diagramLayoutModel the model into which the diagram object point is inserted
+     * @param diagramObjectMRID the mRID of the diagram object the point belongs to
+     * @param xPosition the x position of the diagram object point
+     * @param yPosition the y position of the diagram object point
+     */
+    public void insertDiagramObjectPoint(
+            Model diagramLayoutModel, MRID diagramObjectMRID, float xPosition, float yPosition) {
         var maxZPosition =
                 diagramLayoutModel.listObjectsOfProperty(DL.zPosition).toSet().stream()
                         .max(
@@ -97,7 +110,7 @@ public class DiagramLayoutServiceUtils {
         var diagramObjectPoint =
                 DiagramObjectPoint.builder()
                         .mRID(new MRID(UUID.randomUUID()))
-                        .position(new XYZPosition(0, 0, maxZPosition + 1))
+                        .position(new XYZPosition(xPosition, yPosition, maxZPosition + 1))
                         .belongsToDiagramObject(diagramObjectMRID)
                         .build();
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);

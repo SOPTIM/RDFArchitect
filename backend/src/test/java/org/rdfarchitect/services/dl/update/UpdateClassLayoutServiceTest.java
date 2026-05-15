@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.dl.data.DLUtils;
@@ -51,10 +52,34 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
                         .label(PACKAGE_A_LABEL)
                         .prefix("ex")
                         .build();
-        service.createClassLayoutData(graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID);
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, null);
 
         // Assert
         assertInitialClassLayoutData(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
+    }
+
+    @Test
+    void createClassLayoutData_withInitialPosition_createsClassLayoutDataAtPosition() {
+        // Arrange
+        addGraphFromFile("package.ttl");
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("ex")
+                        .build();
+        var classLayoutPosition = new ClassLayoutPositionDTO();
+        classLayoutPosition.setXPosition(123.0F);
+        classLayoutPosition.setYPosition(456.0F);
+
+        // Act
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, classLayoutPosition);
+
+        // Assert
+        assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
+        assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
     }
 
     @Test
