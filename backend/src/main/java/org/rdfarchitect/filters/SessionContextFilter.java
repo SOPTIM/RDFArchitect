@@ -51,18 +51,13 @@ public class SessionContextFilter implements Filter {
             if (httpRequest.getCookies() != null) {
                 for (Cookie cookie : httpRequest.getCookies()) {
                     if ("RDFA_USER_SETTINGS".equals(cookie.getName())) {
-                        try {
-                            var decoded =
-                                    java.net.URLDecoder.decode(
-                                            cookie.getValue(),
-                                            java.nio.charset.StandardCharsets.UTF_8);
-                            var node =
-                                    new com.fasterxml.jackson.databind.ObjectMapper()
-                                            .readTree(decoded);
-                            usePackagePrefix = parseUsePackagePrefix(node);
-                            normalizeComments = parseNormalizeComments(node);
-                        } catch (Exception ignored) {
-                        }
+                        var decoded =
+                                java.net.URLDecoder.decode(
+                                        cookie.getValue(), java.nio.charset.StandardCharsets.UTF_8);
+                        var node =
+                                new com.fasterxml.jackson.databind.ObjectMapper().readTree(decoded);
+                        usePackagePrefix = parseUsePackagePrefix(node);
+                        normalizeComments = parseNormalizeComments(node);
                         break;
                     }
                 }
