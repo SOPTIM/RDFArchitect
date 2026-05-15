@@ -245,11 +245,12 @@ class UpdateClassServiceTest {
 
     @Test
     void copyClass_copyExistingClass() {
-        var targetPackageDTO = PackageDTO.builder()
-                .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
-                .prefix(PREFIX)
-                .label("newPackage")
-                .build();
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
 
         var request = new CopyClassRequestDTO();
         request.setTargetPackage(targetPackageDTO);
@@ -265,17 +266,19 @@ class UpdateClassServiceTest {
             graph.begin(TxnType.READ);
 
             assertThat(
-                    graph.contains(
-                            NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
-                            RDF.type.asNode(),
-                            RDFS.Class.asNode()))
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
                     .isTrue();
 
             assertThat(
-                    graph.contains(
-                            NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
-                            RDFS.label.asNode(),
-                            new RDFSLabel("oldLabel - Copy", "en").asLangLiteral().asNode()))
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    RDFS.label.asNode(),
+                                    new RDFSLabel("oldLabel - Copy", "en")
+                                            .asLangLiteral()
+                                            .asNode()))
                     .isTrue();
         } finally {
             graph.end();
@@ -284,11 +287,12 @@ class UpdateClassServiceTest {
 
     @Test
     void copyClass_copyExistingClass_abstract() {
-        var targetPackageDTO = PackageDTO.builder()
-                .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
-                .prefix(PREFIX)
-                .label("newPackage")
-                .build();
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
 
         var request = new CopyClassRequestDTO();
         request.setTargetPackage(targetPackageDTO);
@@ -304,17 +308,17 @@ class UpdateClassServiceTest {
             graph.begin(TxnType.READ);
 
             assertThat(
-                    graph.contains(
-                            NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
-                            RDF.type.asNode(),
-                            RDFS.Class.asNode()))
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
                     .isTrue();
 
             assertThat(
-                    graph.contains(
-                            Node.ANY,
-                            RDFS.domain.asNode(),
-                            NodeFactory.createURI(PREFIX + "oldLabel - Copy")))
+                            graph.contains(
+                                    Node.ANY,
+                                    RDFS.domain.asNode(),
+                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy")))
                     .isFalse();
         } finally {
             graph.end();
