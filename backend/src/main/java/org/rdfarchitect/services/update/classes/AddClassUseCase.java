@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.update.classes;
 
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
@@ -25,19 +26,21 @@ import java.util.UUID;
 public interface AddClassUseCase {
 
     /**
-     * Constructs a new class and adds it to the specified graph. All optional parameters are set to
-     * null. The label of the class is set to NewClass with an index number appended if a NewClass
-     * already exists in the graph.
+     * Constructs a new class and adds it to the specified graph, optionally at a given initial
+     * diagram layout position.
      *
      * @param graphIdentifier The graph URI and database name of the graph to add the class to.
      * @param packageDTO The Package to which the class will be added.
      * @param classURIPrefix The prefix of the class to be added.
      * @param className The name of the class to be added.
+     * @param classLayoutPosition The initial diagram position of the class, or {@code null} to
+     *     place the class at the origin.
      * @return The UUID of the newly created class.
      */
     UUID addClass(
             GraphIdentifier graphIdentifier,
             PackageDTO packageDTO,
             String classURIPrefix,
-            String className);
+            String className,
+            ClassLayoutPositionDTO classLayoutPosition);
 }

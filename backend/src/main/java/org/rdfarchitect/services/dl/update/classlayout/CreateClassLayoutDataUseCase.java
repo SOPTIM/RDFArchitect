@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.dl.update.classlayout;
 
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
@@ -25,16 +26,20 @@ import java.util.UUID;
 public interface CreateClassLayoutDataUseCase {
 
     /**
-     * Creates the diagram layout data for a newly created class
+     * Creates the diagram layout data for a newly created class, optionally at a given initial
+     * position.
      *
      * @param graphIdentifier the identifier of the graph
      * @param packageDTO the DTO used for creating the new class
      * @param className the name of the newly created class
      * @param classUUID the UUID of the newly created class
+     * @param classLayoutPosition the initial diagram position of the newly created class, or {@code
+     *     null} to place the class at the origin
      */
     void createClassLayoutData(
             GraphIdentifier graphIdentifier,
             PackageDTO packageDTO,
             String className,
-            UUID classUUID);
+            UUID classUUID,
+            ClassLayoutPositionDTO classLayoutPosition);
 }

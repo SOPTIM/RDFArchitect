@@ -42,6 +42,7 @@
         lockedDatasetName,
         lockedGraphUri,
         lockedPackage,
+        classLayoutPosition = null,
         onClassCreated = () => {},
     } = $props();
 
@@ -198,6 +199,14 @@
         const classURINamespaceLocal = classURINamespace;
         const selectedPackageUUID = classPackage?.uuid ?? "default";
         let packageDTO = classPackage?.uuid === "default" ? null : classPackage;
+        const requestBody = {
+            packageDTO,
+            classURIPrefix: classURINamespaceLocal?.value,
+            className: classNameLocal?.value,
+        };
+        if (classLayoutPosition) {
+            requestBody.classLayoutPosition = classLayoutPosition;
+        }
 
         try {
             const res = await fetch(
@@ -212,11 +221,7 @@
                     headers: new Headers({
                         "Content-Type": "application/json",
                     }),
-                    body: JSON.stringify({
-                        packageDTO,
-                        classURIPrefix: classURINamespaceLocal?.value,
-                        className: classNameLocal?.value,
-                    }),
+                    body: JSON.stringify(requestBody),
                     credentials: "include",
                 },
             );
@@ -224,6 +229,7 @@
                 const uuid = await res.text();
                 console.log("successfully added class");
                 onClassCreated({
+                    classUUID: uuid,
                     datasetName: datasetNameLocal,
                     graphURI: graphURILocal,
                     packageUUID: selectedPackageUUID,

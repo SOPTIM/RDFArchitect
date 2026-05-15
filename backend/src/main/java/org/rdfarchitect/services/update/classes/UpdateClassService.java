@@ -25,6 +25,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -129,7 +130,8 @@ public class UpdateClassService
             GraphIdentifier graphIdentifier,
             PackageDTO packageDTO,
             String classURIPrefix,
-            String className) {
+            String className,
+            ClassLayoutPositionDTO classLayoutPosition) {
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         GraphRewindableWithUUIDs graph = null;
         UUID newClassUUID;
@@ -152,7 +154,7 @@ public class UpdateClassService
         }
 
         createClassLayoutDataUseCase.createClassLayoutData(
-                graphIdentifier, packageDTO, className, newClassUUID);
+                graphIdentifier, packageDTO, className, newClassUUID, classLayoutPosition);
 
         changeLogUseCase.recordChange(
                 graphIdentifier,
