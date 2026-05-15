@@ -41,7 +41,7 @@
         buttons = [],
     } = $props();
 
-    let lastValidInput = $state(value);
+    let lastValidInput = value;
     let datalistID = crypto.randomUUID();
 
     $effect(() => {
