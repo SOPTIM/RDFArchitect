@@ -17,8 +17,11 @@
 
 <script>
     import { UserSettingsComponents as USC } from "$lib/components/bitsui/usersettings/index.js";
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
+    import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     let { showDialog = $bindable() } = $props();
 
@@ -40,6 +43,7 @@
             userSettings.set(key, value);
         }
         showDialog = false;
+        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -53,12 +57,47 @@
     size="w-1/3"
     title="Settings"
 >
-    <div class="mx-2 flex flex-col gap-4 py-2">
-        <USC.Section title="Graph export">
-            <USC.Item.CheckBox
-                label="Use package prefix 'Package_'"
-                value={localSettings["usePackagePrefix"] ?? true}
-                onChange={v => (localSettings["usePackagePrefix"] = v)}
+    <div class="mx-2 flex h-80 flex-col gap-4 overflow-y-auto py-2">
+        <USC.Section title="Export">
+            <CheckBoxEditControl
+                label="Use 'Package_' prefix"
+                value={localSettings["usePackagePrefix"]}
+                callOnInputTrue={() =>
+                    (localSettings["usePackagePrefix"] = true)}
+                callOnInputFalse={() =>
+                    (localSettings["usePackagePrefix"] = false)}
+                labelFirst={false}
+            />
+            <USC.Item.SingleSelect
+                label="Default Export Format"
+                options={supportedRDFMediaTypes}
+                getOptionLabel={v => v.name}
+                getOptionValue={v => v.mimeType}
+                value={localSettings["defaultExportFormat"] ??
+                    supportedRDFMediaTypes[0].mimeType}
+                onChange={v => (localSettings["defaultExportFormat"] = v)}
+            />
+        </USC.Section>
+        <USC.Section title="Visualization">
+            <CheckBoxEditControl
+                label="Show 'Package_' Prefix"
+                value={localSettings["showPackagePrefix"] ?? false}
+                callOnInputTrue={() =>
+                    (localSettings["showPackagePrefix"] = true)}
+                callOnInputFalse={() =>
+                    (localSettings["showPackagePrefix"] = false)}
+                labelFirst={false}
+            />
+        </USC.Section>
+        <USC.Section title="Normalization">
+            <CheckBoxEditControl
+                label="Normalize comments to xsd:String"
+                value={localSettings["normalizeComments"] ?? true}
+                callOnInputTrue={() =>
+                    (localSettings["normalizeComments"] = true)}
+                callOnInputFalse={() =>
+                    (localSettings["normalizeComments"] = false)}
+                labelFirst={false}
             />
         </USC.Section>
     </div>

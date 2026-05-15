@@ -17,13 +17,11 @@
 
 import UserSettingsSelectItem from "$lib/components/bitsui/usersettings/item/UserSettingsSelectItem.svelte";
 
-import UserSettingsCheckboxItem from "./item/UserSettingsCheckboxItem.svelte";
 import UserSettingsSection from "./UserSettingsSection.svelte";
 
 export const UserSettingsComponents = {
     Section: UserSettingsSection,
     Item: {
-        CheckBox: UserSettingsCheckboxItem,
         SingleSelect: UserSettingsSelectItem,
     },
 };

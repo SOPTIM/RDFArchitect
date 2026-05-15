@@ -33,6 +33,7 @@ import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateRequest;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
@@ -146,7 +147,11 @@ public class CIMUpdates {
         }
         if (newClass.getComment() != null) {
             classBaseUpdate.addInsert(
-                    newClassURI, RDFS.comment, newClass.getComment().asTypedLiteral());
+                    newClassURI,
+                    RDFS.comment,
+                    UserSettingsContext.get().normalizeComments()
+                            ? newClass.getComment().asTypedLiteral()
+                            : newClass.getComment().asLiteral());
         }
         if (newClass.getBelongsToCategory() != null) {
             classBaseUpdate.addInsert(
@@ -264,7 +269,12 @@ public class CIMUpdates {
         }
         // comment
         if (attribute.getComment() != null) {
-            baseUpdate.addInsert(newURI, RDFS.comment, attribute.getComment().asTypedLiteral());
+            baseUpdate.addInsert(
+                    newURI,
+                    RDFS.comment,
+                    UserSettingsContext.get().normalizeComments()
+                            ? attribute.getComment().asTypedLiteral()
+                            : attribute.getComment().asLiteral());
         }
         // isFixed
         appendValueNode(baseUpdate, newURI, CIMS.isFixed, attribute.getFixedValue());
@@ -483,7 +493,9 @@ public class CIMUpdates {
             baseUpdate.addInsert(
                     association.getUri().toNode(),
                     RDFS.comment,
-                    association.getComment().asTypedLiteral());
+                    UserSettingsContext.get().normalizeComments()
+                            ? association.getComment().asTypedLiteral()
+                            : association.getComment().asLiteral());
         }
     }
 
@@ -565,7 +577,11 @@ public class CIMUpdates {
         }
         if (newEnumEntry.getComment() != null) {
             baseUpdate.addInsert(
-                    newEnumEntryURI, RDFS.comment, newEnumEntry.getComment().asTypedLiteral());
+                    newEnumEntryURI,
+                    RDFS.comment,
+                    UserSettingsContext.get().normalizeComments()
+                            ? newEnumEntry.getComment().asTypedLiteral()
+                            : newEnumEntry.getComment().asLiteral());
         }
         if (newEnumEntry.getStereotype() != null) {
             baseUpdate.addInsert(newEnumEntryURI, CIMS.stereotype, CIMStereotypes.enumLiteral);
@@ -644,7 +660,11 @@ public class CIMUpdates {
         }
         if (newPackage.getComment() != null) {
             packageUpdateBuilder.addInsert(
-                    newPackageURI, RDFS.comment, newPackage.getComment().asTypedLiteral());
+                    newPackageURI,
+                    RDFS.comment,
+                    UserSettingsContext.get().normalizeComments()
+                            ? newPackage.getComment().asTypedLiteral()
+                            : newPackage.getComment().asLiteral());
         }
 
         UpdateExecutionFactory.create(packageUpdateBuilder.build(), dataset).execute();

@@ -27,6 +27,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
@@ -110,6 +111,11 @@
         if (selectedDatasetName) {
             namespaces = await getNamespaces(selectedDatasetName);
         }
+        const saved = userSettings.get("defaultExportFormat", null);
+        selectedMediaType = saved
+            ? (supportedMediaTypes.find(m => m.mimeType === saved) ??
+              supportedMediaTypes[0])
+            : supportedMediaTypes[0];
     });
 
     function toggleAllEntries() {

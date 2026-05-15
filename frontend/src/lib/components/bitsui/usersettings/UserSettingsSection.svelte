@@ -16,19 +16,38 @@
   -->
 
 <script>
-    let { title, children } = $props();
+    import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
+    let { title, children, open = true } = $props();
+
+    let isOpen = $state(open);
 </script>
 
 <div class="flex flex-col gap-2">
     {#if title}
-        <div class="flex items-center gap-2">
+        <button
+            type="button"
+            class="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0"
+            onclick={() => (isOpen = !isOpen)}
+        >
+            <Fa
+                icon={faChevronRight}
+                class="text-default-text opacity-80 transition-transform duration-200 {isOpen
+                    ? 'rotate-90'
+                    : ''}"
+            />
             <span
-                class="text-default-text text-xs font-semibold whitespace-nowrap uppercase opacity-80"
+                class="text-default-text text-sm font-semibold whitespace-nowrap uppercase opacity-80"
             >
                 {title}
             </span>
             <hr class="flex-1 border-t border-gray-600" />
+        </button>
+    {/if}
+    {#if isOpen}
+        <div class="mt-1 flex flex-col gap-2">
+            {@render children?.()}
         </div>
     {/if}
-    {@render children?.()}
 </div>

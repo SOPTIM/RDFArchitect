@@ -38,8 +38,8 @@
     );
 </script>
 
-<div class="flex items-center justify-between gap-2">
-    <span class="text-default-text text-sm">{label}</span>
+<div class="flex items-center gap-2">
+    <span class="text-default-text">{label}</span>
 
     <BitsUiDropdownMenu.Root>
         <BitsUiDropdownMenu.Trigger

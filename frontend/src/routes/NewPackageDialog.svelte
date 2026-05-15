@@ -155,6 +155,9 @@
         if (!namespace || !label) {
             return null;
         }
+        if (!label?.startsWith("Package_")) {
+            label = "Package_" + label;
+        }
         return getExpandedNamespace(namespace) + label;
     }
 
@@ -169,6 +172,9 @@
         packageComment,
         packageURINamespace,
     ) {
+        if (!packageLabel.startsWith("Package_")) {
+            packageLabel = "Package_" + packageLabel;
+        }
         let promise = fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
