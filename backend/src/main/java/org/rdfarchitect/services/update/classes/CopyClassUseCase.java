@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import org.rdfarchitect.api.dto.packages.PackageDTO;
+import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.UUID;
@@ -32,16 +32,13 @@ public interface CopyClassUseCase {
      * @param classUUID The UUID of the class that will be copied.
      * @param targetGraphIdentifier The graph URI and database name of the graph the new class will
      *     be added in.
-     * @param targetPackageDTO The package the new class will be added in.
-     * @param copyAsAbstract If true, only the class itself will be copied, if false, all attributes
-     *     will also be copied.
+     * @param copyClassRequestDTO The DTO that contains the information about how the class should
+     *     be copied, e.g. if attributes and associations should be copied as well.
+     * @return The UUID of the newly created class.
      */
     UUID copyClass(
             GraphIdentifier graphIdentifier,
             UUID classUUID,
             GraphIdentifier targetGraphIdentifier,
-            PackageDTO targetPackageDTO,
-            boolean copyAsAbstract,
-            boolean copyAttributes,
-            boolean copyAssociations);
+            CopyClassRequestDTO copyClassRequestDTO);
 }

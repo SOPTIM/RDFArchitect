@@ -114,20 +114,11 @@ public class CIMUpdates {
 
     public UUID insertClass(Graph graph, PrefixMapping prefixMapping, CIMClass newClass) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
-        var uuid = UUID.randomUUID();
-        var model = ModelFactory.createModelForGraph(graph);
-        var existingResource = model.getResource(newClass.getUri().toString());
         assertNoPackageWithSameIri(graph, newClass.getUri());
-        if (existingResource != null && existingResource.hasProperty(RDFA.uuid)) {
-            var existingUUIDLiteral = existingResource.getProperty(RDFA.uuid).getObject();
-            if (existingUUIDLiteral != null) {
-                uuid = UUID.fromString(existingUUIDLiteral.asLiteral().getString());
-            }
-        }
-        newClass.setUuid(uuid);
+        newClass.setUuid(createUUID(graph, newClass));
         var insertClass = insertClass(prefixMapping, null, newClass);
         UpdateExecutionFactory.create(insertClass.build(), dataset).execute();
-        return uuid;
+        return newClass.getUuid();
     }
 
     private UpdateBuilder insertClass(
@@ -164,14 +155,7 @@ public class CIMUpdates {
         return classBaseUpdate;
     }
 
-    public UUID insertUMLAdaptedClass(
-            Graph graph,
-            PrefixMapping prefixMapping,
-            CIMClassUMLAdapted newClass,
-            boolean newValuesAsBlankNode) {
-
-        assertNoPackageWithSameIri(graph, newClass.getUri());
-
+    private UUID createUUID(Graph graph, CIMClass newClass) {
         var uuid = UUID.randomUUID();
         var model = ModelFactory.createModelForGraph(graph);
         var existingResource = model.getResource(newClass.getUri().toString());
@@ -181,7 +165,18 @@ public class CIMUpdates {
                 uuid = UUID.fromString(existingUUIDLiteral.asLiteral().getString());
             }
         }
-        newClass.setUuid(uuid);
+        return uuid;
+    }
+
+    public UUID insertUMLAdaptedClass(
+            Graph graph,
+            PrefixMapping prefixMapping,
+            CIMClassUMLAdapted newClass,
+            boolean newValuesAsBlankNode) {
+
+        assertNoPackageWithSameIri(graph, newClass.getUri());
+
+        newClass.setUuid(createUUID(graph, newClass));
 
         var request = new UpdateRequest();
 
@@ -221,7 +216,7 @@ public class CIMUpdates {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         UpdateExecutionFactory.create(request, dataset).execute();
 
-        return uuid;
+        return newClass.getUuid();
     }
 
     public void deleteClass(Graph graph, PrefixMapping prefixMapping, String classUUID) {

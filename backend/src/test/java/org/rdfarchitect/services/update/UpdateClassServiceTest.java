@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
@@ -251,14 +252,14 @@ class UpdateClassServiceTest {
                         .label("newPackage")
                         .build();
 
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(false);
+        request.setCopyAttributes(true);
+        request.setCopyAssociations(false);
+
         updateClassService.copyClass(
-                graphIdentifier,
-                UUID.fromString(CLASS_UUID),
-                graphIdentifier,
-                targetPackageDTO,
-                false,
-                true,
-                false);
+                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
@@ -291,14 +292,14 @@ class UpdateClassServiceTest {
                         .label("newPackage")
                         .build();
 
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(true);
+        request.setCopyAttributes(false);
+        request.setCopyAssociations(false);
+
         updateClassService.copyClass(
-                graphIdentifier,
-                UUID.fromString(CLASS_UUID),
-                graphIdentifier,
-                targetPackageDTO,
-                true,
-                false,
-                false);
+                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
@@ -331,14 +332,14 @@ class UpdateClassServiceTest {
                         .label("newPackage")
                         .build();
 
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(true);
+        request.setCopyAttributes(false);
+        request.setCopyAssociations(false);
+
         updateClassService.copyClass(
-                graphIdentifier,
-                UUID.fromString(CLASS_UUID),
-                graphIdentifier,
-                targetPackageDTO,
-                true,
-                false,
-                false);
+                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
 
         var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         try {
@@ -361,15 +362,15 @@ class UpdateClassServiceTest {
                         .label("newPackage")
                         .build();
 
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(false);
+        request.setCopyAttributes(false);
+        request.setCopyAssociations(false);
+
         var newClassUUID =
                 updateClassService.copyClass(
-                        graphIdentifier,
-                        UUID.fromString(CLASS_UUID),
-                        graphIdentifier,
-                        targetPackageDTO,
-                        false,
-                        false,
-                        false);
+                        graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
 
         assertThat(newClassUUID).isNotNull();
         assertThat(newClassUUID).isNotEqualTo(UUID.fromString(CLASS_UUID));

@@ -97,10 +97,7 @@ public class CopyClassRESTController {
                         graphIdentifier,
                         UUID.fromString(classUUID),
                         targetGraphIdentifier,
-                        copyClassRequest.getTargetPackage(),
-                        copyClassRequest.isCopyAsAbstract(),
-                        copyClassRequest.isCopyAttributes(),
-                        copyClassRequest.isCopyAssociations());
+                        copyClassRequest);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" to \"{}\".",

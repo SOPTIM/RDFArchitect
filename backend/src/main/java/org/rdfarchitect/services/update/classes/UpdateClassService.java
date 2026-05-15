@@ -25,6 +25,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -33,6 +34,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
@@ -217,10 +219,7 @@ public class UpdateClassService
             GraphIdentifier graphIdentifier,
             UUID classUUID,
             GraphIdentifier targetGraphIdentifier,
-            PackageDTO targetPackageDTO,
-            boolean copyAsAbstract,
-            boolean copyAttributes,
-            boolean copyAssociations) {
+            CopyClassRequestDTO copyClassRequestDTO) {
 
         var cimClass = readSourceClass(graphIdentifier, classUUID.toString());
 
@@ -231,27 +230,41 @@ public class UpdateClassService
                                 databasePort
                                         .getGraphWithContext(targetGraphIdentifier)
                                         .getRdfGraph(),
-                                graphIdentifier.graphUri(),
                                 cimClass.getLabel()));
 
-        var className = label.getValue();
-        var cimPackage = packageMapper.toCIMObject(targetPackageDTO);
+        var cimPackage = packageMapper.toCIMObject(copyClassRequestDTO.getTargetPackage());
         var newCimClass =
                 copyCimClass(
                         targetGraphIdentifier,
                         cimClass,
                         cimPackage,
                         label,
-                        copyAsAbstract,
-                        copyAttributes,
-                        copyAssociations);
+                        copyClassRequestDTO.isCopyAsAbstract(),
+                        copyClassRequestDTO.isCopyAttributes(),
+                        copyClassRequestDTO.isCopyAssociations());
 
         var newClassUUID = insertClass(targetGraphIdentifier, newCimClass);
 
         changeLogUseCase.recordChange(
                 targetGraphIdentifier,
                 new ChangeLogEntry(
-                        "Added class " + className,
+                        "Copied class "
+                                + cimClass.getLabel().getValue()
+                                + " from "
+                                + (cimClass.getBelongsToCategory() != null
+                                        ? cimClass.getBelongsToCategory().getLabel().getValue()
+                                        : "no package")
+                                + " to "
+                                + (copyClassRequestDTO.getTargetPackage() != null
+                                        ? copyClassRequestDTO.getTargetPackage().getLabel()
+                                        : "no package")
+                                + " as "
+                                + label.getValue()
+                                + (copyClassRequestDTO.isCopyAsAbstract() ? " as abstract" : "")
+                                + (copyClassRequestDTO.isCopyAttributes() ? " with" : " without")
+                                + " attributes"
+                                + (copyClassRequestDTO.isCopyAssociations() ? " with" : " without")
+                                + " associations",
                         databasePort
                                 .getGraphWithContext(targetGraphIdentifier)
                                 .getRdfGraph()
@@ -261,24 +274,22 @@ public class UpdateClassService
 
     private CIMClassUMLAdapted readSourceClass(GraphIdentifier graphIdentifier, String classUUID) {
         GraphRewindableWithUUIDs graph = null;
-        boolean ended = false;
+        CIMClassUMLAdapted cimClass;
         try {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
             graph.begin(TxnType.READ);
-            var cimClass =
+            cimClass =
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
                             graph,
                             graphIdentifier.graphUri(),
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             classUUID);
-            graph.end();
-            ended = true;
-            return cimClass;
         } finally {
-            if (graph != null && !ended) {
+            if (graph != null) {
                 graph.end();
             }
         }
+        return cimClass;
     }
 
     private UUID insertClass(
@@ -341,67 +352,71 @@ public class UpdateClassService
                             cimPackage.getUri(), cimPackage.getLabel(), cimPackage.getUuid()));
         }
         newCimClass.attributes(
-                copyAttributes
-                        ? copyAttributes(cimClass.getAttributes(), newCimClass.build())
-                        : List.of());
+                copyAttributes(cimClass.getAttributes(), newCimClass.build(), copyAttributes));
         newCimClass.enumEntries(
-                copyAttributes
-                        ? copyEnumEntries(cimClass.getEnumEntries(), newCimClass.build())
-                        : List.of());
+                copyEnumEntries(cimClass.getEnumEntries(), newCimClass.build(), copyAttributes));
         newCimClass.associationPairs(
-                copyAssociations
-                        ? copyAssociations(
-                                cimClass.getAssociationPairs(),
-                                cimClass,
-                                newCimClass.build(),
-                                targetGraph,
-                                targetGraphIdentifier.graphUri())
-                        : List.of());
+                copyAssociations(
+                        cimClass.getAssociationPairs(),
+                        cimClass,
+                        newCimClass.build(),
+                        targetGraph,
+                        copyAssociations));
 
         return newCimClass.build();
     }
 
-    private List<CIMAttribute> copyAttributes(List<CIMAttribute> attributes, CIMClass cimClass) {
+    private List<CIMAttribute> copyAttributes(
+            List<CIMAttribute> attributes, CIMClass cimClass, boolean copyAttributes) {
+        if (!copyAttributes) {
+            return List.of();
+        }
         return attributes.stream()
                 .map(
-                        attr ->
-                                attr.toBuilder()
-                                        .uuid(UUID.randomUUID())
-                                        .uri(
-                                                new URI(
-                                                        cimClass.getUri().getPrefix()
-                                                                + cimClass.getUri().getSuffix()
-                                                                + "."
-                                                                + attr.getLabel().getValue()))
-                                        .domain(
-                                                new RDFSDomain(
-                                                        cimClass.getUri(),
-                                                        new RDFSLabel(
-                                                                cimClass.getUri().getSuffix(),
-                                                                "en")))
-                                        .build())
+                        attr -> {
+                            var uri =
+                                    new URI(
+                                            cimClass.getUri().getPrefix()
+                                                    + cimClass.getUri().getSuffix()
+                                                    + "."
+                                                    + attr.getLabel().getValue());
+                            var domain =
+                                    new RDFSDomain(
+                                            cimClass.getUri(),
+                                            new RDFSLabel(cimClass.getUri().getSuffix(), "en"));
+                            return attr.toBuilder()
+                                    .uuid(UUID.randomUUID())
+                                    .uri(uri)
+                                    .domain(domain)
+                                    .build();
+                        })
                 .toList();
     }
 
-    private List<CIMEnumEntry> copyEnumEntries(List<CIMEnumEntry> enumEntries, CIMClass cimClass) {
+    private List<CIMEnumEntry> copyEnumEntries(
+            List<CIMEnumEntry> enumEntries, CIMClass cimClass, boolean copyEnumEntries) {
+        if (!copyEnumEntries) {
+            return List.of();
+        }
         return enumEntries.stream()
                 .map(
-                        entry ->
-                                entry.toBuilder()
-                                        .uuid(UUID.randomUUID())
-                                        .type(
-                                                new RDFType(
-                                                        cimClass.getUri(),
-                                                        new RDFSLabel(
-                                                                cimClass.getUri().getSuffix(),
-                                                                "en")))
-                                        .uri(
-                                                new URI(
-                                                        cimClass.getUri().getPrefix()
-                                                                + cimClass.getUri().getSuffix()
-                                                                + "."
-                                                                + entry.getLabel().getValue()))
-                                        .build())
+                        entry -> {
+                            var rdfType =
+                                    new RDFType(
+                                            cimClass.getUri(),
+                                            new RDFSLabel(cimClass.getUri().getSuffix(), "en"));
+                            var uri =
+                                    new URI(
+                                            cimClass.getUri().getPrefix()
+                                                    + cimClass.getUri().getSuffix()
+                                                    + "."
+                                                    + entry.getLabel().getValue());
+                            return entry.toBuilder()
+                                    .uuid(UUID.randomUUID())
+                                    .type(rdfType)
+                                    .uri(uri)
+                                    .build();
+                        })
                 .toList();
     }
 
@@ -410,89 +425,72 @@ public class UpdateClassService
             CIMClass sourceClass,
             CIMClass newClass,
             GraphRewindableWithUUIDs graph,
-            String graphUri) {
+            boolean copyAssociations) {
+        if (!copyAssociations) {
+            return List.of();
+        }
         return pairs.stream()
                 .filter(pair -> pair.getFrom().getDomain().getUri().equals(sourceClass.getUri()))
-                .map(
-                        pair -> {
-                            var existingLabels =
-                                    getExistingAssociationLabels(
-                                            graph,
-                                            graphUri,
-                                            pair.getTo().getDomain().getUri(),
-                                            pair.getTo().getLabel());
-                            var newToLabel =
-                                    constructUniqueLabel(pair.getTo().getLabel(), existingLabels);
-                            var from =
-                                    pair.getFrom().toBuilder()
-                                            .uuid(UUID.randomUUID())
-                                            .uri(
-                                                    new URI(
-                                                            newClass.getUri()
-                                                                    + "."
-                                                                    + pair.getFrom()
-                                                                            .getLabel()
-                                                                            .getValue()))
-                                            .domain(
-                                                    new RDFSDomain(
-                                                            newClass.getUri(),
-                                                            new RDFSLabel(
-                                                                    newClass.getUri().getSuffix(),
-                                                                    "en")))
-                                            .inverseRoleName(
-                                                    new CIMSInverseRoleName(
-                                                            pair.getFrom()
-                                                                            .getRange()
-                                                                            .getUri()
-                                                                            .toString()
-                                                                    + "."
-                                                                    + newToLabel.getValue()))
-                                            .build();
-
-                            var to =
-                                    pair.getTo().toBuilder()
-                                            .uuid(UUID.randomUUID())
-                                            .label(newToLabel)
-                                            .uri(
-                                                    new URI(
-                                                            pair.getTo().getDomain().getUri()
-                                                                    + "."
-                                                                    + newToLabel.getValue()))
-                                            .range(
-                                                    new RDFSRange(
-                                                            newClass.getUri(),
-                                                            new RDFSLabel(
-                                                                    newClass.getUri().getSuffix(),
-                                                                    "en")))
-                                            .inverseRoleName(
-                                                    new CIMSInverseRoleName(
-                                                            newClass.getUri().toString()
-                                                                    + "."
-                                                                    + from.getLabel().getValue()))
-                                            .build();
-
-                            return new CIMAssociationPair(from, to);
-                        })
+                .map(pair -> copyAssociationPair(pair, newClass, graph))
                 .toList();
     }
 
-    private Set<String> getExistingClassLabels(
-            GraphRewindableWithUUIDs graph, String graphUri, RDFSLabel label) {
+    private CIMAssociationPair copyAssociationPair(
+            CIMAssociationPair pair, CIMClass newClass, GraphRewindableWithUUIDs graph) {
+        var existingLabels =
+                getExistingAssociationLabels(
+                        graph, pair.getTo().getDomain().getUri(), pair.getTo().getLabel());
+        var newToLabel = constructUniqueLabel(pair.getTo().getLabel(), existingLabels);
+
+        var from = buildFromAssociation(pair.getFrom(), newClass, newToLabel);
+        var to = buildToAssociation(pair.getTo(), newClass, newToLabel, from);
+
+        return new CIMAssociationPair(from, to);
+    }
+
+    private CIMAssociation buildFromAssociation(
+            CIMAssociation original, CIMClass newClass, RDFSLabel newToLabel) {
+        return original.toBuilder()
+                .uuid(UUID.randomUUID())
+                .uri(new URI(newClass.getUri() + "." + original.getLabel().getValue()))
+                .domain(
+                        new RDFSDomain(
+                                newClass.getUri(),
+                                new RDFSLabel(newClass.getUri().getSuffix(), "en")))
+                .inverseRoleName(
+                        new CIMSInverseRoleName(
+                                original.getRange().getUri() + "." + newToLabel.getValue()))
+                .build();
+    }
+
+    private CIMAssociation buildToAssociation(
+            CIMAssociation original, CIMClass newClass, RDFSLabel newToLabel, CIMAssociation from) {
+        return original.toBuilder()
+                .uuid(UUID.randomUUID())
+                .label(newToLabel)
+                .uri(new URI(original.getDomain().getUri() + "." + newToLabel.getValue()))
+                .range(
+                        new RDFSRange(
+                                newClass.getUri(),
+                                new RDFSLabel(newClass.getUri().getSuffix(), "en")))
+                .inverseRoleName(
+                        new CIMSInverseRoleName(
+                                newClass.getUri() + "." + from.getLabel().getValue()))
+                .build();
+    }
+
+    private Set<String> getExistingClassLabels(GraphRewindableWithUUIDs graph, RDFSLabel label) {
         var baseValue = label.getValue();
 
+        final var LABEL_VAR = "?label";
         var exprFactory = new ExprFactory();
         var query =
                 new SelectBuilder()
-                        .addVar("?label")
-                        .addGraph(
-                                NodeFactory.createURI(graphUri),
-                                new SelectBuilder()
-                                        .addWhere("?s", RDFS.label, "?label")
-                                        .addFilter(
-                                                exprFactory.strstarts(
-                                                        exprFactory.str("?label"), baseValue)))
+                        .addVar(LABEL_VAR)
+                        .addWhere("?s", RDFS.label, LABEL_VAR)
+                        .addFilter(exprFactory.strstarts(exprFactory.str(LABEL_VAR), baseValue))
                         .build();
-        var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, graphUri);
+        var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, null);
 
         var existingLabels = new HashSet<String>();
         while (resultSet.hasNext()) {
@@ -503,25 +501,17 @@ public class UpdateClassService
     }
 
     private Set<String> getExistingAssociationLabels(
-            GraphRewindableWithUUIDs graph, String graphUri, URI domainUri, RDFSLabel label) {
+            GraphRewindableWithUUIDs graph, URI domainUri, RDFSLabel label) {
         var exprFactory = new ExprFactory();
         var query =
                 new SelectBuilder()
                         .addVar("?label")
-                        .addGraph(
-                                NodeFactory.createURI(graphUri),
-                                new SelectBuilder()
-                                        .addWhere(
-                                                "?s",
-                                                RDFS.domain,
-                                                NodeFactory.createURI(domainUri.toString()))
-                                        .addWhere("?s", RDFS.label, "?label")
-                                        .addFilter(
-                                                exprFactory.strstarts(
-                                                        exprFactory.str("?label"),
-                                                        label.getValue())))
+                        .addWhere("?s", RDFS.domain, NodeFactory.createURI(domainUri.toString()))
+                        .addWhere("?s", RDFS.label, "?label")
+                        .addFilter(
+                                exprFactory.strstarts(exprFactory.str("?label"), label.getValue()))
                         .build();
-        var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, graphUri);
+        var resultSet = InMemorySparqlExecutor.executeSingleQuery(graph, query, null);
         var existingLabels = new HashSet<String>();
         while (resultSet.hasNext()) {
             existingLabels.add(resultSet.nextSolution().getLiteral("label").getString());

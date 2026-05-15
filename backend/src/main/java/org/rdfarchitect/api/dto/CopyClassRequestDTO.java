@@ -17,17 +17,11 @@
 
 package org.rdfarchitect.api.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class CopyClassRequestDTO {
 
     String targetDatasetName;
