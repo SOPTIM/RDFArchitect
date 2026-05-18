@@ -296,7 +296,7 @@
                 placeholder={datasetName
                     ? "Select namespace"
                     : "Select a dataset first"}
-                getOptionValue={namespace => namespace.prefix}
+                getOptionValue={namespace => namespace.substitutedPrefix}
                 getOptionLabel={namespace =>
                     `${namespace.substitutedPrefix} (${namespace.prefix})`}
             />
