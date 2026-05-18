@@ -355,7 +355,7 @@
                     disabled={disablePasteButton}
                     faIcon={faPaste}
                 >
-                    Paste without attributes
+                    Paste without attributes/enum entries
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(false, true, false)}

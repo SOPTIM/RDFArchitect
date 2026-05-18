@@ -253,18 +253,20 @@ public class UpdateClassService
                                 + " from "
                                 + (cimClass.getBelongsToCategory() != null
                                         ? cimClass.getBelongsToCategory().getLabel().getValue()
-                                        : "no package")
+                                        : "default")
                                 + " to "
                                 + (copyClassRequestDTO.getTargetPackage() != null
                                         ? copyClassRequestDTO.getTargetPackage().getLabel()
-                                        : "no package")
+                                        : "default")
                                 + " as "
                                 + label.getValue()
-                                + (copyClassRequestDTO.isCopyAsAbstract() ? " as abstract" : "")
-                                + (copyClassRequestDTO.isCopyAttributes() ? " with" : " without")
-                                + " attributes"
-                                + (copyClassRequestDTO.isCopyAssociations() ? " with" : " without")
-                                + " associations",
+                                + (copyClassRequestDTO.isCopyAsAbstract()
+                                        ? " bare"
+                                        : !copyClassRequestDTO.isCopyAttributes()
+                                                ? " without attributes"
+                                                : !copyClassRequestDTO.isCopyAssociations()
+                                                        ? " without associations"
+                                                        : ""),
                         databasePort
                                 .getGraphWithContext(targetGraphIdentifier)
                                 .getRdfGraph()
@@ -524,7 +526,7 @@ public class UpdateClassService
         if (!existingLabels.contains(baseValue)) {
             return new RDFSLabel(baseValue, label.getLang());
         }
-        baseValue = label.getValue() + " - Copy";
+        baseValue = label.getValue() + "-Copy";
         if (!existingLabels.contains(baseValue)) {
             return new RDFSLabel(baseValue, label.getLang());
         }

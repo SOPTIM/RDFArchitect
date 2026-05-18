@@ -52,7 +52,9 @@ export async function saveCopyClass(
         );
         if (res.ok) {
             const uuid = await res.text();
+            editorState.selectedDataset.updateValue(datasetName);
             editorState.selectedClassDataset.updateValue(datasetName);
+            editorState.selectedGraph.updateValue(graphURI);
             editorState.selectedClassGraph.updateValue(graphURI);
             editorState.selectedPackageUUID.updateValue(
                 packageDTO?.uuid ?? "default",

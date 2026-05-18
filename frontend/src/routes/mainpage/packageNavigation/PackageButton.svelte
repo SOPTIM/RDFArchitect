@@ -121,7 +121,7 @@
     function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
         let packageDTO = new Package({
             uuid: packageNavEntry.id,
-            label: packageNavEntry.label,
+            label: packageNavEntry.data.label,
             prefix: packageNavEntry.data?.prefix,
         });
         saveCopyClass(
@@ -182,7 +182,7 @@
                         faIcon={faPaste}
                         disabled={disablePasteButton}
                     >
-                        Paste without attributes
+                        Paste without attributes/enum entries
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(false, true, false)}

@@ -80,43 +80,37 @@
     const packageSelectionLocked = $derived(!!lockedPackage);
 
     $effect(async () => {
-        namespaces = await getNamespaces(datasetName);
-        if (classURINamespace) {
-            classURINamespace.value = null;
-        }
-        if (!packageSelectionLocked) {
-            packages = datasetName ? packages : [];
+        const ds = datasetName;
+        const graph = graphURI;
+
+        await untrack(async () => {
+            namespaces = await getNamespaces(ds);
+            if (classURINamespace) classURINamespace.value = null;
             classPackage = null;
-        }
-    });
 
-    $effect(async () => {
-        if (packageSelectionLocked) {
-            return;
-        }
-        await getPackages(datasetName, graphURI);
-        classPackage = null;
-    });
+            if (!ds || !graph) {
+                packages = [];
+                compareClasses = [];
+                return;
+            }
 
-    $effect(async () => {
-        if (datasetName && graphURI) {
-            compareClasses = await getClasses(datasetName, graphURI);
-        } else {
-            compareClasses = [];
-        }
-        if (!className || !classURINamespace) {
-            return;
-        }
-        untrack(
-            () =>
-                (className = new ReactiveValueWrapper(className?.value, label =>
+            if (!packageSelectionLocked) {
+                await getPackages(ds, graph);
+            }
+
+            compareClasses = await getClasses(ds, graph);
+
+            if (className && classURINamespace) {
+                const currentValue = className.value;
+                className = new ReactiveValueWrapper(currentValue, label =>
                     isInvalidClassLabel(
                         label,
                         classURINamespace?.value,
                         compareClasses,
                     ),
-                )),
-        );
+                );
+            }
+        });
     });
 
     async function onOpen() {

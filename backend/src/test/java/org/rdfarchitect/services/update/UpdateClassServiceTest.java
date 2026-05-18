@@ -267,14 +267,14 @@ class UpdateClassServiceTest {
 
             assertThat(
                             graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
                                     RDF.type.asNode(),
                                     RDFS.Class.asNode()))
                     .isTrue();
 
             assertThat(
                             graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
                                     RDFS.label.asNode(),
                                     new RDFSLabel("oldLabel - Copy", "en")
                                             .asLangLiteral()
@@ -309,7 +309,7 @@ class UpdateClassServiceTest {
 
             assertThat(
                             graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy"),
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
                                     RDF.type.asNode(),
                                     RDFS.Class.asNode()))
                     .isTrue();
@@ -318,7 +318,7 @@ class UpdateClassServiceTest {
                             graph.contains(
                                     Node.ANY,
                                     RDFS.domain.asNode(),
-                                    NodeFactory.createURI(PREFIX + "oldLabel - Copy")))
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy")))
                     .isFalse();
         } finally {
             graph.end();
@@ -347,7 +347,7 @@ class UpdateClassServiceTest {
         try {
             graph.begin(TxnType.READ);
 
-            var copyUri = NodeFactory.createURI(PREFIX + "oldLabel - Copy");
+            var copyUri = NodeFactory.createURI(PREFIX + "oldLabel-Copy");
 
             assertThat(graph.contains(copyUri, RDFS.subClassOf.asNode(), Node.ANY)).isFalse();
         } finally {

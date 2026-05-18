@@ -116,6 +116,14 @@
         {disabled}
     />
     <ContextMenu.Content>
+        <ContextMenu.Item.Button
+            onSelect={openNewClassDialog}
+            {disabled}
+            faIcon={faPlus}
+        >
+            Add class
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger faIcon={faPaste} disabled={false}>
                 Paste
@@ -133,7 +141,7 @@
                     faIcon={faPaste}
                     disabled={disablePasteButton}
                 >
-                    Paste without attributes
+                    Paste without attributes/enum entries
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={() => pasteClass(false, true, false)}
@@ -151,14 +159,6 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
-        <ContextMenu.Separator />
-        <ContextMenu.Item.Button
-            onSelect={openNewClassDialog}
-            {disabled}
-            faIcon={faPlus}
-        >
-            Add class
-        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 
