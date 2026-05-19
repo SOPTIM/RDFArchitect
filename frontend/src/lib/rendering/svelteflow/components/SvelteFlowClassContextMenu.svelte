@@ -146,7 +146,11 @@
         {disabled}
     />
     <ContextMenu.Content>
-        <ContextMenu.Item.Button onSelect={copyClass} faIcon={faCopy}>
+        <ContextMenu.Item.Button
+            onSelect={copyClass}
+            faIcon={faCopy}
+            altText="Ctrl+C"
+        >
             Copy
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />

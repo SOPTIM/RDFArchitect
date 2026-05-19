@@ -174,6 +174,7 @@
                         onSelect={() => pasteClass(false, true, true)}
                         faIcon={faPaste}
                         disabled={disablePasteButton}
+                        altText="Ctrl+V"
                     >
                         Paste
                     </ContextMenu.Item.Button>
@@ -181,6 +182,7 @@
                         onSelect={() => pasteClass(false, false, true)}
                         faIcon={faPaste}
                         disabled={disablePasteButton}
+                        altText="Ctrl+Shift+V"
                     >
                         Paste without attributes/enum entries
                     </ContextMenu.Item.Button>
@@ -188,6 +190,7 @@
                         onSelect={() => pasteClass(false, true, false)}
                         faIcon={faPaste}
                         disabled={disablePasteButton}
+                        altText="Ctrl+Alt+V"
                     >
                         Paste without associations
                     </ContextMenu.Item.Button>
@@ -195,6 +198,7 @@
                         onSelect={() => pasteClass(true, false, false)}
                         faIcon={faPaste}
                         disabled={disablePasteButton}
+                        altText="Ctrl+Shift+Alt+V"
                     >
                         Paste bare
                     </ContextMenu.Item.Button>

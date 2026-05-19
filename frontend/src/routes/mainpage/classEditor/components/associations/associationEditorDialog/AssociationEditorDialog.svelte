@@ -53,8 +53,13 @@
                     ctx.graphUri,
                     targetValue,
                 );
-                const classInfo = await res.json();
-                ctx.addTargetClassInfo(classInfo);
+                if (res && res.ok) {
+                    const text = await res.text();
+                    if (text) {
+                        const classInfo = await res.json();
+                        ctx.addTargetClassInfo(classInfo);
+                    }
+                }
             }
 
             // Trigger violation checks

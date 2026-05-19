@@ -63,6 +63,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -434,6 +435,7 @@ public class UpdateClassService
         return pairs.stream()
                 .filter(pair -> pair.getFrom().getDomain().getUri().equals(sourceClass.getUri()))
                 .map(pair -> copyAssociationPair(pair, newClass, graph))
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -445,10 +447,13 @@ public class UpdateClassService
         var newToLabel = constructUniqueLabel(pair.getTo().getLabel(), existingToLabels);
         var existingFromLabels =
                 getExistingAssociationLabels(graph, newClass.getUri(), pair.getFrom().getLabel());
+        if (!existingFromLabels.isEmpty()) {
+            return null;
+        }
         var newFromLabel = constructUniqueLabel(pair.getFrom().getLabel(), existingFromLabels);
 
         var from = buildFromAssociation(pair.getFrom(), newClass, newToLabel, newFromLabel);
-        var to = buildToAssociation(pair.getTo(), newClass, newToLabel, newFromLabel, from);
+        var to = buildToAssociation(pair.getTo(), newClass, newToLabel, newFromLabel);
 
         return new CIMAssociationPair(from, to);
     }
@@ -476,8 +481,7 @@ public class UpdateClassService
             CIMAssociation original,
             CIMClass newClass,
             RDFSLabel newToLabel,
-            RDFSLabel newFromLabel,
-            CIMAssociation from) {
+            RDFSLabel newFromLabel) {
         return original.toBuilder()
                 .uuid(UUID.randomUUID())
                 .label(newToLabel)
@@ -499,6 +503,7 @@ public class UpdateClassService
         var query =
                 new SelectBuilder()
                         .addVar(LABEL_VAR)
+                        .addWhere("?s", RDF.type, RDFS.Class)
                         .addWhere("?s", RDFS.label, LABEL_VAR)
                         .addFilter(exprFactory.strstarts(exprFactory.str(LABEL_VAR), baseValue))
                         .build();

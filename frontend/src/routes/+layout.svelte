@@ -33,6 +33,7 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
 
     import {
+        copyState,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -40,6 +41,7 @@
     import File from "./layout/menu-bar/File.svelte";
     import Help from "./layout/menu-bar/Help.svelte";
     import View from "./layout/menu-bar/View.svelte";
+    import { saveCopyClass } from "./mainpage/packageNavigation/save-copy-class-to-backend.js";
     import Searchbar from "./Searchbar.svelte";
 
     import { goto } from "$app/navigation";
@@ -55,6 +57,16 @@
     let menubarValue = $state(undefined);
 
     let isDatasetReadOnly = $state(false);
+    let canCopyClass = $derived(editorState.selectedClassUUID.getValue());
+    let canPasteClass = $derived(
+        !isDatasetReadOnly &&
+            editorState.selectedDataset.getValue() &&
+            editorState.selectedGraph.getValue() &&
+            editorState.selectedPackageUUID.getValue() &&
+            copyState.datasetName.getValue() &&
+            copyState.graphURI.getValue() &&
+            copyState.classUUID.getValue(),
+    );
 
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
 
@@ -118,6 +130,49 @@
         goto("/mainpage");
     }
 
+    function copyClass() {
+        copyState.classUUID.updateValue(
+            editorState.selectedClassUUID.getValue(),
+        );
+        copyState.graphURI.updateValue(
+            editorState.selectedClassGraph.getValue(),
+        );
+        copyState.datasetName.updateValue(
+            editorState.selectedClassDataset.getValue(),
+        );
+    }
+
+    async function getPackage(datasetName, graphURI, packageUUID) {
+        if (!datasetName || !graphURI) {
+            return [];
+        }
+        const res = await bec.getPackage(datasetName, graphURI, packageUUID);
+        return await res.json();
+    }
+
+    async function pasteClass(
+        copyAsAbstract,
+        copyAttributes,
+        copyAssociations,
+    ) {
+        let packageDTO =
+            editorState.selectedPackageUUID.getValue() === "default"
+                ? null
+                : await getPackage(
+                      editorState.selectedDataset.getValue(),
+                      editorState.selectedGraph.getValue(),
+                      editorState.selectedPackageUUID.getValue(),
+                  );
+        await saveCopyClass(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            packageDTO,
+            copyAsAbstract,
+            copyAttributes,
+            copyAssociations,
+        );
+    }
+
     async function handleKeydown(event) {
         if (event.key === "Escape") {
             if (event.defaultPrevented) {
@@ -154,6 +209,24 @@
             case "y":
                 event.preventDefault();
                 if (canRedo && (await redo())) await reload();
+                break;
+            case "c":
+                event.preventDefault();
+                if (canCopyClass) copyClass();
+                break;
+            case "v":
+                event.preventDefault();
+                if (canPasteClass) {
+                    if (event.shiftKey && event.altKey) {
+                        await pasteClass(true, false, false);
+                    } else if (event.shiftKey) {
+                        await pasteClass(false, false, true);
+                    } else if (event.altKey) {
+                        await pasteClass(false, true, false);
+                    } else {
+                        await pasteClass(false, true, true);
+                    }
+                }
                 break;
         }
     }

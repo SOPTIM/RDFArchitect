@@ -25,6 +25,7 @@ import org.apache.jena.query.ResultSet;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.models.cim.data.CIMObjectFactory;
 import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.queries.select.CIMQueries;
@@ -50,7 +51,11 @@ public class CIMUMLObjectFactory {
             Graph graph, String graphUri, PrefixMapping prefixMapping, String classUUID) {
         var objectFetcher = new CIMObjectFetcher(graph, graphUri, prefixMapping);
         // fetch class
-        var classObject = new CIMClassUMLAdapted(objectFetcher.fetchCIMClass(classUUID));
+        CIMClass cimClass = objectFetcher.fetchCIMClass(classUUID);
+        if (cimClass == null) {
+            return null;
+        }
+        var classObject = new CIMClassUMLAdapted(cimClass);
 
         // if enum, then fetch enum entries
         if (classObject

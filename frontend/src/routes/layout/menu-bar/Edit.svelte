@@ -335,6 +335,7 @@
             onSelect={copyClass}
             disabled={disableCopyClassButton}
             faIcon={faCopy}
+            altText="Ctrl+C"
         >
             Copy Class
         </Menubar.Item.Button>
@@ -347,6 +348,7 @@
                     onSelect={() => pasteClass(false, true, true)}
                     disabled={disablePasteButton}
                     faIcon={faPaste}
+                    altText="Ctrl+V"
                 >
                     Paste
                 </Menubar.Item.Button>
@@ -354,6 +356,7 @@
                     onSelect={() => pasteClass(false, false, true)}
                     disabled={disablePasteButton}
                     faIcon={faPaste}
+                    altText="Ctrl+Shift+V"
                 >
                     Paste without attributes/enum entries
                 </Menubar.Item.Button>
@@ -361,6 +364,7 @@
                     onSelect={() => pasteClass(false, true, false)}
                     disabled={disablePasteButton}
                     faIcon={faPaste}
+                    altText="Ctrl+Alt+V"
                 >
                     Paste without associations
                 </Menubar.Item.Button>
@@ -368,6 +372,7 @@
                     onSelect={() => pasteClass(true, false, false)}
                     disabled={disablePasteButton}
                     faIcon={faPaste}
+                    altText="Ctrl+Shift+Alt+V"
                 >
                     Paste bare
                 </Menubar.Item.Button>
