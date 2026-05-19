@@ -276,9 +276,7 @@ class UpdateClassServiceTest {
                             graph.contains(
                                     NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
                                     RDFS.label.asNode(),
-                                    new RDFSLabel("oldLabel - Copy", "en")
-                                            .asLangLiteral()
-                                            .asNode()))
+                                    new RDFSLabel("oldLabel-Copy", "en").asLangLiteral().asNode()))
                     .isTrue();
         } finally {
             graph.end();

@@ -24,6 +24,7 @@
         faLayerGroup,
         faCopy,
         faTrash,
+        faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -35,6 +36,7 @@
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
         request = null,
@@ -55,6 +57,7 @@
     let open = $state(false);
     let deleteClassTarget = $state(null);
     let showDeleteDependenciesDialog = $state(false);
+    let showSHACLDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -64,6 +67,11 @@
     let isAtFront = $derived(classZIndex >= nodeCount - 1);
     let isAtBack = $derived(classZIndex <= 0);
     let classActionsDisabled = $derived(disabled || readOnly);
+
+    const shaclClass = $derived({
+        uuid: { value: contextMenuClass?.uuid },
+        label: { value: contextMenuClass?.label ?? "" },
+    });
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -150,6 +158,14 @@
         >
             Delete class
         </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={() => {
+                showSHACLDialog = true;
+            }}
+            faIcon={faDiagramProject}
+        >
+            Constraints
+        </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger
                 faIcon={faLayerGroup}
@@ -218,4 +234,11 @@
     {datasetName}
     {graphUri}
     resourceUuid={deleteClassTarget?.uuid}
+/>
+
+<SHACLClassSpecificPopUp
+    datasetName={editorState.selectedDataset.getValue()}
+    graphUri={editorState.selectedGraph.getValue()}
+    reactiveClass={shaclClass}
+    bind:showDialog={showSHACLDialog}
 />

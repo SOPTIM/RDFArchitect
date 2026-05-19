@@ -439,22 +439,29 @@ public class UpdateClassService
 
     private CIMAssociationPair copyAssociationPair(
             CIMAssociationPair pair, CIMClass newClass, GraphRewindableWithUUIDs graph) {
-        var existingLabels =
+        var existingToLabels =
                 getExistingAssociationLabels(
                         graph, pair.getTo().getDomain().getUri(), pair.getTo().getLabel());
-        var newToLabel = constructUniqueLabel(pair.getTo().getLabel(), existingLabels);
+        var newToLabel = constructUniqueLabel(pair.getTo().getLabel(), existingToLabels);
+        var existingFromLabels =
+                getExistingAssociationLabels(graph, newClass.getUri(), pair.getFrom().getLabel());
+        var newFromLabel = constructUniqueLabel(pair.getFrom().getLabel(), existingFromLabels);
 
-        var from = buildFromAssociation(pair.getFrom(), newClass, newToLabel);
-        var to = buildToAssociation(pair.getTo(), newClass, newToLabel, from);
+        var from = buildFromAssociation(pair.getFrom(), newClass, newToLabel, newFromLabel);
+        var to = buildToAssociation(pair.getTo(), newClass, newToLabel, newFromLabel, from);
 
         return new CIMAssociationPair(from, to);
     }
 
     private CIMAssociation buildFromAssociation(
-            CIMAssociation original, CIMClass newClass, RDFSLabel newToLabel) {
+            CIMAssociation original,
+            CIMClass newClass,
+            RDFSLabel newToLabel,
+            RDFSLabel newFromLabel) {
         return original.toBuilder()
                 .uuid(UUID.randomUUID())
-                .uri(new URI(newClass.getUri() + "." + original.getLabel().getValue()))
+                .label(newFromLabel)
+                .uri(new URI(newClass.getUri() + "." + newFromLabel.getValue()))
                 .domain(
                         new RDFSDomain(
                                 newClass.getUri(),
@@ -466,7 +473,11 @@ public class UpdateClassService
     }
 
     private CIMAssociation buildToAssociation(
-            CIMAssociation original, CIMClass newClass, RDFSLabel newToLabel, CIMAssociation from) {
+            CIMAssociation original,
+            CIMClass newClass,
+            RDFSLabel newToLabel,
+            RDFSLabel newFromLabel,
+            CIMAssociation from) {
         return original.toBuilder()
                 .uuid(UUID.randomUUID())
                 .label(newToLabel)
@@ -476,8 +487,7 @@ public class UpdateClassService
                                 newClass.getUri(),
                                 new RDFSLabel(newClass.getUri().getSuffix(), "en")))
                 .inverseRoleName(
-                        new CIMSInverseRoleName(
-                                newClass.getUri() + "." + from.getLabel().getValue()))
+                        new CIMSInverseRoleName(newClass.getUri() + "." + newFromLabel.getValue()))
                 .build();
     }
 
