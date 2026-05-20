@@ -20,7 +20,11 @@
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { DiagramType, editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
