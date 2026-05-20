@@ -60,6 +60,10 @@
             return;
         }
 
+        if (!primaryButtonExists || readonly) {
+            return;
+        }
+
         if (
             event.defaultPrevented ||
             event.key !== "Enter" ||
@@ -76,20 +80,21 @@
         const target = event.target;
         if (
             target instanceof HTMLTextAreaElement ||
-            target instanceof HTMLButtonElement ||
             target instanceof HTMLAnchorElement ||
             (target instanceof HTMLElement &&
-                (target.getAttribute?.("role") === "button" ||
-                    target.isContentEditable))
+                (target.isContentEditable ||
+                    target.closest?.("[data-enter-skip]")))
         ) {
             return;
         }
+
+        event.preventDefault();
+        event.stopPropagation();
 
         if (disablePrimary) {
             return;
         }
 
-        event.preventDefault();
         if (onPrimary instanceof Function) {
             onPrimary();
         }
@@ -99,8 +104,13 @@
     }
 </script>
 
-<svelte:window onkeydown|capture={handleConfirmShortcut} />
-<DialogBase bind:showDialog {onOpen} {onClose} {...restProps}>
+<DialogBase
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    {...restProps}
+    onkeydown={handleConfirmShortcut}
+>
     <div class="flex min-h-0 flex-1 flex-col">
         <div class="flex min-h-0 w-full flex-1 flex-col">
             <div class="mb-1 ml-2 flex shrink-0 items-start justify-between">
