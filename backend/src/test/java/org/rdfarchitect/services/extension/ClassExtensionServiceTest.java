@@ -31,6 +31,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.ClassMapper;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -56,7 +57,8 @@ class ClassExtensionServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl());
+        var schemaConfig = new SchemaConfig();
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), schemaConfig);
         var mockChangeLogService = mock(ChangeLogService.class);
         classExtensionService =
                 new ClassExtensionService(databasePort, classMapper, mockChangeLogService);

@@ -20,7 +20,7 @@
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
@@ -51,9 +51,11 @@
             const newClass = await response.json();
             editorState.selectedDataset.updateValue(selectedDatasetName);
             editorState.selectedGraph.updateValue(selectedGraphURI);
-            editorState.selectedPackageUUID.updateValue(
-                newClass.belongsToCategory ?? "default",
-            );
+            editorState.selectedDiagram.updateValue({
+                type: DiagramType.PACKAGE,
+                id: newClass.belongsToCategory,
+            });
+            forceReloadTrigger.trigger();
         } catch (e) {
             console.log(e);
         }
