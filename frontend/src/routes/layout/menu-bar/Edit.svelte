@@ -106,7 +106,7 @@
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
             !hasGraphSelected ||
-            !editorState.selectedPackageUUID.getValue() ||
+            !editorState.selectedDiagram.getValue() ||
             !copyState.datasetName.getValue() ||
             !copyState.graphURI.getValue() ||
             !copyState.classUUID.getValue(),

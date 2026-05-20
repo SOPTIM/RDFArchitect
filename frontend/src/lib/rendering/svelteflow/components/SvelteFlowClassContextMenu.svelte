@@ -167,14 +167,6 @@
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />
         <ContextMenu.Item.Button
-            onSelect={openDeleteClassDialog}
-            disabled={classActionsDisabled}
-            faIcon={faTrash}
-            variant="danger"
-        >
-            Delete class
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
             onSelect={() => {
                 showSHACLDialog = true;
             }}
@@ -252,7 +244,7 @@
         </ContextMenu.Item.Button>
         <ContextMenu.Item.Button
             onSelect={openDeleteClassDialog}
-            {disabled}
+            disabled={classActionsDisabled}
             faIcon={faTrash}
             variant="danger"
         >
@@ -274,6 +266,7 @@
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
 />
+
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
     lockedDatasetName={datasetName}
