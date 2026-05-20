@@ -26,6 +26,10 @@
         fetchCanRedo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        installBackendFetchInterceptor,
+        probeBackendConnection,
+    } from "$lib/api/backendConnectionMonitor.svelte.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
@@ -73,6 +77,8 @@
     });
 
     onMount(() => {
+        installBackendFetchInterceptor();
+        probeBackendConnection();
         loadSnapshot();
     });
 
