@@ -33,7 +33,11 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { Package } from "$lib/models/dto/index.ts";
-    import { DiagramType, copyState, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        copyState,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -41,9 +45,9 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import { saveCopyClass } from "./save-copy-class-to-backend.js";
     import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import { saveCopyClass } from "./save-copy-class-to-backend.js";
 
     let {
         datasetNavEntry,

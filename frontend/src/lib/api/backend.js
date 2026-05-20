@@ -498,7 +498,7 @@ export class BackendConnection {
 
     async postCopyClass(datasetName, graphURI, classUUID, targetInfo) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/copy`;
-      return await fetch(url, {
+        return await fetch(url, {
             method: "POST",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
