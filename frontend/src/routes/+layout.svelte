@@ -92,10 +92,6 @@
         editorState.selectedClassUUID.trigger();
         editorState.selectedDiagram.trigger();
         isDatasetReadOnly = false;
-        toastStore.success(
-            "Editing enabled",
-            `You can now modify "${selectedDataset}".`,
-        );
     }
 
     async function loadSnapshot() {

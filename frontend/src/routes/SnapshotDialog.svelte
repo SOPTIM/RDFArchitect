@@ -39,8 +39,6 @@
     let datasets = $state([]);
     let base64Token = $state();
 
-    let copySuccess = $state(false);
-
     const datasetSelectionLocked = $derived(!!lockedDatasetName);
 
     function onOpen() {
@@ -88,10 +86,6 @@
             await navigator.clipboard.writeText(
                 `${window.location.origin}/?snapshot=${base64Token}`,
             );
-            copySuccess = true;
-            setTimeout(() => {
-                copySuccess = false;
-            }, 2000);
             toastStore.success("Snapshot link copied to clipboard");
         } catch (err) {
             console.error("Failed to copy: ", err);
@@ -144,13 +138,6 @@
                             <Fa icon={faClipboardList} />
                         </ButtonControl>
                     </div>
-                {/if}
-            </div>
-            <div class="h-6">
-                {#if copySuccess}
-                    <p class="text-green-text text-sm">
-                        Link copied to clipboard!
-                    </p>
                 {/if}
             </div>
         </div>
