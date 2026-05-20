@@ -24,6 +24,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
@@ -60,10 +61,18 @@
                 "Successfully created snapshot for dataset",
                 datasetName,
             );
+            toastStore.success(
+                "Snapshot ready",
+                `Share link created for "${datasetName}".`,
+            );
         } else {
             console.error(
                 "Error creating snapshot for dataset:",
                 res.statusText,
+            );
+            toastStore.error(
+                "Snapshot failed",
+                `Could not create a snapshot for "${datasetName}".`,
             );
         }
     }
@@ -83,8 +92,13 @@
             setTimeout(() => {
                 copySuccess = false;
             }, 2000);
+            toastStore.success("Snapshot link copied to clipboard");
         } catch (err) {
             console.error("Failed to copy: ", err);
+            toastStore.error(
+                "Copy failed",
+                "Could not write the snapshot link to the clipboard.",
+            );
         }
     }
 </script>

@@ -29,8 +29,10 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
         editorState,
@@ -78,11 +80,22 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        await bec.enableEditing(selectedDataset);
+        const res = await bec.enableEditing(selectedDataset);
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Could not enable editing",
+                `Dataset "${selectedDataset}" remains read-only.`,
+            );
+            return;
+        }
         forceReloadTrigger.trigger();
         editorState.selectedClassUUID.trigger();
         editorState.selectedDiagram.trigger();
         isDatasetReadOnly = false;
+        toastStore.success(
+            "Editing enabled",
+            `You can now modify "${selectedDataset}".`,
+        );
     }
 
     async function loadSnapshot() {
@@ -91,6 +104,15 @@
             const res = await bec.loadSnapshot(base64Param);
             if (res.ok) {
                 await goto("/mainpage");
+                toastStore.success(
+                    "Snapshot loaded",
+                    "The shared snapshot has been loaded.",
+                );
+            } else {
+                toastStore.error(
+                    "Could not load snapshot",
+                    "The snapshot link is invalid or has expired.",
+                );
             }
         }
     }
@@ -146,14 +168,23 @@
             case "z":
                 event.preventDefault();
                 if (event.shiftKey) {
-                    if (canRedo && (await redo())) await reload();
+                    if (canRedo && (await redo())) {
+                        await reload();
+                        toastStore.info("Redone");
+                    }
                 } else {
-                    if (canUndo && (await undo())) await reload();
+                    if (canUndo && (await undo())) {
+                        await reload();
+                        toastStore.info("Undone");
+                    }
                 }
                 break;
             case "y":
                 event.preventDefault();
-                if (canRedo && (await redo())) await reload();
+                if (canRedo && (await redo())) {
+                    await reload();
+                    toastStore.info("Redone");
+                }
                 break;
         }
     }
@@ -220,3 +251,4 @@
         {@render children?.()}
     </div>
 </div>
+<ToastContainer />
