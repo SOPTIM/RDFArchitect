@@ -113,7 +113,7 @@
     );
 
     $effect(async () => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         editorState.selectedClassUUID.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
@@ -150,7 +150,7 @@
         }
         await disableEditing(selectedDataset);
         await reload();
-        editorState.selectedPackageUUID.trigger();
+        editorState.selectedDiagram.trigger();
     }
 
     function openNamespaceManager() {
@@ -206,7 +206,7 @@
     async function refreshSelectedPackageDetails(packages) {
         const datasetName = editorState.selectedDataset.getValue();
         const graphURI = editorState.selectedGraph.getValue();
-        const packageId = editorState.selectedPackageUUID.getValue();
+        const packageId = editorState.selectedDiagram.getProperty("id");
 
         if (!datasetName || !graphURI || !packageId) {
             selectedPackageDetails = null;

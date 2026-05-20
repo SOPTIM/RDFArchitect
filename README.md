@@ -35,6 +35,7 @@ For the complete documentation, see the [docs site](https://rdfarchitect.soptim.
 
 - Import and export RDF schemas and CIM extensions
 - Visualize class structures via UML diagrams
+- create custom diagrams containing classes from different packages or even profiles
 - Edit classes, attributes, associations, enum entries, and notes
 - Share diagrams as a complete, read-friendly reference of classes, relations, notes, and constraints
 - Schema migration between CIM versions and extensions

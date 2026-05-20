@@ -23,12 +23,14 @@
         faAngleUp,
         faLayerGroup,
         faCopy,
+        faMinus,
         faTrash,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { copyState, editorState } from "$lib/sharedState.svelte.js";
+    import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
 
     import {
         getContextMenuTriggerStyle,
@@ -37,6 +39,7 @@
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
 
     let {
         request = null,
@@ -58,6 +61,7 @@
     let deleteClassTarget = $state(null);
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
+    let showRemoveFromDiagramDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -92,6 +96,14 @@
         }
         deleteClassTarget = contextMenuClass;
         showDeleteDependenciesDialog = true;
+        onClose();
+    }
+
+    function openRemoveFromDiagramDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        showRemoveFromDiagramDialog = true;
         onClose();
     }
 
@@ -230,6 +242,22 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
+        <ContextMenuSeparator />
+        <ContextMenu.Item.Button
+            onSelect={openRemoveFromDiagramDialog}
+            faIcon={faMinus}
+            variant="danger"
+        >
+            Remove from Diagram
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={openDeleteClassDialog}
+            {disabled}
+            faIcon={faTrash}
+            variant="danger"
+        >
+            Delete class
+        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 
@@ -245,4 +273,12 @@
     graphUri={editorState.selectedGraph.getValue()}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
+/>
+<RemoveFromDiagramDialog
+    bind:showDialog={showRemoveFromDiagramDialog}
+    lockedDatasetName={datasetName}
+    {graphUri}
+    diagramId={editorState.selectedDiagram.getProperty("id")}
+    classId={contextMenuClass.uuid}
+    classLabel={contextMenuClass.label}
 />

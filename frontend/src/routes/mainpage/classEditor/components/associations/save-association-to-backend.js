@@ -49,6 +49,6 @@ export function saveApiAssociationToBackend(
         })
         .finally(() => {
             editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
+            editorState.selectedDiagram.trigger();
         });
 }

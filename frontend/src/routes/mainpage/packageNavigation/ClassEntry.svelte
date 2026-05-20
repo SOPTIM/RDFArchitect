@@ -20,6 +20,8 @@
     import {
         faArrowUpRightFromSquare,
         faDiagramProject,
+        faMinus,
+        faObjectGroup,
         faTrash,
         faCopy,
     } from "@fortawesome/free-solid-svg-icons";
@@ -27,9 +29,12 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { copyState, editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, copyState, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -38,6 +43,8 @@
         datasetNavEntry,
         graphNavEntry,
         classNavEntry,
+        diagramId,
+        diagramGraphUri,
         namespaces = [],
         readonly = false,
         onPackChange = () => {},
@@ -45,6 +52,9 @@
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
+    let showRemoveFromDiagramDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
     const shaclClass = $derived({
@@ -53,7 +63,9 @@
     });
 
     function selectClass() {
-        classNavEntry.parent?.open();
+        if (!diagramId) {
+            classNavEntry.parent?.open();
+        }
         onPackChange();
         if (!editorState.selectedClassUUID.getValue()) {
             eventStack.executeNewestEvent(classNavEntry.id);
@@ -81,9 +93,10 @@
     function showClassInPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedPackageUUID.updateValue(
-            classNavEntry.parent?.id ?? "default",
-        );
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: classNavEntry.parent?.id ?? "default",
+        });
         selectClass();
         focusClassInDiagram();
     }
@@ -134,7 +147,36 @@
         >
             Constraints
         </ContextMenu.Item.Button>
+        {#if !diagramId}
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToGraphDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Profile Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToDatasetDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.Separator />
+        {#if diagramId}
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showRemoveFromDiagramDialog = true;
+                }}
+                faIcon={faMinus}
+                variant="danger"
+            >
+                Remove from Diagram
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.Item.Button
             onSelect={() => {
                 selectClass();
@@ -161,4 +203,24 @@
     graphUri={graphNavEntry.id}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
+/>
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToGraphDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={[classNavEntry]}
+/>
+<AddToDatasetDiagramDialog
+    bind:showDialog={showAddToDatasetDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={[classNavEntry]}
+/>
+<RemoveFromDiagramDialog
+    bind:showDialog={showRemoveFromDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    graphUri={diagramGraphUri}
+    {diagramId}
+    classId={classNavEntry.id}
+    classLabel={classNavEntry.label}
 />

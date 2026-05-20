@@ -47,7 +47,7 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
 
     @Override
     public RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
+            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return null;
         }
@@ -73,6 +73,13 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
         appendOnClickFunctionality(renderContext);
 
         return new MermaidDTO(renderContext.mermaidString.toString());
+    }
+
+    @Override
+    public RenderingDataDTO renderGlobalUML(
+            CIMCollection cimCollection, String datasetName, UUID diagramId) {
+        throw new UnsupportedOperationException(
+                "Rendering dataset Diagrams is not supported for the mermaid renderer.");
     }
 
     private static final String ON_CLICK_CALLBACK_FUNCTION_NAME = "getClassInformation";

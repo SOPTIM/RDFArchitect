@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.cim.data.GraphToCIMCollectionConverterImpl;
+package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -37,8 +37,8 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,7 +47,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.UUID;
 
-class GraphToCIMCollectionConverterImplNoFilterTest {
+class GraphToCIMCollectionConverterServiceNoFilterTest {
 
     private final InMemoryDatabase database = new InMemoryDatabaseImpl();
 
@@ -58,7 +58,7 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
     private static final String PATH =
-            "src/test/java/org/rdfarchitect/cim/data/GraphToCIMCollectionConverterImpl/";
+            "src/test/java/org/rdfarchitect/cim/data/CIMCollectionConverter/";
 
     private static final String ENTSOE_RDFS_PATH =
             "../external/entsoe-application-profiles-library/CGMES/CurrentRelease/RDFS/";
@@ -145,12 +145,12 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
         assertThat(cimCollection.getEnumEntries()).isEmpty();
 
         assertThat(cimCollection.getPackages()).hasSize(1);
-        assertThat(cimCollection.getPackages().iterator().next().getUri())
+        assertThat(cimCollection.getPackages().getFirst().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cim") + "Package_Infrastruktur"));
 
         assertThat(cimCollection.getClasses()).hasSize(1);
 
-        var cimClass = cimCollection.getClasses().iterator().next();
+        var cimClass = cimCollection.getClasses().getFirst();
         assertThat(cimClass.getUri()).isEqualTo(new URI(prefixMapping.get("cim") + "ChildClass"));
         assertThat(cimClass.getLabel()).isEqualTo(new RDFSLabel("ChildClass", "en"));
         assertThat(cimClass.getSuperClass()).isNull();
@@ -177,7 +177,7 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
         assertThat(cimCollection.getClasses()).isEmpty();
 
         assertThat(cimCollection.getPackages()).hasSize(1);
-        assertThat(cimCollection.getPackages().iterator().next().getUri())
+        assertThat(cimCollection.getPackages().getFirst().getUri())
                 .isEqualTo(new URI(prefixMapping.get("cim") + "Package_Infrastruktur"));
     }
 
@@ -274,7 +274,7 @@ class GraphToCIMCollectionConverterImplNoFilterTest {
         assertThat(cimCollection.getClasses()).isEmpty();
 
         assertThat(cimCollection.getEnums()).hasSize(1);
-        var enumClass = cimCollection.getEnums().iterator().next();
+        var enumClass = cimCollection.getEnums().getFirst();
         assertThat(enumClass.getUri()).isEqualTo(new URI(prefixMapping.get("cim") + "EnumClass"));
         assertThat(enumClass.getLabel()).isEqualTo(new RDFSLabel("EnumClass", "en"));
         assertThat(enumClass.getSuperClass()).isNull();

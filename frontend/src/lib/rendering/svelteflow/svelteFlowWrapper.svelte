@@ -290,13 +290,13 @@
                     editorState.selectedDataset.getValue(),
                 );
                 editorState.selectedClassGraph.updateValue(
-                    editorState.selectedGraph.getValue(),
+                    nodeClickEvent.node.data.graphUri,
                 );
                 editorState.selectedClassUUID.updateValue(id);
             } else {
                 eventStack.executeNewestEvent({
                     datasetName: editorState.selectedDataset.getValue(),
-                    graphUri: editorState.selectedGraph.getValue(),
+                    graphUri: nodeClickEvent.node.data.graphUri,
                     classUuid: id,
                 });
             }
@@ -466,12 +466,22 @@
             classPositionDTOList.push(classPositionDTO);
         }
 
-        bec.updateClassPositions(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            editorState.selectedPackageUUID.getValue(),
-            classPositionDTOList,
-        );
+        const diagramUUID = editorState.selectedDiagram.getProperty("id");
+
+        if (editorState.selectedGraph.getValue()) {
+            bec.updateClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                diagramUUID,
+                classPositionDTOList,
+            );
+        } else {
+            bec.updateGlobalClassPositions(
+                editorState.selectedDataset.getValue(),
+                diagramUUID,
+                classPositionDTOList,
+            );
+        }
     }
 
     async function getLayoutedNodes(nodes, edges) {
