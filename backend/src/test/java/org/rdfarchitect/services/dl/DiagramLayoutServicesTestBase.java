@@ -37,9 +37,9 @@ import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterService;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutService;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.IOException;

@@ -23,6 +23,8 @@ Before the tour, three terms do a lot of work in RDFArchitect and it is worth fi
 
 Classes complete the hierarchy shown in the navigation tree: *"Dataset → Graph → Package → Class"*. Almost every action you trigger is implicitly scoped by what you have selected in that tree.
 
+**Custom Diagrams** In addition to the Packages defined by the schema, you can also define your own custom diagrams. These custom diagrams can either be defined on the graph level, in which case they can only contain classes defined in that graph, or they can be defined on the dataset level. Custom Diagram only store references to the original classes so any changes to those classes will always be reflected in their original package and any custom diagram that they belong to. Similarly, if a class is deleted it will be deleted from all its occurences.
+
 ## How this guide is organised
 
 1. **[The workspace and importing data](./workspace-and-importing)** — the editor layout and how to get content in.

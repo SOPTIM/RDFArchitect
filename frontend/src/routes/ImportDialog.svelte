@@ -227,7 +227,7 @@
 
         editorState.selectedDataset.updateValue(datasetName);
         editorState.selectedGraph.updateValue(importedGraphUris[0]);
-        editorState.selectedPackageUUID.updateValue(null);
+        editorState.selectedDiagram.updateValue({ type: null, id: null });
         editorState.selectedClassDataset.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
         editorState.selectedClassUUID.updateValue(null);

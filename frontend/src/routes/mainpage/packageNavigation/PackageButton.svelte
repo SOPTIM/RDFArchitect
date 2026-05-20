@@ -25,12 +25,13 @@
         faLink,
         faTrash,
         faEye,
+        faObjectGroup,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -38,6 +39,8 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
+    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -47,6 +50,8 @@
         readonly,
     } = $props();
     let showNewClassDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
 
@@ -59,7 +64,7 @@
     const selectionTrigger = $derived([
         editorState.selectedDataset.subscribe(),
         editorState.selectedGraph.subscribe(),
-        editorState.selectedPackageUUID.subscribe(),
+        editorState.selectedDiagram.subscribe(),
         getContext("packageNavigation").reloadTrigger?.subscribe(),
     ]);
 
@@ -105,7 +110,11 @@
     function selectPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedPackageUUID.updateValue(packageNavEntry.id);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: packageNavEntry.id,
+        });
+        console.log(editorState.selectedDiagram.getValue());
     }
 </script>
 
@@ -138,6 +147,23 @@
                 faIcon={faPlus}
             >
                 New Class
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToGraphDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Profile Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showAddToDatasetDiagramDialog = true;
+                }}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -187,6 +213,20 @@
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
     lockedPackage={packageNavEntry.data}
+/>
+
+<AddToGraphDiagramDialog
+    bind:showDialog={showAddToGraphDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+    classes={packageNavEntry.children}
+/>
+
+<AddToDatasetDiagramDialog
+    bind:showDialog={showAddToDatasetDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    classes={packageNavEntry.children}
 />
 
 <PackageEditorDialog

@@ -19,6 +19,7 @@ package org.rdfarchitect.services.dl.update;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.Diagram;
@@ -29,8 +30,9 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.services.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
+import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -107,43 +109,57 @@ public class UpdateDiagramLayoutService
 
     @Override
     public void ensureDiagramLayoutExists(
-            GraphIdentifier graphIdentifier, UUID packageUUID, CIMCollection cimCollection) {
+            GraphIdentifier graphIdentifier, UUID diagramUUID, CIMCollection cimCollection) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
-        var resolvedPackageUUID =
-                packageUUID != null ? packageUUID : diagramLayout.getDefaultPackageMRID().getUuid();
+        var resolvedUUID =
+                diagramUUID != null ? diagramUUID : diagramLayout.getDefaultPackageMRID().getUuid();
 
-        // ensure a DL diagram exists for the requested package
-        var diagram = DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedPackageUUID);
+        // ensure a DL diagram exists for the requested package or diagram
+        var diagram = DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedUUID);
         if (diagram == null) {
-            String packageName = null;
+            String packageName =
+                    getDiagramName(diagramLayout, graphIdentifier, cimCollection, resolvedUUID);
 
-            // finds the package name for the DL diagram to be added
-            if (resolvedPackageUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
-                packageName = graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME;
-            } else {
-                for (var cimPackage : cimCollection.getPackages()) {
-                    if (cimPackage.getUuid().equals(resolvedPackageUUID)) {
-                        packageName = cimPackage.getLabel().getValue();
-                        break;
-                    }
-                }
-
-                if (packageName == null) {
-                    throw new IllegalArgumentException(
-                            "Package with UUID " + resolvedPackageUUID + " not found");
-                }
+            if (packageName == null) {
+                throw new IllegalArgumentException(
+                        "Diagram with UUID " + resolvedUUID + " not found");
             }
 
-            DiagramLayoutServiceUtils.insertDiagram(
-                    diagramLayoutModel, resolvedPackageUUID, packageName);
+            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, resolvedUUID, packageName);
         }
 
-        // ensure DOs and DOPs exist for all classes to be rendered
+        ensureDiagramObjectsExist(resolvedUUID, cimCollection, diagramLayoutModel);
+    }
+
+    @Override
+    public void ensureDiagramLayoutExists(
+            String datasetName, UUID diagramUUID, CIMCollection cimCollection) {
+        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+
+        // ensure a DL diagram exists for the requested package or diagram
+        var diagram = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID);
+        if (diagram == null) {
+            String diagramName = getDiagramName(datasetName, diagramUUID);
+
+            if (diagramName == null) {
+                throw new IllegalArgumentException(
+                        "Custom diagram with UUID " + diagramUUID + " not found");
+            }
+
+            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, diagramName);
+        }
+
+        ensureDiagramObjectsExist(diagramUUID, cimCollection, diagramLayoutModel);
+    }
+
+    private void ensureDiagramObjectsExist(
+            UUID diagramUUID, CIMCollection cimCollection, Model diagramLayoutModel) {
         var cimClasses = cimCollection.getClassesAndEnums();
         var diagramObjects =
-                DLObjectFetcher.fetchDiagramDOs(diagramLayoutModel, new MRID(resolvedPackageUUID));
+                DLObjectFetcher.fetchDiagramDOs(diagramLayoutModel, new MRID(diagramUUID));
         var existingMRIDs =
                 diagramObjects.stream()
                         .map(DiagramObject::getBelongsToIdentifiedObject)
@@ -153,12 +169,47 @@ public class UpdateDiagramLayoutService
                 var diagramObjectMRID =
                         DiagramLayoutServiceUtils.insertDiagramObject(
                                 diagramLayoutModel,
-                                resolvedPackageUUID,
+                                diagramUUID,
                                 cimClass.getLabel().getValue(),
                                 cimClass.getUuid());
                 DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                         diagramLayoutModel, diagramObjectMRID);
             }
         }
+    }
+
+    private String getDiagramName(
+            DiagramLayout diagramLayout,
+            GraphIdentifier graphIdentifier,
+            CIMCollection cimCollection,
+            UUID diagramUUID) {
+        if (diagramUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
+            return graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME;
+        }
+
+        for (var cimPackage : cimCollection.getPackages()) {
+            if (cimPackage.getUuid().equals(diagramUUID)) {
+                return cimPackage.getLabel().getValue();
+            }
+        }
+
+        for (var customDiagram :
+                databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values()) {
+            if (customDiagram.getDiagramId().equals(diagramUUID)) {
+                return customDiagram.getName();
+            }
+        }
+
+        return null;
+    }
+
+    private String getDiagramName(String datasetName, UUID diagramUUID) {
+        for (var customDiagram : databasePort.getDatasetDiagrams(datasetName).values()) {
+            if (customDiagram.getDiagramId().equals(diagramUUID)) {
+                return customDiagram.getName();
+            }
+        }
+
+        return null;
     }
 }
