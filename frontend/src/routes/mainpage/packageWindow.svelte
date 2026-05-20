@@ -35,7 +35,7 @@
     );
 
     const selectionTrigger = $derived([
-        editorState.selectedPackageUUID.subscribe(),
+        editorState.selectedDiagram.subscribe(),
         editorState.selectedClassUUID.subscribe(),
     ]);
     const isClassSelected = $derived(
@@ -45,13 +45,13 @@
         `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClassUUID.getValue() ?? ""}::${editorState.selectedClassUUID.subscribe()}`,
     );
     const renderingKey = $derived(
-        `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedPackageUUID.getValue() ?? ""}`,
+        `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
     );
 
     $effect(() => {
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         const packageKey = getPackageKey();
         if (packageKey && paneSizeByPackage[packageKey]) {
             classEditorPaneWidth = paneSizeByPackage[packageKey];
@@ -63,7 +63,7 @@
     function getPackageKey() {
         const dataset = editorState.selectedDataset.getValue();
         const graph = editorState.selectedGraph.getValue();
-        const pack = editorState.selectedPackageUUID.getValue();
+        const pack = editorState.selectedDiagram.getProperty("id");
         if (!dataset || !graph || !pack) {
             return null;
         }

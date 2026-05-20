@@ -66,20 +66,33 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
 
     @Override
     public RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID) {
+            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return createEmptyDiagram();
         }
 
         ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
-                graphIdentifier, packageUUID, cimCollection);
-
-        // setup
-        var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
+                graphIdentifier, diagramId, cimCollection);
         var renderingLayoutData =
                 fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
-                        graphIdentifier, packageUUID);
+                        graphIdentifier, diagramId);
+        return renderUML(cimCollection, renderingLayoutData);
+    }
 
+    @Override
+    public RenderingDataDTO renderGlobalUML(
+            CIMCollection cimCollection, String datasetName, UUID diagramId) {
+        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
+                datasetName, diagramId, cimCollection);
+        var renderingLayoutData =
+                fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
+                        datasetName, diagramId);
+        return renderUML(cimCollection, renderingLayoutData);
+    }
+
+    private RenderingDataDTO renderUML(
+            CIMCollection cimCollection, RenderingLayoutData renderingLayoutData) {
+        var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
         var renderContext = new RenderContext(cimCollection, uriToUUIDMap, renderingLayoutData);
 
         var nodes = assembleNodeDTOList(renderContext);
@@ -130,6 +143,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
 
         var nodeDataDTO =
                 NodeDataDTO.builder()
+                        .graphUri(cimClass.getGraphUri())
                         .label(cimClass.getLabel().getValue())
                         .belongsToCategory(
                                 cimClass.getBelongsToCategory() != null

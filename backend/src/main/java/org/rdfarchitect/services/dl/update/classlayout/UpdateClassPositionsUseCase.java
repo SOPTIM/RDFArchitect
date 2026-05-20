@@ -39,4 +39,16 @@ public interface UpdateClassPositionsUseCase {
             GraphIdentifier graphIdentifier,
             UUID packageUUID,
             List<ClassPositionDTO> classPositionDTOList);
+
+    /**
+     * Updates the positions of classes within the {@link Diagram diagram} associated with the given
+     * custom diagram.
+     *
+     * @param datasetName the identifier of the graph
+     * @param diagramUUID the UUID of the custom diagram identifying the diagram
+     * @param classPositionDTOList the list of class repositioning instructions containing class
+     *     UUIDs and their new positions
+     */
+    void updateClassPositions(
+            String datasetName, UUID diagramUUID, List<ClassPositionDTO> classPositionDTOList);
 }

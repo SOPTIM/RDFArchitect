@@ -46,7 +46,7 @@
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));
 
     $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readonly;
     });
 

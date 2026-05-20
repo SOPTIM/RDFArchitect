@@ -48,6 +48,7 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ChangeLogService;
+import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,7 @@ class UpdateClassServiceTest {
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
         var mockChangeLogService = mock(ChangeLogService.class);
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
+        var mockCustomDiagramService = mock(CustomDiagramService.class);
         updateClassService =
                 new UpdateClassService(
                         databasePort,
@@ -84,7 +86,8 @@ class UpdateClassServiceTest {
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
-                        false);
+                        false,
+                        mockCustomDiagramService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()

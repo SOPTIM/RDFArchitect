@@ -107,7 +107,7 @@
     });
 
     $effect(async () => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
         isDatasetReadOnly = await isReadOnly(datasetName);
     });

@@ -37,6 +37,7 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
@@ -58,6 +59,7 @@ public class UpdateClassService
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+    private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -67,7 +69,8 @@ public class UpdateClassService
             CreateClassLayoutDataUseCase createClassLayoutDataUseCase,
             UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase,
             DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
-            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
+            @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
+            RemoveFromDiagramUseCase removeFromDiagramUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -76,6 +79,7 @@ public class UpdateClassService
         this.updateDiagramObjectNameUseCase = updateDiagramObjectNameUseCase;
         this.deleteClassLayoutDataUseCase = deleteClassLayoutDataUseCase;
         this.newValuesAsBlankNode = newValuesAsBlankNode;
+        this.removeFromDiagramUseCase = removeFromDiagramUseCase;
     }
 
     @Override
@@ -187,6 +191,7 @@ public class UpdateClassService
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(
                 graphIdentifier, UUID.fromString(classUUID));
+        removeFromDiagramUseCase.removeFromAllDiagrams(graphIdentifier, UUID.fromString(classUUID));
 
         changeLogUseCase.recordChange(
                 graphIdentifier,

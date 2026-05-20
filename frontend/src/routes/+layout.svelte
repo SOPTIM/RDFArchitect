@@ -59,7 +59,7 @@
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
 
     $effect(async () => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         editorState.selectedClassUUID.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
@@ -81,7 +81,7 @@
         await bec.enableEditing(selectedDataset);
         forceReloadTrigger.trigger();
         editorState.selectedClassUUID.trigger();
-        editorState.selectedPackageUUID.trigger();
+        editorState.selectedDiagram.trigger();
         isDatasetReadOnly = false;
     }
 

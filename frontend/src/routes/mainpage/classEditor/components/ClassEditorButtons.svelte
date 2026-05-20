@@ -56,7 +56,7 @@
     let graphUri = $derived(classEditorContext.graphUri);
 
     $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readonly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
@@ -94,7 +94,7 @@
             );
             reactiveClass.save();
             editorState.selectedClassUUID.trigger();
-            editorState.selectedPackageUUID.trigger();
+            editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
         } else {
             console.error(

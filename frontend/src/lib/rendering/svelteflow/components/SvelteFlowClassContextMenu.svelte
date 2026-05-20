@@ -22,10 +22,13 @@
         faAnglesUp,
         faAngleUp,
         faLayerGroup,
+        faMinus,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -33,6 +36,7 @@
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
 
     let {
         request = null,
@@ -52,6 +56,7 @@
     let open = $state(false);
     let deleteClassTarget = $state(null);
     let showDeleteDependenciesDialog = $state(false);
+    let showRemoveFromDiagramDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -80,6 +85,14 @@
         }
         deleteClassTarget = contextMenuClass;
         showDeleteDependenciesDialog = true;
+        onClose();
+    }
+
+    function openRemoveFromDiagramDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        showRemoveFromDiagramDialog = true;
         onClose();
     }
 
@@ -126,14 +139,6 @@
         {disabled}
     />
     <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={openDeleteClassDialog}
-            {disabled}
-            faIcon={faTrash}
-            variant="danger"
-        >
-            Delete class
-        </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger faIcon={faLayerGroup}>
                 Move
@@ -191,6 +196,22 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
+        <ContextMenuSeparator />
+        <ContextMenu.Item.Button
+            onSelect={openRemoveFromDiagramDialog}
+            faIcon={faMinus}
+            variant="danger"
+        >
+            Remove from Diagram
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={openDeleteClassDialog}
+            {disabled}
+            faIcon={faTrash}
+            variant="danger"
+        >
+            Delete class
+        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 
@@ -199,4 +220,12 @@
     {datasetName}
     {graphUri}
     resourceUuid={deleteClassTarget?.uuid}
+/>
+<RemoveFromDiagramDialog
+    bind:showDialog={showRemoveFromDiagramDialog}
+    lockedDatasetName={datasetName}
+    {graphUri}
+    diagramId={editorState.selectedDiagram.getProperty("id")}
+    classId={contextMenuClass.uuid}
+    classLabel={contextMenuClass.label}
 />

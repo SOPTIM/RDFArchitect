@@ -26,7 +26,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -47,23 +47,23 @@ import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import java.util.List;
 import java.util.UUID;
 
-public class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
+class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
 
     private static final String CLASS_AND_SUBCLASS_FILE_PATH = "classes/class_and_subclass.ttl";
     private static final String CLASS_OPTIONAL_FILE_PATH = "classes/class_optional.ttl";
     private static final String ENUM_FILE_PATH = "classes/enum.ttl";
     private static final String MULTIPLE_CLASSES_FILE_PATH = "classes/multiple_classes.ttl";
 
-    private static CIMClass classRequired;
+    private CIMClass classRequired;
 
     /**
      * New class but with all optionals, meaning subClassOf, comment, belongsToCategory and
      * stereotype
      */
-    private static CIMClass classOptional;
+    private CIMClass classOptional;
 
-    @BeforeAll
-    static void setUpClassEnvironment() {
+    @BeforeEach
+    void setUpClassEnvironment() {
         CIMClass baseClass =
                 CIMClass.builder()
                         .uuid(MY_UUID)

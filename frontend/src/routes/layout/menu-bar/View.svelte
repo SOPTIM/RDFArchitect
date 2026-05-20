@@ -41,7 +41,7 @@
     let hasGraphSelected = $derived(!!selectedDataset && selectedGraph);
 
     $effect(async () => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         editorState.selectedClassUUID.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();

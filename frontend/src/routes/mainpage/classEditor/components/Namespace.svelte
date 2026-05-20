@@ -33,7 +33,7 @@
     let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readonly;
     });
 

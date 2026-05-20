@@ -34,8 +34,18 @@ export function isSelectedGraph(dataset, graph) {
 export function isSelectedPackage(dataset, graph, pack) {
     return (
         isSelectedGraph(dataset, graph) &&
-        editorState.selectedPackageUUID.getValue() === getPackageId(pack)
+        editorState.selectedDiagram.getProperty("id") === getPackageId(pack)
     );
+}
+
+export function isSelectedCustomDiagram(dataset, graph, diagram) {
+    return graph
+        ? isSelectedGraph(dataset, graph) &&
+              editorState.selectedDiagram.getProperty("id") ===
+                  diagram.diagramId
+        : isSelectedDataset(dataset) &&
+              editorState.selectedDiagram.getProperty("id") ===
+                  diagram.diagramId;
 }
 
 export function isSelectedClass(dataset, graph, cls) {
@@ -43,7 +53,7 @@ export function isSelectedClass(dataset, graph, cls) {
         cls = { uuid: cls };
     }
     const datasetLabel = dataset?.label ?? dataset;
-    const graphUri = getUri(graph);
+    const graphUri = graph ? getUri(graph) : null;
     return (
         editorState.selectedClassUUID.getValue() === cls.uuid &&
         editorState.selectedClassDataset.getValue() === datasetLabel &&
@@ -59,7 +69,7 @@ export function getUri(resource) {
     return uri.prefix ? uri.prefix + uri.suffix : uri.suffix;
 }
 
-function getPackageId(pack) {
+export function getPackageId(pack) {
     if (typeof pack === "string") {
         return pack;
     }
