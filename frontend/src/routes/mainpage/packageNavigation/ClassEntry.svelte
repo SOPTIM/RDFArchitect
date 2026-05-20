@@ -32,13 +32,13 @@
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import ExtendClassDialog from "./ExtendClassDialog.svelte";
     import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
-    import ExtendClassDialog from "./ExtendClassDialog.svelte";
 
     let {
         datasetNavEntry,
@@ -225,6 +225,6 @@
 <ExtendClassDialog
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}
-    classUuid={classNavEntry.id}
+    classUUID={classNavEntry.id}
     bind:showDialog={showExtendClassDialog}
 />

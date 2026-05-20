@@ -34,26 +34,30 @@
     let selectedDatasetName = $state(null);
     let selectedGraphURI = $state(null);
 
-    let disableSubmit = $derived(
-        !selectedDatasetName ||
-        !selectedGraphURI
-    );
+    let disableSubmit = $derived(!selectedDatasetName || !selectedGraphURI);
 
     async function extendClass() {
         let body = {
             datasetName: selectedDatasetName,
             graphUri: selectedGraphURI,
-        }
+        };
         try {
-            const newClass = await bec.extendClass(datasetName, graphUri, classUUID, body);
+            const response = await bec.extendClass(
+                datasetName,
+                graphUri,
+                classUUID,
+                body,
+            );
+            const newClass = await response.json();
             editorState.selectedDataset.updateValue(selectedDatasetName);
             editorState.selectedGraph.updateValue(selectedGraphURI);
-            editorState.selectedPackageUUID.updateValue(newClass.package.uuid);
+            editorState.selectedPackageUUID.updateValue(
+                newClass.belongsToCategory ?? "default",
+            );
         } catch (e) {
             console.log(e);
         }
     }
-
 </script>
 
 <ActionDialog
@@ -63,10 +67,15 @@
     disablePrimary={disableSubmit}
     title="Extend Class"
 >
-    <DatasetAndGraphSelection
-        bind:dataset={selectedDatasetName}
-        bind:graph={selectedGraphURI}
-        allowSelectionOfReadonlyDatasets={false}
-        displayAsCard={false}
-    />
+    <div class="space-y-4 px-3 py-3">
+        <p class="text-default-text w-2/3 text-sm leading-relaxed">
+            Please select the graph that you want to extend this class in
+        </p>
+        <DatasetAndGraphSelection
+            bind:dataset={selectedDatasetName}
+            bind:graph={selectedGraphURI}
+            allowSelectionOfReadonlyDatasets={false}
+            displayAsCard={false}
+        />
+    </div>
 </ActionDialog>

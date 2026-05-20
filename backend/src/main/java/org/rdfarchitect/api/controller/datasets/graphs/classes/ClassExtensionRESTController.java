@@ -21,7 +21,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -54,26 +56,26 @@ public class ClassExtensionRESTController {
     @PostMapping
     public ClassDTO extendClass(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(
-                    value = HttpHeaders.ORIGIN,
-                    required = false,
-                    defaultValue = "unknown")
-            String originURL,
-            @Parameter(description = "The literal name of the dataset.")
-            @PathVariable String datasetName,
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
             @Parameter(
-                    description =
-                            "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI,
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    required = true,
-                    description = "The new attribute",
-                    content =
-                    @Content(schema = @Schema(implementation = AttributeDTO.class)))
-            @RequestBody
-            GraphIdentifier newGraphIdentifier) {
+                            required = true,
+                            description = "The new attribute",
+                            content =
+                                    @Content(schema = @Schema(implementation = AttributeDTO.class)))
+                    @RequestBody
+                    GraphIdentifier newGraphIdentifier) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/extend\" from \"{}\".",
                 datasetName,
@@ -84,7 +86,8 @@ public class ClassExtensionRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var newClass = classExtensionUseCase.extendClass(graphIdentifier, classUUID, newGraphIdentifier);
+        var newClass =
+                classExtensionUseCase.extendClass(graphIdentifier, classUUID, newGraphIdentifier);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/extend\" to \"{}\".",
