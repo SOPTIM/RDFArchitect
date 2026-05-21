@@ -1,0 +1,9 @@
+PREFIX ex:   <http://example.org#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+
+ex:Wires
+    rdf:type cims:ClassCategory ;
+    rdfs:label "Wires"@en ;
+    ex:uuid "e118a879-da21-4910-a9ca-c7a41b68b1c1" .

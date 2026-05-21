@@ -21,6 +21,7 @@
         faAnglesDown,
         faAnglesUp,
         faAngleUp,
+        faFileExport,
         faLayerGroup,
         faCopy,
         faMinus,
@@ -40,6 +41,7 @@
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
 
     let {
         request = null,
@@ -58,9 +60,10 @@
 
     let triggerRef = $state(null);
     let open = $state(false);
-    let deleteClassTarget = $state(null);
+    let dialogClass = $state(null);
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
+    let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
@@ -94,7 +97,7 @@
         if (classActionsDisabled || !contextMenuClass) {
             return;
         }
-        deleteClassTarget = contextMenuClass;
+        dialogClass = contextMenuClass;
         showDeleteDependenciesDialog = true;
         onClose();
     }
@@ -104,6 +107,15 @@
             return;
         }
         showRemoveFromDiagramDialog = true;
+        onClose();
+    }
+
+    function openExtendClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        dialogClass = contextMenuClass;
+        showExtendClassDialog = true;
         onClose();
     }
 
@@ -164,6 +176,12 @@
             altText="Ctrl+C"
         >
             Copy
+        </ContextMenu.Item.Button>
+      <ContextMenu.Item.Button
+            onSelect={openExtendClassDialog}
+            faIcon={faFileExport}
+        >
+            Extend Class
         </ContextMenu.Item.Button>
         <ContextMenu.Separator />
         <ContextMenu.Item.Button
@@ -257,7 +275,13 @@
     bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
     {graphUri}
-    resourceUuid={deleteClassTarget?.uuid}
+    resourceUuid={dialogClass?.uuid}
+/>
+<ExtendClassDialog
+    {datasetName}
+    {graphUri}
+    classUUID={dialogClass?.uuid}
+    bind:showDialog={showExtendClassDialog}
 />
 
 <SHACLClassSpecificPopUp
