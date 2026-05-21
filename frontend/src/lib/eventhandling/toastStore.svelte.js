@@ -43,7 +43,15 @@ const DEFAULT_DURATIONS = {
     warning: 5000,
     error: 6000,
 };
-const timeouts = new Map();
+
+/**
+ * Per-toast countdown state. The handle is the active `setTimeout` id (null
+ * while paused); `remaining` tracks how much of the duration is left so that
+ * pause/resume can be alternated repeatedly.
+ *
+ * @type {Map<number, { handle: number | null, startedAt: number, remaining: number }>}
+ */
+const timers = new Map();
 
 /**
  * Singleton facade. Methods read and mutate the reactive `toasts` state, so
@@ -62,6 +70,8 @@ export const toastStore = {
     warning: (title, message, options = {}) =>
         show({ ...options, variant: "warning", title, message }),
     dismiss,
+    pause,
+    resume,
     clear,
 };
 
@@ -92,25 +102,64 @@ function show({ variant = "info", title, message, duration } = {}) {
 
     if (resolvedDuration > 0 && typeof window !== "undefined") {
         const handle = window.setTimeout(() => dismiss(id), resolvedDuration);
-        timeouts.set(id, handle);
+        timers.set(id, {
+            handle,
+            startedAt: Date.now(),
+            remaining: resolvedDuration,
+        });
     }
 
     return id;
 }
 
+/**
+ * Halt the auto-dismiss countdown for a toast (e.g. while the user hovers it).
+ *
+ * @param {number} id
+ */
+function pause(id) {
+    const timer = timers.get(id);
+    if (!timer || timer.handle === null) return;
+    clearTimeout(timer.handle);
+    const elapsed = Date.now() - timer.startedAt;
+    timer.remaining = Math.max(0, timer.remaining - elapsed);
+    timer.handle = null;
+}
+
+/**
+ * Resume a previously paused auto-dismiss countdown.
+ *
+ * @param {number} id
+ */
+function resume(id) {
+    const timer = timers.get(id);
+    if (!timer || timer.handle !== null) return;
+    if (typeof window === "undefined") return;
+    if (timer.remaining <= 0) {
+        dismiss(id);
+        return;
+    }
+    timer.startedAt = Date.now();
+    timer.handle = window.setTimeout(() => dismiss(id), timer.remaining);
+}
+
 function dismiss(id) {
-    const handle = timeouts.get(id);
-    if (handle !== undefined) {
-        clearTimeout(handle);
-        timeouts.delete(id);
+    const timer = timers.get(id);
+    if (timer) {
+        if (timer.handle !== null) {
+            clearTimeout(timer.handle);
+        }
+        timers.delete(id);
     }
     toasts = toasts.filter(t => t.id !== id);
 }
 
 function clear() {
-    for (const handle of timeouts.values()) {
-        clearTimeout(handle);
+    for (const timer of timers.values()) {
+        if (timer.handle !== null) {
+            clearTimeout(timer.handle);
+        }
     }
-    timeouts.clear();
+    timers.clear();
     toasts = [];
 }

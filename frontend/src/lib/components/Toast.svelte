@@ -22,7 +22,10 @@
         faTriangleExclamation,
         faXmark,
     } from "@fortawesome/free-solid-svg-icons";
+    import { fly } from "svelte/transition";
     import { Fa } from "svelte-fa";
+
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     /**
      * A single toast notification card. Rendered by ToastContainer; not
@@ -62,13 +65,30 @@
             ? "alert"
             : "status",
     );
+
+    const showProgress = $derived(toast.duration > 0);
+
+    function pause() {
+        toastStore.pause(toast.id);
+    }
+
+    function resume() {
+        toastStore.resume(toast.id);
+    }
 </script>
 
 <div
-    class="toast-card {config.surfaceClass} pointer-events-auto flex
-        w-80 max-w-[90vw] items-start gap-3 rounded-lg border p-3 shadow-md"
+    class="toast-card {config.surfaceClass} pointer-events-auto relative flex
+        w-80 max-w-[90vw] items-start gap-3 overflow-hidden rounded-lg border
+        p-3 shadow-md"
     {role}
     aria-live={role === "alert" ? "assertive" : "polite"}
+    in:fly={{ x: 24, duration: 200 }}
+    out:fly={{ x: 24, duration: 150 }}
+    onmouseenter={pause}
+    onmouseleave={resume}
+    onfocusin={pause}
+    onfocusout={resume}
 >
     <Fa icon={config.icon} class="{config.iconClass} mt-0.5 shrink-0" />
     <div class="min-w-0 flex-1 text-sm leading-snug">
@@ -88,31 +108,76 @@
     >
         <Fa icon={faXmark} />
     </button>
+    {#if showProgress}
+        <div
+            class="toast-progress"
+            style:animation-duration="{toast.duration}ms"
+            aria-hidden="true"
+        ></div>
+    {/if}
 </div>
 
 <style>
     .toast-card {
         background: var(--color-white);
         color: var(--color-default-text);
+        --toast-progress-color: var(--color-default-text);
     }
 
     .toast-surface-success {
         background: var(--color-green-background);
         border-color: var(--color-green-border);
+        --toast-progress-color: var(--color-green-border);
     }
 
     .toast-surface-error {
         background: var(--color-red-background);
         border-color: var(--color-red-border);
+        --toast-progress-color: var(--color-red-border);
     }
 
     .toast-surface-info {
         background: var(--color-lightblue);
         border-color: var(--color-blue);
+        --toast-progress-color: var(--color-blue);
     }
 
     .toast-surface-warning {
         background: var(--color-white);
         border-color: var(--color-orange);
+        --toast-progress-color: var(--color-orange);
+    }
+
+    .toast-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        width: 100%;
+        background: var(--toast-progress-color);
+        transform-origin: left center;
+        animation-name: toast-progress-shrink;
+        animation-timing-function: linear;
+        animation-fill-mode: forwards;
+    }
+
+    .toast-card:hover .toast-progress {
+        animation-play-state: paused;
+    }
+
+    @keyframes toast-progress-shrink {
+        from {
+            transform: scaleX(1);
+        }
+        to {
+            transform: scaleX(0);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .toast-progress {
+            animation: none;
+            opacity: 0.4;
+        }
     }
 </style>
