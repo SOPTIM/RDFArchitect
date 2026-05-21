@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.*;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -30,9 +29,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.rdf.TestRDFUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
 import java.util.Map;
@@ -116,12 +115,12 @@ class GraphWithContextCollectionTest {
         // Assert
         assertThat(size).isEqualTo(3);
         for (String uri : graphUris) {
-            GraphRewindableWithUUIDs graph = collection.begin(uri, TxnType.READ);
-            assertThat(graph).isNotNull();
-            assertThat(graph.find().toList()).hasSize(9);
-            assertThat(graph.transactionType()).isEqualTo(TxnType.READ);
-            assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-            graph.end();
+            var graphWithCtx = collection.getGraphWithContext(uri);
+            try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+                assertThat(ctx).isNotNull();
+                assertThat(ctx.getRdfGraph().find().toList()).hasSize(9);
+                assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+            }
         }
     }
 
@@ -139,19 +138,20 @@ class GraphWithContextCollectionTest {
         // Act
         List<String> graphUris = collection.listGraphUris();
         int size = graphUris.size();
-        GraphRewindableWithUUIDs graph = collection.begin(DEFAULT_GRAPH_NAME, TxnType.READ);
 
         // Assert
         assertThat(size).isEqualTo(1);
-        assertThat(graph).isNotNull();
-        assertThat(graph.find().toList()).hasSize(3);
-        assertThat(graph.transactionType()).isEqualTo(TxnType.READ);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-        graph.end();
+        var graphWithCtx = collection.getGraphWithContext(DEFAULT_GRAPH_NAME);
+        try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+            assertThat(ctx).isNotNull();
+            assertThat(ctx.getRdfGraph().find().toList()).hasSize(3);
+            assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+        }
     }
 
-    @Test
-    void begin_existingGraphUri_returnsGraphRewindable() {
+    @ParameterizedTest
+    @EnumSource(ReadWrite.class)
+    void begin_existingGraphUri_returnsGraphRewindable(ReadWrite mode) {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
 
@@ -159,16 +159,14 @@ class GraphWithContextCollectionTest {
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
 
         // Act
-        GraphRewindableWithUUIDs graph =
-                collection.begin("http://example.org/graph1", TxnType.READ);
-
-        // Assert
-        assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-        assertThat(graph.transactionType()).isEqualTo(TxnType.READ);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-        graph.end();
+        var graphWithCtx = collection.getGraphWithContext("http://example.org/graph1");
+        try (var ctx = graphWithCtx.begin(mode)) {
+            // Assert
+            assertThat(ctx).isNotNull();
+            assertThat(ctx.isInTransaction()).isTrue();
+            assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
+            assertThat(ctx.transactionMode()).isEqualTo(mode);
+        }
     }
 
     @Test
@@ -177,15 +175,14 @@ class GraphWithContextCollectionTest {
         GraphWithContextCollection collection = new GraphWithContextCollection();
 
         // Act
-        GraphRewindableWithUUIDs graph = collection.begin(DEFAULT_GRAPH_NAME, TxnType.READ);
-
-        // Assert
-        assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.find().toList()).isEmpty();
-        assertThat(graph.transactionType()).isEqualTo(TxnType.READ);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-        graph.end();
+        var graphWithCtx = collection.getGraphWithContext(DEFAULT_GRAPH_NAME);
+        try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+            // Assert
+            assertThat(ctx).isNotNull();
+            assertThat(ctx.isInTransaction()).isTrue();
+            assertThat(ctx.getRdfGraph().find().toList()).isEmpty();
+            assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+        }
     }
 
     @Test
@@ -195,7 +192,7 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.begin("http://example.org/nonexistent", TxnType.READ))
+                .isThrownBy(() -> collection.getGraphWithContext("http://example.org/nonexistent"))
                 .withMessage("Graph URI http://example.org/nonexistent does not exist.");
     }
 
@@ -207,68 +204,59 @@ class GraphWithContextCollectionTest {
 
         // Act/Assert
         assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.begin(graphUri, TxnType.READ))
+                .isThrownBy(() -> collection.getGraphWithContext(graphUri))
                 .withMessage("Graph Uri " + graphUri + " is not a valid URI");
     }
 
     @Test
-    void begin_existingNamedGraphWithWrite_graphRewindableInWriteTransaction() {
+    void begin_readThenEndThenBeginWrite_allowsWriteAfterReadEnds() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        exampleGraphs = List.of(createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        var graphWithCtx = collection.getGraphWithContext("http://example.org/graph1");
 
-        // Act
-        GraphRewindableWithUUIDs graph =
-                collection.begin("http://example.org/graph1", TxnType.WRITE);
+        // Act - begin READ, end it, then begin WRITE
+        try (var readCtx = graphWithCtx.begin(ReadWrite.READ)) {
+            assertThat(readCtx.getRdfGraph().find().toList()).hasSize(9);
+        }
+        try (var writeCtx = graphWithCtx.begin(ReadWrite.WRITE)) {
+            // Assert
+            assertThat(writeCtx).isNotNull();
+            assertThat(writeCtx.isInTransaction()).isTrue();
+            assertThat(writeCtx.transactionMode()).isEqualTo(ReadWrite.WRITE);
+            writeCtx.getRdfGraph().add(TestRDFUtils.triple("a a d"));
+            writeCtx.commit("add triple");
+        }
 
-        // Assert
-        assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-        assertThat(graph.transactionType()).isEqualTo(TxnType.WRITE);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.WRITE);
-        graph.end();
+        // Verify the write persisted
+        try (var verifyCtx = graphWithCtx.begin(ReadWrite.READ)) {
+            assertThat(verifyCtx.getRdfGraph().find().toList()).hasSize(10);
+        }
     }
 
     @Test
-    void begin_existingNamedGraphWithReadAndEndTransaction_graphRewindableInReadPromote() {
+    void begin_writeCommitThenRead_seesCommittedChanges() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        exampleGraphs = List.of(createExampleGraph());
         collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        var graphWithCtx = collection.getGraphWithContext("http://example.org/graph1");
 
-        // Act
-        GraphRewindableWithUUIDs graph =
-                collection.begin("http://example.org/graph1", TxnType.READ_PROMOTE);
+        // Act - begin WRITE, commit changes, end, then begin READ
+        try (var writeCtx = graphWithCtx.begin(ReadWrite.WRITE)) {
+            writeCtx.getRdfGraph().add(TestRDFUtils.triple("a a d"));
+            writeCtx.getRdfGraph().add(TestRDFUtils.triple("a a e"));
+            writeCtx.commit("add two triples");
+        }
 
-        // Assert
-        assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-        assertThat(graph.transactionType()).isEqualTo(TxnType.READ_PROMOTE);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-        graph.end();
-    }
-
-    @Test
-    void begin_existingNamedGraphWithReadCommitedPromote_graphRewindableInReadCommitedPromote() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-
-        // Act
-        GraphRewindableWithUUIDs graph =
-                collection.begin("http://example.org/graph1", TxnType.READ_COMMITTED_PROMOTE);
-
-        // Assert
-        assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-        assertThat(graph.transactionType()).isEqualTo(TxnType.READ_COMMITTED_PROMOTE);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-        graph.end();
+        // Assert - READ sees the committed changes
+        try (var readCtx = graphWithCtx.begin(ReadWrite.READ)) {
+            assertThat(readCtx).isNotNull();
+            assertThat(readCtx.isInTransaction()).isTrue();
+            assertThat(readCtx.transactionMode()).isEqualTo(ReadWrite.READ);
+            assertThat(readCtx.getRdfGraph().find().toList()).hasSize(11);
+        }
     }
 
     @ParameterizedTest
@@ -286,15 +274,14 @@ class GraphWithContextCollectionTest {
 
         // Act
         collection.create(graphUri, exampleGraphs.getFirst());
-        GraphRewindableWithUUIDs graph = collection.begin(graphUri, TxnType.READ);
-
-        // Assert
-        assertThat(graph).isOfAnyClassIn(GraphRewindableWithUUIDs.class);
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-        assertThat(graph.transactionType()).isEqualTo(TxnType.READ);
-        assertThat(graph.transactionMode()).isEqualTo(ReadWrite.READ);
-        graph.end();
+        var graphWithCtx = collection.getGraphWithContext(graphUri);
+        try (var ctx = graphWithCtx.begin(ReadWrite.READ)) {
+            // Assert
+            assertThat(ctx).isNotNull();
+            assertThat(ctx.isInTransaction()).isTrue();
+            assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
+            assertThat(ctx.transactionMode()).isEqualTo(ReadWrite.READ);
+        }
     }
 
     @ParameterizedTest
@@ -334,43 +321,6 @@ class GraphWithContextCollectionTest {
 
         // Assert
         assertThat(collection.listGraphUris()).isEmpty();
-    }
-
-    @Test
-    void containsGraph_existingGraphUri_returnsTrue() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-
-        // Act
-        boolean containsGraph = collection.containsGraph("http://example.org/graph1");
-
-        // Assert
-        assertThat(containsGraph).isTrue();
-    }
-
-    @Test
-    void containsGraph_nonExistingGraphUri_returnsFalse() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-
-        // Act
-        boolean containsGraph = collection.containsGraph("http://example.org/nonexistent");
-
-        // Assert
-        assertThat(containsGraph).isFalse();
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void containsGraph_invalidGraphUri_throwsException(String graphUri) {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-
-        // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.containsGraph(graphUri));
     }
 
     @Test
@@ -624,90 +574,5 @@ class GraphWithContextCollectionTest {
                         Map.of(
                                 "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
                                 "owl", "http://www.w3.org/2002/07/owl#"));
-    }
-
-    @Test
-    void undo_existingGraphUri_undoesLastChange() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        GraphRewindableWithUUIDs graph =
-                collection.begin("http://example.org/graph1", TxnType.WRITE);
-        graph.add(TestRDFUtils.triple("a a d"));
-        graph.commit();
-        graph.end();
-
-        // Act
-        collection.undo("http://example.org/graph1");
-
-        // Assert
-        graph = collection.begin("http://example.org/graph1", TxnType.READ);
-        assertThat(graph.find().toList()).hasSize(9);
-        graph.end();
-    }
-
-    @Test
-    void undo_nonExistingGraphUri_throwsException() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-
-        // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.undo("http://example.org/nonexistent"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void undo_invalidGraphUri_throwsException(String graphUri) {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-
-        // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.undo(graphUri));
-    }
-
-    @Test
-    void redo_existingGraphUri_restoresLastChange() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-        exampleGraphs = List.of(createExampleGraph());
-        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
-        GraphRewindableWithUUIDs graph =
-                collection.begin("http://example.org/graph1", TxnType.WRITE);
-        graph.add(TestRDFUtils.triple("a a d"));
-        graph.commit();
-        graph.end();
-        collection.undo("http://example.org/graph1");
-
-        // Act
-        collection.redo("http://example.org/graph1");
-
-        // Assert
-        graph = collection.begin("http://example.org/graph1", TxnType.READ);
-        assertThat(graph.find().toList()).hasSize(10);
-        graph.end();
-    }
-
-    @Test
-    void redo_nonExistingGraphUri_throwsException() {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-
-        // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.redo("http://example.org/nonexistent"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"", "foo", "bar", "otherInvalidUri"})
-    void redo_invalidGraphUri_throwsException(String graphUri) {
-        // Arrange
-        GraphWithContextCollection collection = new GraphWithContextCollection();
-
-        // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
-                .isThrownBy(() -> collection.redo(graphUri));
     }
 }

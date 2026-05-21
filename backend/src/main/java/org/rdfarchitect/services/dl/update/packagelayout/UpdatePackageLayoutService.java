@@ -19,6 +19,7 @@ package org.rdfarchitect.services.dl.update.packagelayout;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -53,70 +54,63 @@ public class UpdatePackageLayoutService
         var cimPackage = packageMapper.toCIMObject(packageDTO);
         cimPackage.setUuid(newPackageUUID);
 
-        var diagramLayoutModel =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModel();
-
-        DiagramLayoutServiceUtils.insertDiagram(
-                diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+            DiagramLayoutServiceUtils.insertDiagram(
+                    diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
+            ctx.commit();
+        }
     }
 
     @Override
     public void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        var diagramLayoutModel =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModel();
-
+        // converter.convert() opens its own READ transaction — collect data before opening WRITE
         var packageGraphFilter = new GraphFilter(false);
         packageGraphFilter.setIncludeInheritance(true);
         packageGraphFilter.setIncludeAssociations(true);
         packageGraphFilter.setIncludeRelationsToExternalPackages(true);
         packageGraphFilter.setPackageUUID(packageUUID.toString());
-
         var classesCIMCollection = converter.convert(graphIdentifier, packageGraphFilter);
 
-        for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
-            // if the class belongs to the package, delete all DOs and DOPs globally
-            if (cimClassOrEnum.getBelongsToCategory().getUuid() == packageUUID) {
-                for (var diagramObject :
-                        DLObjectFetcher.fetchAllDOs(diagramLayoutModel, cimClassOrEnum.getUuid())) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+
+            for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
+                if (cimClassOrEnum.getBelongsToCategory().getUuid() == packageUUID) {
+                    for (var diagramObject :
+                            DLObjectFetcher.fetchAllDOs(
+                                    diagramLayoutModel, cimClassOrEnum.getUuid())) {
+                        DLUpdates.deleteDiagramObjectCascade(
+                                diagramLayoutModel, diagramObject.getMRID());
+                    }
+                } else {
+                    var diagramObject =
+                            DLObjectFetcher.fetchDiagramDOForClass(
+                                    diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
                     DLUpdates.deleteDiagramObjectCascade(
                             diagramLayoutModel, diagramObject.getMRID());
                 }
             }
-            // if the class belongs to a different package, only delete the DO/DOP in the diagram
-            else {
-                var diagramObject =
-                        DLObjectFetcher.fetchDiagramDOForClass(
-                                diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
-            }
-        }
 
-        DLUpdates.deleteDiagram(diagramLayoutModel, new MRID(packageUUID));
+            DLUpdates.deleteDiagram(diagramLayoutModel, new MRID(packageUUID));
+            ctx.commit();
+        }
     }
 
     @Override
     public void replaceDiagram(
             GraphIdentifier graphIdentifier, UUID packageUUID, String packageName) {
-        var diagramLayoutModel =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getDiagramLayout()
-                        .getDiagramLayoutModel();
-        var diagramMRID = new MRID(packageUUID);
-
-        var newDiagram =
-                Diagram.builder()
-                        .mRID(diagramMRID)
-                        .name(packageName)
-                        .orientation(OrientationKind.NEGATIVE)
-                        .build();
-
-        DLUpdates.replaceDiagram(diagramLayoutModel, diagramMRID, newDiagram);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
+            var diagramMRID = new MRID(packageUUID);
+            var newDiagram =
+                    Diagram.builder()
+                            .mRID(diagramMRID)
+                            .name(packageName)
+                            .orientation(OrientationKind.NEGATIVE)
+                            .build();
+            DLUpdates.replaceDiagram(diagramLayoutModel, diagramMRID, newDiagram);
+            ctx.commit();
+        }
     }
 }

@@ -20,7 +20,7 @@ package org.rdfarchitect.services.schemamigration;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.migration.DefaultValueView;
 import org.rdfarchitect.api.dto.migration.PropertyOverview;
@@ -37,7 +37,6 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
 import org.rdfarchitect.services.schemamigration.defaults.DefaultValueAssigner;
 import org.rdfarchitect.services.schemamigration.defaults.GetDefaultValueViewsUseCase;
@@ -87,13 +86,9 @@ public class SchemaMigrationService
                         .graph();
 
         Graph updatedGraph;
-        GraphRewindableWithUUIDs loadedGraph =
-                databasePort.getGraphWithContext(updatedSchema).getRdfGraph();
-        try {
-            loadedGraph.begin(TxnType.READ);
-            updatedGraph = GraphUtils.deepCopy(loadedGraph);
-        } finally {
-            loadedGraph.end();
+        try (var updatedCtx =
+                databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
+            updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
         initContext(originalGraph, updatedGraph);
@@ -102,22 +97,15 @@ public class SchemaMigrationService
     @Override
     public void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema) {
         Graph originalGraph;
-        GraphRewindableWithUUIDs loadedGraph =
-                databasePort.getGraphWithContext(originalSchema).getRdfGraph();
-        try {
-            loadedGraph.begin(TxnType.READ);
-            originalGraph = GraphUtils.deepCopy(loadedGraph);
-        } finally {
-            loadedGraph.end();
+        try (var originalCtx =
+                databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
+            originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
         }
 
         Graph updatedGraph;
-        loadedGraph = databasePort.getGraphWithContext(updatedSchema).getRdfGraph();
-        try {
-            loadedGraph.begin(TxnType.READ);
-            updatedGraph = GraphUtils.deepCopy(loadedGraph);
-        } finally {
-            loadedGraph.end();
+        try (var updatedCtx =
+                databasePort.getGraphWithContext(updatedSchema).begin(ReadWrite.READ)) {
+            updatedGraph = GraphUtils.deepCopy(updatedCtx.getRdfGraph());
         }
 
         initContext(originalGraph, updatedGraph);

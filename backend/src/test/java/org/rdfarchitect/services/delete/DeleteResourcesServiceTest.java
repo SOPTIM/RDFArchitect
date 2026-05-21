@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
@@ -41,10 +41,9 @@ import org.rdfarchitect.api.dto.delete.DeleteAction;
 import org.rdfarchitect.api.dto.delete.ResourceDeleteRequest;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
+import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -91,7 +90,7 @@ class DeleteResourcesServiceTest {
 
     @InjectMocks private DeleteResourcesService service;
 
-    private GraphRewindableWithUUIDs wrappedGraph;
+    private GraphWithContextTransactional wrappedContext;
 
     @BeforeEach
     void setUp() throws IOException {
@@ -100,20 +99,19 @@ class DeleteResourcesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        wrappedGraph = new GraphRewindableWithUUIDs(graph, 5, 5);
-        var wrappedContext = new GraphWithContext(wrappedGraph);
+        wrappedContext = new GraphWithContextTransactional(graph);
 
         when(databasePort.getGraphWithContext(any(GraphIdentifier.class)))
                 .thenReturn(wrappedContext);
     }
 
     private Model readModel() {
-        wrappedGraph.begin(TxnType.READ);
-        return ModelFactory.createModelForGraph(wrappedGraph);
+        wrappedContext.begin(ReadWrite.READ);
+        return ModelFactory.createModelForGraph(wrappedContext.getRdfGraph());
     }
 
     private void endRead() {
-        wrappedGraph.end();
+        wrappedContext.end();
     }
 
     private ResourceDeleteRequest request(UUID uuid, DeleteAction action) {

@@ -21,12 +21,13 @@ import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface UpdateAssociationsUseCase {
 
     void replaceAllAssociations(
             GraphIdentifier graphIdentifier,
-            String classUUID,
+            UUID classUUID,
             List<AssociationPairDTO> associationPairList);
 
     AssociationsService.AssociationUUIDs replaceAssociation(

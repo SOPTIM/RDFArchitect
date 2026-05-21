@@ -17,7 +17,8 @@
 
 package org.rdfarchitect.services.update.classes.attributes;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
@@ -25,9 +26,8 @@ import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
-import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -39,17 +39,14 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
 
     private final DatabasePort databasePort;
     private final AttributeMapper attributeMapper;
-    private final ChangeLogUseCase changeLogUseCase;
     private final boolean newValuesAsBlankNode;
 
     public AttributesService(
             DatabasePort databasePort,
             AttributeMapper attributeMapper,
-            ChangeLogUseCase changeLogUseCase,
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
         this.databasePort = databasePort;
         this.attributeMapper = attributeMapper;
-        this.changeLogUseCase = changeLogUseCase;
         this.newValuesAsBlankNode = newValuesAsBlankNode;
     }
 
@@ -61,9 +58,8 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         }
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
         var graphUri = graphIdentifier.graphUri();
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.WRITE);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var graph = ctx.getRdfGraph();
             var update =
                     new UpdateRequest()
                             .add(
@@ -77,14 +73,12 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             UpdateExecutionFactory.create(
                             update, SessionDataStore.wrapGraphInDataset(graph, graphUri))
                     .execute();
-            graph.commit();
-        } finally {
-            graph.end();
+            var classLabel = findClassLabel(graph, attributeDTO.getDomain());
+            ctx.commit(
+                    "Created attribute \"%s.%s\" (%s)"
+                            .formatted(
+                                    classLabel, cimAttribute.getLabel(), cimAttribute.getUuid()));
         }
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "Created attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
     }
 
@@ -93,35 +87,33 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var cimAttribute = attributeMapper.toCIMObject(attributeDTO);
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
         var graphUri = graphIdentifier.graphUri();
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.WRITE);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var graph = ctx.getRdfGraph();
             var update =
                     CIMUpdates.replaceAttribute(
                             graph, prefixMapping, graphUri, cimAttribute, newValuesAsBlankNode);
             UpdateExecutionFactory.create(
                             update, SessionDataStore.wrapGraphInDataset(graph, graphUri))
                     .execute();
-            graph.commit();
-        } finally {
-            graph.end();
+            var classLabel = findClassLabel(graph, attributeDTO.getDomain());
+            ctx.commit(
+                    "Replaced attribute \"%s.%s\" (%s)"
+                            .formatted(
+                                    classLabel,
+                                    cimAttribute.getLabel().getValue(),
+                                    cimAttribute.getUuid()));
         }
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "Replaced attribute " + cimAttribute.getUuid(), graph.getLastDelta()));
         return cimAttribute.getUuid();
     }
 
     @Override
     public void replaceAllAttributes(
-            GraphIdentifier graphIdentifier, String classUUID, List<AttributeDTO> attributeList) {
+            GraphIdentifier graphIdentifier, UUID classUUID, List<AttributeDTO> attributeList) {
         var attributeCIMObjects = attributeMapper.toCIMObjectList(attributeList);
         var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
         var graphUri = graphIdentifier.graphUri();
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.WRITE);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var graph = ctx.getRdfGraph();
             var update =
                     CIMUpdates.replaceAttributes(
                             graph,
@@ -133,14 +125,16 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
             UpdateExecutionFactory.create(
                             update, SessionDataStore.wrapGraphInDataset(graph, graphUri))
                     .execute();
-            graph.commit();
-        } finally {
-            graph.end();
+            var classResource = CIMResourceUtils.findResourceForUuid(graph, classUUID);
+            var classLabel = CIMResourceUtils.findLabelForResource(classResource);
+            ctx.commit(
+                    "Replaced all attributes for class \"%s\" (%s)"
+                            .formatted(classLabel, classUUID));
         }
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "All attributes for class " + classUUID + " replaced",
-                        graph.getLastDelta()));
+    }
+
+    private String findClassLabel(Graph graph, String domainUri) {
+        var classResource = CIMResourceUtils.findResourceForUri(graph, domainUri);
+        return CIMResourceUtils.findLabelForResource(classResource);
     }
 }

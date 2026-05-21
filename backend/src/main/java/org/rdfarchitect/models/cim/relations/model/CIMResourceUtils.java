@@ -19,7 +19,10 @@ package org.rdfarchitect.models.cim.relations.model;
 
 import lombok.experimental.UtilityClass;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.util.UUID;
@@ -43,7 +46,7 @@ public class CIMResourceUtils {
     /**
      * Finds the uuid of a resource.
      *
-     * @param resource The resource to finde the uuid for.
+     * @param resource The resource to find the uuid for.
      * @return The uuid of the resource.
      */
     public UUID findUuidForResource(Resource resource) {
@@ -51,5 +54,34 @@ public class CIMResourceUtils {
             throw new IllegalStateException("Resource " + resource + " does not have a UUID.");
         }
         return UUID.fromString(resource.getProperty(RDFA.uuid).getString());
+    }
+
+    public Resource findResourceForUuid(Graph graph, UUID uuid) {
+        var model = ModelFactory.createModelForGraph(graph);
+        var results = model.listSubjectsWithProperty(RDFA.uuid, uuid.toString()).toList();
+        if (results.isEmpty()) {
+            throw new IllegalStateException("No resource with UUID " + uuid + " found in graph.");
+        }
+        if (results.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple resources with UUID " + uuid + " found in graph.");
+        }
+        return results.getFirst();
+    }
+
+    public Resource findResourceForUri(Graph graph, String uri) {
+        var model = ModelFactory.createModelForGraph(graph);
+        var resource = model.getResource(uri);
+        if (!resource.listProperties().hasNext()) {
+            throw new IllegalStateException("No resource with URI " + uri + " found in graph.");
+        }
+        return resource;
+    }
+
+    public String findLabelForResource(Resource resource) {
+        if (!resource.hasProperty(RDFS.label)) {
+            throw new IllegalStateException("Resource " + resource + " does not have a label.");
+        }
+        return resource.getProperty(RDFS.label).getString();
     }
 }

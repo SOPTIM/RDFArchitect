@@ -19,7 +19,7 @@ package org.rdfarchitect.services.select;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
@@ -31,8 +31,6 @@ import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
 import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
 import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -53,11 +51,8 @@ public class QueryClassService
     @Override
     public ClassUMLAdaptedDTO getClassInformation(
             GraphIdentifier graphIdentifier, String classUUID) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var graph = ctx.getRdfGraph();
             var cimClass =
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
                             graph,
@@ -68,20 +63,13 @@ public class QueryClassService
                 return null;
             }
             return umlAdaptedClassMapper.toDTO(cimClass);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
         }
     }
 
     @Override
     public List<ClassDTO> listSuperClasses(GraphIdentifier graphIdentifier, UUID classUUID) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var graph = ctx.getRdfGraph();
             var superClassList = new ArrayList<CIMClass>();
             var cimObjectFetcher =
                     new CIMObjectFetcher(
@@ -100,25 +88,14 @@ public class QueryClassService
                 }
             }
             return mapper.toDTOList(superClassList);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
         }
     }
 
     @Override
     public ClassRelationsDTO getClassesReferencingThisClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
-        GraphRewindable graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            return CIMClassRelationFinder.getAllClassRelations(graph, classUUID);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return CIMClassRelationFinder.getAllClassRelations(ctx.getRdfGraph(), classUUID);
         }
     }
 }

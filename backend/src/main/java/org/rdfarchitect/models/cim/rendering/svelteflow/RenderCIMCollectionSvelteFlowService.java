@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.models.cim.rendering.svelteflow;
 
-import lombok.RequiredArgsConstructor;
-
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -28,7 +26,6 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
@@ -40,7 +37,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.models.cim.rendering.RenderingUtils;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
-import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -53,52 +49,42 @@ import java.util.UUID;
  * Converts a {@link CIMCollection} to a DTO Record that contains two JSON arrays with nodes and
  * edges used to render a UML diagram using the JavaScript library SvelteFlow.
  */
-@RequiredArgsConstructor
 public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollectionUseCase {
+
+    private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
+
+    public RenderCIMCollectionSvelteFlowService(
+            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase) {
+        this.fetchRenderingLayoutDataUseCase = fetchRenderingLayoutDataUseCase;
+    }
 
     // CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
     private static final String CLASS_NODE_TYPE = "class";
     private static final String INHERITANCE_EDGE_TYPE = "inheritance";
     private static final String ASSOCIATION_EDGE_TYPE = "association";
-    private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
-    private final EnsureDiagramLayoutForCIMCollectionUseCase
-            ensureDiagramLayoutForCIMCollectionUseCase;
 
     @Override
-    public RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
+    public RenderingDataDTO renderUML(CIMCollection cimCollection, RenderingLayoutData layoutData) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return createEmptyDiagram();
         }
 
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
-                graphIdentifier, diagramId, cimCollection);
-        var renderingLayoutData =
-                fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
-                        graphIdentifier, diagramId);
-        return renderUML(cimCollection, renderingLayoutData);
-    }
-
-    @Override
-    public RenderingDataDTO renderGlobalUML(
-            CIMCollection cimCollection, String datasetName, UUID diagramId) {
-        ensureDiagramLayoutForCIMCollectionUseCase.ensureDiagramLayoutExists(
-                datasetName, diagramId, cimCollection);
-        var renderingLayoutData =
-                fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
-                        datasetName, diagramId);
-        return renderUML(cimCollection, renderingLayoutData);
-    }
-
-    private RenderingDataDTO renderUML(
-            CIMCollection cimCollection, RenderingLayoutData renderingLayoutData) {
         var uriToUUIDMap = RenderingUtils.createUUIDUriPairs(cimCollection);
-        var renderContext = new RenderContext(cimCollection, uriToUUIDMap, renderingLayoutData);
+        var renderContext = new RenderContext(cimCollection, uriToUUIDMap, layoutData);
 
         var nodes = assembleNodeDTOList(renderContext);
         var edges = assembleEdgeDTOList(renderContext);
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
+    }
+
+    @Override
+    public RenderingDataDTO renderGlobalUML(
+            CIMCollection cimCollection, String datasetName, UUID diagramId) {
+        var renderingLayoutData =
+                fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
+                        datasetName, diagramId);
+        return renderUML(cimCollection, renderingLayoutData);
     }
 
     private SvelteFlowDTO createEmptyDiagram() {
@@ -125,7 +111,13 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * @return NodeDTO containing class data
      */
     private NodeDTO assembleNodeDTO(RenderContext renderContext, CIMClass cimClass) {
-        var dop = renderContext.layoutingData().getClassLayoutingData().get(cimClass.getUuid());
+        var dop =
+                renderContext.layoutingData() != null
+                        ? renderContext
+                                .layoutingData()
+                                .getClassLayoutingData()
+                                .get(cimClass.getUuid())
+                        : null;
 
         var nodeDTO = NodeDTO.builder().id(cimClass.getUuid()).type(CLASS_NODE_TYPE);
 
@@ -134,11 +126,13 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var enumEntries = getClassEnumEntries(renderContext, cimClass);
 
         var positionDTO =
-                PositionDTO.builder()
-                        .x(dop.getPosition().getX())
-                        .y(dop.getPosition().getY())
-                        .z(dop.getPosition().getZ())
-                        .build();
+                dop != null
+                        ? PositionDTO.builder()
+                                .x(dop.getPosition().getX())
+                                .y(dop.getPosition().getY())
+                                .z(dop.getPosition().getZ())
+                                .build()
+                        : PositionDTO.builder().x(0).y(0).z(0).build();
         nodeDTO.position(positionDTO);
 
         var nodeDataDTO =

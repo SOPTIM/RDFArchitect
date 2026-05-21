@@ -44,6 +44,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/associations")
@@ -102,7 +103,7 @@ public class ClassAllAssociationsRESTController {
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         updateAssociationsUseCase.replaceAllAssociations(
-                graphIdentifier, classUUID, associationPairList);
+                graphIdentifier, UUID.fromString(classUUID), associationPairList);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/associations\" to \"{}\".",

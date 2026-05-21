@@ -30,6 +30,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 
 import java.util.UUID;
 
@@ -48,7 +49,7 @@ class GraphRewindableWithUUIDsTest {
                 NodeFactory.createURI("http://example.com/testSubject"),
                 RDF.type.asNode(),
                 RDFS.Class.asNode());
-        GraphRewindableWithUUIDs.enhanceWithUUIDs(graph);
+        GraphUtils.enhanceWithUUIDs(graph);
 
         assertThat(graph.size()).isEqualTo(2);
         assertThat(
@@ -66,7 +67,7 @@ class GraphRewindableWithUUIDsTest {
         graph.add(subject, RDF.type.asNode(), RDFS.Class.asNode());
         graph.add(subject, RDFA.uuid.asNode(), uuidNode);
 
-        GraphRewindableWithUUIDs.enhanceWithUUIDs(graph);
+        GraphUtils.enhanceWithUUIDs(graph);
 
         assertThat(graph.size()).isEqualTo(2);
         assertThat(graph.contains(subject, RDFA.uuid.asNode(), uuidNode)).isTrue();

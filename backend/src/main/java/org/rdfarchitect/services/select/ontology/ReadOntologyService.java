@@ -19,7 +19,7 @@ package org.rdfarchitect.services.select.ontology;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.api.dto.ontology.OntologyField;
@@ -27,7 +27,6 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
 import org.rdfarchitect.models.cim.ontology.OntologyFacade;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,19 +40,10 @@ public class ReadOntologyService implements ReadOntologyUseCase, GetKnownOntolog
     // READ
     @Override
     public OntologyDTO getCurrentOntology(GraphIdentifier graphIdentifier) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            var model = ModelFactory.createModelForGraph(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
-
-            var ontology = new OntologyFacade(model);
-            return ontology.getOntology();
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+            return new OntologyFacade(model).getOntology();
         }
     }
 

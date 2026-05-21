@@ -36,9 +36,8 @@ import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource.AffectedResourceReason;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
+import org.rdfarchitect.database.inmemory.GraphWithContextTransactional;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -82,8 +81,7 @@ class FindDeleteDependenciesServiceTest {
         RDFDataMgr.read(graph, in, Lang.TTL);
         in.close();
 
-        var wrappedGraph = new GraphRewindableWithUUIDs(graph, 5, 5);
-        var wrappedContext = new GraphWithContext(wrappedGraph);
+        var wrappedContext = new GraphWithContextTransactional(graph);
 
         when(databasePort.getGraphWithContext(any(GraphIdentifier.class)))
                 .thenReturn(wrappedContext);

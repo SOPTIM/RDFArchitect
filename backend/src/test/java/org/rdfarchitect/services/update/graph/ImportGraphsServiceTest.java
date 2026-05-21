@@ -19,7 +19,6 @@ package org.rdfarchitect.services.update.graph;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -31,10 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.mock.web.MockMultipartFile;
 
@@ -44,17 +40,15 @@ import java.util.List;
 class ImportGraphsServiceTest {
 
     private ImportGraphsUseCase importGraphsUseCase;
-    private ChangeLogUseCase changeLogUseCaseMock;
+    private CreateDiagramLayoutUseCase createDiagramLayoutUseCaseMock;
     private DatabasePort databasePortMock;
 
     @BeforeEach
     void setUp() {
-        changeLogUseCaseMock = mock(ChangeLogUseCase.class);
-        var createDiagramLayoutUseCaseMock = mock(CreateDiagramLayoutUseCase.class);
+        createDiagramLayoutUseCaseMock = mock(CreateDiagramLayoutUseCase.class);
         databasePortMock = mock(DatabasePort.class);
         importGraphsUseCase =
-                new ImportGraphsService(
-                        changeLogUseCaseMock, createDiagramLayoutUseCaseMock, databasePortMock);
+                new ImportGraphsService(createDiagramLayoutUseCaseMock, databasePortMock);
     }
 
     @Test
@@ -79,12 +73,6 @@ class ImportGraphsServiceTest {
         when(databasePortMock.listGraphUris(datasetName))
                 .thenThrow(new RuntimeException("dataset does not exist"));
 
-        var graphWithContextMock = mock(GraphWithContext.class);
-        when(databasePortMock.getGraphWithContext(any(GraphIdentifier.class)))
-                .thenReturn(graphWithContextMock);
-        var graphMock = mock(GraphRewindableWithUUIDs.class, RETURNS_DEEP_STUBS);
-        when(graphWithContextMock.getRdfGraph()).thenReturn(graphMock);
-
         var result = importGraphsUseCase.importGraphs(datasetName, List.of(file1, file2), null);
 
         assertThat(result.failedFileNames()).isEmpty();
@@ -99,6 +87,6 @@ class ImportGraphsServiceTest {
                 .extracting(GraphIdentifier::graphUri)
                 .containsExactly(RDFA.GRAPH_URI + "graph", RDFA.GRAPH_URI + "graph_1");
 
-        verify(changeLogUseCaseMock, times(2)).recordChange(any(GraphIdentifier.class), any());
+        verify(createDiagramLayoutUseCaseMock, times(2)).createDiagramLayout(any());
     }
 }

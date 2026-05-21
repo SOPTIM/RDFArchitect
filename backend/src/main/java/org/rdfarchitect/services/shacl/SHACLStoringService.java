@@ -20,7 +20,7 @@ package org.rdfarchitect.services.shacl;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
@@ -37,7 +37,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.merge.ModelResourceExclusiveMerge;
 import org.rdfarchitect.shacl.PropertyShapeToClassAssigner;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
@@ -55,7 +55,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -82,31 +81,49 @@ public class SHACLStoringService
 
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
-        var customSHACL = ModelFactory.createModelForGraph(shacl);
-        databasePort.getGraphWithContext(graphIdentifier).setCustomSHACL(customSHACL);
+        var normalized = GraphUtils.normalizeBlankNodes(shacl);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var storedGraph = ctx.getCustomSHACL();
+
+            var toDelete = storedGraph.find().filterKeep(t -> !normalized.contains(t)).toList();
+            var toAdd = normalized.find().filterKeep(t -> !storedGraph.contains(t)).toList();
+
+            if (toDelete.isEmpty() && toAdd.isEmpty()) {
+                return;
+            }
+
+            toDelete.forEach(storedGraph::delete);
+            toAdd.forEach(storedGraph::add);
+
+            var storedModel = ModelFactory.createModelForGraph(storedGraph);
+            storedModel.clearNsPrefixMap();
+            storedModel.setNsPrefixes(ModelFactory.createModelForGraph(normalized));
+
+            ctx.commit("Replace custom SHACL");
+        }
     }
 
     @Override
     public ByteArrayOutputStream exportCustomSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        try (var outStream = new ByteArrayOutputStream()) {
-            customSHACL.write(outStream, format.getLang().getName());
-            return outStream;
-        } catch (Exception e) {
-            logger.warn("Error while writing SHACL graph to output stream", e);
-            return new ByteArrayOutputStream();
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            try (var outStream = new ByteArrayOutputStream()) {
+                customSHACL.write(outStream, format.getLang().getName());
+                return outStream;
+            } catch (Exception e) {
+                logger.warn("Error while writing SHACL graph to output stream", e);
+                return new ByteArrayOutputStream();
+            }
         }
     }
 
     @Override
     public ByteArrayOutputStream exportGeneratedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
-        GraphRewindable ontologyGraph = null;
-        try (var outStream = new ByteArrayOutputStream()) {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ);
+                var outStream = new ByteArrayOutputStream()) {
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var generatedShacl =
@@ -116,10 +133,6 @@ public class SHACLStoringService
             return outStream;
         } catch (IOException e) {
             throw new DataAccessException("Error while writing SHACL graph to output stream", e);
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 
@@ -139,13 +152,9 @@ public class SHACLStoringService
     @Override
     public ByteArrayOutputStream exportCombinedSHACLGraph(
             GraphIdentifier graphIdentifier, RDFFormat format) {
-        var graphContext = databasePort.getGraphWithContext(graphIdentifier);
-        var customSHACL = graphContext.getCustomSHACL();
-        GraphRewindable ontologyGraph = null;
-        try {
-            ontologyGraph = graphContext.getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var generatedShacl =
@@ -159,28 +168,23 @@ public class SHACLStoringService
                 throw new DataAccessException(
                         "Error while writing combined shacl graph to output stream", e);
             }
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 
     @Override
     public ByteArrayOutputStream exportCustomSHACLNamespaces(
             GraphIdentifier graphIdentifier, RDFFormat format) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        if (customSHACL == null) {
-            return new ByteArrayOutputStream();
-        }
-        try (var outStream = new ByteArrayOutputStream()) {
-            var prefixModel = ModelFactory.createDefaultModel();
-            prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());
-            prefixModel.write(outStream, format.getLang().getName());
-            return outStream;
-        } catch (Exception e) {
-            logger.warn("Error while writing SHACL prefixes to output stream", e);
-            return new ByteArrayOutputStream();
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            try (var outStream = new ByteArrayOutputStream()) {
+                var prefixModel = ModelFactory.createDefaultModel();
+                prefixModel.setNsPrefixes(customSHACL.getNsPrefixMap());
+                prefixModel.write(outStream, format.getLang().getName());
+                return outStream;
+            } catch (Exception e) {
+                logger.warn("Error while writing SHACL prefixes to output stream", e);
+                return new ByteArrayOutputStream();
+            }
         }
     }
 
@@ -202,29 +206,19 @@ public class SHACLStoringService
     @Override
     public CustomAndGeneratedTuple<SHACLToClassRelations> getSHACLToClassRelations(
             GraphIdentifier graphIdentifier, UUID classUUID) {
-        GraphRewindable ontologyGraph = null;
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        try {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(
                     databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             var generatedSHACL =
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(classUUID);
             var shaclResult = new CustomAndGeneratedTuple<SHACLToClassRelations>();
-            if (customSHACL != null) {
-                shaclResult.setCustom(
-                        getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
-            }
+            shaclResult.setCustom(getSHACLToClassRelations(ontologyModel, customSHACL, classUUID));
             shaclResult.setGenerated(
                     getSHACLToClassRelations(ontologyModel, generatedSHACL, classUUID));
             return shaclResult;
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 
@@ -271,12 +265,9 @@ public class SHACLStoringService
 
     private CustomAndGeneratedTuple<List<PropertyShape>> getSHACLShapesByProperty(
             GraphIdentifier graphIdentifier, UUID propertyUUID) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        GraphRewindable ontologyGraph = null;
-        try {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var property =
                     ontologyModel
                             .listSubjectsWithProperty(
@@ -291,34 +282,24 @@ public class SHACLStoringService
                     new SHACLFromCIMGenerator(ontologyModel, SHACL_NAMESPACE, true)
                             .generateForClassOnly(UUID.fromString(classUUID));
 
-            List<PropertyShape> customPropertyShapes = Collections.emptyList();
-            if (customSHACL != null) {
-                customPropertyShapes =
-                        new SHACLShapesFetcher(customSHACL)
-                                .getPropertyShapesOfProperty(ontologyModel, property.getURI());
-            }
+            List<PropertyShape> customPropertyShapes =
+                    new SHACLShapesFetcher(customSHACL)
+                            .getPropertyShapesOfProperty(ontologyModel, property.getURI());
             var generatedPropertyShapes =
                     new SHACLShapesFetcher(generatedShacl)
                             .getPropertyShapesOfProperty(ontologyModel, property.getURI());
             return new CustomAndGeneratedTuple<List<PropertyShape>>()
                     .setCustom(customPropertyShapes)
                     .setGenerated(generatedPropertyShapes);
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 
     @Override
     public CustomAndGeneratedTuple<List<NodeShape>> getNodeShapesForClass(
             GraphIdentifier graphIdentifier, UUID classUUID) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        GraphRewindable ontologyGraph = null;
-        try {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var classUri =
                     ontologyModel
                             .listSubjectsWithProperty(
@@ -335,52 +316,46 @@ public class SHACLStoringService
             return new CustomAndGeneratedTuple<List<NodeShape>>()
                     .setCustom(customNodeShapes)
                     .setGenerated(generatedNodeShapes);
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 
     @Override
     public List<PropertyShapesWrapper> getPropertyShapes(
             GraphIdentifier graphIdentifier, UUID classUUID) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        GraphRewindable ontologyGraph = null;
-        try {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
             var shaclToClassAssigner =
                     new PropertyShapeToClassAssigner(
-                            customSHACL, ModelFactory.createModelForGraph(ontologyGraph));
+                            customSHACL, ModelFactory.createModelForGraph(ctx.getRdfGraph()));
             return shaclToClassAssigner.getPropertyShapes(classUUID);
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 
     @Override
     public void deleteSHACLShape(GraphIdentifier graphIdentifier, String shaclShapeURI) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        var deleteModel = ModelFactory.createDefaultModel();
-        copySHACLShapeToNewModel(
-                customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
-        customSHACL.remove(deleteModel);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var deleteModel = ModelFactory.createDefaultModel();
+            copySHACLShapeToNewModel(
+                    customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
+            customSHACL.remove(deleteModel);
+            ctx.commit("Delete SHACL shape");
+        }
     }
 
     @Override
     public void replaceSHACLShape(
             GraphIdentifier graphIdentifier, String shaclShapeURI, String shaclToInsert) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        Model insertModel = parseTriplesToModel(shaclToInsert);
-        Model deleteModel = ModelFactory.createDefaultModel();
-        copySHACLShapeToNewModel(
-                customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
-
-        customSHACL.remove(deleteModel);
-        customSHACL.add(insertModel);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            Model insertModel = parseTriplesToModel(shaclToInsert);
+            Model deleteModel = ModelFactory.createDefaultModel();
+            copySHACLShapeToNewModel(
+                    customSHACL, deleteModel, ResourceFactory.createResource(shaclShapeURI));
+            customSHACL.remove(deleteModel);
+            customSHACL.add(insertModel);
+            ctx.commit("Replace SHACL shape");
+        }
     }
 
     private Model parseTriplesToModel(String triples) {
@@ -396,13 +371,9 @@ public class SHACLStoringService
     @Override
     public void updateClassSHACL(
             GraphIdentifier graphIdentifier, UUID classUUID, String ttlShaclString) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
-        GraphRewindable ontologyGraph = null;
-        try {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
-
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var insertModel = parseTriplesToModel(ttlShaclString);
             var deleteModel = getClassShaclModel(ontologyModel, customSHACL, classUUID);
 
@@ -410,31 +381,32 @@ public class SHACLStoringService
             customSHACL.clearNsPrefixMap();
             customSHACL.setNsPrefixes(insertModel);
             customSHACL.add(insertModel);
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
+            ctx.commit("Update class SHACL");
         }
     }
 
     @Override
     public void updatePropertyShacl(
             GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString) {
-        var customSHACL = databasePort.getGraphWithContext(graphIdentifier).getCustomSHACL();
         var insertModel = parseTriplesToModel(ttlShaclString);
+        // getSHACLShapesByProperty manages its own READ transaction; call it before opening WRITE
         var propertyShapesOfProperty = getSHACLShapesByProperty(graphIdentifier, propertyUUID);
-        var deleteModel = ModelFactory.createDefaultModel();
-        for (var propertyShape : propertyShapesOfProperty.getCustom()) {
-            copySHACLShapeToNewModel(
-                    customSHACL,
-                    deleteModel,
-                    ResourceFactory.createResource(propertyShape.getId()));
-        }
 
-        customSHACL.remove(deleteModel);
-        customSHACL.clearNsPrefixMap();
-        customSHACL.setNsPrefixes(insertModel);
-        customSHACL.add(insertModel);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var deleteModel = ModelFactory.createDefaultModel();
+            for (var propertyShape : propertyShapesOfProperty.getCustom()) {
+                copySHACLShapeToNewModel(
+                        customSHACL,
+                        deleteModel,
+                        ResourceFactory.createResource(propertyShape.getId()));
+            }
+            customSHACL.remove(deleteModel);
+            customSHACL.clearNsPrefixMap();
+            customSHACL.setNsPrefixes(insertModel);
+            customSHACL.add(insertModel);
+            ctx.commit("Update property SHACL");
+        }
     }
 
     /**

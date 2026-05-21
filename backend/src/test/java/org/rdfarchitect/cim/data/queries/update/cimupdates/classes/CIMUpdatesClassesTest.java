@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
@@ -112,42 +112,40 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                var graph = ctx.getRdfGraph();
                 // isFalse
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(EXISTING_CLASS_URI),
                                         Node.ANY,
                                         Node.ANY))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(SUB_CLASS_URI),
                                         RDFS.subClassOf.asNode(),
                                         NodeFactory.createURI(EXISTING_CLASS_URI)))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         RDF.type.asNode(),
                                         RDFS.Class.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         RDFS.label.asNode(),
                                         NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(SUB_CLASS_URI),
                                         RDFS.subClassOf.asNode(),
                                         NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -167,36 +165,36 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                var graph = ctx.getRdfGraph();
                 // isFalse
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(EXISTING_CLASS_URI),
                                         Node.ANY,
                                         Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         RDF.type.asNode(),
                                         RDFS.Class.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         RDFS.label.asNode(),
                                         NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         RDFS.subClassOf.asNode(),
                                         NodeFactory.createURI(SUPER_CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         RDFS.comment.asNode(),
                                         new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
@@ -204,19 +202,17 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                                 .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         CIMS.belongsToCategory.asNode(),
                                         NodeFactory.createURI(PACKAGE_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
+                                graph.contains(
                                         NodeFactory.createURI(CLASS_URI),
                                         CIMS.stereotype.asNode(),
                                         CIMStereotypes.concrete.asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -238,23 +234,22 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                     classRequired));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        RDF.type.asNode(),
-                                        RDFS.Class.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDF.type.asNode(),
+                                                RDFS.Class.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -272,49 +267,52 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                     classOptional));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        RDF.type.asNode(),
-                                        RDFS.Class.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDF.type.asNode(),
+                                                RDFS.Class.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(CLASS_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        RDFS.subClassOf.asNode(),
-                                        NodeFactory.createURI(SUPER_CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDFS.subClassOf.asNode(),
+                                                NodeFactory.createURI(SUPER_CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        CIMS.belongsToCategory.asNode(),
-                                        NodeFactory.createURI(PACKAGE_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                CIMS.belongsToCategory.asNode(),
+                                                NodeFactory.createURI(PACKAGE_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(CLASS_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.concrete.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(CLASS_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.concrete.asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -342,16 +340,14 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("package with the same IRI");
 
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        RDFS.Class.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                RDFS.Class.asNode()))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -369,22 +365,18 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             executeWriteTransaction(
                     graph ->
                             CIMUpdates.deleteClass(
-                                    graph,
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    MY_UUID.toString()));
+                                    graph, databasePort.getPrefixMapping(DATASET_NAME), MY_UUID));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -398,22 +390,18 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             executeWriteTransaction(
                     graph ->
                             CIMUpdates.deleteClass(
-                                    graph,
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    MY_UUID.toString()));
+                                    graph, databasePort.getPrefixMapping(DATASET_NAME), MY_UUID));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -427,28 +415,25 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             executeWriteTransaction(
                     graph ->
                             CIMUpdates.deleteClass(
-                                    graph,
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    MY_UUID.toString()));
+                                    graph, databasePort.getPrefixMapping(DATASET_NAME), MY_UUID));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ENUM_ENTRY_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ENUM_ENTRY_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -466,28 +451,24 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             executeWriteTransaction(
                     graph ->
                             CIMUpdates.deleteClass(
-                                    graph,
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    MY_UUID.toString()));
+                                    graph, databasePort.getPrefixMapping(DATASET_NAME), MY_UUID));
 
             // Assert
-            var model = ModelFactory.createModelForGraph(testGraph);
-            var classResource = model.createResource(EXISTING_CLASS_URI);
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+                var classResource = model.createResource(EXISTING_CLASS_URI);
                 // only the uuid triple remains for the deleted class
                 assertThat(model.listStatements(classResource, null, (RDFNode) null).toList())
                         .hasSize(1)
                         .allMatch(stmt -> stmt.getPredicate().equals(RDFA.uuid));
                 // subClassOf reference is kept
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(SUB_CLASS_URI),
-                                        RDFS.subClassOf.asNode(),
-                                        NodeFactory.createURI(EXISTING_CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(SUB_CLASS_URI),
+                                                RDFS.subClassOf.asNode(),
+                                                NodeFactory.createURI(EXISTING_CLASS_URI)))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -503,23 +484,19 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.deleteBase(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    MY_UUID.toString())
+                                    databasePort.getPrefixMapping(DATASET_NAME), GRAPH_URI, MY_UUID)
                             .build());
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -532,16 +509,13 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
             // Act
             executeUpdateOnTestGraph(
                     CIMUpdates.deleteBase(
-                                    databasePort.getPrefixMapping(DATASET_NAME),
-                                    GRAPH_URI,
-                                    MY_UUID.toString())
+                                    databasePort.getPrefixMapping(DATASET_NAME), GRAPH_URI, MY_UUID)
                             .build());
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
-                var model = ModelFactory.createModelForGraph(testGraph);
+                var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
                 var classResource = model.createResource(EXISTING_CLASS_URI);
 
                 assertThat(
@@ -551,19 +525,20 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_CLASS_URI),
-                                        RDF.type.asNode(),
-                                        RDFS.Class.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_CLASS_URI),
+                                                RDF.type.asNode(),
+                                                RDFS.Class.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_CLASS_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(OTHER_CLASS_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_CLASS_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        OTHER_CLASS_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }

@@ -26,8 +26,7 @@ import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
-import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -36,32 +35,22 @@ public class DatasetSessionListener implements HttpSessionListener {
 
     private final DatabasePort databasePort;
     private final DatabaseConnection databaseConnection;
-    private final ChangeLogUseCase changeLogUseCase;
+    private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
 
     @Override
     public void sessionCreated(HttpSessionEvent event) {
         SessionContext.setSessionId(event.getSession().getId());
         databasePort.fetchFromDatabase(databaseConnection);
-        var datasets = databasePort.listDatasets();
-        for (var dataset : datasets) {
-            var graphUris = databasePort.listGraphUris(dataset);
-            for (var graphUri : graphUris) {
-                var graphIdentifier = new GraphIdentifier(dataset, graphUri);
-                changeLogUseCase.recordChange(
-                        graphIdentifier,
-                        new ChangeLogEntry(
-                                "Imported graph into dataset '"
-                                        + dataset
-                                        + "' with graph URI '"
-                                        + graphUri
-                                        + "'.",
-                                databasePort
-                                        .getGraphWithContext(graphIdentifier)
-                                        .getRdfGraph()
-                                        .getLastDelta()));
+        createDiagramLayoutsForAllGraphs();
+        SessionContext.clear();
+    }
+
+    private void createDiagramLayoutsForAllGraphs() {
+        for (var datasetName : databasePort.listDatasets()) {
+            for (var graphUri : databasePort.listGraphUris(datasetName)) {
+                createDiagramLayoutUseCase.createDiagramLayout(
+                        new GraphIdentifier(datasetName, graphUri));
             }
         }
-
-        SessionContext.clear();
     }
 }

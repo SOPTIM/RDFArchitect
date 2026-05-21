@@ -17,16 +17,11 @@
 
 package org.rdfarchitect.database.inmemory;
 
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-import org.apache.jena.shared.PrefixMapping;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.GraphIdentifier;
-
-import java.util.List;
 
 class InMemoryDatabaseAdapterTest {
 
@@ -36,40 +31,24 @@ class InMemoryDatabaseAdapterTest {
     @BeforeEach
     void setUp() {
         database = mock(InMemoryDatabase.class);
-        adapter = new InMemoryDatabaseAdapter(database, new SchemaConfig());
+        adapter = new InMemoryDatabaseAdapter(database);
     }
 
     @Test
-    void createEmptyGraph_newDataset_addsDefaultPrefixMapping() {
+    void createEmptyGraph_newDataset_delegatesToDatabase() {
         var graphIdentifier = new GraphIdentifier("new-dataset", "http://example.com/graph");
-        when(database.listDatasets()).thenReturn(List.of("existing-dataset"));
 
         adapter.createEmptyGraph(graphIdentifier);
 
-        verify(database).create(eq(graphIdentifier), any());
-        verify(database).enableEditing("new-dataset");
-        verify(database)
-                .setPrefixMapping(
-                        eq("new-dataset"),
-                        argThat(
-                                prefixMapping ->
-                                        prefixMapping
-                                                .getNsPrefixMap()
-                                                .entrySet()
-                                                .containsAll(
-                                                        PrefixMapping.Standard.getNsPrefixMap()
-                                                                .entrySet())));
+        verify(database).createEmptyGraph(graphIdentifier);
     }
 
     @Test
-    void createEmptyGraph_existingDataset_doesNotAddStandardPrefixMapping() {
+    void createEmptyGraph_existingDataset_delegatesToDatabase() {
         var graphIdentifier = new GraphIdentifier("existing-dataset", "http://example.com/graph");
-        when(database.listDatasets()).thenReturn(List.of("existing-dataset"));
 
         adapter.createEmptyGraph(graphIdentifier);
 
-        verify(database).create(eq(graphIdentifier), any());
-        verify(database, never()).enableEditing(anyString());
-        verify(database, never()).setPrefixMapping(anyString(), any(PrefixMapping.class));
+        verify(database).createEmptyGraph(graphIdentifier);
     }
 }

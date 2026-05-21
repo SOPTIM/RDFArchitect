@@ -20,9 +20,8 @@ package org.rdfarchitect.database.snapshots;
 import static org.rdfarchitect.database.snapshots.SnapshotUtils.constructSnapshotName;
 import static org.rdfarchitect.database.snapshots.SnapshotUtils.findSnapshotName;
 import static org.rdfarchitect.database.snapshots.SnapshotUtils.generateBase64Token;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdfconnection.RDFConnection;
 import org.apache.jena.system.Txn;
@@ -36,7 +35,6 @@ import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.FusekiServerException;
 import org.rdfarchitect.exception.database.SnapshotException;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 public class FusekiSnapshotAdapter implements SnapshotPort {
 
@@ -102,25 +100,17 @@ public class FusekiSnapshotAdapter implements SnapshotPort {
     }
 
     private void transferGraph(RDFConnection conn, GraphIdentifier graphIdentifier) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-
-            var copiedGraph = GraphUtils.deepCopy(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             copiedGraph
                     .getPrefixMapping()
                     .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
-            removeUUIDs(copiedGraph);
+            GraphUtils.removeUUIDs(copiedGraph);
 
             conn.put(graphIdentifier.graphUri(), ModelFactory.createModelForGraph(copiedGraph));
         } catch (Exception e) {
             throw new FusekiServerException(e.getMessage());
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
         }
     }
 }

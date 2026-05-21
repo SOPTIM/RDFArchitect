@@ -19,9 +19,9 @@ package org.rdfarchitect.models.cim.rendering.mermaid;
 
 import lombok.Getter;
 
+import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.mermaid.MermaidDTO;
-import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -46,8 +46,7 @@ import java.util.UUID;
 public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUseCase {
 
     @Override
-    public RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId) {
+    public RenderingDataDTO renderUML(CIMCollection cimCollection, RenderingLayoutData layoutData) {
         if (!RenderingUtils.hasRenderableClasses(cimCollection)) {
             return null;
         }
@@ -79,7 +78,7 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     public RenderingDataDTO renderGlobalUML(
             CIMCollection cimCollection, String datasetName, UUID diagramId) {
         throw new UnsupportedOperationException(
-                "Rendering dataset Diagrams is not supported for the mermaid renderer.");
+                "Rendering dataset diagrams is not supported for the mermaid renderer.");
     }
 
     private static final String ON_CLICK_CALLBACK_FUNCTION_NAME = "getClassInformation";

@@ -19,7 +19,7 @@ package org.rdfarchitect.services.compare;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
@@ -40,22 +40,15 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
     @Override
     public List<TriplePackageChange> compareSchemas(
             GraphIdentifier graphIdentifier, MultipartFile file) {
-        var updatedGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
         var originalGraph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(file)
                         .setGraphName(GRAPH_URI)
                         .build()
                         .graph();
-        List<TriplePackageChange> result;
-
-        try {
-            updatedGraph.begin(TxnType.READ);
-            result = TripleChangeAnalyser.compareGraphs(originalGraph, updatedGraph);
-        } finally {
-            updatedGraph.end();
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return TripleChangeAnalyser.compareGraphs(originalGraph, ctx.getRdfGraph());
         }
-        return result;
     }
 
     @Override
@@ -79,24 +72,19 @@ public class SchemaComparisonService implements SchemaComparisonUseCase {
     @Override
     public List<TriplePackageChange> compareSchemas(
             GraphIdentifier originalGraphIdentifier, GraphIdentifier updatedGraphIdentifier) {
-        var originalGraph = databasePort.getGraphWithContext(originalGraphIdentifier).getRdfGraph();
-        var updatedGraph = databasePort.getGraphWithContext(updatedGraphIdentifier).getRdfGraph();
-        List<TriplePackageChange> result;
-
         if (originalGraphIdentifier.equals(updatedGraphIdentifier)) {
             return new ArrayList<>();
         }
-        try {
-            originalGraph.begin(TxnType.READ);
-            try {
-                updatedGraph.begin(TxnType.READ);
-                result = TripleChangeAnalyser.compareGraphs(originalGraph, updatedGraph);
-            } finally {
-                updatedGraph.end();
-            }
-        } finally {
-            originalGraph.end();
+        try (var originalCtx =
+                        databasePort
+                                .getGraphWithContext(originalGraphIdentifier)
+                                .begin(ReadWrite.READ);
+                var updatedCtx =
+                        databasePort
+                                .getGraphWithContext(updatedGraphIdentifier)
+                                .begin(ReadWrite.READ)) {
+            return TripleChangeAnalyser.compareGraphs(
+                    originalCtx.getRdfGraph(), updatedCtx.getRdfGraph());
         }
-        return result;
     }
 }

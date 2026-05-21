@@ -26,10 +26,8 @@ import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +63,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
     private static final int MAX_ENTRIES = 1000;
     private static final String FALL_BACK_NAME = "graph";
 
-    private final ChangeLogUseCase changeLogUseCase;
     private final CreateDiagramLayoutUseCase createDiagramLayoutUseCase;
     private final DatabasePort databasePort;
 
@@ -108,7 +105,7 @@ public class ImportGraphsService implements ImportGraphsUseCase {
             graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
             var graphIdentifier = replaceGraph(datasetName, graphUri, file);
             result.importedGraphUris().add(graphUri);
-            recordChange(graphIdentifier, datasetName);
+            createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
         } catch (RuntimeException _) {
             result.failedFileNames().add(file.getOriginalFilename());
         }
@@ -120,22 +117,6 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         databasePort.deleteGraph(graphIdentifier);
         databasePort.createGraph(graphIdentifier, graph);
         return graphIdentifier;
-    }
-
-    private void recordChange(GraphIdentifier graphIdentifier, String datasetName) {
-        createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "Imported graph into dataset '"
-                                + datasetName
-                                + "' with graph URI '"
-                                + graphIdentifier.graphUri()
-                                + "'.",
-                        databasePort
-                                .getGraphWithContext(graphIdentifier)
-                                .getRdfGraph()
-                                .getLastDelta()));
     }
 
     private void importZipFile(
