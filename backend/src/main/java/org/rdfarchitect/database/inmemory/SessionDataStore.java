@@ -27,6 +27,7 @@ import org.apache.jena.sparql.core.Transactional;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -82,6 +83,14 @@ public interface SessionDataStore {
      * @return map of custom diagrams belonging to the dataset
      */
     Map<UUID, CustomDiagram> getDatasetDiagrams(String datasetName);
+
+    /**
+     * Get the {@link CrossProfileDiagram} for a dataset.
+     *
+     * @param datasetName literal dataset name
+     * @return the cross profile diagram belonging to the dataset
+     */
+    CrossProfileDiagram getCrossProfileDiagram(String datasetName);
 
     /**
      * Get the {@link DiagramLayout} for all custom diagrams defined on a dataset

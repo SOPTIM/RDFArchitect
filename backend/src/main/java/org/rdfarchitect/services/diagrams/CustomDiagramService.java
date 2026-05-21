@@ -22,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.springframework.stereotype.Service;
 
@@ -53,6 +54,11 @@ public class CustomDiagramService
     @Override
     public List<CustomDiagram> getCustomDiagramsForDataset(String datasetName) {
         return databasePort.getDatasetDiagrams(datasetName).values().stream().toList();
+    }
+
+    @Override
+    public CrossProfileDiagram getCrossProfileDiagram(String datasetName) {
+        return databasePort.getCrossProfileDiagram(datasetName);
     }
 
     @Override
