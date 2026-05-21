@@ -125,8 +125,11 @@
                     optionObjectList={classEditorContext.namespaces}
                     accessDisplayData={namespace => namespace.substitutedPrefix}
                     accessIdentifier={getNsPrefixNsUriString}
-                    callOnValidChange={newNamespace =>
-                        (attribute.namespace.value = newNamespace?.prefix)}
+                    callOnChange={newNamespace =>
+                        (attribute.namespace.value =
+                            newNamespace?.prefix !== undefined
+                                ? newNamespace.prefix
+                                : newNamespace)}
                     highlight={attribute.namespace.isModified}
                     warn={!attribute.namespace.isValid}
                     {readonly}
@@ -172,10 +175,10 @@
                         ) +
                         ":" +
                         datatype.label}
-                    callOnValidChange={newDatatype =>
-                        (attribute.datatype.value = newDatatype
+                    callOnChange={newDatatype =>
+                        (attribute.datatype.value = newDatatype?.prefix
                             ? newDatatype.prefix + newDatatype.label
-                            : null)}
+                            : (newDatatype ?? null))}
                     highlight={attribute.datatype.isModified}
                     warn={!attribute.datatype.isValid}
                     {readonly}

@@ -59,6 +59,7 @@
 
     async function onOpen() {
         await fetchPackages();
+        namespaces = await getNamespaces(datasetName);
         if (pack) {
             isNewPackage = false;
             pkg = new ReactivePackage({
@@ -66,6 +67,7 @@
                 label: getPackageDisplayLabel(pack.label),
                 namespace: pack.prefix,
                 comment: pack.comment,
+                compareNamespaces: namespaces,
             });
         } else {
             isNewPackage = true;
@@ -83,9 +85,6 @@
             }
             return [];
         });
-        if (!readonly && datasetName) {
-            namespaces = await getNamespaces(datasetName);
-        }
     }
     async function fetchPackages() {
         if (!datasetName || !graphUri) {
@@ -182,10 +181,11 @@
                     " (" +
                     namespace.prefix +
                     ") "}
-                callOnValidChange={newNamespace =>
-                    (pkg.namespace.value = newNamespace
-                        ? newNamespace.prefix
-                        : null)}
+                callOnChange={newNamespace =>
+                    (pkg.namespace.value =
+                        newNamespace?.prefix !== undefined
+                            ? newNamespace.prefix
+                            : newNamespace)}
                 highlight={pkg.namespace.isModified}
                 warn={!pkg.namespace.isValid}
                 {readonly}

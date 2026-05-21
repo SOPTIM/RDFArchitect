@@ -20,14 +20,14 @@ import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte
 /**
  * Maps a class DTO to a ReactiveClass instance
  * @param {Object} classDto - The class data transfer object from the API
- * @param {Array} classes - Array of existing classes for resolving references
+ * @param {Array} context - Mixed context data required for resolving references (e.g. classes, namespaces, etc.)
  * @param {function} getClassByUuid - A function that returns the class with the given uuid
  * @returns {ReactiveClass} The reactive class instance
  */
-export function mapClassDtoToReactiveClass(classDto, classes, getClassByUuid) {
+export function mapClassDtoToReactiveClass(classDto, context, getClassByUuid) {
     let superClass = null;
     if (classDto.superClass) {
-        superClass = classes.find(
+        superClass = context.classes.find(
             cls =>
                 cls.prefix + cls.label ===
                 classDto.superClass.prefix + classDto.superClass.label,
@@ -39,7 +39,7 @@ export function mapClassDtoToReactiveClass(classDto, classes, getClassByUuid) {
     );
     const associations = mapAssociationDtoListToReactiveAssociationList(
         classDto.associationPairs,
-        classes,
+        context.classes,
     );
 
     const enumEntries = mapEnumEntryListToReactiveEnumEntryList(
@@ -57,7 +57,7 @@ export function mapClassDtoToReactiveClass(classDto, classes, getClassByUuid) {
         associations,
         enumEntries,
         getClassByUuid,
-        classes,
+        context,
     );
 }
 

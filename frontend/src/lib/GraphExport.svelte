@@ -87,6 +87,7 @@
                 ontologyJSON.uuid,
                 ontologyJSON.namespace,
                 ontologyJSON.entries,
+                namespaces,
             );
         }
     });

@@ -64,8 +64,11 @@
             optionObjectList={classEditorContext.namespaces}
             accessDisplayData={namespace => namespace.substitutedPrefix}
             accessIdentifier={getNsPrefixNsUriString}
-            callOnValidChange={newNamespace =>
-                (association.namespace.value = newNamespace?.prefix)}
+            callOnChange={newNamespace =>
+                (association.namespace.value =
+                    newNamespace?.prefix !== undefined
+                        ? newNamespace.prefix
+                        : newNamespace)}
             highlight={association.namespace.isModified}
             warn={!association.namespace.isValid}
             {readonly}
@@ -101,7 +104,7 @@
             label="Target:"
             placeholder="Target"
             value={classEditorContext.getClassByUuid(association.target.value)
-                ?.label}
+                ?.label ?? association.target.value}
             optionObjectList={classes}
             accessDisplayData={cls => {
                 return cls.label;
@@ -110,8 +113,9 @@
                 classEditorContext.getSubstitutedNamespace(cls.prefix) +
                 ":" +
                 cls.label}
-            callOnValidChange={newTarget =>
-                (association.target.value = newTarget.uuid)}
+            callOnChange={newTarget =>
+                (association.target.value =
+                    newTarget?.uuid !== undefined ? newTarget.uuid : newTarget)}
             highlight={association.target.isModified}
             warn={!association.target.isValid}
             {readonly}
