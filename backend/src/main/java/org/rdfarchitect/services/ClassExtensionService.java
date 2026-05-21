@@ -147,7 +147,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
             var newPackage = fetchNewPackage(model);
 
             for (var cls : superClasses) {
-                if (!model.containsResource(model.createResource(cls.getUri().toString()))) {
+                if (!model.contains(model.createResource(cls.getUri().toString()), null)) {
                     cls.setBelongsToCategory(newPackage);
                     CIMUpdates.insertClass(newGraph, prefixMapping, cls);
                 }
