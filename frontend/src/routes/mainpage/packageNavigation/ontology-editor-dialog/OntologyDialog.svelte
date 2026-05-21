@@ -73,6 +73,7 @@
                 ontology.uuid,
                 ontology.namespace,
                 ontology.entries,
+                namespaces,
             );
         }
     }
@@ -108,6 +109,7 @@
                     ontology.uuid,
                     ontology.namespace,
                     ontology.entries,
+                    namespaces,
                 );
             }
             ontologyObject.save();
@@ -219,8 +221,11 @@
                             )}
                         accessIdentifier={namespace =>
                             `${namespace.substitutedPrefix} (${namespace?.prefix})`}
-                        callOnValidChange={value =>
-                            (ontologyObject.namespace.value = value?.prefix)}
+                        callOnChange={value =>
+                            (ontologyObject.namespace.value =
+                                value?.prefix !== undefined
+                                    ? value.prefix
+                                    : value)}
                         {readonly}
                     />
                 </div>

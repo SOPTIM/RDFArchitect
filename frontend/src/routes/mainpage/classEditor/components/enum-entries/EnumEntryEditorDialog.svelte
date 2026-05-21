@@ -117,8 +117,11 @@
                             : prefix;
                     }}
                     accessIdentifier={getNsPrefixNsUriString}
-                    callOnValidChange={newNamespace =>
-                        (enumEntry.namespace.value = newNamespace?.prefix)}
+                    callOnChange={newNamespace =>
+                        (enumEntry.namespace.value =
+                            newNamespace?.prefix !== undefined
+                                ? newNamespace.prefix
+                                : newNamespace)}
                     highlight={enumEntry.namespace.isModified}
                     warn={!enumEntry.namespace.isValid}
                     {readonly}
