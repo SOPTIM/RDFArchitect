@@ -34,6 +34,7 @@
 
     import {
         copyState,
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -62,7 +63,10 @@
         !isDatasetReadOnly &&
             editorState.selectedDataset.getValue() &&
             editorState.selectedGraph.getValue() &&
-            editorState.selectedPackageUUID.getValue() &&
+            editorState.selectedDiagram.getProperty("id") &&
+            editorState.selectedDiagram.getProperty("type") ===
+                DiagramType.PACKAGE &&
+            copyState.datasetName.getValue() &&
             copyState.datasetName.getValue() &&
             copyState.graphURI.getValue() &&
             copyState.classUUID.getValue(),
@@ -142,27 +146,26 @@
         );
     }
 
-    async function getPackage(datasetName, graphURI, packageUUID) {
-        if (!datasetName || !graphURI) {
-            return [];
-        }
-        const res = await bec.getPackage(datasetName, graphURI, packageUUID);
-        return await res.json();
-    }
-
     async function pasteClass(
         copyAsAbstract,
         copyAttributes,
         copyAssociations,
     ) {
-        let packageDTO =
-            editorState.selectedPackageUUID.getValue() === "default"
+        const res = await bec.getPackages(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+        );
+        const packagesJSON = await res.json();
+        let packages = [
+            ...packagesJSON.internalPackageList,
+            ...packagesJSON.externalPackageList,
+        ];
+        const selectedPackageUUID =
+            editorState.selectedDiagram.getProperty("id") === "default"
                 ? null
-                : await getPackage(
-                      editorState.selectedDataset.getValue(),
-                      editorState.selectedGraph.getValue(),
-                      editorState.selectedPackageUUID.getValue(),
-                  );
+                : editorState.selectedDiagram.getProperty("id");
+        let packageDTO =
+            packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
         await saveCopyClass(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),

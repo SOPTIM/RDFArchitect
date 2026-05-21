@@ -19,6 +19,7 @@ import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import {
     copyState,
+    DiagramType,
     editorState,
     forceReloadTrigger,
 } from "$lib/sharedState.svelte.js";
@@ -56,9 +57,10 @@ export async function saveCopyClass(
             editorState.selectedClassDataset.updateValue(datasetName);
             editorState.selectedGraph.updateValue(graphURI);
             editorState.selectedClassGraph.updateValue(graphURI);
-            editorState.selectedPackageUUID.updateValue(
-                packageDTO?.uuid ?? "default",
-            );
+            editorState.selectedDiagram.updateValue({
+                type: DiagramType.PACKAGE,
+                id: packageDTO?.uuid ?? "default",
+            });
             editorState.selectedClassUUID.updateValue(uuid);
         } else {
             const errorText = await res.text();
