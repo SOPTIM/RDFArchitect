@@ -23,7 +23,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
-import org.rdfarchitect.services.diagrams.AddToDiagramUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/datasets/{datasetName}/diagrams/{diagramId}/classes")
@@ -44,7 +45,7 @@ public class CustomDatasetDiagramAllClassesRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(CustomDatasetDiagramAllClassesRESTController.class);
 
-    private final AddToDiagramUseCase addToDiagramUseCase;
+    private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @PostMapping
     public String addToDiagram(
@@ -66,7 +67,8 @@ public class CustomDatasetDiagramAllClassesRESTController {
                 diagramId,
                 originURL);
 
-        addToDiagramUseCase.addToDiagram(datasetName, diagramId, classes);
+        customDiagramLayoutUseCase.addClassesToCustomDatasetDiagram(
+                datasetName, UUID.fromString(diagramId), classes);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",

@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.rendering;
 
+import org.apache.jena.graph.Graph;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
@@ -25,11 +26,14 @@ import org.rdfarchitect.models.cim.rendering.GraphFilter;
 public interface GraphToCIMCollectionConverterUseCase {
 
     /**
-     * Converts a Graph to a {@link CIMCollection}.
-     *
-     * @param graphIdentifier The graph to getClassDefinition.
-     * @param filter The filter to apply to the graph.
-     * @return The {@link CIMCollection}.
+     * Opens a READ transaction, copies the RDF graph, and converts it to a {@link CIMCollection}.
      */
     CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter);
+
+    /**
+     * Converts an already-copied RDF graph to a {@link CIMCollection} without opening a
+     * transaction. Use this when the caller already holds a transaction and has deep-copied the
+     * graph.
+     */
+    CIMCollection convert(Graph copiedGraph, GraphIdentifier graphIdentifier, GraphFilter filter);
 }

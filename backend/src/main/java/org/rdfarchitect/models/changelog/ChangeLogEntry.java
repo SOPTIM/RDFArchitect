@@ -19,11 +19,8 @@ package org.rdfarchitect.models.changelog;
 
 import lombok.Data;
 
-import org.apache.jena.graph.Graph;
-import org.rdfarchitect.rdf.graph.DeltaCompressible;
-
-import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -32,25 +29,14 @@ public class ChangeLogEntry {
     private UUID changeId;
     private LocalDateTime timestamp;
     private String message;
-    private WeakReference<Graph> additions;
-    private WeakReference<Graph> deletions;
+    private int steps;
+    private List<ContextDelta> contextDeltas;
 
-    public ChangeLogEntry(String message, DeltaCompressible delta) {
-        this.changeId = delta.getVersionId();
+    public ChangeLogEntry(String message, int steps, List<ContextDelta> contextDeltas) {
+        this.changeId = UUID.randomUUID();
         this.timestamp = LocalDateTime.now();
         this.message = message;
-
-        this.additions = new WeakReference<>(delta.getAdditions());
-        this.deletions = new WeakReference<>(delta.getDeletions());
-
-        var additionsGraph = this.additions.get();
-        var deletionsGraph = this.deletions.get();
-        if (additionsGraph == null || deletionsGraph == null) {
-            return;
-        }
-
-        if (additionsGraph.isEmpty() && deletionsGraph.isEmpty()) {
-            this.additions = new WeakReference<>(delta.getBase());
-        }
+        this.steps = steps;
+        this.contextDeltas = contextDeltas;
     }
 }

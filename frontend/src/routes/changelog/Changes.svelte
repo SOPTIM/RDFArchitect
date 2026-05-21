@@ -60,7 +60,6 @@
         );
         if (res.ok) {
             changelog = await res.json();
-            changelog.reverse();
             cleanExpandedStateMap(changelog);
         } else {
             console.error("Failed to fetch changelog:", res.statusText);

@@ -29,6 +29,7 @@ import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
+import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.rendering.DiagramToCIMCollectionConverterUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +56,8 @@ public class CustomDiagramsRESTController {
     private final DiagramToCIMCollectionConverterUseCase converter;
 
     private final RenderCIMCollectionUseCase renderer;
+
+    private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
 
     private final DeleteCustomDiagramUseCase deleteCustomDiagram;
 
@@ -90,11 +93,11 @@ public class CustomDiagramsRESTController {
         var cimCollection =
                 converter.convert(new GraphIdentifier(datasetName, extendedGraphURI), diagramId);
 
-        var result =
-                renderer.renderUML(
-                        cimCollection,
+        var layoutData =
+                fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
                         new GraphIdentifier(datasetName, extendedGraphURI),
                         UUID.fromString(diagramId));
+        var result = renderer.renderUML(cimCollection, layoutData);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",

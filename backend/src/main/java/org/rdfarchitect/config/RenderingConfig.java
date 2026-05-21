@@ -21,7 +21,6 @@ import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
 import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
-import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,13 +33,10 @@ public class RenderingConfig {
 
     @Bean
     public RenderCIMCollectionUseCase renderingPort(
-            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase,
-            EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase) {
+            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase) {
         return switch (rendererType) {
             case "svelteflow" ->
-                    new RenderCIMCollectionSvelteFlowService(
-                            fetchRenderingLayoutDataUseCase,
-                            ensureDiagramLayoutForCIMCollectionUseCase);
+                    new RenderCIMCollectionSvelteFlowService(fetchRenderingLayoutDataUseCase);
             case "mermaid" -> new RenderCIMCollectionMermaidService();
             default -> new RenderCIMCollectionMermaidService();
         };

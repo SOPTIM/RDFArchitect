@@ -21,11 +21,9 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
-import org.apache.jena.shared.impl.PrefixMappingImpl;
-import org.apache.jena.sparql.graph.GraphFactory;
-import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -39,10 +37,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
 
     private final InMemoryDatabase database;
 
-    private final SchemaConfig schemaConfig;
-
     @Override
-    public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
+    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         return database.getGraphWithContext(graphIdentifier);
     }
 
@@ -68,53 +64,12 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
 
     @Override
     public void createGraph(GraphIdentifier graphIdentifier, Graph graph) {
-        database.create(graphIdentifier, graph);
-        var currentPrefixMapping =
-                new PrefixMappingImpl()
-                        .setNsPrefixes(database.getPrefixMapping(graphIdentifier.datasetName()))
-                        .setNsPrefixes(graph.getPrefixMapping());
-        database.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
+        database.createGraph(graphIdentifier, graph);
     }
 
     @Override
     public void createEmptyGraph(GraphIdentifier graphIdentifier) {
-        var datasetName = graphIdentifier.datasetName();
-        var isNewDataset = !database.listDatasets().contains(datasetName);
-        database.create(graphIdentifier, GraphFactory.createDefaultGraph());
-        if (isNewDataset) {
-            database.enableEditing(datasetName);
-            var configNamespaces = schemaConfig.getNamespaces();
-            var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
-            for (var entry : configNamespaces.entrySet()) {
-                prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
-            }
-            database.setPrefixMapping(graphIdentifier.datasetName(), prefixMapping);
-        }
-    }
-
-    @Override
-    public Boolean canRedo(GraphIdentifier graphIdentifier) {
-        return database.canRedo(graphIdentifier);
-    }
-
-    @Override
-    public Boolean canUndo(GraphIdentifier graphIdentifier) {
-        return database.canUndo(graphIdentifier);
-    }
-
-    @Override
-    public void redo(GraphIdentifier graphIdentifier) {
-        database.redo(graphIdentifier);
-    }
-
-    @Override
-    public void undo(GraphIdentifier graphIdentifier) {
-        database.undo(graphIdentifier);
-    }
-
-    @Override
-    public void restore(GraphIdentifier graphIdentifier, UUID versionId) {
-        database.restore(graphIdentifier, versionId);
+        database.createEmptyGraph(graphIdentifier);
     }
 
     @Override

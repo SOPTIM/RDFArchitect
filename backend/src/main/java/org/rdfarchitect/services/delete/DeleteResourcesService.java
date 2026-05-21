@@ -19,7 +19,7 @@ package org.rdfarchitect.services.delete;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
@@ -35,7 +35,6 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUti
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils.CimResourceType;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -65,16 +64,15 @@ public class DeleteResourcesService implements DeleteResourcesUseCase {
     @Override
     public void executeDeleteRequests(
             GraphIdentifier graphIdentifier, List<ResourceDeleteRequest> deleteRequests) {
-        GraphRewindable graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.WRITE);
-            deleteResources(ModelFactory.createModelForGraph(graph), deleteRequests);
-            graph.commit();
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var deleteCount =
+                    deleteRequests.stream()
+                            .filter(r -> r.getAction() == DeleteAction.DELETE)
+                            .count();
+
+            deleteResources(ModelFactory.createModelForGraph(ctx.getRdfGraph()), deleteRequests);
+            ctx.commit(
+                    "Deleted " + deleteCount + " " + (deleteCount == 1 ? "resource" : "resources"));
         }
     }
 

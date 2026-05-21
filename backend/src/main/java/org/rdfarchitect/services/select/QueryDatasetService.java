@@ -20,7 +20,7 @@ package org.rdfarchitect.services.select;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
@@ -31,7 +31,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -74,18 +73,11 @@ public class QueryDatasetService
     }
 
     private Model getGraphAsModel(String datasetName, String graphURI) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph =
-                    databasePort
-                            .getGraphWithContext(new GraphIdentifier(datasetName, graphURI))
-                            .getRdfGraph();
-            graph.begin(TxnType.READ);
-            return ModelFactory.createModelForGraph(GraphUtils.deepCopy(graph));
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+        try (var ctx =
+                databasePort
+                        .getGraphWithContext(new GraphIdentifier(datasetName, graphURI))
+                        .begin(ReadWrite.READ)) {
+            return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
     }
 

@@ -43,7 +43,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         // Arrange
 
         // Act
-        var result = mermaidRenderer.renderUML(cimCollection, null, null);
+        var result = mermaidRenderer.renderUML(cimCollection, null);
 
         // Assert
         assertThat(result).isNull();
@@ -52,7 +52,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
     @Test
     void renderUML_nullCollection_throwsException() {
         // Assert/Act
-        assertThatException().isThrownBy(() -> mermaidRenderer.renderUML(null, null, null));
+        assertThatException().isThrownBy(() -> mermaidRenderer.renderUML(null, null));
     }
 
     @Test
@@ -62,7 +62,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         addPackage("package_package2");
 
         // Act
-        var result = mermaidRenderer.renderUML(cimCollection, null, null);
+        var result = mermaidRenderer.renderUML(cimCollection, null);
 
         // Assert
         assertThat(result).isNull();
@@ -75,8 +75,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         var class1 = cimCollection.getClasses().getFirst();
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
 
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
@@ -109,8 +108,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
                 new ArrayList<>(List.of(new CIMSStereotype(CIMStereotypes.concrete.getURI()))));
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
 
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
@@ -138,12 +136,11 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         // Arrange
         addClass(null, "class1");
         var class1 = cimCollection.getClasses().getFirst();
-        addAttribute("class1", "attribute1", XSDDatatype.XSDstring);
-        addAttribute("class1", "attribute2", XSDDatatype.XSDint);
+        addAttribute("attribute1", XSDDatatype.XSDstring);
+        addAttribute("attribute2", XSDDatatype.XSDint);
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
 
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
@@ -177,8 +174,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         addClass(null, "class3");
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
@@ -196,11 +192,10 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         // Arrange
         addClass(null, "class1");
         addClass(null, "class2");
-        addAssociation("class1", "class2", AssociationUsed.YES, AssociationUsed.YES);
+        addAssociation("class2", AssociationUsed.YES);
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
@@ -224,8 +219,7 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         addClass("package_package2", "class2");
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
@@ -241,12 +235,11 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
     @Test
     void renderUML_collectionWithEnum_MermaidStringContainingEnum() {
         // Arrange
-        addEnum(null, "enum1");
+        addEnum(null);
         var enum1 = cimCollection.getEnums().getFirst();
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
         Pattern pattern = Pattern.compile("[a-f0-9-]{36}");
         Matcher matcher = pattern.matcher(result);
 
@@ -282,17 +275,16 @@ class RenderCIMCollectionMermaidServiceTest extends RenderCIMCollectionTestBase 
         var class1 = classesIterator.next();
         var class2 = classesIterator.next();
         class1.setSuperClass(new RDFSSubClassOf(class2.getUri(), class2.getLabel()));
-        addAttribute("class1", "attribute1", XSDDatatype.XSDstring);
-        addAttribute("class1", "attribute2", XSDDatatype.XSDint);
-        addAssociation("class1", "class2", AssociationUsed.YES, AssociationUsed.YES);
-        addAssociation("class1", "enum1", AssociationUsed.YES, AssociationUsed.NO);
-        addEnum("package_package1", "enum1");
-        addEnumEntry("enum1", "enumEntry1");
-        addEnumEntry("enum1", "enumEntry2");
+        addAttribute("attribute1", XSDDatatype.XSDstring);
+        addAttribute("attribute2", XSDDatatype.XSDint);
+        addAssociation("class2", AssociationUsed.YES);
+        addAssociation("enum1", AssociationUsed.NO);
+        addEnum("package_package1");
+        addEnumEntry("enumEntry1");
+        addEnumEntry("enumEntry2");
 
         // Act
-        var result =
-                ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null, null)).mermaidString();
+        var result = ((MermaidDTO) mermaidRenderer.renderUML(cimCollection, null)).mermaidString();
 
         // Assert
         assertThat(result.replaceAll("[a-f0-9-]{36}", "UUID"))

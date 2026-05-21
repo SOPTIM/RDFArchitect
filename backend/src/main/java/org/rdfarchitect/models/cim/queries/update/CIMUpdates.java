@@ -88,25 +88,19 @@ public class CIMUpdates {
                         graph,
                         prefixMapping,
                         null,
-                        newClass.getUuid().toString(),
+                        newClass.getUuid(),
                         newClass.getAttributes(),
                         newValuesAsBlankNode);
         UpdateExecutionFactory.create(updateAttributes, dataset).execute();
         // replace associations in database
         var updateAssociations =
                 replaceAssociations(
-                        prefixMapping,
-                        null,
-                        newClass.getUuid().toString(),
-                        newClass.getAssociationPairs());
+                        prefixMapping, null, newClass.getUuid(), newClass.getAssociationPairs());
         UpdateExecutionFactory.create(updateAssociations.build(), dataset).execute();
         // replace enum entries in database
         var updateEnumEntries =
                 replaceEnumEntries(
-                        prefixMapping,
-                        null,
-                        newClass.getUuid().toString(),
-                        newClass.getEnumEntries());
+                        prefixMapping, null, newClass.getUuid(), newClass.getEnumEntries());
         UpdateExecutionFactory.create(updateEnumEntries.build(), dataset).execute();
         // update other references to this class
         updateReferences(graph, prefixMapping, newClass.getUuid(), newClass.getUri());
@@ -224,7 +218,7 @@ public class CIMUpdates {
         return newClass.getUuid();
     }
 
-    public void deleteClass(Graph graph, PrefixMapping prefixMapping, String classUUID) {
+    public void deleteClass(Graph graph, PrefixMapping prefixMapping, UUID classUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         UpdateExecutionFactory.create(deleteAttributes(prefixMapping, null, classUUID), dataset)
                 .execute();
@@ -233,7 +227,7 @@ public class CIMUpdates {
         var classBaseDelete = deleteBase(prefixMapping, null, classUUID);
         UpdateExecutionFactory.create(classBaseDelete.build(), dataset).execute();
 
-        deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(classUUID));
+        deleteUuidIfNotReferencedAnyWhereElse(graph, classUUID);
     }
 
     /**
@@ -366,7 +360,7 @@ public class CIMUpdates {
      * UpdateRequest}.
      */
     private UpdateRequest deleteAttributes(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+            PrefixMapping prefixMapping, String graphURI, UUID classUUID) {
         var request = deleteAttributeValueNodesForClass(graphURI, classUUID);
         request.add(
                 new CIMBaseUpdateBuilder()
@@ -374,7 +368,7 @@ public class CIMUpdates {
                         .setGraph(graphURI)
                         .build()
                         .addDelete(CIMQueryVars.URI, ANY_1, ANY_2)
-                        .addWhere(CIMQueryVars.DOMAIN_URI, RDFA.uuid, classUUID)
+                        .addWhere(CIMQueryVars.DOMAIN_URI, RDFA.uuid, classUUID.toString())
                         .addWhere(CIMQueryVars.URI, RDFS.domain, CIMQueryVars.DOMAIN_URI)
                         .addWhere(CIMQueryVars.URI, CIMS.stereotype, CIMStereotypes.attribute)
                         .addWhere(CIMQueryVars.URI, ANY_1, ANY_2)
@@ -393,7 +387,7 @@ public class CIMUpdates {
             Graph graph,
             PrefixMapping prefixMapping,
             String graphURI,
-            String classUUID,
+            UUID classUUID,
             List<CIMAttribute> attributes,
             boolean newValuesAsBlankNode) {
         var request = deleteAttributes(prefixMapping, graphURI, classUUID);
@@ -448,9 +442,9 @@ public class CIMUpdates {
      * the given class. {@code classUUID} is passed through Jena's node coercion rather than
      * interpolated.
      */
-    private UpdateRequest deleteAttributeValueNodesForClass(String graphURI, String classUUID) {
+    private UpdateRequest deleteAttributeValueNodesForClass(String graphURI, UUID classUUID) {
         var request = new UpdateRequest();
-        if (classUUID == null || classUUID.isBlank()) {
+        if (classUUID == null) {
             return request;
         }
         for (var predicate : VALUE_NODE_PREDICATES) {
@@ -459,7 +453,7 @@ public class CIMUpdates {
                             .setGraph(graphURI)
                             .build()
                             .addDelete(VAR_BLANK, VAR_BLANK_P, VAR_BLANK_O)
-                            .addWhere(VAR_CLASS, RDFA.uuid, classUUID)
+                            .addWhere(VAR_CLASS, RDFA.uuid, classUUID.toString())
                             .addWhere(VAR_ATTRIBUTE, RDFS.domain, VAR_CLASS)
                             .addWhere(VAR_ATTRIBUTE, CIMS.stereotype, CIMStereotypes.attribute)
                             .addWhere(VAR_ATTRIBUTE, predicate, VAR_BLANK)
@@ -552,14 +546,14 @@ public class CIMUpdates {
     }
 
     private UpdateBuilder deleteAssociations(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+            PrefixMapping prefixMapping, String graphURI, UUID classUUID) {
         // init baseUpdate
         var baseUpdate =
                 new CIMBaseUpdateBuilder().addPrefixes(prefixMapping).setGraph(graphURI).build();
         return baseUpdate
                 .addDelete(CIMQueryVars.URI, ANY_1, ANY_2)
                 .addDelete(CIMQueryVars.Inverse.URI, ANY_3, ANY_4)
-                .addWhere(CIMQueryVars.DOMAIN_URI, RDFA.uuid, classUUID)
+                .addWhere(CIMQueryVars.DOMAIN_URI, RDFA.uuid, classUUID.toString())
                 .addWhere(CIMQueryVars.URI, RDFS.domain, CIMQueryVars.DOMAIN_URI)
                 .addWhere(CIMQueryVars.URI, ANY_1, ANY_2)
                 .addWhere(CIMQueryVars.URI, CIMS.inverseRoleName, CIMQueryVars.Inverse.URI)
@@ -569,7 +563,7 @@ public class CIMUpdates {
     public UpdateBuilder replaceAssociations(
             PrefixMapping prefixMapping,
             String graphURI,
-            String classUUID,
+            UUID classUUID,
             List<CIMAssociationPair> associationPairs) {
         var baseUpdate = CIMUpdates.deleteAssociations(prefixMapping, graphURI, classUUID);
         var seenFromUUIDs = new HashSet<UUID>();
@@ -602,13 +596,12 @@ public class CIMUpdates {
                 .addOptional(CIMQueryVars.URI, "?pre", "?obj");
     }
 
-    public UpdateBuilder deleteBase(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+    public UpdateBuilder deleteBase(PrefixMapping prefixMapping, String graphURI, UUID classUUID) {
         var classBaseUpdate =
                 new CIMBaseUpdateBuilder().addPrefixes(prefixMapping).setGraph(graphURI).build();
         classBaseUpdate
                 .addDelete(CIMQueryVars.URI, "?pre", "?obj")
-                .addWhere(CIMQueryVars.URI, RDFA.uuid, classUUID)
+                .addWhere(CIMQueryVars.URI, RDFA.uuid, classUUID.toString())
                 .addOptional(CIMQueryVars.URI, "?pre", "?obj")
                 .addFilter(new ExprFactory().ne("?pre", RDFA.uuid));
 
@@ -649,22 +642,22 @@ public class CIMUpdates {
         UpdateExecutionFactory.create(insertEnumEntry.build(), dataset).execute();
     }
 
-    public void deleteEnumEntry(Graph graph, PrefixMapping prefixMapping, String enumEntryUUID) {
+    public void deleteEnumEntry(Graph graph, PrefixMapping prefixMapping, UUID enumEntryUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
 
         var deleteEnumEntry = deleteBase(prefixMapping, null, enumEntryUUID);
         UpdateExecutionFactory.create(deleteEnumEntry.build(), dataset).execute();
-        deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(enumEntryUUID));
+        deleteUuidIfNotReferencedAnyWhereElse(graph, enumEntryUUID);
     }
 
     private UpdateBuilder deleteEnumEntries(
-            PrefixMapping prefixMapping, String graphURI, String classUUID) {
+            PrefixMapping prefixMapping, String graphURI, UUID classUUID) {
         return new CIMBaseUpdateBuilder()
                 .addPrefixes(prefixMapping)
                 .setGraph(graphURI)
                 .build()
                 .addDelete(CIMQueryVars.URI, ANY_1, ANY_2)
-                .addWhere(CIMQueryVars.TYPE_URI, RDFA.uuid, classUUID)
+                .addWhere(CIMQueryVars.TYPE_URI, RDFA.uuid, classUUID.toString())
                 .addWhere(CIMQueryVars.URI, RDF.type, CIMQueryVars.TYPE_URI)
                 .addWhere(CIMQueryVars.URI, ANY_1, ANY_2);
     }
@@ -672,7 +665,7 @@ public class CIMUpdates {
     public UpdateBuilder replaceEnumEntries(
             PrefixMapping prefixMapping,
             String graphURI,
-            String classUUID,
+            UUID classUUID,
             List<CIMEnumEntry> enumEntries) {
         var baseUpdate = CIMUpdates.deleteEnumEntries(prefixMapping, graphURI, classUUID);
         for (CIMEnumEntry enumEntry : enumEntries) {
@@ -682,7 +675,7 @@ public class CIMUpdates {
     }
 
     public void replaceEnumEntry(Graph graph, PrefixMapping prefixMapping, CIMEnumEntry enumEntry) {
-        deleteEnumEntry(graph, prefixMapping, enumEntry.getUuid().toString());
+        deleteEnumEntry(graph, prefixMapping, enumEntry.getUuid());
         insertEnumEntry(graph, prefixMapping, enumEntry);
     }
 
@@ -692,7 +685,7 @@ public class CIMUpdates {
         updateReferences(graph, prefixMapping, newPackage.getUuid(), newPackage.getUri());
 
         // delete old package
-        deletePackage(graph, prefixMapping, newPackage.getUuid().toString());
+        deletePackage(graph, prefixMapping, newPackage.getUuid());
 
         // insert new package
         insertPackage(graph, prefixMapping, newPackage);
@@ -722,12 +715,12 @@ public class CIMUpdates {
         UpdateExecutionFactory.create(packageUpdateBuilder.build(), dataset).execute();
     }
 
-    public void deletePackage(Graph graph, PrefixMapping prefixMapping, String packageUUID) {
+    public void deletePackage(Graph graph, PrefixMapping prefixMapping, UUID packageUUID) {
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
 
         var packageBaseDelete = deleteBase(prefixMapping, null, packageUUID);
         UpdateExecutionFactory.create(packageBaseDelete.build(), dataset).execute();
-        deleteUuidIfNotReferencedAnyWhereElse(graph, UUID.fromString(packageUUID));
+        deleteUuidIfNotReferencedAnyWhereElse(graph, packageUUID);
     }
 
     private void updateReferences(Graph graph, PrefixMapping prefixMapping, UUID uuid, URI newURI) {

@@ -19,10 +19,11 @@ package org.rdfarchitect.services.versioncontrol;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -39,28 +40,29 @@ public class VersionControlService
 
     private final DatabasePort databasePort;
     private final DatabaseConnection databaseConnection;
-    private final ChangeLogUseCase changelogUseCase;
 
     @Override
     public Boolean canRedo(GraphIdentifier graphIdentifier) {
-        return databasePort.canRedo(graphIdentifier);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx.canRedo();
+        }
     }
 
     @Override
     public Boolean canUndo(GraphIdentifier graphIdentifier) {
-        return databasePort.canUndo(graphIdentifier);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx.canUndo();
+        }
     }
 
     @Override
-    public void redo(GraphIdentifier graphIdentifier) {
-        databasePort.redo(graphIdentifier);
-        changelogUseCase.redoChange(graphIdentifier);
+    public ChangeLogEntry redo(GraphIdentifier graphIdentifier) {
+        return databasePort.getGraphWithContext(graphIdentifier).redo();
     }
 
     @Override
-    public void undo(GraphIdentifier graphIdentifier) {
-        databasePort.undo(graphIdentifier);
-        changelogUseCase.undoChange(graphIdentifier);
+    public ChangeLogEntry undo(GraphIdentifier graphIdentifier) {
+        return databasePort.getGraphWithContext(graphIdentifier).undo();
     }
 
     @Override
@@ -70,7 +72,6 @@ public class VersionControlService
 
     @Override
     public void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId) {
-        databasePort.restore(graphIdentifier, versionId);
-        changelogUseCase.restoreVersion(graphIdentifier, versionId);
+        databasePort.getGraphWithContext(graphIdentifier).restoreToVersion(versionId);
     }
 }

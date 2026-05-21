@@ -150,7 +150,8 @@ public class ClassAllAttributesRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        updateAttributesUseCase.replaceAllAttributes(graphIdentifier, classUUID, attributeList);
+        updateAttributesUseCase.replaceAllAttributes(
+                graphIdentifier, UUID.fromString(classUUID), attributeList);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/attributes\" to \"{}\".",

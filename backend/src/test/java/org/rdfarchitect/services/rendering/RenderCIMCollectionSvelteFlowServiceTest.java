@@ -39,7 +39,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         // Arrange
 
         // Act
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);
 
         // Assert
         assertThat(result.getNodes()).isEmpty();
@@ -48,7 +48,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderUML_nullCollection_throwsException() {
-        assertThatException().isThrownBy(() -> svelteFlowRenderer.renderUML(null, null, null));
+        assertThatException().isThrownBy(() -> svelteFlowRenderer.renderUML(null, null));
     }
 
     @Test
@@ -58,7 +58,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         addPackage("package_package2");
 
         // Act
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);
 
         // Assert
         assertThat(result.getNodes()).isEmpty();
@@ -81,8 +81,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
                         new URI("http://example.com/Category#package_package1"),
                         new RDFSLabel("package1", "en"),
                         UUID.randomUUID()));
-        addAttribute("class1", "attribute1", XSDDatatype.XSDstring);
-        addAttribute("class1", "attribute2", XSDDatatype.XSDint);
+        addAttribute("attribute1", XSDDatatype.XSDstring);
+        addAttribute("attribute2", XSDDatatype.XSDint);
         var attributeIterator = cimCollection.getAttributes().iterator();
         var attribute1 = attributeIterator.next();
         attribute1.setMultiplicity(
@@ -94,7 +94,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
                         "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#0...n"));
 
         // Act
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);
 
         // Assert
         var nodeDTO = result.getNodes().getFirst();
@@ -120,12 +120,12 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
     void renderUML_singleEnum_createsNodeWithCorrectData() {
         // Arrange
         addPackage("package_package1");
-        addEnum("package_package1", "enum1");
-        addEnumEntry("enum1", "enumEntry1");
-        addEnumEntry("enum1", "enumEntry2");
+        addEnum("package_package1");
+        addEnumEntry("enumEntry1");
+        addEnumEntry("enumEntry2");
 
         // Act
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);
 
         // Assert
         var nodeDTO = result.getNodes().getFirst();
@@ -152,7 +152,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         subClass.setSuperClass(new RDFSSubClassOf(superClass.getUri(), superClass.getLabel()));
 
         // Act
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);
 
         // Assert
         var inheritanceEdgeDTO = result.getEdges().getFirst();
@@ -171,7 +171,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         addPackage("package_package1");
         addClass("package_package1", "class1");
         addClass("package_package2", "class2");
-        addAssociation("class1", "class2", AssociationUsed.YES, AssociationUsed.NO);
+        addAssociation("class2", AssociationUsed.NO);
         var associationIterator = cimCollection.getAssociations().iterator();
         var fromAssoc = associationIterator.next();
         var toAssoc = associationIterator.next();
@@ -183,7 +183,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
                         "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#1...1"));
 
         // Act
-        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null, null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderUML(cimCollection, null);
 
         // Assert
         var associationEdgeDTO = result.getEdges().getFirst();
