@@ -38,6 +38,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -229,11 +230,33 @@
     }
 
     async function enableEditing(datasetName) {
-        await bec.enableEditing(datasetName);
+        const res = await bec.enableEditing(datasetName);
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Could not enable editing",
+                `Dataset "${datasetName}" remains read-only.`,
+            );
+            return;
+        }
+        toastStore.success(
+            "Editing enabled",
+            `Dataset "${datasetName}" is now editable.`,
+        );
     }
 
     async function disableEditing(datasetName) {
-        await bec.disableEditing(datasetName);
+        const res = await bec.disableEditing(datasetName);
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Could not disable editing",
+                `Dataset "${datasetName}" remains editable.`,
+            );
+            return;
+        }
+        toastStore.success(
+            "Editing disabled",
+            `Dataset "${datasetName}" is now read-only.`,
+        );
     }
     $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>

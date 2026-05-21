@@ -34,6 +34,7 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
@@ -105,20 +106,40 @@
             return;
         }
 
-        await bec.enableEditing(datasetNavEntry.id).then(() => {
-            readonly = false;
-            forceReloadTrigger.trigger();
-        });
+        const res = await bec.enableEditing(datasetNavEntry.id);
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Could not enable editing",
+                `Dataset "${datasetNavEntry.label}" remains read-only.`,
+            );
+            return;
+        }
+        readonly = false;
+        forceReloadTrigger.trigger();
+        toastStore.success(
+            "Editing enabled",
+            `Dataset "${datasetNavEntry.label}" is now editable.`,
+        );
     }
 
     async function disableEditing() {
         if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        await bec.disableEditing(datasetNavEntry.id).then(() => {
-            readonly = true;
-            forceReloadTrigger.trigger();
-        });
+        const res = await bec.disableEditing(datasetNavEntry.id);
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Could not disable editing",
+                `Dataset "${datasetNavEntry.label}" remains editable.`,
+            );
+            return;
+        }
+        readonly = true;
+        forceReloadTrigger.trigger();
+        toastStore.success(
+            "Editing disabled",
+            `Dataset "${datasetNavEntry.label}" is now read-only.`,
+        );
     }
 </script>
 

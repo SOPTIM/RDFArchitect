@@ -151,11 +151,18 @@
                     ontology.entries.append(entry);
                 }
             }
-            await bec.putOntology(
+            const ontologyRes = await bec.putOntology(
                 selectedDatasetName,
                 graphURI,
                 ontology.getPlainObject(),
             );
+            if (ontologyRes && ontologyRes.ok === false) {
+                toastStore.error(
+                    "Profile header update failed",
+                    "Could not persist the generated profile header entries; export aborted.",
+                );
+                return;
+            }
             forceReloadTrigger.trigger();
         }
         try {
