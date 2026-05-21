@@ -19,6 +19,7 @@
     import "../app.css";
     import { onMount } from "svelte";
 
+    import { enableEditing } from "$lib/actions/editingActions.js";
     import {
         undo,
         fetchCanUndo,
@@ -86,12 +87,7 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        const res = await bec.enableEditing(selectedDataset);
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Could not enable editing",
-                `Dataset "${selectedDataset}" remains read-only.`,
-            );
+        if (!(await enableEditing(selectedDataset))) {
             return;
         }
         forceReloadTrigger.trigger();

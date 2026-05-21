@@ -32,13 +32,16 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import {
+        enableEditing,
+        disableEditing,
+    } from "$lib/actions/editingActions.js";
+    import {
         undo as doUndo,
         redo as doRedo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -124,7 +127,9 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        await enableEditing(selectedDataset);
+        if (!(await enableEditing(selectedDataset))) {
+            return;
+        }
         await reload();
         forceReloadTrigger.trigger();
     }
@@ -133,7 +138,9 @@
         if (!selectedDataset || isDatasetReadOnly) {
             return;
         }
-        await disableEditing(selectedDataset);
+        if (!(await disableEditing(selectedDataset))) {
+            return;
+        }
         await reload();
         editorState.selectedDiagram.trigger();
     }
@@ -229,35 +236,6 @@
         if (await doRedo()) reload();
     }
 
-    async function enableEditing(datasetName) {
-        const res = await bec.enableEditing(datasetName);
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Could not enable editing",
-                `Dataset "${datasetName}" remains read-only.`,
-            );
-            return;
-        }
-        toastStore.success(
-            "Editing enabled",
-            `Dataset "${datasetName}" is now editable.`,
-        );
-    }
-
-    async function disableEditing(datasetName) {
-        const res = await bec.disableEditing(datasetName);
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Could not disable editing",
-                `Dataset "${datasetName}" remains editable.`,
-            );
-            return;
-        }
-        toastStore.success(
-            "Editing disabled",
-            `Dataset "${datasetName}" is now read-only.`,
-        );
-    }
     $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>
 
