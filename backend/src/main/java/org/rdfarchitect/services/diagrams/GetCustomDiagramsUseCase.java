@@ -15,21 +15,28 @@
  *
  */
 
-package org.rdfarchitect.services;
+package org.rdfarchitect.services.diagrams;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
-import org.rdfarchitect.models.cim.rendering.GraphFilter;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 
-/** Converts a Graph to a {@link CIMCollection}. */
-public interface GraphToCIMCollectionConverterUseCase {
+import java.util.List;
+
+public interface GetCustomDiagramsUseCase {
 
     /**
-     * Converts a Graph to a {@link CIMCollection}.
+     * Lists the custom diagrams belonging to a single graph.
      *
-     * @param graphIdentifier The graph to getClassDefinition.
-     * @param filter The filter to apply to the graph.
-     * @return The {@link CIMCollection}.
+     * @param graphIdentifier The graph identifier.
+     * @return The custom diagrams for the graph.
      */
-    CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter);
+    List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier);
+
+    /**
+     * Lists the custom diagrams belonging to a single dataset.
+     *
+     * @param datasetName The name of the dataset.
+     * @return The custom diagrams for the dataset.
+     */
+    List<CustomDiagram> getCustomDiagramsForDataset(String datasetName);
 }

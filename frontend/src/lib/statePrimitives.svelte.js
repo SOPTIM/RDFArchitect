@@ -50,6 +50,50 @@ export class StateValuePair {
 }
 
 /**
+ * StateObjectPair allows storing an object with multiple properties,
+ * triggering updates whenever any property changes.
+ */
+export class StateObjectPair {
+    #value = $state(null);
+    #toggle = $state(false);
+
+    constructor(value) {
+        this.#value = value;
+    }
+
+    getValue() {
+        return this.#value;
+    }
+
+    updateValue(value) {
+        // Deep equality check für Objekte
+        if (JSON.stringify(this.#value) !== JSON.stringify(value)) {
+            this.#value = value;
+            this.#toggle = !this.#toggle;
+        }
+    }
+
+    subscribe() {
+        return this.#toggle;
+    }
+
+    trigger() {
+        this.#toggle = !this.#toggle;
+    }
+
+    getProperty(key) {
+        return this.#value?.[key] ?? null;
+    }
+
+    setProperty(key, newVal) {
+        if (this.#value?.[key] !== newVal) {
+            this.#value[key] = newVal;
+            this.#toggle = !this.#toggle;
+        }
+    }
+}
+
+/**
  * A simple trigger you can subscribe to and trigger manually.
  */
 export class SimpleTrigger {

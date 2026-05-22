@@ -43,6 +43,8 @@ public class CIMClass {
 
     private UUID uuid;
 
+    private String graphUri;
+
     private URI uri;
 
     private RDFSLabel label;

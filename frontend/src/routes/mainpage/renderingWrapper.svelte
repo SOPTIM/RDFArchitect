@@ -31,6 +31,7 @@
         editorState,
         graphViewState,
         forceReloadTrigger,
+        DiagramType,
     } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
@@ -69,16 +70,18 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
 
         const datasetName = editorState.selectedDataset.getValue();
         const graphUri = editorState.selectedGraph.getValue();
-        const packageUUID = editorState.selectedPackageUUID.getValue();
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        const diagramType = editorState.selectedDiagram.getProperty("type");
         const filter = graphViewState.filter.getValue();
+
         const nextDiagramRequestKey = getDiagramRequestKey(
             datasetName,
             graphUri,
-            packageUUID,
+            diagramId,
             filter,
         );
         const hasCurrentResponse = untrack(() => !!response);
@@ -86,18 +89,37 @@
             nextDiagramRequestKey !== diagramRequestKey || !hasCurrentResponse;
         diagramRequestKey = nextDiagramRequestKey;
 
-        if (!packageUUID) {
-            response = null;
-            renderingFormat = null;
-            displayDiagram = false;
-            isLoading = false;
-            return;
-        }
-
         if (showBlockingLoading) {
             isLoading = true;
         }
 
+        if (diagramId) {
+            if (diagramType === DiagramType.CUSTOM_GRAPH_DIAGRAM) {
+                await fetchGraphDiagramRenderingData(diagramId);
+            } else if (diagramType === DiagramType.CUSTOM_DATASET_DIAGRAM) {
+                await fetchDatasetDiagramRenderingData(diagramId);
+            } else {
+                await fetchPackageRenderingData(
+                    datasetName,
+                    graphUri,
+                    diagramId,
+                    filter,
+                );
+            }
+        } else {
+            response = null;
+            renderingFormat = null;
+            displayDiagram = false;
+            isLoading = false;
+        }
+    });
+
+    async function fetchPackageRenderingData(
+        datasetName,
+        graphUri,
+        packageUUID,
+        filter,
+    ) {
         let graphFilter = {
             packageUUID,
             includeEnumEntries: filter.includeEnumEntries,
@@ -134,7 +156,56 @@
             displayDiagram = false;
             isLoading = false;
         }
-    });
+    }
+
+    async function fetchDatasetDiagramRenderingData(diagramId) {
+        try {
+            const res = await bec.getCustomDatasetDiagramRenderingData(
+                editorState.selectedDataset.getValue(),
+                diagramId,
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function fetchGraphDiagramRenderingData(diagramId) {
+        try {
+            const res = await bec.getCustomGraphDiagramRenderingData(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                diagramId,
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+        } finally {
+            isLoading = false;
+        }
+    }
 
     function getDiagramRequestKey(datasetName, graphUri, packageUUID, filter) {
         return JSON.stringify({
@@ -159,7 +230,7 @@
     }
 </script>
 
-{#if editorState.selectedPackageUUID.getValue()}
+{#if editorState.selectedDiagram.getProperty("id")}
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             {#if displayDiagram}
@@ -174,14 +245,16 @@
                             reset view
                         </ButtonControl>
                     </div>
-                    <div class="h-9 w-28">
-                        <ButtonControl
-                            variant="default"
-                            callOnClick={() => (showFilterDialog = true)}
-                        >
-                            filter view
-                        </ButtonControl>
-                    </div>
+                    {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
+                        <div class="h-9 w-28">
+                            <ButtonControl
+                                variant="default"
+                                callOnClick={() => (showFilterDialog = true)}
+                            >
+                                filter view
+                            </ButtonControl>
+                        </div>
+                    {/if}
                     {#if !isDatasetReadOnly && renderingFormat === SVELTEFLOW_FORMAT}
                         <div class="h-9 w-28">
                             <ButtonControl

@@ -39,14 +39,26 @@ export function isInvalidClassLabel(label, namespace, compareClasses) {
     }
     if (typeof namespace === "string" && namespace.trim() !== "") {
         if (
-            compareClasses &&
-            compareClasses.filter(
+            compareClasses?.some(
                 c => c.label === label && c.prefix === namespace,
-            ).length > 0
+            )
         ) {
             violations.push("must be unique");
         }
     }
+    return violations;
+}
+
+export function isValidDiagramName(diagramName, compareDiagrams) {
+    const violations = [];
+    if (diagramName?.trim() === "") {
+        violations.push("must not be empty");
+    }
+
+    if (compareDiagrams?.some(d => d.name === diagramName)) {
+        violations.push("must be unique");
+    }
+
     return violations;
 }
 

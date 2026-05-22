@@ -22,6 +22,8 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
+    import { Checkbox } from "$lib/components/bitsui/checkbox";
+
     let {
         label,
         level = 1,
@@ -37,6 +39,9 @@
         title,
         onToggle,
         onclick,
+        showCheckbox = false,
+        selected = false,
+        onSelect,
         ...restProps
     } = $props();
 
@@ -46,14 +51,34 @@
         readonly: "nav-entry__badge--readonly",
     };
 
+    let clickTimeout;
+
     function handleClick(event) {
         if (disabled) {
             event.preventDefault();
             return;
         }
-        onclick?.(event);
-        if (onToggle && event?.detail % 2 === 0) {
-            onToggle(event);
+        if (
+            event.target.type === "checkbox" ||
+            event.target.closest('[role="checkbox"]')
+        ) {
+            return;
+        }
+
+        if (event?.detail === 2) {
+            clearTimeout(clickTimeout);
+            if (onToggle) {
+                onToggle(event);
+            }
+        } else if (event?.detail === 1) {
+            clearTimeout(clickTimeout);
+            clickTimeout = setTimeout(() => {
+                if (showCheckbox) {
+                    selected = !selected;
+                    onSelect?.(event);
+                }
+                onclick?.(event);
+            }, 250);
         }
     }
 
@@ -103,6 +128,12 @@
         <span class={`nav-entry__badge ${badgeClass(badgeVariant)}`}>
             {badgeText}
         </span>
+    {/if}
+    {#if showCheckbox}
+        <Checkbox
+            bind:checked={selected}
+            onCheckedChange={() => onSelect?.()}
+        />
     {/if}
 </button>
 

@@ -32,7 +32,7 @@
     let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
 
     $effect(() => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readonly;
     });
 

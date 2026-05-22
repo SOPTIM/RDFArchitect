@@ -24,6 +24,7 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
 
     import {
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -127,7 +128,10 @@
             if (res.ok) {
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedPackageUUID.updateValue("default");
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.PACKAGE,
+                    id: "default",
+                });
                 editorState.selectedClassUUID.updateValue(null);
             } else {
                 console.log("failed to create graph");

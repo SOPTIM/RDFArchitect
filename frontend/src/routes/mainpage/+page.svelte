@@ -21,7 +21,7 @@
     import { validate } from "uuid";
 
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 
     import PackageNavigation from "./packageNavigation/packageNavigation.svelte";
     import PackageWindow from "./packageWindow.svelte";
@@ -42,7 +42,10 @@
         if (pack !== "default" && !validate(pack)) {
             pack = await resolveIRI(dataset, graph, pack);
         }
-        editorState.selectedPackageUUID.updateValue(pack);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: pack,
+        });
     }
 
     async function resolveIRI(dataset, graph, iri) {

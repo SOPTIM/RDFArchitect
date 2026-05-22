@@ -48,8 +48,8 @@ public class CIMUpdatesTestBase {
     protected static final String GRAPH_URI = "http://graph";
     protected static final GraphIdentifier graphIdentifier =
             new GraphIdentifier("default", GRAPH_URI);
-    protected static GraphRewindableWithUUIDs testGraph;
-    protected static DatabasePort databasePort;
+    protected GraphRewindableWithUUIDs testGraph;
+    protected DatabasePort databasePort;
 
     // base test constants
     protected static final String DATASET_NAME = "default";
@@ -117,7 +117,7 @@ public class CIMUpdatesTestBase {
         addGraphFromFile(BASE_FILENAME);
     }
 
-    protected static void addGraphFromFile(String fileName) {
+    protected void addGraphFromFile(String fileName) {
         byte[] content;
         try {
             content = Files.readAllBytes(Path.of(PATH + fileName));
