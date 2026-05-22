@@ -32,7 +32,7 @@
 </script>
 
 <div
-    class="pointer-events-none fixed top-14 right-4 z-50 flex flex-col gap-2"
+    class="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col-reverse gap-2"
     aria-label="Notifications"
 >
     {#each toasts as toast (toast.id)}
