@@ -1,0 +1,17 @@
+PREFIX ex:   <http://example.org#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+
+ex:Base
+    rdf:type rdfs:Class ;
+    rdfs:label "Base"@en ;
+    cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> ;
+    ex:uuid "22222222-2222-2222-2222-222222222222" .
+
+ex:Child
+    rdf:type rdfs:Class ;
+    rdfs:label "Child"@en ;
+    rdfs:subClassOf ex:Base ;
+    cims:stereotype <http://iec.ch/TC57/NonStandard/UML#concrete> ;
+    ex:uuid "2c9916ee-a33e-4a2a-a0b8-ad1ba1322ffd" .
