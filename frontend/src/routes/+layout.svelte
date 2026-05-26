@@ -58,6 +58,8 @@
     let menubarValue = $state(undefined);
 
     let isDatasetReadOnly = $state(false);
+
+    let isLeftAltPressed = false;
     let canCopyClass = $derived(editorState.selectedClassUUID.getValue());
     let canPasteClass = $derived(
         !isDatasetReadOnly &&
@@ -178,6 +180,10 @@
     }
 
     async function handleKeydown(event) {
+        if (event.code === "AltLeft") {
+            isLeftAltPressed = true;
+        }
+
         if (event.key === "Escape") {
             if (event.defaultPrevented) {
                 return;
@@ -197,12 +203,16 @@
             return;
         }
 
-        if (!(event.ctrlKey || event.metaKey)) {
+        const hasCtrl = event.ctrlKey || event.metaKey;
+        const hasCtrlAltViaAltGr =
+            event.getModifierState("AltGraph") && isLeftAltPressed;
+
+        if (!hasCtrl && !hasCtrlAltViaAltGr) {
             return;
         }
 
-        switch (event.key.toLowerCase()) {
-            case "z":
+        switch (event.code) {
+            case "KeyZ":
                 event.preventDefault();
                 if (event.shiftKey) {
                     if (canRedo && (await redo())) await reload();
@@ -210,22 +220,22 @@
                     if (canUndo && (await undo())) await reload();
                 }
                 break;
-            case "y":
+            case "KeyY":
                 event.preventDefault();
                 if (canRedo && (await redo())) await reload();
                 break;
-            case "c":
+            case "KeyC":
                 event.preventDefault();
                 if (canCopyClass) copyClass();
                 break;
-            case "v":
+            case "KeyV":
                 event.preventDefault();
                 if (canPasteClass) {
-                    if (event.shiftKey && event.altKey) {
+                    if (event.shiftKey && isLeftAltPressed) {
                         await pasteClass(true, false, false);
                     } else if (event.shiftKey) {
                         await pasteClass(false, false, true);
-                    } else if (event.altKey) {
+                    } else if (isLeftAltPressed) {
                         await pasteClass(false, true, false);
                     } else {
                         await pasteClass(false, true, true);
@@ -236,7 +246,15 @@
     }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window
+    onkeydown={handleKeydown}
+    onkeyup={e => {
+        if (e.code === "AltLeft") isLeftAltPressed = false;
+    }}
+    onblur={() => {
+        isLeftAltPressed = false;
+    }}
+/>
 <div class="fixed top-0 left-0 flex h-screen max-h-screen w-screen flex-col">
     {#if page.url.pathname !== "/"}
         <nav
