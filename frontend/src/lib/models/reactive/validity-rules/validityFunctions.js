@@ -22,8 +22,7 @@ import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/in
 export function isInvalidUuid(uuid) {
     const violations = [];
     if (validateUuid(uuid)) {
-        // Allows null because uuids are not required
-        violations.push("must be a valid UUID");
+        violations.push("must be a valid input");
     }
     return violations;
 }
@@ -139,7 +138,7 @@ export function isInvalidNamespace(namespace, compareNamespaces) {
             compareNamespace => compareNamespace.prefix === namespace,
         )
     ) {
-        violations.push("");
+        violations.push("must be a valid input");
     }
 
     return violations;
@@ -186,7 +185,7 @@ export function isInvalidDatatypeUri(uri, compareDatatypes) {
             datatype => datatype.prefix + datatype.label === uri,
         )
     ) {
-        violations.push("");
+        violations.push("must be a valid input");
     }
 
     return violations;
@@ -196,7 +195,7 @@ export function isInvalidTarget(target) {
     const violations = isNotEmptyValidation(target);
 
     if (violations.length === 0 && validateUuid(target)) {
-        violations.push("");
+        violations.push("must be a valid input");
     }
 
     return violations;
@@ -324,21 +323,9 @@ export function namespacePrefixesAreUnique(prefix, reactiveNamespacesArray) {
 }
 
 export function isInvalidPackage(pack) {
-    const violations = [];
-
-    if (validateUuid(pack)) {
-        violations.push("");
-    }
-
-    return violations;
+    return isInvalidUuid(pack);
 }
 
 export function isInvalidSuperClass(superClass) {
-    const violations = [];
-
-    if (validateUuid(superClass)) {
-        violations.push("");
-    }
-
-    return violations;
+    return isInvalidUuid(superClass);
 }
