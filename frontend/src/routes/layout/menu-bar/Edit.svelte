@@ -32,6 +32,10 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import {
+        enableEditing,
+        disableEditing,
+    } from "$lib/actions/editingActions.js";
+    import {
         undo as doUndo,
         redo as doRedo,
     } from "$lib/actions/versionControlActions.js";
@@ -97,7 +101,7 @@
     let graphHasOntology = $derived(!!ontology);
 
     $effect(async () => {
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         editorState.selectedClassUUID.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
@@ -123,7 +127,9 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        await enableEditing(selectedDataset);
+        if (!(await enableEditing(selectedDataset))) {
+            return;
+        }
         await reload();
         forceReloadTrigger.trigger();
     }
@@ -132,9 +138,11 @@
         if (!selectedDataset || isDatasetReadOnly) {
             return;
         }
-        await disableEditing(selectedDataset);
+        if (!(await disableEditing(selectedDataset))) {
+            return;
+        }
         await reload();
-        editorState.selectedPackageUUID.trigger();
+        editorState.selectedDiagram.trigger();
     }
 
     function openNamespaceManager() {
@@ -190,7 +198,7 @@
     async function refreshSelectedPackageDetails(packages) {
         const datasetName = editorState.selectedDataset.getValue();
         const graphURI = editorState.selectedGraph.getValue();
-        const packageId = editorState.selectedPackageUUID.getValue();
+        const packageId = editorState.selectedDiagram.getProperty("id");
 
         if (!datasetName || !graphURI || !packageId) {
             selectedPackageDetails = null;
@@ -228,13 +236,6 @@
         if (await doRedo()) reload();
     }
 
-    async function enableEditing(datasetName) {
-        await bec.enableEditing(datasetName);
-    }
-
-    async function disableEditing(datasetName) {
-        await bec.disableEditing(datasetName);
-    }
     $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>
 

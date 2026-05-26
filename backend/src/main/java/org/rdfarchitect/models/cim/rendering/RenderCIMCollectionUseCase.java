@@ -28,6 +28,29 @@ import java.util.UUID;
  */
 public interface RenderCIMCollectionUseCase {
 
+    /**
+     * Generates the rendering data for a CIMCollection, that belongs to a specific graph.
+     *
+     * @param cimCollection the CIMCollection to be converted
+     * @param graphIdentifier the dataset name and graph uri of the graph that the collection
+     *     belongs to
+     * @param diagramId the id of the package or custom diagram that should be rendered
+     * @return a dto that contains all data required to render a UML diagram for the given
+     *     collection
+     */
     RenderingDataDTO renderUML(
-            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID packageUUID);
+            CIMCollection cimCollection, GraphIdentifier graphIdentifier, UUID diagramId);
+
+    /**
+     * Generates the rendering data for a CIMCollection, that belongs not to one specific graph, but
+     * the dataset as a whole.
+     *
+     * @param cimCollection the CIMCollection to be converted
+     * @param datasetName the dataset name that the collection belongs to
+     * @param diagramId the id of the custom diagram that should be rendered
+     * @return a dto that contains all data required to render a UML diagram for the given
+     *     collection
+     */
+    RenderingDataDTO renderGlobalUML(
+            CIMCollection cimCollection, String datasetName, UUID diagramId);
 }

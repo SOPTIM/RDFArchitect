@@ -20,6 +20,7 @@
 
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
@@ -29,6 +30,9 @@
     let { showDialog = $bindable(), datasetName, graphUri, pack } = $props();
 
     async function deletePackage() {
+        const packageLabel = pack?.label
+            ? getPackageDisplayLabel(pack.label)
+            : null;
         try {
             const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/packages/${encodeURIComponent(pack.uuid)}`;
             const res = await fetch(url, {
@@ -37,13 +41,29 @@
             });
             if (!res.ok) {
                 console.error("Failed to delete package");
+                toastStore.error(
+                    "Delete failed",
+                    packageLabel
+                        ? `Could not delete package "${packageLabel}".`
+                        : "Could not delete package.",
+                );
+                return;
             }
-            if (editorState.selectedPackageUUID.getValue() === pack.uuid) {
-                editorState.selectedPackageUUID.updateValue(null);
+            if (editorState.selectedDiagram.getProperty("id") === pack.uuid) {
+                editorState.selectedDiagram.updateValue({
+                    type: null,
+                    id: null,
+                });
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);
             }
+            toastStore.success(
+                "Package deleted",
+                packageLabel
+                    ? `"${packageLabel}" was removed.`
+                    : "Package was removed.",
+            );
         } finally {
             forceReloadTrigger.trigger();
         }

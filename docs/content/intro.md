@@ -27,7 +27,7 @@ If you are new to RDFArchitect, start with **[Getting Started](/getting-started)
 ## What you can do with it
 
 - **Import and export** CGMES and ENTSO-E profiles in RDF/XML, Turtle, or N-Triples.
-- **Visualise** classes, attributes, associations, and inheritance as UML-style diagrams, organised by package.
+- **Visualise** classes, attributes, associations, and inheritance as UML-style diagrams, organised by package or your own custom diagram.
 - **Edit** every aspect of a profile — classes, attributes, associations, enum entries, stereotypes, comments, namespaces, and the profile header — through a guided UI.
 - **Generate SHACL** automatically from the schema, and manage imported SHACL alongside it.
 - **Track changes** with an edit changelog, undo/redo, and the ability to restore any previous state.

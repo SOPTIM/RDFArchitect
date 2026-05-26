@@ -47,13 +47,13 @@
     $effect(async () => {
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedPackageUUID.subscribe();
+        editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
 
-        if (!editorState.selectedPackageUUID.getValue()) return;
+        if (!editorState.selectedDiagram.getProperty("id")) return;
 
         let graphFilter = {
-            packageUUID: editorState.selectedPackageUUID.getValue(),
+            packageUUID: editorState.selectedDiagram.getProperty("id"),
             includeEnumEntries:
                 graphViewState.filter.getValue().includeEnumEntries,
             includeAttributes:
@@ -104,7 +104,7 @@
     });
 </script>
 
-{#if editorState.selectedPackageUUID.getValue()}
+{#if editorState.selectedDiagram.getProperty("id")}
     <div class="bg-window-background flex h-full flex-col justify-between">
         <div class="relative h-full overflow-hidden">
             {#if displayDiagram}

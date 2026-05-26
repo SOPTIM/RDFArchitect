@@ -25,7 +25,9 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -47,9 +49,10 @@
     function selectSubject(searchResult) {
         editorState.selectedDataset.updateValue(searchResult.datasetName);
         editorState.selectedGraph.updateValue(searchResult.graphUri);
-        editorState.selectedPackageUUID.updateValue(
-            searchResult.packageUUID ?? "default",
-        );
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: searchResult.packageUUID ?? "default",
+        });
 
         if (searchResult.type === "CLASS") {
             editorState.selectedClassDataset.updateValue(
@@ -61,7 +64,10 @@
         } else if (searchResult.type === "PACKAGE") {
             editorState.selectedClassUUID.updateValue(null);
             editorState.focusedClassUUID.updateValue(null);
-            editorState.selectedPackageUUID.updateValue(searchResult.uuid);
+            editorState.selectedDiagram.updateValue({
+                type: DiagramType.PACKAGE,
+                id: searchResult.uuid,
+            });
         } else {
             editorState.selectedClassDataset.updateValue(
                 searchResult.datasetName,
@@ -76,7 +82,7 @@
         }
         editorState.selectedDataset.trigger();
         editorState.selectedGraph.trigger();
-        editorState.selectedPackageUUID.trigger();
+        editorState.selectedDiagram.trigger();
         forceReloadTrigger.trigger();
     }
 
@@ -101,7 +107,7 @@
                     : null,
             packageUUID:
                 selectedFilter.value === "package"
-                    ? editorState.selectedPackageUUID.getValue()
+                    ? editorState.selectedDiagram.getProperty("id")
                     : null,
         };
         fetchSearchResults(trimmedQuery, body);
@@ -146,6 +152,10 @@
             console.error(
                 "Error fetching search results:",
                 response.statusText,
+            );
+            toastStore.error(
+                "Search failed",
+                "Could not fetch search results. Please try again.",
             );
         }
     }

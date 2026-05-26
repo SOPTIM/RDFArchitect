@@ -21,6 +21,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
@@ -50,16 +51,24 @@
     async function deleteDataset() {
         try {
             if (datasetName) {
-                await bec.deleteDataset(datasetName);
+                const res = await bec.deleteDataset(datasetName);
+                if (res && res.ok === false) {
+                    toastStore.error(
+                        "Delete failed",
+                        `Could not delete dataset "${datasetName}".`,
+                    );
+                    return;
+                }
             }
 
             if (editorState.selectedDataset.getValue() === datasetName) {
-                editorState.selectedDataset.updateValue(null);
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedPackageUUID.updateValue(null);
-                editorState.selectedClassDataset.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClassUUID.updateValue(null);
+                editorState.reset();
+            }
+            if (datasetName) {
+                toastStore.success(
+                    "Dataset deleted",
+                    `"${datasetName}" was removed.`,
+                );
             }
         } finally {
             forceReloadTrigger.trigger();

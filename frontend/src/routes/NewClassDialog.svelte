@@ -27,11 +27,13 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -158,9 +160,9 @@
         }
         await getPackages(datasetName, graphURI);
         const selectedPackageUUID =
-            editorState.selectedPackageUUID.getValue() === "default"
+            editorState.selectedDiagram.getProperty("id") === "default"
                 ? null
-                : editorState.selectedPackageUUID.getValue();
+                : editorState.selectedDiagram.getProperty("id");
         classPackage =
             packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
     }
@@ -237,22 +239,35 @@
                 });
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedPackageUUID.updateValue(
-                    selectedPackageUUID,
-                );
+                editorState.selectedDiagram.updateValue({
+                    type: DiagramType.PACKAGE,
+                    id: selectedPackageUUID,
+                });
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);
                 editorState.selectedClassUUID.updateValue(uuid);
+                toastStore.success(
+                    "Class created",
+                    `"${classNameLocal.value}" was added.`,
+                );
             } else {
                 console.log("failed to insert data");
+                toastStore.error(
+                    "Create failed",
+                    `Could not create class "${classNameLocal.value}".`,
+                );
             }
         } catch (e) {
             console.log("failed to add class:", e);
+            toastStore.error(
+                "Create failed",
+                "An unexpected error occurred while creating the class.",
+            );
         } finally {
             forceReloadTrigger.trigger();
             editorState.selectedDataset.trigger();
             editorState.selectedGraph.trigger();
-            editorState.selectedPackageUUID.trigger();
+            editorState.selectedDiagram.trigger();
             editorState.selectedClassUUID.trigger();
         }
     }

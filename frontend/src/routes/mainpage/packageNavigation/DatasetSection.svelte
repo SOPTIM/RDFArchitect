@@ -25,17 +25,21 @@
         faPenToSquare,
         faLock,
         faDiagramProject,
+        faPlus,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
+    import {
+        enableEditing,
+        disableEditing,
+    } from "$lib/actions/editingActions.js";
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
@@ -43,13 +47,13 @@
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
+    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
+    let showNewDiagramDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showNamespacesDialog = $state(false);
@@ -92,29 +96,30 @@
             return;
         }
         editorState.selectedGraph.updateValue(null);
-        editorState.selectedPackageUUID.updateValue(null);
+        editorState.selectedDiagram.updateValue({ type: null, id: null });
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
     }
 
-    async function enableEditing() {
+    async function requestEnableEditing() {
         if (!datasetNavEntry?.id || !readonly) {
             return;
         }
-
-        await bec.enableEditing(datasetNavEntry.id).then(() => {
-            readonly = false;
-            forceReloadTrigger.trigger();
-        });
+        if (!(await enableEditing(datasetNavEntry.id))) {
+            return;
+        }
+        readonly = false;
+        forceReloadTrigger.trigger();
     }
 
-    async function disableEditing() {
+    async function requestDisableEditing() {
         if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        await bec.disableEditing(datasetNavEntry.id).then(() => {
-            readonly = true;
-            forceReloadTrigger.trigger();
-        });
+        if (!(await disableEditing(datasetNavEntry.id))) {
+            return;
+        }
+        readonly = true;
+        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -158,6 +163,15 @@
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
+                    showNewDiagramDialog = true;
+                }}
+                faIcon={faPlus}
+            >
+                New Dataset Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
                     selectDataset();
                     showNamespacesDialog = true;
                 }}
@@ -169,7 +183,6 @@
                     Manage Namespaces
                 {/if}
             </ContextMenu.Item.Button>
-            <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
                     selectDataset();
@@ -181,14 +194,14 @@
             </ContextMenu.Item.Button>
             {#if readonly}
                 <ContextMenu.Item.Button
-                    onSelect={() => enableEditing()}
+                    onSelect={() => requestEnableEditing()}
                     faIcon={faPenToSquare}
                 >
                     Enable Editing
                 </ContextMenu.Item.Button>
             {:else}
                 <ContextMenu.Item.Button
-                    onSelect={() => disableEditing()}
+                    onSelect={() => requestDisableEditing()}
                     faIcon={faLock}
                 >
                     Disable Editing
@@ -219,6 +232,12 @@
                     {readonly}
                 />
             {/each}
+
+            <CustomDiagramsSection
+                {datasetNavEntry}
+                allGraphNavEntries={datasetNavEntry.children}
+                {readonly}
+            />
         </div>
     {/if}
 </div>
@@ -230,6 +249,10 @@
 <NewGraphDialog
     bind:showDialog={showNewGraphDialog}
     lockedDatasetName={datasetNavEntry.label}
+/>
+<CustomDatasetDiagramDialog
+    bind:showDialog={showNewDiagramDialog}
+    lockedDatasetName={datasetNavEntry.id}
 />
 <SnapshotDialog
     bind:showDialog={showSnapshotDialog}

@@ -21,11 +21,15 @@
         faAnglesDown,
         faAnglesUp,
         faAngleUp,
+        faFileExport,
         faLayerGroup,
+        faMinus,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
+    import { editorState } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -33,6 +37,8 @@
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
 
     let {
         request = null,
@@ -50,8 +56,10 @@
 
     let triggerRef = $state(null);
     let open = $state(false);
-    let deleteClassTarget = $state(null);
+    let dialogClass = $state(null);
     let showDeleteDependenciesDialog = $state(false);
+    let showExtendClassDialog = $state(false);
+    let showRemoveFromDiagramDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -78,8 +86,25 @@
         if (!contextMenuClass) {
             return;
         }
-        deleteClassTarget = contextMenuClass;
+        dialogClass = contextMenuClass;
         showDeleteDependenciesDialog = true;
+        onClose();
+    }
+
+    function openRemoveFromDiagramDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        showRemoveFromDiagramDialog = true;
+        onClose();
+    }
+
+    function openExtendClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        dialogClass = contextMenuClass;
+        showExtendClassDialog = true;
         onClose();
     }
 
@@ -127,12 +152,10 @@
     />
     <ContextMenu.Content>
         <ContextMenu.Item.Button
-            onSelect={openDeleteClassDialog}
-            {disabled}
-            faIcon={faTrash}
-            variant="danger"
+            onSelect={openExtendClassDialog}
+            faIcon={faFileExport}
         >
-            Delete class
+            Extend Class
         </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger faIcon={faLayerGroup}>
@@ -191,6 +214,22 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
+        <ContextMenuSeparator />
+        <ContextMenu.Item.Button
+            onSelect={openRemoveFromDiagramDialog}
+            faIcon={faMinus}
+            variant="danger"
+        >
+            Remove from Diagram
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={openDeleteClassDialog}
+            {disabled}
+            faIcon={faTrash}
+            variant="danger"
+        >
+            Delete class
+        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 
@@ -198,5 +237,19 @@
     bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
     {graphUri}
-    resourceUuid={deleteClassTarget?.uuid}
+    resourceUuid={dialogClass?.uuid}
+/>
+<ExtendClassDialog
+    {datasetName}
+    {graphUri}
+    classUUID={dialogClass?.uuid}
+    bind:showDialog={showExtendClassDialog}
+/>
+<RemoveFromDiagramDialog
+    bind:showDialog={showRemoveFromDiagramDialog}
+    lockedDatasetName={datasetName}
+    {graphUri}
+    diagramId={editorState.selectedDiagram.getProperty("id")}
+    classId={contextMenuClass.uuid}
+    classLabel={contextMenuClass.label}
 />
