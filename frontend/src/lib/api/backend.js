@@ -37,16 +37,6 @@ export class BackendConnection {
         });
     }
 
-    async getGraphNames(datasetName) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs`;
-        return fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
     async getClassInfo(datasetName, graphURI, classUUID) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return fetch(url, {
@@ -64,16 +54,6 @@ export class BackendConnection {
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(newClass),
-            credentials: "include",
-        });
-    }
-
-    async getPackages(datasetName, graphURI) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages`;
-        return fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
             credentials: "include",
         });
     }
@@ -191,14 +171,6 @@ export class BackendConnection {
             credentials: "include",
         });
     }
-    async deleteClass(datasetName, graphURI, classUUID) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
-        return await fetch(url, {
-            method: "DELETE",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
 
     async deleteResources(datasetName, graphURI, deleteRequests) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/delete-requests`;
@@ -226,26 +198,6 @@ export class BackendConnection {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(enumEntry),
-            credentials: "include",
-        });
-    }
-
-    async getNamespaces(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/namespaces`;
-        return await fetch(url, {
-            method: "GET",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async replaceNamespaces(datasetName, namespaces) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/namespaces`;
-        return fetch(url, {
-            method: "PUT",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(namespaces),
             credentials: "include",
         });
     }
@@ -446,16 +398,6 @@ export class BackendConnection {
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(newOntology),
-            credentials: "include",
-        });
-    }
-
-    async deleteOntology(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
-        return await fetch(url, {
-            method: "DELETE",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
             credentials: "include",
         });
     }

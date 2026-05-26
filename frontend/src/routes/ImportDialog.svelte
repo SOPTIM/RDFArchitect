@@ -68,9 +68,9 @@
         await datasetStore.load();
         for (const dataset of $datasetStore.data) {
             if (dataset.readonly) {
-                readOnlyDatasets.push(dataset);
+                readOnlyDatasets.push(dataset.label);
             } else {
-                modifiableDatasets.push(dataset);
+                modifiableDatasets.push(dataset.label);
             }
         }
     }

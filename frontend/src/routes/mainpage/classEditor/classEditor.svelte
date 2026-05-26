@@ -34,7 +34,6 @@
     import {
         getClasses,
         getDataTypes,
-        getNamespaces,
         getPackages,
         getStereotypes,
     } from "./fetch-class-editor-context.js";
@@ -193,7 +192,7 @@
             getPackages(datasetName, graphUri),
             getDataTypes(datasetName, graphUri),
             getStereotypes(datasetName, graphUri),
-            getNamespaces(datasetName),
+            datasetStore.getNamespaces(datasetName),
         ]);
         loadingContext = false;
         editorState.selectedContext.trigger();

@@ -39,6 +39,7 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import {
         editorState,
@@ -52,7 +53,6 @@
 
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();

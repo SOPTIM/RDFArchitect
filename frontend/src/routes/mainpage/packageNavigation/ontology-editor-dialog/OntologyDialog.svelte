@@ -19,7 +19,6 @@
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
@@ -32,6 +31,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
     import OntologyEntryRow from "./OntologyEntryRow.svelte";
@@ -88,7 +88,7 @@
 
     async function onOpen() {
         if (!namespaces) {
-            namespaces = await getNamespaces(dataset);
+            namespaces = datasetStore.getNamespaces(dataset);
         }
 
         namespaces = withOntologyDefaultNamespaces(namespaces);

@@ -20,7 +20,6 @@
     import { onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
@@ -32,6 +31,7 @@
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
+    import { datasetStore } from "../lib/stores/DatasetStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -51,7 +51,9 @@
     let ontology = $state();
     let generatedOntologyEntries = $state([]);
 
-    let namespaces = $state([]);
+    let namespaces = $derived(
+        $datasetStore.data?.find(d => d.label === selectedDatasetName)?.prefixes ?? new Set()
+    );
     let hasOntology = $derived(!!ontology);
 
     // Derived state for checkbox
@@ -68,14 +70,6 @@
             (disablePrimary =
                 !selectedDatasetName || !graphURI || !selectedMediaType),
     );
-
-    $effect(async () => {
-        if (selectedDatasetName) {
-            namespaces = await getNamespaces(selectedDatasetName);
-        } else {
-            namespaces = [];
-        }
-    });
 
     $effect(async () => {
         if (selectedDatasetName && graphURI) {
@@ -110,9 +104,6 @@
         selectedDatasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
-        if (selectedDatasetName) {
-            namespaces = await getNamespaces(selectedDatasetName);
-        }
         const saved = userSettings.get("defaultExportFormat", null);
         selectedMediaType = saved
             ? (supportedMediaTypes.find(m => m.mimeType === saved) ??

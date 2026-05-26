@@ -15,24 +15,24 @@
  *
  */
 
-import { getNamespaces as getNamespacesFromApi } from "$lib/api/apiDatasetUtils.js";
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
+import { packageStore } from "$lib/stores/PackageStore.ts";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 export async function getPackages(datasetName, graphUri) {
     // fetch packages
-    const res = await bec.getPackages(datasetName, graphUri);
-    let packagesDto = await res.json();
+    await packageStore.load(datasetName, graphUri);
+    const packageData = packageStore.getPackages(datasetName, graphUri);
 
     // Combine internal and external packages
     let packages = [];
-    for (const pkg of packagesDto.internalPackageList) {
+    for (const pkg of packageData.internal) {
         packages.push(new Package(pkg));
     }
-    for (const pkg of packagesDto.externalPackageList) {
+    for (const pkg of packageData.external) {
         packages.push(new Package({ ...pkg, external: true }));
     }
 
@@ -111,10 +111,4 @@ export async function getStereotypes(datasetName, graphUri) {
 
     console.debug("STEREOTYPES:", stereotypesJSON);
     return stereotypesJSON;
-}
-
-export async function getNamespaces(datasetName) {
-    const namespaces = await getNamespacesFromApi(datasetName);
-    console.debug("NAMESPACES:", namespaces);
-    return namespaces;
 }

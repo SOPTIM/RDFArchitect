@@ -17,20 +17,17 @@
 
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { packageStore } from "$lib/stores/PackageStore.ts";
 
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-async function getPackages(datasetName, graphURI) {
-    const res = await bec.getPackages(datasetName, graphURI);
-    return await res.json();
-}
-
 export async function createPackageListForGraph(datasetName, graphURI) {
-    const res = await getPackages(datasetName, graphURI);
+    await packageStore.load(datasetName, graphURI);
+    const packageData = packageStore.getPackages(datasetName, graphURI);
 
-    return [...res.internalPackageList, ...res.externalPackageList]
+    return [...packageData.internal, ...packageData.external]
         .map(pack => {
             const packageId = getPackageId(pack);
 

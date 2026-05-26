@@ -18,8 +18,6 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
@@ -27,22 +25,17 @@
         editorState,
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const baseDeletionDescription =
         "All schemas and packages inside this dataset will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
-        graphs = null;
-        if (datasetName) {
-            const res = await bec.getGraphNames(datasetName);
-            graphs = await res.json();
-        } else {
-            graphs = [];
-        }
+        await graphURIStore.load(datasetName);
+        graphs = graphURIStore.getGraphURIs(datasetName);
     }
 
     function onClose() {

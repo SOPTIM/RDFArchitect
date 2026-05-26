@@ -33,7 +33,6 @@
         enableEditing,
         disableEditing,
     } from "$lib/actions/editingActions.js";
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
@@ -85,7 +84,7 @@
             return;
         }
         try {
-            namespaces = await getNamespaces(datasetNavEntry.label);
+            namespaces = datasetStore.getNamespaces(datasetNavEntry.label);
         } catch (err) {
             console.error("Failed to load namespaces:", err);
             namespaces = [];

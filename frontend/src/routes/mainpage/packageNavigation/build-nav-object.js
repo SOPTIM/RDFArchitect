@@ -23,6 +23,8 @@ import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 import { datasetStore } from "$lib/stores/DatasetStore.ts";
+import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+import { packageStore } from "$lib/stores/PackageStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -34,6 +36,12 @@ import {
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+/**
+ * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
+ * @param {NavEntry[]} existingList
+ * @param {object} props
+ * @returns {NavEntry}
+ */
 function reuseOrCreate(existingList, props) {
     const existing = existingList?.find(e => e.id === props.id);
     if (existing) {
@@ -52,6 +60,7 @@ function syncList(targetArray, freshEntries, parent = null) {
 }
 
 export async function getNavEntryList(existingDatasetNavList) {
+    await datasetStore.load();
     const datasets = get(datasetStore).data ?? [];
     const freshEntries = datasets
         .sort((a, b) => a.label.localeCompare(b.label))
@@ -99,8 +108,8 @@ async function populateDataset(datasetNavEntry) {
 
 async function getGraphNames(datasetName) {
     try {
-        const res = await bec.getGraphNames(datasetName);
-        return await res.json();
+        await graphURIStore.load(datasetName);
+        return graphURIStore.getGraphURIs(datasetName);
     } catch (err) {
         console.error(
             "Error fetching graph names for dataset " + datasetName,
@@ -112,17 +121,16 @@ async function getGraphNames(datasetName) {
 
 export async function populateGraph(datasetNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
-    const packageApiObject = await getPackages(
-        datasetNavObject.id,
-        graphNavObject.id,
-    );
+    await packageStore.load(datasetNavObject.id, graphNavObject.id);
+    const packageData = packageStore.getPackages(datasetNavObject.id, graphNavObject.id);
+
     const allClasses = await getClasses(datasetNavObject.id, graphNavObject.id);
 
     const freshEntries = [
-        ...packageApiObject.internalPackageList.map(pack =>
+        ...packageData.internal.map(pack =>
             reuseOrCreatePackage(existingPackageList, pack, false),
         ),
-        ...packageApiObject.externalPackageList.map(pack =>
+        ...packageData.external.map(pack =>
             reuseOrCreatePackage(existingPackageList, pack, true),
         ),
     ].sort((a, b) => {
@@ -185,32 +193,9 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
     return entry;
 }
 
-async function getPackages(datasetName, graphURI) {
-    try {
-        const res = await bec.getPackages(datasetName, graphURI);
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching packages for dataset " +
-                datasetName +
-                " and graph " +
-                graphURI,
-            err,
-        );
-        return { internalPackageList: [], externalPackageList: [] };
-    }
-}
-
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
-    console.log(
-        "Populating package",
-        packageNavObject.id,
-        "with classes:",
-        allClasses,
-    );
-    allClasses = allClasses ?? [];
     const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
         .sort((a, b) => a.label.localeCompare(b.label))

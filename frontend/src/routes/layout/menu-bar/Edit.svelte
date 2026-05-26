@@ -40,7 +40,7 @@
     } from "$lib/actions/editingActions.js";
     import {
         undo as doUndo,
-        redo as doRedo,
+        redo as doRedo
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
@@ -49,9 +49,10 @@
     import {
         copyState,
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
 
+    import { packageStore } from "$lib/stores/PackageStore.ts";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
@@ -62,7 +63,10 @@
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
 
-    let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
+    let {
+        canUndo, canRedo, isDatasetReadOnly, reload = () => {
+        }
+    } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -91,20 +95,20 @@
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
     let hasDatasetSelected = $derived(!!selectedDataset);
     let hasGraphSelected = $derived(
-        hasDatasetSelected && !!editorState.selectedGraph.getValue(),
+        hasDatasetSelected && !!editorState.selectedGraph.getValue()
     );
     let canAccessNamespaces = $derived(hasDatasetSelected);
     let canEditCurrentPackage = $derived(
         selectedPackageDetails &&
-            !selectedPackageDetails.external &&
-            selectedPackageDetails.label !== "default" &&
-            !isDatasetReadOnly,
+        !selectedPackageDetails.external &&
+        selectedPackageDetails.label !== "default" &&
+        !isDatasetReadOnly
     );
     let canDeleteCurrentPackage = $derived(
         selectedPackageDetails &&
-            !selectedPackageDetails.external &&
-            selectedPackageDetails.label !== "default" &&
-            !isDatasetReadOnly,
+        !selectedPackageDetails.external &&
+        selectedPackageDetails.label !== "default" &&
+        !isDatasetReadOnly
     );
     let graphHasOntology = $derived(!!ontology);
 
@@ -246,29 +250,19 @@
         if (!hasGraphSelected) {
             return [];
         }
-        try {
-            const response = await bec.getPackages(
-                selectedDataset,
-                selectedGraph,
-            );
-            if (!response.ok) {
-                throw new Error("Failed to fetch packages");
-            }
-            const packagesJSON = await response.json();
-            return [
-                ...(packagesJSON.internalPackageList ?? []).map(p => ({
-                    ...p,
-                    external: false,
-                })),
-                ...(packagesJSON.externalPackageList ?? []).map(p => ({
-                    ...p,
-                    external: true,
-                })),
-            ];
-        } catch (error) {
-            console.error("Failed to fetch packages", error);
-            return [];
-        }
+
+        await packageStore.load(selectedDataset, selectedGraph);
+        const packageData = packageStore.getPackages(selectedDataset, selectedGraph);
+        return [
+            ...(packageData.internal ?? []).map(p => ({
+                ...p,
+                external: false,
+            })),
+            ...(packageData.external ?? []).map(p => ({
+                ...p,
+                external: true,
+            })),
+        ];;
     }
 
     async function refreshSelectedPackageDetails(packages) {
@@ -308,6 +302,7 @@
     async function undo() {
         if (await doUndo()) reload();
     }
+
     async function redo() {
         if (await doRedo()) reload();
     }

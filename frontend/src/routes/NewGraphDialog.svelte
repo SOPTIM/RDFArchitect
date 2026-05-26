@@ -23,7 +23,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
 
     import {
         DiagramType,
@@ -106,8 +106,8 @@
             return;
         }
 
-        await graphStore.load(datasetNameUserInput);
-        graphNames = graphStore.getGraphs(datasetNameUserInput);
+        await graphURIStore.load(datasetNameUserInput);
+        graphNames = graphURIStore.getGraphs(datasetNameUserInput);
     }
 
     async function addGraph() {
@@ -157,7 +157,7 @@
                 );
             })
             .finally(() => {
-                graphStore.invalidateDataset(datasetNameLocal);
+                graphURIStore.invalidateDataset(datasetNameLocal);
                 datasetStore.load(true);
                 forceReloadTrigger.trigger();
             });

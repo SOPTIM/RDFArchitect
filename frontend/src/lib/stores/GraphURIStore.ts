@@ -19,20 +19,20 @@ import { writable, get } from "svelte/store";
 
 import { listGraphs, deleteGraph, Uri } from "../api/generated";
 
-type DatasetGraphsState = {
+type GraphURIState = {
     data: Uri[] | null;
     fetchedAt: number | null;
     pending: Promise<void> | null;
     error: unknown;
 };
 
-type GraphsState = {
-    graphs: Map<string, DatasetGraphsState>;
+type DatasetState = {
+    graphs: Map<string, GraphURIState>;
 };
 
-export const graphStore = createGraphsStore();
+export const graphURIStore = createGrapURIStore();
 
-function createEmptyDatasetState(): DatasetGraphsState {
+function createEmptyDatasetState(): GraphURIState {
     return {
         data: null,
         fetchedAt: null,
@@ -41,22 +41,22 @@ function createEmptyDatasetState(): DatasetGraphsState {
     };
 }
 
-function createGraphsStore() {
-    const store = writable<GraphsState>({
+function createGrapURIStore() {
+    const store = writable<DatasetState>({
         graphs: new Map(),
     });
 
     const { subscribe, update } = store;
 
-    function getDatasetState(state: GraphsState, datasetName: string): DatasetGraphsState {
+    function getDatasetState(state: DatasetState, datasetName: string): GraphURIState {
         return state.graphs.get(datasetName) ?? createEmptyDatasetState();
     }
 
     function setDatasetState(
-        state: GraphsState,
+        state: DatasetState,
         datasetName: string,
-        next: DatasetGraphsState,
-    ): GraphsState {
+        next: GraphURIState,
+    ): DatasetState {
         const byDataset = new Map(state.graphs);
         byDataset.set(datasetName, next);
         return { ...state, graphs: byDataset };
@@ -117,15 +117,15 @@ function createGraphsStore() {
         return promise;
     }
 
-    function getGraphs(datasetName: string): Uri[] | null {
+    function getGraphURIs(datasetName: string): Uri[] | null {
         return getDatasetState(get(store), datasetName).data;
     }
 
-    function getStateForDataset(datasetName: string): DatasetGraphsState {
+    function getStateForDataset(datasetName: string): GraphURIState {
         return getDatasetState(get(store), datasetName);
     }
 
-    async function remove(datasetName: string, graphURI: string) {
+    async function removeGraph(datasetName: string, graphURI: string) {
         const { error } = await deleteGraph({
             path: { datasetName, graphURI },
         });
@@ -164,9 +164,9 @@ function createGraphsStore() {
     return {
         subscribe,
         load,
-        getGraphs,
+        getGraphURIs,
         getStateForDataset,
-        remove,
+        remove: removeGraph,
         invalidateDataset,
         invalidateAll,
     };
