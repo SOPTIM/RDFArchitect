@@ -52,6 +52,7 @@
 
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
@@ -76,7 +77,7 @@
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
-            ? await isReadOnly(selectedDataset)
+            ? await datasetStore.isReadOnly(selectedDataset)
             : false;
     });
 
@@ -121,11 +122,6 @@
     async function fetchUndoRedo() {
         canUndo = await fetchCanUndo();
         canRedo = await fetchCanRedo();
-    }
-
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
     }
 
     async function reload() {

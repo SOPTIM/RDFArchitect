@@ -259,7 +259,7 @@
                                 showScopeDropdown = false;
                             }}
                         >
-                            {filter.name}
+                            {filter.label}
                         </button>
                     {/each}
                 </div>

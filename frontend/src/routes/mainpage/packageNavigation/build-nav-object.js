@@ -15,12 +15,14 @@
  *
  */
 
+import { get } from "svelte/store";
+
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+import { datasetStore } from "$lib/stores/DatasetStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -50,44 +52,20 @@ function syncList(targetArray, freshEntries, parent = null) {
 }
 
 export async function getNavEntryList(existingDatasetNavList) {
-    const freshEntries = (await getDatasetNames())
-        .sort((a, b) => a.localeCompare(b))
-        .map(label =>
-            reuseOrCreate(existingDatasetNavList, { label, id: label }),
+    const datasets = get(datasetStore).data ?? [];
+    const freshEntries = datasets
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(dataset =>
+            reuseOrCreate(existingDatasetNavList, { label: dataset.label, id: dataset.label }),
         );
 
     const result = existingDatasetNavList ?? [];
     syncList(result, freshEntries, null);
 
     for (const datasetNavEntry of result) {
-        try {
-            await populateDataset(datasetNavEntry);
-        } catch (err) {
-            console.error(
-                "Error populating dataset " + datasetNavEntry.id,
-                err,
-            );
-            toastStore.error(
-                "Failed to load dataset",
-                `Could not load graphs for dataset "${datasetNavEntry.id}". Other datasets are still available.`,
-            );
-        }
+        await populateDataset(datasetNavEntry);
     }
     return result;
-}
-
-async function getDatasetNames() {
-    try {
-        const res = await bec.getDatasetNames();
-        if (!res.ok) {
-            console.error(`Error fetching dataset names: HTTP ${res.status}`);
-            return [];
-        }
-        return await res.json();
-    } catch (err) {
-        console.error("Error fetching dataset names", err);
-        return [];
-    }
 }
 
 async function populateDataset(datasetNavEntry) {
@@ -122,12 +100,6 @@ async function populateDataset(datasetNavEntry) {
 async function getGraphNames(datasetName) {
     try {
         const res = await bec.getGraphNames(datasetName);
-        if (!res.ok) {
-            console.error(
-                `Error fetching graph names for dataset "${datasetName}": HTTP ${res.status}`,
-            );
-            return [];
-        }
         return await res.json();
     } catch (err) {
         console.error(
@@ -279,13 +251,6 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
 async function getClasses(datasetName, graphURI) {
     try {
         const res = await bec.getClasses(datasetName, graphURI);
-        console.warn(
-            "Fetched classes for dataset " +
-                datasetName +
-                " and graph " +
-                graphURI,
-            res,
-        );
         return await res.json();
     } catch (err) {
         console.error(

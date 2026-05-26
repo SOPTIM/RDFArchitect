@@ -113,7 +113,7 @@
             placeholder={diagramList.length > 0
                 ? "Select diagram"
                 : "No diagrams available"}
-            getOptionLabel={diagram => diagram.name}
+            getOptionLabel={diagram => diagram.label}
         />
     </div>
 </ActionDialog>

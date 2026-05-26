@@ -15,9 +15,9 @@
  *
  */
 
-import fs from "fs";
-import path from "path";
-import { fileURLToPath } from "url";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 const __filepath = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filepath);
@@ -53,7 +53,7 @@ function generateLicenseContent() {
                 .replace(/\.git$/, "");
 
             packages.push({
-                name: pkg.name,
+                name: pkg.label,
                 version: pkg.version,
                 license,
                 reference,
@@ -65,9 +65,9 @@ function generateLicenseContent() {
 
     let markdown = "# Third-Party Licenses\n\n";
 
-    for (const pkg of packages.sort((a, b) => a.name.localeCompare(b.name))) {
-        markdown += `### ${pkg.name}\n`;
-        markdown += `- **Package:** ${pkg.name}\n`;
+    for (const pkg of packages.toSorted((a, b) => a.label.localeCompare(b.label))) {
+        markdown += `### ${pkg.label}\n`;
+        markdown += `- **Package:** ${pkg.label}\n`;
         markdown += `- **Version:** ${pkg.version}\n`;
         markdown += `- **License:** ${pkg.license}\n`;
         if (pkg.reference) {

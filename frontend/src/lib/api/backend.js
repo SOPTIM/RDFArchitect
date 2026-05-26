@@ -37,29 +37,12 @@ export class BackendConnection {
         });
     }
 
-    async getDatasetNames() {
-        const url = `${PUBLIC_BACKEND_URL}/datasets`;
-        return fetch(url, {
-            method: "GET",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
     async getGraphNames(datasetName) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async deleteDataset(datasetName) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}`;
-        return fetch(url, {
-            method: "DELETE",
             credentials: "include",
         });
     }
@@ -336,15 +319,6 @@ export class BackendConnection {
 
     async loadSnapshot(base64Token) {
         let url = `${PUBLIC_BACKEND_URL}/snapshots/${encodeURIComponent(base64Token)}`;
-        return await fetch(url, {
-            method: "GET",
-            mode: "cors",
-            credentials: "include",
-        });
-    }
-
-    async isReadOnly(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/readonly`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
