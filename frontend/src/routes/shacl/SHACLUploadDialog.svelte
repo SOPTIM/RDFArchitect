@@ -20,6 +20,7 @@
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -69,13 +70,25 @@
             .then(res => {
                 if (res.ok) {
                     console.log("successfully inserted data");
+                    toastStore.success(
+                        "Constraints imported",
+                        `"${file.name}" was applied to "${graphURI}".`,
+                    );
                 } else {
                     console.log("failed to insert SHACL file");
+                    toastStore.error(
+                        "Import failed",
+                        `Could not import "${file.name}".`,
+                    );
                 }
             })
             .catch(e => {
                 console.log("failed to insert SHACL file:");
                 console.log(e);
+                toastStore.error(
+                    "Import failed",
+                    "An unexpected error occurred while uploading the SHACL file.",
+                );
             })
             .finally(() => {
                 forceReloadTrigger.trigger();

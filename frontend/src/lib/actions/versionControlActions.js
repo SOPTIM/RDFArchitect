@@ -16,6 +16,7 @@
  */
 
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { editorState } from "$lib/sharedState.svelte.js";
 
 function resolveTargets(datasetName, graphURI) {
@@ -71,6 +72,7 @@ export async function undo(datasetName, graphURI) {
     }
 
     console.log("Undo failed.");
+    toastStore.error("Undo failed", "Could not undo the last change.");
     return false;
 }
 
@@ -113,5 +115,6 @@ export async function redo(datasetName, graphURI) {
     }
 
     console.log("Redo failed.");
+    toastStore.error("Redo failed", "Could not redo the change.");
     return false;
 }

@@ -25,6 +25,7 @@
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
@@ -156,22 +157,44 @@
                     ontology.entries.append(entry);
                 }
             }
-            await bec.putOntology(
+            const ontologyRes = await bec.putOntology(
                 selectedDatasetName,
                 graphURI,
                 ontology.getPlainObject(),
             );
+            if (ontologyRes && ontologyRes.ok === false) {
+                toastStore.error(
+                    "Profile header update failed",
+                    "Could not persist the generated profile header entries; export aborted.",
+                );
+                return;
+            }
             forceReloadTrigger.trigger();
         }
         try {
             const response = await fetchGraphFile(getAPIRoute);
+            if (!response.ok) {
+                toastStore.error(
+                    "Export failed",
+                    `Could not export "${graphURI}".`,
+                );
+                return;
+            }
             const blob = await response.blob();
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
             saveFile(blob, suggestedFilename, selectedMediaType);
+            toastStore.success(
+                "Export ready",
+                `"${graphURI}" downloaded as ${selectedMediaType.name}.`,
+            );
         } catch (e) {
             console.error("Failed to download graph:", e);
+            toastStore.error(
+                "Export failed",
+                "An unexpected error occurred while exporting.",
+            );
         } finally {
             showDialog = false;
         }

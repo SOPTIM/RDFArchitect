@@ -20,6 +20,7 @@
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         DiagramType,
         editorState,
@@ -52,6 +53,13 @@
                 classUUID,
                 body,
             );
+            if (!response.ok) {
+                toastStore.error(
+                    "Could not extend class",
+                    "The class could not be extended. Please try again.",
+                );
+                return;
+            }
             const newClass = await response.json();
             editorState.selectedDataset.updateValue(selectedDatasetName);
             editorState.selectedGraph.updateValue(selectedGraphURI);
@@ -60,8 +68,16 @@
                 id: newClass.belongsToCategory,
             });
             forceReloadTrigger.trigger();
+            toastStore.success(
+                "Class extended",
+                `The class has been extended in "${selectedDatasetName}".`,
+            );
         } catch (e) {
             console.log(e);
+            toastStore.error(
+                "Could not extend class",
+                "An unexpected error occurred. Please try again.",
+            );
         }
     }
 </script>

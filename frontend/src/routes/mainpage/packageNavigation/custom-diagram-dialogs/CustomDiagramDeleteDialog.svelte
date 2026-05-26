@@ -21,6 +21,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
@@ -47,6 +48,13 @@
                     "Failed to delete custom diagram",
                     await res.text(),
                 );
+                toastStore.error(
+                    "Delete failed",
+                    diagram?.label
+                        ? `Could not delete custom diagram "${diagram.label}".`
+                        : "Could not delete custom diagram.",
+                );
+                return;
             }
             if (
                 editorState.selectedDiagram.getProperty("id") ===
@@ -60,6 +68,12 @@
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);
             }
+            toastStore.success(
+                "Custom diagram deleted",
+                diagram?.label
+                    ? `"${diagram.label}" was removed.`
+                    : "Diagram was removed.",
+            );
         } finally {
             forceReloadTrigger.trigger();
         }

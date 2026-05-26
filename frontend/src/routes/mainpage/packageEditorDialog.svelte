@@ -22,6 +22,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactivePackageToPackageDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
@@ -121,9 +122,17 @@
             console.log("Successfully saved package");
             pkg.save();
             forceReloadTrigger.trigger();
+            toastStore.success(
+                isNewPackage ? "Package created" : "Package saved",
+                `"${getPackageDisplayLabel(apiPackage.label)}" was saved.`,
+            );
         } else {
             const errorText = await res.text();
             console.error("Could not save package:", errorText);
+            toastStore.error(
+                "Save failed",
+                `Could not save package "${getPackageDisplayLabel(apiPackage.label)}".`,
+            );
         }
 
         return res;

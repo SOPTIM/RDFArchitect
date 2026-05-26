@@ -27,6 +27,7 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
         editorState,
@@ -80,6 +81,7 @@
     }
 
     async function saveChangesToBackend(classDto) {
+        const classLabel = classDto.label ?? classDto.uuid;
         const res = await bec.replaceClass(
             datasetName,
             graphUri,
@@ -96,10 +98,15 @@
             editorState.selectedClassUUID.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
+            toastStore.success("Class saved", `"${classLabel}" was saved.`);
         } else {
             console.error(
                 "Could not save unsaved changes to class:",
                 responseText,
+            );
+            toastStore.error(
+                "Save failed",
+                `Could not save class "${classLabel}".`,
             );
         }
         forceReloadTrigger.trigger();

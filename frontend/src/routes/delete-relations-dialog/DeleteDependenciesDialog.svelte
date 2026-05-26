@@ -21,6 +21,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
@@ -145,15 +146,26 @@
         if (!deleteDependencies) return;
         const payload = buildPayload(deleteDependencies);
         console.log("Submit delete with selections:", payload);
+        const label = deleteDependencies.resourceIdentifier.label;
         let res = await bec.deleteResources(datasetName, graphUri, payload);
         if (!res.ok) {
             console.error("Failed to delete resources:", await res.text());
+            toastStore.error(
+                "Delete failed",
+                label
+                    ? `Could not delete ${type} "${label}".`
+                    : "Could not delete the selected resources.",
+            );
         } else {
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClassUUID.updateValue(null);
+            toastStore.success(
+                `${type ? type.charAt(0).toUpperCase() + type.slice(1) : "Resource"} deleted`,
+                label ? `"${label}" was removed.` : "Resource was removed.",
+            );
         }
     }
 
