@@ -15,15 +15,11 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { CreateClientConfig } from "./generated/client";
 
-export async function getNamespaces(datasetName) {
-    if (!datasetName) {
-        return [];
-    }
-    const res = await bec.getNamespaces(datasetName);
-    return await res.json();
-}
+export const createClientConfig: CreateClientConfig = (config) => ({
+    ...config,
+    baseUrl: "http://localhost:8080/",
+    credentials: "include",
+});

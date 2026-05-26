@@ -273,7 +273,7 @@
         bind:value={selectedMediaType}
     >
         {#each supportedMediaTypes as mediaType}
-            <option value={mediaType}>{mediaType.name}</option>
+            <option value={mediaType}>{mediaType.label}</option>
         {/each}
     </select>
 </div>

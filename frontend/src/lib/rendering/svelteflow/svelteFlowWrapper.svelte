@@ -35,6 +35,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
@@ -106,7 +107,7 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+        isDatasetReadOnly = dataset ? await datasetStore.isReadOnly(dataset) : false;
     });
 
     $effect(() => {
@@ -269,11 +270,6 @@
             });
             editorState.focusedClassUUID.updateValue(null);
         });
-    }
-
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
     }
 
     function handleNodeClick(nodeClickEvent) {

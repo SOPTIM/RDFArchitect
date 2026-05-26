@@ -19,7 +19,6 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -30,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import {
         getClasses,
@@ -49,6 +49,7 @@
     import Package from "./components/Package.svelte";
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
+
 
     const { datasetName, graphUri, classUuid } = $props();
 
@@ -96,7 +97,7 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            isDatasetReadOnly = await isReadOnly(datasetName);
+            isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
             await loadContext();
             await loadReactiveClass(cancellation);
         })();
@@ -109,7 +110,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = await isReadOnly(datasetName);
+        isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
     });
 
     onMount(() => eventStack.addEvent(closeClassEditor));

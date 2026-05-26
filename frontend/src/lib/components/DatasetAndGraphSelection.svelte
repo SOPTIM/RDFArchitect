@@ -18,10 +18,9 @@
     import { onMount } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     let {
         dataset = $bindable(),
@@ -29,15 +28,12 @@
         lockedDatasetName,
         lockedGraphUri,
         allowSelectionOfReadonlyDatasets = true,
-        displayAsCard = true,
+        displayAsCard = true
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const datasetSelectId = `datasetSelect-${uuidv4()}`;
     const graphSelectId = `graphSelect-${uuidv4()}`;
 
-    let datasets = $state([]);
     let graphNames = $state([]);
 
     const datasetLocked = $derived(lockedDatasetName !== undefined);
@@ -45,23 +41,39 @@
 
     const graphSelectDisabled = $derived(graphLocked || !dataset);
 
-    $effect(() => {
+    $effect(async () => {
         if (datasetLocked) return;
         if (!dataset) {
             graph = graphLocked ? lockedGraphUri : null;
             graphNames = [];
             return;
         }
-        loadGraphsFor(dataset);
+
+        await graphStore.load(dataset)
+        graphNames = graphStore.getGraphs(dataset);
+        const valid = graphNames.some(graphName => getUri(graphName) === graph);
+        if (!valid && !graphLocked) {
+            graph = null;
+        }
     });
 
     onMount(async () => {
+        await datasetStore.load();
         if (datasetLocked) dataset = lockedDatasetName;
         if (graphLocked) graph = lockedGraphUri;
 
-        await loadDatasets();
+        if (!datasetLocked && dataset && !allowSelectionOfReadonlyDatasets) {
+            const selectedDataset = $datasetStore.data.find(
+                option => option.label === dataset
+            );
+            if (!selectedDataset || selectedDataset.readonly) {
+                dataset = null;
+            }
+        }
+
         if (dataset) {
-            await loadGraphsFor(dataset);
+            await graphStore.load(dataset);
+            graphNames = graphStore.getGraphs(dataset);
         } else {
             graphNames = [];
         }
@@ -69,45 +81,6 @@
 
     function getUri(graph) {
         return (!graph.prefix ? "" : graph.prefix) + graph.suffix;
-    }
-
-    async function loadDatasets() {
-        const res = await bec.getDatasetNames();
-        const datasetNames = await res.json();
-        const newDatasets = datasetNames.map(name => ({
-            label: name,
-            readonly: false,
-        }));
-        if (!allowSelectionOfReadonlyDatasets) {
-            for (const dataset of newDatasets) {
-                dataset.readonly = await isReadOnly(dataset.label);
-            }
-        }
-        datasets = newDatasets;
-
-        if (!datasetLocked && dataset && !allowSelectionOfReadonlyDatasets) {
-            const selectedDataset = newDatasets.find(
-                option => option.label === dataset,
-            );
-            if (!selectedDataset || selectedDataset.readonly) {
-                dataset = null;
-            }
-        }
-    }
-
-    async function loadGraphsFor(dataset) {
-        if (!dataset) {
-            graphNames = [];
-            return;
-        }
-
-        const res = await bec.getGraphNames(dataset);
-        graphNames = await res.json();
-
-        const valid = graphNames.some(graphName => getUri(graphName) === graph);
-        if (!valid && !graphLocked) {
-            graph = null;
-        }
     }
 </script>
 
@@ -120,13 +93,13 @@
     <SelectEditControl
         id={datasetSelectId}
         bind:value={dataset}
-        options={datasets}
+        options={$datasetStore.data}
         getOptionIsDisabled={dataset =>
             !allowSelectionOfReadonlyDatasets && dataset.readonly}
         getOptionValue={dataset => dataset.label}
         getOptionLabel={dataset =>
             dataset.label + (dataset.readonly ? " (readonly)" : "")}
-        disabled={datasetLocked || datasets.length === 0}
+        disabled={datasetLocked || ($datasetStore.data?.length ?? 0) === 0}
         placeholder="Select dataset"
         onchange={() => (graph = null)}
     />

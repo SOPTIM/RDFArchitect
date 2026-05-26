@@ -33,11 +33,12 @@
         enableEditing,
         disableEditing,
     } from "$lib/actions/editingActions.js";
-    import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
@@ -68,7 +69,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readonly = await isReadOnly(datasetNavEntry.label);
+        readonly = await datasetStore.isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {

@@ -15,11 +15,14 @@
  *
  */
 
+import { get } from "svelte/store";
+
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+import { datasetStore } from "$lib/stores/DatasetStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -71,10 +74,11 @@ export async function getNavEntryList(existingDatasetNavList) {
         existingDatasetNavList,
     );
 
-    const freshEntries = (await getDatasetNames())
-        .sort((a, b) => a.localeCompare(b))
-        .map(label =>
-            reuseOrCreate(existingDatasetNavList, { label, id: label }),
+    const datasets = get(datasetStore).data ?? [];
+    const freshEntries = datasets
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(dataset =>
+            reuseOrCreate(existingDatasetNavList, { label: dataset.label, id: dataset.label }),
         );
 
     const result = existingDatasetNavList ?? [];
@@ -86,16 +90,6 @@ export async function getNavEntryList(existingDatasetNavList) {
 
     console.log("finished Building navObj: ", result);
     return result;
-}
-
-async function getDatasetNames() {
-    try {
-        const res = await bec.getDatasetNames();
-        return await res.json();
-    } catch (err) {
-        console.error("Error fetching dataset names", err);
-        return [];
-    }
 }
 
 async function populateDataset(datasetNavEntry) {

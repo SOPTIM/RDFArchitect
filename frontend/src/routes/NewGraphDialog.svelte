@@ -18,11 +18,11 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     import {
         DiagramType,
@@ -32,7 +32,6 @@
 
     let { showDialog = $bindable(), lockedDatasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const uniqueId = uuidv4();
     const defaultGraphUriPrefix = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
@@ -82,10 +81,14 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue() ?? "";
         graphUriUserInput = "";
 
-        const datasetNames = await getDatasetNames();
-        modifiableDatasets = datasetNames.modifiable;
-        readOnlyDatasets = datasetNames.readonly;
-
+        await datasetStore.load();
+        for (const dataset of $datasetStore.data) {
+            if (dataset.readonly) {
+                readOnlyDatasets.push(dataset);
+            } else {
+                modifiableDatasets.push(dataset);
+            }
+        }
         await refreshGraphNames();
     }
 
@@ -106,8 +109,8 @@
             return;
         }
 
-        const res = await bec.getGraphNames(datasetNameUserInput);
-        graphNames = await res.json();
+        await graphStore.load(datasetNameUserInput);
+        graphNames = graphStore.getGraphs(datasetNameUserInput);
     }
 
     async function addGraph() {
@@ -157,6 +160,8 @@
                 );
             })
             .finally(() => {
+                graphStore.invalidateDataset(datasetNameLocal);
+                datasetStore.load(true);
                 forceReloadTrigger.trigger();
             });
     }

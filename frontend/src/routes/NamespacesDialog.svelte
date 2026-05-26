@@ -38,6 +38,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     let { showDialog = $bindable() } = $props();
 
@@ -52,7 +53,7 @@
     async function onOpen() {
         datasetName = editorState.selectedDataset.getValue();
         if (!datasetName) return;
-        readonly = await isReadOnly(datasetName);
+        readonly = await datasetStore.isReadOnly(datasetName);
         await loadNamespaces(datasetName);
     }
 
@@ -70,11 +71,6 @@
                 );
             },
         );
-    }
-
-    async function isReadOnly(datasetNameLocal) {
-        const res = await bec.isReadOnly(datasetNameLocal);
-        return await res.json();
     }
 
     async function saveNamespaces() {

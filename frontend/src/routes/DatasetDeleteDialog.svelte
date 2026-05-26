@@ -26,6 +26,7 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
@@ -51,8 +52,8 @@
     async function deleteDataset() {
         try {
             if (datasetName) {
-                const res = await bec.deleteDataset(datasetName);
-                if (res && res.ok === false) {
+                const res = await datasetStore.remove(datasetName);
+                if (res.error) {
                     toastStore.error(
                         "Delete failed",
                         `Could not delete dataset "${datasetName}".`,

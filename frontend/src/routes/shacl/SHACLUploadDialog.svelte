@@ -134,7 +134,7 @@
             <div class="h-9 w-full content-center">
                 <p class="break-all">
                     {#if file}
-                        {file.name}
+                        {file.label}
                     {:else}
                         no file selected
                     {/if}

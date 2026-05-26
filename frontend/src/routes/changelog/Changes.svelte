@@ -15,13 +15,13 @@
   -->
 
 <script>
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import ChangesRow from "./ChangesRow.svelte";
 
@@ -39,7 +39,7 @@
     $effect(async () => {
         forceReloadTrigger.subscribe();
         if (selectedDatasetName) {
-            readonlyDataset = await isReadOnly(selectedDatasetName);
+            readonlyDataset = await datasetStore.isReadOnly(selectedDatasetName);
         }
     });
 
