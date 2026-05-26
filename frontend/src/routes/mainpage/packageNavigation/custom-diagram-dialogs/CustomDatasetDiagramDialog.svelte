@@ -36,6 +36,7 @@
         createPackageListForGraph,
     } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
+    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -74,15 +75,10 @@
         localDiagramId = crypto.randomUUID();
     }
 
-    async function getGraphs(datasetName) {
-        const result = await bec.getGraphNames(datasetName);
-        return await result.json();
-    }
-
     async function fetchGraphs() {
         try {
-            const res = await getGraphs(lockedDatasetName);
-            graphs = res
+            await graphURIStore.load(lockedDatasetName);
+            graphs = graphURIStore.getGraphURIs(lockedDatasetName)
                 .map(graph => {
                     return {
                         ...graph,

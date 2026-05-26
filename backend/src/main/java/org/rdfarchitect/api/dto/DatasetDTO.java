@@ -15,15 +15,17 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+package org.rdfarchitect.api.dto;
 
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
+import java.util.List;
 
-export async function getNamespaces(datasetName) {
-    if (!datasetName) {
-        return [];
-    }
-    const res = await bec.getNamespaces(datasetName);
-    return await res.json();
+@Data
+@AllArgsConstructor
+public class DatasetDTO {
+    private String name;
+    private boolean readonly;
+    private List<CIMPrefixPair> prefixes;
 }

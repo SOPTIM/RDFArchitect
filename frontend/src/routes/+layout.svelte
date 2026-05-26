@@ -38,6 +38,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import {
         copyState,
@@ -54,7 +55,6 @@
 
     import { goto } from "$app/navigation";
     import { page } from "$app/state";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();

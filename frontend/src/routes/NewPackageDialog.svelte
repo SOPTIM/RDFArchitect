@@ -16,7 +16,6 @@
   -->
 
 <script>
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -28,6 +27,8 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     import {
         editorState,
@@ -75,7 +76,7 @@
     );
 
     $effect(async () => {
-        namespaces = await getNamespaces(selectedDatasetName);
+        namespaces = datasetStore.getNamespaces(selectedDatasetName);
         packageURINamespace = null;
     });
 
@@ -96,7 +97,7 @@
         if (!selectedDatasetName) {
             return;
         }
-        namespaces = await getNamespaces(selectedDatasetName);
+        namespaces = datasetStore.getNamespaces(selectedDatasetName);
 
         if (selectedGraphURI) {
             await getResources(selectedDatasetName, selectedGraphURI);
@@ -129,12 +130,9 @@
             packages = [];
             return;
         }
-        const res = await bec.getPackages(datasetName, graphURI);
-        const packagesJSON = await res.json();
-        packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+
+        await packageStore.load(datasetName, graphURI);
+        return packageStore.getPackages(datasetName, graphURI);
     }
 
     async function getClasses(datasetName, graphURI) {

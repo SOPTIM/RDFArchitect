@@ -15,14 +15,19 @@
  *
  */
 
-import { writable, get, derived } from "svelte/store";
+import { writable, get } from "svelte/store";
 
-import { listDatasets, deleteDataset, isReadOnly as fetchIsReadOnly } from "../api/generated";
+import {
+    listDatasets,
+    deleteDataset,
+    CimPrefixPair,
+    replaceNamespaces,
+} from "../api/generated";
 
 export type DatasetInfo = {
     label: string;
     readonly: boolean | null;
-    prefixes: Set<string>;
+    prefixes: CimPrefixPair[];
 };
 
 type DatasetsState = {
@@ -35,23 +40,27 @@ type DatasetsState = {
 export const datasetStore = createDatasetStore();
 
 function createDatasetStore() {
-    const store = writable<DatasetsState>(
-        {
-            data: null,
-            fetchedAt: null,
-            pending: null,
-            error: null,
-        },
-        () => {
-            const state = get(store);
+    const store = writable<DatasetsState>({
+        data: null,
+        fetchedAt: null,
+        pending: null,
+        error: null,
+    }); // ← kein Start-Callback
 
-            if (state.data === null && !state.pending) {
-                void load();
-            }
-        },
-    );
+    const { subscribe: baseSubscribe, update } = store;
 
-    const { subscribe, update } = store;
+    let initialLoadTriggered = false;
+
+    function subscribe(
+        run: (value: DatasetsState) => void,
+        invalidate?: () => void,
+    ) {
+        if (!initialLoadTriggered) {
+            initialLoadTriggered = true;
+            void load();
+        }
+        return baseSubscribe(run, invalidate);
+    }
 
     async function load(force = false) {
         const state = get(store);
@@ -71,39 +80,12 @@ function createDatasetStore() {
                     return;
                 }
 
-                const datasetNames = data ?? [];
-                const previous = get(store).data ?? [];
-                const byName = new Map(previous.map(d => [d.label, d]));
+                const datasets = data ?? [];
 
-                const baseData: DatasetInfo[] = datasetNames.map(name => {
-                    const prev = byName.get(name);
-                    return {
-                        label: name,
-                        readonly: null,
-                        prefixes: prev?.prefixes ?? new Set<string>(),
-                    };
-                });
-
-                const readonlyPairs = await Promise.all(
-                    baseData.map(async d => {
-                        const { data: roData, error: roError } =
-                            await fetchIsReadOnly({
-                                path: { datasetName: d.label },
-                            });
-                        return {
-                            name: d.label,
-                            readonly: roError ? null : (roData ?? null),
-                        };
-                    }),
-                );
-
-                const readonlyByName = new Map(
-                    readonlyPairs.map(x => [x.name, x.readonly]),
-                );
-
-                const nextData: DatasetInfo[] = baseData.map(d => ({
-                    ...d,
-                    readonly: readonlyByName.get(d.label) ?? null,
+                const nextData: DatasetInfo[] = datasets.map(dataset => ({
+                    label: dataset.name ?? "",
+                    readonly: dataset.readonly ?? null,
+                    prefixes: dataset.prefixes ?? [],
                 }));
 
                 update(s => ({
@@ -141,27 +123,49 @@ function createDatasetStore() {
         void load(true);
     }
 
-    async function isReadOnly(datasetName: string, force = false) {
-        if (force) {
-            const { data, error } = await fetchIsReadOnly({
-                path: { datasetName },
-            });
-            if (error) {
-                return;
-            }
-            const readonly = data ?? null;
-            update(s => ({
-                ...s,
-                data:
-                    s.data?.map(d =>
-                        d.label === datasetName ? { ...d, readonly: readonly } : d,
-                    ) ?? null,
-            }));
+    function isReadOnly(datasetName: string): boolean | null {
+        const dataset = get(store).data?.find(d => d.label === datasetName);
+        if (!dataset) {
+            console.warn(
+                `isReadOnly called before dataset "${datasetName}" was loaded`,
+            );
+            return null;
         }
+        return dataset.readonly;
+    }
 
-        return derived(datasetStore, $store => {
-            return $store.data?.find(d => d.label === datasetName)?.readonly ?? null;
+    function getNamespaces(datasetName: string): CimPrefixPair[] {
+        const dataset = get(store).data?.find(d => d.label === datasetName);
+        if (!dataset) {
+            console.warn(`getNamespaces called before dataset "${datasetName}" was loaded`);
+            return [];
+        }
+        return dataset.prefixes;
+    }
+
+    async function saveNamespaces(
+        datasetName: string,
+        namespaces: CimPrefixPair[],
+    ) {
+        const { error } = await replaceNamespaces({
+            path: { datasetName },
+            body: namespaces,
         });
+
+        if (error) return { error };
+
+        // Update prefixes in store so getNamespaces() returns fresh data
+        update(s => ({
+            ...s,
+            data:
+                s.data?.map(d =>
+                    d.label === datasetName
+                        ? { ...d, prefixes: namespaces }
+                        : d,
+                ) ?? null,
+        }));
+
+        return { error: null };
     }
 
     function updateReadonly(datasetName: string, readonly: boolean) {
@@ -181,5 +185,7 @@ function createDatasetStore() {
         isReadOnly,
         updateReadonly,
         invalidate,
+        getNamespaces,
+        saveNamespaces,
     };
 }

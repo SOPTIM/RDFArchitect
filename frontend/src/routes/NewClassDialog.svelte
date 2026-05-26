@@ -19,8 +19,6 @@
     import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
@@ -30,6 +28,8 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
@@ -38,6 +38,7 @@
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
+
 
     let {
         showDialog = $bindable(),
@@ -56,7 +57,6 @@
         classURINamespace: "classURINamespaceNewClass" + uuid,
         className: "classNameNewClass" + uuid,
     };
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let datasetName = $state(null);
     let graphURI = $state(null);
@@ -86,7 +86,7 @@
         const graph = graphURI;
 
         await untrack(async () => {
-            namespaces = await getNamespaces(ds);
+            namespaces = datasetStore.getNamespaces(ds);
             if (classURINamespace) classURINamespace.value = null;
             classPackage = null;
 
@@ -130,15 +130,10 @@
             ),
         );
 
-        if (!datasetName) {
+        if (!datasetName || !graphURI) {
             return;
         }
-        namespaces = await getNamespaces(datasetName);
-
-        if (!graphURI) {
-            return;
-        }
-        namespaces = await getNamespaces(datasetName);
+        namespaces = datasetStore.getNamespaces(datasetName);
 
         if (graphURI) {
             await getPackages(datasetName, graphURI);
@@ -180,12 +175,8 @@
             packages = [];
             return;
         }
-        const res = await bec.getPackages(datasetName, graphURI);
-        const packagesJSON = await res.json();
-        packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+
+        packages = await packageStore.getPackages(datasetName, graphURI);
     }
 
     async function newClass() {
