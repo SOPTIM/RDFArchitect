@@ -22,6 +22,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         DiagramType,
@@ -200,8 +201,16 @@
                     type: DiagramType.CUSTOM_DATASET_DIAGRAM,
                     id: localDiagramId,
                 });
+                toastStore.success(
+                    "Diagram saved",
+                    `"${localDiagramName}" was saved.`,
+                );
             } else {
                 console.error("Failed to save diagram");
+                toastStore.error(
+                    "Save failed",
+                    `Could not save diagram "${localDiagramName}".`,
+                );
             }
         } finally {
             forceReloadTrigger.trigger();

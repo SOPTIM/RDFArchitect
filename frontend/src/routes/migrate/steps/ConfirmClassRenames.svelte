@@ -21,6 +21,7 @@
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import RenameTable from "./RenameTable.svelte";
 
@@ -79,12 +80,29 @@
 
     export async function onNext() {
         let body = deletedAndRenamed.filter(r => r.newResource != null);
-        await fetch(PUBLIC_BACKEND_URL + "/migrations/class-renamings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify(body),
-        });
+        try {
+            const res = await fetch(
+                PUBLIC_BACKEND_URL + "/migrations/class-renamings",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify(body),
+                },
+            );
+            if (!res.ok) {
+                toastStore.error(
+                    "Save failed",
+                    "Could not save class renames for the migration.",
+                );
+            }
+        } catch (e) {
+            console.log("Failed to save class renames:", e);
+            toastStore.error(
+                "Save failed",
+                "Could not save class renames for the migration.",
+            );
+        }
     }
 </script>
 

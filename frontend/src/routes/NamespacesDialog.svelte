@@ -27,6 +27,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapNamespaceDtoToReactiveNamespace } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { mapReactiveNamespaceToNamespaceDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveNamespace } from "$lib/models/reactive/models/reactive-namespace.svelte.js";
@@ -82,8 +83,28 @@
         const namespaceDTOs = plainReactiveNamespaces.map(namespace => {
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
-        await bec.replaceNamespaces(datasetName, namespaceDTOs);
-        forceReloadTrigger.trigger();
+        try {
+            const res = await bec.replaceNamespaces(datasetName, namespaceDTOs);
+            if (res && res.ok === false) {
+                toastStore.error(
+                    "Save failed",
+                    `Could not save namespaces for "${datasetName}".`,
+                );
+                return;
+            }
+            toastStore.success(
+                "Namespaces saved",
+                `Updated for "${datasetName}".`,
+            );
+        } catch (err) {
+            console.error("Failed to save namespaces:", err);
+            toastStore.error(
+                "Save failed",
+                "An unexpected error occurred while saving namespaces.",
+            );
+        } finally {
+            forceReloadTrigger.trigger();
+        }
     }
 
     async function addNamespace() {

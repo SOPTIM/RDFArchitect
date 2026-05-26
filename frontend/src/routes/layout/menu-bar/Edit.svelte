@@ -32,6 +32,10 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import {
+        enableEditing,
+        disableEditing,
+    } from "$lib/actions/editingActions.js";
+    import {
         undo as doUndo,
         redo as doRedo,
     } from "$lib/actions/versionControlActions.js";
@@ -123,7 +127,9 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        await enableEditing(selectedDataset);
+        if (!(await enableEditing(selectedDataset))) {
+            return;
+        }
         await reload();
         forceReloadTrigger.trigger();
     }
@@ -132,7 +138,9 @@
         if (!selectedDataset || isDatasetReadOnly) {
             return;
         }
-        await disableEditing(selectedDataset);
+        if (!(await disableEditing(selectedDataset))) {
+            return;
+        }
         await reload();
         editorState.selectedDiagram.trigger();
     }
@@ -228,13 +236,6 @@
         if (await doRedo()) reload();
     }
 
-    async function enableEditing(datasetName) {
-        await bec.enableEditing(datasetName);
-    }
-
-    async function disableEditing(datasetName) {
-        await bec.disableEditing(datasetName);
-    }
     $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>
 
