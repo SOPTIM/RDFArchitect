@@ -37,10 +37,4 @@ public class UserSettingsContext {
     public static void clear() {
         settings.remove();
     }
-
-    public record UserSettings(boolean usePackagePrefix, boolean normalizeComments) {
-        public static UserSettings defaults() {
-            return new UserSettings(true, true);
-        }
-    }
 }

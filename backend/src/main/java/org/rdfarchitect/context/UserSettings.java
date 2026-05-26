@@ -15,14 +15,10 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.context;
 
-import org.apache.jena.riot.RDFFormat;
-import org.rdfarchitect.database.GraphIdentifier;
-
-import java.io.ByteArrayOutputStream;
-
-public interface GetSchemaUseCase {
-
-    ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format);
+public record UserSettings(boolean usePackagePrefix, boolean normalizeComments) {
+    public static UserSettings defaults() {
+        return new UserSettings(true, true);
+    }
 }

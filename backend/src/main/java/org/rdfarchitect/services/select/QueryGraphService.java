@@ -37,6 +37,7 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
+import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
@@ -223,8 +224,7 @@ public class QueryGraphService
     }
 
     @Override
-    public ByteArrayOutputStream getSchema(
-            GraphIdentifier graphIdentifier, RDFFormat format, boolean usePackagePrefix) {
+    public ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format) {
         GraphRewindableWithUUIDs graph = null;
         try (var out = new ByteArrayOutputStream()) {
             graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
@@ -234,7 +234,7 @@ public class QueryGraphService
                     .getPrefixMapping()
                     .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             removeUUIDs(copiedGraph);
-            correctPackagePrefix(copiedGraph, usePackagePrefix);
+            correctPackagePrefix(copiedGraph, UserSettingsContext.get().usePackagePrefix());
             var sortedModel = new CimSortedModel(ModelFactory.createModelForGraph(copiedGraph));
             sortedModel.write(out, format.getLang().getName());
             return out;

@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -103,14 +102,11 @@ public class GraphContentRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var format = getRdfFormat(acceptHeader);
-        var usePackagePrefix = UserSettingsContext.get().usePackagePrefix();
 
         // fetch data
         var outStream =
                 getSchemaUseCase.getSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI),
-                        format,
-                        usePackagePrefix);
+                        new GraphIdentifier(datasetName, extendedGraphURI), format);
 
         // add suggested file name to response
         var fileName = "default";

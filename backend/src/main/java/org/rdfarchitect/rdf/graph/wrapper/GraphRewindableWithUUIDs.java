@@ -195,12 +195,7 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
                 .forEach(
                         stmt -> {
                             if (stmt.getPredicate().equals(RDFS.label) && labelChanged) {
-                                var lang = stmt.getLanguage();
-                                if (lang != null && !lang.isEmpty()) {
-                                    newResource.addProperty(RDFS.label, newLabel, lang);
-                                } else {
-                                    newResource.addProperty(RDFS.label, newLabel);
-                                }
+                                changeLabel(newResource, stmt, newLabel);
                             } else {
                                 newResource.addProperty(stmt.getPredicate(), stmt.getObject());
                             }
