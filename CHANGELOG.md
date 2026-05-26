@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-26
+
+### Added
+
+- RDFA-243: Add toast notifications for user feedback across app ([0c3fb043](https://github.com/SOPTIM/RDFArchitect/commit/0c3fb043), [#124](https://github.com/SOPTIM/RDFArchitect/pull/124))
+- RDFA-113: Automatic extension of classes ([4a2676fb](https://github.com/SOPTIM/RDFArchitect/commit/4a2676fb), [#122](https://github.com/SOPTIM/RDFArchitect/pull/122))
+- RDFA-364: Add custom diagrams ([70641ec3](https://github.com/SOPTIM/RDFArchitect/commit/70641ec3), [#71](https://github.com/SOPTIM/RDFArchitect/pull/71))
+- Make Enter key reliably trigger primary action in all dialogs ([ef3a9e83](https://github.com/SOPTIM/RDFArchitect/commit/ef3a9e83), [#121](https://github.com/SOPTIM/RDFArchitect/pull/121))
+- RDFA-437: Use ENTSO-E application-profiles-library as submodule ([9f1eb336](https://github.com/SOPTIM/RDFArchitect/commit/9f1eb336), [#109](https://github.com/SOPTIM/RDFArchitect/pull/109))
+- Add workflow to automate changelog updates ([5bfdb56b](https://github.com/SOPTIM/RDFArchitect/commit/5bfdb56b), [#112](https://github.com/SOPTIM/RDFArchitect/pull/112))
+- RDFA-504: Added config to set default stereotypes and namspaces ([78305671](https://github.com/SOPTIM/RDFArchitect/commit/78305671), [#106](https://github.com/SOPTIM/RDFArchitect/pull/106))
+- RDFA-321: Support RDF blank nodes in attribute editor for fixed and default values ([839bd5e1](https://github.com/SOPTIM/RDFArchitect/commit/839bd5e1), [#22](https://github.com/SOPTIM/RDFArchitect/pull/22))
+- RDFA-136: Show references on delete and allow selective deleting ([ef1d6ada](https://github.com/SOPTIM/RDFArchitect/commit/ef1d6ada), [#82](https://github.com/SOPTIM/RDFArchitect/pull/82))
+- RDFA-434: Z-index for svelteflow Diagram ([b4bf26d4](https://github.com/SOPTIM/RDFArchitect/commit/b4bf26d4), [#83](https://github.com/SOPTIM/RDFArchitect/pull/83))
+
+### Changed
+
+- RDFA-410: Add Developer Certificate of Origin ([8ddfd6f2](https://github.com/SOPTIM/RDFArchitect/commit/8ddfd6f2), [#108](https://github.com/SOPTIM/RDFArchitect/pull/108))
+- RDFA-501: Enhance documentation ([ef7203ff](https://github.com/SOPTIM/RDFArchitect/commit/ef7203ff), [#101](https://github.com/SOPTIM/RDFArchitect/pull/101))
+- RDFA-439: Remove uuids from frontend ([770d11a6](https://github.com/SOPTIM/RDFArchitect/commit/770d11a6), [#84](https://github.com/SOPTIM/RDFArchitect/pull/84))
+- Add bachelors thesis to repo ([6dd16b23](https://github.com/SOPTIM/RDFArchitect/commit/6dd16b23), [#94](https://github.com/SOPTIM/RDFArchitect/pull/94))
+- Fix deploy workflow ([e15569aa](https://github.com/SOPTIM/RDFArchitect/commit/e15569aa), [#96](https://github.com/SOPTIM/RDFArchitect/pull/96))
+- RDFA-497: Add documentation website ([c23ee085](https://github.com/SOPTIM/RDFArchitect/commit/c23ee085), [#95](https://github.com/SOPTIM/RDFArchitect/pull/95))
+- Add GitHub PR validation workflows ([0d900d61](https://github.com/SOPTIM/RDFArchitect/commit/0d900d61), [#86](https://github.com/SOPTIM/RDFArchitect/pull/86))
+
+### Fixed
+
+- RDFA-529: Class context menu actions ([6cbdd1ef](https://github.com/SOPTIM/RDFArchitect/commit/6cbdd1ef), [#114](https://github.com/SOPTIM/RDFArchitect/pull/114))
+- RDFA-507: Fixed that self associations double on class change save ([d6d1c07d](https://github.com/SOPTIM/RDFArchitect/commit/d6d1c07d), [#115](https://github.com/SOPTIM/RDFArchitect/pull/115))
+- Update empty state text for schema import prompt ([873bda7e](https://github.com/SOPTIM/RDFArchitect/commit/873bda7e), [#110](https://github.com/SOPTIM/RDFArchitect/pull/110))
+- RDFA-450: Render associations on the same class ([2e5b1719](https://github.com/SOPTIM/RDFArchitect/commit/2e5b1719), [#104](https://github.com/SOPTIM/RDFArchitect/pull/104))
+- RDFA-502: Add custom shacl to graph context ([54c29adb](https://github.com/SOPTIM/RDFArchitect/commit/54c29adb), [#105](https://github.com/SOPTIM/RDFArchitect/pull/105))
+- RDFA-481: Support packages without Package_ prefix ([e3740973](https://github.com/SOPTIM/RDFArchitect/commit/e3740973), [#78](https://github.com/SOPTIM/RDFArchitect/pull/78))
+- RDFA-449: Association IRI violation checks ([353d8e42](https://github.com/SOPTIM/RDFArchitect/commit/353d8e42), [#75](https://github.com/SOPTIM/RDFArchitect/pull/75))
+- Diagram reload UX and removed deprecated file database backend ([87852733](https://github.com/SOPTIM/RDFArchitect/commit/87852733), [#102](https://github.com/SOPTIM/RDFArchitect/pull/102))
+- RDFA-96: Classes are now opened in the class editor on creation ([ad5e4450](https://github.com/SOPTIM/RDFArchitect/commit/ad5e4450), [#92](https://github.com/SOPTIM/RDFArchitect/pull/92))
+
 ## [1.0.0] - 2026-04-24
 
 ### Added
@@ -80,7 +117,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RDFA-332: Set TTL as default format for SHACL export ([e72119b4](https://github.com/SOPTIM/RDFArchitect/commit/e72119b4), [#9](https://github.com/SOPTIM/RDFArchitect/pull/9))
 - RDFA-192: Navigation entries are now sorted alphabetically ([1f90af0f](https://github.com/SOPTIM/RDFArchitect/commit/1f90af0f), [#12](https://github.com/SOPTIM/RDFArchitect/pull/12))
 - RDFA-267: Updated GitHub Links in Help menu bar ([e301d52f](https://github.com/SOPTIM/RDFArchitect/commit/e301d52f), [#25](https://github.com/SOPTIM/RDFArchitect/pull/25))
-
 
 ### Fixed
 
