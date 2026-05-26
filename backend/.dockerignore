@@ -2,3 +2,5 @@ target
 .git
 .idea
 *.iml
+*.md
+.mvn/
