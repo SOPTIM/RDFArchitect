@@ -164,8 +164,9 @@
             editorState.selectedDiagram.getProperty("id") === "default"
                 ? null
                 : editorState.selectedDiagram.getProperty("id");
-        let packageDTO =
-            packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
+        let packageDTO = selectedPackageUUID
+            ? (packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null)
+            : null;
         await saveCopyClass(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
