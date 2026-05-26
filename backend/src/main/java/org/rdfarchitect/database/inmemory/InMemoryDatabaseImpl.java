@@ -24,7 +24,6 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
@@ -65,13 +64,13 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public CrossProfileDiagram getCrossProfileDiagram(String datasetName) {
-        return getOrCreateSessionDataStore().getCrossProfileDiagram(datasetName);
+    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
+        return getOrCreateSessionDataStore().getDatasetDiagramLayout(datasetName);
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
-        return getOrCreateSessionDataStore().getDatasetDiagramLayout(datasetName);
+    public UUID getCrossProfileDiagramUUID(String datasetName) {
+        return getOrCreateSessionDataStore().getCrossProfileDiagramUUID(datasetName);
     }
 
     @Override

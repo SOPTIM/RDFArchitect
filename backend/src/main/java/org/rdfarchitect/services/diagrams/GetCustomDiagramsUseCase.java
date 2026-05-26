@@ -17,11 +17,10 @@
 
 package org.rdfarchitect.services.diagrams;
 
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-
 import java.util.List;
+import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 
 public interface GetCustomDiagramsUseCase {
 
@@ -47,5 +46,5 @@ public interface GetCustomDiagramsUseCase {
      * @param datasetName The name of the dataset.
      * @return The cross profile diagram for the dataset.
      */
-    CrossProfileDiagram getCrossProfileDiagram(String datasetName);
+    CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName);
 }

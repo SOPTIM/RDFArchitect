@@ -37,6 +37,7 @@ import {
 export const DiagramType = {
     CUSTOM_GRAPH_DIAGRAM: "customGraphDiagram",
     CUSTOM_DATASET_DIAGRAM: "customDatasetDiagram",
+    CROSS_PROFILE: "crossProfile",
     PACKAGE: "package",
 };
 

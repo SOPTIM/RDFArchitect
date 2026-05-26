@@ -15,16 +15,15 @@
  *
  */
 
-package org.rdfarchitect.database.inmemory.diagrams;
+package org.rdfarchitect.api.dto.crossProfileDiagram;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
-import java.util.List;
 import java.util.UUID;
 
 @Data
-public class CrossProfileDiagram {
-
-    private final UUID diagramId;
-    private List<MergedClassInDiagram> classes;
-
+@AllArgsConstructor
+public class ClassSourceDTO {
+    private UUID classUuid;
+    private String graphUri;
 }

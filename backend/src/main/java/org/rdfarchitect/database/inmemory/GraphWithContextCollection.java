@@ -31,7 +31,6 @@ import org.apache.jena.sparql.core.Transactional;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.config.GraphCompressionConfig;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -65,10 +64,10 @@ public class GraphWithContextCollection {
     @Getter
     private final ConcurrentMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
 
-    @Getter
-    private final CrossProfileDiagram crossProfileDiagram = new CrossProfileDiagram(UUID.randomUUID());
-
     @Getter private final DiagramLayout diagramLayout = new DiagramLayout();
+
+    @Getter
+    private final UUID crossProfileDiagramUUID = UUID.randomUUID();
 
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();

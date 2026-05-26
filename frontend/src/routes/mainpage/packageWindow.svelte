@@ -18,13 +18,15 @@
 <script>
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import CrossProfileDiagram from "$lib/rendering/svelteflow/CrossProfileDiagram.svelte";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "./classEditor/classEditor.svelte";
     import RenderingWrapper from "./renderingWrapper.svelte";
 
     let classEditorPaneWidth = $state(30);
     let paneSizeByPackage = $state({});
+
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
             editorState.selectedDataset.getValue(),
@@ -47,6 +49,12 @@
     const renderingKey = $derived(
         `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
     );
+
+    const diagramType = $derived(
+        editorState.selectedDiagram.getProperty("type"),
+    );
+    const isCrossProfile = $derived(diagramType === DiagramType.CROSS_PROFILE);
+    const selectedDataset = $derived(editorState.selectedDataset.getValue());
 
     $effect(() => {
         editorState.selectedDataset.subscribe();
@@ -75,7 +83,6 @@
             if (!editorState.selectedClassUUID.getValue()) {
                 return;
             }
-            // event.detail[1] holds the size of the class editor pane.
             classEditorPaneWidth = event.detail[1].size;
             const packageKey = getPackageKey();
             if (packageKey) {
@@ -89,36 +96,42 @@
 </script>
 
 <div class="h-full w-full overflow-hidden">
-    <Splitpanes
-        theme="opencgmes-theme"
-        class="flex h-full"
-        onresize={handleSplitPaneResize}
-    >
-        <Pane
-            size={isClassSelected ? 100 - classEditorPaneWidth : 100}
-            class="bg-window-background h-full overflow-hidden"
+    {#if isCrossProfile && selectedDataset}
+        {#key selectedDataset}
+            <CrossProfileDiagram datasetName={selectedDataset} />
+        {/key}
+    {:else}
+        <Splitpanes
+            theme="opencgmes-theme"
+            class="flex h-full"
+            onresize={handleSplitPaneResize}
         >
-            {#key renderingKey}
-                <div class="h-full">
-                    <RenderingWrapper />
-                </div>
-            {/key}
-        </Pane>
-
-        {#if isClassSelected}
             <Pane
-                size={classEditorPaneWidth}
-                minSize={25}
-                class="h-full overflow-auto"
+                size={isClassSelected ? 100 - classEditorPaneWidth : 100}
+                class="bg-window-background h-full overflow-hidden"
             >
-                {#key classEditorKey}
-                    <ClassEditor
-                        datasetName={classDatasetName}
-                        graphUri={classGraphUri}
-                        classUuid={editorState.selectedClassUUID.getValue()}
-                    />
+                {#key renderingKey}
+                    <div class="h-full">
+                        <RenderingWrapper />
+                    </div>
                 {/key}
             </Pane>
-        {/if}
-    </Splitpanes>
+
+            <Pane
+                size={isClassSelected ? classEditorPaneWidth : 0}
+                minSize={isClassSelected ? 25 : 0}
+                class="h-full overflow-auto"
+            >
+                {#if isClassSelected}
+                    {#key classEditorKey}
+                        <ClassEditor
+                            datasetName={classDatasetName}
+                            graphUri={classGraphUri}
+                            classUuid={editorState.selectedClassUUID.getValue()}
+                        />
+                    {/key}
+                {/if}
+            </Pane>
+        </Splitpanes>
+    {/if}
 </div>

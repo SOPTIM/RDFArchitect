@@ -42,14 +42,16 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
             GraphIdentifier graphIdentifier, UUID packageUUID) {
         var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        return fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, packageUUID);
+        return diagramLayout.read(() ->
+                fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, packageUUID));
     }
 
     @Override
     public RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId) {
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        return fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, diagramId);
+        return diagramLayout.read(() ->
+                fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, diagramId));
     }
 
     private RenderingLayoutData fetchRenderingLayoutData(

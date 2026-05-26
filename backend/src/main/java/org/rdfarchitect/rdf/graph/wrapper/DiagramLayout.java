@@ -26,19 +26,37 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 
 import java.util.UUID;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class DiagramLayout {
 
     @Getter private final Model diagramLayoutModel;
-
     @Getter private final MRID defaultPackageMRID;
+
+    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock();
 
     public DiagramLayout() {
         defaultPackageMRID = new MRID(UUID.randomUUID());
-
         diagramLayoutModel = ModelFactory.createDefaultModel();
-
         diagramLayoutModel.setNsPrefix(CIM.PREFIX, CIM.NAMESPACE);
         diagramLayoutModel.setNsPrefix("rdf", RDF.uri);
+    }
+
+    public <T> T read(java.util.function.Supplier<T> action) {
+        rwLock.readLock().lock();
+        try {
+            return action.get();
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+    public void write(Runnable action) {
+        rwLock.writeLock().lock();
+        try {
+            action.run();
+        } finally {
+            rwLock.writeLock().unlock();
+        }
     }
 }

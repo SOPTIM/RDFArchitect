@@ -17,23 +17,12 @@
 
 package org.rdfarchitect.api.dto.crossProfileDiagram;
 
-import java.util.List;
-import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import org.rdfarchitect.api.dto.association.AssociationPairDTO;
-import org.rdfarchitect.api.dto.attributes.AttributeDTO;
-import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 
 @Data
 @AllArgsConstructor
-public class MergedClassDTO {
-
-    private UUID uuid;
-    private String classUri;
-    private List<ClassSourceDTO>                      sources;
-    private List<GraphSourcedDTO<AttributeDTO>>       attributes;
-    private List<GraphSourcedDTO<EnumEntryDTO>>       enumEntries;
-    private List<GraphSourcedDTO<AssociationPairDTO>> associationPairs;
-
+public class GraphSourcedDTO<T> {
+    private String graphUri;
+    private T value;
 }

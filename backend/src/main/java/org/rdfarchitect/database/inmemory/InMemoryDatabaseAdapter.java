@@ -27,7 +27,6 @@ import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
@@ -53,13 +52,13 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public CrossProfileDiagram getCrossProfileDiagram(String datasetName) {
-        return database.getCrossProfileDiagram(datasetName);
+    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
+        return database.getDatasetDiagramLayout(datasetName);
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
-        return database.getDatasetDiagramLayout(datasetName);
+    public UUID getCrossProfileDiagramUUID(String datasetName) {
+        return database.getCrossProfileDiagramUUID(datasetName);
     }
 
     @Override

@@ -26,6 +26,7 @@
         faLock,
         faDiagramProject,
         faPlus,
+        faShareNodes,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -34,8 +35,11 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
@@ -231,6 +235,34 @@
                     {readonly}
                 />
             {/each}
+
+            <div
+                class="bg-border my-1 ml-14 h-0.5"
+                role="presentation"
+                oncontextmenu={e => e.stopPropagation()}
+            ></div>
+            <NavigationEntry
+                level={2}
+                label="Dataset Diagram"
+                icon={faShareNodes}
+                hasChildren={false}
+                isSelected={!editorState.selectedGraph.getValue() &&
+                    editorState.selectedDataset.getValue() ===
+                        datasetNavEntry.label &&
+                    editorState.selectedDiagram.getProperty("type") ===
+                        DiagramType.CROSS_PROFILE}
+                onclick={() => {
+                    editorState.selectedDataset.updateValue(
+                        datasetNavEntry.label,
+                    );
+                    editorState.selectedGraph.updateValue(null);
+                    editorState.selectedClassUUID.updateValue(null);
+                    editorState.selectedDiagram.updateValue({
+                        type: DiagramType.CROSS_PROFILE,
+                        id: null,
+                    });
+                }}
+            />
 
             <CustomDiagramsSection
                 {datasetNavEntry}

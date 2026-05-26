@@ -188,6 +188,32 @@ public class QueryGraphService
     }
 
     @Override
+    public List<ClassUMLAdaptedDTO> getFullClassList(GraphIdentifier graphIdentifier) {
+        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
+        var rdfGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+
+        var baseList = getClassList(graphIdentifier, false);
+
+        rdfGraph.begin(TxnType.READ);
+        try {
+            return baseList.stream()
+                    .filter(dto -> dto.getUuid() != null)
+                    .map(dto -> {
+                        var fullClass = CIMUMLObjectFactory.createCIMClassUMLAdapted(
+                                rdfGraph,
+                                graphIdentifier.graphUri(),
+                                prefixMapping,
+                                dto.getUuid().toString());
+                        fullClass.nullEmptyLists();
+                        return classMapper.toDTO(fullClass);
+                    })
+                    .toList();
+        } finally {
+            rdfGraph.end();
+        }
+    }
+
+    @Override
     public List<ClassUMLAdaptedDTO> listDatatypes(GraphIdentifier graphIdentifier) {
         // build query
         var baseQuery =

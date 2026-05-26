@@ -19,16 +19,29 @@ package org.rdfarchitect.services.diagrams;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.dto.crossProfileDiagram.ClassSourceDTO;
+import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.crossProfileDiagram.GraphSourcedDTO;
+import org.rdfarchitect.api.dto.crossProfileDiagram.MergedClassDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.dl.data.dto.DiagramObject;
+import org.rdfarchitect.dl.data.dto.relations.MRID;
+import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
+import org.rdfarchitect.services.select.GetClassListUseCase;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -40,6 +53,7 @@ public class CustomDiagramService
                 RemoveFromDiagramUseCase {
 
     private final DatabasePort databasePort;
+    private final GetClassListUseCase getClassListUseCase;
 
     @Override
     public List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
@@ -57,8 +71,74 @@ public class CustomDiagramService
     }
 
     @Override
-    public CrossProfileDiagram getCrossProfileDiagram(String datasetName) {
-        return databasePort.getCrossProfileDiagram(datasetName);
+    public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName) {
+        var graphUris = databasePort.listGraphUris(datasetName);
+        var crossProfileDiagramUUID = databasePort.getCrossProfileDiagramUUID(datasetName);
+        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
+
+        diagramLayout.write(() -> {
+            var model = diagramLayout.getDiagramLayoutModel();
+            if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
+                DiagramLayoutServiceUtils.insertDiagram(
+                        model, crossProfileDiagramUUID, "CrossProfileDiagram");
+            }
+        });
+
+        Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
+
+        for (var graphUri : graphUris) {
+            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            var classList = getClassListUseCase.getFullClassList(graphIdentifier);
+
+            for (var dto : classList) {
+                var classUri = dto.getPrefix() + dto.getLabel();
+                var mergedUuid = UUID.nameUUIDFromBytes(
+                        classUri.getBytes(StandardCharsets.UTF_8));
+
+                var merged = mergeMap.computeIfAbsent(classUri, uri ->
+                        new MergedClassDTO(mergedUuid, uri,
+                                new ArrayList<>(), new ArrayList<>(),
+                                new ArrayList<>(), new ArrayList<>()));
+
+                merged.getSources().add(new ClassSourceDTO(dto.getUuid(), graphUri));
+
+                if (dto.getAttributes() != null) {
+                    dto.getAttributes().forEach(attr ->
+                            merged.getAttributes().add(new GraphSourcedDTO<>(graphUri, attr)));
+                }
+                if (dto.getEnumEntries() != null) {
+                    dto.getEnumEntries().forEach(entry ->
+                            merged.getEnumEntries().add(new GraphSourcedDTO<>(graphUri, entry)));
+                }
+                if (dto.getAssociationPairs() != null) {
+                    dto.getAssociationPairs().forEach(assoc ->
+                            merged.getAssociationPairs().add(new GraphSourcedDTO<>(graphUri, assoc)));
+                }
+            }
+        }
+
+        diagramLayout.write(() -> {
+            var model = diagramLayout.getDiagramLayoutModel();
+            var existingDOs = DLObjectFetcher.fetchDiagramDOs(
+                    model, new MRID(crossProfileDiagramUUID));
+            var existingClassUUIDs = existingDOs.stream()
+                    .map(DiagramObject::getBelongsToIdentifiedObject)
+                    .map(MRID::getUuid)
+                    .collect(Collectors.toSet());
+
+            for (var merged : mergeMap.values()) {
+                if (!existingClassUUIDs.contains(merged.getUuid())) {
+                    var doMRID = DiagramLayoutServiceUtils.insertDiagramObject(
+                            model,
+                            crossProfileDiagramUUID,
+                            merged.getClassUri(),
+                            merged.getUuid());
+                    DiagramLayoutServiceUtils.insertDiagramObjectPoint(model, doMRID);
+                }
+            }
+        });
+
+        return new CrossProfileDiagramDTO(crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
     }
 
     @Override

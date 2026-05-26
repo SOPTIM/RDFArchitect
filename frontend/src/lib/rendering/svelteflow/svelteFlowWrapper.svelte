@@ -470,6 +470,7 @@
         }
 
         const diagramUUID = editorState.selectedDiagram.getProperty("id");
+        if (!diagramUUID) return;
 
         if (editorState.selectedGraph.getValue()) {
             bec.updateClassPositions(

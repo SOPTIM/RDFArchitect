@@ -204,12 +204,16 @@ public class UpdateDiagramLayoutService
     }
 
     private String getDiagramName(String datasetName, UUID diagramUUID) {
+        var crossProfileUUID = databasePort.getCrossProfileDiagramUUID(datasetName);
+        if (diagramUUID.equals(crossProfileUUID)) {
+            return "CrossProfileDiagram";
+        }
+
         for (var customDiagram : databasePort.getDatasetDiagrams(datasetName).values()) {
             if (customDiagram.getDiagramId().equals(diagramUUID)) {
                 return customDiagram.getName();
             }
         }
-
         return null;
     }
 }

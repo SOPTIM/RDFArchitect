@@ -31,7 +31,6 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
@@ -131,22 +130,22 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public CrossProfileDiagram getCrossProfileDiagram(String datasetName) {
+    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getCrossProfileDiagram();
+            return graphCollections.get(datasetName).getDiagramLayout();
         } finally {
             lock.unlock();
         }
     }
 
     @Override
-    public DiagramLayout getDatasetDiagramLayout(String datasetName) {
+    public UUID getCrossProfileDiagramUUID(String datasetName) {
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getDiagramLayout();
+            return graphCollections.get(datasetName).getCrossProfileDiagramUUID();
         } finally {
             lock.unlock();
         }

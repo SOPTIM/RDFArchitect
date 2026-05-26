@@ -526,6 +526,16 @@ export class BackendConnection {
         });
     }
 
+    async getCrossProfileDiagramForDataset(datasetName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagram`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async putCustomDiagram(datasetName, graphURI, diagramId, newDiagram) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {

@@ -19,7 +19,7 @@ package org.rdfarchitect.api.controller.datasets.diagrams;
 
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
-import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagram;
+import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,12 +36,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class CrossProfileDiagramRestController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(AllCustomDatasetDiagramsRESTController.class);
+            LoggerFactory.getLogger(CrossProfileDiagramRestController.class);
 
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @GetMapping
-    public CrossProfileDiagram getCustomDiagramList(
+    public CrossProfileDiagramDTO getCustomDiagramList(
             @Parameter(description = "The name/url of the inquirer.")
             @RequestHeader(
                     value = HttpHeaders.ORIGIN,
