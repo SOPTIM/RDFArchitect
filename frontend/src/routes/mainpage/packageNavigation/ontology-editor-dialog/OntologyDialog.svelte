@@ -28,6 +28,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
@@ -144,11 +145,20 @@
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
-        if (ontologyObject.uuid.value) {
-            await bec.putOntology(datasetName, graphUri, serializable);
-        } else {
-            await bec.postOntology(datasetName, graphUri, serializable);
+        const res = ontologyObject.uuid.value
+            ? await bec.putOntology(datasetName, graphUri, serializable)
+            : await bec.postOntology(datasetName, graphUri, serializable);
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Save failed",
+                "Could not save the profile header.",
+            );
+            return;
         }
+        toastStore.success(
+            "Profile header saved",
+            "The profile header was saved.",
+        );
     }
 
     function scrollEntriesToBottom() {

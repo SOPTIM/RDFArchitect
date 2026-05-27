@@ -20,6 +20,7 @@
 
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
         editorState,
@@ -58,6 +59,7 @@
         ).then(res => {
             if (res.ok) {
                 console.log("successfully deleted data");
+                const deletedGraph = graphURI;
                 editorState.selectedDataset.updateValue(null);
                 editorState.selectedGraph.updateValue(null);
                 editorState.selectedDiagram.updateValue({
@@ -67,14 +69,26 @@
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);
+                toastStore.success(
+                    "Schema deleted",
+                    `"${deletedGraph}" was removed.`,
+                );
             } else {
                 console.log("failed to insert data");
+                toastStore.error(
+                    "Delete failed",
+                    `Could not delete schema "${graphURI}".`,
+                );
             }
         });
         promise
             .catch(e => {
                 console.log("failed to delete graph:");
                 console.log(e);
+                toastStore.error(
+                    "Delete failed",
+                    "An unexpected error occurred while deleting the schema.",
+                );
             })
             .finally(() => {
                 forceReloadTrigger.trigger();

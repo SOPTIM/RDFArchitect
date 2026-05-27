@@ -19,6 +19,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -188,9 +189,19 @@
                     res.status,
                     res.statusText,
                 );
+                toastStore.error(
+                    "Save failed",
+                    "Could not save property constraints.",
+                );
+            } else {
+                toastStore.success("Constraints saved");
             }
         } catch (error) {
             console.warn("Failed to save custom SHACL:", error);
+            toastStore.error(
+                "Save failed",
+                "An unexpected error occurred while saving property constraints.",
+            );
         } finally {
             await fetchShacl(
                 editorState.selectedClassUUID.getValue(),

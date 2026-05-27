@@ -19,6 +19,7 @@
     import "../app.css";
     import { onMount } from "svelte";
 
+    import { enableEditing } from "$lib/actions/editingActions.js";
     import {
         undo,
         fetchCanUndo,
@@ -26,11 +27,17 @@
         fetchCanRedo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        installBackendFetchInterceptor,
+        probeBackendConnection,
+    } from "$lib/api/backendConnectionMonitor.svelte.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
+    import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
         copyState,
@@ -89,6 +96,8 @@
     });
 
     onMount(() => {
+        installBackendFetchInterceptor();
+        probeBackendConnection();
         loadSnapshot();
     });
 
@@ -96,7 +105,9 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        await bec.enableEditing(selectedDataset);
+        if (!(await enableEditing(selectedDataset))) {
+            return;
+        }
         forceReloadTrigger.trigger();
         editorState.selectedClassUUID.trigger();
         editorState.selectedDiagram.trigger();
@@ -109,6 +120,15 @@
             const res = await bec.loadSnapshot(base64Param);
             if (res.ok) {
                 await goto("/mainpage");
+                toastStore.success(
+                    "Snapshot loaded",
+                    "The shared snapshot has been loaded.",
+                );
+            } else {
+                toastStore.error(
+                    "Could not load snapshot",
+                    "The snapshot link is invalid or has expired.",
+                );
             }
         }
     }
@@ -215,14 +235,23 @@
             case "KeyZ":
                 event.preventDefault();
                 if (event.shiftKey) {
-                    if (canRedo && (await redo())) await reload();
+                    if (canRedo && (await redo())) {
+                        await reload();
+                        toastStore.info("Redone");
+                    }
                 } else {
-                    if (canUndo && (await undo())) await reload();
+                    if (canUndo && (await undo())) {
+                        await reload();
+                        toastStore.info("Undone");
+                    }
                 }
                 break;
             case "KeyY":
                 event.preventDefault();
-                if (canRedo && (await redo())) await reload();
+                if (canRedo && (await redo())) {
+                    await reload();
+                    toastStore.info("Redone");
+                }
                 break;
             case "KeyC":
                 event.preventDefault();
@@ -315,3 +344,4 @@
         {@render children?.()}
     </div>
 </div>
+<ToastContainer />
