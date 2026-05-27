@@ -34,10 +34,6 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import {
-        enableEditing,
-        disableEditing,
-    } from "$lib/actions/editingActions.js";
-    import {
         undo as doUndo,
         redo as doRedo,
     } from "$lib/actions/versionControlActions.js";

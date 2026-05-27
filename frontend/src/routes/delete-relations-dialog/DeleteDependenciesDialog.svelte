@@ -21,8 +21,8 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
