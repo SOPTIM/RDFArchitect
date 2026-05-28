@@ -35,6 +35,10 @@ export class ReactiveOntology {
         );
     }
 
+    static empty(namespaces = []) {
+        return new ReactiveOntology(null, "", [], namespaces);
+    }
+
     /**
      * The UUID of this ontology
      * @type {ReactiveValueWrapper<string>}
