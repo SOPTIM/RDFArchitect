@@ -29,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/GraphStore.svelte";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
@@ -74,15 +75,10 @@
         localDiagramId = crypto.randomUUID();
     }
 
-    async function getGraphs(datasetName) {
-        const result = await bec.getGraphNames(datasetName);
-        return await result.json();
-    }
-
     async function fetchGraphs() {
         try {
-            const res = await getGraphs(lockedDatasetName);
-            graphs = res
+            await graphStore.load(lockedDatasetName);
+            graphs = graphStore.getGraphs(lockedDatasetName)
                 .map(graph => {
                     return {
                         ...graph,

@@ -15,22 +15,16 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { classStore } from "$lib/stores/ClassStore.svelte";
+import { packageStore } from "$lib/stores/PackageStore.svelte";
 
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
 
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
-async function getPackages(datasetName, graphURI) {
-    const res = await bec.getPackages(datasetName, graphURI);
-    return await res.json();
-}
-
 export async function createPackageListForGraph(datasetName, graphURI) {
-    const res = await getPackages(datasetName, graphURI);
+    await packageStore.load(datasetName, graphURI);
+    const packageData = packageStore.getPackages(datasetName, graphURI);
 
-    return [...res.internalPackageList, ...res.externalPackageList]
+    return [...packageData.internal, ...packageData.external]
         .map(pack => {
             const packageId = getPackageId(pack);
 
@@ -49,18 +43,13 @@ export async function createPackageListForGraph(datasetName, graphURI) {
         });
 }
 
-async function getClasses(datasetName, graphURI) {
-    const res = await bec.getClasses(datasetName, graphURI);
-    return await res.json();
-}
-
 export async function createClassListForGraph(
     datasetName,
     graphURI,
     selectedClasses,
 ) {
     try {
-        const classList = (await getClasses(datasetName, graphURI)) ?? [];
+        const classList = (classStore.getClasses(datasetName, graphURI)) ?? [];
 
         const grouped = {};
 

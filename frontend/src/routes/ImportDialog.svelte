@@ -20,11 +20,11 @@
     import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {
@@ -65,9 +65,14 @@
         datasetNameUserInput =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
 
-        const datasetNames = await getDatasetNames();
-        modifiableDatasets = datasetNames.modifiable;
-        readOnlyDatasets = datasetNames.readonly;
+        await datasetStore.load();
+        for (const dataset of $datasetStore.data) {
+            if (dataset.readonly) {
+                readOnlyDatasets.push(dataset.label);
+            } else {
+                modifiableDatasets.push(dataset.label);
+            }
+        }
     }
 
     function onClose() {
@@ -188,7 +193,7 @@
                     ? ""
                     : ensureGraphNamespaceUri(
                           fileEntry.graphUri,
-                          fileEntry.file.name,
+                          fileEntry.file.label,
                       ),
             );
         });
@@ -265,6 +270,7 @@
         try {
             const res = await putFiles(filesLocal, datasetNameUserInputLocal);
             await parseResponse(res, datasetNameUserInputLocal);
+            await datasetStore.load(true);
         } catch (e) {
             console.log("failed to insert data:");
             console.log(e);
@@ -398,7 +404,7 @@
                                     class="border-border bg-window-background focus:border-orange ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                     type="text"
                                     value={fileEntry.isZip
-                                        ? fileEntry.file.name
+                                        ? fileEntry.file.label
                                         : fileEntry.graphUri}
                                     disabled={fileEntry.isZip}
                                     oninput={event =>

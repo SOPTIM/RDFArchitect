@@ -27,15 +27,16 @@
     import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
     import {
         getPackageDisplayLabel,
         restorePackageLabelPrefix,
     } from "$lib/utils/package-label.js";
 
     import {
-        getNamespaces,
         getPackages,
     } from "./classEditor/fetch-class-editor-context.js";
+
 
     let {
         showDialog = $bindable(),
@@ -84,7 +85,7 @@
             return [];
         });
         if (!readonly && datasetName) {
-            namespaces = await getNamespaces(datasetName);
+            namespaces = datasetStore.getNamespaces(datasetName);
         }
     }
     async function fetchPackages() {

@@ -15,16 +15,17 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.api.dto;
 
-import org.rdfarchitect.api.dto.DatasetDTO;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
 import java.util.List;
 
-public interface ListDatasetsUseCase {
-
-    /**
-     * List all datasets including their prefixes and read-only status. Snapshots are excluded from the list.
-     * @return List of dataset objects
-     */
-    List<DatasetDTO> listDatasets();
+@Data
+@AllArgsConstructor
+public class DatasetDTO {
+    private String name;
+    private boolean readonly;
+    private List<CIMPrefixPair> prefixes;
 }

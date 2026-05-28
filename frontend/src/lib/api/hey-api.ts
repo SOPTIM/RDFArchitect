@@ -15,16 +15,11 @@
  *
  */
 
-package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.api.dto.DatasetDTO;
-import java.util.List;
+import { CreateClientConfig } from "./generated/client";
 
-public interface ListDatasetsUseCase {
-
-    /**
-     * List all datasets including their prefixes and read-only status. Snapshots are excluded from the list.
-     * @return List of dataset objects
-     */
-    List<DatasetDTO> listDatasets();
-}
+export const createClientConfig: CreateClientConfig = (config) => ({
+    ...config,
+    baseUrl: "http://localhost:8080/",
+    credentials: "include",
+});

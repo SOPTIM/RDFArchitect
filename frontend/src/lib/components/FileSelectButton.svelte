@@ -39,7 +39,7 @@
     </div>
     <div class="h-9 w-full content-center">
         <p class="break-all">
-            {file ? file.name : "no file selected"}
+            {file ? file.label : "no file selected"}
         </p>
     </div>
 </div>

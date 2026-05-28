@@ -33,6 +33,7 @@
         forceReloadTrigger,
         DiagramType,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
 
@@ -63,7 +64,7 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+        isDatasetReadOnly = datasetStore.isReadOnly(dataset);
     });
 
     $effect(async () => {
@@ -214,11 +215,6 @@
             packageUUID,
             filter,
         });
-    }
-
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
     }
 
     function handleResetView() {

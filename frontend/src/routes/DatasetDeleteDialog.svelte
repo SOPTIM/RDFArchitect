@@ -18,30 +18,24 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+    import { graphStore } from "$lib/stores/GraphStore.svelte";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const baseDeletionDescription =
         "All schemas and packages inside this dataset will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
-        graphs = null;
-        if (datasetName) {
-            const res = await bec.getGraphNames(datasetName);
-            graphs = await res.json();
-        } else {
-            graphs = [];
-        }
+        await graphStore.load(datasetName);
+        graphs = graphStore.getGraphs(datasetName);
     }
 
     function onClose() {
@@ -51,8 +45,8 @@
     async function deleteDataset() {
         try {
             if (datasetName) {
-                const res = await bec.deleteDataset(datasetName);
-                if (res && res.ok === false) {
+                const res = await datasetStore.remove(datasetName);
+                if (res.error) {
                     toastStore.error(
                         "Delete failed",
                         `Could not delete dataset "${datasetName}".`,

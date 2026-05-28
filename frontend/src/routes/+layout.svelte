@@ -38,6 +38,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import {
         copyState,
@@ -91,7 +92,7 @@
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
-            ? await isReadOnly(selectedDataset)
+            ? datasetStore.isReadOnly(selectedDataset)
             : false;
     });
 
@@ -99,6 +100,7 @@
         installBackendFetchInterceptor();
         probeBackendConnection();
         loadSnapshot();
+        datasetStore.load();
     });
 
     async function requestEnableEditing() {
@@ -136,11 +138,6 @@
     async function fetchUndoRedo() {
         canUndo = await fetchCanUndo();
         canRedo = await fetchCanRedo();
-    }
-
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
     }
 
     async function reload() {

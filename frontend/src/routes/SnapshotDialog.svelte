@@ -25,6 +25,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
@@ -36,19 +37,13 @@
     const datasetSelectId = `datasetSelect-${uuidv4()}`;
 
     let datasetName = $state(null);
-    let datasets = $state([]);
     let base64Token = $state();
 
     const datasetSelectionLocked = $derived(!!lockedDatasetName);
 
     function onOpen() {
-        datasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
-        if (datasetSelectionLocked) {
-            datasets = [{ label: lockedDatasetName }];
-        } else {
-            loadDatasets();
-        }
+        datasetName = lockedDatasetName ?? editorState.selectedDataset.getValue();
+
     }
 
     async function snapshotDataset() {
@@ -73,12 +68,6 @@
                 `Could not create a snapshot for "${datasetName}".`,
             );
         }
-    }
-
-    async function loadDatasets() {
-        const res = await bec.getDatasetNames();
-        const datasetNames = await res.json();
-        datasets = datasetNames.map(name => ({ label: name }));
     }
 
     async function copyToClipboard() {
@@ -111,10 +100,10 @@
         <SelectEditControl
             id={datasetSelectId}
             bind:value={datasetName}
-            options={datasets}
+            options={$datasetStore.data}
             getOptionValue={dataset => dataset.label}
             getOptionLabel={dataset => dataset.label}
-            disabled={datasetSelectionLocked || datasets.length === 0}
+            disabled={datasetSelectionLocked || datasetStore.data?.length === 0}
             placeholder="Select dataset"
         />
 
