@@ -30,7 +30,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
     import OntologyEntryRow from "./OntologyEntryRow.svelte";

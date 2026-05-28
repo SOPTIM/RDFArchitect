@@ -37,16 +37,6 @@ export class BackendConnection {
         });
     }
 
-    async getClassInfo(datasetName, graphURI, classUUID) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
-        return fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
     async replaceClass(datasetName, graphURI, classUUID, newClass) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return fetch(url, {
@@ -60,16 +50,6 @@ export class BackendConnection {
 
     async getPackage(datasetName, graphURI, packageUUID) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}`;
-        return fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async getClasses(datasetName, graphURI, includeExternalClasses = false) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes?includeExternalClasses=${includeExternalClasses}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",

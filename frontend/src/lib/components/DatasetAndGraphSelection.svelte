@@ -19,8 +19,8 @@
     import { v4 as uuidv4 } from "uuid";
 
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+    import { graphStore } from "$lib/stores/GraphStore.svelte";
 
     let {
         dataset = $bindable(),
@@ -49,8 +49,8 @@
             return;
         }
 
-        await graphURIStore.load(dataset)
-        graphNames = graphURIStore.getGraphURIs(dataset);
+        await graphStore.load(dataset)
+        graphNames = graphStore.getGraphs(dataset);
         const valid = graphNames.some(graphName => getUri(graphName) === graph);
         if (!valid && !graphLocked) {
             graph = null;
@@ -72,8 +72,8 @@
         }
 
         if (dataset) {
-            await graphURIStore.load(dataset);
-            graphNames = graphURIStore.getGraphURIs(dataset);
+            await graphStore.load(dataset);
+            graphNames = graphStore.getGraphs(dataset);
         } else {
             graphNames = [];
         }

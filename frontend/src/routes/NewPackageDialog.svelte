@@ -16,7 +16,6 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
@@ -27,8 +26,9 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { classStore } from "$lib/stores/ClassStore.svelte";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+    import { packageStore } from "$lib/stores/PackageStore.svelte";
 
     import {
         editorState,
@@ -47,7 +47,6 @@
         packageLabel: "packageNameNewPackage" + uuid,
         packageComment: "packageCommentNewPackage" + uuid,
     };
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedDatasetName = $state(null);
     let selectedGraphURI = $state(null);
@@ -140,8 +139,7 @@
             classes = [];
             return;
         }
-        const res = await bec.getClasses(datasetName, graphURI);
-        classes = await res.json();
+        return classStore.getClasses(datasetName, graphURI);
     }
 
     function getExpandedNamespace(namespace) {

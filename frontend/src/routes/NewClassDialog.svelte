@@ -23,22 +23,21 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { classStore } from "$lib/stores/ClassStore.svelte";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+    import { packageStore } from "$lib/stores/PackageStore.svelte";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
-
 
     let {
         showDialog = $bindable(),
@@ -46,7 +45,8 @@
         lockedGraphUri,
         lockedPackage,
         classLayoutPosition = null,
-        onClassCreated = () => {},
+        onClassCreated = () => {
+        }
     } = $props();
 
     const uuid = uuidv4();
@@ -55,7 +55,7 @@
         graphURI: "graphUriNewClass" + uuid,
         classPackage: "classPackageNewClass" + uuid,
         classURINamespace: "classURINamespaceNewClass" + uuid,
-        className: "classNameNewClass" + uuid,
+        className: "classNameNewClass" + uuid
     };
 
     let datasetName = $state(null);
@@ -72,11 +72,11 @@
 
     let disableSubmit = $derived(
         !datasetName ||
-            !graphURI ||
-            !classPackage ||
-            !classURINamespace?.value ||
-            !className?.value ||
-            (className?.violations.length ?? 0) > 0,
+        !graphURI ||
+        !classPackage ||
+        !classURINamespace?.value ||
+        !className?.value ||
+        (className?.violations.length ?? 0) > 0
     );
 
     const packageSelectionLocked = $derived(!!lockedPackage);
@@ -97,10 +97,10 @@
             }
 
             if (!packageSelectionLocked) {
-                await getPackages(ds, graph);
+                packageStore.getPackages(ds, graph);
             }
 
-            compareClasses = await getClasses(ds, graph);
+            compareClasses = classStore.getClasses(ds, graph);
 
             if (className && classURINamespace) {
                 const currentValue = className.value;
@@ -126,8 +126,8 @@
             isInvalidClassLabel(
                 label,
                 classURINamespace?.value,
-                compareClasses,
-            ),
+                compareClasses
+            )
         );
 
         if (!datasetName || !graphURI) {
@@ -189,44 +189,29 @@
         const requestBody = {
             packageDTO,
             classURIPrefix: classURINamespaceLocal?.value,
-            className: classNameLocal?.value,
+            className: classNameLocal?.value
         };
         if (classLayoutPosition) {
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(datasetNameLocal) +
-                    "/graphs/" +
-                    encodeURIComponent(graphURILocal) +
-                    "/classes",
-                {
-                    method: "POST",
-                    headers: new Headers({
-                        "Content-Type": "application/json",
-                    }),
-                    body: JSON.stringify(requestBody),
-                    credentials: "include",
-                },
-            );
-            if (res.ok) {
-                const uuid = await res.text();
+            const res = await classStore.addClass(datasetName, graphURI, requestBody);
+            if (!res.error) {
+                const uuid = res.data;
                 console.log("successfully added class");
                 onClassCreated({
                     classUUID: uuid,
                     datasetName: datasetNameLocal,
                     graphURI: graphURILocal,
                     packageUUID: selectedPackageUUID,
-                    className: classNameLocal.value,
+                    className: classNameLocal.value
                 });
                 editorState.selectedDataset.updateValue(datasetNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedDiagram.updateValue({
                     type: DiagramType.PACKAGE,
-                    id: selectedPackageUUID,
+                    id: selectedPackageUUID
                 });
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);

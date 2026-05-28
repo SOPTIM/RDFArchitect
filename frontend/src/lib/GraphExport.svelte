@@ -30,7 +30,7 @@
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
-    import { datasetStore } from "../lib/stores/DatasetStore.ts";
+    import { datasetStore } from "./stores/DatasetStore.svelte.ts";
 
     let {
         showDialog = $bindable(),

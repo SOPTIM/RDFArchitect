@@ -19,9 +19,7 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
@@ -29,7 +27,8 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { classStore } from "$lib/stores/ClassStore.svelte";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import {
         getClasses,
@@ -54,7 +53,6 @@
 
     const enumerationStereotype =
         "http://iec.ch/TC57/NonStandard/UML#enumeration";
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const context = {
         namespaces: [],
@@ -96,7 +94,7 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
+            isDatasetReadOnly = datasetStore.isReadOnly(datasetName);
             await loadContext();
             await loadReactiveClass(cancellation);
         })();
@@ -109,7 +107,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
+        isDatasetReadOnly = datasetStore.isReadOnly(datasetName);
     });
 
     onMount(() => eventStack.addEvent(closeClassEditor));
@@ -154,9 +152,7 @@
     }
 
     async function loadReactiveClass(cancelled) {
-        const classDto = await (
-            await bec.getClassInfo(datasetName, graphUri, classUuid)
-        ).json();
+        const classDto = await classStore.getClassDetail(datasetName, graphUri, classUuid);
         if (cancelled.cancelled) return;
         const newReactiveClass = mapClassDtoToReactiveClass(
             classDto,
@@ -179,11 +175,7 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                const res = await bec.getClassInfo(datasetName, graphUri, uuid);
-                if (!res || !res.ok) return null;
-                const text = await res.text();
-                if (!text) return null;
-                return JSON.parse(text);
+                return classStore.getClassDetail(datasetName, graphUri, uuid);
             }),
         );
         if (cancelled.cancelled) return;
@@ -225,9 +217,6 @@
         },
         get targetClassInfos() {
             return context.targetClassInfos;
-        },
-        get backendConnection() {
-            return bec;
         },
         // get Objects by identifier functions
         get getClassByUuid() {

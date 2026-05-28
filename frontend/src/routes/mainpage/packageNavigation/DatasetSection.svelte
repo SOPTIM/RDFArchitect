@@ -37,7 +37,7 @@
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";

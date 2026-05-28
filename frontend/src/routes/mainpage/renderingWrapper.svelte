@@ -33,7 +33,7 @@
         forceReloadTrigger,
         DiagramType,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
 

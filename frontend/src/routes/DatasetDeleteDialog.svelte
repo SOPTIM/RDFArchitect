@@ -24,8 +24,8 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+    import { graphStore } from "$lib/stores/GraphStore.svelte";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
@@ -34,8 +34,8 @@
     let graphs = $state(null);
 
     async function onOpen() {
-        await graphURIStore.load(datasetName);
-        graphs = graphURIStore.getGraphURIs(datasetName);
+        await graphStore.load(datasetName);
+        graphs = graphStore.getGraphs(datasetName);
     }
 
     function onClose() {

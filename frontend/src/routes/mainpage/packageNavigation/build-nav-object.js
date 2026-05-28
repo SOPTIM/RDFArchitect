@@ -22,8 +22,8 @@ import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
-import { datasetStore } from "$lib/stores/DatasetStore.ts";
-import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+import { graphStore } from "$lib/stores/GraphStore.svelte";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -32,7 +32,8 @@ import {
     isSelectedPackage,
     isSelectedClass,
 } from "./packageNavigationUtils.svelte.js";
-import { packageStore } from "$lib/stores/PackageStore.ts";
+import { packageStore } from "$lib/stores/PackageStore.svelte";
+import { classStore } from "$lib/stores/ClassStore.svelte";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -126,8 +127,8 @@ async function populateDataset(datasetNavEntry) {
 
 async function getGraphNames(datasetName) {
     try {
-        await graphURIStore.load(datasetName);
-        return graphURIStore.getGraphURIs(datasetName);
+        await graphStore.load(datasetName);
+        return graphStore.getGraphs(datasetName);
     } catch (err) {
         console.error(
             "Error fetching graph names for dataset " + datasetName,
@@ -211,8 +212,7 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
-    const freshEntries = allClasses
-        .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
+    const freshEntries = classStore.getClassesForPackage(datasetId, graphId, packageNavObject.id)
         .sort((a, b) => a.label.localeCompare(b.label))
         .map(cls =>
             reuseOrCreate(existingClassList, {
@@ -250,8 +250,7 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
 
 async function getClasses(datasetName, graphURI) {
     try {
-        const res = await bec.getClasses(datasetName, graphURI);
-        return await res.json();
+        return await classStore.getClasses(datasetName, graphURI);
     } catch (err) {
         console.error(
             "Error fetching classes for dataset " +

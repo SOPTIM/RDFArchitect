@@ -45,8 +45,8 @@
         editorState,
         forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
-
     import { packageStore } from "$lib/stores/PackageStore.ts";
+
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
@@ -198,7 +198,7 @@
                 ...p,
                 external: true,
             })),
-        ];;
+        ];
     }
 
     async function refreshSelectedPackageDetails(packages) {

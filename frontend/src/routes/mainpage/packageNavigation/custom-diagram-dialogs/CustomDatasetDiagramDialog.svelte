@@ -29,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/GraphStore.svelte";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
@@ -36,7 +37,6 @@
         createPackageListForGraph,
     } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -77,8 +77,8 @@
 
     async function fetchGraphs() {
         try {
-            await graphURIStore.load(lockedDatasetName);
-            graphs = graphURIStore.getGraphURIs(lockedDatasetName)
+            await graphStore.load(lockedDatasetName);
+            graphs = graphStore.getGraphs(lockedDatasetName)
                 .map(graph => {
                     return {
                         ...graph,

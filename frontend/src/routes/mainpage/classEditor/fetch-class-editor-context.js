@@ -18,7 +18,8 @@
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
-import { packageStore } from "$lib/stores/PackageStore.ts";
+import { classStore } from "$lib/stores/ClassStore.svelte";
+import { packageStore } from "$lib/stores/PackageStore.svelte";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -97,9 +98,8 @@ export async function getDataTypes(datasetName, graphUri) {
 }
 
 export async function getClasses(datasetName, graphUri) {
-    const res = await bec.getClasses(datasetName, graphUri, true);
-    let classesDto = await res.json();
-    let classes = classesDto.map(cls => new Class(cls));
+    const classDTOs = classStore.getClasses(datasetName, graphUri, true);
+    let classes = classDTOs.map(cls => new Class(cls));
     console.log("CLASSES:", classes);
     return classes;
 }

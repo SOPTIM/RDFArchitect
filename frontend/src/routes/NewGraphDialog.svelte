@@ -21,8 +21,8 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.svelte";
+    import { graphStore } from "$lib/stores/GraphStore.svelte";
 
     import {
         DiagramType,
@@ -109,8 +109,8 @@
             return;
         }
 
-        await graphURIStore.load(datasetNameUserInput);
-        graphNames = graphURIStore.getGraphs(datasetNameUserInput);
+        await graphStore.load(datasetNameUserInput);
+        graphNames = graphStore.getGraphs(datasetNameUserInput);
     }
 
     async function addGraph() {
@@ -160,7 +160,7 @@
                 );
             })
             .finally(() => {
-                graphURIStore.invalidateDataset(datasetNameLocal);
+                graphStore.invalidateDataset(datasetNameLocal);
                 datasetStore.load(true);
                 forceReloadTrigger.trigger();
             });
