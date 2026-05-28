@@ -196,15 +196,12 @@ public class UpdateClassLayoutService
         if (classes.isEmpty()) {
             return;
         }
-        var diagram =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getCustomDiagrams()
-                        .get(diagramUUID);
-        if (diagram != null) {
-            diagram.getClasses().addAll(classes);
-        }
+
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagram = ctx.getCustomDiagrams().get(diagramUUID);
+            if (diagram != null) {
+                diagram.getClasses().addAll(classes);
+            }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
                 DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, "");
@@ -222,15 +219,11 @@ public class UpdateClassLayoutService
     @Override
     public void removeClassFromCustomDiagram(
             GraphIdentifier graphIdentifier, UUID diagramUUID, UUID classUUID) {
-        var diagram =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getCustomDiagrams()
-                        .get(diagramUUID);
-        if (diagram != null) {
-            diagram.getClasses().removeIf(c -> c.getUuid().equals(classUUID));
-        }
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagram = ctx.getCustomDiagrams().get(diagramUUID);
+            if (diagram != null) {
+                diagram.getClasses().removeIf(c -> c.getUuid().equals(classUUID));
+            }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var diagramObject =
                     DLObjectFetcher.fetchDiagramDOForClass(

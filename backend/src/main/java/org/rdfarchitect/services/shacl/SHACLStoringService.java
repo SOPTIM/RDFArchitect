@@ -283,8 +283,7 @@ public class SHACLStoringService
                             .generateForClassOnly(UUID.fromString(classUUID));
 
             List<PropertyShape> customPropertyShapes =
-                    new SHACLShapesFetcher(customSHACL)
-                            .getPropertyShapesOfProperty(ontologyModel, property.getURI());
+                    getCustomPropertyShapesOfProperty(ontologyModel, customSHACL, propertyUUID);
             var generatedPropertyShapes =
                     new SHACLShapesFetcher(generatedShacl)
                             .getPropertyShapesOfProperty(ontologyModel, property.getURI());
@@ -292,6 +291,26 @@ public class SHACLStoringService
                     .setCustom(customPropertyShapes)
                     .setGenerated(generatedPropertyShapes);
         }
+    }
+
+    /**
+     * Retrieves the custom property shapes for a given property UUID without managing its own
+     * transaction. This allows callers to use it within an existing transaction context.
+     *
+     * @param ontologyModel the ontology model
+     * @param customSHACL the model containing the custom SHACL shapes
+     * @param propertyUUID the property UUID
+     * @return a list of custom property shapes for the given property
+     */
+    private List<PropertyShape> getCustomPropertyShapesOfProperty(
+            Model ontologyModel, Model customSHACL, UUID propertyUUID) {
+        var property =
+                ontologyModel
+                        .listSubjectsWithProperty(
+                                RDFA.uuid, ontologyModel.createLiteral(propertyUUID.toString()))
+                        .next();
+        return new SHACLShapesFetcher(customSHACL)
+                .getPropertyShapesOfProperty(ontologyModel, property.getURI());
     }
 
     @Override
@@ -389,13 +408,16 @@ public class SHACLStoringService
     public void updatePropertyShacl(
             GraphIdentifier graphIdentifier, UUID propertyUUID, String ttlShaclString) {
         var insertModel = parseTriplesToModel(ttlShaclString);
-        // getSHACLShapesByProperty manages its own READ transaction; call it before opening WRITE
-        var propertyShapesOfProperty = getSHACLShapesByProperty(graphIdentifier, propertyUUID);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var customSHACL = ModelFactory.createModelForGraph(ctx.getCustomSHACL());
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+
+            var customPropertyShapes =
+                    getCustomPropertyShapesOfProperty(ontologyModel, customSHACL, propertyUUID);
+
             var deleteModel = ModelFactory.createDefaultModel();
-            for (var propertyShape : propertyShapesOfProperty.getCustom()) {
+            for (var propertyShape : customPropertyShapes) {
                 copySHACLShapeToNewModel(
                         customSHACL,
                         deleteModel,

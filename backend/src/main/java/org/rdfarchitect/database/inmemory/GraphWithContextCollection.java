@@ -157,10 +157,13 @@ public class GraphWithContextCollection {
         try {
             graphs.values()
                     .forEach(
-                            graph -> {
-                                graph.begin(ReadWrite.WRITE);
-                                graph.getRdfGraph().close();
-                                graph.end();
+                            ctx -> {
+                                try {
+                                    ctx.begin(ReadWrite.WRITE);
+                                    ctx.getRdfGraph().close();
+                                } finally {
+                                    ctx.end();
+                                }
                             });
             graphs.clear();
         } finally {
