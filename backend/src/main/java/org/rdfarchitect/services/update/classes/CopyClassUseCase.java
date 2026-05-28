@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes;
 
 import org.rdfarchitect.api.dto.CopyClassRequestDTO;
+import org.rdfarchitect.api.dto.CopyClassResponseDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.UUID;
@@ -36,7 +37,7 @@ public interface CopyClassUseCase {
      *     be copied, e.g. if attributes and associations should be copied as well.
      * @return The UUID of the newly created class.
      */
-    UUID copyClass(
+    CopyClassResponseDTO copyClass(
             GraphIdentifier graphIdentifier,
             UUID classUUID,
             GraphIdentifier targetGraphIdentifier,

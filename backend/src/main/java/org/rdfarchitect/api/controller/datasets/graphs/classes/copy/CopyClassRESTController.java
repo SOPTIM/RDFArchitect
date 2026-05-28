@@ -23,6 +23,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.CopyClassRequestDTO;
+import org.rdfarchitect.api.dto.CopyClassResponseDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.CopyClassUseCase;
@@ -52,7 +53,7 @@ public class CopyClassRESTController {
             summary = "copy a class",
             description = "Create a copy of a class in the specified graph")
     @PostMapping
-    public String copyClass(
+    public CopyClassResponseDTO copyClass(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -92,7 +93,7 @@ public class CopyClassRESTController {
                 new GraphIdentifier(
                         copyClassRequest.getTargetDatasetName(), targetExtendedGraphURI);
 
-        var newClassUUID =
+        var response =
                 copyClassUseCase.copyClass(
                         graphIdentifier,
                         UUID.fromString(classUUID),
@@ -106,6 +107,6 @@ public class CopyClassRESTController {
                 classUUID,
                 originURL);
 
-        return newClassUUID.toString();
+        return response;
     }
 }

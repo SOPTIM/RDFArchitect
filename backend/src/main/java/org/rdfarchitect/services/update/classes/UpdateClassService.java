@@ -26,6 +26,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
 import org.rdfarchitect.api.dto.CopyClassRequestDTO;
+import org.rdfarchitect.api.dto.CopyClassResponseDTO;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
@@ -221,7 +222,7 @@ public class UpdateClassService
     }
 
     @Override
-    public UUID copyClass(
+    public CopyClassResponseDTO copyClass(
             GraphIdentifier graphIdentifier,
             UUID classUUID,
             GraphIdentifier targetGraphIdentifier,
@@ -277,7 +278,7 @@ public class UpdateClassService
                                 .getGraphWithContext(targetGraphIdentifier)
                                 .getRdfGraph()
                                 .getLastDelta()));
-        return newClassUUID;
+        return new CopyClassResponseDTO(newClassUUID.toString(), label.getValue());
     }
 
     private CIMClassUMLAdapted readSourceClass(GraphIdentifier graphIdentifier, String classUUID) {
