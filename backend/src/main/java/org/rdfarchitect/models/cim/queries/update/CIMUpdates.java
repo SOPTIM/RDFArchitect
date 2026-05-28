@@ -24,6 +24,7 @@ import org.apache.jena.arq.querybuilder.UpdateBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Property;
 import org.apache.jena.rdf.model.ResourceFactory;
@@ -33,6 +34,7 @@ import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateRequest;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
@@ -42,6 +44,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.AttributeValueNode;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
@@ -138,7 +141,9 @@ public class CIMUpdates {
         }
         if (newClass.getComment() != null) {
             classBaseUpdate.addInsert(
-                    newClassURI, RDFS.comment, newClass.getComment().asTypedLiteral());
+                    newClassURI,
+                    RDFS.comment,
+                    asLiteralWithOptionalNormalization(newClass.getComment()));
         }
         if (newClass.getBelongsToCategory() != null) {
             classBaseUpdate.addInsert(
@@ -320,7 +325,10 @@ public class CIMUpdates {
         }
         // comment
         if (attribute.getComment() != null) {
-            baseUpdate.addInsert(newURI, RDFS.comment, attribute.getComment().asTypedLiteral());
+            baseUpdate.addInsert(
+                    newURI,
+                    RDFS.comment,
+                    asLiteralWithOptionalNormalization(attribute.getComment()));
         }
         // isFixed
         appendValueNode(baseUpdate, newURI, CIMS.isFixed, attribute.getFixedValue());
@@ -539,7 +547,7 @@ public class CIMUpdates {
             baseUpdate.addInsert(
                     association.getUri().toNode(),
                     RDFS.comment,
-                    association.getComment().asTypedLiteral());
+                    asLiteralWithOptionalNormalization(association.getComment()));
         }
     }
 
@@ -625,7 +633,9 @@ public class CIMUpdates {
         }
         if (newEnumEntry.getComment() != null) {
             baseUpdate.addInsert(
-                    newEnumEntryURI, RDFS.comment, newEnumEntry.getComment().asTypedLiteral());
+                    newEnumEntryURI,
+                    RDFS.comment,
+                    asLiteralWithOptionalNormalization(newEnumEntry.getComment()));
         }
         if (newEnumEntry.getStereotype() != null) {
             baseUpdate.addInsert(newEnumEntryURI, CIMS.stereotype, CIMStereotypes.enumLiteral);
@@ -704,7 +714,9 @@ public class CIMUpdates {
         }
         if (newPackage.getComment() != null) {
             packageUpdateBuilder.addInsert(
-                    newPackageURI, RDFS.comment, newPackage.getComment().asTypedLiteral());
+                    newPackageURI,
+                    RDFS.comment,
+                    asLiteralWithOptionalNormalization(newPackage.getComment()));
         }
 
         UpdateExecutionFactory.create(packageUpdateBuilder.build(), dataset).execute();
@@ -770,5 +782,14 @@ public class CIMUpdates {
         if (!isReferencedElsewhere) {
             model.removeAll(resource, RDFA.uuid, uuidLiteral);
         }
+    }
+
+    private Literal asLiteralWithOptionalNormalization(RDFSComment comment) {
+        if (comment == null) {
+            return null;
+        }
+        return UserSettingsContext.get().normalizeComments()
+                ? comment.asTypedLiteral()
+                : comment.asLiteral();
     }
 }

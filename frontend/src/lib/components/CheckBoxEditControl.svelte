@@ -29,29 +29,31 @@
     let uuid = crypto.randomUUID();
 </script>
 
-{#if labelFirst && label}
-    <label for={uuid} class=" text-default-text">
-        {label}
-    </label>
-{/if}
-<input
-    type="checkbox"
-    id={uuid}
-    class="text-button-default-text bg-default-background checked:bg-button-default-background h-4 w-4
+<div>
+    {#if labelFirst && label}
+        <label for={uuid} class=" text-default-text">
+            {label}
+        </label>
+    {/if}
+    <input
+        type="checkbox"
+        id={uuid}
+        class="text-button-default-text bg-default-background checked:bg-button-default-background h-4 w-4
            rounded
            border-none disabled:cursor-not-allowed"
-    bind:checked={value}
-    onchange={() => {
-        if (value) {
-            callOnInputTrue();
-        } else {
-            callOnInputFalse();
-        }
-    }}
-    disabled={disabled || readonly}
-/>
-{#if !labelFirst && label}
-    <label for={uuid} class="">
-        {label}
-    </label>
-{/if}
+        bind:checked={value}
+        onchange={() => {
+            if (value) {
+                callOnInputTrue();
+            } else {
+                callOnInputFalse();
+            }
+        }}
+        disabled={disabled || readonly}
+    />
+    {#if !labelFirst && label}
+        <label for={uuid} class="">
+            {label}
+        </label>
+    {/if}
+</div>

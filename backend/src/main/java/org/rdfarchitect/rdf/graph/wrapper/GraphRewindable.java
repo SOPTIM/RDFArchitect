@@ -32,6 +32,7 @@ import org.apache.jena.sparql.core.Transactional;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
+import org.rdfarchitect.context.UserSettingsContext;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphNotInAWriteTransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
@@ -120,7 +121,9 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
                             graph.add(
                                     triple.getSubject(),
                                     RDFS.comment.asNode(),
-                                    newComment.asTypedLiteral().asNode());
+                                    UserSettingsContext.get().normalizeComments()
+                                            ? newComment.asTypedLiteral().asNode()
+                                            : newComment.asLiteral().asNode());
                         });
     }
 

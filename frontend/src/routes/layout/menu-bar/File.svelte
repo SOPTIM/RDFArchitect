@@ -20,6 +20,7 @@
         faDownload,
         faFileExport,
         faFileImport,
+        faGear,
         faShare,
         faTrash,
         faUpload,
@@ -35,6 +36,7 @@
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
+    import UserSettingDialog from "../../UserSettingDialog.svelte";
 
     let { isDatasetReadOnly } = $props();
 
@@ -45,6 +47,7 @@
     let showSHACLUploadDialog = $state(false);
     let showDeleteDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
+    let showUserSettingDialog = $state(false);
 
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
@@ -100,6 +103,13 @@
         </Menubar.SubMenu.Root>
         <Menubar.Separator />
         <Menubar.Item.Button
+            onSelect={() => (showUserSettingDialog = true)}
+            faIcon={faGear}
+        >
+            Settings
+        </Menubar.Item.Button>
+        <Menubar.Separator />
+        <Menubar.Item.Button
             onSelect={() => (showSnapshotDialog = true)}
             faIcon={faShare}
         >
@@ -137,6 +147,7 @@
 <SnapshotDialog bind:showDialog={showSnapshotDialog} />
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />
 <SHACLExportDialog bind:showDialog={showSHACLExportDialog} />
+<UserSettingDialog bind:showDialog={showUserSettingDialog} />
 
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <DatasetDeleteDialog
