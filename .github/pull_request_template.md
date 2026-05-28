@@ -19,8 +19,10 @@
 ## Author Checklist
 
 - [ ] Linked the relevant issue(s) above
-- [ ] Changes have been tested manually (check the affected areas below)
-- [ ] No new warnings or errors are introduced
+- [ ] Tests added or updated (or not applicable)
+- [ ] Documentation updated (or not applicable)
+- [ ] No breaking changes introduced (or described in the summary above)
+- [ ] Commits are signed off (`git commit -s`) for DCO
 
 ## Affected Areas
 
