@@ -26,20 +26,7 @@
 
 ## Affected Areas
 
-<!-- Check every area your change touches, then verify the corresponding items in the detailed checklist below. -->
-
-- [ ] General behavior (data reload, readonly mode, dialogs, undo/redo)
-- [ ] Global MenuBar
-- [ ] Welcome Page
-- [ ] Editor – Navigation & context menus
-- [ ] Editor – Package View (diagram)
-- [ ] Editor – Class Editor
-- [ ] Editor – Custom Diagram View
-- [ ] Editor – Delete Dialog
-- [ ] Prefixes Page
-- [ ] Changelog Page
-- [ ] Compare Page
-- [ ] Migrate Schema Page
+<!-- Which parts of the app does this change touch? e.g. Navigation, Class Editor, Package View -->
 
 <details>
 <summary>Detailed feature test checklist</summary>
@@ -86,12 +73,12 @@
 - [ ] Security and data information displayed
 - [ ] Copyright and version information displayed
 
-### Editor – MenuBar
+### Editor - MenuBar
 - [ ] Search function works with all filters (All Datasets, Current Dataset, Current Graph, Current Package)
 - [ ] Search finds classes, attributes, associations, packages
 - [ ] "Enable Editing" button appears for readonly datasets
 
-### Editor – Navigation
+### Editor - Navigation
 - [ ] Hierarchical display (Datasets → Schemas → Packages) works
 - [ ] Selection is highlighted
 - [ ] Selecting a class does not change dataset/schema/package selection
@@ -141,7 +128,7 @@
     - [ ] Edit diagram works
     - [ ] Delete diagram works
 
-### Editor – Package View
+### Editor - Package View
 - [ ] Class diagram displays correctly
 - [ ] Moving nodes works and layout changes persist after reload
 - [ ] Loading animation shows while loading
@@ -159,7 +146,7 @@
     - [ ] Add class works (disabled in readonly datasets)
     - [ ] Paste class works (disabled in readonly datasets)
 
-### Editor – Class Editor
+### Editor - Class Editor
 - [ ] Display and edit class properties: Label, Namespace, Package, Derived from, Abstract, Stereotypes, Attributes, Associations, Comment
 - [ ] Delete class works
 - [ ] Save changes works
@@ -170,12 +157,12 @@
 - [ ] Attribute/association Constraints View works
 - [ ] Class Constraints View works
 
-### Editor – Delete Dialog
+### Editor - Delete Dialog
 - [ ] Package, Classes, Attributes and Associations are correctly listed
 - [ ] Delete, Keep, Move to default works
 - [ ] Set all works
 
-### Editor – Custom Diagram View
+### Editor - Custom Diagram View
 - [ ] Class diagram displays correctly
 - [ ] Moving nodes works and layout changes persist after reload
 - [ ] Loading animation shows while loading
