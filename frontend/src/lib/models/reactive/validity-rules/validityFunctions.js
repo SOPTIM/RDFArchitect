@@ -21,11 +21,14 @@ import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/in
 
 export function isInvalidUuid(uuid) {
     const violations = [];
-    if (uuid !== null && (!uuid || !uuidValidate(uuid))) {
-        // Allows null because uuids are not required
-        violations.push("must be a valid UUID");
+    if (validateUuid(uuid)) {
+        violations.push("must be a valid input");
     }
     return violations;
+}
+
+function validateUuid(uuid) {
+    return uuid !== null && (!uuid || !uuidValidate(uuid));
 }
 
 export function isInvalidLabel(label) {
@@ -127,8 +130,18 @@ export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
     return violations;
 }
 
-export function isInvalidNamespace(namespace) {
-    return isNotEmptyValidation(namespace);
+export function isInvalidNamespace(namespace, compareNamespaces) {
+    const violations = isNotEmptyValidation(namespace);
+    if (
+        violations.length === 0 &&
+        !compareNamespaces.some(
+            compareNamespace => compareNamespace.prefix === namespace,
+        )
+    ) {
+        violations.push("must be a valid input");
+    }
+
+    return violations;
 }
 
 export function isInvalidMultiplicityLowerBound(lowerBound, upperBound) {
@@ -163,15 +176,28 @@ export function isInvalidMultiplicityUpperBound(upperBound, lowerBound) {
     return violations;
 }
 
-export function isInvalidDatatypeUri(uri) {
-    return isNotEmptyValidation(uri);
+export function isInvalidDatatypeUri(uri, compareDatatypes) {
+    const violations = isNotEmptyValidation(uri);
+
+    if (
+        violations.length === 0 &&
+        !compareDatatypes.some(
+            datatype => datatype.prefix + datatype.label === uri,
+        )
+    ) {
+        violations.push("must be a valid input");
+    }
+
+    return violations;
 }
 
 export function isInvalidTarget(target) {
-    const violations = isInvalidUuid(target);
-    if (!target || target.trim() === "") {
-        violations.push("must not be empty");
+    const violations = isNotEmptyValidation(target);
+
+    if (violations.length === 0 && validateUuid(target)) {
+        violations.push("must be a valid input");
     }
+
     return violations;
 }
 
@@ -294,4 +320,12 @@ export function namespacePrefixesAreUnique(prefix, reactiveNamespacesArray) {
     }
 
     return violations;
+}
+
+export function isInvalidPackage(pack) {
+    return isInvalidUuid(pack);
+}
+
+export function isInvalidSuperClass(superClass) {
+    return isInvalidUuid(superClass);
 }

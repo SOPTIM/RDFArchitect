@@ -22,7 +22,7 @@
         label,
         placeholder = "",
         value,
-        callOnValidChange = () => {},
+        callOnChange = () => {},
         //accessDisplayData: how an option is displayed
         accessDisplayData = value => {
             return value;
@@ -41,24 +41,22 @@
         buttons = [],
     } = $props();
 
-    let lastSavedValue = value;
     let datalistID = crypto.randomUUID();
 
     function verifyInput() {
         if (!value) {
             value = null;
-            callOnValidChange(value);
+            callOnChange(value);
             return;
         }
         for (let optionObj of optionObjectList) {
             if (accessIdentifier(optionObj) === value) {
-                lastSavedValue = accessDisplayData(optionObj);
-                value = lastSavedValue;
-                callOnValidChange(optionObj);
+                value = accessDisplayData(optionObj);
+                callOnChange(optionObj);
                 return;
             }
         }
-        value = lastSavedValue;
+        callOnChange(value);
     }
 </script>
 

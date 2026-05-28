@@ -110,10 +110,18 @@
                         enumEntry.namespace.value,
                     )}
                     optionObjectList={classEditorContext.namespaces}
-                    accessDisplayData={namespace => namespace.substitutedPrefix}
+                    accessDisplayData={namespace => {
+                        let prefix = namespace.substitutedPrefix;
+                        return prefix?.endsWith(":")
+                            ? prefix.slice(0, -1)
+                            : prefix;
+                    }}
                     accessIdentifier={getNsPrefixNsUriString}
-                    callOnValidChange={newNamespace =>
-                        (enumEntry.namespace.value = newNamespace?.prefix)}
+                    callOnChange={newNamespace =>
+                        (enumEntry.namespace.value =
+                            newNamespace?.prefix !== undefined
+                                ? newNamespace.prefix
+                                : newNamespace)}
                     highlight={enumEntry.namespace.isModified}
                     warn={!enumEntry.namespace.isValid}
                     {readonly}

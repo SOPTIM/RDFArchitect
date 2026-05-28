@@ -25,6 +25,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
@@ -66,13 +67,17 @@
         if (!namespaces) {
             namespaces = await getNamespaces(dataset);
         }
+
+        const resolvedNamespaces = namespaces ?? [];
+
         if (!ontology) {
-            ontologyObject = new ReactiveOntology();
+            ontologyObject = ReactiveOntology.empty(resolvedNamespaces);
         } else {
             ontologyObject = new ReactiveOntology(
                 ontology.uuid,
                 ontology.namespace,
                 ontology.entries,
+                resolvedNamespaces,
             );
         }
     }
@@ -108,6 +113,7 @@
                     ontology.uuid,
                     ontology.namespace,
                     ontology.entries,
+                    namespaces ?? [],
                 );
             }
             ontologyObject.save();
@@ -205,7 +211,7 @@
     <div class="mx-2 flex h-full flex-col">
         {#key ontologyObject}
             {#if ontologyObject}
-                <div class="mb-2 w-150">
+                <div class="mb-2 flex w-150 flex-col">
                     <SearchableSelect
                         label="Namespace:"
                         placeholder="*namespace"
@@ -219,9 +225,15 @@
                             )}
                         accessIdentifier={namespace =>
                             `${namespace.substitutedPrefix} (${namespace?.prefix})`}
-                        callOnValidChange={value =>
-                            (ontologyObject.namespace.value = value?.prefix)}
+                        callOnChange={value =>
+                            (ontologyObject.namespace.value =
+                                value?.prefix !== undefined
+                                    ? value.prefix
+                                    : value)}
                         {readonly}
+                    />
+                    <ViolationMessages
+                        violations={ontologyObject?.namespace.violations}
                     />
                 </div>
 

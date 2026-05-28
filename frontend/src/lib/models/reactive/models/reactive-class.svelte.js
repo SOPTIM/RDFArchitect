@@ -29,6 +29,9 @@ import {
     isInvalidNamespace,
     isInvalidStereotype,
     isInvalidUuid,
+    isInvalidPackage,
+    isInvalidSuperClass,
+    isInvalidDatatypeUri,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
@@ -37,10 +40,30 @@ function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
     );
 }
 
+function initializeAttributeViolationChecks(
+    attribute,
+    attributesArray,
+    namespaces,
+    datatypes,
+) {
+    attribute.label.violationChecks.push(label =>
+        hasUniqueIRI(label, attribute.namespace.value, attributesArray),
+    );
+
+    attribute.namespace.violationChecks.push(namespace =>
+        isInvalidNamespace(namespace, namespaces),
+    );
+
+    attribute.datatype.violationChecks.push(datatype =>
+        isInvalidDatatypeUri(datatype, datatypes),
+    );
+}
+
 function initializeAssociationViolationChecks(
     association,
     associationsArray,
     getClassByUuid,
+    compareNamespaces,
 ) {
     association.label.violationChecks.push(() =>
         isInvalidAssociationLabel(association, associationsArray),
@@ -48,11 +71,25 @@ function initializeAssociationViolationChecks(
     association.inverse.label.violationChecks.push(() =>
         isInvalidInverseAssociationLabel(association, getClassByUuid),
     );
+    association.namespace.violationChecks.push(namespace =>
+        isInvalidNamespace(namespace, compareNamespaces),
+    );
+    association.inverse.namespace.violationChecks.push(namespace =>
+        isInvalidNamespace(namespace, compareNamespaces),
+    );
 }
 
-function initializeUniqueLabelChecks(reactiveObject, enumEntriesArray) {
-    reactiveObject.label.violationChecks.push(label =>
+function initializeEnumEntryViolationChecks(
+    enumEntry,
+    enumEntriesArray,
+    namespaces,
+) {
+    enumEntry.label.violationChecks.push(label =>
         hasUniqueLabel(label, enumEntriesArray),
+    );
+
+    enumEntry.namespace.violationChecks.push(namespace =>
+        isInvalidNamespace(namespace, namespaces),
     );
 }
 
@@ -69,20 +106,22 @@ export class ReactiveClass {
         associations = [],
         enumEntries = [],
         getClassByUuid = () => undefined,
-        compareClasses = [],
+        context = [],
     ) {
-        compareClasses = compareClasses.filter(c => c.uuid !== uuid);
+        let compareClasses = context.classes.filter(c => c.uuid !== uuid);
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
-        this.namespace = new ReactiveValueWrapper(
-            namespace,
-            isInvalidNamespace,
+        this.namespace = new ReactiveValueWrapper(namespace, namespace =>
+            isInvalidNamespace(namespace, context.namespaces),
         );
         this.label = new ReactiveValueWrapper(label, label =>
             isInvalidClassLabel(label, this.namespace.value, compareClasses),
         );
 
-        this.package = new ReactiveValueWrapper(pack);
-        this.superClass = new ReactiveValueWrapper(superClass);
+        this.package = new ReactiveValueWrapper(pack, isInvalidPackage);
+        this.superClass = new ReactiveValueWrapper(
+            superClass,
+            isInvalidSuperClass,
+        );
         this.comment = new ReactiveValueWrapper(comment);
         this.stereotypes = new ReactiveObjectsArrayWrapper(
             stereotypes,
@@ -92,15 +131,13 @@ export class ReactiveClass {
         this.attributes = new ReactiveObjectsArrayWrapper(
             attributes,
             ReactiveAttribute,
-            (reactiveObject, entriesArray) => {
-                reactiveObject.label.violationChecks.push(label =>
-                    hasUniqueIRI(
-                        label,
-                        reactiveObject.namespace.value,
-                        entriesArray,
-                    ),
-                );
-            },
+            (attribute, attributesArray) =>
+                initializeAttributeViolationChecks(
+                    attribute,
+                    attributesArray,
+                    context.namespaces,
+                    context.datatypes,
+                ),
         );
         this.associations = new ReactiveObjectsArrayWrapper(
             associations,
@@ -110,12 +147,18 @@ export class ReactiveClass {
                     association,
                     associationsArray,
                     getClassByUuid,
+                    context.namespaces,
                 ),
         );
         this.enumEntries = new ReactiveObjectsArrayWrapper(
             enumEntries,
             ReactiveEnumEntry,
-            initializeUniqueLabelChecks,
+            (enumEntry, enumEntriesArray) =>
+                initializeEnumEntryViolationChecks(
+                    enumEntry,
+                    enumEntriesArray,
+                    context.namespaces,
+                ),
         );
     }
 
