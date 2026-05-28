@@ -1,3 +1,20 @@
+# ---------- Build stage ----------
+FROM node:24-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files first for better layer caching
+COPY package*.json ./
+
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build frontend
+RUN npm run build
+
+# ---------- Runtime stage ----------
 FROM nginx:alpine3.22
 
 ARG PUBLIC_APP_VERSION=""
@@ -10,7 +27,7 @@ ENV PUBLIC_APP_VERSION="${PUBLIC_APP_VERSION}" \
 
 #RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY build /usr/share/nginx/html
+COPY --from=builder /app/build /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 

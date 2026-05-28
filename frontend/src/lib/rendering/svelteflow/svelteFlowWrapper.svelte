@@ -427,7 +427,7 @@
         bec.updateClassPositions(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
-            editorState.selectedPackageUUID.getValue(),
+            editorState.selectedDiagram.getProperty("id"),
             classPositionDTOList,
         );
     }
