@@ -64,7 +64,6 @@ public class UpdatePackageLayoutService
 
     @Override
     public void deletePackageLayoutData(GraphIdentifier graphIdentifier, UUID packageUUID) {
-        // converter.convert() opens its own READ transaction — collect data before opening WRITE
         var packageGraphFilter = new GraphFilter(false);
         packageGraphFilter.setIncludeInheritance(true);
         packageGraphFilter.setIncludeAssociations(true);
@@ -76,20 +75,10 @@ public class UpdatePackageLayoutService
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
 
             for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
-                if (cimClassOrEnum.getBelongsToCategory().getUuid() == packageUUID) {
-                    for (var diagramObject :
-                            DLObjectFetcher.fetchAllDOs(
-                                    diagramLayoutModel, cimClassOrEnum.getUuid())) {
-                        DLUpdates.deleteDiagramObjectCascade(
-                                diagramLayoutModel, diagramObject.getMRID());
-                    }
-                } else {
-                    var diagramObject =
-                            DLObjectFetcher.fetchDiagramDOForClass(
-                                    diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
-                    DLUpdates.deleteDiagramObjectCascade(
-                            diagramLayoutModel, diagramObject.getMRID());
-                }
+                var diagramObject =
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                diagramLayoutModel, packageUUID, cimClassOrEnum.getUuid());
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
             }
 
             DLUpdates.deleteDiagram(diagramLayoutModel, new MRID(packageUUID));
