@@ -29,12 +29,10 @@
         faTags,
         faTrash,
         faEye,
+        faPaste,
+        faCopy,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import {
-        enableEditing,
-        disableEditing,
-    } from "$lib/actions/editingActions.js";
     import {
         undo as doUndo,
         redo as doRedo,
@@ -43,6 +41,7 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
+        copyState,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -51,6 +50,7 @@
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
+    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
@@ -99,6 +99,18 @@
             !isDatasetReadOnly,
     );
     let graphHasOntology = $derived(!!ontology);
+
+    let disableCopyClassButton = $derived(
+        !editorState.selectedClassUUID.getValue(),
+    );
+    let disablePasteButton = $derived(
+        isDatasetReadOnly ||
+            !hasGraphSelected ||
+            !editorState.selectedDiagram.getValue() ||
+            !copyState.datasetName.getValue() ||
+            !copyState.graphURI.getValue() ||
+            !copyState.classUUID.getValue(),
+    );
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
@@ -236,6 +248,36 @@
         if (await doRedo()) reload();
     }
 
+    async function enableEditing(datasetName) {
+        await bec.enableEditing(datasetName);
+    }
+
+    async function disableEditing(datasetName) {
+        await bec.disableEditing(datasetName);
+    }
+
+    function copyClass() {
+        copyState.classUUID.updateValue(
+            editorState.selectedClassUUID.getValue(),
+        );
+        copyState.graphURI.updateValue(
+            editorState.selectedClassGraph.getValue(),
+        );
+        copyState.datasetName.updateValue(
+            editorState.selectedClassDataset.getValue(),
+        );
+    }
+
+    function pasteClass(copyAsAbstract, copyAttributes, copyAssociations) {
+        saveCopyClass(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            selectedPackageDetails,
+            copyAsAbstract,
+            copyAttributes,
+            copyAssociations,
+        );
+    }
     $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>
 
@@ -290,6 +332,53 @@
                     faIcon={canEditCurrentPackage ? faPen : faEye}
                 >
                     Package
+                </Menubar.Item.Button>
+            </Menubar.SubMenu.Content>
+        </Menubar.SubMenu.Root>
+        <Menubar.Item.Button
+            onSelect={copyClass}
+            disabled={disableCopyClassButton}
+            faIcon={faCopy}
+            altText="Ctrl+C"
+        >
+            Copy Class
+        </Menubar.Item.Button>
+        <Menubar.SubMenu.Root>
+            <Menubar.SubMenu.Trigger faIcon={faPaste}>
+                Paste
+            </Menubar.SubMenu.Trigger>
+            <Menubar.SubMenu.Content>
+                <Menubar.Item.Button
+                    onSelect={() => pasteClass(false, true, true)}
+                    disabled={disablePasteButton}
+                    faIcon={faPaste}
+                    altText="Ctrl+V"
+                >
+                    Paste
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => pasteClass(false, false, true)}
+                    disabled={disablePasteButton}
+                    faIcon={faPaste}
+                    altText="Ctrl+Shift+V"
+                >
+                    Paste without attributes/enum entries
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => pasteClass(false, true, false)}
+                    disabled={disablePasteButton}
+                    faIcon={faPaste}
+                    altText="Ctrl+Alt+V"
+                >
+                    Paste without associations
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => pasteClass(true, false, false)}
+                    disabled={disablePasteButton}
+                    faIcon={faPaste}
+                    altText="Ctrl+Shift+Alt+V"
+                >
+                    Paste bare
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>

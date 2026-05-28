@@ -47,5 +47,5 @@
     {disabled}
     {...otherProps}
 >
-    <ItemSubMenuTriggerBase {faIcon} {children} {variant} />
+    <ItemSubMenuTriggerBase {faIcon} {children} {variant} {disabled} />
 </BitsUiMenubar.SubTrigger>

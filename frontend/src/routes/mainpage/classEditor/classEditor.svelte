@@ -180,11 +180,14 @@
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
                 const res = await bec.getClassInfo(datasetName, graphUri, uuid);
-                return res.json();
+                if (!res || !res.ok) return null;
+                const text = await res.text();
+                if (!text) return null;
+                return JSON.parse(text);
             }),
         );
         if (cancelled.cancelled) return;
-        context.targetClassInfos = targetClassInfos;
+        context.targetClassInfos = targetClassInfos.filter(Boolean);
     }
 
     function openPropertySHACLRulesDialog(property) {

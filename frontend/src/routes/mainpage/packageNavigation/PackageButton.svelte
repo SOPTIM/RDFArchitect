@@ -25,13 +25,19 @@
         faLink,
         faTrash,
         faEye,
+        faPaste,
         faObjectGroup,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import { Package } from "$lib/models/dto/index.ts";
+    import {
+        DiagramType,
+        copyState,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -41,6 +47,7 @@
     import PackageEditorDialog from "../packageEditorDialog.svelte";
     import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import { saveCopyClass } from "./save-copy-class-to-backend.js";
 
     let {
         datasetNavEntry,
@@ -56,6 +63,13 @@
     let showDeleteDependenciesDialog = $state(false);
 
     let wasPackageSelected = false;
+
+    let disablePasteButton = $derived(
+        readonly ||
+            !copyState.classUUID.getValue() ||
+            !copyState.graphURI.getValue() ||
+            !copyState.datasetName.getValue(),
+    );
 
     let isProtectedPackage = $derived(
         packageNavEntry?.id === "default" || packageNavEntry?.data.external,
@@ -116,6 +130,22 @@
         });
         console.log(editorState.selectedDiagram.getValue());
     }
+
+    function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
+        let packageDTO = new Package({
+            uuid: packageNavEntry.id,
+            label: packageNavEntry.data.label,
+            prefix: packageNavEntry.data?.prefix,
+        });
+        saveCopyClass(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+            packageDTO,
+            copyAbstract,
+            copyAttributes,
+            copyAssociations,
+        );
+    }
 </script>
 
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
@@ -148,6 +178,45 @@
             >
                 New Class
             </ContextMenu.Item.Button>
+            <ContextMenu.SubMenu.Root>
+                <ContextMenu.SubMenu.Trigger faIcon={faPaste} disabled={false}>
+                    Paste
+                </ContextMenu.SubMenu.Trigger>
+                <ContextMenu.SubMenu.Content>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(false, true, true)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                        altText="Ctrl+V"
+                    >
+                        Paste
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(false, false, true)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                        altText="Ctrl+Shift+V"
+                    >
+                        Paste without attributes/enum entries
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(false, true, false)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                        altText="Ctrl+Alt+V"
+                    >
+                        Paste without associations
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => pasteClass(true, false, false)}
+                        faIcon={faPaste}
+                        disabled={disablePasteButton}
+                        altText="Ctrl+Shift+Alt+V"
+                    >
+                        Paste bare
+                    </ContextMenu.Item.Button>
+                </ContextMenu.SubMenu.Content>
+            </ContextMenu.SubMenu.Root>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {

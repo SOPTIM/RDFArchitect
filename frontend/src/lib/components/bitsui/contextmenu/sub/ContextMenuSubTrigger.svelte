@@ -19,13 +19,25 @@
 
     import ItemSubMenuTriggerBase from "$lib/components/bitsui/base/menu/item/ItemSubMenuTriggerBase.svelte";
 
-    let { children, faIcon, ...otherProps } = $props();
+    let {
+        children,
+        faIcon,
+        variant = "default",
+        disabled = false,
+        ...otherProps
+    } = $props();
+
+    function handlePointerEnter(event) {
+        if (disabled) return;
+        event.currentTarget.focus();
+    }
 </script>
 
 <BitsUiContextMenu.SubTrigger
     class="group w-full"
-    onpointerenter={e => e.currentTarget.focus()}
+    onpointerenter={handlePointerEnter}
+    {disabled}
     {...otherProps}
 >
-    <ItemSubMenuTriggerBase {faIcon} {children} />
+    <ItemSubMenuTriggerBase {faIcon} {children} {variant} {disabled} />
 </BitsUiContextMenu.SubTrigger>

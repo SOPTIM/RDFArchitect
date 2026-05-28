@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.update.packages;
 
+import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
+
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.TxnType;
@@ -26,10 +28,17 @@ import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
+import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.cim.data.CIMObjectFactory;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
+import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
+import org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
@@ -42,7 +51,10 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class UpdatePackageService
-        implements AddPackageUseCase, ReplacePackageUseCase, DeletePackageUseCase {
+        implements AddPackageUseCase,
+                ReplacePackageUseCase,
+                DeletePackageUseCase,
+                GetPackageUseCase {
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
@@ -142,5 +154,36 @@ public class UpdatePackageService
                             + newPackage.getUri()
                             + " because a class with the same IRI already exists.");
         }
+    }
+
+    @Override
+    public PackageDTO getPackage(GraphIdentifier graphIdentifier, UUID packageUUID) {
+        var baseQuery =
+                new CIMBaseQueryBuilder()
+                        .setDistinct()
+                        .addPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()))
+                        .setGraph(graphIdentifier.graphUri())
+                        .setType(CIMS.classCategory)
+                        .addWhereThis(RDFA.uuid, packageUUID.toString())
+                        .build();
+
+        var query =
+                new CIMQueryBuilder(baseQuery)
+                        .appendUUIDQuery(REQUIRED)
+                        .appendLabelQuery(REQUIRED)
+                        .build();
+
+        var resultSet =
+                InMemorySparqlExecutor.executeSingleQuery(
+                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        query,
+                        graphIdentifier.graphUri());
+
+        if (!resultSet.hasNext()) {
+            throw new DataAccessException("Package not found: " + packageUUID);
+        }
+
+        var cimPackage = CIMObjectFactory.createCIMPackage(resultSet.nextSolution());
+        return packageMapper.toDTO(cimPackage);
     }
 }
