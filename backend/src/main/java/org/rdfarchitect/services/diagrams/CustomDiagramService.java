@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +34,6 @@ public class CustomDiagramService
         implements GetCustomDiagramsUseCase,
                 ReplaceCustomDiagramUseCase,
                 DeleteCustomDiagramUseCase,
-                AddToDiagramUseCase,
                 RemoveFromDiagramUseCase {
 
     private final DatabasePort databasePort;
@@ -76,15 +74,6 @@ public class CustomDiagramService
     }
 
     @Override
-    public void addToDiagram(String datasetName, String diagramId, List<ClassInDiagram> classes) {
-        var diagrams = databasePort.getDatasetDiagrams(datasetName);
-        var diagram = diagrams.get(UUID.fromString(diagramId));
-        if (diagram != null) {
-            diagram.getClasses().addAll(classes);
-        }
-    }
-
-    @Override
     public void removeFromDiagram(String datasetName, String diagramId, UUID classId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
 
@@ -96,8 +85,10 @@ public class CustomDiagramService
 
     @Override
     public void deleteCustomDiagram(GraphIdentifier graphIdentifier, String diagramId) {
-        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
-        graphWithContext.getCustomDiagrams().remove(UUID.fromString(diagramId));
+        databasePort
+                .getGraphWithContext(graphIdentifier)
+                .getCustomDiagrams()
+                .remove(UUID.fromString(diagramId));
     }
 
     @Override
@@ -111,24 +102,19 @@ public class CustomDiagramService
                             + diagram.getDiagramId()
                             + "'");
         }
-        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
-        graphWithContext.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
-    }
-
-    @Override
-    public void addToDiagram(
-            GraphIdentifier graphIdentifier, String diagramId, List<ClassInDiagram> classes) {
-        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
-        var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
-        if (diagram != null) {
-            diagram.getClasses().addAll(classes);
-        }
+        databasePort
+                .getGraphWithContext(graphIdentifier)
+                .getCustomDiagrams()
+                .put(UUID.fromString(diagramId), diagram);
     }
 
     @Override
     public void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
-        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
-        var diagram = graphWithContext.getCustomDiagrams().get(UUID.fromString(diagramId));
+        var diagram =
+                databasePort
+                        .getGraphWithContext(graphIdentifier)
+                        .getCustomDiagrams()
+                        .get(UUID.fromString(diagramId));
         if (diagram != null) {
             diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
@@ -136,12 +122,12 @@ public class CustomDiagramService
 
     @Override
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
-        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
-        for (var diagram : graphWithContext.getCustomDiagrams().values()) {
+        for (var diagram :
+                databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values()) {
             diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
-        var datasetDiagrams = databasePort.getDatasetDiagrams(graphIdentifier.datasetName());
-        for (var diagram : datasetDiagrams.values()) {
+        for (var diagram :
+                databasePort.getDatasetDiagrams(graphIdentifier.datasetName()).values()) {
             diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
         }
     }

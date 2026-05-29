@@ -27,11 +27,9 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.GetRenderingDataUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -51,9 +49,7 @@ public class RenderingRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(RenderingRESTController.class);
 
-    private final GraphToCIMCollectionConverterUseCase converter;
-
-    private final RenderCIMCollectionUseCase renderer;
+    private final GetRenderingDataUseCase getRenderingDataUseCase;
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -101,9 +97,8 @@ public class RenderingRESTController {
                         ? UUID.fromString(filter.getPackageUUID())
                         : null;
 
-        CIMCollection cimCollection = converter.convert(graphIdentifier, filter);
         RenderingDataDTO renderingData =
-                renderer.renderUML(cimCollection, graphIdentifier, packageUUID);
+                getRenderingDataUseCase.getRenderingData(graphIdentifier, filter, packageUUID);
 
         logger.info(
                 "Sending response to GET request \"/api/datasets/{{}}/graphs/{{}}/rendering\" to \"{}\".",

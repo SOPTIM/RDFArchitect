@@ -36,7 +36,7 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.rdf.resources.CIM;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.services.dl.update.UpdateDiagramLayoutService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
@@ -70,13 +70,12 @@ public class DiagramLayoutServicesTestBase {
     public static DatabasePort databasePort;
     public static PackageMapper packageMapper;
     public static InMemoryDatabase database;
-    public static DiagramLayout diagramLayout;
+    public static DiagramLayoutDelta diagramLayout;
     public static UpdateDiagramLayoutService updateDiagramLayoutService;
 
     @BeforeAll
     static void setUpEnvironment() {
-        diagramLayout = new DiagramLayout();
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         converter = new GraphToCIMCollectionConverterService(databasePort);
         packageMapper = Mappers.getMapper(PackageMapper.class);
         updateDiagramLayoutService = new UpdateDiagramLayoutService(databasePort, converter);
@@ -97,7 +96,7 @@ public class DiagramLayoutServicesTestBase {
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);
-        databasePort.getGraphWithContext(graphIdentifier).setDiagramLayout(diagramLayout);
+        diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
     }
 
     public static void assertDiagram(UUID packageUUID, String packageName) {
@@ -105,7 +104,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
         var diagram = model.getResource(new MRID(packageUUID).getFullMRID());
         assertThat(diagram).isNotNull();
         assertThat(diagram.hasProperty(RDF.type, DL.diagramType)).isTrue();
@@ -119,7 +118,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var diagramResource = ResourceFactory.createResource(new MRID(packageUUID).getFullMRID());
 
@@ -137,7 +136,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var diagramObjects =
                 model.listSubjectsWithProperty(
@@ -171,7 +170,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var diagramObjects =
                 model.listSubjectsWithProperty(
@@ -186,7 +185,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var classResource = ResourceFactory.createResource(new MRID(classUUID).getFullMRID());
         var packageResource = ResourceFactory.createResource(new MRID(packageUUID).getFullMRID());
@@ -210,7 +209,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var diagramObjectPoints =
                 model.listSubjectsWithProperty(
@@ -239,7 +238,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var diagramObjectPoints =
                 model.listSubjectsWithProperty(
@@ -255,7 +254,7 @@ public class DiagramLayoutServicesTestBase {
                 databasePort
                         .getGraphWithContext(graphIdentifier)
                         .getDiagramLayout()
-                        .getDiagramLayoutModel();
+                        .getDiagramLayoutModelDirect();
 
         var diagramObjects =
                 model.listSubjectsWithProperty(
@@ -293,6 +292,5 @@ public class DiagramLayoutServicesTestBase {
     @AfterEach
     void tearDown() {
         databasePort.deleteGraph(graphIdentifier);
-        diagramLayout = new DiagramLayout();
     }
 }

@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
@@ -120,54 +120,61 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -189,74 +196,84 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.isFixed.asNode(),
-                                        NodeFactory.createLiteralString(IS_FIXED_VALUE)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.isFixed.asNode(),
+                                                NodeFactory.createLiteralString(IS_FIXED_VALUE)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.isDefault.asNode(),
-                                        NodeFactory.createLiteralString(IS_DEFAULT_VALUE)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.isDefault.asNode(),
+                                                NodeFactory.createLiteralString(IS_DEFAULT_VALUE)))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -300,54 +317,61 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.datatype.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.datatype.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -369,74 +393,84 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.isFixed.asNode(),
-                                        NodeFactory.createLiteralString(IS_FIXED_VALUE)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.isFixed.asNode(),
+                                                NodeFactory.createLiteralString(IS_FIXED_VALUE)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.isDefault.asNode(),
-                                        NodeFactory.createLiteralString(IS_DEFAULT_VALUE)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.isDefault.asNode(),
+                                                NodeFactory.createLiteralString(IS_DEFAULT_VALUE)))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -462,25 +496,22 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 var isFixedTriples =
-                        testGraph
+                        ctx.getRdfGraph()
                                 .find(
                                         NodeFactory.createURI(ATTRIBUTE_URI),
                                         CIMS.isFixed.asNode(),
                                         Node.ANY)
                                 .toList();
                 assertThat(isFixedTriples).hasSize(1);
-                var blankNode = isFixedTriples.get(0).getObject();
+                var blankNode = isFixedTriples.getFirst().getObject();
                 assertThat(blankNode.isBlank()).isTrue();
                 var literalTriples =
-                        testGraph.find(blankNode, RDFS.Literal.asNode(), Node.ANY).toList();
+                        ctx.getRdfGraph().find(blankNode, RDFS.Literal.asNode(), Node.ANY).toList();
                 assertThat(literalTriples).hasSize(1);
-                assertThat(literalTriples.get(0).getObject().getLiteralLexicalForm())
+                assertThat(literalTriples.getFirst().getObject().getLiteralLexicalForm())
                         .isEqualTo(IS_FIXED_VALUE);
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -500,16 +531,14 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             databasePort.getPrefixMapping(DATASET_NAME), GRAPH_URI, MY_UUID));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -528,48 +557,53 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             nonExistingUUID));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(
-                                                EXISTING_ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        EXISTING_ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -587,12 +621,9 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             nonExistingUUID));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isTrue
-                assertThat(testGraph.isEmpty()).isTrue();
-            } finally {
-                testGraph.end();
+                assertThat(ctx.getRdfGraph().isEmpty()).isTrue();
             }
         }
     }
@@ -618,65 +649,73 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     g,
                                     databasePort.getPrefixMapping(DATASET_NAME),
                                     GRAPH_URI,
-                                    MY_UUID.toString(),
+                                    MY_UUID,
                                     List.of(newAttributeOne),
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -701,101 +740,118 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     g,
                                     databasePort.getPrefixMapping(DATASET_NAME),
                                     GRAPH_URI,
-                                    MY_UUID.toString(),
+                                    MY_UUID,
                                     List.of(newAttributeOne),
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(OTHER_ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        OTHER_ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(OTHER_CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(OTHER_CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(OTHER_CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(OTHER_CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ATTRIBUTE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ATTRIBUTE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ATTRIBUTE_URI),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ATTRIBUTE_URI),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -812,28 +868,27 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     g,
                                     databasePort.getPrefixMapping(DATASET_NAME),
                                     GRAPH_URI,
-                                    MY_UUID.toString(),
+                                    MY_UUID,
                                     List.of(),
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -851,90 +906,103 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                                     g,
                                     databasePort.getPrefixMapping(DATASET_NAME),
                                     GRAPH_URI,
-                                    "does not exist",
+                                    UUID.randomUUID(),
                                     List.of(),
                                     false));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(
-                                                EXISTING_ATTRIBUTE_LABEL + "A", "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        EXISTING_ATTRIBUTE_LABEL + "A", "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        RDF.type.asNode(),
-                                        RDF.Property.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                RDF.type.asNode(),
+                                                RDF.Property.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(
-                                                EXISTING_ATTRIBUTE_LABEL + "B", "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        EXISTING_ATTRIBUTE_LABEL + "B", "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        RDFS.domain.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                RDFS.domain.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        RDFS.range.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                RDFS.range.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.attribute.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.attribute.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        CIMS.multiplicity.asNode(),
-                                        new CIMSMultiplicity(MULTIPLICITY_URI).getUri().toNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                CIMS.multiplicity.asNode(),
+                                                new CIMSMultiplicity(MULTIPLICITY_URI)
+                                                        .getUri()
+                                                        .toNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -957,23 +1025,22 @@ class CIMUpdatesAttributesTest extends CIMUpdatesTestBase {
                             .build());
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "A"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ATTRIBUTE_URI + "B"),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
     }

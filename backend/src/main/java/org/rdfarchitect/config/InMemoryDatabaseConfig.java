@@ -26,7 +26,7 @@ import org.springframework.context.annotation.Configuration;
 public class InMemoryDatabaseConfig {
 
     @Bean
-    public InMemoryDatabase createInMemoryDatabase() {
-        return new InMemoryDatabaseImpl();
+    public InMemoryDatabase createInMemoryDatabase(SchemaConfig schemaConfig) {
+        return new InMemoryDatabaseImpl(schemaConfig);
     }
 }

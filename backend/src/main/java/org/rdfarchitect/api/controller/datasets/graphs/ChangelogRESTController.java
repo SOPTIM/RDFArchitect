@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.GraphChangeLog;
+import org.rdfarchitect.models.changelog.ChangeLog;
 import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.slf4j.Logger;
@@ -61,7 +61,7 @@ public class ChangelogRESTController {
                         content =
                                 @Content(
                                         mediaType = "application/json",
-                                        schema = @Schema(implementation = GraphChangeLog.class)))
+                                        schema = @Schema(implementation = ChangeLog.class)))
             })
     @GetMapping
     public List<ChangeLogEntryDTO> getChangeLog(

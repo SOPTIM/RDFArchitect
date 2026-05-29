@@ -19,14 +19,13 @@ package org.rdfarchitect.services.select.ontology;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
 import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.ontology.OntologyGeneratableEntriesBuilder;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,24 +35,19 @@ import java.util.List;
 public class GenerateOntologyEntriesService implements GenerateOntologyEntriesUseCase {
 
     private final DatabasePort databasePort;
-    private final ChangeLogUseCase changeLogUseCase;
+
+    private final ChangeLogEntryMapper changeLogEntryMapper;
 
     @Override
     public List<OntologyEntry> generateOntologyEntries(GraphIdentifier graphIdentifier) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            var model = ModelFactory.createModelForGraph(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             return new OntologyGeneratableEntriesBuilder(model)
-                    .generateDCTModified(changeLogUseCase.listChanges(graphIdentifier))
+                    .generateDCTModified(
+                            changeLogEntryMapper.toDTOList(ctx.getChangeLog().getUndoHistory()))
                     .generateDCTIssued()
                     .build();
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
         }
     }
 }

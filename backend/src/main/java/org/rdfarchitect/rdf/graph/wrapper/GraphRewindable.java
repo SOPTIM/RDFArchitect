@@ -55,6 +55,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * will delete all previously following changes. this implementation ensures thread safety by
  * utilizing the single-writer multiple-reader principle (SWMR).
  */
+@Deprecated
 public class GraphRewindable implements Graph, Transactional, Rewindable {
 
     // logger
@@ -77,8 +78,7 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
     protected final int compressCount;
 
     /**
-     * Accepts a {@link Graph} that serves as a base version of the {@link
-     * GraphRewindableWithUUIDs}.
+     * Accepts a {@link Graph} that serves as a base version of the {@link GraphRewindable}.
      *
      * @param base The base graph
      * @param maxVersions The maximum amount of versions the graph stores.

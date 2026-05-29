@@ -20,47 +20,21 @@ package org.rdfarchitect.database.inmemory;
 import lombok.experimental.UtilityClass;
 
 import org.apache.jena.query.Query;
-import org.apache.jena.query.QueryExecution;
 import org.apache.jena.query.QueryExecutionFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.ResultSet;
 import org.apache.jena.query.ResultSetFactory;
-import org.apache.jena.query.TxnType;
-import org.apache.jena.update.UpdateExecutionFactory;
-import org.apache.jena.update.UpdateRequest;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+import org.rdfarchitect.database.GraphContext;
 
 @UtilityClass
 public class InMemorySparqlExecutor {
 
-    /**
-     * Opens a single WRITE transaction on {@code graph} and runs {@code update}. Use this only when
-     * the {@link UpdateRequest} can be fully prepared <em>before</em> the transaction opens.
-     */
-    public void executeSingleUpdate(
-            GraphRewindableWithUUIDs graph, UpdateRequest update, String graphUri) {
-        try {
-            graph.begin(TxnType.WRITE);
-            var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
-            UpdateExecutionFactory.create(update, dataset).execute();
-            graph.commit();
-        } finally {
-            graph.end();
-        }
-    }
-
-    public ResultSet executeSingleQuery(
-            GraphRewindableWithUUIDs graph, Query query, String graphUri) {
-        QueryExecution queryExecution = null;
-        try {
-            graph.begin(TxnType.READ);
-            var dataset = SessionDataStore.wrapGraphInDataset(graph, graphUri);
-            queryExecution = QueryExecutionFactory.create(query, dataset);
-            var resultSet = queryExecution.execSelect();
-            return ResultSetFactory.copyResults(resultSet);
-        } finally {
-            graph.end();
-            if (queryExecution != null) {
-                queryExecution.close();
+    public ResultSet executeSingleQuery(GraphContext graph, Query query, String graphUri) {
+        try (var ctx = graph.begin(ReadWrite.READ)) {
+            var dataset = SessionDataStore.wrapGraphInDataset(ctx.getRdfGraph(), graphUri);
+            try (var queryExecution = QueryExecutionFactory.create(query, dataset)) {
+                var resultSet = queryExecution.execSelect();
+                return ResultSetFactory.copyResults(resultSet);
             }
         }
     }

@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
-import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -42,7 +42,7 @@ public class CustomDatasetDiagramClassRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(CustomDatasetDiagramClassRESTController.class);
 
-    private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
+    private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @DeleteMapping
     public String removeFromDiagram(
@@ -65,7 +65,8 @@ public class CustomDatasetDiagramClassRESTController {
                 classId,
                 originURL);
 
-        removeFromDiagramUseCase.removeFromDiagram(datasetName, diagramId, classId);
+        customDiagramLayoutUseCase.removeClassFromCustomDatasetDiagram(
+                datasetName, UUID.fromString(diagramId), classId);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",

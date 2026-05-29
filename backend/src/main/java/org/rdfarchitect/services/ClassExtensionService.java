@@ -20,7 +20,7 @@ package org.rdfarchitect.services;
 import lombok.AllArgsConstructor;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.vocabulary.RDF;
@@ -29,7 +29,6 @@ import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
@@ -40,7 +39,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -57,35 +55,25 @@ public class ClassExtensionService implements ClassExtensionUseCase {
     @Override
     public ClassDTO extendClass(
             GraphIdentifier graphIdentifier, String classUUID, GraphIdentifier newGraphIdentifier) {
-        var graph = databasePort.getGraphWithContext(graphIdentifier);
         CIMClass classCopy;
         List<CIMClass> superClasses;
 
-        GraphRewindable rdfGraph = null;
-        try {
-            rdfGraph = graph.getRdfGraph();
-            rdfGraph.begin(TxnType.READ);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var rdfGraph = ctx.getRdfGraph();
 
             classCopy = fetchStubbedClassCopy(graphIdentifier, classUUID);
             superClasses = fetchStubbedSuperClasses(rdfGraph, UUID.fromString(classUUID));
-
-        } finally {
-            if (rdfGraph != null) {
-                rdfGraph.end();
-            }
         }
-
-        var newGraph = databasePort.getGraphWithContext(newGraphIdentifier).getRdfGraph();
-        insertNewClasses(newGraph, newGraphIdentifier, classCopy, superClasses);
-        changeLogUseCase.recordChange(
-                newGraphIdentifier,
-                new ChangeLogEntry(
-                        "Added "
-                                + classCopy.getLabel().getValue()
-                                + " and its superclasses to graph "
-                                + newGraphIdentifier.graphUri(),
-                        newGraph.getLastDelta()));
-
+        try (var ctx =
+                databasePort.getGraphWithContext(newGraphIdentifier).begin(ReadWrite.WRITE)) {
+            var newGraph = databasePort.getGraphWithContext(newGraphIdentifier).getRdfGraph();
+            insertNewClasses(newGraph, classCopy, superClasses);
+            ctx.commit(
+                    "Added "
+                            + classCopy.getLabel().getValue()
+                            + " and its superclasses to graph "
+                            + newGraphIdentifier.graphUri());
+        }
         return classMapper.toDTO(classCopy);
     }
 
@@ -134,33 +122,19 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         return superClasses.stream().toList();
     }
 
-    private void insertNewClasses(
-            GraphRewindable newGraph,
-            GraphIdentifier newGraphIdentifier,
-            CIMClass classCopy,
-            List<CIMClass> superClasses) {
-        try {
-            var model = ModelFactory.createModelForGraph(newGraph);
-            newGraph.begin(TxnType.WRITE);
-            var prefixMapping = databasePort.getPrefixMapping(newGraphIdentifier.datasetName());
+    private void insertNewClasses(Graph newGraph, CIMClass classCopy, List<CIMClass> superClasses) {
+        var model = ModelFactory.createModelForGraph(newGraph);
 
-            var newPackage = fetchNewPackage(model);
+        var newPackage = fetchNewPackage(model);
 
-            for (var cls : superClasses) {
-                if (!model.contains(model.createResource(cls.getUri().toString()), null)) {
-                    cls.setBelongsToCategory(newPackage);
-                    CIMUpdates.insertClass(newGraph, prefixMapping, cls);
-                }
-            }
-            classCopy.setBelongsToCategory(newPackage);
-            CIMUpdates.insertClass(newGraph, prefixMapping, classCopy);
-
-            newGraph.commit();
-        } finally {
-            if (newGraph != null) {
-                newGraph.end();
+        for (var cls : superClasses) {
+            if (!model.contains(model.createResource(cls.getUri().toString()), null)) {
+                cls.setBelongsToCategory(newPackage);
+                CIMUpdates.insertClass(newGraph, newGraph.getPrefixMapping(), cls);
             }
         }
+        classCopy.setBelongsToCategory(newPackage);
+        CIMUpdates.insertClass(newGraph, newGraph.getPrefixMapping(), classCopy);
     }
 
     private CIMSBelongsToCategory fetchNewPackage(Model model) {

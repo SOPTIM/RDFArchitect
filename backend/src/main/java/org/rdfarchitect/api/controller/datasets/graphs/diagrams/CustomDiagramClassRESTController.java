@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -47,7 +47,7 @@ public class CustomDiagramClassRESTController {
 
     private final ExpandURIUseCase expandURIUseCase;
 
-    private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
+    private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @DeleteMapping
     public String removeFromDiagram(
@@ -77,8 +77,10 @@ public class CustomDiagramClassRESTController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        removeFromDiagramUseCase.removeFromDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classId);
+        customDiagramLayoutUseCase.removeClassFromCustomDiagram(
+                new GraphIdentifier(datasetName, extendedGraphURI),
+                UUID.fromString(diagramId),
+                classId);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",

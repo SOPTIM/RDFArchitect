@@ -18,30 +18,15 @@
 package org.rdfarchitect.rdf.graph.wrapper;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.rdf.model.Model;
-import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.RDFNode;
-import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.rdf.model.Statement;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
-import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
-
+@Deprecated
 public class GraphRewindableWithUUIDs extends GraphRewindable {
-
-    private static final Set<String> RELEVANT_TYPES =
-            Set.of(RDF.Property.toString(), RDFS.Class.toString());
 
     /**
      * Accepts a {@link Graph} that serves as a base version of the {@link
@@ -53,7 +38,7 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
      *     compressing.
      */
     public GraphRewindableWithUUIDs(@NotNull Graph base, int maxVersions, int compressCount) {
-        super(enhanceWithUUIDs(base), maxVersions, compressCount);
+        super(GraphUtils.enhanceWithUUIDs(base), maxVersions, compressCount);
     }
 
     @Override
@@ -68,7 +53,7 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
             logger.debug("Commiting a transaction with no changes.");
             return;
         }
-        enhanceWithUUIDs(this);
+        GraphUtils.enhanceWithUUIDs(this);
         pastDeltas.push(currentDelta);
         assert pastDeltas.peek() != null;
         currentDelta = new DeltaCompressible(pastDeltas.peek());
@@ -77,146 +62,5 @@ public class GraphRewindableWithUUIDs extends GraphRewindable {
             compressBase();
         }
         logger.debug("Committed transaction.");
-    }
-
-    static Graph enhanceWithUUIDs(Graph graph) {
-        var model = ModelFactory.createModelForGraph(graph);
-        addUUIDsToTypedResources(model);
-        addUUIDsToReferencedOnlyResources(model);
-        return graph;
-    }
-
-    private static void addUUIDsToTypedResources(Model model) {
-        var subjects =
-                model.listResourcesWithProperty(RDF.type)
-                        .filterKeep(r -> r.isURIResource() && !r.hasProperty(RDFA.uuid))
-                        .toSet();
-
-        for (var subject : subjects) {
-            subject.addProperty(RDFA.uuid, createUUID());
-        }
-    }
-
-    private static void addUUIDsToReferencedOnlyResources(Model model) {
-        var objects = new HashSet<Resource>();
-
-        model.listResourcesWithProperty(RDF.type)
-                .filterKeep(r -> r.isURIResource() && hasAnyType(r))
-                .forEachRemaining(
-                        subject ->
-                                subject.listProperties()
-                                        .mapWith(Statement::getObject)
-                                        .filterKeep(GraphRewindableWithUUIDs::isReferencedOnlyURI)
-                                        .mapWith(RDFNode::asResource)
-                                        .forEachRemaining(objects::add));
-
-        objects.forEach(o -> o.addProperty(RDFA.uuid, createUUID()));
-    }
-
-    private static boolean hasAnyType(Resource resource) {
-        return resource.listProperties(RDF.type)
-                .mapWith(Statement::getObject)
-                .filterKeep(o -> RELEVANT_TYPES.contains(o.asResource().getURI()))
-                .hasNext();
-    }
-
-    private static boolean isReferencedOnlyURI(RDFNode node) {
-        return node.isURIResource()
-                && !RELEVANT_TYPES.contains(node.asResource().getURI())
-                && !node.asResource().hasProperty(RDFA.uuid)
-                && !node.asResource().listProperties().hasNext();
-    }
-
-    private static String createUUID() {
-        return UUID.randomUUID().toString();
-    }
-
-    public static void removeUUIDs(Graph graph) {
-        graph.find(Node.ANY, RDFA.uuid.asNode(), Node.ANY).toList().forEach(graph::delete);
-    }
-
-    public static void correctPackagePrefix(Graph graph, boolean usePackagePrefix) {
-        var model = ModelFactory.createModelForGraph(graph);
-        var packages = model.listResourcesWithProperty(RDF.type, CIMS.classCategory).toList();
-
-        final var PREFIX = "Package_";
-
-        for (var packageResource : packages) {
-            var labelStmt = packageResource.getProperty(RDFS.label);
-            if (labelStmt == null) {
-                continue;
-            }
-
-            var currentLabel = labelStmt.getString();
-            var currentUri = packageResource.getURI();
-            var sepIdx = Math.max(currentUri.lastIndexOf('#'), currentUri.lastIndexOf('/'));
-            var uriBase = currentUri.substring(0, sepIdx + 1);
-            var uriSuffix = currentUri.substring(sepIdx + 1);
-
-            String newLabel;
-            String newUriSuffix;
-
-            if (usePackagePrefix) {
-                newLabel = currentLabel.startsWith(PREFIX) ? currentLabel : PREFIX + currentLabel;
-                newUriSuffix = uriSuffix.startsWith(PREFIX) ? uriSuffix : PREFIX + uriSuffix;
-            } else {
-                newLabel =
-                        currentLabel.startsWith(PREFIX)
-                                ? currentLabel.substring(PREFIX.length())
-                                : currentLabel;
-                newUriSuffix =
-                        uriSuffix.startsWith(PREFIX)
-                                ? uriSuffix.substring(PREFIX.length())
-                                : uriSuffix;
-            }
-
-            var newUri = uriBase + newUriSuffix;
-            var uriChanged = !newUri.equals(currentUri);
-            var labelChanged = !newLabel.equals(currentLabel);
-
-            if (uriChanged) {
-                changeURIAndLabel(packageResource, labelChanged, newUri, newLabel, model);
-            } else if (labelChanged) {
-                changeLabel(packageResource, labelStmt, newLabel);
-            }
-        }
-    }
-
-    private static void changeURIAndLabel(
-            Resource packageResource,
-            boolean labelChanged,
-            String newUri,
-            String newLabel,
-            Model model) {
-        var newResource = model.createResource(newUri);
-        packageResource
-                .listProperties()
-                .toList()
-                .forEach(
-                        stmt -> {
-                            if (stmt.getPredicate().equals(RDFS.label) && labelChanged) {
-                                changeLabel(newResource, stmt, newLabel);
-                            } else {
-                                newResource.addProperty(stmt.getPredicate(), stmt.getObject());
-                            }
-                        });
-
-        model.listStatements(null, null, packageResource)
-                .toList()
-                .forEach(stmt -> model.add(stmt.getSubject(), stmt.getPredicate(), newResource));
-        model.listStatements(null, null, packageResource).toList().forEach(model::remove);
-
-        model.removeAll(packageResource, null, null);
-    }
-
-    private static void changeLabel(
-            Resource packageResource, Statement labelStmt, String newLabel) {
-        var lang = labelStmt.getLanguage();
-        packageResource.removeAll(RDFS.label);
-        if (lang != null && !lang.isEmpty()) {
-            packageResource.addProperty(RDFS.label, newLabel, lang);
-        } else {
-            packageResource.addProperty(RDFS.label, newLabel);
-        }
     }
 }
