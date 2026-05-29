@@ -19,8 +19,6 @@ package org.rdfarchitect.services.select;
 
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.correctPackagePrefix;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
 import lombok.RequiredArgsConstructor;
 
@@ -42,6 +40,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.cim.CIMModifyingUtils;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.CIMObjectFactory;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -231,7 +230,8 @@ public class QueryGraphService
                     .getPrefixMapping()
                     .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
             GraphUtils.removeUUIDs(copiedGraph);
-            correctPackagePrefix(copiedGraph, UserSettingsContext.get().usePackagePrefix());
+            CIMModifyingUtils.standardizePackagePrefix(
+                    copiedGraph, UserSettingsContext.get().usePackagePrefix());
             var sortedModel = new CimSortedModel(ModelFactory.createModelForGraph(copiedGraph));
             sortedModel.write(out, format.getLang().getName());
             return out;
