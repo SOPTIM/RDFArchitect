@@ -15,17 +15,21 @@
  *
  */
 
+import { userSettings } from "$lib/userSettings.svelte.js";
+
 export const PACKAGE_LABEL_PREFIX = "Package_";
 
 export function getPackageDisplayLabel(label) {
     if (typeof label !== "string" || label === "default") {
         return label;
     }
-    if (
-        label.startsWith(PACKAGE_LABEL_PREFIX) &&
-        label.length > PACKAGE_LABEL_PREFIX.length
-    ) {
-        return label.slice(PACKAGE_LABEL_PREFIX.length);
+    if (!userSettings.get("showPackagePrefix", false)) {
+        if (
+            label.startsWith(PACKAGE_LABEL_PREFIX) &&
+            label.length > PACKAGE_LABEL_PREFIX.length
+        ) {
+            return label.slice(PACKAGE_LABEL_PREFIX.length);
+        }
     }
     return label;
 }

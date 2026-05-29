@@ -362,9 +362,6 @@
         event.preventDefault();
         event.stopPropagation();
         closeContextMenus();
-        if (isDatasetReadOnly) {
-            return;
-        }
         contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
@@ -427,7 +424,7 @@
         bec.updateClassPositions(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
-            editorState.selectedPackageUUID.getValue(),
+            editorState.selectedDiagram.getProperty("id"),
             classPositionDTOList,
         );
     }
@@ -593,7 +590,7 @@
         onpaneclick={closeContextMenus}
         onpanecontextmenu={handlePaneContextMenu}
         onedgecontextmenu={handleEdgeContextMenu}
-        onnodedragstart={({ node }) => bringToFrontTemporarily(node.id)}
+        onnodedragstart={({ node }) => bringToFrontTemporarily(node?.id)}
         onnodedragstop={handleNodeMove}
         selectionMode={"full"}
         connectionMode={"loose"}
@@ -614,7 +611,8 @@
     />
     <SvelteFlowClassContextMenu
         request={classContextMenuRequest}
-        disabled={isDatasetReadOnly || !contextMenuClass}
+        disabled={!contextMenuClass}
+        readOnly={isDatasetReadOnly}
         {contextMenuClass}
         datasetName={editorState.selectedDataset.getValue()}
         graphUri={editorState.selectedGraph.getValue()}

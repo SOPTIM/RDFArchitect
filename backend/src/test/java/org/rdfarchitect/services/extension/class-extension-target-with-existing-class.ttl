@@ -1,0 +1,15 @@
+PREFIX ex:   <http://example.org#>
+PREFIX rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+
+ex:CorePackage
+    rdf:type cims:ClassCategory ;
+    rdfs:label "Core"@en ;
+    ex:uuid "99999999-9999-9999-9999-999999999999" .
+
+ex:Base
+    rdf:type rdfs:Class ;
+    rdfs:label "Base"@en ;
+    ex:uuid "33333333-3333-3333-3333-333333333333" ;
+    cims:belongsToCategory ex:CorePackage .

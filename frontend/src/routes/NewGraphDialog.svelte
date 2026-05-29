@@ -22,6 +22,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
         DiagramType,
@@ -133,8 +134,16 @@
                     id: "default",
                 });
                 editorState.selectedClassUUID.updateValue(null);
+                toastStore.success(
+                    "Schema created",
+                    `"${graphURILocal}" was added to "${datasetNameLocal}".`,
+                );
             } else {
                 console.log("failed to create graph");
+                toastStore.error(
+                    "Create failed",
+                    `Could not create schema "${graphURILocal}".`,
+                );
             }
         });
 
@@ -142,6 +151,10 @@
             .catch(e => {
                 console.log("failed to create graph:");
                 console.log(e);
+                toastStore.error(
+                    "Create failed",
+                    "An unexpected error occurred while creating the schema.",
+                );
             })
             .finally(() => {
                 forceReloadTrigger.trigger();

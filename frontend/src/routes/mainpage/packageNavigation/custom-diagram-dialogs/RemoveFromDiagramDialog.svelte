@@ -21,6 +21,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
@@ -35,21 +36,37 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     async function removeFromDiagram() {
-        if (graphUri) {
-            await bec.removeFromCustomGraphDiagram(
-                lockedDatasetName,
-                graphUri,
-                diagramId,
-                classId,
+        try {
+            const res = graphUri
+                ? await bec.removeFromCustomGraphDiagram(
+                      lockedDatasetName,
+                      graphUri,
+                      diagramId,
+                      classId,
+                  )
+                : await bec.removeFromCustomDatasetDiagram(
+                      lockedDatasetName,
+                      diagramId,
+                      classId,
+                  );
+            if (res && res.ok === false) {
+                toastStore.error(
+                    "Remove failed",
+                    classLabel
+                        ? `Could not remove class "${classLabel}" from the diagram.`
+                        : "Could not remove class from the diagram.",
+                );
+                return;
+            }
+            toastStore.success(
+                "Class removed",
+                classLabel
+                    ? `"${classLabel}" was removed from the diagram.`
+                    : "Class was removed from the diagram.",
             );
-        } else {
-            await bec.removeFromCustomDatasetDiagram(
-                lockedDatasetName,
-                diagramId,
-                classId,
-            );
+        } finally {
+            forceReloadTrigger.trigger();
         }
-        forceReloadTrigger.trigger();
     }
 </script>
 

@@ -19,6 +19,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
@@ -122,15 +123,24 @@
             );
             if (res.ok) {
                 customSHACLBackup = customSHACL;
+                toastStore.success("Constraints saved");
             } else {
                 console.warn(
                     "Failed to save custom SHACL:",
                     res.status,
                     res.statusText,
                 );
+                toastStore.error(
+                    "Save failed",
+                    "Could not save custom constraints.",
+                );
             }
         } catch (error) {
             console.warn("Failed to save custom SHACL:", error);
+            toastStore.error(
+                "Save failed",
+                "An unexpected error occurred while saving custom constraints.",
+            );
         }
     }
 </script>

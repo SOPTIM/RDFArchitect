@@ -27,6 +27,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -81,43 +82,37 @@
     const packageSelectionLocked = $derived(!!lockedPackage);
 
     $effect(async () => {
-        namespaces = await getNamespaces(datasetName);
-        if (classURINamespace) {
-            classURINamespace.value = null;
-        }
-        if (!packageSelectionLocked) {
-            packages = datasetName ? packages : [];
+        const ds = datasetName;
+        const graph = graphURI;
+
+        await untrack(async () => {
+            namespaces = await getNamespaces(ds);
+            if (classURINamespace) classURINamespace.value = null;
             classPackage = null;
-        }
-    });
 
-    $effect(async () => {
-        if (packageSelectionLocked) {
-            return;
-        }
-        await getPackages(datasetName, graphURI);
-        classPackage = null;
-    });
+            if (!ds || !graph) {
+                packages = [];
+                compareClasses = [];
+                return;
+            }
 
-    $effect(async () => {
-        if (datasetName && graphURI) {
-            compareClasses = await getClasses(datasetName, graphURI);
-        } else {
-            compareClasses = [];
-        }
-        if (!className || !classURINamespace) {
-            return;
-        }
-        untrack(
-            () =>
-                (className = new ReactiveValueWrapper(className?.value, label =>
+            if (!packageSelectionLocked) {
+                await getPackages(ds, graph);
+            }
+
+            compareClasses = await getClasses(ds, graph);
+
+            if (className && classURINamespace) {
+                const currentValue = className.value;
+                className = new ReactiveValueWrapper(currentValue, label =>
                     isInvalidClassLabel(
                         label,
                         classURINamespace?.value,
                         compareClasses,
                     ),
-                )),
-        );
+                );
+            }
+        });
     });
 
     async function onOpen() {
@@ -245,11 +240,23 @@
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);
                 editorState.selectedClassUUID.updateValue(uuid);
+                toastStore.success(
+                    "Class created",
+                    `"${classNameLocal.value}" was added.`,
+                );
             } else {
                 console.log("failed to insert data");
+                toastStore.error(
+                    "Create failed",
+                    `Could not create class "${classNameLocal.value}".`,
+                );
             }
         } catch (e) {
             console.log("failed to add class:", e);
+            toastStore.error(
+                "Create failed",
+                "An unexpected error occurred while creating the class.",
+            );
         } finally {
             forceReloadTrigger.trigger();
             editorState.selectedDataset.trigger();
@@ -304,7 +311,7 @@
                 placeholder={datasetName
                     ? "Select namespace"
                     : "Select a dataset first"}
-                getOptionValue={namespace => namespace.prefix}
+                getOptionValue={namespace => namespace.substitutedPrefix}
                 getOptionLabel={namespace =>
                     `${namespace.substitutedPrefix} (${namespace.prefix})`}
             />

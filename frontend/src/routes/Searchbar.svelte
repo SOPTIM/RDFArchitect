@@ -25,6 +25,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         DiagramType,
         editorState,
@@ -151,6 +152,10 @@
             console.error(
                 "Error fetching search results:",
                 response.statusText,
+            );
+            toastStore.error(
+                "Search failed",
+                "Could not fetch search results. Please try again.",
             );
         }
     }

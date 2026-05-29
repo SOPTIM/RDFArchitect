@@ -24,6 +24,7 @@
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     let { disableNext = $bindable() } = $props();
@@ -132,10 +133,19 @@
                     fileA,
                     fileB,
                 });
+            } else {
+                toastStore.error(
+                    "Migration setup failed",
+                    "Could not establish the migration context.",
+                );
             }
         } catch (e) {
             console.log("failed to establish migration context:");
             console.log(e);
+            toastStore.error(
+                "Migration setup failed",
+                "Could not establish the migration context.",
+            );
         }
     }
 </script>

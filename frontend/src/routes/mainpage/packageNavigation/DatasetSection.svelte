@@ -30,8 +30,11 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
+    import {
+        enableEditing,
+        disableEditing,
+    } from "$lib/actions/editingActions.js";
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -52,8 +55,6 @@
     import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
@@ -104,25 +105,26 @@
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
     }
 
-    async function enableEditing() {
+    async function requestEnableEditing() {
         if (!datasetNavEntry?.id || !readonly) {
             return;
         }
-
-        await bec.enableEditing(datasetNavEntry.id).then(() => {
-            readonly = false;
-            forceReloadTrigger.trigger();
-        });
+        if (!(await enableEditing(datasetNavEntry.id))) {
+            return;
+        }
+        readonly = false;
+        forceReloadTrigger.trigger();
     }
 
-    async function disableEditing() {
+    async function requestDisableEditing() {
         if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        await bec.disableEditing(datasetNavEntry.id).then(() => {
-            readonly = true;
-            forceReloadTrigger.trigger();
-        });
+        if (!(await disableEditing(datasetNavEntry.id))) {
+            return;
+        }
+        readonly = true;
+        forceReloadTrigger.trigger();
     }
 </script>
 
@@ -197,14 +199,14 @@
             </ContextMenu.Item.Button>
             {#if readonly}
                 <ContextMenu.Item.Button
-                    onSelect={() => enableEditing()}
+                    onSelect={() => requestEnableEditing()}
                     faIcon={faPenToSquare}
                 >
                     Enable Editing
                 </ContextMenu.Item.Button>
             {:else}
                 <ContextMenu.Item.Button
-                    onSelect={() => disableEditing()}
+                    onSelect={() => requestDisableEditing()}
                     faIcon={faLock}
                 >
                     Disable Editing

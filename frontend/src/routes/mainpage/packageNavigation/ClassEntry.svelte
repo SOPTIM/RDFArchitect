@@ -20,20 +20,27 @@
     import {
         faArrowUpRightFromSquare,
         faDiagramProject,
+        faFileExport,
         faMinus,
         faObjectGroup,
         faTrash,
+        faCopy,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        copyState,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendClassDialog from "./ExtendClassDialog.svelte";
     import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -51,6 +58,7 @@
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
+    let showExtendClassDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
     let showAddToDatasetDiagramDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
@@ -99,6 +107,12 @@
         selectClass();
         focusClassInDiagram();
     }
+
+    function copyClass() {
+        copyState.classUUID.updateValue(classNavEntry.id);
+        copyState.graphURI.updateValue(graphNavEntry.id);
+        copyState.datasetName.updateValue(datasetNavEntry.id);
+    }
 </script>
 
 <ContextMenu.Root>
@@ -119,6 +133,14 @@
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
         <ContextMenu.Item.Button
+            onSelect={copyClass}
+            faIcon={faCopy}
+            altText="Ctrl+C"
+        >
+            Copy
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
+        <ContextMenu.Item.Button
             onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}
         >
@@ -131,6 +153,15 @@
             faIcon={faDiagramProject}
         >
             Constraints
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
+        <ContextMenu.Item.Button
+            onSelect={() => {
+                showExtendClassDialog = true;
+            }}
+            faIcon={faFileExport}
+        >
+            Extend Class
         </ContextMenu.Item.Button>
         {#if !diagramId}
             <ContextMenu.Item.Button
@@ -208,4 +239,11 @@
     {diagramId}
     classId={classNavEntry.id}
     classLabel={classNavEntry.label}
+/>
+
+<ExtendClassDialog
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    classUUID={classNavEntry.id}
+    bind:showDialog={showExtendClassDialog}
 />

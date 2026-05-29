@@ -21,6 +21,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -52,8 +53,16 @@
         if (res.ok) {
             console.log("Version restored successfully");
             forceReloadTrigger.trigger();
+            toastStore.success(
+                "Version restored",
+                "The selected version has been restored.",
+            );
         } else {
             console.error("Failed to restore version:", res.statusText);
+            toastStore.error(
+                "Restore failed",
+                "Could not restore the selected version.",
+            );
         }
     }
 

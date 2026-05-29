@@ -20,6 +20,7 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
@@ -60,13 +61,16 @@
     onMount(() => setUpLocalLists());
 
     function setUpLocalLists() {
-        localNodeShapesList = JSON.parse(JSON.stringify(nodeShapesList));
-        localPropertyShapesWrapperList = JSON.parse(
-            JSON.stringify(propertyShapesWrapperList),
-        );
-        localDerivedPropertyShapesList = JSON.parse(
-            JSON.stringify(derivedPropertyShapesWrapperList),
-        );
+        if (nodeShapesList)
+            localNodeShapesList = JSON.parse(JSON.stringify(nodeShapesList));
+        if (propertyShapesWrapperList)
+            localPropertyShapesWrapperList = JSON.parse(
+                JSON.stringify(propertyShapesWrapperList),
+            );
+        if (derivedPropertyShapesWrapperList)
+            localDerivedPropertyShapesList = JSON.parse(
+                JSON.stringify(derivedPropertyShapesWrapperList),
+            );
     }
 
     function putChanges() {
@@ -93,9 +97,23 @@
             .then(res => {
                 if (res.ok) {
                     console.log("successfully updated custom shacl of class.");
+                    toastStore.success(
+                        "SHACL shapes saved",
+                        "Custom SHACL shapes were saved.",
+                    );
                 } else {
                     console.log("failed to update custom shacl of class.");
+                    toastStore.error(
+                        "Save failed",
+                        "Could not save custom SHACL shapes.",
+                    );
                 }
+            })
+            .catch(() => {
+                toastStore.error(
+                    "Save failed",
+                    "Could not save custom SHACL shapes.",
+                );
             })
             .finally(() => {
                 editorState.selectedClassUUID.trigger();

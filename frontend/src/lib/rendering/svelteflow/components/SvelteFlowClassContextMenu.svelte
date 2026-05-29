@@ -21,14 +21,17 @@
         faAnglesDown,
         faAnglesUp,
         faAngleUp,
+        faFileExport,
         faLayerGroup,
+        faCopy,
         faMinus,
         faTrash,
+        faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { copyState, editorState } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -37,10 +40,13 @@
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
+    import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
         request = null,
         disabled = false,
+        readOnly = false,
         contextMenuClass = null,
         datasetName = "",
         graphUri = "",
@@ -54,8 +60,10 @@
 
     let triggerRef = $state(null);
     let open = $state(false);
-    let deleteClassTarget = $state(null);
+    let dialogClass = $state(null);
     let showDeleteDependenciesDialog = $state(false);
+    let showSHACLDialog = $state(false);
+    let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
@@ -65,6 +73,12 @@
     );
     let isAtFront = $derived(classZIndex >= nodeCount - 1);
     let isAtBack = $derived(classZIndex <= 0);
+    let classActionsDisabled = $derived(disabled || readOnly);
+
+    const shaclClass = $derived({
+        uuid: { value: contextMenuClass?.uuid },
+        label: { value: contextMenuClass?.label ?? "" },
+    });
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -80,10 +94,10 @@
     }
 
     function openDeleteClassDialog() {
-        if (!contextMenuClass) {
+        if (classActionsDisabled || !contextMenuClass) {
             return;
         }
-        deleteClassTarget = contextMenuClass;
+        dialogClass = contextMenuClass;
         showDeleteDependenciesDialog = true;
         onClose();
     }
@@ -96,38 +110,55 @@
         onClose();
     }
 
+    function openExtendClassDialog() {
+        if (!contextMenuClass) {
+            return;
+        }
+        dialogClass = contextMenuClass;
+        showExtendClassDialog = true;
+        onClose();
+    }
+
     function handleMoveUp() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "up" });
     }
 
     function handleMoveDown() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "down" });
     }
 
     function handleMoveToTop() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "top" });
     }
 
     function handleMoveToBottom() {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         onMoveClass({ classUuid: contextMenuClass.uuid, direction: "bottom" });
     }
 
     function handleLayerChange(newLayer) {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
         // Immediate local update
         onSetLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
     }
 
     function handleLayerPersist(newLayer) {
-        if (!contextMenuClass) return;
+        if (classActionsDisabled || !contextMenuClass) return;
         const clamped = Math.max(0, Math.min(nodeCount - 1, newLayer));
         // Debounced API call
         onPersistLayer({ classUuid: contextMenuClass.uuid, layer: clamped });
+    }
+
+    function copyClass() {
+        copyState.classUUID.updateValue(contextMenuClass.uuid);
+        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
+        copyState.datasetName.updateValue(
+            editorState.selectedDataset.getValue(),
+        );
     }
 </script>
 
@@ -139,8 +170,33 @@
         {disabled}
     />
     <ContextMenu.Content>
+        <ContextMenu.Item.Button
+            onSelect={copyClass}
+            faIcon={faCopy}
+            altText="Ctrl+C"
+        >
+            Copy
+        </ContextMenu.Item.Button>
+        <ContextMenu.Item.Button
+            onSelect={openExtendClassDialog}
+            faIcon={faFileExport}
+        >
+            Extend Class
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
+        <ContextMenu.Item.Button
+            onSelect={() => {
+                showSHACLDialog = true;
+            }}
+            faIcon={faDiagramProject}
+        >
+            Constraints
+        </ContextMenu.Item.Button>
         <ContextMenu.SubMenu.Root>
-            <ContextMenu.SubMenu.Trigger faIcon={faLayerGroup}>
+            <ContextMenu.SubMenu.Trigger
+                faIcon={faLayerGroup}
+                disabled={classActionsDisabled}
+            >
                 Move
             </ContextMenu.SubMenu.Trigger>
             <ContextMenu.SubMenu.Content>
@@ -150,7 +206,7 @@
                         handleMoveToTop();
                     }}
                     faIcon={faAnglesUp}
-                    disabled={isAtFront}
+                    disabled={classActionsDisabled || isAtFront}
                 >
                     Move to front
                 </ContextMenu.Item.Button>
@@ -160,7 +216,7 @@
                         handleMoveUp();
                     }}
                     faIcon={faAngleUp}
-                    disabled={isAtFront}
+                    disabled={classActionsDisabled || isAtFront}
                 >
                     Move up
                 </ContextMenu.Item.Button>
@@ -168,7 +224,7 @@
                     value={classZIndex}
                     min={0}
                     max={nodeCount - 1}
-                    {disabled}
+                    disabled={classActionsDisabled}
                     onchange={handleLayerChange}
                     onpersist={handleLayerPersist}
                 >
@@ -180,7 +236,7 @@
                         handleMoveDown();
                     }}
                     faIcon={faAngleDown}
-                    disabled={isAtBack}
+                    disabled={classActionsDisabled || isAtBack}
                 >
                     Move down
                 </ContextMenu.Item.Button>
@@ -190,7 +246,7 @@
                         handleMoveToBottom();
                     }}
                     faIcon={faAnglesDown}
-                    disabled={isAtBack}
+                    disabled={classActionsDisabled || isAtBack}
                 >
                     Move to bottom
                 </ContextMenu.Item.Button>
@@ -206,7 +262,7 @@
         </ContextMenu.Item.Button>
         <ContextMenu.Item.Button
             onSelect={openDeleteClassDialog}
-            {disabled}
+            disabled={classActionsDisabled}
             faIcon={faTrash}
             variant="danger"
         >
@@ -219,8 +275,22 @@
     bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
     {graphUri}
-    resourceUuid={deleteClassTarget?.uuid}
+    resourceUuid={dialogClass?.uuid}
 />
+<ExtendClassDialog
+    {datasetName}
+    {graphUri}
+    classUUID={dialogClass?.uuid}
+    bind:showDialog={showExtendClassDialog}
+/>
+
+<SHACLClassSpecificPopUp
+    datasetName={editorState.selectedDataset.getValue()}
+    graphUri={editorState.selectedGraph.getValue()}
+    reactiveClass={shaclClass}
+    bind:showDialog={showSHACLDialog}
+/>
+
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
     lockedDatasetName={datasetName}

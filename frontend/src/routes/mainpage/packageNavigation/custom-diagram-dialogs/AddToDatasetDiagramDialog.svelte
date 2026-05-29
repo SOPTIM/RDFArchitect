@@ -20,6 +20,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
     let {
@@ -60,16 +61,31 @@
     }
 
     async function addToDiagram() {
-        const classesToAdd = classes.map(cls => ({
-            graphUri: lockedGraphUri,
-            uuid: cls.id,
-        }));
-        await bec.addToCustomDatasetDiagram(
-            lockedDatasetName,
-            selectedDiagram.diagramId,
-            classesToAdd,
-        );
-        forceReloadTrigger.trigger();
+        const diagramName = selectedDiagram?.name;
+        const count = classes.length;
+        try {
+            const res = await bec.addToCustomDatasetDiagram(
+                lockedDatasetName,
+                selectedDiagram.diagramId,
+                classes.map(cls => ({
+                    graphUri: lockedGraphUri,
+                    uuid: cls.id,
+                })),
+            );
+            if (res && res.ok === false) {
+                toastStore.error(
+                    "Add failed",
+                    `Could not add ${count === 1 ? "class" : "classes"} to "${diagramName}".`,
+                );
+                return;
+            }
+            toastStore.success(
+                "Added to diagram",
+                `${count} ${count === 1 ? "class" : "classes"} added to "${diagramName}".`,
+            );
+        } finally {
+            forceReloadTrigger.trigger();
+        }
     }
 </script>
 

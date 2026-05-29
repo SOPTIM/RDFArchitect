@@ -25,6 +25,7 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
 
@@ -156,6 +157,9 @@
         if (!namespace || !label) {
             return null;
         }
+        if (!label?.startsWith("Package_")) {
+            label = "Package_" + label;
+        }
         return getExpandedNamespace(namespace) + label;
     }
 
@@ -170,6 +174,9 @@
         packageComment,
         packageURINamespace,
     ) {
+        if (!packageLabel.startsWith("Package_")) {
+            packageLabel = "Package_" + packageLabel;
+        }
         let promise = fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
@@ -209,11 +216,19 @@
                     type: DiagramType.PACKAGE,
                     id: uuid,
                 });
+                toastStore.success(
+                    "Package created",
+                    `"${packageLabel}" was added.`,
+                );
             });
         promise
             .catch(e => {
                 console.log("failed to add package:");
                 console.log(e);
+                toastStore.error(
+                    "Create failed",
+                    `Could not create package "${packageLabel}".`,
+                );
             })
             .finally(() => {
                 forceReloadTrigger.trigger();
