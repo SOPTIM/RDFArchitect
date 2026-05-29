@@ -42,7 +42,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
+import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
 import org.rdfarchitect.services.update.packages.UpdatePackageService;
 
@@ -51,7 +51,7 @@ import java.util.UUID;
 class UpdatePackageServiceTest {
 
     private UpdatePackageService service;
-    private GraphRewindableWithUUIDs mockGraph;
+    private GraphRewindable mockGraph;
     private GraphContext mockGraphWithContext;
     private final PackageMapper mapper = Mappers.getMapper(PackageMapper.class);
 
@@ -66,7 +66,7 @@ class UpdatePackageServiceTest {
                         mockUpdatePackageLayoutService,
                         mockUpdatePackageLayoutService,
                         mockUpdatePackageLayoutService);
-        mockGraph = mock(GraphRewindableWithUUIDs.class);
+        mockGraph = mock(GraphRewindable.class);
         mockGraphWithContext = mock(GraphContext.class);
         when(mockGraphWithContext.begin(any(ReadWrite.class))).thenReturn(mockGraphWithContext);
         when(databasePort.getGraphWithContext(any())).thenReturn(mockGraphWithContext);

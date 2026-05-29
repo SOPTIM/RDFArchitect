@@ -30,6 +30,7 @@ import org.rdfarchitect.exception.graph.GraphVersionControlException;
 import org.rdfarchitect.models.changelog.ChangeLog;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.changelog.ContextDelta;
+import org.rdfarchitect.models.cim.CIMModifyingUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.rdfarchitect.rdf.graph.wrapper.RDFGraphDelta;
@@ -82,8 +83,8 @@ public class GraphWithContextTransactional implements GraphContext {
         txnContext.begin(ReadWrite.WRITE);
         int maxVersions = GraphCompressionConfig.getMaxVersions();
         int compressCount = GraphCompressionConfig.getCompressCount();
-        GraphUtils.replaceCommentFormat(base);
         GraphUtils.enhanceWithUUIDs(base);
+        CIMModifyingUtils.replaceCommentDatatype(base);
         this.rdfGraph =
                 new RDFGraphDelta(
                         GraphFactory.createDefaultGraph(), maxVersions, compressCount, txnContext);

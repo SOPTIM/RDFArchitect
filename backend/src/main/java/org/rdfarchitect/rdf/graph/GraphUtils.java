@@ -32,8 +32,6 @@ import org.apache.jena.rdf.model.Statement;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.nio.charset.StandardCharsets;
@@ -204,22 +202,5 @@ public class GraphUtils {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException(e);
         }
-    }
-
-    public static void replaceCommentFormat(Graph graph) {
-        graph.find(Node.ANY, RDFS.comment.asNode(), Node.ANY)
-                .toList()
-                .forEach(
-                        triple -> {
-                            var newComment =
-                                    new RDFSComment(
-                                            triple.getObject().getLiteralLexicalForm(),
-                                            new URI("http://www.w3.org/2001/XMLSchema#string"));
-                            graph.delete(triple);
-                            graph.add(
-                                    triple.getSubject(),
-                                    RDFS.comment.asNode(),
-                                    newComment.asTypedLiteral().asNode());
-                        });
     }
 }

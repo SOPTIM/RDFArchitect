@@ -39,7 +39,6 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.rdf.TestRDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
 import java.util.UUID;
@@ -102,7 +101,7 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.getFirst(), 20, 5);
+        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
         String queryString = "SELECT * WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
@@ -126,7 +125,7 @@ class InMemorySparqlExecutorTest {
     void executeSingleQuery_onNamedWithValidAllQuery_shouldReturnAllResults(String graphUri) {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.getFirst(), 20, 5);
+        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
         String queryString = "SELECT * FROM <" + graphUri + "> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
@@ -150,7 +149,7 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.getFirst(), 20, 5);
+        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
         String queryString = "SELECT * WHERE { ?s ?p ?o . FILTER(?p = <http://nonexisting>) }";
         var query = QueryFactory.create(queryString);
 
@@ -169,7 +168,7 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "http://example.org/graph";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.getFirst(), 20, 5);
+        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
         String queryString =
                 "SELECT * FROM <"
                         + graphUri
@@ -191,7 +190,7 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph());
-        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.getFirst(), 20, 5);
+        var graphRewindable = new GraphRewindable(exampleGraphs.getFirst(), 20, 5);
         String queryString = "SELECT * FROM <http://nonexisting> WHERE { ?s ?p ?o }";
         var query = QueryFactory.create(queryString);
 
@@ -210,7 +209,7 @@ class InMemorySparqlExecutorTest {
         // Arrange
         String graphUri = "default";
         exampleGraphs = List.of(createExampleGraph(), GraphFactory.createDefaultGraph());
-        var graphRewindable = new GraphRewindableWithUUIDs(exampleGraphs.get(1), 20, 5);
+        var graphRewindable = new GraphRewindable(exampleGraphs.get(1), 20, 5);
 
         // Act
         for (var t : exampleGraphs.get(0).find().toList()) {

@@ -78,8 +78,7 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
     protected final int compressCount;
 
     /**
-     * Accepts a {@link Graph} that serves as a base version of the {@link
-     * GraphRewindableWithUUIDs}.
+     * Accepts a {@link Graph} that serves as a base version of the {@link GraphRewindable}.
      *
      * @param base The base graph
      * @param maxVersions The maximum amount of versions the graph stores.

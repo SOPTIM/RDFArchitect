@@ -32,7 +32,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.exception.database.ResourceConflictException;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.CIMObjectFactory;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
@@ -40,8 +39,6 @@ import org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
@@ -141,19 +138,17 @@ public class UpdatePackageService
                         .appendUUIDQuery(REQUIRED)
                         .appendLabelQuery(REQUIRED)
                         .build();
-        try(var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)){
-            var resultSet =
-                    InMemorySparqlExecutor.executeSingleQuery(
-                            ctx.getRdfGraph(),
-                            query,
-                            graphIdentifier.graphUri());
+        var resultSet =
+                InMemorySparqlExecutor.executeSingleQuery(
+                        databasePort.getGraphWithContext(graphIdentifier),
+                        query,
+                        graphIdentifier.graphUri());
 
-            if (!resultSet.hasNext()) {
-                throw new DataAccessException("Package not found: " + packageUUID);
-            }
-
-            var cimPackage = CIMObjectFactory.createCIMPackage(resultSet.nextSolution());
-            return packageMapper.toDTO(cimPackage);
+        if (!resultSet.hasNext()) {
+            throw new DataAccessException("Package not found: " + packageUUID);
         }
+
+        var cimPackage = CIMObjectFactory.createCIMPackage(resultSet.nextSolution());
+        return packageMapper.toDTO(cimPackage);
     }
 }
