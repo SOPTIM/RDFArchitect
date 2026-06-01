@@ -21,6 +21,10 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.vocabulary.DCAT;
+import org.apache.jena.vocabulary.DCTerms;
+import org.apache.jena.vocabulary.OWL2;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -63,6 +67,19 @@ public class UpdateOntologyService
             }
             var ontology = new OntologyFacade(model);
             ontology.createOntology(ontologyDTO);
+            var pm = new PrefixMappingImpl();
+            pm.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            if(pm.getNsURIPrefix(DCAT.getURI()) == null) {
+                pm.setNsPrefix("dcat", DCAT.getURI());
+            }
+            if(pm.getNsURIPrefix(DCAT.getURI()) == null) {
+                pm.setNsPrefix("dct", DCTerms.getURI());
+            }
+            if(pm.getNsURIPrefix(DCAT.getURI()) == null) {
+                pm.setNsPrefix("owl", OWL2.getURI());
+            }
+            databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);
+
             graph.commit();
         } finally {
             if (graph != null) {

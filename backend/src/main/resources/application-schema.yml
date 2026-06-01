@@ -10,3 +10,4 @@ schema:
         cim: "http://iec.ch/TC57/CIM100#"
         cims: "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#"
         dct: "http://purl.org/dc/terms/"
+        dcat: "http://www.w3.org/ns/dcat#"
