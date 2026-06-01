@@ -31,7 +31,11 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
-    import { copyState, DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        copyState,
+        DiagramType,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
