@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
@@ -197,6 +198,7 @@ class CustomDiagramsServiceTest {
 
     private GraphContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
         GraphContext graph = mock(GraphContext.class);
+        when(graph.begin(any(ReadWrite.class))).thenReturn(graph);
         when(graph.getCustomDiagrams()).thenReturn(diagrams);
         return graph;
     }

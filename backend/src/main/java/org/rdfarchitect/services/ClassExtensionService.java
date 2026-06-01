@@ -50,7 +50,6 @@ public class ClassExtensionService implements ClassExtensionUseCase {
 
     private DatabasePort databasePort;
     private ClassMapper classMapper;
-    private ChangeLogUseCase changeLogUseCase;
 
     @Override
     public ClassDTO extendClass(

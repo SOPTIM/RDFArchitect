@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.database.inmemory.diagrams;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -37,20 +40,28 @@ import java.util.UUID;
  * <p>State is managed via snapshots: on each {@link #commit()}, the current state is deep-copied
  * and pushed onto the undo stack. {@link #undo()} and {@link #redo()} restore previous snapshots.
  *
+ * <p>Before a write transaction begins, the coordinator must call {@link #beginTransaction()} so
+ * that {@link #abort()} can restore the pre-transaction state and {@link #hasChanges()} can detect
+ * modifications. The method is package-private so that only the coordinator ({@link
+ * org.rdfarchitect.database.inmemory.GraphWithContextTransactional}) in the same package can invoke
+ * it.
+ *
  * <p>Like all other transaction participants, this class has no lock of its own. Synchronisation is
- * the responsibility of the owning coordinator ({@link
- * org.rdfarchitect.database.inmemory.GraphWithContextTransactional}).
+ * the responsibility of the owning coordinator.
  */
 public class CustomDiagram implements TransactionParticipant, Rewindable {
 
     @Getter private final UUID diagramId;
     @Getter @Setter private String name;
-    @Getter @Setter private List<ClassInDiagram> classes;
+    private List<ClassInDiagram> classes;
 
     private final Deque<DiagramSnapshot> undoStack = new ArrayDeque<>();
     private final Deque<DiagramSnapshot> redoStack = new ArrayDeque<>();
 
-    /** Snapshot of the mutable diagram state taken before a transaction begins. */
+    /**
+     * Snapshot of the state at the start of the current transaction. {@code null} outside
+     * transactions.
+     */
     private DiagramSnapshot preTransactionSnapshot;
 
     private record DiagramSnapshot(UUID versionId, String name, List<ClassInDiagram> classes) {
@@ -77,14 +88,44 @@ public class CustomDiagram implements TransactionParticipant, Rewindable {
         }
     }
 
+    /**
+     * Jackson deserialization constructor. The {@code diagramId} field is {@code final} and must be
+     * supplied via {@code @JsonCreator} since a no-args constructor cannot initialise it.
+     */
+    @JsonCreator
+    public CustomDiagram(
+            @JsonProperty("diagramId") UUID diagramId,
+            @JsonProperty("name") String name,
+            @JsonProperty("classes") List<ClassInDiagram> classes) {
+        this.diagramId = diagramId;
+        this.name = name;
+        setClasses(classes);
+    }
+
     public CustomDiagram(UUID diagramId) {
         this.diagramId = diagramId;
     }
 
-    public CustomDiagram(UUID diagramId, String name, List<ClassInDiagram> classes) {
-        this.diagramId = diagramId;
-        this.name = name;
-        this.classes = classes;
+    // -------------------------------------------------------------------------
+    // Accessors for classes (defensive copying)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns a deep copy of the classes list so that callers cannot mutate internal state.
+     *
+     * @return a deep copy of the diagram's class list, never {@code null}
+     */
+    public List<ClassInDiagram> getClasses() {
+        return DiagramSnapshot.deepCopyClasses(classes);
+    }
+
+    /**
+     * Stores a deep copy of the provided list, preventing external aliasing after assignment.
+     *
+     * @param classes the new list of classes; {@code null} is treated as an empty list
+     */
+    public void setClasses(List<ClassInDiagram> classes) {
+        this.classes = DiagramSnapshot.deepCopyClasses(classes);
     }
 
     // -------------------------------------------------------------------------
@@ -92,9 +133,20 @@ public class CustomDiagram implements TransactionParticipant, Rewindable {
     // -------------------------------------------------------------------------
 
     /**
-     * Captures a snapshot of the current state before the transaction began, then records the
-     * current (possibly modified) state as a new undo entry. Clears the redo stack since a new
-     * commit invalidates any undone history.
+     * Captures a snapshot of the current state at the start of a write transaction. Must be called
+     * by the coordinator before any modifications are made, so that {@link #abort()} can restore
+     * the original state and {@link #hasChanges()} can detect modifications.
+     *
+     * <p><strong>Internal API:</strong> only {@link
+     * org.rdfarchitect.database.inmemory.GraphWithContextTransactional} should call this method.
+     */
+    public void beginTransaction() {
+        preTransactionSnapshot = DiagramSnapshot.of(this);
+    }
+
+    /**
+     * Pushes the current state onto the undo stack and clears the redo stack. The pre-transaction
+     * snapshot is reset so that the next transaction starts clean.
      */
     @Override
     public void commit() {
@@ -115,6 +167,10 @@ public class CustomDiagram implements TransactionParticipant, Rewindable {
         }
     }
 
+    /**
+     * Returns {@code true} if the diagram has been modified since {@link #beginTransaction()} was
+     * called. Returns {@code false} if no transaction is active.
+     */
     @Override
     public boolean hasChanges() {
         if (preTransactionSnapshot == null) {
@@ -122,14 +178,6 @@ public class CustomDiagram implements TransactionParticipant, Rewindable {
         }
         return !java.util.Objects.equals(preTransactionSnapshot.name, name)
                 || !java.util.Objects.equals(preTransactionSnapshot.classes, classes);
-    }
-
-    /**
-     * Called by the coordinator when a transaction begins so that {@link #abort()} can restore the
-     * original state and {@link #hasChanges()} can detect modifications.
-     */
-    public void beginTransaction() {
-        preTransactionSnapshot = DiagramSnapshot.of(this);
     }
 
     // -------------------------------------------------------------------------

@@ -18,7 +18,6 @@
 package org.rdfarchitect.services.extension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
@@ -38,7 +37,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ChangeLogService;
 import org.rdfarchitect.services.ClassExtensionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,9 +56,7 @@ class ClassExtensionServiceTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        var mockChangeLogService = mock(ChangeLogService.class);
-        classExtensionService =
-                new ClassExtensionService(databasePort, classMapper, mockChangeLogService);
+        classExtensionService = new ClassExtensionService(databasePort, classMapper);
     }
 
     @Test

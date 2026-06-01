@@ -74,10 +74,11 @@ public class CustomDiagramService
     @Override
     public void removeFromDiagram(String datasetName, String diagramId, UUID classId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
-
         var diagram = diagrams.get(UUID.fromString(diagramId));
         if (diagram != null) {
-            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+            var classes = diagram.getClasses();
+            classes.removeIf(c -> c.getUuid().equals(classId));
+            diagram.setClasses(classes);
         }
     }
 
@@ -111,7 +112,9 @@ public class CustomDiagramService
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             if (diagram != null) {
-                diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+                var classes = diagram.getClasses();
+                classes.removeIf(c -> c.getUuid().equals(classId));
+                diagram.setClasses(classes);
             }
             ctx.commit("removed class %s from diagram %s".formatted(classId, diagramId));
         }
@@ -120,16 +123,16 @@ public class CustomDiagramService
     @Override
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            for (var diagram :
-                    databasePort
-                            .getGraphWithContext(graphIdentifier)
-                            .getCustomDiagrams()
-                            .values()) {
-                diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+            for (var diagram : ctx.getCustomDiagrams().values()) {
+                var classes = diagram.getClasses();
+                classes.removeIf(c -> c.getUuid().equals(classId));
+                diagram.setClasses(classes);
             }
             for (var diagram :
                     databasePort.getDatasetDiagrams(graphIdentifier.datasetName()).values()) {
-                diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+                var classes = diagram.getClasses();
+                classes.removeIf(c -> c.getUuid().equals(classId));
+                diagram.setClasses(classes);
             }
             ctx.commit("removed class %s from all diagrams".formatted(classId));
         }

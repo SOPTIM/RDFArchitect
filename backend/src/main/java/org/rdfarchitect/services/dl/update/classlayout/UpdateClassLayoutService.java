@@ -200,7 +200,9 @@ public class UpdateClassLayoutService
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
-                diagram.getClasses().addAll(classes);
+                var updated = diagram.getClasses();
+                updated.addAll(classes);
+                diagram.setClasses(updated);
             }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             if (DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID) == null) {
@@ -222,7 +224,9 @@ public class UpdateClassLayoutService
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
-                diagram.getClasses().removeIf(c -> c.getUuid().equals(classUUID));
+                var updated = diagram.getClasses();
+                updated.removeIf(c -> c.getUuid().equals(classUUID));
+                diagram.setClasses(updated);
             }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
             var diagramObject =
@@ -243,7 +247,9 @@ public class UpdateClassLayoutService
         }
         var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
         if (diagram != null) {
-            diagram.getClasses().addAll(classes);
+            var updated = diagram.getClasses();
+            updated.addAll(classes);
+            diagram.setClasses(updated);
         }
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
@@ -263,7 +269,9 @@ public class UpdateClassLayoutService
             String datasetName, UUID diagramUUID, UUID classUUID) {
         var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
         if (diagram != null) {
-            diagram.getClasses().removeIf(c -> c.getUuid().equals(classUUID));
+            var updated = diagram.getClasses();
+            updated.removeIf(c -> c.getUuid().equals(classUUID));
+            diagram.setClasses(updated);
         }
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();

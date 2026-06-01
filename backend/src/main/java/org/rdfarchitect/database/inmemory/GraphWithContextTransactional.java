@@ -41,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -109,28 +108,19 @@ public class GraphWithContextTransactional implements GraphContext {
     // -------------------------------------------------------------------------
 
     /**
-     * Returns all transaction participants: the core ones plus every custom diagram currently
-     * registered.
+     * Returns the core transaction participants. Custom diagrams are managed separately since they
+     * are not part of the undo/redo history.
      */
     private List<TransactionParticipant> allTransactionParticipants() {
-        var all =
-                new ArrayList<TransactionParticipant>(
-                        coreTransactionParticipants.size() + customDiagrams.size());
-        all.addAll(coreTransactionParticipants);
-        all.addAll(customDiagrams.values());
-        return all;
+        return coreTransactionParticipants;
     }
 
     /**
-     * Returns all rewindable components: the core ones plus every custom diagram currently
-     * registered.
+     * Returns the core rewindable components. Custom diagrams are intentionally excluded: their
+     * state is not tracked in the changelog and is not undoable.
      */
     private List<NamedRewindable> allRewindables() {
-        var all = new ArrayList<>(coreRewindables);
-        for (var entry : customDiagrams.entrySet()) {
-            all.add(new NamedRewindable("diagram-" + entry.getKey(), entry.getValue()));
-        }
-        return all;
+        return coreRewindables;
     }
 
     // -------------------------------------------------------------------------
@@ -176,7 +166,6 @@ public class GraphWithContextTransactional implements GraphContext {
             case READ -> rwLock.readLock().lock();
             case WRITE -> rwLock.writeLock().lock();
         }
-        // Notify custom diagrams so they can snapshot their pre-transaction state.
         if (mode == ReadWrite.WRITE) {
             customDiagrams.values().forEach(CustomDiagram::beginTransaction);
         }
@@ -194,6 +183,7 @@ public class GraphWithContextTransactional implements GraphContext {
         GraphUtils.enhanceWithUUIDs(rdfGraph);
         changeLog.clearRedo();
         allTransactionParticipants().forEach(TransactionParticipant::commit);
+        customDiagrams.values().forEach(CustomDiagram::commit);
         stepsSinceNamedCommit.incrementAndGet();
         logger.debug("Context committed.");
     }
@@ -360,6 +350,7 @@ public class GraphWithContextTransactional implements GraphContext {
             throw new GraphTransactionException("Cannot abort a read transaction.");
         }
         allTransactionParticipants().forEach(TransactionParticipant::abort);
+        customDiagrams.values().forEach(CustomDiagram::abort);
         logger.debug("Context aborted.");
     }
 
@@ -374,6 +365,7 @@ public class GraphWithContextTransactional implements GraphContext {
                         .anyMatch(TransactionParticipant::hasChanges)) {
             logger.warn("Ending write transaction with uncommitted changes — aborting.");
             allTransactionParticipants().forEach(TransactionParticipant::abort);
+            customDiagrams.values().forEach(CustomDiagram::abort);
         }
         var lock =
                 txnContext.transactionMode() == ReadWrite.READ
