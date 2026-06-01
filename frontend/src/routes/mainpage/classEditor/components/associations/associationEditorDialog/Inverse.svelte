@@ -63,8 +63,11 @@
             optionObjectList={classEditorContext.namespaces}
             accessDisplayData={namespace => namespace.substitutedPrefix}
             accessIdentifier={getNsPrefixNsUriString}
-            callOnValidChange={newNamespace =>
-                (association.inverse.namespace.value = newNamespace?.prefix)}
+            callOnChange={newNamespace =>
+                (association.inverse.namespace.value =
+                    newNamespace?.prefix !== undefined
+                        ? newNamespace.prefix
+                        : newNamespace)}
             highlight={association.inverse.namespace.isModified}
             warn={!association.inverse.namespace.isValid}
             {readonly}

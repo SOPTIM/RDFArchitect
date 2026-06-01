@@ -61,8 +61,9 @@
                 (pack.prefix
                     ? classEditorContext.getSubstitutedNamespace(pack.prefix)
                     : "") + pack.label}
-            callOnValidChange={newPack =>
-                (pack.value = newPack ? newPack.uuid : null)}
+            callOnChange={newPack =>
+                (pack.value =
+                    newPack?.uuid !== undefined ? newPack.uuid : newPack)}
             {readonly}
             buttons={getControlButtonsForReactiveObject(pack, readonly)}
         />
