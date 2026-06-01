@@ -69,13 +69,13 @@ public class UpdateOntologyService
             ontology.createOntology(ontologyDTO);
             var pm = new PrefixMappingImpl();
             pm.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
-            if(pm.getNsURIPrefix(DCAT.getURI()) == null) {
+            if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
                 pm.setNsPrefix("dcat", DCAT.getURI());
             }
-            if(pm.getNsURIPrefix(DCAT.getURI()) == null) {
+            if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
                 pm.setNsPrefix("dct", DCTerms.getURI());
             }
-            if(pm.getNsURIPrefix(DCAT.getURI()) == null) {
+            if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
                 pm.setNsPrefix("owl", OWL2.getURI());
             }
             databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);
