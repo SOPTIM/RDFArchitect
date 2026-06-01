@@ -132,13 +132,19 @@ export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
 
 export function isInvalidNamespace(namespace, compareNamespaces) {
     const violations = isNotEmptyValidation(namespace);
-    if (
-        violations.length === 0 &&
-        !compareNamespaces.some(
-            compareNamespace => compareNamespace.prefix === namespace,
-        )
-    ) {
-        violations.push("must be a valid input");
+    if (violations.length > 0) return violations;
+
+    const isKnownPrefix = compareNamespaces.some(n => n.prefix === namespace);
+    const hasIriViolation = validateIri(
+        namespace,
+        IriValidationStrategy.Pragmatic,
+    );
+    const hasWrongEnding = !namespace.endsWith("#") && !namespace.endsWith("/");
+
+    if (!isKnownPrefix && hasIriViolation) {
+        violations.push("must be a valid input or IRI");
+    } else if (!isKnownPrefix && hasWrongEnding) {
+        violations.push('must end with "#" or "/"');
     }
 
     return violations;
