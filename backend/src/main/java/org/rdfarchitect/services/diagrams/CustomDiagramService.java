@@ -19,6 +19,7 @@ package org.rdfarchitect.services.diagrams;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
@@ -40,12 +41,9 @@ public class CustomDiagramService
 
     @Override
     public List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
-        return databasePort
-                .getGraphWithContext(graphIdentifier)
-                .getCustomDiagrams()
-                .values()
-                .stream()
-                .toList();
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return ctx.getCustomDiagrams().values().stream().toList();
+        }
     }
 
     @Override
@@ -85,10 +83,10 @@ public class CustomDiagramService
 
     @Override
     public void deleteCustomDiagram(GraphIdentifier graphIdentifier, String diagramId) {
-        databasePort
-                .getGraphWithContext(graphIdentifier)
-                .getCustomDiagrams()
-                .remove(UUID.fromString(diagramId));
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
+            ctx.commit("deleted diagram %s".formatted(diagramId));
+        }
     }
 
     @Override
@@ -102,33 +100,38 @@ public class CustomDiagramService
                             + diagram.getDiagramId()
                             + "'");
         }
-        databasePort
-                .getGraphWithContext(graphIdentifier)
-                .getCustomDiagrams()
-                .put(UUID.fromString(diagramId), diagram);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
+            ctx.commit("replaced diagram %s".formatted(diagramId));
+        }
     }
 
     @Override
     public void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
-        var diagram =
-                databasePort
-                        .getGraphWithContext(graphIdentifier)
-                        .getCustomDiagrams()
-                        .get(UUID.fromString(diagramId));
-        if (diagram != null) {
-            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
+            if (diagram != null) {
+                diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+            }
+            ctx.commit("removed class %s from diagram %s".formatted(classId, diagramId));
         }
     }
 
     @Override
     public void removeFromAllDiagrams(GraphIdentifier graphIdentifier, UUID classId) {
-        for (var diagram :
-                databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values()) {
-            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
-        }
-        for (var diagram :
-                databasePort.getDatasetDiagrams(graphIdentifier.datasetName()).values()) {
-            diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            for (var diagram :
+                    databasePort
+                            .getGraphWithContext(graphIdentifier)
+                            .getCustomDiagrams()
+                            .values()) {
+                diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+            }
+            for (var diagram :
+                    databasePort.getDatasetDiagrams(graphIdentifier.datasetName()).values()) {
+                diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+            }
+            ctx.commit("removed class %s from all diagrams".formatted(classId));
         }
     }
 }
