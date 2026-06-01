@@ -16,17 +16,36 @@
   -->
 
 <script>
+    import { onMount, onDestroy } from "svelte";
+
+    import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "../../mainpage/classEditor/classEditor.svelte";
 
-    let { mergedClass } = $props();
+    let { datasetName, classUuid } = $props();
+
+    let mergedClass = $state(null);
+    let loading = $state(true);
 
     let activeTabIndex = $state(0);
-
     let activeSource = $derived(mergedClass?.sources?.[activeTabIndex] ?? null);
 
-    let datasetName = $derived(editorState.selectedDataset.getValue());
+    $effect(() => {
+        if (!datasetName || !classUuid) return;
+        loading = true;
+        getCrossProfileDiagram(datasetName)
+            .then(diagram => {
+                mergedClass =
+                    diagram?.classes?.find(c => c.uuid === classUuid) ?? null;
+            })
+            .finally(() => (loading = false));
+    });
+
+    onMount(() => eventStack.addEvent(closeMergedClassEditor));
+    onDestroy(() => eventStack.removeEvent(closeMergedClassEditor));
 
     function extractGraphLabel(graphUri) {
         const hash = graphUri.lastIndexOf("#");
@@ -34,23 +53,36 @@
         const idx = Math.max(hash, slash);
         return idx >= 0 ? graphUri.substring(idx + 1) : graphUri;
     }
+
+    function closeMergedClassEditor() {
+        editorState.selectedClassDataset.updateValue(null);
+        editorState.selectedClassGraph.updateValue(null);
+        editorState.selectedClassType.updateValue(null);
+        editorState.selectedClassUUID.updateValue(null);
+    }
 </script>
 
-{#if mergedClass && mergedClass.sources?.length > 0}
-    <div class="border-border flex border-b">
-        {#each mergedClass.sources as source, i}
-            <button
-                type="button"
-                class="px-4 py-2 text-sm font-medium transition-colors
-                    {activeTabIndex === i
-                    ? 'border-b-2 border-orange-500 text-orange-500'
-                    : 'text-default-text hover:text-orange-400'}"
-                onclick={() => (activeTabIndex = i)}
-                title={source.graphUri}
-            >
-                {extractGraphLabel(source.graphUri)}
-            </button>
-        {/each}
+{#if loading}
+    <div class="relative h-full w-full">
+        <div
+            class="absolute inset-0 flex items-center justify-center bg-white/50"
+        >
+            <LoadingSpinner />
+        </div>
+    </div>
+{:else if mergedClass && mergedClass.sources?.length > 0}
+    <div class="border-border border-b px-2 py-1">
+        <select
+            class="border-button-border bg-window-background text-default-text w-full rounded border border-solid px-2 py-1 text-sm outline-none"
+            onchange={e => (activeTabIndex = Number(e.target.value))}
+            value={activeTabIndex}
+        >
+            {#each mergedClass.sources as source, i}
+                <option value={i} title={source.graphUri}>
+                    {extractGraphLabel(source.graphUri)}
+                </option>
+            {/each}
+        </select>
     </div>
 
     {#if activeSource}

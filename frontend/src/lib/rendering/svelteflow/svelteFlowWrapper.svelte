@@ -32,6 +32,8 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
+        ClassType,
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -292,12 +294,24 @@
                 editorState.selectedClassGraph.updateValue(
                     nodeClickEvent.node.data.graphUri,
                 );
+                editorState.selectedClassType.updateValue(
+                    editorState.selectedDiagram.getProperty("type") ===
+                        DiagramType.CROSS_PROFILE
+                        ? ClassType.MERGED_CLASS
+                        : ClassType.NORMAL_CLASS,
+                );
                 editorState.selectedClassUUID.updateValue(id);
+                console.log(editorState.selectedClassType.getValue());
             } else {
                 eventStack.executeNewestEvent({
                     datasetName: editorState.selectedDataset.getValue(),
                     graphUri: nodeClickEvent.node.data.graphUri,
                     classUuid: id,
+                    classType:
+                        editorState.selectedDiagram.getProperty("type") ===
+                        DiagramType.CROSS_PROFILE
+                            ? ClassType.MERGED_CLASS
+                            : ClassType.NORMAL_CLASS,
                 });
             }
 

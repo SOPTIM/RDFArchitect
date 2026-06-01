@@ -200,15 +200,17 @@ public class QueryGraphService
         try {
             return baseList.stream()
                     .filter(dto -> dto.getUuid() != null)
-                    .map(dto -> {
-                        var fullClass = CIMUMLObjectFactory.createCIMClassUMLAdapted(
-                                rdfGraph,
-                                graphIdentifier.graphUri(),
-                                prefixMapping,
-                                dto.getUuid().toString());
-                        fullClass.nullEmptyLists();
-                        return classMapper.toDTO(fullClass);
-                    })
+                    .map(
+                            dto -> {
+                                var fullClass =
+                                        CIMUMLObjectFactory.createCIMClassUMLAdapted(
+                                                rdfGraph,
+                                                graphIdentifier.graphUri(),
+                                                prefixMapping,
+                                                dto.getUuid().toString());
+                                fullClass.nullEmptyLists();
+                                return classMapper.toDTO(fullClass);
+                            })
                     .toList();
         } finally {
             rdfGraph.end();

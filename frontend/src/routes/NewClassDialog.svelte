@@ -33,6 +33,7 @@
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
+        ClassType,
         DiagramType,
         editorState,
         forceReloadTrigger,
@@ -239,6 +240,9 @@
                 });
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);
+                editorState.selectedClassType.updateValue(
+                    ClassType.NORMAL_CLASS,
+                );
                 editorState.selectedClassUUID.updateValue(uuid);
                 toastStore.success(
                     "Class created",

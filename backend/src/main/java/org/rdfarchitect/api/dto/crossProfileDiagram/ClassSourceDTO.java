@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.crossProfileDiagram;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import java.util.UUID;
 
 @Data

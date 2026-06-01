@@ -31,13 +31,22 @@ public class CIMCollection {
         classes = new TreeSet<>(Comparator.comparing(cimClass -> cimClass.getUri().toString()));
         attributes =
                 new TreeSet<>(
-                        Comparator.comparing(cimAttribute -> cimAttribute.getUri().toString()));
+                        Comparator.comparing(
+                                        (CIMAttribute a) ->
+                                                a.getGraphUri() != null ? a.getGraphUri() : "")
+                                .thenComparing(a -> a.getUri().toString()));
         associations =
                 new TreeSet<>(
-                        Comparator.comparing(cimAssociation -> cimAssociation.getUri().toString()));
+                        Comparator.comparing((CIMAssociation a) -> a.getUri().toString())
+                                .thenComparing(
+                                        a -> a.getGraphUri() != null ? a.getGraphUri() : ""));
         enums = new TreeSet<>(Comparator.comparing(cimEnum -> cimEnum.getUri().toString()));
         enumEntries =
-                new TreeSet<>(Comparator.comparing(enumEntry -> enumEntry.getUri().toString()));
+                new TreeSet<>(
+                        Comparator.comparing(
+                                        (CIMEnumEntry a) ->
+                                                a.getGraphUri() != null ? a.getGraphUri() : "")
+                                .thenComparing(a -> a.getUri().toString()));
     }
 
     private final SortedSet<CIMPackage> packages;

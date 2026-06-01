@@ -241,6 +241,7 @@
         editorState.selectedDiagram.updateValue({ type: null, id: null });
         editorState.selectedClassDataset.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
+        editorState.selectedClassType.updateValue(null);
         editorState.selectedClassUUID.updateValue(null);
 
         const importedCount = importedGraphUris.length;

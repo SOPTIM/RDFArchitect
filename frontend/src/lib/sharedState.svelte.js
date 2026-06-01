@@ -41,6 +41,11 @@ export const DiagramType = {
     PACKAGE: "package",
 };
 
+export const ClassType = {
+    NORMAL_CLASS: "normalClass",
+    MERGED_CLASS: "mergedClass",
+};
+
 /**
  * The editorState object contains the state of the editor. Content might expand in the future.
  * @type {{
@@ -62,6 +67,7 @@ export const editorState = {
     selectedDiagram: new StateObjectPair({ type: null, id: null }),
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
+    selectedClassType: new StateValuePair(),
     selectedClassUUID: new StateValuePair(),
     focusedClassUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
@@ -72,6 +78,7 @@ export const editorState = {
         this.selectedDiagram.updateValue({ type: null, id: null });
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
+        this.selectedClassType.updateValue(null);
         this.selectedClassUUID.updateValue(null);
         this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);

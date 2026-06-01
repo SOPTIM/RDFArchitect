@@ -19,7 +19,9 @@ package org.rdfarchitect.services.diagrams;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.ClassSourceDTO;
+import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.GraphSourcedDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.MergedClassDTO;
@@ -30,12 +32,15 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.select.GetClassListUseCase;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +55,8 @@ public class CustomDiagramService
                 ReplaceCustomDiagramUseCase,
                 DeleteCustomDiagramUseCase,
                 AddToDiagramUseCase,
-                RemoveFromDiagramUseCase {
+                RemoveFromDiagramUseCase,
+                CrossProfileColorUseCase {
 
     private final DatabasePort databasePort;
     private final GetClassListUseCase getClassListUseCase;
@@ -71,74 +77,129 @@ public class CustomDiagramService
     }
 
     @Override
-    public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName) {
+    public CrossProfileDiagramDTO getCrossProfileDiagram(
+            String datasetName, boolean includeProperties, boolean doLayout) {
         var graphUris = databasePort.listGraphUris(datasetName);
         var crossProfileDiagramUUID = databasePort.getCrossProfileDiagramUUID(datasetName);
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-
-        diagramLayout.write(() -> {
-            var model = diagramLayout.getDiagramLayoutModel();
-            if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
-                DiagramLayoutServiceUtils.insertDiagram(
-                        model, crossProfileDiagramUUID, "CrossProfileDiagram");
-            }
-        });
 
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
 
         for (var graphUri : graphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
             var classList = getClassListUseCase.getFullClassList(graphIdentifier);
+            var graphColor =
+                    databasePort.getGraphWithContext(graphIdentifier).getCrossProfileDiagramColor();
 
             for (var dto : classList) {
                 var classUri = dto.getPrefix() + dto.getLabel();
-                var mergedUuid = UUID.nameUUIDFromBytes(
-                        classUri.getBytes(StandardCharsets.UTF_8));
+                var mergedUuid = UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
 
-                var merged = mergeMap.computeIfAbsent(classUri, uri ->
-                        new MergedClassDTO(mergedUuid, uri,
-                                new ArrayList<>(), new ArrayList<>(),
-                                new ArrayList<>(), new ArrayList<>()));
+                var merged =
+                        mergeMap.computeIfAbsent(
+                                classUri,
+                                uri ->
+                                        new MergedClassDTO(
+                                                mergedUuid,
+                                                uri,
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>(),
+                                                new ArrayList<>()));
 
                 merged.getSources().add(new ClassSourceDTO(dto.getUuid(), graphUri));
 
-                if (dto.getAttributes() != null) {
-                    dto.getAttributes().forEach(attr ->
-                            merged.getAttributes().add(new GraphSourcedDTO<>(graphUri, attr)));
-                }
-                if (dto.getEnumEntries() != null) {
-                    dto.getEnumEntries().forEach(entry ->
-                            merged.getEnumEntries().add(new GraphSourcedDTO<>(graphUri, entry)));
-                }
-                if (dto.getAssociationPairs() != null) {
-                    dto.getAssociationPairs().forEach(assoc ->
-                            merged.getAssociationPairs().add(new GraphSourcedDTO<>(graphUri, assoc)));
+                if (includeProperties) {
+                    mergeProperties(graphUri, dto, merged, graphColor);
                 }
             }
         }
+        if (doLayout) {
+            doDiagramLayout(diagramLayout, crossProfileDiagramUUID, mergeMap);
+        }
+        return new CrossProfileDiagramDTO(
+                crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
+    }
 
-        diagramLayout.write(() -> {
-            var model = diagramLayout.getDiagramLayoutModel();
-            var existingDOs = DLObjectFetcher.fetchDiagramDOs(
-                    model, new MRID(crossProfileDiagramUUID));
-            var existingClassUUIDs = existingDOs.stream()
-                    .map(DiagramObject::getBelongsToIdentifiedObject)
-                    .map(MRID::getUuid)
-                    .collect(Collectors.toSet());
+    private static void mergeProperties(
+            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
+        if (dto.getAttributes() != null) {
+            dto.getAttributes()
+                    .forEach(
+                            attr ->
+                                    merged.getAttributes()
+                                            .add(
+                                                    new GraphSourcedDTO<>(
+                                                            graphUri, graphColor, attr)));
+        }
+        if (dto.getEnumEntries() != null) {
+            dto.getEnumEntries()
+                    .forEach(
+                            entry ->
+                                    merged.getEnumEntries()
+                                            .add(
+                                                    new GraphSourcedDTO<>(
+                                                            graphUri, graphColor, entry)));
+        }
+        if (dto.getAssociationPairs() != null) {
+            dto.getAssociationPairs()
+                    .forEach(
+                            assoc ->
+                                    merged.getAssociationPairs()
+                                            .add(
+                                                    new GraphSourcedDTO<>(
+                                                            graphUri, graphColor, assoc)));
+        }
+        if (dto.getSuperClass() != null) {
+            merged.getSuperClasses()
+                    .add(new GraphSourcedDTO<>(graphUri, graphColor, dto.getSuperClass()));
+        }
+        if (dto.getStereotypes() != null) {
+            dto.getStereotypes()
+                    .forEach(
+                            stereotype -> {
+                                if (!merged.getStereotypes()
+                                        .contains(new CIMSStereotype(stereotype))) {
+                                    merged.getStereotypes().add(new CIMSStereotype(stereotype));
+                                }
+                            });
+        }
+    }
 
-            for (var merged : mergeMap.values()) {
-                if (!existingClassUUIDs.contains(merged.getUuid())) {
-                    var doMRID = DiagramLayoutServiceUtils.insertDiagramObject(
-                            model,
-                            crossProfileDiagramUUID,
-                            merged.getClassUri(),
-                            merged.getUuid());
-                    DiagramLayoutServiceUtils.insertDiagramObjectPoint(model, doMRID);
-                }
-            }
-        });
+    private static void doDiagramLayout(
+            DiagramLayout diagramLayout,
+            UUID crossProfileDiagramUUID,
+            Map<String, MergedClassDTO> mergeMap) {
+        diagramLayout.write(
+                () -> {
+                    var model = diagramLayout.getDiagramLayoutModel();
+                    if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
+                        DiagramLayoutServiceUtils.insertDiagram(
+                                model, crossProfileDiagramUUID, "CrossProfileDiagram");
+                    }
+                    var existingDOs =
+                            DLObjectFetcher.fetchDiagramDOs(
+                                    model, new MRID(crossProfileDiagramUUID));
+                    var existingClassUUIDs =
+                            existingDOs.stream()
+                                    .map(DiagramObject::getBelongsToIdentifiedObject)
+                                    .map(MRID::getUuid)
+                                    .collect(Collectors.toSet());
 
-        return new CrossProfileDiagramDTO(crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
+                    for (var merged : mergeMap.values()) {
+                        if (!existingClassUUIDs.contains(merged.getUuid())) {
+                            var doMRID =
+                                    DiagramLayoutServiceUtils.insertDiagramObject(
+                                            model,
+                                            crossProfileDiagramUUID,
+                                            merged.getClassUri(),
+                                            merged.getUuid());
+                            DiagramLayoutServiceUtils.insertDiagramObjectPoint(model, doMRID);
+                        }
+                    }
+                });
     }
 
     @Override
@@ -229,6 +290,31 @@ public class CustomDiagramService
         var datasetDiagrams = databasePort.getDatasetDiagrams(graphIdentifier.datasetName());
         for (var diagram : datasetDiagrams.values()) {
             diagram.getClasses().removeIf(c -> c.getUuid().equals(classId));
+        }
+    }
+
+    @Override
+    public CrossProfileDiagramColorDataDTO getCrossProfileColors(String datasetName) {
+        var graphUris = databasePort.listGraphUris(datasetName);
+        var colorsDTO = new CrossProfileDiagramColorDataDTO(new HashMap<>());
+        for (var graphUri : graphUris) {
+            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            var graphColor =
+                    databasePort.getGraphWithContext(graphIdentifier).getCrossProfileDiagramColor();
+            colorsDTO.getGraphColors().put(graphUri, graphColor);
+        }
+        return colorsDTO;
+    }
+
+    @Override
+    public void replaceCrossProfileColors(String datasetName, CrossProfileDiagramColorDataDTO dto) {
+        var graphUris = databasePort.listGraphUris(datasetName);
+        for (var graphUri : graphUris) {
+            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
+            var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
+            if (dto.getGraphColors().containsKey(graphUri)) {
+                graphWithContext.setCrossProfileDiagramColor(dto.getGraphColors().get(graphUri));
+            }
         }
     }
 }

@@ -21,8 +21,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
+import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
+import org.rdfarchitect.services.rendering.DiagramToCIMCollectionConverterUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -33,17 +36,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/crossprofilediagram")
+@RequestMapping("/api/datasets/{datasetName}/crossprofilediagramRendering")
 @RequiredArgsConstructor
-public class CrossProfileDiagramRestController {
+public class CrossProfileDiagramRenderingRestController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(CrossProfileDiagramRestController.class);
+            LoggerFactory.getLogger(CrossProfileDiagramRenderingRestController.class);
+
+    private final DiagramToCIMCollectionConverterUseCase converter;
+
+    private final RenderCIMCollectionUseCase renderer;
 
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
+    private final DatabasePort databasePort;
+
     @GetMapping
-    public CrossProfileDiagramDTO getCrossProfileRenderingData(
+    public RenderingDataDTO getCrossProfileRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -53,14 +62,23 @@ public class CrossProfileDiagramRestController {
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
+                "Received GET request: \"/api/datasets/{{}}/crossprofilediagramRendering\" from \"{}\"",
                 datasetName,
                 originURL);
 
-        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, false, false);
+        var crossProfileDiagram =
+                getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, true, true);
+
+        var cimCollection = converter.convert(crossProfileDiagram);
+
+        var result =
+                renderer.renderGlobalUML(
+                        cimCollection,
+                        datasetName,
+                        databasePort.getCrossProfileDiagramUUID(datasetName));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
+                "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagramRendering\" from \"{}\"",
                 datasetName,
                 originURL);
         return result;

@@ -21,8 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
-import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
+import org.rdfarchitect.database.DatabasePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -33,17 +32,17 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/crossprofilediagram")
+@RequestMapping("/api/datasets/{datasetName}/crossprofilediagramID")
 @RequiredArgsConstructor
-public class CrossProfileDiagramRestController {
+public class CrossProfileDiagramIDController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(CrossProfileDiagramRestController.class);
+            LoggerFactory.getLogger(CrossProfileDiagramIDController.class);
 
-    private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
+    private final DatabasePort databasePort;
 
     @GetMapping
-    public CrossProfileDiagramDTO getCrossProfileRenderingData(
+    public String getCrossProfileRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -57,12 +56,10 @@ public class CrossProfileDiagramRestController {
                 datasetName,
                 originURL);
 
-        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, false, false);
-
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
                 datasetName,
                 originURL);
-        return result;
+        return databasePort.getCrossProfileDiagramUUID(datasetName).toString();
     }
 }

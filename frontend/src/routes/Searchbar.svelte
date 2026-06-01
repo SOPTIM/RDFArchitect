@@ -27,6 +27,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
+        ClassType,
         DiagramType,
         editorState,
         forceReloadTrigger,
@@ -59,6 +60,7 @@
                 searchResult.datasetName,
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
+            editorState.selectedClassType.updateValue(ClassType.NORMAL_CLASS);
             editorState.selectedClassUUID.updateValue(searchResult.uuid);
             editorState.focusedClassUUID.updateValue(searchResult.uuid);
         } else if (searchResult.type === "PACKAGE") {

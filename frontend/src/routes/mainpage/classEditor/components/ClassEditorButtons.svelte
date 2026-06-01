@@ -43,6 +43,7 @@
         datasetOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
+        classTypeOfClassToOpenNext,
         closeClassEditor,
     } = $props();
 
@@ -182,12 +183,14 @@
         reactiveClass.reset();
         editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
+        editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
         editorState.selectedClassUUID.updateValue(classToOpenNext);
     }}
     onSave={() => {
         saveChanges();
         editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
+        editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
         editorState.selectedClassUUID.updateValue(classToOpenNext);
     }}
     disableSave={!reactiveClass?.isModified || !reactiveClass?.isValid}

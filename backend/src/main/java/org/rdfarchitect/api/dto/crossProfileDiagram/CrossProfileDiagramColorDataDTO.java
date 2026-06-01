@@ -20,10 +20,10 @@ package org.rdfarchitect.api.dto.crossProfileDiagram;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.Map;
+
 @Data
 @AllArgsConstructor
-public class GraphSourcedDTO<T> {
-    private String graphUri;
-    private String graphColor;
-    private T value;
+public class CrossProfileDiagramColorDataDTO {
+    Map<String, String> graphColors;
 }

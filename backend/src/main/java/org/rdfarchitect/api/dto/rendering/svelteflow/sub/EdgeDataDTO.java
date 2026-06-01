@@ -29,4 +29,5 @@ public class EdgeDataDTO {
     private String fromMultiplicity;
     private boolean useToAssociation;
     private boolean useFromAssociation;
+    private String graphUri;
 }

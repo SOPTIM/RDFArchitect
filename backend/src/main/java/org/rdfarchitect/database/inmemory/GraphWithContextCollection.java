@@ -66,8 +66,7 @@ public class GraphWithContextCollection {
 
     @Getter private final DiagramLayout diagramLayout = new DiagramLayout();
 
-    @Getter
-    private final UUID crossProfileDiagramUUID = UUID.randomUUID();
+    @Getter private final UUID crossProfileDiagramUUID = UUID.randomUUID();
 
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();

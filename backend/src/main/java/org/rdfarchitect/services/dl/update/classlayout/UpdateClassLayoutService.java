@@ -84,7 +84,10 @@ public class UpdateClassLayoutService
         var resolvedPackageUUID =
                 packageUUID != null ? packageUUID : diagramLayout.getDefaultPackageMRID().getUuid();
 
-        diagramLayout.write(() -> updateDiagramObjects(resolvedPackageUUID, classPositionDTOList, diagramLayoutModel));
+        diagramLayout.write(
+                () ->
+                        updateDiagramObjects(
+                                resolvedPackageUUID, classPositionDTOList, diagramLayoutModel));
     }
 
     @Override
@@ -93,7 +96,8 @@ public class UpdateClassLayoutService
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
-        diagramLayout.write(() -> updateDiagramObjects(diagramUUID, classPositionDTOList, diagramLayoutModel));
+        diagramLayout.write(
+                () -> updateDiagramObjects(diagramUUID, classPositionDTOList, diagramLayoutModel));
     }
 
     private void updateDiagramObjects(

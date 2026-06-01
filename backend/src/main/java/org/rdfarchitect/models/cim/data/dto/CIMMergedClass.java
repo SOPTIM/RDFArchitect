@@ -15,15 +15,22 @@
  *
  */
 
-package org.rdfarchitect.api.dto.crossProfileDiagram;
+package org.rdfarchitect.models.cim.data.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
+
+import java.util.List;
+
+@EqualsAndHashCode(callSuper = true)
 @Data
-@AllArgsConstructor
-public class GraphSourcedDTO<T> {
-    private String graphUri;
-    private String graphColor;
-    private T value;
+@SuperBuilder(toBuilder = true)
+@NoArgsConstructor
+public class CIMMergedClass extends CIMClass {
+
+    private List<RDFSSubClassOf> superClasses;
 }

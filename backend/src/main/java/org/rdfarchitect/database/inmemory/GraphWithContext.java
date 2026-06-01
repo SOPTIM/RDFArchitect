@@ -25,6 +25,8 @@ import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
+import java.awt.Color;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,7 +45,21 @@ public class GraphWithContext {
 
     @Getter @Setter private Model customSHACL;
 
+    @Getter @Setter private String crossProfileDiagramColor;
+
     public GraphWithContext(GraphRewindableWithUUIDs rdfGraph) {
         this.rdfGraph = rdfGraph;
+        this.crossProfileDiagramColor = generateRandomDarkColor();
+    }
+
+    private static String generateRandomDarkColor() {
+        Random random = new Random();
+
+        float hue = random.nextFloat();
+        float saturation = 0.5f + random.nextFloat() * 0.5f;
+        float brightness = 0.3f + random.nextFloat() * 0.4f;
+
+        Color color = Color.getHSBColor(hue, saturation, brightness);
+        return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
     }
 }

@@ -31,7 +31,11 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
-    import { copyState, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        copyState,
+        DiagramType,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -169,106 +173,108 @@
         style={triggerStyle}
         {disabled}
     />
-    <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={copyClass}
-            faIcon={faCopy}
-            altText="Ctrl+C"
-        >
-            Copy
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={openExtendClassDialog}
-            faIcon={faFileExport}
-        >
-            Extend Class
-        </ContextMenu.Item.Button>
-        <ContextMenu.Separator />
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                showSHACLDialog = true;
-            }}
-            faIcon={faDiagramProject}
-        >
-            Constraints
-        </ContextMenu.Item.Button>
-        <ContextMenu.SubMenu.Root>
-            <ContextMenu.SubMenu.Trigger
-                faIcon={faLayerGroup}
-                disabled={classActionsDisabled}
+    {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+        <ContextMenu.Content>
+            <ContextMenu.Item.Button
+                onSelect={copyClass}
+                faIcon={faCopy}
+                altText="Ctrl+C"
             >
-                Move
-            </ContextMenu.SubMenu.Trigger>
-            <ContextMenu.SubMenu.Content>
-                <ContextMenu.Item.Button
-                    onSelect={e => {
-                        e.preventDefault();
-                        handleMoveToTop();
-                    }}
-                    faIcon={faAnglesUp}
-                    disabled={classActionsDisabled || isAtFront}
-                >
-                    Move to front
-                </ContextMenu.Item.Button>
-                <ContextMenu.Item.Button
-                    onSelect={e => {
-                        e.preventDefault();
-                        handleMoveUp();
-                    }}
-                    faIcon={faAngleUp}
-                    disabled={classActionsDisabled || isAtFront}
-                >
-                    Move up
-                </ContextMenu.Item.Button>
-                <ContextMenu.Item.Counter
-                    value={classZIndex}
-                    min={0}
-                    max={nodeCount - 1}
+                Copy
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={openExtendClassDialog}
+                faIcon={faFileExport}
+            >
+                Extend Class
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showSHACLDialog = true;
+                }}
+                faIcon={faDiagramProject}
+            >
+                Constraints
+            </ContextMenu.Item.Button>
+            <ContextMenu.SubMenu.Root>
+                <ContextMenu.SubMenu.Trigger
+                    faIcon={faLayerGroup}
                     disabled={classActionsDisabled}
-                    onchange={handleLayerChange}
-                    onpersist={handleLayerPersist}
                 >
-                    Layer
-                </ContextMenu.Item.Counter>
-                <ContextMenu.Item.Button
-                    onSelect={e => {
-                        e.preventDefault();
-                        handleMoveDown();
-                    }}
-                    faIcon={faAngleDown}
-                    disabled={classActionsDisabled || isAtBack}
-                >
-                    Move down
-                </ContextMenu.Item.Button>
-                <ContextMenu.Item.Button
-                    onSelect={e => {
-                        e.preventDefault();
-                        handleMoveToBottom();
-                    }}
-                    faIcon={faAnglesDown}
-                    disabled={classActionsDisabled || isAtBack}
-                >
-                    Move to bottom
-                </ContextMenu.Item.Button>
-            </ContextMenu.SubMenu.Content>
-        </ContextMenu.SubMenu.Root>
-        <ContextMenuSeparator />
-        <ContextMenu.Item.Button
-            onSelect={openRemoveFromDiagramDialog}
-            faIcon={faMinus}
-            variant="danger"
-        >
-            Remove from Diagram
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={openDeleteClassDialog}
-            disabled={classActionsDisabled}
-            faIcon={faTrash}
-            variant="danger"
-        >
-            Delete class
-        </ContextMenu.Item.Button>
-    </ContextMenu.Content>
+                    Move
+                </ContextMenu.SubMenu.Trigger>
+                <ContextMenu.SubMenu.Content>
+                    <ContextMenu.Item.Button
+                        onSelect={e => {
+                            e.preventDefault();
+                            handleMoveToTop();
+                        }}
+                        faIcon={faAnglesUp}
+                        disabled={classActionsDisabled || isAtFront}
+                    >
+                        Move to front
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={e => {
+                            e.preventDefault();
+                            handleMoveUp();
+                        }}
+                        faIcon={faAngleUp}
+                        disabled={classActionsDisabled || isAtFront}
+                    >
+                        Move up
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Counter
+                        value={classZIndex}
+                        min={0}
+                        max={nodeCount - 1}
+                        disabled={classActionsDisabled}
+                        onchange={handleLayerChange}
+                        onpersist={handleLayerPersist}
+                    >
+                        Layer
+                    </ContextMenu.Item.Counter>
+                    <ContextMenu.Item.Button
+                        onSelect={e => {
+                            e.preventDefault();
+                            handleMoveDown();
+                        }}
+                        faIcon={faAngleDown}
+                        disabled={classActionsDisabled || isAtBack}
+                    >
+                        Move down
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={e => {
+                            e.preventDefault();
+                            handleMoveToBottom();
+                        }}
+                        faIcon={faAnglesDown}
+                        disabled={classActionsDisabled || isAtBack}
+                    >
+                        Move to bottom
+                    </ContextMenu.Item.Button>
+                </ContextMenu.SubMenu.Content>
+            </ContextMenu.SubMenu.Root>
+            <ContextMenuSeparator />
+            <ContextMenu.Item.Button
+                onSelect={openRemoveFromDiagramDialog}
+                faIcon={faMinus}
+                variant="danger"
+            >
+                Remove from Diagram
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={openDeleteClassDialog}
+                disabled={classActionsDisabled}
+                faIcon={faTrash}
+                variant="danger"
+            >
+                Delete class
+            </ContextMenu.Item.Button>
+        </ContextMenu.Content>
+    {/if}
 </ContextMenu.Root>
 
 <DeleteDependenciesDialog

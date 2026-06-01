@@ -32,5 +32,5 @@ public class NodeDataDTO {
     private String belongsToCategory;
     private List<String> stereotypes;
     private List<AttributeDTO> attributes;
-    private List<String> enumEntries;
+    private List<EnumEntryDTO> enumEntries;
 }

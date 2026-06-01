@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.rendering;
 
+import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 
@@ -40,4 +41,12 @@ public interface DiagramToCIMCollectionConverterUseCase {
      * @return The {@link CIMCollection}.
      */
     CIMCollection convert(String datasetName, String diagramId);
+
+    /**
+     * Converts a Diagram to a {@link CIMCollection}.
+     *
+     * @param diagram The diagram to be converted.
+     * @return The {@link CIMCollection}.
+     */
+    CIMCollection convert(CrossProfileDiagramDTO diagram);
 }

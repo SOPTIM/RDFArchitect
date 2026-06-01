@@ -83,6 +83,7 @@
     let datasetOfClassToOpenNext = $state(null);
     let graphOfClassToOpenNext = $state(null);
     let classToOpenNext = $state(null);
+    let classTypeOfClassToOpenNext = $state(null);
 
     let isEnum = $derived(
         reactiveClass?.stereotypes.contains(enumerationStereotype),
@@ -117,10 +118,16 @@
     onDestroy(() => eventStack.removeEvent(closeClassEditor));
 
     function closeClassEditor(
-        { datasetName = null, graphUri = null, classUuid = null } = {
+        {
+            datasetName = null,
+            graphUri = null,
+            classUuid = null,
+            classType = null,
+        } = {
             datasetName: null,
             graphUri: null,
             classUuid: null,
+            classType: null,
         },
     ) {
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
@@ -128,10 +135,12 @@
             datasetOfClassToOpenNext = datasetName;
             graphOfClassToOpenNext = graphUri;
             classToOpenNext = classUuid;
+            classTypeOfClassToOpenNext = classType;
             return;
         }
         editorState.selectedClassDataset.updateValue(datasetName);
         editorState.selectedClassGraph.updateValue(graphUri);
+        editorState.selectedClassType.updateValue(classType);
         editorState.selectedClassUUID.updateValue(classUuid);
     }
 
@@ -290,6 +299,7 @@
                         {datasetOfClassToOpenNext}
                         {graphOfClassToOpenNext}
                         {classToOpenNext}
+                        {classTypeOfClassToOpenNext}
                         {closeClassEditor}
                     />
                     <div

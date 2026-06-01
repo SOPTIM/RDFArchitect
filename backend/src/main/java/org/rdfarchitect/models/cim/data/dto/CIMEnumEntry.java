@@ -36,6 +36,10 @@ public class CIMEnumEntry {
 
     private URI uri;
 
+    private String graphUri;
+
+    private String color;
+
     private RDFType type;
 
     private RDFSLabel label;

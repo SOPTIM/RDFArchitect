@@ -18,10 +18,10 @@
 <script>
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import CrossProfileDiagram from "$lib/rendering/svelteflow/CrossProfileDiagram.svelte";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "./classEditor/classEditor.svelte";
+    import MergedClassEditor from "./classEditor/mergedClassEditor.svelte";
     import RenderingWrapper from "./renderingWrapper.svelte";
 
     let classEditorPaneWidth = $state(30);
@@ -50,11 +50,9 @@
         `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
     );
 
-    const diagramType = $derived(
-        editorState.selectedDiagram.getProperty("type"),
+    const isMergedClass = $derived(
+        editorState.selectedClassType.getValue() === ClassType.MERGED_CLASS,
     );
-    const isCrossProfile = $derived(diagramType === DiagramType.CROSS_PROFILE);
-    const selectedDataset = $derived(editorState.selectedDataset.getValue());
 
     $effect(() => {
         editorState.selectedDataset.subscribe();
@@ -96,42 +94,43 @@
 </script>
 
 <div class="h-full w-full overflow-hidden">
-    {#if isCrossProfile && selectedDataset}
-        {#key selectedDataset}
-            <CrossProfileDiagram datasetName={selectedDataset} />
-        {/key}
-    {:else}
-        <Splitpanes
-            theme="opencgmes-theme"
-            class="flex h-full"
-            onresize={handleSplitPaneResize}
+    <Splitpanes
+        theme="opencgmes-theme"
+        class="flex h-full"
+        onresize={handleSplitPaneResize}
+    >
+        <Pane
+            size={isClassSelected ? 100 - classEditorPaneWidth : 100}
+            class="bg-window-background h-full overflow-hidden"
         >
-            <Pane
-                size={isClassSelected ? 100 - classEditorPaneWidth : 100}
-                class="bg-window-background h-full overflow-hidden"
-            >
-                {#key renderingKey}
-                    <div class="h-full">
-                        <RenderingWrapper />
-                    </div>
-                {/key}
-            </Pane>
+            {#key renderingKey}
+                <div class="h-full">
+                    <RenderingWrapper />
+                </div>
+            {/key}
+        </Pane>
 
-            <Pane
-                size={isClassSelected ? classEditorPaneWidth : 0}
-                minSize={isClassSelected ? 25 : 0}
-                class="h-full overflow-auto"
-            >
-                {#if isClassSelected}
-                    {#key classEditorKey}
+        <Pane
+            size={isClassSelected ? classEditorPaneWidth : 0}
+            minSize={isClassSelected ? 25 : 0}
+            class="h-full overflow-auto"
+        >
+            {#if isClassSelected}
+                {#key classEditorKey}
+                    {#if isMergedClass}
+                        <MergedClassEditor
+                            datasetName={classDatasetName}
+                            classUuid={editorState.selectedClassUUID.getValue()}
+                        />
+                    {:else}
                         <ClassEditor
                             datasetName={classDatasetName}
                             graphUri={classGraphUri}
                             classUuid={editorState.selectedClassUUID.getValue()}
                         />
-                    {/key}
-                {/if}
-            </Pane>
-        </Splitpanes>
-    {/if}
+                    {/if}
+                {/key}
+            {/if}
+        </Pane>
+    </Splitpanes>
 </div>

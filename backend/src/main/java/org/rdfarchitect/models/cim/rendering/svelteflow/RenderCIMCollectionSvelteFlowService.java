@@ -25,6 +25,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
@@ -32,6 +33,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.data.dto.CIMMergedClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
@@ -177,6 +179,8 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                             .label(cimAttribute.getLabel().getValue())
                             .type(cimAttribute.getDataType().getLabel().getValue())
                             .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
+                            .graphUri(cimAttribute.getGraphUri())
+                            .color(cimAttribute.getColor())
                             .build());
         }
 
@@ -219,14 +223,19 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * @param cimClass The CIM class
      * @return List of enum entry labels
      */
-    private List<String> getClassEnumEntries(RenderContext renderContext, CIMClass cimClass) {
-        List<String> enumEntries = new ArrayList<>();
+    private List<EnumEntryDTO> getClassEnumEntries(RenderContext renderContext, CIMClass cimClass) {
+        List<EnumEntryDTO> enumEntries = new ArrayList<>();
 
         for (var cimEnumEntry : renderContext.cimCollection.getEnumEntries()) {
             if (!cimEnumEntry.getType().getUri().equals(cimClass.getUri())) {
                 continue;
             }
-            enumEntries.add(cimEnumEntry.getLabel().getValue());
+            enumEntries.add(
+                    EnumEntryDTO.builder()
+                            .label(cimEnumEntry.getLabel().getValue())
+                            .graphUri(cimEnumEntry.getGraphUri())
+                            .color(cimEnumEntry.getColor())
+                            .build());
         }
 
         return enumEntries;
@@ -258,7 +267,18 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         List<EdgeDTO> inheritanceEdgeDTOList = new ArrayList<>();
         for (var cimClass : renderContext.cimCollection.getClasses()) {
             if (cimClass.getSuperClass() != null) {
-                inheritanceEdgeDTOList.add(assembleInheritanceEdgeDTO(renderContext, cimClass));
+                inheritanceEdgeDTOList.add(
+                        assembleInheritanceEdgeDTO(
+                                renderContext,
+                                cimClass.getUri(),
+                                cimClass.getSuperClass().getUri()));
+            }
+            if (cimClass instanceof CIMMergedClass cimMergedClass) {
+                for (var superClass : cimMergedClass.getSuperClasses()) {
+                    inheritanceEdgeDTOList.add(
+                            assembleInheritanceEdgeDTO(
+                                    renderContext, cimClass.getUri(), superClass.getUri()));
+                }
             }
         }
         return inheritanceEdgeDTOList;
@@ -267,13 +287,14 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
     /**
      * Assembles an inheritance edge from a class to its superclass.
      *
-     * @param cimClass The child class
+     * @param classURI The URI of the child class
+     * @param superClassURI The URI of the parent class
      * @return EdgeDTO representing the inheritance relationship
      */
-    private EdgeDTO assembleInheritanceEdgeDTO(RenderContext renderContext, CIMClass cimClass) {
-        var classUUID = renderContext.uriToUUIDMap.get(cimClass.getUri().toString());
-        var superClassUUID =
-                renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
+    private EdgeDTO assembleInheritanceEdgeDTO(
+            RenderContext renderContext, URI classURI, URI superClassURI) {
+        var classUUID = renderContext.uriToUUIDMap.get(classURI.toString());
+        var superClassUUID = renderContext.uriToUUIDMap.get(superClassURI.toString());
 
         return EdgeDTO.builder()
                 .id(UUID.randomUUID().toString())
@@ -340,6 +361,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                         .fromMultiplicity(fromMultiplicity)
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
+                        .graphUri(from.getGraphUri())
                         .build();
 
         return EdgeDTO.builder()

@@ -46,6 +46,16 @@ export class BackendConnection {
         });
     }
 
+    async getCrossProfileID(datasetName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramID`;
+        return fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async getGraphNames(datasetName) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs`;
         return fetch(url, {
@@ -558,12 +568,43 @@ export class BackendConnection {
         });
     }
 
+    async getCrossProfileDiagramRenderingDataForDataset(datasetName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramRendering`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async getCrossProfileDiagramForDataset(datasetName) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagram`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async getCrossProfileColorData(datasetName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramColors`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
+    async putCrossProfileColorData(datasetName, colorData) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramColors`;
+        return await fetch(url, {
+            method: "PUT",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(colorData),
             credentials: "include",
         });
     }

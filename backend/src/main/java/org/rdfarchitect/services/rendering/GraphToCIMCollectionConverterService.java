@@ -165,15 +165,29 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             CIMCollection cimCollection) {
         if (filter.getAllowedUUIDs() != null && !filter.getAllowedUUIDs().isEmpty()) {
             fetchSpecifiedClasses(graph, graphIdentifier, filter, cimCollection);
-        } else {
+        } else if (filter.getPackageUUID() != null && !filter.getPackageUUID().equals("default")) {
             fetchClassesInPackage(graph, graphIdentifier, filter, cimCollection);
             fetchExternalAssociatedClasses(graph, graphIdentifier, filter, cimCollection);
             fetchExternallyInheritanceRelatedClasses(graph, graphIdentifier, filter, cimCollection);
+        } else {
+            fetchAllClasses(graph, graphIdentifier, filter, cimCollection);
         }
 
         clearSuperClassRelations(filter, cimCollection);
         clearSuperClassRelationsToExternalClasses(filter, cimCollection);
         clearInheritanceToNonExistingClasses(cimCollection);
+    }
+
+    private void fetchAllClasses(
+            Graph graph,
+            GraphIdentifier graphIdentifier,
+            GraphFilter filter,
+            CIMCollection cimCollection) {
+        var classQueryBuilder =
+                CIMQueries.getClassesQuery(
+                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                        graphIdentifier.graphUri());
+        fetchClasses(graph, graphIdentifier, filter, cimCollection, classQueryBuilder);
     }
 
     private void clearSuperClassRelations(GraphFilter filter, CIMCollection cimCollection) {
@@ -375,7 +389,12 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                                 databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMAttributeList(attributesQuery.build());
 
-        attributeList.forEach(cimAttribute -> cimCollection.getAttributes().add(cimAttribute));
+        attributeList.forEach(
+                cimAttribute -> {
+                    cimAttribute =
+                            cimAttribute.toBuilder().graphUri(graphIdentifier.graphUri()).build();
+                    cimCollection.getAttributes().add(cimAttribute);
+                });
     }
 
     // enums
@@ -463,7 +482,12 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                                 databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMEnumEntryList(enumEntriesQuery.build());
 
-        enumEntryList.forEach(cimEnumEntry -> cimCollection.getEnumEntries().add(cimEnumEntry));
+        enumEntryList.forEach(
+                cimEnumEntry -> {
+                    cimEnumEntry =
+                            cimEnumEntry.toBuilder().graphUri(graphIdentifier.graphUri()).build();
+                    cimCollection.getEnumEntries().add(cimEnumEntry);
+                });
     }
 
     private void fetchAssociations(
@@ -502,11 +526,19 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
 
         associationList.forEach(
                 cimAssociation -> {
+                    var finalCimAssociation = cimAssociation;
                     if (cimCollection.getClasses().stream()
                             .anyMatch(
                                     cimClass ->
                                             cimClass.getUri()
-                                                    .equals(cimAssociation.getRange().getUri()))) {
+                                                    .equals(
+                                                            finalCimAssociation
+                                                                    .getRange()
+                                                                    .getUri()))) {
+                        cimAssociation =
+                                cimAssociation.toBuilder()
+                                        .graphUri(graphIdentifier.graphUri())
+                                        .build();
                         cimCollection.getAssociations().add(cimAssociation);
                     }
                 });

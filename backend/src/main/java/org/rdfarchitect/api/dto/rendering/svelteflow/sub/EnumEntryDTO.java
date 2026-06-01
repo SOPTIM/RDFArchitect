@@ -15,15 +15,17 @@
  *
  */
 
-package org.rdfarchitect.api.dto.crossProfileDiagram;
+package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
+/** DTO representing an enum entry used in the SvelteFlow node data DTO. */
 @Data
-@AllArgsConstructor
-public class GraphSourcedDTO<T> {
+@Builder
+public class EnumEntryDTO {
+
+    private String label;
     private String graphUri;
-    private String graphColor;
-    private T value;
+    private String color;
 }

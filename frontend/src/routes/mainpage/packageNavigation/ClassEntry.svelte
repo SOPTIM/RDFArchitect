@@ -34,6 +34,7 @@
         DiagramType,
         copyState,
         editorState,
+        ClassType,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -75,9 +76,11 @@
         }
         onPackChange();
         if (!editorState.selectedClassUUID.getValue()) {
+            console.warn("here: ", { diagramId });
             eventStack.executeNewestEvent(classNavEntry.id);
             editorState.selectedClassDataset.updateValue(datasetNavEntry.id);
             editorState.selectedClassGraph.updateValue(graphNavEntry.id);
+            editorState.selectedClassType.updateValue(ClassType.NORMAL_CLASS);
             editorState.selectedClassUUID.updateValue(classNavEntry.id);
             return;
         }

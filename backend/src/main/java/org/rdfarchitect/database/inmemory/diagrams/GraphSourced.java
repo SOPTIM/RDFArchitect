@@ -19,6 +19,7 @@ package org.rdfarchitect.database.inmemory.diagrams;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import java.util.List;
 
 @Data

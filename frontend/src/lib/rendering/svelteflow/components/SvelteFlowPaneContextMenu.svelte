@@ -123,15 +123,16 @@
         style={triggerStyle}
         {disabled}
     />
-    <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={openNewClassDialog}
-            {disabled}
-            faIcon={faPlus}
-        >
-            Add class
-        </ContextMenu.Item.Button>
-        {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
+    {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
+        <ContextMenu.Content>
+            <ContextMenu.Item.Button
+                onSelect={openNewClassDialog}
+                {disabled}
+                faIcon={faPlus}
+            >
+                Add class
+            </ContextMenu.Item.Button>
+
             <ContextMenu.Separator />
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faPaste} disabled={false}>
@@ -172,8 +173,8 @@
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
-        {/if}
-    </ContextMenu.Content>
+        </ContextMenu.Content>
+    {/if}
 </ContextMenu.Root>
 
 <NewClassDialog

@@ -68,6 +68,7 @@
                 });
                 editorState.selectedClassDataset.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
+                editorState.selectedClassType.updateValue(null);
                 editorState.selectedClassUUID.updateValue(null);
                 toastStore.success(
                     "Schema deleted",

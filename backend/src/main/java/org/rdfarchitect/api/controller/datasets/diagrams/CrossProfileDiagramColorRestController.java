@@ -21,29 +21,31 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
-import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
+import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
+import org.rdfarchitect.services.diagrams.CrossProfileColorUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/datasets/{datasetName}/crossprofilediagram")
+@RequestMapping("/api/datasets/{datasetName}/crossprofilediagramColors")
 @RequiredArgsConstructor
-public class CrossProfileDiagramRestController {
+public class CrossProfileDiagramColorRestController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(CrossProfileDiagramRestController.class);
+            LoggerFactory.getLogger(CrossProfileDiagramColorRestController.class);
 
-    private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
+    private final CrossProfileColorUseCase colorUseCase;
 
     @GetMapping
-    public CrossProfileDiagramDTO getCrossProfileRenderingData(
+    public CrossProfileDiagramColorDataDTO getCrossProfileColors(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -53,16 +55,41 @@ public class CrossProfileDiagramRestController {
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
+                "Received GET request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
                 datasetName,
                 originURL);
 
-        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, false, false);
+        var result = colorUseCase.getCrossProfileColors(datasetName);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
+                "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
                 datasetName,
                 originURL);
         return result;
+    }
+
+    @PutMapping
+    public void updateCrossProfileColors(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @RequestBody CrossProfileDiagramColorDataDTO colorData) {
+
+        logger.info(
+                "Received PUT request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
+                datasetName,
+                originURL);
+
+        colorUseCase.replaceCrossProfileColors(datasetName, colorData);
+
+        logger.info(
+                "Sending response to PUT request: \"/api/datasets/{{}}/crossprofilediagramColors\" from \"{}\"",
+                datasetName,
+                originURL);
     }
 }
