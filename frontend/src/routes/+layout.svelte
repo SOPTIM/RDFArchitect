@@ -212,17 +212,6 @@
             return;
         }
 
-        const target = event.target;
-        if (
-            target instanceof HTMLElement &&
-            (target.isContentEditable ||
-                target.tagName === "INPUT" ||
-                target.tagName === "TEXTAREA" ||
-                target.tagName === "SELECT")
-        ) {
-            return;
-        }
-
         const hasCtrl = event.ctrlKey || event.metaKey;
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
@@ -231,9 +220,11 @@
             return;
         }
 
-        switch (event.key.toLowerCase()) {
-            case "z":
-                event.preventDefault();
+        // Undo/Redo always fires, even when an input is focused
+        let key = event.key.toLowerCase();
+        if (key === "z" || key === "y") {
+            event.preventDefault();
+            if (key === "z") {
                 if (event.shiftKey) {
                     if (canRedo && (await redo())) {
                         await reload();
@@ -245,19 +236,33 @@
                         toastStore.info("Undone");
                     }
                 }
-                break;
-            case "y":
-                event.preventDefault();
+            } else if (key === "y"){
                 if (canRedo && (await redo())) {
                     await reload();
                     toastStore.info("Redone");
                 }
-                break;
-            case "c":
+            }
+            return;
+        }
+
+        // All other shortcuts: skip when an input-like element is focused
+        const target = event.target;
+        if (
+            target instanceof HTMLElement &&
+            (target.isContentEditable ||
+                target.tagName === "INPUT" ||
+                target.tagName === "TEXTAREA" ||
+                target.tagName === "SELECT")
+        ) {
+            return;
+        }
+
+        switch (event.code) {
+            case "KeyC":
                 event.preventDefault();
                 if (canCopyClass) copyClass();
                 break;
-            case "v":
+            case "KeyV":
                 event.preventDefault();
                 if (canPasteClass) {
                     if (event.shiftKey && isLeftAltPressed) {

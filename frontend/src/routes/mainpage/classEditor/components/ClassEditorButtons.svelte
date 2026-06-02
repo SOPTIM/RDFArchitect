@@ -40,6 +40,7 @@
     let {
         reactiveClass,
         showDiscardSaveConfirmDialog = $bindable(),
+        pendingAction = $bindable(),
         datasetOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
@@ -111,6 +112,27 @@
         }
         forceReloadTrigger.trigger();
     }
+
+    function handleDiscard() {
+        reactiveClass.reset();
+        if (pendingAction) {
+            pendingAction();
+            pendingAction = null;
+        } else {
+            editorState.selectedClassDataset.updateValue(
+                datasetOfClassToOpenNext,
+            );
+            editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
+            editorState.selectedClassUUID.updateValue(classToOpenNext);
+        }
+    }
+
+    function handleSave() {
+        saveChanges();
+        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
+        editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
+        editorState.selectedClassUUID.updateValue(classToOpenNext);
+    }
 </script>
 
 <div class="flex gap-1">
@@ -178,17 +200,8 @@
 
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}
-    onDiscard={() => {
-        reactiveClass.reset();
-        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
-        editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
-    }}
-    onSave={() => {
-        saveChanges();
-        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
-        editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
-    }}
-    disableSave={!reactiveClass?.isModified || !reactiveClass?.isValid}
+    onDiscard={handleDiscard}
+    onSave={handleSave}
+    disableSave={!reactiveClass?.isValid}
+    hideSave={!!pendingAction}
 />

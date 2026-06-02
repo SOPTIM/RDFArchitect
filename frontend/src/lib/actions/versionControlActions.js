@@ -16,8 +16,9 @@
  */
 
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-import { editorState } from "$lib/sharedState.svelte.js";
+import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
 function resolveTargets(datasetName, graphURI) {
     const dataset = datasetName ?? editorState.selectedDataset.getValue();
@@ -55,25 +56,26 @@ export async function fetchCanUndo(datasetName, graphURI) {
 }
 
 export async function undo(datasetName, graphURI) {
-    const targets = resolveTargets(datasetName, graphURI);
-    if (!targets) return false;
+    eventStack.guardAction(async () => {
+        const targets = resolveTargets(datasetName, graphURI);
+        if (!targets) return;
 
-    const res = await fetch(
-        `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/undo`,
-        {
-            method: "POST",
-            credentials: "include",
-        },
-    );
+        const res = await fetch(
+            `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/undo`,
+            {
+                method: "POST",
+                credentials: "include",
+            },
+        );
 
-    if (res.ok) {
-        console.log("Undo successful.");
-        return true;
-    }
-
-    console.log("Undo failed.");
-    toastStore.error("Undo failed", "Could not undo the last change.");
-    return false;
+        if (res.ok) {
+            console.log("Undo successful.");
+            forceReloadTrigger.trigger();
+        } else {
+            console.log("Undo failed.");
+            toastStore.error("Undo failed", "Could not undo the last change.");
+        }
+    });
 }
 
 export async function fetchCanRedo(datasetName, graphURI) {
@@ -98,23 +100,24 @@ export async function fetchCanRedo(datasetName, graphURI) {
 }
 
 export async function redo(datasetName, graphURI) {
-    const targets = resolveTargets(datasetName, graphURI);
-    if (!targets) return false;
+    eventStack.guardAction(async () => {
+        const targets = resolveTargets(datasetName, graphURI);
+        if (!targets) return;
 
-    const res = await fetch(
-        `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/redo`,
-        {
-            method: "POST",
-            credentials: "include",
-        },
-    );
+        const res = await fetch(
+            `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/redo`,
+            {
+                method: "POST",
+                credentials: "include",
+            },
+        );
 
-    if (res.ok) {
-        console.log("Redo successful.");
-        return true;
-    }
-
-    console.log("Redo failed.");
-    toastStore.error("Redo failed", "Could not redo the change.");
-    return false;
+        if (res.ok) {
+            console.log("Redo successful.");
+            forceReloadTrigger.trigger();
+        } else {
+            console.log("Redo failed.");
+            toastStore.error("Redo failed", "Could not redo the change.");
+        }
+    });
 }
