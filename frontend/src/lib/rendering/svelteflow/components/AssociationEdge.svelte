@@ -81,14 +81,14 @@
                 style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.25 - 12}px, ${pos.y - 30}px)`}
                 class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
             >
-                {data.fromMultiplicity}
+                {data.toMultiplicity}
             </div>
         {:else}
             <div
                 style:transform={`translate(-50%, -50%) translate(${edgeParams.sx + edgeParams.startX}px, ${edgeParams.sy + edgeParams.startY}px)`}
                 class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
             >
-                {data.fromMultiplicity}
+                {data.toMultiplicity}
             </div>
         {/if}
     {/if}
@@ -103,14 +103,14 @@
                 style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.75 + 12}px, ${pos.y - 30}px)`}
                 class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
             >
-                {data.toMultiplicity}
+                {data.fromMultiplicity}
             </div>
         {:else}
             <div
                 style:transform={`translate(-50%, -50%) translate(${edgeParams.tx + edgeParams.endX}px, ${edgeParams.ty + edgeParams.endY}px)`}
                 class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
             >
-                {data.toMultiplicity}
+                {data.fromMultiplicity}
             </div>
         {/if}
     {/if}
