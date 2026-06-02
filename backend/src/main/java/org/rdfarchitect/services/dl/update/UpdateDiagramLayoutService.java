@@ -84,7 +84,9 @@ public class UpdateDiagramLayoutService
                             cimClassOrEnum.getUuid());
             DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                     diagramLayoutModel,
-                    UUID.fromString(packageGraphFilter.getPackageUUID()),
+                    packageGraphFilter.getPackageUUID() == null
+                            ? diagramLayout.getDefaultPackageMRID().getUuid()
+                            : UUID.fromString(packageGraphFilter.getPackageUUID()),
                     diagramObjectMRID);
         }
 

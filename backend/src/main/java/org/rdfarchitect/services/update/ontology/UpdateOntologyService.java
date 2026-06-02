@@ -72,10 +72,10 @@ public class UpdateOntologyService
             if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
                 pm.setNsPrefix("dcat", DCAT.getURI());
             }
-            if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
+            if (pm.getNsURIPrefix(DCTerms.getURI()) == null) {
                 pm.setNsPrefix("dct", DCTerms.getURI());
             }
-            if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
+            if (pm.getNsURIPrefix(OWL2.getURI()) == null) {
                 pm.setNsPrefix("owl", OWL2.getURI());
             }
             databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);

@@ -52,9 +52,9 @@
     // Added client-side here (without persisting) so they already appear
     // in the namespace selection while the dialog is open.
     const ONTOLOGY_DEFAULT_NAMESPACES = [
-        { substitutedPrefix: "dcat", prefix: "http://www.w3.org/ns/dcat#" },
-        { substitutedPrefix: "dct", prefix: "http://purl.org/dc/terms/" },
-        { substitutedPrefix: "owl", prefix: "http://www.w3.org/2002/07/owl#" },
+        { substitutedPrefix: "dcat:", prefix: "http://www.w3.org/ns/dcat#" },
+        { substitutedPrefix: "dct:", prefix: "http://purl.org/dc/terms/" },
+        { substitutedPrefix: "owl:", prefix: "http://www.w3.org/2002/07/owl#" },
     ];
 
     let showAddKnownEntriesPopUp = $state(false);
