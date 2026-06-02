@@ -39,11 +39,24 @@ export default defineConfig({
     optimizeDeps: {
         exclude: ["tinybench"], // Add the package name here
     },
-    resolve: process.env.VITEST
-        ? {
-              conditions: ["browser"],
-          }
-        : undefined,
+    resolve: {
+        alias: {
+            // svelte-collapsible and its dependency svelte-collapse ship a
+            // malformed "exports" target ("src/index.js" rather than the
+            // spec-compliant "./src/index.js"). Vite 7's resolver tolerated
+            // this; Vite 8's rolldown-based resolver enforces the spec and
+            // fails to resolve them. Both packages are unmaintained.
+            "svelte-collapsible": path.resolve(
+                __dirname,
+                "node_modules/svelte-collapsible/src/index.js",
+            ),
+            "svelte-collapse": path.resolve(
+                __dirname,
+                "node_modules/svelte-collapse/src/index.js",
+            ),
+        },
+        conditions: process.env.VITEST ? ["browser"] : undefined,
+    },
     test: {
         environment: "jsdom",
         globals: true, // Optional: makes describe, test, expect available globally
