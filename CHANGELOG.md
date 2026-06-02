@@ -19,7 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RDFA-364: Add custom diagrams ([70641ec3](https://github.com/SOPTIM/RDFArchitect/commit/70641ec3), [#71](https://github.com/SOPTIM/RDFArchitect/pull/71))
 - Make Enter key reliably trigger primary action in all dialogs ([ef3a9e83](https://github.com/SOPTIM/RDFArchitect/commit/ef3a9e83), [#121](https://github.com/SOPTIM/RDFArchitect/pull/121))
 - RDFA-437: Use ENTSO-E application-profiles-library as submodule ([9f1eb336](https://github.com/SOPTIM/RDFArchitect/commit/9f1eb336), [#109](https://github.com/SOPTIM/RDFArchitect/pull/109))
-- Add workflow to automate changelog updates ([5bfdb56b](https://github.com/SOPTIM/RDFArchitect/commit/5bfdb56b), [#112](https://github.com/SOPTIM/RDFArchitect/pull/112))
+- RDFA-419: Add workflow to automate changelog updates ([5bfdb56b](https://github.com/SOPTIM/RDFArchitect/commit/5bfdb56b), [#112](https://github.com/SOPTIM/RDFArchitect/pull/112))
 - RDFA-504: Added config to set default stereotypes and namspaces ([78305671](https://github.com/SOPTIM/RDFArchitect/commit/78305671), [#106](https://github.com/SOPTIM/RDFArchitect/pull/106))
 - RDFA-321: Support RDF blank nodes in attribute editor for fixed and default values ([839bd5e1](https://github.com/SOPTIM/RDFArchitect/commit/839bd5e1), [#22](https://github.com/SOPTIM/RDFArchitect/pull/22))
 - RDFA-136: Show references on delete and allow selective deleting ([ef1d6ada](https://github.com/SOPTIM/RDFArchitect/commit/ef1d6ada), [#82](https://github.com/SOPTIM/RDFArchitect/pull/82))
