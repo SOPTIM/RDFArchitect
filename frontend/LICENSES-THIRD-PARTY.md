@@ -185,7 +185,7 @@
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 3.5.2
+- **Version:** 4.0.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
