@@ -204,10 +204,7 @@
             isLeftAltPressed = true;
         }
 
-        if (event.key === "Escape") {
-            if (event.defaultPrevented) {
-                return;
-            }
+        if (event.key === "Escape" && !event.defaultPrevented) {
             eventStack.executeNewestEvent();
             return;
         }
@@ -216,9 +213,7 @@
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
 
-        if (!hasCtrl && !hasCtrlAltViaAltGr) {
-            return;
-        }
+        if (!hasCtrl && !hasCtrlAltViaAltGr) return;
 
         // Undo/Redo always fires, even when an input is focused
         let key = event.key.toLowerCase();
@@ -229,23 +224,26 @@
                 console.log(`${event.code} blocked because a dialog is open.`);
                 return;
             }
+
             event.preventDefault();
-            if (key === "z") {
-                if (event.shiftKey) {
-                    if (canRedo && (await redo())) {
-                        await reload();
-                        toastStore.info("Redone");
-                    }
-                } else {
-                    if (canUndo && (await undo())) {
-                        await reload();
-                        toastStore.info("Undone");
-                    }
-                }
-            } else if (key === "y"){
+
+            const isRedo =
+                key === "y" ||
+                (key === "z" && event.shiftKey);
+
+            if (isRedo) {
                 if (canRedo && (await redo())) {
                     await reload();
                     toastStore.info("Redone");
+                } else if (!canRedo) {
+                    console.log("Redo blocked: nothing to redo.");
+                }
+            } else {
+                if (canUndo && (await undo())) {
+                    await reload();
+                    toastStore.info("Undone");
+                } else if (!canUndo) {
+                    console.log("Undo blocked: nothing to undo.");
                 }
             }
             return;
@@ -269,17 +267,16 @@
                 if (canCopyClass) copyClass();
                 break;
             case "KeyV":
+                if (!canPasteClass) break;
                 event.preventDefault();
-                if (canPasteClass) {
-                    if (event.shiftKey && isLeftAltPressed) {
-                        await pasteClass(true, false, false);
-                    } else if (event.shiftKey) {
-                        await pasteClass(false, false, true);
-                    } else if (isLeftAltPressed) {
-                        await pasteClass(false, true, false);
-                    } else {
-                        await pasteClass(false, true, true);
-                    }
+                if (event.shiftKey && isLeftAltPressed) {
+                    await pasteClass(true, false, false);
+                } else if (event.shiftKey) {
+                    await pasteClass(false, false, true);
+                } else if (isLeftAltPressed) {
+                    await pasteClass(false, true, false);
+                } else {
+                    await pasteClass(false, true, true);
                 }
                 break;
         }
