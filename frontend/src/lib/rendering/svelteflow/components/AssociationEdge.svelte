@@ -70,7 +70,7 @@
 
 <BaseEdge {id} {path} {markerStart} {markerEnd} {style} />
 <EdgeLabel>
-    {#if data.fromMultiplicity}
+    {#if data.toMultiplicity}
         {#if target === source && sourceNode.current}
             {@const pos = sourceNode.current.internals.positionAbsolute ?? {
                 x: 0,
@@ -92,7 +92,7 @@
             </div>
         {/if}
     {/if}
-    {#if data.toMultiplicity}
+    {#if data.fromMultiplicity}
         {#if target === source && targetNode.current}
             {@const pos = targetNode.current.internals.positionAbsolute ?? {
                 x: 0,
