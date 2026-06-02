@@ -191,7 +191,7 @@
 
 ### prettier-plugin-tailwindcss
 - **Package:** prettier-plugin-tailwindcss
-- **Version:** 0.7.4
+- **Version:** 0.8.0
 - **License:** MIT
 - **URL:** [https://github.com/tailwindlabs/prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss)
 

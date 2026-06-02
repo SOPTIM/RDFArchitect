@@ -28,18 +28,18 @@
         <maven.compiler.release>25</maven.compiler.release>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <surefire-plugin.version>3.5.5</surefire-plugin.version> <!-- 3.3.0 -->
+        <surefire-plugin.version>3.5.6</surefire-plugin.version> <!-- 3.3.0 -->
         <jacoco.version>0.8.14</jacoco.version> <!-- 0.8.12 -->
         <git-commit-id-maven-plugin.version>10.0.0</git-commit-id-maven-plugin.version>
         <mycila-license-plugin.version>5.0.0</mycila-license-plugin.version>
-        <spotless-maven-plugin.version>3.4.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.5.1</spotless-maven-plugin.version>
         <google-java-format.version>1.35.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <checkstyle.version>13.4.0</checkstyle.version>
+        <checkstyle.version>13.4.2</checkstyle.version>
         <spotbugs-maven-plugin.version>4.9.8.3</spotbugs-maven-plugin.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
-        <lombok.version>1.18.44</lombok.version>
+        <lombok.version>1.18.46</lombok.version>
     </properties>
     <build>
         <plugins>
@@ -318,19 +318,19 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.5</version>
+        <version>4.0.6</version>
     </parent>
     <dependencies>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>apache-jena-libs</artifactId>
             <type>pom</type>
-            <version>6.0.0</version>
+            <version>6.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.jena</groupId>
             <artifactId>jena-querybuilder</artifactId>
-            <version>6.0.0</version>
+            <version>6.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -352,7 +352,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.6</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -371,7 +371,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>4.0.5</version>
+            <version>4.0.6</version>
         </dependency>
 
         <dependency>
@@ -401,7 +401,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.44</version>
+            <version>1.18.46</version>
             <scope>provided</scope>
         </dependency>
 
