@@ -2,7 +2,7 @@
 
 ### @eslint/compat
 - **Package:** @eslint/compat
-- **Version:** 2.0.5
+- **Version:** 2.1.0
 - **License:** Apache-2.0
 - **URL:** [https://github.com/eslint/rewrite/tree/main/packages/compat#readme](https://github.com/eslint/rewrite/tree/main/packages/compat#readme)
 
@@ -56,19 +56,19 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.60.1
+- **Version:** 2.61.1
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
 ### @sveltejs/vite-plugin-svelte
 - **Package:** @sveltejs/vite-plugin-svelte
-- **Version:** 6.2.4
+- **Version:** 7.1.2
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/vite-plugin-svelte#readme](https://github.com/sveltejs/vite-plugin-svelte#readme)
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.2.2
+- **Version:** 4.3.0
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.58.2
+- **Version:** 8.60.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -103,7 +103,7 @@
 
 ### bits-ui
 - **Package:** bits-ui
-- **Version:** 2.18.0
+- **Version:** 2.18.1
 - **License:** MIT
 
 ### codemirror
@@ -126,7 +126,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.2.1
+- **Version:** 10.4.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -144,7 +144,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.17.0
+- **Version:** 3.17.1
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -156,12 +156,12 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.5.0
+- **Version:** 17.6.0
 - **License:** MIT
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 29.0.2
+- **Version:** 29.1.1
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -173,7 +173,7 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.10
+- **Version:** 8.5.15
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
@@ -185,19 +185,19 @@
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 3.5.1
+- **Version:** 3.5.2
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
 ### prettier-plugin-tailwindcss
 - **Package:** prettier-plugin-tailwindcss
-- **Version:** 0.7.2
+- **Version:** 0.7.4
 - **License:** MIT
 - **URL:** [https://github.com/tailwindlabs/prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss)
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.55.4
+- **Version:** 5.55.9
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -209,7 +209,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.6.0
+- **Version:** 1.6.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -227,7 +227,7 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.2.2
+- **Version:** 4.3.0
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -239,13 +239,13 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.58.2
+- **Version:** 8.60.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
 ### uuid
 - **Package:** uuid
-- **Version:** 13.0.1
+- **Version:** 13.0.2
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 
@@ -257,13 +257,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 7.3.2
+- **Version:** 8.0.14
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.4
+- **Version:** 4.1.7
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
