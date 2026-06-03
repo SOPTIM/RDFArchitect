@@ -74,6 +74,11 @@
         );
     }
 
+    function isDataLost(change) {
+        return change.contextDeltas?.some(
+            context => context.additions === null || context.deletions === null,
+        );
+    }
     function toggleRowExpanded() {
         setExpanded(rowKey, !getExpanded(rowKey));
     }
@@ -122,7 +127,11 @@
     <td class="w-px p-4 text-center whitespace-nowrap">
         {#if newest}
             <span class="text-default-text text-sm">Current Version</span>
-        {:else if hasTriples(change)}
+        {:else if isDataLost(change)}
+            <span class="text-default-text text-sm">
+                Can no longer be restored
+            </span>
+        {:else}
             <ButtonControl
                 disabled={readonly}
                 title={readonly ? "cannot restore in readonly dataset" : ""}
@@ -130,10 +139,6 @@
             >
                 Restore Version
             </ButtonControl>
-        {:else}
-            <span class="text-default-text text-sm">
-                Can no longer be restored
-            </span>
         {/if}
     </td>
 </tr>

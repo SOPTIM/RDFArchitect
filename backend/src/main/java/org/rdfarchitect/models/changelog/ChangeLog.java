@@ -198,28 +198,6 @@ public class ChangeLog implements TransactionParticipant {
                 });
     }
 
-    /**
-     * Buffers replacing the oldest (bottom-most) entry of the undo stack with the given entry. As a
-     * side effect, the redo stack is cleared when the mutation is applied. This is used during
-     * delta compression to replace the base entry with a compressed version.
-     *
-     * <p>If the undo stack is empty when the mutation is applied, a {@link
-     * java.util.NoSuchElementException} will be thrown at commit time.
-     *
-     * @param entry the replacement entry
-     * @throws GraphNotInATransactionException if no transaction is active
-     * @throws GraphNotInAWriteTransactionException if the active transaction is read-only
-     */
-    public void replaceOldest(ChangeLogEntry entry) {
-        checkWriteTransaction();
-        pendingMutations.add(
-                () -> {
-                    undoStack.removeLast();
-                    undoStack.addLast(entry);
-                    redoStack.clear();
-                });
-    }
-
     // -------------------------------------------------------------------------
     // read queries
     // -------------------------------------------------------------------------

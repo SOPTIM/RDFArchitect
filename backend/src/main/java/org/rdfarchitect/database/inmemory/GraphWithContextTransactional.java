@@ -41,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -71,7 +72,7 @@ public class GraphWithContextTransactional implements GraphContext {
     private final ConcurrentHashMap<UUID, CustomDiagram> customDiagrams = new ConcurrentHashMap<>();
 
     /** The fixed participants that are always part of every transaction. */
-    private final List<TransactionParticipant> coreTransactionParticipants;
+    private final List<RDFGraphDelta> graphParticipants;
 
     private final List<NamedRewindable> coreRewindables;
     private final AtomicInteger stepsSinceNamedCommit = new AtomicInteger(0);
@@ -94,7 +95,7 @@ public class GraphWithContextTransactional implements GraphContext {
         this.customSHACL =
                 new RDFGraphDelta(
                         GraphFactory.createDefaultGraph(), maxVersions, compressCount, txnContext);
-        this.coreTransactionParticipants = List.of(rdfGraph, diagramLayout, customSHACL, changeLog);
+        this.graphParticipants = List.of(rdfGraph, customSHACL);
         this.coreRewindables =
                 List.of(
                         new NamedRewindable("rdf", rdfGraph),
@@ -107,12 +108,11 @@ public class GraphWithContextTransactional implements GraphContext {
     // Helpers — build the effective participant / rewindable lists
     // -------------------------------------------------------------------------
 
-    /**
-     * Returns the core transaction participants. Custom diagrams are managed separately since they
-     * are not part of the undo/redo history.
-     */
-    private List<TransactionParticipant> allTransactionParticipants() {
-        return coreTransactionParticipants;
+    private List<TransactionParticipant> allParticipants() {
+        var all = new ArrayList<TransactionParticipant>(graphParticipants);
+        all.add(diagramLayout);
+        all.add(changeLog);
+        return all;
     }
 
     /**
@@ -182,9 +182,13 @@ public class GraphWithContextTransactional implements GraphContext {
         }
         GraphUtils.enhanceWithUUIDs(rdfGraph);
         changeLog.clearRedo();
-        allTransactionParticipants().forEach(TransactionParticipant::commit);
+        if (graphParticipants.stream().anyMatch(TransactionParticipant::hasChanges)) {
+            graphParticipants.forEach(TransactionParticipant::commit);
+            stepsSinceNamedCommit.incrementAndGet();
+        }
+        diagramLayout.commit();
+        changeLog.commit();
         customDiagrams.values().forEach(CustomDiagram::commit);
-        stepsSinceNamedCommit.incrementAndGet();
         logger.debug("Context committed.");
     }
 
@@ -349,7 +353,7 @@ public class GraphWithContextTransactional implements GraphContext {
         if (txnContext.transactionMode() == ReadWrite.READ) {
             throw new GraphTransactionException("Cannot abort a read transaction.");
         }
-        allTransactionParticipants().forEach(TransactionParticipant::abort);
+        allParticipants().forEach(TransactionParticipant::abort);
         customDiagrams.values().forEach(CustomDiagram::abort);
         logger.debug("Context aborted.");
     }
@@ -361,10 +365,9 @@ public class GraphWithContextTransactional implements GraphContext {
         }
         if (txnContext.transactionMode() == ReadWrite.WRITE
                 && !rdfGraph.isClosed()
-                && allTransactionParticipants().stream()
-                        .anyMatch(TransactionParticipant::hasChanges)) {
+                && allParticipants().stream().anyMatch(TransactionParticipant::hasChanges)) {
             logger.warn("Ending write transaction with uncommitted changes — aborting.");
-            allTransactionParticipants().forEach(TransactionParticipant::abort);
+            allParticipants().forEach(TransactionParticipant::abort);
             customDiagrams.values().forEach(CustomDiagram::abort);
         }
         var lock =

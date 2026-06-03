@@ -25,7 +25,6 @@ import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
@@ -46,7 +45,7 @@ public interface ChangeLogEntryMapper {
     default List<TripleDTO> mapTriples(WeakReference<Graph> graphReference) {
         var graph = graphReference.get();
         if (graph == null) {
-            return new ArrayList<>();
+            return null;
         }
         return graph.stream()
                 .filter(triple -> !triple.getPredicate().equals(RDFA.uuid.asNode()))

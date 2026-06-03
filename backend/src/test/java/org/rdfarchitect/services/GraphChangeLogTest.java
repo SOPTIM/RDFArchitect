@@ -167,20 +167,6 @@ class GraphChangeLogTest {
         }
 
         @Test
-        void replaceOldest_outsideTransaction_throws() {
-            assertThrows(
-                    GraphNotInATransactionException.class, () -> changeLog.replaceOldest(entry1));
-        }
-
-        @Test
-        void replaceOldest_inReadTransaction_throws() {
-            beginRead();
-            assertThrows(
-                    GraphNotInAWriteTransactionException.class,
-                    () -> changeLog.replaceOldest(entry1));
-        }
-
-        @Test
         void peekUndo_outsideTransaction_throws() {
             assertThrows(GraphNotInATransactionException.class, () -> changeLog.peekUndo());
         }
@@ -332,20 +318,6 @@ class GraphChangeLogTest {
             changeLog.abort();
 
             assertThat(changeLog.getUndoHistory()).hasSize(3);
-        }
-
-        @Test
-        void abort_discardsPendingReplaceOldest() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-            changeLog.abort();
-
-            assertThat(changeLog.getUndoHistory()).hasSize(2);
-            assertThat(changeLog.getUndoHistory().get(1)).isEqualTo(entry1);
         }
 
         @Test
@@ -1097,189 +1069,78 @@ class GraphChangeLogTest {
             assertThat(changeLog.getRedoHistory()).containsExactly(entry3);
         }
 
-        @Test
-        void getRedoHistory_afterReplaceOldest_isEmpty() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
+        // -------------------------------------------------------------------------
+        // restore
+        // -------------------------------------------------------------------------
 
-            beginWrite();
-            changeLog.moveToRedo();
-            changeLog.commit();
-            endTxn();
+        @Nested
+        class RestoreTests {
 
-            beginRead();
-            assertThat(changeLog.getRedoHistory()).hasSize(1);
-            endTxn();
+            @Test
+            void restore_toOldestVersion_leavesOnlyThatEntry() {
+                pushAndCommit(entry1);
+                pushAndCommit(entry2);
+                pushAndCommit(entry3);
 
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-            changeLog.commit();
-            endTxn();
+                beginWrite();
+                changeLog.restore(version1);
+                changeLog.commit();
 
-            beginRead();
-            assertThat(changeLog.getRedoHistory()).isEmpty();
-        }
-    }
+                assertThat(changeLog.getUndoHistory()).containsExactly(entry1);
+                assertThat(changeLog.getRedoHistory()).containsExactly(entry2, entry3);
+            }
 
-    // -------------------------------------------------------------------------
-    // restore
-    // -------------------------------------------------------------------------
+            @Test
+            void restore_toMiddleVersion_keepsOlderEntries() {
+                pushAndCommit(entry1);
+                pushAndCommit(entry2);
+                pushAndCommit(entry3);
 
-    @Nested
-    class RestoreTests {
+                beginWrite();
+                changeLog.restore(version2);
+                changeLog.commit();
 
-        @Test
-        void restore_toOldestVersion_leavesOnlyThatEntry() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-            pushAndCommit(entry3);
+                assertThat(changeLog.getUndoHistory()).containsExactly(entry2, entry1);
+                assertThat(changeLog.getRedoHistory()).containsExactly(entry3);
+            }
 
-            beginWrite();
-            changeLog.restore(version1);
-            changeLog.commit();
+            @Test
+            void restore_toCurrentVersion_noChange() {
+                pushAndCommit(entry1);
+                pushAndCommit(entry2);
 
-            assertThat(changeLog.getUndoHistory()).containsExactly(entry1);
-            assertThat(changeLog.getRedoHistory()).containsExactly(entry2, entry3);
-        }
+                beginWrite();
+                changeLog.restore(version2);
+                changeLog.commit();
 
-        @Test
-        void restore_toMiddleVersion_keepsOlderEntries() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-            pushAndCommit(entry3);
+                assertThat(changeLog.getUndoHistory()).containsExactly(entry2, entry1);
+                assertThat(changeLog.getRedoHistory()).isEmpty();
+            }
 
-            beginWrite();
-            changeLog.restore(version2);
-            changeLog.commit();
+            @Test
+            void restore_invalidVersion_clearsUndoStack() {
+                pushAndCommit(entry1);
+                pushAndCommit(entry2);
 
-            assertThat(changeLog.getUndoHistory()).containsExactly(entry2, entry1);
-            assertThat(changeLog.getRedoHistory()).containsExactly(entry3);
-        }
+                beginWrite();
+                changeLog.restore(UUID.randomUUID());
+                changeLog.commit();
 
-        @Test
-        void restore_toCurrentVersion_noChange() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
+                assertThat(changeLog.getUndoHistory()).isEmpty();
+            }
 
-            beginWrite();
-            changeLog.restore(version2);
-            changeLog.commit();
+            @Test
+            void restore_notAppliedBeforeCommit() {
+                pushAndCommit(entry1);
+                pushAndCommit(entry2);
+                pushAndCommit(entry3);
 
-            assertThat(changeLog.getUndoHistory()).containsExactly(entry2, entry1);
-            assertThat(changeLog.getRedoHistory()).isEmpty();
-        }
+                beginWrite();
+                changeLog.restore(version1);
 
-        @Test
-        void restore_invalidVersion_clearsUndoStack() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-
-            beginWrite();
-            changeLog.restore(UUID.randomUUID());
-            changeLog.commit();
-
-            assertThat(changeLog.getUndoHistory()).isEmpty();
-        }
-
-        @Test
-        void restore_notAppliedBeforeCommit() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-            pushAndCommit(entry3);
-
-            beginWrite();
-            changeLog.restore(version1);
-
-            assertThat(changeLog.getUndoHistory()).hasSize(3);
-            assertThat(changeLog.getRedoHistory()).isEmpty();
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // replaceOldest
-    // -------------------------------------------------------------------------
-
-    @Nested
-    class ReplaceOldestTests {
-
-        @Test
-        void replaceOldest_replacesBottomEntry() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-            changeLog.commit();
-
-            assertThat(changeLog.getUndoHistory()).hasSize(2);
-            assertThat(changeLog.getUndoHistory().get(0)).isEqualTo(entry2);
-            assertThat(changeLog.getUndoHistory().get(1)).isEqualTo(replacement);
-        }
-
-        @Test
-        void replaceOldest_clearsRedoStack() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-            pushAndCommit(entry3);
-
-            beginWrite();
-            changeLog.moveToRedo();
-            changeLog.commit();
-            endTxn();
-
-            beginRead();
-            assertThat(changeLog.getRedoHistory()).hasSize(1);
-            endTxn();
-
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-            changeLog.commit();
-
-            assertThat(changeLog.getRedoHistory()).isEmpty();
-        }
-
-        @Test
-        void replaceOldest_notAppliedBeforeCommit() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-
-            assertThat(changeLog.getUndoHistory().get(1)).isEqualTo(entry1);
-        }
-
-        @Test
-        void replaceOldest_singleEntry_replacesThatEntry() {
-            pushAndCommit(entry1);
-
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-            changeLog.commit();
-
-            assertThat(changeLog.getUndoHistory()).containsExactly(replacement);
-        }
-
-        @Test
-        void replaceOldest_preservesNewerEntries() {
-            pushAndCommit(entry1);
-            pushAndCommit(entry2);
-            pushAndCommit(entry3);
-
-            var replacement = createEntry("replacement", UUID.randomUUID());
-            beginWrite();
-            changeLog.replaceOldest(replacement);
-            changeLog.commit();
-
-            assertThat(changeLog.getUndoHistory()).hasSize(3);
-            assertThat(changeLog.getUndoHistory().get(0)).isEqualTo(entry3);
-            assertThat(changeLog.getUndoHistory().get(1)).isEqualTo(entry2);
-            assertThat(changeLog.getUndoHistory().get(2)).isEqualTo(replacement);
+                assertThat(changeLog.getUndoHistory()).hasSize(3);
+                assertThat(changeLog.getRedoHistory()).isEmpty();
+            }
         }
     }
 
