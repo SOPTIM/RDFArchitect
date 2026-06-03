@@ -50,16 +50,18 @@ class EventStack {
         this.actionGuard = fn;
     }
 
-    unregisterActionGuard() {
-        this.actionGuard = null;
+    unregisterActionGuard(fn) {
+        if (this.actionGuard !== fn) {
+            this.actionGuard = null;
+        }
     }
 
     guardAction(action) {
         if (this.actionGuard) {
-            this.actionGuard(action);
-            return;
+            const result = this.actionGuard(action);
+            return result ?? Promise.resolve(false);
         }
-        action();
+        return action();
     }
 }
 eventStack = new EventStack();

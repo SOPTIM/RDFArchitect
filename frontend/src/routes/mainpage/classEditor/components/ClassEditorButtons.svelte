@@ -113,6 +113,10 @@
         forceReloadTrigger.trigger();
     }
 
+    function handleCancel() {
+        pendingAction = null;
+    }
+
     function handleDiscard() {
         reactiveClass.reset();
         if (pendingAction) {
@@ -202,6 +206,7 @@
     bind:showDialog={showDiscardSaveConfirmDialog}
     onDiscard={handleDiscard}
     onSave={handleSave}
+    onCancel={handleCancel}
     disableSave={!reactiveClass?.isValid}
     hideSave={!!pendingAction}
 />

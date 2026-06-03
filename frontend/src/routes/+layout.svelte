@@ -234,14 +234,12 @@
             if (isRedo) {
                 if (canRedo && (await redo())) {
                     await reload();
-                    toastStore.info("Redone");
                 } else if (!canRedo) {
                     console.log("Redo blocked: nothing to redo.");
                 }
             } else {
                 if (canUndo && (await undo())) {
                     await reload();
-                    toastStore.info("Undone");
                 } else if (!canUndo) {
                     console.log("Undo blocked: nothing to undo.");
                 }

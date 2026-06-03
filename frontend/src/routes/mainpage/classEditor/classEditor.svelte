@@ -107,9 +107,29 @@
                     classUuid: null,
                 });
             }
+            let classData;
+            try {
+                classData = JSON.parse(resText);
+            } catch (e) {
+                console.error(
+                    "Failed to parse class data for class UUID",
+                    classUuid,
+                    "in dataset",
+                    datasetName,
+                    "and graph",
+                    graphUri,
+                    ":",
+                    e,
+                );
+                return closeClassEditor({
+                    datasetName: datasetName,
+                    graphUri: graphUri,
+                    classUuid: null,
+                });
+            }
             isDatasetReadOnly = await isReadOnly(datasetName);
             await loadContext();
-            await loadReactiveClass(cancellation, JSON.parse(resText));
+            await loadReactiveClass(cancellation, classData);
         })();
 
         return () => {
@@ -139,7 +159,7 @@
             showDiscardSaveConfirmDialog = true;
             return;
         }
-        action();
+        return action();
     }
 
     export function closeClassEditor(

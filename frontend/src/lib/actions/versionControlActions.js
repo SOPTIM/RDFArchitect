@@ -55,10 +55,10 @@ export async function fetchCanUndo(datasetName, graphURI) {
     return false;
 }
 
-export async function undo(datasetName, graphURI) {
-    eventStack.guardAction(async () => {
+export function undo(datasetName, graphURI) {
+    return eventStack.guardAction(async () => {
         const targets = resolveTargets(datasetName, graphURI);
-        if (!targets) return;
+        if (!targets) return false;
 
         const res = await fetch(
             `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/undo`,
@@ -71,9 +71,12 @@ export async function undo(datasetName, graphURI) {
         if (res.ok) {
             console.log("Undo successful.");
             forceReloadTrigger.trigger();
+            toastStore.info("Undone");
+            return true;
         } else {
             console.log("Undo failed.");
             toastStore.error("Undo failed", "Could not undo the last change.");
+            return false;
         }
     });
 }
@@ -99,10 +102,10 @@ export async function fetchCanRedo(datasetName, graphURI) {
     return false;
 }
 
-export async function redo(datasetName, graphURI) {
-    eventStack.guardAction(async () => {
+export function redo(datasetName, graphURI) {
+    return eventStack.guardAction(async () => {
         const targets = resolveTargets(datasetName, graphURI);
-        if (!targets) return;
+        if (!targets) return false;
 
         const res = await fetch(
             `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/redo`,
@@ -115,9 +118,12 @@ export async function redo(datasetName, graphURI) {
         if (res.ok) {
             console.log("Redo successful.");
             forceReloadTrigger.trigger();
+            toastStore.info("Redone");
+            return true;
         } else {
             console.log("Redo failed.");
             toastStore.error("Redo failed", "Could not redo the change.");
+            return false;
         }
     });
 }
