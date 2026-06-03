@@ -108,6 +108,7 @@ public class UpdateClassLayoutService
                     DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                             diagramLayoutModel,
                             doMRID,
+                            resolvedPackageUUID,
                             classPositionDTO.getXPosition(),
                             classPositionDTO.getYPosition());
                     continue;
@@ -151,6 +152,7 @@ public class UpdateClassLayoutService
                 DiagramLayoutServiceUtils.insertDiagramObjectPoint(
                         diagramLayoutModel,
                         doMRID,
+                        diagramUUID,
                         classPositionDTO.getXPosition(),
                         classPositionDTO.getYPosition());
                 continue;
@@ -212,7 +214,8 @@ public class UpdateClassLayoutService
                 var doMRID =
                         DiagramLayoutServiceUtils.insertDiagramObject(
                                 diagramLayoutModel, diagramUUID, "", cls.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, doMRID);
+                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                        diagramLayoutModel, diagramUUID, doMRID);
             }
             ctx.commit();
         }
@@ -260,7 +263,8 @@ public class UpdateClassLayoutService
             var doMRID =
                     DiagramLayoutServiceUtils.insertDiagramObject(
                             diagramLayoutModel, diagramUUID, "", cls.getUuid());
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(diagramLayoutModel, doMRID);
+            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                    diagramLayoutModel, diagramUUID, doMRID);
         }
     }
 
