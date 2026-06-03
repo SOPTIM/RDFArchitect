@@ -71,7 +71,7 @@ public class UpdateClassLayoutService
         float xPosition = classLayoutPosition != null ? classLayoutPosition.getXPosition() : 0;
         float yPosition = classLayoutPosition != null ? classLayoutPosition.getYPosition() : 0;
         DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                diagramLayoutModel, doMRID, xPosition, yPosition);
+                diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
     }
 
     @Override

@@ -48,6 +48,15 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+    // Namespaces that the backend auto-adds when an ontology is created.
+    // Added client-side here (without persisting) so they already appear
+    // in the namespace selection while the dialog is open.
+    const ONTOLOGY_DEFAULT_NAMESPACES = [
+        { substitutedPrefix: "dcat:", prefix: "http://www.w3.org/ns/dcat#" },
+        { substitutedPrefix: "dct:", prefix: "http://purl.org/dc/terms/" },
+        { substitutedPrefix: "owl:", prefix: "http://www.w3.org/2002/07/owl#" },
+    ];
+
     let showAddKnownEntriesPopUp = $state(false);
     let showDiscardSaveConfirmDialog = $state(false);
 
@@ -63,11 +72,26 @@
 
     let disableSubmit = $derived(!hasChanges || !isValid);
 
+    /**
+     * Returns the namespace list extended with the ontology default
+     * namespaces (dcat, dct, owl) that are missing. A namespace counts as
+     * present if its IRI (`prefix`) already exists. Nothing is persisted here;
+     * the backend adds these on save when the ontology is created.
+     */
+    function withOntologyDefaultNamespaces(currentNamespaces) {
+        const existing = currentNamespaces ?? [];
+        const missing = ONTOLOGY_DEFAULT_NAMESPACES.filter(
+            defaultNs => !existing.some(ns => ns.prefix === defaultNs.prefix),
+        );
+        return [...existing, ...missing];
+    }
+
     async function onOpen() {
         if (!namespaces) {
             namespaces = await getNamespaces(dataset);
         }
 
+        namespaces = withOntologyDefaultNamespaces(namespaces);
         const resolvedNamespaces = namespaces ?? [];
 
         if (!ontology) {
@@ -113,7 +137,7 @@
                     ontology.uuid,
                     ontology.namespace,
                     ontology.entries,
-                    namespaces ?? [],
+                    namespaces ?? withOntologyDefaultNamespaces([]),
                 );
             }
             ontologyObject.save();
