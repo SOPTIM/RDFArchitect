@@ -36,17 +36,35 @@ public interface PackageMapper {
 
     PackageMapper INSTANCE = Mappers.getMapper(PackageMapper.class);
 
-    @Mapping(target = "label", source = "uri.suffix")
-    @Mapping(target = "prefix", source = "uri.prefix")
-    @Mapping(target = "comment", source = "comment.value")
-    PackageDTO toDTO(CIMPackage packageCIM);
-
-    List<PackageDTO> toDTOList(List<CIMPackage> packageCIMList);
-
     @Mapping(target = "uri", source = ".")
     CIMPackage toCIMObject(PackageDTO dto);
 
     List<CIMPackage> toCIMObjectList(List<PackageDTO> dtoList);
+
+    default PackageDTO toDTO(CIMPackage packageCIM) {
+        if (packageCIM == null) {
+            return null;
+        }
+        var dto = new PackageDTO();
+        dto.setUuid(packageCIM.getUuid());
+        if (packageCIM.getUri() == null) {
+            dto.setLabel(packageCIM.getLabel() != null ? packageCIM.getLabel().getValue() : null);
+            dto.setPrefix(null);
+        } else {
+            dto.setLabel(packageCIM.getUri().getSuffix());
+            dto.setPrefix(packageCIM.getUri().getPrefix());
+        }
+        dto.setComment(
+                packageCIM.getComment() != null ? packageCIM.getComment().getValue() : null);
+        return dto;
+    }
+
+    default List<PackageDTO> toDTOList(List<CIMPackage> packageCIMList) {
+        if (packageCIMList == null) {
+            return null;
+        }
+        return packageCIMList.stream().map(this::toDTO).toList();
+    }
 
     default BelongsToCategoryDTO mapBelongsToCategory(CIMSBelongsToCategory belongsToCategory) {
         if (belongsToCategory == null) {

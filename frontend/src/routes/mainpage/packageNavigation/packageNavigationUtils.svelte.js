@@ -66,7 +66,7 @@ export function getUri(resource) {
         return resource;
     }
     const uri = resource.uri ? resource.uri : resource;
-    return uri.prefix ? uri.prefix + uri.suffix : uri.suffix;
+    return (uri.prefix ?? "") + (uri.suffix ?? "");
 }
 
 export function getPackageId(pack) {

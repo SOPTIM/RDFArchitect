@@ -20,6 +20,7 @@
         "@sveltejs/kit": "^2.5.27",
         "@sveltejs/vite-plugin-svelte": "^7.0.0",
         "@types/eslint": "^9.6.0",
+        "@types/valid-url": "^1.0.7",
         "@typescript-eslint/parser": "^8.24.0",
         "autoprefixer": "^10.4.20",
         "eslint": "^10.0.0",
@@ -60,6 +61,7 @@
         "svelte-fa": "^4.0.4",
         "svelte-splitpanes": "^8.0.9",
         "uuid": "^14.0.0",
+        "valid-url": "^1.0.9",
         "validate-iri": "^1.0.1"
     }
 }

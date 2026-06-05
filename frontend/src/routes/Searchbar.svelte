@@ -26,6 +26,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
     import {
         DiagramType,
         editorState,
@@ -161,7 +162,7 @@
     }
 
     function formatSearchResult(result) {
-        let path = `${result.datasetName}/${getSuffix(result.graphUri)}/`;
+        let path = `${result.datasetName}/${new URI(result.graphUri).suffix}/`;
         if (result.type !== "PACKAGE") {
             if (result.packageLabel) {
                 path += `${getPackageDisplayLabel(result.packageLabel.value)}/`;
@@ -180,11 +181,6 @@
             return getPackageDisplayLabel(result.label.value);
         }
         return result.label.value;
-    }
-
-    function getSuffix(uri) {
-        const parts = uri.split("#");
-        return parts[parts.length - 1];
     }
 
     export function clickOutside(node) {
