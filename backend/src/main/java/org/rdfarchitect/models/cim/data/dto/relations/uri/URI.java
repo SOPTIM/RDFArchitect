@@ -21,13 +21,13 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.irix.IRIException;
+import org.apache.jena.irix.IRIx;
 
-@Data
 @NoArgsConstructor
 @JsonDeserialize(using = URIDeserializer.class)
 @Schema(
@@ -36,29 +36,58 @@ import org.apache.jena.graph.NodeFactory;
                         + "to json), the object structure ist always used.")
 public class URI {
 
-    private String prefix;
-    private String suffix;
+    private IRIx iri;
 
     public URI(String uri) {
-        String[] split = uri.split("#", 2);
-        if (split.length == 2) {
-            // split
-            prefix = split[0] + "#";
-            suffix = split[1];
-        } else {
-            prefix = null;
-            suffix = uri;
+        if (uri == null) {
+            throw new IllegalArgumentException("URI must not be null");
+        }
+        if (uri.isEmpty()) {
+            throw new IllegalArgumentException("URI must not be empty");
+        }
+        try {
+            this.iri = IRIx.create(uri);
+        } catch (IRIException e) {
+            throw new IllegalArgumentException("Invalid IRI: " + uri, e);
+        }
+        if (getSuffix().isEmpty()) {
+            throw new IllegalArgumentException("IRI must have a local name: " + uri);
+        }
+        if (getPrefix() == null || getPrefix().isEmpty()) {
+            throw new IllegalArgumentException("IRI must have a namespace: " + uri);
         }
     }
 
+    public String getPrefix() {
+        String full = iri.str();
+        int hash = full.indexOf('#');
+        if (hash >= 0) {
+            return full.substring(0, hash + 1);
+        }
+        int slash = full.lastIndexOf('/');
+        return slash >= 0 ? full.substring(0, slash + 1) : null;
+    }
+
+    public String getSuffix() {
+        String full = iri.str();
+        int hash = full.indexOf('#');
+        if (hash >= 0) {
+            return full.substring(hash + 1);
+        }
+        int slash = full.lastIndexOf('/');
+        return slash >= 0 ? full.substring(slash + 1) : full;
+    }
+
+    @Override
     public String toString() {
-        return prefix + suffix;
+        return iri.str();
     }
 
     public Node toNode() {
-        return NodeFactory.createURI(this.toString());
+        return NodeFactory.createURI(iri.str());
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (obj instanceof URI other) {
             return this.toString().equals(other.toString());
@@ -66,6 +95,7 @@ public class URI {
         return false;
     }
 
+    @Override
     public int hashCode() {
         return this.toString().hashCode();
     }

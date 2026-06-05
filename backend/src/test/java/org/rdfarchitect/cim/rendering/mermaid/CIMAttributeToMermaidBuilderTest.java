@@ -76,7 +76,7 @@ class CIMAttributeToMermaidBuilderTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"datatype", "var", "x", "1", "\"sdf!§$", ""})
+    @ValueSource(strings = {"datatype", "var", "x", "1", "Float", "String"})
     void build_validAttributeWithDifferentDataTypes_returnsMermaidAttribute(String dataType) {
         // Arrange
         var attribute =

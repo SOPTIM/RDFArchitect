@@ -21,6 +21,7 @@ import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.rdf.model.Model;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
 import org.rdfarchitect.shacl.dto.PropertyShapesWrapper;
@@ -128,10 +129,10 @@ public class PropertyShapeToClassAssigner {
                         PropertyShapesWrapper.builder()
                                 .domain(classUUID)
                                 .propertyType("attribute")
-                                .label(propertyUri.split("#", 2)[1])
+                                .label(new URI(propertyUri).getSuffix())
                                 .propertyShapes(propertyShapesOfProperty)
                                 .build();
-                propertyShapeWrapper.setLabel(propertyUri.split("#", 2)[1]);
+                propertyShapeWrapper.setLabel(new URI(propertyUri).getSuffix());
                 propertyShapeWrapper.setPropertyShapes(propertyShapesOfProperty);
                 propertyShapes.add(propertyShapeWrapper);
             }
@@ -196,7 +197,7 @@ public class PropertyShapeToClassAssigner {
                         PropertyShapesWrapper.builder()
                                 .domain(classUUID)
                                 .propertyType("association")
-                                .label(propertyUri.split("#", 2)[1])
+                                .label(new URI(propertyUri).getSuffix())
                                 .propertyShapes(
                                         propertyShapeFetcher.getPropertyShapesOfProperty(
                                                 dataset.getNamedModel(ONTOLOGY_GRAPH_URI),
@@ -248,7 +249,7 @@ public class PropertyShapeToClassAssigner {
                         PropertyShapesWrapper.builder()
                                 .domain(classUUID)
                                 .propertyType("sparql")
-                                .label(propertyShapeUri.split("#", 2)[1])
+                                .label(new URI(propertyShapeUri).getSuffix())
                                 .propertyShapes(new ArrayList<>(List.of(propertyShapesOfProperty)))
                                 .build();
                 propertyShapes.add(propertyShapeWrapper);
@@ -309,7 +310,7 @@ public class PropertyShapeToClassAssigner {
                 var querySolution = results.next();
                 var propertyShapeUri = querySolution.getResource("propertyShape").getURI();
                 // Check if the property shape is a super class attribute
-                String localName = propertyShapeUri.split("#", 2)[1];
+                String localName = new URI(propertyShapeUri).getSuffix();
                 boolean isSuperClassAttribute =
                         superClasses.stream()
                                 .map(sc -> sc.getLabel().getValue())
@@ -325,7 +326,7 @@ public class PropertyShapeToClassAssigner {
                         PropertyShapesWrapper.builder()
                                 .domain(classUUID)
                                 .propertyType("other")
-                                .label(propertyShapeUri.split("#", 2)[1])
+                                .label(new URI(propertyShapeUri).getSuffix())
                                 .propertyShapes(new ArrayList<>(List.of(propertyShapesOfProperty)))
                                 .build();
                 propertyShapesWrapperList.add(propertyShapeWrapper);
