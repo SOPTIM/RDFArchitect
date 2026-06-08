@@ -45,8 +45,9 @@
         editorState,
         forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
-
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
+
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import FilterViewDialog from "../../FilterViewDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
@@ -244,11 +245,11 @@
     }
 
     async function enableEditing(datasetName) {
-        await bec.enableEditing(datasetName);
+        datasetStore.updateReadonly(datasetName, false);
     }
 
     async function disableEditing(datasetName) {
-        await bec.disableEditing(datasetName);
+        datasetStore.updateReadonly(datasetName, true);
     }
 
     function copyClass() {

@@ -22,6 +22,8 @@ import {
     deleteDataset,
     CimPrefixPair,
     replaceNamespaces,
+    enableEditing,
+    disableEditing,
 } from "../api/generated";
 
 export type DatasetInfo = {
@@ -168,7 +170,15 @@ function createDatasetStore() {
         return { error: null };
     }
 
-    function updateReadonly(datasetName: string, readonly: boolean) {
+    async function updateReadonly(datasetName: string, readonly: boolean) {
+        const res = readonly
+            ? await disableEditing({ path: { datasetName } })
+            : await enableEditing({ path: { datasetName } });
+
+        if (res?.error) {
+            return { error: res };
+        }
+
         update(s => ({
             ...s,
             data:
@@ -176,6 +186,8 @@ function createDatasetStore() {
                     d.label === datasetName ? { ...d, readonly } : d,
                 ) ?? null,
         }));
+
+        return { error: null };
     }
 
     return {

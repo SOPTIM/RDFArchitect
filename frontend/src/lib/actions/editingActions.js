@@ -24,11 +24,8 @@
  * editor state, etc.) remain the caller's responsibility.
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
 /**
  * Make the dataset editable. Toasts on success and failure.
@@ -38,8 +35,8 @@ const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
  */
 export async function enableEditing(datasetName) {
     if (!datasetName) return false;
-    const res = await bec.enableEditing(datasetName);
-    if (res && res.ok === false) {
+    const { error } = datasetStore.updateReadonly(datasetName, false);
+    if (error) {
         toastStore.error(
             "Could not enable editing",
             `Dataset "${datasetName}" remains read-only.`,
@@ -61,8 +58,8 @@ export async function enableEditing(datasetName) {
  */
 export async function disableEditing(datasetName) {
     if (!datasetName) return false;
-    const res = await bec.disableEditing(datasetName);
-    if (res && res.ok === false) {
+    const { error } = await datasetStore.updateReadonly(datasetName, true);
+    if (error) {
         toastStore.error(
             "Could not disable editing",
             `Dataset "${datasetName}" remains editable.`,
