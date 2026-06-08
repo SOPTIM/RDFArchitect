@@ -54,8 +54,8 @@ public interface PackageMapper {
             dto.setLabel(packageCIM.getUri().getSuffix());
             dto.setPrefix(packageCIM.getUri().getPrefix());
         }
-        dto.setComment(
-                packageCIM.getComment() != null ? packageCIM.getComment().getValue() : null);
+        dto.setComment(packageCIM.getComment() != null ? packageCIM.getComment().getValue() : null);
+        dto.setBelongsToCategory(mapBelongsToCategory(packageCIM.getBelongsToCategory()));
         return dto;
     }
 
