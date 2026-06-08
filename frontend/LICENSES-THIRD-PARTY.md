@@ -78,6 +78,12 @@
 - **License:** MIT
 - **URL:** [https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/eslint](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/eslint)
 
+### @types/valid-url
+- **Package:** @types/valid-url
+- **Version:** 1.0.7
+- **License:** MIT
+- **URL:** [https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/valid-url](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/valid-url)
+
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
 - **Version:** 8.60.1
@@ -248,6 +254,12 @@
 - **Version:** 14.0.0
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
+
+### valid-url
+- **Package:** valid-url
+- **Version:** 1.0.9
+- **License:** Unknown
+- **URL:** [git://github.com/ogt/valid-url](git://github.com/ogt/valid-url)
 
 ### validate-iri
 - **Package:** validate-iri
