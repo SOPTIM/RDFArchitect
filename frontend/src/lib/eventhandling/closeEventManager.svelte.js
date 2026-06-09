@@ -51,7 +51,7 @@ class EventStack {
     }
 
     unregisterActionGuard(fn) {
-        if (this.actionGuard !== fn) {
+        if (this.actionGuard === fn) {
             this.actionGuard = null;
         }
     }

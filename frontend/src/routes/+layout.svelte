@@ -227,9 +227,7 @@
 
             event.preventDefault();
 
-            const isRedo =
-                key === "y" ||
-                (key === "z" && event.shiftKey);
+            const isRedo = key === "y" || (key === "z" && event.shiftKey);
 
             if (isRedo) {
                 if (canRedo && (await redo())) {
