@@ -83,7 +83,11 @@ public class UpdateDiagramLayoutService
                             cimClassOrEnum.getLabel().getValue(),
                             cimClassOrEnum.getUuid());
             DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramObjectMRID);
+                    diagramLayoutModel,
+                    packageGraphFilter.getPackageUUID() == null
+                            ? diagramLayout.getDefaultPackageMRID().getUuid()
+                            : UUID.fromString(packageGraphFilter.getPackageUUID()),
+                    diagramObjectMRID);
         }
 
         // create DOs and DOPs for each frontend diagram
@@ -102,7 +106,7 @@ public class UpdateDiagramLayoutService
                                 cimClassOrEnum.getLabel().getValue(),
                                 cimClassOrEnum.getUuid());
                 DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        diagramLayoutModel, diagramObjectMRID);
+                        diagramLayoutModel, cimPackage.getUuid(), diagramObjectMRID);
             }
         }
     }
@@ -173,7 +177,7 @@ public class UpdateDiagramLayoutService
                                 cimClass.getLabel().getValue(),
                                 cimClass.getUuid());
                 DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        diagramLayoutModel, diagramObjectMRID);
+                        diagramLayoutModel, diagramUUID, diagramObjectMRID);
             }
         }
     }

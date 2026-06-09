@@ -39,4 +39,8 @@ public class RDFSComment {
         return ResourceFactory.createTypedLiteral(
                 value, TypeMapper.getInstance().getSafeTypeByName(format.toString()));
     }
+
+    public Literal asLiteral() {
+        return ResourceFactory.createPlainLiteral(value);
+    }
 }

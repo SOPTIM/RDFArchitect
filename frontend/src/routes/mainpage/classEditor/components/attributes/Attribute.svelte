@@ -82,10 +82,10 @@
                 classEditorContext.getSubstitutedNamespace(datatype.prefix) +
                 ":" +
                 datatype.label}
-            callOnValidChange={newDatatype =>
-                (attribute.datatype.value = newDatatype
+            callOnChange={newDatatype =>
+                (attribute.datatype.value = newDatatype?.prefix
                     ? newDatatype.prefix + newDatatype.label
-                    : null)}
+                    : (newDatatype ?? null))}
             {readonly}
             tooltip={attribute.datatype.value}
             buttons={getControlButtonsForReactiveObject(

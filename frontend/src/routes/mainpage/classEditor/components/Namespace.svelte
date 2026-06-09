@@ -95,8 +95,8 @@
             optionObjectList={namespaces}
             accessDisplayData={namespace => namespace.substitutedPrefix}
             accessIdentifier={getNsPrefixNsUriString}
-            callOnValidChange={namespace =>
-                trickleDownNamespaceChange(namespace.prefix)}
+            callOnChange={namespace =>
+                trickleDownNamespaceChange(namespace?.prefix ?? namespace)}
             {readonly}
             buttons={getControlButtonsForReactiveObject(
                 namespace,

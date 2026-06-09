@@ -64,6 +64,9 @@ public class QueryClassService
                             graphIdentifier.graphUri(),
                             databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                             classUUID);
+            if (cimClass == null) {
+                return null;
+            }
             return umlAdaptedClassMapper.toDTO(cimClass);
         } finally {
             if (graph != null) {

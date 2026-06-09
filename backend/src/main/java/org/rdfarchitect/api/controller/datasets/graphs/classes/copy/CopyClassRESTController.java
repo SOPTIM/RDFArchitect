@@ -1,0 +1,112 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.api.controller.datasets.graphs.classes.copy;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+
+import lombok.RequiredArgsConstructor;
+
+import org.rdfarchitect.api.dto.CopyClassRequestDTO;
+import org.rdfarchitect.api.dto.CopyClassResponseDTO;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.services.update.classes.CopyClassUseCase;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
+
+@RestController
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/copy")
+@RequiredArgsConstructor
+public class CopyClassRESTController {
+
+    private static final Logger logger = LoggerFactory.getLogger(CopyClassRESTController.class);
+
+    private final ExpandURIUseCase expandURIUseCase;
+    private final CopyClassUseCase copyClassUseCase;
+
+    @Operation(
+            summary = "copy a class",
+            description = "Create a copy of a class in the specified graph")
+    @PostMapping
+    public CopyClassResponseDTO copyClass(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description =
+                                    "Contains the information of the target where the class should be copied to. Also includes if the class should be copied only abstract or "
+                                            + "fully.")
+                    @RequestBody
+                    CopyClassRequestDTO copyClassRequest) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" from \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
+
+        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
+
+        var targetExtendedGraphURI =
+                expandURIUseCase.expandUri(
+                        copyClassRequest.getTargetDatasetName(),
+                        copyClassRequest.getTargetGraphURI());
+        var targetGraphIdentifier =
+                new GraphIdentifier(
+                        copyClassRequest.getTargetDatasetName(), targetExtendedGraphURI);
+
+        var response =
+                copyClassUseCase.copyClass(
+                        graphIdentifier,
+                        UUID.fromString(classUUID),
+                        targetGraphIdentifier,
+                        copyClassRequest);
+
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/copy\" to \"{}\".",
+                datasetName,
+                graphURI,
+                classUUID,
+                originURL);
+
+        return response;
+    }
+}

@@ -21,10 +21,10 @@
 
     import ItemBase from "./ItemBase.svelte";
 
-    let { faIcon, children, variant = "default" } = $props();
+    let { faIcon, children, variant = "default", disabled = false } = $props();
 </script>
 
-<ItemBase disabled={false} {variant}>
+<ItemBase {disabled} {variant}>
     <!-- Left -->
     <div class="menu-icon">
         <Fa icon={faIcon} />

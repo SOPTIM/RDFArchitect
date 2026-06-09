@@ -69,8 +69,11 @@
                 classEditorContext.getSubstitutedNamespace(cls.prefix) +
                 ":" +
                 cls.label}
-            callOnValidChange={newSuperClass =>
-                (superClass.value = newSuperClass.uuid)}
+            callOnChange={newSuperClass =>
+                (superClass.value =
+                    newSuperClass?.uuid !== undefined
+                        ? newSuperClass.uuid
+                        : newSuperClass)}
             {readonly}
             buttons={getControlButtonsForReactiveObject(superClass, readonly)}
         />

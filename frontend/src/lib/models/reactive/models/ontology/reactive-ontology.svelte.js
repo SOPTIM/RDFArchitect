@@ -24,16 +24,19 @@ import {
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 export class ReactiveOntology {
-    constructor(uuid = null, namespace = "", entries = []) {
+    constructor(uuid = null, namespace = "", entries = [], namespaces = []) {
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
-        this.namespace = new ReactiveValueWrapper(
-            namespace,
-            isInvalidNamespace,
+        this.namespace = new ReactiveValueWrapper(namespace, namespace =>
+            isInvalidNamespace(namespace, namespaces),
         );
         this.entries = new ReactiveObjectsArrayWrapper(
             entries,
             ReactiveOntologyEntry,
         );
+    }
+
+    static empty(namespaces = []) {
+        return new ReactiveOntology(null, "", [], namespaces);
     }
 
     /**

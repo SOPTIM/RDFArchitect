@@ -24,12 +24,17 @@
         faMinus,
         faObjectGroup,
         faTrash,
+        faCopy,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        copyState,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
@@ -102,6 +107,12 @@
         selectClass();
         focusClassInDiagram();
     }
+
+    function copyClass() {
+        copyState.classUUID.updateValue(classNavEntry.id);
+        copyState.graphURI.updateValue(graphNavEntry.id);
+        copyState.datasetName.updateValue(datasetNavEntry.id);
+    }
 </script>
 
 <ContextMenu.Root>
@@ -121,6 +132,14 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
+        <ContextMenu.Item.Button
+            onSelect={copyClass}
+            faIcon={faCopy}
+            altText="Ctrl+C"
+        >
+            Copy
+        </ContextMenu.Item.Button>
+        <ContextMenu.Separator />
         <ContextMenu.Item.Button
             onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}

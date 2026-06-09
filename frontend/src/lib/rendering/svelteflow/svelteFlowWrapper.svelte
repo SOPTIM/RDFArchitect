@@ -141,16 +141,34 @@
     }
 
     /**
-     * Initializes nodeOrder from inputNodes on first load.
-     * Sorts by position.z from the backend so persisted order is restored.
-     * No need to handle add/remove since the diagram reloads in those cases.
+     * Synchronizes nodeOrder with the current set of nodes.
+     *
+     * - On first load, initializes the order from the backend's persisted
+     *   position.z so the saved stacking order is restored.
+     * - On subsequent updates, removes nodes that no longer exist and appends
+     *   newly added nodes at the end so they appear in front (highest zIndex).
      */
     function syncNodeOrder(nextNodes) {
+        const nextIds = new Set(nextNodes.map(n => n.id));
+
         if (nodeOrder.length === 0) {
+            // Initial load: sort by persisted z-position
             nodeOrder = [...nextNodes]
                 .sort((a, b) => (a.position?.z ?? 0) - (b.position?.z ?? 0))
                 .map(n => n.id);
+            return;
         }
+
+        // Drop nodes that no longer exist from the order
+        const existingOrder = nodeOrder.filter(id => nextIds.has(id));
+
+        // Append new nodes at the end -> they appear in front (highest zIndex)
+        const knownIds = new Set(existingOrder);
+        const newIds = nextNodes
+            .filter(n => !knownIds.has(n.id))
+            .map(n => n.id);
+
+        nodeOrder = [...existingOrder, ...newIds];
     }
 
     function applyZIndicesFromOrder(diagramNodes) {
@@ -362,9 +380,6 @@
         event.preventDefault();
         event.stopPropagation();
         closeContextMenus();
-        if (isDatasetReadOnly) {
-            return;
-        }
         contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
@@ -592,7 +607,7 @@
         onpaneclick={closeContextMenus}
         onpanecontextmenu={handlePaneContextMenu}
         onedgecontextmenu={handleEdgeContextMenu}
-        onnodedragstart={({ node }) => bringToFrontTemporarily(node.id)}
+        onnodedragstart={({ node }) => bringToFrontTemporarily(node?.id)}
         onnodedragstop={handleNodeMove}
         selectionMode={"full"}
         connectionMode={"loose"}
@@ -613,7 +628,8 @@
     />
     <SvelteFlowClassContextMenu
         request={classContextMenuRequest}
-        disabled={isDatasetReadOnly || !contextMenuClass}
+        disabled={!contextMenuClass}
+        readOnly={isDatasetReadOnly}
         {contextMenuClass}
         datasetName={editorState.selectedDataset.getValue()}
         graphUri={editorState.selectedGraph.getValue()}

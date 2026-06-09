@@ -20,9 +20,7 @@ import {
     isInvalidLabel,
     isInvalidMultiplicityLowerBound,
     isInvalidMultiplicityUpperBound,
-    isInvalidNamespace,
     isInvalidUuid,
-    isInvalidDatatypeUri,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 export class ReactiveAttribute {
@@ -39,10 +37,7 @@ export class ReactiveAttribute {
     } = {}) {
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.label = new ReactiveValueWrapper(label, isInvalidLabel);
-        this.namespace = new ReactiveValueWrapper(
-            namespace,
-            isInvalidNamespace,
-        );
+        this.namespace = new ReactiveValueWrapper(namespace);
         this.multiplicityLowerBound = new ReactiveValueWrapper(
             multiplicityLowerBound,
             lowerBound =>
@@ -59,10 +54,7 @@ export class ReactiveAttribute {
                     this.multiplicityLowerBound.value,
                 ),
         );
-        this.datatype = new ReactiveValueWrapper(
-            datatype,
-            isInvalidDatatypeUri,
-        );
+        this.datatype = new ReactiveValueWrapper(datatype);
         this.comment = new ReactiveValueWrapper(comment);
         this.fixedValue = new ReactiveValueWrapper(fixedValue);
         this.defaultValue = new ReactiveValueWrapper(defaultValue);

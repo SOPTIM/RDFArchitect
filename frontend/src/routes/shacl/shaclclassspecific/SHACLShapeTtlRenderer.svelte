@@ -61,13 +61,16 @@
     onMount(() => setUpLocalLists());
 
     function setUpLocalLists() {
-        localNodeShapesList = JSON.parse(JSON.stringify(nodeShapesList));
-        localPropertyShapesWrapperList = JSON.parse(
-            JSON.stringify(propertyShapesWrapperList),
-        );
-        localDerivedPropertyShapesList = JSON.parse(
-            JSON.stringify(derivedPropertyShapesWrapperList),
-        );
+        if (nodeShapesList)
+            localNodeShapesList = JSON.parse(JSON.stringify(nodeShapesList));
+        if (propertyShapesWrapperList)
+            localPropertyShapesWrapperList = JSON.parse(
+                JSON.stringify(propertyShapesWrapperList),
+            );
+        if (derivedPropertyShapesWrapperList)
+            localDerivedPropertyShapesList = JSON.parse(
+                JSON.stringify(derivedPropertyShapesWrapperList),
+            );
     }
 
     function putChanges() {

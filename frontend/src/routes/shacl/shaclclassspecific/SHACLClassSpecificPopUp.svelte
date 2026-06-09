@@ -143,10 +143,10 @@
                             />
                         {:else}
                             <SHACLShapeTtlRenderer
-                                namespaces={customShacl.namespaces}
-                                nodeShapesList={customShacl.nodeShapes}
-                                propertyShapesWrapperList={customShacl.propertyShapes}
-                                derivedPropertyShapesWrapperList={customShacl.derivedPropertyShapes}
+                                namespaces={customShacl?.namespaces}
+                                nodeShapesList={customShacl?.nodeShapes}
+                                propertyShapesWrapperList={customShacl?.propertyShapes}
+                                derivedPropertyShapesWrapperList={customShacl?.derivedPropertyShapes}
                                 readOnly={false}
                             />
                         {/if}

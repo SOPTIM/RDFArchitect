@@ -34,6 +34,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
@@ -243,5 +244,138 @@ class UpdateClassServiceTest {
         } finally {
             graph.end();
         }
+    }
+
+    @Test
+    void copyClass_copyExistingClass() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(false);
+        request.setCopyAttributes(true);
+        request.setCopyAssociations(false);
+
+        updateClassService.copyClass(
+                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.READ);
+
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isTrue();
+
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
+                                    RDFS.label.asNode(),
+                                    new RDFSLabel("oldLabel-Copy", "en").asLangLiteral().asNode()))
+                    .isTrue();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void copyClass_copyExistingClass_abstract() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(true);
+        request.setCopyAttributes(false);
+        request.setCopyAssociations(false);
+
+        updateClassService.copyClass(
+                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.READ);
+
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
+                                    RDF.type.asNode(),
+                                    RDFS.Class.asNode()))
+                    .isTrue();
+
+            assertThat(
+                            graph.contains(
+                                    Node.ANY,
+                                    RDFS.domain.asNode(),
+                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy")))
+                    .isFalse();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void copyClass_copyAsAbstract_doesNotCopySuperClass() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(true);
+        request.setCopyAttributes(false);
+        request.setCopyAssociations(false);
+
+        updateClassService.copyClass(
+                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+
+        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        try {
+            graph.begin(TxnType.READ);
+
+            var copyUri = NodeFactory.createURI(PREFIX + "oldLabel-Copy");
+
+            assertThat(graph.contains(copyUri, RDFS.subClassOf.asNode(), Node.ANY)).isFalse();
+        } finally {
+            graph.end();
+        }
+    }
+
+    @Test
+    void copyClass_returnsNewClassUUID() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var request = new CopyClassRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(false);
+        request.setCopyAttributes(false);
+        request.setCopyAssociations(false);
+
+        var newClassUUID =
+                updateClassService.copyClass(
+                        graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+
+        assertThat(newClassUUID).isNotNull();
+        assertThat(newClassUUID).isNotEqualTo(UUID.fromString(CLASS_UUID));
     }
 }
