@@ -105,7 +105,7 @@ class AssociationMapperTest {
         void toDTO_fullAssociation() {
             cimAssociation.setComment(
                     new RDFSComment(
-                            "Test Comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            "Test Comment", new URI("http://www.w3.org/2001/XMLSchema#string")));
 
             var dto = associationMapper.toDTO(cimAssociation);
 
@@ -195,7 +195,7 @@ class AssociationMapperTest {
                                             new RDFSComment(
                                                     "Test Comment",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                                                            "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
                             assertThat(mappedCIMAssociation.getMultiplicity())
                                     .isEqualTo(
