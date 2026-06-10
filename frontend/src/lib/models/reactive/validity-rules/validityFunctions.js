@@ -213,7 +213,10 @@ export function isInvalidStereotype(stereotype, existingStereotypes) {
     if (!stereotype || stereotype.trim() === "") {
         violations.push("must not be empty");
     }
-    if (existingStereotypes.filter(s => s.equals(stereotype)).length > 1) {
+    if (
+        stereotype !== CONCRETE_STEREOTYPE &&
+        existingStereotypes.filter(s => s.equals(stereotype)).length > 1
+    ) {
         violations.push("must be unique");
     }
     return violations;
