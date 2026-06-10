@@ -31,7 +31,11 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
-    import { copyState, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        copyState,
+        DiagramType,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -253,13 +257,15 @@
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
         <ContextMenuSeparator />
-        <ContextMenu.Item.Button
-            onSelect={openRemoveFromDiagramDialog}
-            faIcon={faMinus}
-            variant="danger"
-        >
-            Remove from Diagram
-        </ContextMenu.Item.Button>
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
+            <ContextMenu.Item.Button
+                onSelect={openRemoveFromDiagramDialog}
+                faIcon={faMinus}
+                variant="danger"
+            >
+                Remove from Diagram
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.Item.Button
             onSelect={openDeleteClassDialog}
             disabled={classActionsDisabled}

@@ -19,19 +19,15 @@ package org.rdfarchitect.services.dl.update;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 
 class UpdateDiagramLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
     private static UpdateDiagramLayoutService service;
-    private static GraphFilter graphFilter;
 
     @BeforeAll
     static void setUpEnvironment() {
         service = new UpdateDiagramLayoutService(databasePort, converter);
-        graphFilter = new GraphFilter(true);
-        graphFilter.setPackageUUID(String.valueOf(PACKAGE_A_UUID));
     }
 
     @Test
@@ -50,31 +46,5 @@ class UpdateDiagramLayoutServiceTest extends DiagramLayoutServicesTestBase {
         assertInitialClassLayoutData(CLASS_B_UUID, PACKAGE_B_UUID, CLASS_B_LABEL);
         assertInitialClassLayoutData(
                 CLASS_C_UUID, diagramLayout.getDefaultPackageMRID().getUuid(), CLASS_C_LABEL);
-    }
-
-    @Test
-    void ensureDiagramLayoutExists_emptyDiagramLayout_createsDiagram() {
-        // Arrange
-        addGraphFromFile("package.ttl");
-
-        // Act
-        var cimCollection = converter.convert(graphIdentifier, graphFilter);
-        service.ensureDiagramLayoutExists(graphIdentifier, PACKAGE_A_UUID, cimCollection);
-
-        // Assert
-        assertDiagram(PACKAGE_A_UUID, PACKAGE_A_LABEL);
-    }
-
-    @Test
-    void ensureDiagramLayoutExists_emptyDiagramLayout_createsClassLayout() {
-        // Arrange
-        addGraphFromFile("package_and_class.ttl");
-
-        // Act
-        var cimCollection = converter.convert(graphIdentifier, graphFilter);
-        service.ensureDiagramLayoutExists(graphIdentifier, PACKAGE_A_UUID, cimCollection);
-
-        // Assert
-        assertInitialClassLayoutData(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
     }
 }

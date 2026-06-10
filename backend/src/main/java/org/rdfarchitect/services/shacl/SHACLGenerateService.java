@@ -19,14 +19,13 @@ package org.rdfarchitect.services.shacl;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.apache.jena.shacl.ShaclException;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.shacl.SHACLFromCIMGenerator;
 
 import java.io.ByteArrayOutputStream;
@@ -41,22 +40,16 @@ public class SHACLGenerateService implements SHACLGenerateUseCase {
     @Override
     public String exportGeneratedSHACLGraph(
             GraphIdentifier graphIdentifier, PrefixEntry shaclPrefix) {
-        GraphRewindable ontologyGraph = null;
         var prefixes = databasePort.getPrefixMapping(graphIdentifier.datasetName());
-        try (var outStream = new ByteArrayOutputStream()) {
-            ontologyGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            ontologyGraph.begin(TxnType.READ);
-            var ontologyModel = ModelFactory.createModelForGraph(ontologyGraph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ);
+                var outStream = new ByteArrayOutputStream()) {
+            var ontologyModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             ontologyModel.setNsPrefixes(prefixes);
             var shaclModel = new SHACLFromCIMGenerator(ontologyModel, shaclPrefix, true).generate();
             shaclModel.write(outStream, Lang.TTL.getName());
             return outStream.toString(StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new ShaclException("Error while writing SHACL model to output stream", e);
-        } finally {
-            if (ontologyGraph != null) {
-                ontologyGraph.end();
-            }
         }
     }
 }

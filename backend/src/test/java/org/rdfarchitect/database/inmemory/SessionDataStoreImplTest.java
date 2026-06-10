@@ -20,7 +20,6 @@ package org.rdfarchitect.database.inmemory;
 import static org.assertj.core.api.Assertions.*;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingMem;
@@ -144,23 +143,6 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void deleteDataset_validName_graphsAreClosed() {
-        // Arrange
-        exampleGraphs = List.of(createExampleGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graph = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.READ);
-        graph.end();
-
-        // Act
-        inMemoryDatabase.deleteDataset(NAME);
-        graph.begin(TxnType.READ);
-
-        // Assert
-        assertThat(graph.isClosed()).isTrue();
-        graph.end();
-    }
-
-    @Test
     void listDatasets_emptyDatabase_returnsEmptyList() {
         // Arrange
 
@@ -187,40 +169,27 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void begin_validNameAndGraph_returnsGraph() {
+    void getGraphWithContext_existingDataset_returnsGraphContext() {
         // Arrange
-        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
 
         // Act
-        var graph = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.READ);
+        var graphContext = inMemoryDatabase.getGraphWithContext(GRAPH_IDENTIFIER);
 
         // Assert
-        assertThat(graph.isInTransaction()).isTrue();
-        assertThat(graph.isIsomorphicWith(exampleGraphs.get(1))).isTrue();
-        graph.end();
+        assertThat(graphContext).isNotNull();
     }
 
     @Test
-    void begin_nonExistingDatasetAndDefaultGraph_returnsEmptyGraph() {
+    void getGraphWithContext_nonExistingDataset_returnsGraphContext() {
         // Arrange
 
         // Act
-        var graph = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.READ);
+        var graphContext = inMemoryDatabase.getGraphWithContext(GRAPH_IDENTIFIER);
 
         // Assert
-        assertThat(graph.isEmpty()).isTrue();
-        graph.end();
-    }
-
-    @Test
-    void begin_nonExistingDatasetAndNamedGraph_throwsException() {
-        // Arrange
-
-        // Act + Assert
-        var identifier = new GraphIdentifier("a", "http://example.com/graph");
-        assertThatThrownBy(() -> inMemoryDatabase.begin(identifier, TxnType.READ))
-                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(graphContext).isNotNull();
     }
 
     @Test
@@ -449,199 +418,5 @@ class SessionDataStoreImplTest {
         var storedPrefixes = inMemoryDatabase.getPrefixMapping(NAME);
         assertThat(storedPrefixes.getNsPrefixMap())
                 .containsExactlyEntriesOf(Map.of("ex2", "http://example2.com/"));
-    }
-
-    @Test
-    void undo_nonExistingDataset_throwsException() {
-        // Arrange
-
-        // Act
-        assertThatExceptionOfType(DataAccessException.class)
-                .isThrownBy(() -> inMemoryDatabase.undo(GRAPH_IDENTIFIER));
-    }
-
-    @Test
-    void undo_nonExistingGraph_doesNothing() {
-        // Arrange
-        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-
-        // Act
-        assertThatExceptionOfType(Exception.class)
-                .isThrownBy(() -> inMemoryDatabase.undo(GRAPH_IDENTIFIER));
-    }
-
-    @Test
-    void undo_validGraph_undoesLastOperation() {
-        // Arrange
-        exampleGraphs = List.of(createExampleGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
-        graphRewindable.add(TestRDFUtils.triple("a a d"));
-        graphRewindable.commit();
-        graphRewindable.end();
-
-        // Act
-        inMemoryDatabase.undo(GRAPH_IDENTIFIER);
-
-        // Assert
-        graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.READ);
-        assertThat(graphRewindable.isIsomorphicWith(exampleGraphs.getFirst())).isTrue();
-        graphRewindable.end();
-    }
-
-    @Test
-    void redo_nonExistingDataset_throwsException() {
-        // Arrange
-
-        // Act
-        assertThatExceptionOfType(DataAccessException.class)
-                .isThrownBy(() -> inMemoryDatabase.redo(GRAPH_IDENTIFIER));
-    }
-
-    @Test
-    void redo_nonExistingGraph_doesNothing() {
-        // Arrange
-        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-
-        // Act
-        assertThatExceptionOfType(Exception.class)
-                .isThrownBy(() -> inMemoryDatabase.redo(GRAPH_IDENTIFIER));
-    }
-
-    @Test
-    void redo_validGraph_restoresLastUndoneOperation() {
-        // Arrange
-        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
-        graphRewindable.add(TestRDFUtils.triple("a a d"));
-        graphRewindable.commit();
-        graphRewindable.end();
-        inMemoryDatabase.undo(GRAPH_IDENTIFIER);
-
-        // Act
-        inMemoryDatabase.redo(GRAPH_IDENTIFIER);
-
-        // Assert
-        graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.READ);
-        assertThat(graphRewindable.isIsomorphicWith(exampleGraphs.getFirst())).isFalse();
-        assertThat(graphRewindable.contains(TestRDFUtils.triple("a a d"))).isTrue();
-        graphRewindable.end();
-    }
-
-    @Test
-    void canUndo_nonExistingDataset_throwsException() {
-        // Arrange
-
-        // Act
-        assertThatExceptionOfType(DataAccessException.class)
-                .isThrownBy(() -> inMemoryDatabase.canUndo(GRAPH_IDENTIFIER));
-    }
-
-    @Test
-    void canUndo_nonExistingGraph_throwsException() {
-        // Arrange
-        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-
-        // Act + Assert
-        assertThatExceptionOfType(Exception.class)
-                .isThrownBy(
-                        () ->
-                                inMemoryDatabase.canUndo(
-                                        new GraphIdentifier("a", "http://example.com/graph")));
-    }
-
-    @Test
-    void canUndo_validGraphWithNoCommit_returnsFalse() {
-        // Arrange
-        exampleGraphs = List.of(createExampleGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
-        graphRewindable.add(TestRDFUtils.triple("a a d"));
-        graphRewindable.end();
-
-        // Act
-        var canUndo = inMemoryDatabase.canUndo(GRAPH_IDENTIFIER);
-
-        // Assert
-        assertThat(canUndo).isFalse();
-    }
-
-    @Test
-    void canUndo_validGraphWithCommit_returnsTrue() {
-        // Arrange
-        exampleGraphs = List.of(createExampleGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
-        graphRewindable.add(TestRDFUtils.triple("a a d"));
-        graphRewindable.commit();
-        graphRewindable.end();
-
-        // Act
-        var canUndo = inMemoryDatabase.canUndo(GRAPH_IDENTIFIER);
-
-        // Assert
-        assertThat(canUndo).isTrue();
-    }
-
-    @Test
-    void canRedo_nonExistingDataset_throwsException() {
-        // Arrange
-
-        // Act
-        assertThatExceptionOfType(DataAccessException.class)
-                .isThrownBy(() -> inMemoryDatabase.canRedo(GRAPH_IDENTIFIER));
-    }
-
-    @Test
-    void canRedo_nonExistingGraph_throwsException() {
-        // Arrange
-        exampleGraphs = List.of(GraphFactory.createDefaultGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-
-        // Act
-        assertThatExceptionOfType(Exception.class)
-                .isThrownBy(
-                        () ->
-                                inMemoryDatabase.canRedo(
-                                        new GraphIdentifier("a", "http://example.com/graph")));
-    }
-
-    @Test
-    void canRedo_validGraphWithNoUndoneChange_returnsFalse() {
-        // Arrange
-        exampleGraphs = List.of(createExampleGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
-        graphRewindable.add(TestRDFUtils.triple("a a d"));
-        graphRewindable.commit();
-        graphRewindable.end();
-
-        // Act
-        var canRedo = inMemoryDatabase.canRedo(GRAPH_IDENTIFIER);
-
-        // Assert
-        assertThat(canRedo).isFalse();
-    }
-
-    @Test
-    void canRedo_validGraphAfterUndoneChange_returnsTrue() {
-        // Arrange
-        exampleGraphs = List.of(createExampleGraph());
-        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
-        var graphRewindable = inMemoryDatabase.begin(GRAPH_IDENTIFIER, TxnType.WRITE);
-        graphRewindable.add(TestRDFUtils.triple("a a d"));
-        graphRewindable.commit();
-        graphRewindable.end();
-        inMemoryDatabase.undo(GRAPH_IDENTIFIER);
-
-        // Act
-        var canRedo = inMemoryDatabase.canRedo(GRAPH_IDENTIFIER);
-
-        // Assert
-        assertThat(canRedo).isTrue();
     }
 }

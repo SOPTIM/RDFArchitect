@@ -21,11 +21,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -59,9 +60,8 @@ class CustomDiagramsServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        var graphWithContext = mockGraph(map);
-
-        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graphWithContext);
+        var graph = mockGraph(map);
+        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
         var result = service.getCustomDiagramsForGraph(graphIdentifier);
 
@@ -102,7 +102,6 @@ class CustomDiagramsServiceTest {
         map.put(diagramId, new CustomDiagram(diagramId));
 
         var graph = mockGraph(map);
-
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
         service.deleteCustomDiagram(graphIdentifier, diagramId.toString());
@@ -114,7 +113,6 @@ class CustomDiagramsServiceTest {
     void replaceCustomDiagram_newDiagramForDataset_replacesInMap() {
         var diagramId = UUID.randomUUID();
         var newDiagram = new CustomDiagram(diagramId);
-
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
@@ -128,10 +126,9 @@ class CustomDiagramsServiceTest {
     void replaceCustomDiagram_newDiagramForGraph_replacesInMap() {
         var diagramId = UUID.randomUUID();
         var newDiagram = new CustomDiagram(diagramId);
-
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
-        var graph = mockGraph(map);
 
+        var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
         service.replaceCustomDiagram(graphIdentifier, diagramId.toString(), newDiagram);
@@ -140,41 +137,12 @@ class CustomDiagramsServiceTest {
     }
 
     @Test
-    void addToDiagram_classAddedToDatasetDiagram_diagramContainsClass() {
-        var diagramId = UUID.randomUUID();
-        var diagram = new CustomDiagram(diagramId);
-        diagram.setClasses(new ArrayList<>());
-
-        var map = new ConcurrentHashMap<UUID, CustomDiagram>();
-        map.put(diagramId, diagram);
-
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
-
-        var classInDiagram =
-                new ClassInDiagram(UUID.randomUUID(), new URI("http://example.org#graph"));
-
-        service.addToDiagram("dataset", diagramId.toString(), List.of(classInDiagram));
-
-        assertThat(diagram.getClasses()).containsExactly(classInDiagram);
-    }
-
-    @Test
-    void addToDiagram_nonExistingDatasetDiagram_doesNotFail() {
-        when(databasePort.getDatasetDiagrams("dataset")).thenReturn(new ConcurrentHashMap<>());
-
-        assertDoesNotThrow(
-                () -> service.addToDiagram("dataset", UUID.randomUUID().toString(), List.of()));
-    }
-
-    @Test
-    void removeFromDiagram_classRemovedFromDatasetDiagramByUuid_diagramIsEmpty() {
+    void removeFromDiagram_classRemovedFromDatasetDiagram_diagramIsEmpty() {
         var classId = UUID.randomUUID();
         var classInDiagram = new ClassInDiagram(classId, new URI("http://example.org#graph"));
-
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
         diagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
-
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
@@ -189,16 +157,13 @@ class CustomDiagramsServiceTest {
     void removeFromDiagram_classRemovedFromGraphDiagram_diagramIsEmpty() {
         var classId = UUID.randomUUID();
         var classInDiagram = new ClassInDiagram(classId, new URI("http://example.org#graph"));
-
         var diagramId = UUID.randomUUID();
         var diagram = new CustomDiagram(diagramId);
         diagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
-
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
         var graph = mockGraph(map);
-
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
         service.removeFromDiagram(graphIdentifier, diagramId.toString(), classId);
@@ -211,24 +176,18 @@ class CustomDiagramsServiceTest {
         var classId = UUID.randomUUID();
         var classInDiagram = new ClassInDiagram(classId, new URI("http://example.org#graph"));
 
-        var diagramId1 = UUID.randomUUID();
-        var graphDiagram = new CustomDiagram(diagramId1);
+        var graphDiagram = new CustomDiagram(UUID.randomUUID());
         graphDiagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
-
-        var diagramId2 = UUID.randomUUID();
-        var datasetDiagram = new CustomDiagram(diagramId2);
-        datasetDiagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
-
         var graphMap = new ConcurrentHashMap<UUID, CustomDiagram>();
-        graphMap.put(UUID.randomUUID(), graphDiagram);
+        graphMap.put(graphDiagram.getDiagramId(), graphDiagram);
 
+        var datasetDiagram = new CustomDiagram(UUID.randomUUID());
+        datasetDiagram.setClasses(new ArrayList<>(List.of(classInDiagram)));
         var datasetMap = new ConcurrentHashMap<UUID, CustomDiagram>();
-        datasetMap.put(UUID.randomUUID(), datasetDiagram);
+        datasetMap.put(datasetDiagram.getDiagramId(), datasetDiagram);
 
         var graph = mockGraph(graphMap);
-
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
-
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(datasetMap);
 
         service.removeFromAllDiagrams(graphIdentifier, classId);
@@ -237,8 +196,9 @@ class CustomDiagramsServiceTest {
         assertThat(datasetDiagram.getClasses()).isEmpty();
     }
 
-    private GraphWithContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
-        GraphWithContext graph = mock(GraphWithContext.class);
+    private GraphContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
+        GraphContext graph = mock(GraphContext.class);
+        when(graph.begin(any(ReadWrite.class))).thenReturn(graph);
         when(graph.getCustomDiagrams()).thenReturn(diagrams);
         return graph;
     }

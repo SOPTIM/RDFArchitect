@@ -18,8 +18,16 @@
 package org.rdfarchitect.services.versioncontrol;
 
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.changelog.ChangeLogEntry;
 
 public interface RedoUseCase {
 
-    void redo(GraphIdentifier graphIdentifier);
+    /**
+     * Reapplies the most recently undone named commit for the given graph, restoring all associated
+     * graph participants to the state before the undo.
+     *
+     * @param graphIdentifier the identifier of the graph to operate on
+     * @return the changelog entry that was redone, or {@code null} if no redo was available
+     */
+    ChangeLogEntry redo(GraphIdentifier graphIdentifier);
 }

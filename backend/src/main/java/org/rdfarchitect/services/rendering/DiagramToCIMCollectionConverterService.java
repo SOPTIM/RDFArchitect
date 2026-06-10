@@ -40,8 +40,7 @@ public class DiagramToCIMCollectionConverterService
 
     @Override
     public CIMCollection convert(GraphIdentifier graphIdentifier, String diagramId) {
-        var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
-        var diagrams = graphWithContext.getCustomDiagrams();
+        var diagrams = databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams();
         var diagramUUID = UUID.fromString(diagramId);
         if (!diagrams.containsKey(diagramUUID)) {
             throw new IllegalArgumentException(

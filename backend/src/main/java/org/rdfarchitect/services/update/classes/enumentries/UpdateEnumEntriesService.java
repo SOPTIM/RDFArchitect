@@ -19,15 +19,12 @@ package org.rdfarchitect.services.update.classes.enumentries;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
-import org.rdfarchitect.services.ChangeLogUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -38,19 +35,15 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
 
     private final DatabasePort databasePort;
     private final EnumEntryMapper mapper;
-    private final ChangeLogUseCase changeLogUseCase;
 
     @Override
     public UUID replaceOrCreateEnumEntry(
             GraphIdentifier graphIdentifier, EnumEntryDTO enumEntryDTO) {
-        GraphRewindable graph = null;
         String message;
         UUID uuid;
 
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.WRITE);
-
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var graph = ctx.getRdfGraph();
             if (enumEntryDTO.getLabel() == null || enumEntryDTO.getLabel().trim().isEmpty()) {
                 throw new IllegalArgumentException("New enum entry label cannot be null or empty");
             }
@@ -63,30 +56,20 @@ public class UpdateEnumEntriesService implements ReplaceOrCreateEnumEntryUseCase
                         graph,
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
-                message = "Enum entry " + uuid + " created";
+                message = "Created enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
             } else {
                 uuid = enumEntryDTO.getUuid();
                 CIMUpdates.replaceEnumEntry(
                         graph,
                         databasePort.getPrefixMapping(graphIdentifier.datasetName()),
                         cimEnumEntry);
-                message = "Enum entry " + uuid + " replaced";
+                message =
+                        "Replaced enum entry \"%s\" (%s)".formatted(cimEnumEntry.getLabel(), uuid);
             }
 
-            graph.commit();
-        } catch (Exception e) {
-            if (graph != null) {
-                graph.abort();
-            }
-            throw e;
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+            ctx.commit(message);
         }
 
-        changeLogUseCase.recordChange(
-                graphIdentifier, new ChangeLogEntry(message, graph.getLastDelta()));
         return uuid;
     }
 }

@@ -61,7 +61,7 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
         var diagramAobjectsList =
                 diagramLayout
-                        .getDiagramLayoutModel()
+                        .getDiagramLayoutModelDirect()
                         .listSubjectsWithProperty(
                                 DL.belongsToDiagram,
                                 ResourceFactory.createResource(
@@ -76,7 +76,10 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
                                                 ResourceFactory.createResource(
                                                         new MRID(CLASS_A_UUID).getFullMRID())))
                         .findFirst()
-                        .orElse(null);
+                        .orElseThrow(
+                                () ->
+                                        new AssertionError(
+                                                "Expected diagram object for CLASS_A_UUID not found"));
         var doB =
                 diagramAobjectsList.stream()
                         .filter(
@@ -86,7 +89,10 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
                                                 ResourceFactory.createResource(
                                                         new MRID(CLASS_B_UUID).getFullMRID())))
                         .findFirst()
-                        .orElse(null);
+                        .orElseThrow(
+                                () ->
+                                        new AssertionError(
+                                                "Expected diagram object for CLASS_B_UUID not found"));
         var doAmRID = new MRID(DLUtils.extractUUIDFromMRID(doA.getURI()));
         var doBmRID = new MRID(DLUtils.extractUUIDFromMRID(doB.getURI()));
 

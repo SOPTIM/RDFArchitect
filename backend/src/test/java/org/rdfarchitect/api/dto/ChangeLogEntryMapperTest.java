@@ -20,7 +20,6 @@ package org.rdfarchitect.api.dto;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -28,9 +27,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
 
+import java.lang.ref.WeakReference;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 class ChangeLogEntryMapperTest {
@@ -51,7 +53,7 @@ class ChangeLogEntryMapperTest {
 
     @BeforeAll
     static void beforeAll() {
-        Graph baseGraph = GraphFactory.createDefaultGraph();
+        var baseGraph = GraphFactory.createDefaultGraph();
         baseGraph.add(
                 Triple.create(
                         NodeFactory.createURI(SUB),
@@ -62,42 +64,48 @@ class ChangeLogEntryMapperTest {
                         NodeFactory.createURI(SUB),
                         NodeFactory.createURI(PRED),
                         NodeFactory.createURI(DELETED)));
-        DeltaCompressible deltaCompressible = new DeltaCompressible(baseGraph);
-        deltaCompressible.add(
+        var delta = new DeltaCompressible(baseGraph);
+        delta.add(
                 Triple.create(
                         NodeFactory.createURI(SUB),
                         NodeFactory.createURI(PRED),
                         NodeFactory.createURI(ADDED)));
-        deltaCompressible.delete(
+        delta.delete(
                 Triple.create(
                         NodeFactory.createURI(SUB),
                         NodeFactory.createURI(PRED),
                         NodeFactory.createURI(DELETED)));
-        changeLogEntry = new ChangeLogEntry(MESSAGE, deltaCompressible);
+
+        var contextDeltas =
+                List.of(
+                        new ContextDelta(
+                                "rdf",
+                                new WeakReference<>(delta.getAdditions()),
+                                new WeakReference<>(delta.getDeletions())));
+        changeLogEntry = new ChangeLogEntry(MESSAGE, 1, contextDeltas);
         changeLogEntry.setChangeId(CHANGE_ID);
         changeLogEntry.setTimestamp(TIMESTAMP);
     }
 
     @Test
     void toDTO_changeLogEntry() {
-        // Arrange
-
-        // Act
         var dto = changeLogEntryMapper.toDTO(changeLogEntry);
 
-        // Assert
-        var addition = assertDoesNotThrow(() -> dto.getAdditions().get(0));
-        var deletion = assertDoesNotThrow(() -> dto.getDeletions().get(0));
+        assertThat(dto.getContextDeltas()).hasSize(1);
+        var contextDelta = dto.getContextDeltas().getFirst();
+        var addition = assertDoesNotThrow(() -> contextDelta.getAdditions().getFirst());
+        var deletion = assertDoesNotThrow(() -> contextDelta.getDeletions().getFirst());
 
         assertAll(
                 () -> assertThat(dto.getChangeId()).isEqualTo(CHANGE_ID.toString()),
                 () -> assertThat(LocalDateTime.parse(dto.getTimestamp())).isEqualTo(TIMESTAMP),
                 () -> assertThat(dto.getMessage()).isEqualTo(MESSAGE),
-                () -> assertThat(dto.getAdditions()).hasSize(1),
+                () -> assertThat(contextDelta.getContextName()).isEqualTo("rdf"),
+                () -> assertThat(contextDelta.getAdditions()).hasSize(1),
                 () -> assertThat(addition.getSubject()).isEqualTo(SUB),
                 () -> assertThat(addition.getPredicate()).isEqualTo(PRED),
                 () -> assertThat(addition.getObject()).isEqualTo(ADDED),
-                () -> assertThat(dto.getDeletions()).hasSize(1),
+                () -> assertThat(contextDelta.getDeletions()).hasSize(1),
                 () -> assertThat(deletion.getSubject()).isEqualTo(SUB),
                 () -> assertThat(deletion.getPredicate()).isEqualTo(PRED),
                 () -> assertThat(deletion.getObject()).isEqualTo(DELETED));

@@ -19,65 +19,26 @@ package org.rdfarchitect.services;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ChangeLogEntryDTO;
 import org.rdfarchitect.api.dto.ChangeLogEntryMapper;
-import org.rdfarchitect.context.SessionContext;
+import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
-import org.rdfarchitect.models.changelog.GraphChangeLog;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
 public class ChangeLogService implements ChangeLogUseCase {
 
     private final ChangeLogEntryMapper mapper;
-
-    private final Map<String, Map<String, Map<String, GraphChangeLog>>> changeLogs =
-            new ConcurrentHashMap<>();
-
-    private GraphChangeLog getChangeLog(GraphIdentifier graphIdentifier) {
-        return changeLogs
-                .getOrDefault(SessionContext.getSessionId(), Collections.emptyMap())
-                .getOrDefault(graphIdentifier.datasetName(), Collections.emptyMap())
-                .getOrDefault(graphIdentifier.graphUri(), new GraphChangeLog());
-    }
-
-    @Override
-    public void recordChange(GraphIdentifier graphIdentifier, ChangeLogEntry entry) {
-        var graphChangeLog =
-                changeLogs
-                        .computeIfAbsent(
-                                SessionContext.getSessionId(), _ -> new ConcurrentHashMap<>())
-                        .computeIfAbsent(
-                                graphIdentifier.datasetName(), _ -> new ConcurrentHashMap<>())
-                        .computeIfAbsent(graphIdentifier.graphUri(), _ -> new GraphChangeLog());
-        graphChangeLog.addEntry(entry);
-    }
-
-    @Override
-    public void undoChange(GraphIdentifier graphIdentifier) {
-        getChangeLog(graphIdentifier).undoChange();
-    }
-
-    @Override
-    public void redoChange(GraphIdentifier graphIdentifier) {
-        getChangeLog(graphIdentifier).redoChange();
-    }
+    private final DatabasePort databasePort;
 
     @Override
     public List<ChangeLogEntryDTO> listChanges(GraphIdentifier graphIdentifier) {
-        return mapper.toDTOList(getChangeLog(graphIdentifier).getEntries());
-    }
-
-    @Override
-    public void restoreVersion(GraphIdentifier graphIdentifier, UUID versionId) {
-        getChangeLog(graphIdentifier).restore(versionId);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return mapper.toDTOList(ctx.getChangeLog().getUndoHistory());
+        }
     }
 }

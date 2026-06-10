@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeAll;
@@ -85,22 +85,22 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryRequired));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDF.type.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDF.type.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ENUM_ENTRY_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ENUM_ENTRY_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -118,36 +118,38 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryOptional));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDF.type.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDF.type.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ENUM_ENTRY_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ENUM_ENTRY_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.enumLiteral.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.enumLiteral.asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -186,22 +188,22 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryRequired));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDF.type.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDF.type.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ENUM_ENTRY_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ENUM_ENTRY_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -221,36 +223,38 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     enumEntryOptional));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDF.type.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDF.type.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ENUM_ENTRY_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ENUM_ENTRY_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.enumLiteral.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.enumLiteral.asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -276,36 +280,38 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                                     newEnumEntry));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDF.type.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDF.type.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ENUM_ENTRY_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ENUM_ENTRY_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        CIMS.stereotype.asNode(),
-                                        CIMStereotypes.enumLiteral.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                CIMS.stereotype.asNode(),
+                                                CIMStereotypes.enumLiteral.asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -324,35 +330,36 @@ public class CIMUpdatesEnumEntriesTest extends CIMUpdatesTestBase {
                     CIMUpdates.replaceEnumEntries(
                                     databasePort.getPrefixMapping(DATASET_NAME),
                                     GRAPH_URI,
-                                    MY_UUID.toString(),
+                                    MY_UUID,
                                     List.of(enumEntryRequired))
                             .build());
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_ENUM_ENTRY_URI),
-                                        Node.ANY,
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_ENUM_ENTRY_URI),
+                                                Node.ANY,
+                                                Node.ANY))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDF.type.asNode(),
-                                        NodeFactory.createURI(CLASS_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDF.type.asNode(),
+                                                NodeFactory.createURI(CLASS_URI)))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(ENUM_ENTRY_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(ENUM_ENTRY_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(ENUM_ENTRY_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        ENUM_ENTRY_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }

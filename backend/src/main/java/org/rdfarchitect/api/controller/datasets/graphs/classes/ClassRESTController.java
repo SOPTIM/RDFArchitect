@@ -44,6 +44,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}")
 @RequiredArgsConstructor
@@ -190,7 +192,7 @@ public class ClassRESTController {
 
         var graphIdentifier = new GraphIdentifier(datasetName, graphURI);
 
-        deleteClassUseCase.deleteClass(graphIdentifier, classUUID);
+        deleteClassUseCase.deleteClass(graphIdentifier, UUID.fromString(classUUID));
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",

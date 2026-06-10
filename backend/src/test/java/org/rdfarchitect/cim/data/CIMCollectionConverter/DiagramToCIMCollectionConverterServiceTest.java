@@ -24,8 +24,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
@@ -71,7 +71,6 @@ class DiagramToCIMCollectionConverterServiceTest {
         map.put(diagramId, diagram);
 
         var graph = mockGraph(map);
-
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
         var expected = new CIMCollection();
@@ -236,8 +235,8 @@ class DiagramToCIMCollectionConverterServiceTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
-    private GraphWithContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
-        GraphWithContext graph = mock(GraphWithContext.class);
+    private GraphContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
+        GraphContext graph = mock(GraphContext.class);
         when(graph.getCustomDiagrams()).thenReturn(diagrams);
         return graph;
     }

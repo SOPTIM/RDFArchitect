@@ -18,12 +18,11 @@
 package org.rdfarchitect.services.extension;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
@@ -38,7 +37,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ChangeLogService;
 import org.rdfarchitect.services.ClassExtensionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -57,11 +55,8 @@ class ClassExtensionServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        var schemaConfig = new SchemaConfig();
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), schemaConfig);
-        var mockChangeLogService = mock(ChangeLogService.class);
-        classExtensionService =
-                new ClassExtensionService(databasePort, classMapper, mockChangeLogService);
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        classExtensionService = new ClassExtensionService(databasePort, classMapper);
     }
 
     @Test
@@ -93,19 +88,18 @@ class ClassExtensionServiceTest {
         // assert DTO returned
         assertThat(result).isNotNull();
 
-        var targetGraph = databasePort.getGraphWithContext(targetGraphId).getRdfGraph();
-        var sourceGraph = databasePort.getGraphWithContext(sourceGraphId).getRdfGraph();
-        var targetModel = ModelFactory.createModelForGraph(targetGraph);
-        var sourceModel = ModelFactory.createModelForGraph(sourceGraph);
-
         var ex = "http://example.org#";
         var cims = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
         var rdfa = "http://example.org#uuid";
 
-        try {
-            sourceGraph.begin(TxnType.READ);
-            targetGraph.begin(TxnType.READ);
+        try (var sourceCtx = databasePort.getGraphWithContext(sourceGraphId).begin(ReadWrite.READ);
+                var targetCtx =
+                        databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.WRITE)) {
 
+            var sourceGraph = sourceCtx.getRdfGraph();
+            var sourceModel = ModelFactory.createModelForGraph(sourceGraph);
+            var targetGraph = targetCtx.getRdfGraph();
+            var targetModel = ModelFactory.createModelForGraph(targetGraph);
             // class exists in target
             assertThat(
                             targetGraph.contains(
@@ -190,10 +184,6 @@ class ClassExtensionServiceTest {
                                     NodeFactory.createURI(cims + "belongsToCategory"),
                                     NodeFactory.createURI(ex + "CorePackage")))
                     .isTrue();
-
-        } finally {
-            targetGraph.end();
-            sourceGraph.end();
         }
     }
 
@@ -225,20 +215,15 @@ class ClassExtensionServiceTest {
         var ex = "http://example.org#";
         var rdfa = "http://example.org#uuid";
 
-        var targetGraph = databasePort.getGraphWithContext(targetGraphId).getRdfGraph();
-        var targetModel = ModelFactory.createModelForGraph(targetGraph);
-
         String existingBaseUuidBefore;
-        try {
-            targetGraph.begin(TxnType.READ);
+        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+            var targetModel = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             existingBaseUuidBefore =
                     targetModel
                             .getProperty(
                                     targetModel.getResource(ex + "Base"),
                                     targetModel.createProperty(rdfa))
                             .getString();
-        } finally {
-            targetGraph.end();
         }
 
         // act
@@ -247,9 +232,9 @@ class ClassExtensionServiceTest {
         // assert
         assertThat(result).isNotNull();
 
-        try {
-            targetGraph.begin(TxnType.READ);
-
+        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+            var targetGraph = ctx.getRdfGraph();
+            var targetModel = ModelFactory.createModelForGraph(targetGraph);
             // class got added
             assertThat(
                             targetGraph.contains(
@@ -285,9 +270,6 @@ class ClassExtensionServiceTest {
                                     (RDFNode) null)
                             .toList();
             assertThat(baseUuidStatements).hasSize(1);
-
-        } finally {
-            targetGraph.end();
         }
     }
 
@@ -321,15 +303,13 @@ class ClassExtensionServiceTest {
         // assert
         assertThat(result).isNotNull();
 
-        var targetGraph = databasePort.getGraphWithContext(targetGraphId).getRdfGraph();
-        var targetModel = ModelFactory.createModelForGraph(targetGraph);
-
         var ex = "http://example.org#";
         var cimsBelongsToCategory =
                 "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#belongsToCategory";
 
-        try {
-            targetGraph.begin(TxnType.READ);
+        try (var ctx = databasePort.getGraphWithContext(targetGraphId).begin(ReadWrite.READ)) {
+            var targetGraph = ctx.getRdfGraph();
+            var targetModel = ModelFactory.createModelForGraph(targetGraph);
 
             // class still gets inserted
             assertThat(
@@ -348,9 +328,6 @@ class ClassExtensionServiceTest {
                                     (RDFNode) null)
                             .toList();
             assertThat(categoryStatements).isEmpty();
-
-        } finally {
-            targetGraph.end();
         }
     }
 }
