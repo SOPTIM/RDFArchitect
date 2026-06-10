@@ -44,10 +44,10 @@
         STORED_TO_STORED: 0,
         FILE_TO_STORED: 1,
         FILE_TO_FILE: 2,
+        STORED_TO_FILE: 3,
     });
 
     let compareMode = $state(CompareMode.STORED_TO_STORED);
-    let swapped = $state(false);
 
     let datasetA = $state(null);
     let graphA = $state(null);
@@ -70,6 +70,11 @@
             disabled: false,
         },
         {
+            value: CompareMode.STORED_TO_FILE,
+            label: "Stored schema → Uploaded schema",
+            disabled: false,
+        },
+        {
             value: CompareMode.FILE_TO_FILE,
             label: "Uploaded schema → Uploaded schema",
             disabled: !!lockedDatasetName || !!lockedGraphUri,
@@ -83,6 +88,10 @@
 
         if (compareMode === CompareMode.FILE_TO_STORED) {
             return !datasetB || !graphB || !fileA;
+        }
+
+        if (compareMode === CompareMode.STORED_TO_FILE) {
+            return !datasetA || !graphA || !fileA;
         }
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
@@ -105,7 +114,6 @@
 
     function onClose() {
         compareMode = CompareMode.STORED_TO_STORED;
-        swapped = false;
 
         datasetA = null;
         graphA = null;
@@ -119,7 +127,6 @@
 
     function onCompareModeChange(mode) {
         compareMode = mode;
-        swapped = false;
 
         datasetB = null;
         graphB = null;
@@ -135,7 +142,17 @@
         } else if (compareMode === CompareMode.FILE_TO_FILE) {
             [fileA, fileB] = [fileB, fileA];
         } else if (compareMode === CompareMode.FILE_TO_STORED) {
-            swapped = !swapped;
+            datasetA = datasetB;
+            graphA = graphB;
+            datasetB = null;
+            graphB = null;
+            compareMode = CompareMode.STORED_TO_FILE;
+        } else if (compareMode === CompareMode.STORED_TO_FILE) {
+            datasetB = datasetA;
+            graphB = graphA;
+            datasetA = null;
+            graphA = null;
+            compareMode = CompareMode.FILE_TO_STORED;
         }
     }
 
@@ -168,12 +185,17 @@
 
     async function runCompare() {
         let response;
+        let invert = false;
         switch (compareMode) {
             case CompareMode.FILE_TO_FILE:
                 response = await bec.compareSchemasFromFiles(fileA, fileB);
                 break;
             case CompareMode.FILE_TO_STORED:
                 response = await bec.compareSchemas(datasetB, graphB, fileA);
+                break;
+            case CompareMode.STORED_TO_FILE:
+                response = await bec.compareSchemas(datasetA, graphA, fileA);
+                invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:
                 response = await bec.compareDatasetSchemas(
@@ -188,7 +210,7 @@
         }
 
         let changeList = await response.json();
-        if (swapped) {
+        if (invert) {
             changeList = invertChangeList(changeList);
         }
         changeList.sort((a, b) => a.label.localeCompare(b.label));
@@ -279,7 +301,7 @@
             {#if compareMode === CompareMode.FILE_TO_STORED}
                 <div class="flex flex-col gap-1.5">
                     <span class="text-text-subtle px-1 text-xs font-medium">
-                        {swapped ? "After" : "Before"}
+                        Before
                     </span>
                     <div
                         class="border-border bg-background-subtle rounded border p-3"
@@ -303,7 +325,7 @@
 
                 <div class="flex flex-col gap-1.5">
                     <span class="text-text-subtle px-1 text-xs font-medium">
-                        {swapped ? "Before" : "After"}
+                        After
                     </span>
                     <DatasetAndGraphSelection
                         bind:dataset={datasetB}
@@ -311,6 +333,44 @@
                         {lockedDatasetName}
                         {lockedGraphUri}
                     />
+                </div>
+            {/if}
+
+            {#if compareMode === CompareMode.STORED_TO_FILE}
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetA}
+                        bind:graph={graphA}
+                        {lockedDatasetName}
+                        {lockedGraphUri}
+                    />
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="bg-border h-px w-full"></div>
+                    <button
+                        onclick={swapSelections}
+                        class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                        title="Swap Before and After"
+                    >
+                        <Fa icon={faRightLeft} />
+                        Swap
+                    </button>
+                    <div class="bg-border h-px w-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton bind:file={fileA} />
+                    </div>
                 </div>
             {/if}
 
