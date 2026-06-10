@@ -145,8 +145,7 @@ class ImportGraphsServiceTest {
 
         var warning = result.warnings().getFirst();
         assertThat(warning.fileName()).isEqualTo("schema.ttl");
-        assertThat(warning.undisplayableProperties())
-                .containsExactlyInAnyOrder("color", "owner");
+        assertThat(warning.undisplayableProperties()).containsExactlyInAnyOrder("color", "owner");
     }
 
     @Test
