@@ -15,8 +15,9 @@
   -
   -->
 <script>
-    import { Fa } from "svelte-fa";
     import { faRightLeft } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
@@ -143,7 +144,10 @@
     }
 
     function invertResourceChange(resource) {
-        return { ...resource, changes: resource.changes?.map(invertPropertyChange) ?? null };
+        return {
+            ...resource,
+            changes: resource.changes?.map(invertPropertyChange) ?? null,
+        };
     }
 
     function invertClassChange(cls) {
@@ -237,7 +241,9 @@
 
             {#if compareMode === CompareMode.STORED_TO_STORED}
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-text-subtle px-1 text-xs font-medium">Before</span>
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
                     <DatasetAndGraphSelection
                         bind:dataset={datasetA}
                         bind:graph={graphA}
@@ -260,7 +266,9 @@
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-text-subtle px-1 text-xs font-medium">After</span>
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
                     <DatasetAndGraphSelection
                         bind:dataset={datasetB}
                         bind:graph={graphB}
@@ -273,7 +281,9 @@
                     <span class="text-text-subtle px-1 text-xs font-medium">
                         {swapped ? "After" : "Before"}
                     </span>
-                    <div class="border-border bg-background-subtle rounded border p-3">
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
                         <FileSelectButton bind:file={fileA} />
                     </div>
                 </div>
@@ -306,8 +316,12 @@
 
             {#if compareMode === CompareMode.FILE_TO_FILE}
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-text-subtle px-1 text-xs font-medium">Before</span>
-                    <div class="border-border bg-background-subtle rounded border p-3">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
                         <FileSelectButton bind:file={fileA} />
                     </div>
                 </div>
@@ -326,8 +340,12 @@
                 </div>
 
                 <div class="flex flex-col gap-1.5">
-                    <span class="text-text-subtle px-1 text-xs font-medium">After</span>
-                    <div class="border-border bg-background-subtle rounded border p-3">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
                         <FileSelectButton
                             bind:file={fileB}
                             label="Select second file"
