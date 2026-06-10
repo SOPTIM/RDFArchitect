@@ -112,6 +112,24 @@ public class SchemaMigrationService
     }
 
     @Override
+    public void setMigrationContext(GraphIdentifier originalSchema, MultipartFile updatedSchema) {
+        Graph originalGraph;
+        try (var originalCtx =
+                databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
+            originalGraph = GraphUtils.deepCopy(originalCtx.getRdfGraph());
+        }
+
+        var updatedGraph =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(updatedSchema)
+                        .setGraphName(GRAPH_URI)
+                        .build()
+                        .graph();
+
+        initContext(originalGraph, updatedGraph);
+    }
+
+    @Override
     public void setMigrationContext(MultipartFile originalSchema, MultipartFile updatedSchema) {
         var originalGraph =
                 new GraphFileSourceBuilderImpl()

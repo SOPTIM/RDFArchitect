@@ -15,6 +15,9 @@
   -
   -->
 <script>
+    import { faRightLeft } from "@fortawesome/free-solid-svg-icons";
+    import { Fa } from "svelte-fa";
+
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
@@ -41,6 +44,7 @@
         STORED_TO_STORED: 0,
         FILE_TO_STORED: 1,
         FILE_TO_FILE: 2,
+        STORED_TO_FILE: 3,
     });
 
     let compareMode = $state(CompareMode.STORED_TO_STORED);
@@ -66,6 +70,11 @@
             disabled: false,
         },
         {
+            value: CompareMode.STORED_TO_FILE,
+            label: "Stored schema → Uploaded schema",
+            disabled: false,
+        },
+        {
             value: CompareMode.FILE_TO_FILE,
             label: "Uploaded schema → Uploaded schema",
             disabled: !!lockedDatasetName || !!lockedGraphUri,
@@ -79,6 +88,10 @@
 
         if (compareMode === CompareMode.FILE_TO_STORED) {
             return !datasetB || !graphB || !fileA;
+        }
+
+        if (compareMode === CompareMode.STORED_TO_FILE) {
+            return !datasetA || !graphA || !fileA;
         }
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
@@ -122,14 +135,67 @@
         fileB = null;
     }
 
+    function swapSelections() {
+        if (compareMode === CompareMode.STORED_TO_STORED) {
+            [datasetA, datasetB] = [datasetB, datasetA];
+            [graphA, graphB] = [graphB, graphA];
+        } else if (compareMode === CompareMode.FILE_TO_FILE) {
+            [fileA, fileB] = [fileB, fileA];
+        } else if (compareMode === CompareMode.FILE_TO_STORED) {
+            datasetA = datasetB;
+            graphA = graphB;
+            datasetB = null;
+            graphB = null;
+            compareMode = CompareMode.STORED_TO_FILE;
+        } else if (compareMode === CompareMode.STORED_TO_FILE) {
+            datasetB = datasetA;
+            graphB = graphA;
+            datasetA = null;
+            graphA = null;
+            compareMode = CompareMode.FILE_TO_STORED;
+        }
+    }
+
+    function invertPropertyChange(change) {
+        return { ...change, from: change.to, to: change.from };
+    }
+
+    function invertResourceChange(resource) {
+        return {
+            ...resource,
+            changes: resource.changes?.map(invertPropertyChange) ?? null,
+        };
+    }
+
+    function invertClassChange(cls) {
+        return {
+            ...invertResourceChange(cls),
+            attributes: cls.attributes?.map(invertResourceChange) ?? null,
+            associations: cls.associations?.map(invertResourceChange) ?? null,
+            enumEntries: cls.enumEntries?.map(invertResourceChange) ?? null,
+        };
+    }
+
+    function invertChangeList(changeList) {
+        return changeList.map(pkg => ({
+            ...invertResourceChange(pkg),
+            classes: pkg.classes.map(invertClassChange),
+        }));
+    }
+
     async function runCompare() {
         let response;
+        let invert = false;
         switch (compareMode) {
             case CompareMode.FILE_TO_FILE:
                 response = await bec.compareSchemasFromFiles(fileA, fileB);
                 break;
             case CompareMode.FILE_TO_STORED:
                 response = await bec.compareSchemas(datasetB, graphB, fileA);
+                break;
+            case CompareMode.STORED_TO_FILE:
+                response = await bec.compareSchemas(datasetA, graphA, fileA);
+                invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:
                 response = await bec.compareDatasetSchemas(
@@ -143,7 +209,10 @@
                 throw new Error(`Unknown compareMode: ${compareMode}`);
         }
 
-        const changeList = await response.json();
+        let changeList = await response.json();
+        if (invert) {
+            changeList = invertChangeList(changeList);
+        }
         changeList.sort((a, b) => a.label.localeCompare(b.label));
         compareState.changeList.updateValue(changeList);
         migrationState.set({
@@ -193,78 +262,155 @@
             </div>
 
             {#if compareMode === CompareMode.STORED_TO_STORED}
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetA}
-                    bind:graph={graphA}
-                    {lockedDatasetName}
-                    {lockedGraphUri}
-                />
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetA}
+                        bind:graph={graphA}
+                        {lockedDatasetName}
+                        {lockedGraphUri}
+                    />
+                </div>
 
                 <div class="flex items-center gap-3">
                     <div class="bg-border h-px w-full"></div>
-                    <span
-                        class="text-text-subtle text-xs font-light text-nowrap"
+                    <button
+                        onclick={swapSelections}
+                        class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                        title="Swap Before and After"
                     >
-                        COMPARE TO
-                    </span>
+                        <Fa icon={faRightLeft} />
+                        Swap
+                    </button>
                     <div class="bg-border h-px w-full"></div>
                 </div>
 
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetB}
-                    bind:graph={graphB}
-                />
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetB}
+                        bind:graph={graphB}
+                    />
+                </div>
             {/if}
 
             {#if compareMode === CompareMode.FILE_TO_STORED}
-                <div
-                    class="border-border bg-background-subtle rounded border p-3"
-                >
-                    <FileSelectButton bind:file={fileA} />
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton bind:file={fileA} />
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-3">
                     <div class="bg-border h-px w-full"></div>
-                    <span
-                        class="text-text-subtle text-xs font-light text-nowrap"
+                    <button
+                        onclick={swapSelections}
+                        class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                        title="Swap Before and After"
                     >
-                        COMPARE TO
-                    </span>
+                        <Fa icon={faRightLeft} />
+                        Swap
+                    </button>
                     <div class="bg-border h-px w-full"></div>
                 </div>
 
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetB}
-                    bind:graph={graphB}
-                    {lockedDatasetName}
-                    {lockedGraphUri}
-                />
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetB}
+                        bind:graph={graphB}
+                        {lockedDatasetName}
+                        {lockedGraphUri}
+                    />
+                </div>
+            {/if}
+
+            {#if compareMode === CompareMode.STORED_TO_FILE}
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
+                    <DatasetAndGraphSelection
+                        bind:dataset={datasetA}
+                        bind:graph={graphA}
+                        {lockedDatasetName}
+                        {lockedGraphUri}
+                    />
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <div class="bg-border h-px w-full"></div>
+                    <button
+                        onclick={swapSelections}
+                        class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                        title="Swap Before and After"
+                    >
+                        <Fa icon={faRightLeft} />
+                        Swap
+                    </button>
+                    <div class="bg-border h-px w-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton bind:file={fileA} />
+                    </div>
+                </div>
             {/if}
 
             {#if compareMode === CompareMode.FILE_TO_FILE}
-                <div
-                    class="border-border bg-background-subtle rounded border p-3"
-                >
-                    <FileSelectButton bind:file={fileA} />
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        Before
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton bind:file={fileA} />
+                    </div>
                 </div>
 
                 <div class="flex items-center gap-3">
                     <div class="bg-border h-px w-full"></div>
-                    <span
-                        class="text-text-subtle text-xs font-light text-nowrap"
+                    <button
+                        onclick={swapSelections}
+                        class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                        title="Swap Before and After"
                     >
-                        COMPARE TO
-                    </span>
+                        <Fa icon={faRightLeft} />
+                        Swap
+                    </button>
                     <div class="bg-border h-px w-full"></div>
                 </div>
 
-                <div
-                    class="border-border bg-background-subtle rounded border p-3"
-                >
-                    <FileSelectButton
-                        bind:file={fileB}
-                        label="Select second file"
-                    />
+                <div class="flex flex-col gap-1.5">
+                    <span class="text-text-subtle px-1 text-xs font-medium">
+                        After
+                    </span>
+                    <div
+                        class="border-border bg-background-subtle rounded border p-3"
+                    >
+                        <FileSelectButton
+                            bind:file={fileB}
+                            label="Select second file"
+                        />
+                    </div>
                 </div>
             {/if}
         </div>
