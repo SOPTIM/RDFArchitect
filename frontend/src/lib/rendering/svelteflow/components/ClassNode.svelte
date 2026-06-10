@@ -19,6 +19,7 @@
     import { Handle, Position } from "@xyflow/svelte";
 
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
@@ -116,7 +117,11 @@
                     {#each group.props as attr}
                         <div
                             class="text-default-text leading-6"
-                            style={attr.color ? `color: ${attr.color};` : ""}
+                            style={userSettings.get(
+                                "useColoredPropertiesInMergedView",
+                            ) && attr.color
+                                ? `color: ${attr.color};`
+                                : ""}
                         >
                             {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
                         </div>
@@ -126,7 +131,11 @@
                 {#each attributes as attr}
                     <div
                         class="text-default-text leading-6"
-                        style={attr.color ? `color: ${attr.color};` : ""}
+                        style={userSettings.get(
+                            "useColoredPropertiesInMergedView",
+                        ) && attr.color
+                            ? `color: ${attr.color};`
+                            : ""}
                     >
                         {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
                     </div>
@@ -141,7 +150,9 @@
                     {#each group.props as enumEntry}
                         <div
                             class="text-default-text leading-6"
-                            style={enumEntry.color
+                            style={userSettings.get(
+                                "useColoredPropertiesInMergedView",
+                            ) && enumEntry.color
                                 ? `color: ${enumEntry.color};`
                                 : ""}
                         >
@@ -153,7 +164,9 @@
                 {#each enumEntries as enumEntry}
                     <div
                         class="text-default-text leading-6"
-                        style={enumEntry.color
+                        style={userSettings.get(
+                            "useColoredPropertiesInMergedView",
+                        ) && enumEntry.color
                             ? `color: ${enumEntry.color};`
                             : ""}
                     >

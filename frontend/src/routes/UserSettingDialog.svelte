@@ -29,6 +29,7 @@
         usePackagePrefix: false,
         defaultExportFormat: supportedRDFMediaTypes[0].mimeType,
         showPackagePrefix: false,
+        useColoredPropertiesInMergedView: true,
         normalizeComments: true,
     };
 
@@ -94,6 +95,15 @@
                     (localSettings["showPackagePrefix"] = true)}
                 callOnInputFalse={() =>
                     (localSettings["showPackagePrefix"] = false)}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Use colored properties in merged view"
+                value={localSettings["useColoredPropertiesInMergedView"]}
+                callOnInputTrue={() =>
+                    (localSettings["useColoredPropertiesInMergedView"] = true)}
+                callOnInputFalse={() =>
+                    (localSettings["useColoredPropertiesInMergedView"] = false)}
                 labelFirst={false}
             />
         </USC.Section>

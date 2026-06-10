@@ -21,6 +21,7 @@
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
@@ -116,7 +117,11 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Merged View Colors – {datasetName}"
+    title="Merged View Colors – {datasetName} {userSettings.get(
+        'useColoredPropertiesInMergedView',
+    )
+        ? ''
+        : '(disabled in settings)'}"
     saveChanges={saveColors}
     discardChanges={discardColors}
     {hasChanges}
