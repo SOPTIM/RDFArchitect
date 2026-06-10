@@ -28,7 +28,7 @@
     import { goto } from "$app/navigation";
 
     const externalResources = {
-        help: "https://github.com/SOPTIM/RDFArchitect#readme",
+        help: "https://rdfarchitect.soptim.de",
         feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
 
