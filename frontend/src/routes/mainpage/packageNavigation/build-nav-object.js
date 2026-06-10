@@ -17,6 +17,7 @@
 
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
@@ -81,7 +82,18 @@ export async function getNavEntryList(existingDatasetNavList) {
     syncList(result, freshEntries, null);
 
     for (const datasetNavEntry of result) {
-        await populateDataset(datasetNavEntry);
+        try {
+            await populateDataset(datasetNavEntry);
+        } catch (err) {
+            console.error(
+                "Error populating dataset " + datasetNavEntry.id,
+                err,
+            );
+            toastStore.error(
+                "Failed to load dataset",
+                `Could not load graphs for dataset "${datasetNavEntry.id}". Other datasets are still available.`,
+            );
+        }
     }
 
     console.log("finished Building navObj: ", result);
@@ -91,6 +103,10 @@ export async function getNavEntryList(existingDatasetNavList) {
 async function getDatasetNames() {
     try {
         const res = await bec.getDatasetNames();
+        if (!res.ok) {
+            console.error(`Error fetching dataset names: HTTP ${res.status}`);
+            return [];
+        }
         return await res.json();
     } catch (err) {
         console.error("Error fetching dataset names", err);
@@ -130,6 +146,12 @@ async function populateDataset(datasetNavEntry) {
 async function getGraphNames(datasetName) {
     try {
         const res = await bec.getGraphNames(datasetName);
+        if (!res.ok) {
+            console.error(
+                `Error fetching graph names for dataset "${datasetName}": HTTP ${res.status}`,
+            );
+            return [];
+        }
         return await res.json();
     } catch (err) {
         console.error(
