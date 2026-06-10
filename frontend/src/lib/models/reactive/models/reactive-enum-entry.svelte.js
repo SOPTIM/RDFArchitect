@@ -18,7 +18,6 @@
 import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
 import {
     isInvalidLabel,
-    isInvalidNamespace,
     isInvalidUuid,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
@@ -31,10 +30,7 @@ export class ReactiveEnumEntry {
         stereotype = null,
     } = {}) {
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
-        this.namespace = new ReactiveValueWrapper(
-            namespace,
-            isInvalidNamespace,
-        );
+        this.namespace = new ReactiveValueWrapper(namespace);
         this.label = new ReactiveValueWrapper(label, isInvalidLabel);
         this.comment = new ReactiveValueWrapper(comment);
         this.stereotype = new ReactiveValueWrapper(stereotype);

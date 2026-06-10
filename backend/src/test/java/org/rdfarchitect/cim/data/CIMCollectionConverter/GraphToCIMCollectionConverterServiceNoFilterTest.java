@@ -19,7 +19,7 @@ package org.rdfarchitect.cim.data.CIMCollectionConverter;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.sparql.graph.GraphFactory;
@@ -36,7 +36,6 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterService;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 
@@ -49,11 +48,10 @@ import java.util.UUID;
 
 class GraphToCIMCollectionConverterServiceNoFilterTest {
 
-    private final InMemoryDatabase database = new InMemoryDatabaseImpl();
+    private final InMemoryDatabase database = new InMemoryDatabaseImpl(new SchemaConfig());
 
     private final GraphToCIMCollectionConverterUseCase converter =
-            new GraphToCIMCollectionConverterService(
-                    new InMemoryDatabaseAdapter(database, new SchemaConfig()));
+            new GraphToCIMCollectionConverterService(new InMemoryDatabaseAdapter(database));
 
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
@@ -85,23 +83,17 @@ class GraphToCIMCollectionConverterServiceNoFilterTest {
 
     private void addFileGraphToDatabase(String fileName) throws IOException {
         if (!database.containsGraph(graphIdentifier)) {
-            database.create(graphIdentifier, GraphFactory.createDefaultGraph());
+            database.createGraph(graphIdentifier, GraphFactory.createDefaultGraph());
         }
-        GraphRewindableWithUUIDs graphRewindable = null;
-        try {
-            var graph = GraphFactory.createDefaultGraph();
-            InputStream in = Files.newInputStream(Path.of(fileName));
-            Lang lang = fileName.endsWith(".rdf") ? Lang.RDFXML : Lang.TTL;
-            RDFDataMgr.read(graph, in, lang);
-            graphRewindable = database.begin(graphIdentifier, TxnType.WRITE);
+        var graph = GraphFactory.createDefaultGraph();
+        InputStream in = Files.newInputStream(Path.of(fileName));
+        Lang lang = fileName.endsWith(".rdf") ? Lang.RDFXML : Lang.TTL;
+        RDFDataMgr.read(graph, in, lang);
+        try (var ctx = database.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             for (var triple : graph.find().toList()) {
-                graphRewindable.add(triple);
+                ctx.getRdfGraph().add(triple);
             }
-            graphRewindable.commit();
-        } finally {
-            if (graphRewindable != null) {
-                graphRewindable.end();
-            }
+            ctx.commit();
         }
     }
 

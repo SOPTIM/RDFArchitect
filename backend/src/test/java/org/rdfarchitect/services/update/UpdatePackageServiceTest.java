@@ -21,6 +21,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.*;
 import static org.mockito.Mockito.*;
 
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -32,18 +33,16 @@ import org.mockito.MockedStatic;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.exception.database.ResourceConflictException;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.rdf.graph.DeltaCompressible;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.rdfarchitect.services.dl.update.packagelayout.UpdatePackageLayoutService;
 import org.rdfarchitect.services.update.packages.UpdatePackageService;
 
@@ -52,25 +51,24 @@ import java.util.UUID;
 class UpdatePackageServiceTest {
 
     private UpdatePackageService service;
-    private GraphRewindableWithUUIDs mockGraph;
+    private GraphRewindable mockGraph;
+    private GraphContext mockGraphWithContext;
     private final PackageMapper mapper = Mappers.getMapper(PackageMapper.class);
-    private ChangeLogUseCase changeLogUseCase;
 
     @BeforeEach
     void setUp() {
         DatabasePort databasePort = mock(DatabasePort.class);
-        changeLogUseCase = mock(ChangeLogUseCase.class);
         var mockUpdatePackageLayoutService = mock(UpdatePackageLayoutService.class);
         service =
                 new UpdatePackageService(
                         databasePort,
                         mapper,
-                        changeLogUseCase,
                         mockUpdatePackageLayoutService,
                         mockUpdatePackageLayoutService,
                         mockUpdatePackageLayoutService);
-        mockGraph = mock(GraphRewindableWithUUIDs.class);
-        var mockGraphWithContext = mock(GraphWithContext.class);
+        mockGraph = mock(GraphRewindable.class);
+        mockGraphWithContext = mock(GraphContext.class);
+        when(mockGraphWithContext.begin(any(ReadWrite.class))).thenReturn(mockGraphWithContext);
         when(databasePort.getGraphWithContext(any())).thenReturn(mockGraphWithContext);
         when(mockGraphWithContext.getRdfGraph()).thenReturn(mockGraph);
         when(databasePort.getPrefixMapping(anyString())).thenReturn(mock(PrefixMapping.class));
@@ -86,12 +84,12 @@ class UpdatePackageServiceTest {
             ArgumentCaptor<CIMPackage> captor = ArgumentCaptor.forClass(CIMPackage.class);
             mockedStatic
                     .when(() -> CIMUpdates.insertPackage(eq(mockGraph), any(), captor.capture()))
-                    .thenAnswer(invocation -> null);
+                    .thenAnswer(_ -> null);
 
             service.addPackage(new GraphIdentifier("default", "test"), dto);
 
-            verify(mockGraph).commit();
-            verify(mockGraph).end();
+            verify(mockGraphWithContext).commit(anyString());
+            verify(mockGraphWithContext).close();
 
             CIMPackage captured = captor.getValue();
             assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
@@ -114,12 +112,12 @@ class UpdatePackageServiceTest {
             ArgumentCaptor<CIMPackage> captor = ArgumentCaptor.forClass(CIMPackage.class);
             mockedStatic
                     .when(() -> CIMUpdates.insertPackage(eq(mockGraph), any(), captor.capture()))
-                    .thenAnswer(invocation -> null);
+                    .thenAnswer(_ -> null);
 
             service.addPackage(new GraphIdentifier("default", "test"), dto);
 
-            verify(mockGraph).commit();
-            verify(mockGraph).end();
+            verify(mockGraphWithContext).commit(anyString());
+            verify(mockGraphWithContext).close();
 
             CIMPackage captured = captor.getValue();
             assertThat(captured.getUri()).isEqualTo(new URI("http://example.com#TestPackage"));
@@ -149,7 +147,7 @@ class UpdatePackageServiceTest {
                 // expected
             }
 
-            verify(mockGraph).end();
+            verify(mockGraphWithContext).close();
         }
     }
 
@@ -166,9 +164,8 @@ class UpdatePackageServiceTest {
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("class with the same IRI");
 
-        verify(mockGraph, never()).commit();
-        verify(mockGraph).end();
-        verifyNoInteractions(changeLogUseCase);
+        verify(mockGraphWithContext, never()).commit(anyString());
+        verify(mockGraphWithContext).close();
     }
 
     @Test
@@ -184,12 +181,12 @@ class UpdatePackageServiceTest {
             ArgumentCaptor<CIMPackage> captor = ArgumentCaptor.forClass(CIMPackage.class);
             mockedStatic
                     .when(() -> CIMUpdates.replacePackage(eq(mockGraph), any(), captor.capture()))
-                    .thenAnswer(invocation -> null);
+                    .thenAnswer(_ -> null);
 
             service.replacePackage(new GraphIdentifier("default", "test"), dto);
 
-            verify(mockGraph).commit();
-            verify(mockGraph).end();
+            verify(mockGraphWithContext).commit(anyString());
+            verify(mockGraphWithContext).close();
 
             CIMPackage captured = captor.getValue();
             assertThat(captured.getUri()).isEqualTo(new URI("http://other.org#otherPackage"));
@@ -207,17 +204,11 @@ class UpdatePackageServiceTest {
             service.deletePackage(graphIdentifier, packageUuid);
 
             mockedStatic.verify(
-                    () ->
-                            CIMUpdates.deletePackage(
-                                    eq(mockGraph), any(), eq(packageUuid.toString())));
+                    () -> CIMUpdates.deletePackage(eq(mockGraph), any(), eq(packageUuid)));
         }
 
-        verify(mockGraph).commit();
-        verify(mockGraph).end();
-
-        ArgumentCaptor<ChangeLogEntry> captor = ArgumentCaptor.forClass(ChangeLogEntry.class);
-        verify(changeLogUseCase).recordChange(eq(graphIdentifier), captor.capture());
-        assertThat(captor.getValue().getMessage()).isEqualTo("Deleted package " + packageUuid);
+        verify(mockGraphWithContext).commit("Deleted package " + packageUuid);
+        verify(mockGraphWithContext).close();
     }
 
     @Test
@@ -227,13 +218,13 @@ class UpdatePackageServiceTest {
 
         try (MockedStatic<CIMUpdates> mockedStatic = mockStatic(CIMUpdates.class)) {
             mockedStatic
-                    .when(() -> CIMUpdates.deletePackage(any(), any(), anyString()))
+                    .when(() -> CIMUpdates.deletePackage(any(), any(), any(UUID.class)))
                     .thenThrow(new RuntimeException("boom"));
 
             assertThatThrownBy(() -> service.deletePackage(graphIdentifier, packageUuid))
                     .isInstanceOf(RuntimeException.class);
 
-            verify(mockGraph).end();
+            verify(mockGraphWithContext).close();
         }
     }
 }

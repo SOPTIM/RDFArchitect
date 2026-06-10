@@ -20,17 +20,15 @@ package org.rdfarchitect.database.inmemory;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
-import org.apache.jena.sparql.core.Transactional;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
 import java.util.Map;
@@ -57,23 +55,12 @@ public interface SessionDataStore {
     List<String> listDatasets();
 
     /**
-     * Begin a transaction on a {@link GraphRewindableWithUUIDs}.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @param txnType The transactionType
-     * @return The {@link GraphRewindableWithUUIDs} the {@link Transactional Transaction} is
-     *     performed on.
-     */
-    GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType);
-
-    /**
-     * Get a {@link GraphWithContext} from the database.
+     * Get a {@link GraphContext} for the specified graph.
      *
      * @param graphIdentifier The identifier of the graph.
-     * @return The {@link GraphWithContext}.
+     * @return The {@link GraphContext}.
      */
-    GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
+    GraphContext getGraphWithContext(GraphIdentifier graphIdentifier);
 
     /**
      * Get all {@link CustomDiagram} for a dataset.
@@ -100,9 +87,8 @@ public interface SessionDataStore {
     UUID getCrossProfileDiagramUUID(String datasetName);
 
     /**
-     * Creates a new {@link GraphRewindableWithUUIDs} in a specified dataset. If the dataset does
-     * not exist yet, it will be created. If the {@link GraphRewindableWithUUIDs} already exists
-     * nothing happens.
+     * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will
+     * be created. If the graph already exists, nothing happens.
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
      *     graph URI.
@@ -111,8 +97,8 @@ public interface SessionDataStore {
     void create(GraphIdentifier graphIdentifier, Graph newGraph);
 
     /**
-     * Deletes a {@link GraphRewindableWithUUIDs} from a specified dataset. If the graph or dataset
-     * does not exist, nothing happens.
+     * Deletes the named graph from a specified dataset. If the graph or dataset does not exist,
+     * nothing happens.
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
      *     graph URI.
@@ -183,44 +169,6 @@ public interface SessionDataStore {
     void fetchSnapshot(DatabaseConnection databaseConnection, String base64Token);
 
     /**
-     * Undoes the last change made to a graph.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @throws DataAccessException if the dataset or graph does not exist.
-     */
-    void undo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Redoes the last previously undone change made to a graph.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @throws DataAccessException if the dataset or graph does not exist.
-     */
-    void redo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Checks whether the last change made to a graph can be undone.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @return True if the last change can be undone, otherwise False.
-     * @throws DataAccessException if the dataset or graph does not exist.
-     */
-    boolean canUndo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Checks whether the last undone change can be redone.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @return True if the last undone change can be redone, otherwise False.
-     * @throws DataAccessException if the dataset or graph does not exist.
-     */
-    boolean canRedo(GraphIdentifier graphIdentifier);
-
-    /**
      * Checks if a dataset is currently set to read-only.
      *
      * @param datasetName The name of the dataset.
@@ -244,14 +192,4 @@ public interface SessionDataStore {
      * @throws DataAccessException if the dataset does not exist.
      */
     void disableEditing(String datasetName);
-
-    /**
-     * Restores a graph to a specific version.
-     *
-     * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI.
-     * @param versionId The ID of the version to restore to.
-     * @throws DataAccessException if the graph does not exist.
-     */
-    void restore(GraphIdentifier graphIdentifier, UUID versionId);
 }

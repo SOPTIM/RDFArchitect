@@ -20,7 +20,7 @@ package org.rdfarchitect.services.delete;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
@@ -41,7 +41,6 @@ import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMAssociationUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMAttributeUtils;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -295,15 +294,8 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
     }
 
     private Graph getCopyOfDatabaseGraph(GraphIdentifier graphIdentifier) {
-        GraphRewindable graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            return GraphUtils.deepCopy(graph);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            return GraphUtils.deepCopy(ctx.getRdfGraph());
         }
     }
 }

@@ -24,19 +24,19 @@ import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.Dataset;
 import org.apache.jena.query.DatasetFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,9 +46,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Class that provides {@link GraphRewindableWithUUIDs GraphRewindables} belonging to a session.
- * Write actions on this class are irreversible. closing the provided {@link
- * GraphRewindableWithUUIDs GraphRewindables} is mandatory.
+ * Class that provides {@link GraphContext} instances belonging to a session. Write actions on this
+ * class are irreversible. Closing the provided {@link GraphContext} instances is mandatory.
  */
 public class SessionDataStoreImpl implements SessionDataStore {
 
@@ -69,13 +68,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
             if (!graphCollections.containsKey(datasetName)) {
                 return;
             }
-            var graphRewindableCollection = graphCollections.get(datasetName);
-            for (String graphUri : graphRewindableCollection.listGraphUris()) {
-                GraphRewindableWithUUIDs graph =
-                        graphRewindableCollection.begin(graphUri, TxnType.WRITE);
-                graph.close();
-                graph.end();
-            }
+            graphCollections.get(datasetName).clear();
             graphCollections.remove(datasetName);
         } finally {
             lock.unlock();
@@ -93,20 +86,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            createDataset(datasetName);
-            return graphCollections.get(datasetName).begin(graphUri, txnType);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
+    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         lock.lock();
         try {
             createDataset(graphIdentifier.datasetName());
@@ -189,7 +169,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
         lock.lock();
         try {
             return graphCollections.containsKey(datasetName)
-                    && graphCollections.get(datasetName).containsGraph(graphUri);
+                    && graphCollections.get(datasetName).listGraphUris().contains(graphUri);
         } finally {
             lock.unlock();
         }
@@ -236,17 +216,17 @@ public class SessionDataStoreImpl implements SessionDataStore {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();
         lock.lock();
-        GraphRewindableWithUUIDs graph = null;
         try {
             assertThatGraphExists(graphIdentifier);
-            graph = begin(graphIdentifier, TxnType.READ);
-            var graphSource =
-                    new GraphSourceBuilderImpl().setGraph(graph).setGraphName(graphUri).build();
-            databaseConnection.insertGraph(graphSource, datasetName);
-        } finally {
-            if (graph != null) {
-                graph.end();
+            try (var ctx = getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+                var graphSource =
+                        new GraphSourceBuilderImpl()
+                                .setGraph(ctx.getRdfGraph())
+                                .setGraphName(graphUri)
+                                .build();
+                databaseConnection.insertGraph(graphSource, datasetName);
             }
+        } finally {
             lock.unlock();
         }
     }
@@ -362,71 +342,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public void undo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            graphCollections.get(datasetName).undo(graphUri);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void redo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            graphCollections.get(datasetName).redo(graphUri);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public boolean canUndo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).canUndo(graphUri);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public boolean canRedo(GraphIdentifier graphIdentifier) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).canRedo(graphUri);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void restore(GraphIdentifier graphIdentifier, UUID versionId) {
-        final String datasetName = graphIdentifier.datasetName();
-        final String graphUri = graphIdentifier.graphUri();
-        lock.lock();
-        try {
-            assertThatGraphExists(graphIdentifier);
-            graphCollections.get(datasetName).restore(graphUri, versionId);
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
     public boolean isReadOnly(String datasetName) {
         lock.lock();
         try {
@@ -475,14 +390,14 @@ public class SessionDataStoreImpl implements SessionDataStore {
      * Throws an exceptions if the graph or its dataset does not exist
      *
      * @param graphIdentifier The identifier of the graph, which includes the dataset name and the
-     *     graph URI..
+     *     graph URI.
      * @throws DataAccessException if the dataset or graph does not exist.
      */
     private void assertThatGraphExists(GraphIdentifier graphIdentifier) {
         final String datasetName = graphIdentifier.datasetName();
         final String graphUri = graphIdentifier.graphUri();
         assertThatDatasetExists(datasetName);
-        if (!graphCollections.get(datasetName).containsGraph(graphUri)) {
+        if (!graphCollections.get(datasetName).listGraphUris().contains(graphUri)) {
             throw new DataAccessException(
                     "Graph " + graphUri + " does not exist in dataset " + datasetName);
         }

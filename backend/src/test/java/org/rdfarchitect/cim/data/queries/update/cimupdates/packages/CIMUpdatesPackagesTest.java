@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeAll;
@@ -85,48 +85,52 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     otherPackage));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 // isFalse
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
                         .isFalse();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        CIMS.belongsToCategory.asNode(),
-                                        NodeFactory.createURI(PACKAGE_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                CIMS.belongsToCategory.asNode(),
+                                                NodeFactory.createURI(PACKAGE_URI)))
                         .isFalse();
                 // isTrue
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(OTHER_PACKAGE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(OTHER_PACKAGE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(OTHER_PACKAGE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(
+                                                        OTHER_PACKAGE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        CIMS.belongsToCategory.asNode(),
-                                        NodeFactory.createURI(OTHER_PACKAGE_URI)))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                CIMS.belongsToCategory.asNode(),
+                                                NodeFactory.createURI(OTHER_PACKAGE_URI)))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -148,22 +152,21 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageRequired));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -181,30 +184,30 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageOptional));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -252,16 +255,14 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("class with the same IRI");
 
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(EXISTING_CLASS_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(EXISTING_CLASS_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -280,22 +281,21 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageRequired));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
 
@@ -314,30 +314,30 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                                     packageOptional));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        CIMS.classCategory.asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                CIMS.classCategory.asNode()))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.label.asNode(),
-                                        NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.label.asNode(),
+                                                NodeFactory.createLiteralLang(PACKAGE_LABEL, "en")))
                         .isTrue();
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDFS.comment.asNode(),
-                                        new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
-                                                .asTypedLiteral()
-                                                .asNode()))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDFS.comment.asNode(),
+                                                new RDFSComment(COMMENT, new URI(COMMENT_FORMAT))
+                                                        .asTypedLiteral()
+                                                        .asNode()))
                         .isTrue();
-            } finally {
-                testGraph.end();
             }
         }
     }
@@ -357,19 +357,17 @@ public class CIMUpdatesPackagesTest extends CIMUpdatesTestBase {
                             CIMUpdates.deletePackage(
                                     graph,
                                     databasePort.getPrefixMapping(DATASET_NAME),
-                                    packageRequired.getUuid().toString()));
+                                    packageRequired.getUuid()));
 
             // Assert
-            try {
-                testGraph.begin(TxnType.READ);
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
                 assertThat(
-                                testGraph.contains(
-                                        NodeFactory.createURI(PACKAGE_URI),
-                                        RDF.type.asNode(),
-                                        Node.ANY))
+                                ctx.getRdfGraph()
+                                        .contains(
+                                                NodeFactory.createURI(PACKAGE_URI),
+                                                RDF.type.asNode(),
+                                                Node.ANY))
                         .isFalse();
-            } finally {
-                testGraph.end();
             }
         }
     }

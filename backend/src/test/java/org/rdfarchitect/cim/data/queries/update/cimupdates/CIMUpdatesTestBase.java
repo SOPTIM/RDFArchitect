@@ -19,18 +19,19 @@ package org.rdfarchitect.cim.data.queries.update.cimupdates;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.update.Update;
+import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
+import org.rdfarchitect.database.inmemory.SessionDataStore;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.io.IOException;
@@ -48,7 +49,7 @@ public class CIMUpdatesTestBase {
     protected static final String GRAPH_URI = "http://graph";
     protected static final GraphIdentifier graphIdentifier =
             new GraphIdentifier("default", GRAPH_URI);
-    protected GraphRewindableWithUUIDs testGraph;
+    protected GraphContext testGraph;
     protected DatabasePort databasePort;
 
     // base test constants
@@ -113,7 +114,7 @@ public class CIMUpdatesTestBase {
 
     @BeforeEach
     void setUpEnvironment() {
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         addGraphFromFile(BASE_FILENAME);
     }
 
@@ -132,17 +133,13 @@ public class CIMUpdatesTestBase {
                         .build()
                         .graph();
         databasePort.createGraph(graphIdentifier, graph);
-        testGraph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
+        testGraph = databasePort.getGraphWithContext(graphIdentifier);
     }
 
     protected void addTriple(Node subject, Node predicate, Node object) {
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.WRITE);
-            graph.add(subject, predicate, object);
-            graph.commit();
-        } finally {
-            graph.end();
+        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph().add(subject, predicate, object);
+            ctx.commit();
         }
     }
 
@@ -153,22 +150,20 @@ public class CIMUpdatesTestBase {
 
     /** Use this method to execute a multi-operation {@link UpdateRequest} on the test graph. */
     protected void executeUpdateOnTestGraph(UpdateRequest update) {
-        InMemorySparqlExecutor.executeSingleUpdate(
-                databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
-                update,
-                graphIdentifier.graphUri());
+        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+            var dataset =
+                    SessionDataStore.wrapGraphInDataset(
+                            ctx.getRdfGraph(), graphIdentifier.graphUri());
+            UpdateExecutionFactory.create(update, dataset).execute();
+            ctx.commit();
+        }
     }
 
     /** Use this method to execute write actions in a transaction using lambda expression */
     protected void executeWriteTransaction(Consumer<Graph> graphOperation) {
-        try {
-            testGraph.begin(TxnType.WRITE);
-            graphOperation.accept(testGraph);
-            testGraph.commit();
-        } finally {
-            if (testGraph != null) {
-                testGraph.end();
-            }
+        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+            graphOperation.accept(ctx.getRdfGraph());
+            ctx.commit();
         }
     }
 
@@ -178,18 +173,14 @@ public class CIMUpdatesTestBase {
      * supplier build the {@link UpdateRequest} against {@code testGraph}, then executes it.
      */
     protected void executeUpdateBuiltAgainstTestGraph(
-            Function<GraphRewindableWithUUIDs, UpdateRequest> updateBuilder) {
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.WRITE);
-            var update = updateBuilder.apply(graph);
+            Function<Graph, UpdateRequest> updateBuilder) {
+        try (var ctx = testGraph.begin(ReadWrite.WRITE)) {
+            var update = updateBuilder.apply(ctx.getRdfGraph());
             var dataset =
                     org.rdfarchitect.database.inmemory.SessionDataStore.wrapGraphInDataset(
-                            graph, graphIdentifier.graphUri());
+                            ctx.getRdfGraph(), graphIdentifier.graphUri());
             org.apache.jena.update.UpdateExecutionFactory.create(update, dataset).execute();
-            graph.commit();
-        } finally {
-            graph.end();
+            ctx.commit();
         }
     }
 }

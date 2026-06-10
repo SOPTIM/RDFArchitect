@@ -119,7 +119,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
         var diagramObjects =
                 diagramLayout
-                        .getDiagramLayoutModel()
+                        .getDiagramLayoutModelDirect()
                         .listSubjectsWithProperty(
                                 DL.belongsToIdentifiedObject,
                                 ResourceFactory.createResource(

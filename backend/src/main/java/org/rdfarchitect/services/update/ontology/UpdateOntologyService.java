@@ -19,15 +19,16 @@ package org.rdfarchitect.services.update.ontology;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.vocabulary.DCAT;
+import org.apache.jena.vocabulary.DCTerms;
+import org.apache.jena.vocabulary.OWL2;
 import org.rdfarchitect.api.dto.ontology.OntologyDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
 import org.rdfarchitect.models.cim.ontology.OntologyFacade;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
-import org.rdfarchitect.services.ChangeLogUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.springframework.stereotype.Service;
 
@@ -40,17 +41,13 @@ public class UpdateOntologyService
 
     private final DatabasePort databasePort;
     private final ExpandURIUseCase expandURIUseCase;
-    private final ChangeLogUseCase changeLogUseCase;
 
     // CREATE
     @Override
     public void createOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
         expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.WRITE);
-            var model = ModelFactory.createModelForGraph(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             if (ontologyDTO.getUuid() == null) {
@@ -61,16 +58,21 @@ public class UpdateOntologyService
                             "Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
-            var ontology = new OntologyFacade(model);
-            ontology.createOntology(ontologyDTO);
-            graph.commit();
-        } finally {
-            if (graph != null) {
-                graph.end();
-                changeLogUseCase.recordChange(
-                        graphIdentifier,
-                        new ChangeLogEntry("Created Ontology", graph.getLastDelta()));
+            new OntologyFacade(model).createOntology(ontologyDTO);
+            var pm = new PrefixMappingImpl();
+            pm.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            if (pm.getNsURIPrefix(DCAT.getURI()) == null) {
+                pm.setNsPrefix("dcat", DCAT.getURI());
             }
+            if (pm.getNsURIPrefix(DCTerms.getURI()) == null) {
+                pm.setNsPrefix("dct", DCTerms.getURI());
+            }
+            if (pm.getNsURIPrefix(OWL2.getURI()) == null) {
+                pm.setNsPrefix("owl", OWL2.getURI());
+            }
+            databasePort.setPrefixMapping(graphIdentifier.datasetName(), pm);
+
+            ctx.commit("Created Ontology");
         }
     }
 
@@ -78,11 +80,8 @@ public class UpdateOntologyService
     @Override
     public void replaceOntology(GraphIdentifier graphIdentifier, OntologyDTO ontologyDTO) {
         expandOntologyIris(graphIdentifier.datasetName(), ontologyDTO);
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.WRITE);
-            var model = ModelFactory.createModelForGraph(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
 
             if (ontologyDTO.getUuid() == null) {
@@ -93,39 +92,19 @@ public class UpdateOntologyService
                             "Invalid UUID for ontology: " + ontologyDTO.getUuid());
                 }
             }
-            var ontology = new OntologyFacade(model);
-            ontology.replaceOntology(ontologyDTO);
-            graph.commit();
-        } finally {
-            if (graph != null) {
-                graph.end();
-                changeLogUseCase.recordChange(
-                        graphIdentifier,
-                        new ChangeLogEntry("Replaced Ontology", graph.getLastDelta()));
-            }
+            new OntologyFacade(model).replaceOntology(ontologyDTO);
+            ctx.commit("Replaced Ontology");
         }
     }
 
     // DELETE
     @Override
     public void deleteOntology(GraphIdentifier graphIdentifier) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.WRITE);
-            var model = ModelFactory.createModelForGraph(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
-
-            var ontology = new OntologyFacade(model);
-            ontology.deleteOntology();
-            graph.commit();
-        } finally {
-            if (graph != null) {
-                graph.end();
-                changeLogUseCase.recordChange(
-                        graphIdentifier,
-                        new ChangeLogEntry("Deleted Ontology", graph.getLastDelta()));
-            }
+            new OntologyFacade(model).deleteOntology();
+            ctx.commit("Deleted Ontology");
         }
     }
 

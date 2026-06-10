@@ -20,27 +20,32 @@ package org.rdfarchitect.api.dto;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Triple;
 import org.mapstruct.Mapper;
-import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.models.changelog.ContextDelta;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
 public interface ChangeLogEntryMapper {
 
-    ChangeLogEntryMapper INSTANCE = Mappers.getMapper(ChangeLogEntryMapper.class);
-
     ChangeLogEntryDTO toDTO(ChangeLogEntry entry);
 
     List<ChangeLogEntryDTO> toDTOList(List<ChangeLogEntry> entries);
 
+    default ContextDeltaDTO toContextDeltaDTO(ContextDelta contextDelta) {
+        var dto = new ContextDeltaDTO();
+        dto.setContextName(contextDelta.contextName());
+        dto.setAdditions(mapTriples(contextDelta.additions()));
+        dto.setDeletions(mapTriples(contextDelta.deletions()));
+        return dto;
+    }
+
     default List<TripleDTO> mapTriples(WeakReference<Graph> graphReference) {
         var graph = graphReference.get();
         if (graph == null) {
-            return new ArrayList<>();
+            return null;
         }
         return graph.stream()
                 .filter(triple -> !triple.getPredicate().equals(RDFA.uuid.asNode()))

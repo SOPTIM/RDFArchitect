@@ -18,7 +18,6 @@ import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/rea
 import {
     isInvalidMultiplicityLowerBound,
     isInvalidMultiplicityUpperBound,
-    isInvalidNamespace,
     isInvalidTarget,
     isInvalidUuid,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
@@ -50,10 +49,7 @@ export class ReactiveAssociation {
         // Set top-level properties
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.label = new ReactiveValueWrapper(label);
-        this.namespace = new ReactiveValueWrapper(
-            namespace,
-            isInvalidNamespace,
-        );
+        this.namespace = new ReactiveValueWrapper(namespace);
         this.domain = new ReactiveValueWrapper(domain, isInvalidUuid);
         this.target = new ReactiveValueWrapper(target, isInvalidTarget);
         this.multiplicityLowerBound = new ReactiveValueWrapper(
@@ -79,10 +75,7 @@ export class ReactiveAssociation {
         this.inverse = {
             uuid: new ReactiveValueWrapper(inverseUuid, isInvalidUuid),
             label: new ReactiveValueWrapper(inverseLabel),
-            namespace: new ReactiveValueWrapper(
-                inverseNamespace,
-                isInvalidNamespace,
-            ),
+            namespace: new ReactiveValueWrapper(inverseNamespace),
             multiplicityLowerBound: new ReactiveValueWrapper(
                 inverseLowerBound,
                 lowerBound =>

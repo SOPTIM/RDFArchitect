@@ -8,6 +8,7 @@
 [![Frontend CI](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml/badge.svg?branch=main)](https://github.com/SOPTIM/RDFArchitect/actions/workflows/frontend-ci.yml)
 [![Version](https://img.shields.io/github/v/tag/SOPTIM/RDFArchitect?sort=semver)](https://github.com/SOPTIM/RDFArchitect/releases)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Documentation](https://img.shields.io/badge/docs-rdfarchitect.soptim.de-blue)](https://rdfarchitect.soptim.de)
 
 RDFArchitect is a web-based tool for visualizing, editing, and sharing RDFS schemas with CIM extensions - as used in CGMES and the ENTSO-e network code profiles — along with their SHACL constraints.
 

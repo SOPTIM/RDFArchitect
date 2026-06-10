@@ -19,15 +19,13 @@ package org.rdfarchitect.services.select;
 
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.OPTIONAL;
 import static org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder.Mode.REQUIRED;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.correctPackagePrefix;
-import static org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs.removeUUIDs;
 
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QueryFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.vocabulary.RDF;
@@ -42,6 +40,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.cim.CIMModifyingUtils;
 import org.rdfarchitect.models.cim.CIMQuerySolutionParser;
 import org.rdfarchitect.models.cim.data.CIMObjectFactory;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
@@ -57,7 +56,6 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.rdfarchitect.rdf.model.wrapper.CimSortedModel;
 import org.springframework.stereotype.Service;
 
@@ -147,7 +145,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         QueryFactory.create(query),
                         null);
 
@@ -181,7 +179,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         query,
                         graphIdentifier.graphUri());
 
@@ -240,7 +238,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         query,
                         graphIdentifier.graphUri());
 
@@ -253,25 +251,20 @@ public class QueryGraphService
 
     @Override
     public ByteArrayOutputStream getSchema(GraphIdentifier graphIdentifier, RDFFormat format) {
-        GraphRewindableWithUUIDs graph = null;
-        try (var out = new ByteArrayOutputStream()) {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            var copiedGraph = GraphUtils.deepCopy(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ);
+                var out = new ByteArrayOutputStream()) {
+            var copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
             copiedGraph
                     .getPrefixMapping()
                     .setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
-            removeUUIDs(copiedGraph);
-            correctPackagePrefix(copiedGraph, UserSettingsContext.get().usePackagePrefix());
+            GraphUtils.removeUUIDs(copiedGraph);
+            CIMModifyingUtils.standardizePackagePrefix(
+                    copiedGraph, UserSettingsContext.get().usePackagePrefix());
             var sortedModel = new CimSortedModel(ModelFactory.createModelForGraph(copiedGraph));
             sortedModel.write(out, format.getLang().getName());
             return out;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
         }
     }
 
@@ -297,7 +290,7 @@ public class QueryGraphService
         // execute package query
         var internalPackageQueryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         internalPackageQuery,
                         graphIdentifier.graphUri());
 
@@ -334,7 +327,7 @@ public class QueryGraphService
         // execute external package query
         var externalPackageQueryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         externalPackageQuery,
                         graphIdentifier.graphUri());
 
@@ -367,7 +360,7 @@ public class QueryGraphService
         // execute query
         var queryResultSet =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         query,
                         graphIdentifier.graphUri());
 
@@ -393,7 +386,7 @@ public class QueryGraphService
         // execute query
         var queryResult =
                 InMemorySparqlExecutor.executeSingleQuery(
-                        databasePort.getGraphWithContext(graphIdentifier).getRdfGraph(),
+                        databasePort.getGraphWithContext(graphIdentifier),
                         query,
                         graphIdentifier.graphUri());
 
@@ -416,21 +409,14 @@ public class QueryGraphService
 
     @Override
     public UUID resolveIRI(GraphIdentifier graphIdentifier, String resourceIRI) {
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            var model = ModelFactory.createModelForGraph(graph);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
             var resource = model.getResource(resourceIRI);
             if (resource == null || !model.contains(resource, RDFA.uuid)) {
                 throw new DataAccessException("Resource with IRI " + resourceIRI + " not found.");
             }
             var uuidLiteral = model.getProperty(resource, RDFA.uuid).getObject().asLiteral();
             return UUID.fromString(uuidLiteral.getString());
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
         }
     }
 }

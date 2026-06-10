@@ -25,7 +25,7 @@ import org.apache.jena.arq.querybuilder.SelectBuilder;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.Node;
 import org.apache.jena.query.QueryExecutionFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.DatabasePort;
@@ -46,7 +46,6 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -62,19 +61,17 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
 
     @Override
     public CIMCollection convert(GraphIdentifier graphIdentifier, GraphFilter filter) {
-        var cimCollection = new CIMCollection();
         Graph copiedGraph;
-        GraphRewindableWithUUIDs graph = null;
-        try {
-            graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-            graph.begin(TxnType.READ);
-            copiedGraph = GraphUtils.deepCopy(graph);
-        } finally {
-            if (graph != null) {
-                graph.end();
-            }
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            copiedGraph = GraphUtils.deepCopy(ctx.getRdfGraph());
         }
+        return convert(copiedGraph, graphIdentifier, filter);
+    }
 
+    @Override
+    public CIMCollection convert(
+            Graph copiedGraph, GraphIdentifier graphIdentifier, GraphFilter filter) {
+        var cimCollection = new CIMCollection();
         fetchAllPackages(copiedGraph, graphIdentifier, cimCollection);
         fetchClasses(copiedGraph, graphIdentifier, filter, cimCollection);
         fetchEnums(copiedGraph, graphIdentifier, filter, cimCollection);

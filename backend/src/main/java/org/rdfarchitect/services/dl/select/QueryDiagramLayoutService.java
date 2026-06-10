@@ -19,13 +19,14 @@ package org.rdfarchitect.services.dl.select;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.rdf.graph.wrapper.DiagramLayoutDelta;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -40,10 +41,12 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     @Override
     public RenderingLayoutData fetchRenderingLayoutData(
             GraphIdentifier graphIdentifier, UUID packageUUID) {
-        var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        return diagramLayout.read(
-                () -> fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, packageUUID));
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            DiagramLayoutDelta diagramLayout = ctx.getDiagramLayout();
+            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
+            return diagramLayout.read(
+                            () -> fetchRenderingLayoutData(diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, packageUUID));
+        }
     }
 
     @Override
@@ -51,17 +54,16 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
         return diagramLayout.read(
-                () -> fetchRenderingLayoutData(diagramLayout, diagramLayoutModel, diagramId));
+                () -> fetchRenderingLayoutData(diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, diagramId));
     }
 
     private RenderingLayoutData fetchRenderingLayoutData(
-            DiagramLayout diagramLayout, Model diagramLayoutModel, UUID diagramId) {
+            UUID defaultPackageUUID, Model diagramLayoutModel, UUID diagramId) {
 
         Map<UUID, DiagramObjectPoint> classLayoutingData;
         if (diagramId == null) {
             classLayoutingData =
-                    DLObjectFetcher.fetchDiagramDOPPerClass(
-                            diagramLayoutModel, diagramLayout.getDefaultPackageMRID().getUuid());
+                    DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, defaultPackageUUID);
         } else {
             classLayoutingData =
                     DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagramId);

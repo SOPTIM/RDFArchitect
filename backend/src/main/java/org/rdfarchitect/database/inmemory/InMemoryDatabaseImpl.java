@@ -17,16 +17,20 @@
 
 package org.rdfarchitect.database.inmemory;
 
+import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.graph.Graph;
-import org.apache.jena.query.TxnType;
 import org.apache.jena.shared.PrefixMapping;
+import org.apache.jena.shared.impl.PrefixMappingImpl;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
+import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
-import org.rdfarchitect.rdf.graph.wrapper.GraphRewindableWithUUIDs;
 
 import java.util.List;
 import java.util.Map;
@@ -38,7 +42,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link SessionDataStore} of the current session. The session is extracted from the {@link
  * SessionContext}.
  */
+@RequiredArgsConstructor
 public class InMemoryDatabaseImpl implements InMemoryDatabase {
+
+    private final SchemaConfig schemaConfig;
 
     private final ConcurrentHashMap<String, SessionDataStore> sessionStores =
             new ConcurrentHashMap<>();
@@ -51,11 +58,6 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public List<String> listDatasets() {
         return getOrCreateSessionDataStore().listDatasets();
-    }
-
-    @Override
-    public GraphRewindableWithUUIDs begin(GraphIdentifier graphIdentifier, TxnType txnType) {
-        return getOrCreateSessionDataStore().begin(graphIdentifier, txnType);
     }
 
     @Override
@@ -74,13 +76,36 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier) {
+    public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         return getOrCreateSessionDataStore().getGraphWithContext(graphIdentifier);
     }
 
     @Override
-    public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
-        getOrCreateSessionDataStore().create(graphIdentifier, newGraph);
+    public void createGraph(GraphIdentifier graphIdentifier, Graph newGraph) {
+        var store = getOrCreateSessionDataStore();
+        store.create(graphIdentifier, newGraph);
+        var currentPrefixMapping =
+                new PrefixMappingImpl()
+                        .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))
+                        .setNsPrefixes(newGraph.getPrefixMapping());
+        store.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
+    }
+
+    @Override
+    public void createEmptyGraph(GraphIdentifier graphIdentifier) {
+        var store = getOrCreateSessionDataStore();
+        var datasetName = graphIdentifier.datasetName();
+        var isNewDataset = !store.listDatasets().contains(datasetName);
+        store.create(graphIdentifier, GraphFactory.createDefaultGraph());
+        if (isNewDataset) {
+            store.enableEditing(datasetName);
+            var configNamespaces = schemaConfig.getNamespaces();
+            var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
+            for (var entry : configNamespaces.entrySet()) {
+                prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
+            }
+            store.setPrefixMapping(datasetName, prefixMapping);
+        }
     }
 
     @Override
@@ -125,26 +150,6 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
-    public void undo(GraphIdentifier graphIdentifier) {
-        getOrCreateSessionDataStore().undo(graphIdentifier);
-    }
-
-    @Override
-    public void redo(GraphIdentifier graphIdentifier) {
-        getOrCreateSessionDataStore().redo(graphIdentifier);
-    }
-
-    @Override
-    public boolean canUndo(GraphIdentifier graphIdentifier) {
-        return getOrCreateSessionDataStore().canUndo(graphIdentifier);
-    }
-
-    @Override
-    public boolean canRedo(GraphIdentifier graphIdentifier) {
-        return getOrCreateSessionDataStore().canRedo(graphIdentifier);
-    }
-
-    @Override
     public boolean isReadOnly(String datasetName) {
         return getOrCreateSessionDataStore().isReadOnly(datasetName);
     }
@@ -157,11 +162,6 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     @Override
     public void disableEditing(String datasetName) {
         getOrCreateSessionDataStore().disableEditing(datasetName);
-    }
-
-    @Override
-    public void restore(GraphIdentifier graphIdentifier, UUID versionId) {
-        getOrCreateSessionDataStore().restore(graphIdentifier, versionId);
     }
 
     /** Returns the SessionDataStore for the current session, creating one if necessary. */

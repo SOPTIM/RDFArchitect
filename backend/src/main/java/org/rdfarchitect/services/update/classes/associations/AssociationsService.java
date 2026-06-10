@@ -19,15 +19,19 @@ package org.rdfarchitect.services.update.classes.associations;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.update.UpdateAction;
+import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.InMemorySparqlExecutor;
-import org.rdfarchitect.models.changelog.ChangeLogEntry;
+import org.rdfarchitect.database.inmemory.SessionDataStore;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
-import org.rdfarchitect.services.ChangeLogUseCase;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -39,7 +43,6 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
 
     private final DatabasePort databasePort;
     private final AssociationPairMapper associationPairMapper;
-    private final ChangeLogUseCase changeLogUseCase;
 
     public record AssociationUUIDs(UUID fromUUID, UUID toUUID) {}
 
@@ -61,14 +64,11 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         graphIdentifier.graphUri(),
                         cimAssociationPair);
 
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(
-                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "Created association from " + from.getUuid() + " to " + to.getUuid(),
-                        graph.getLastDelta()));
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            UpdateAction.execute(new UpdateRequest().add(update.build()), ctx.getRdfGraph());
+            ctx.commit(
+                    buildAssociationMessage("Created", ctx, associationPair, cimAssociationPair));
+        }
         return new AssociationUUIDs(from.getUuid(), to.getUuid());
     }
 
@@ -82,23 +82,23 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         graphIdentifier.graphUri(),
                         cimAssociationPair);
 
-        var fromUUID = cimAssociationPair.getFrom().getUuid();
-        var toUUID = cimAssociationPair.getTo().getUuid();
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(
-                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "Replaced association from " + fromUUID + " to " + toUUID,
-                        graph.getLastDelta()));
-        return new AssociationUUIDs(fromUUID, toUUID);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            UpdateExecutionFactory.create(
+                            update.buildRequest(),
+                            SessionDataStore.wrapGraphInDataset(
+                                    ctx.getRdfGraph(), graphIdentifier.graphUri()))
+                    .execute();
+            ctx.commit(
+                    buildAssociationMessage("Replaced", ctx, associationPair, cimAssociationPair));
+        }
+        return new AssociationUUIDs(
+                cimAssociationPair.getFrom().getUuid(), cimAssociationPair.getTo().getUuid());
     }
 
     @Override
     public void replaceAllAssociations(
             GraphIdentifier graphIdentifier,
-            String classUUID,
+            UUID classUUID,
             List<AssociationPairDTO> associationPairList) {
         var cimAssociationPairs = associationPairMapper.toCIMObjectList(associationPairList);
         var update =
@@ -107,12 +107,42 @@ public class AssociationsService implements CreateAssociationUseCase, UpdateAsso
                         graphIdentifier.graphUri(),
                         classUUID,
                         cimAssociationPairs);
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        InMemorySparqlExecutor.executeSingleUpdate(
-                graph, new UpdateRequest().add(update.build()), graphIdentifier.graphUri());
-        changeLogUseCase.recordChange(
-                graphIdentifier,
-                new ChangeLogEntry(
-                        "Replaced all associations for class " + classUUID, graph.getLastDelta()));
+
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var classResource = CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), classUUID);
+            var classLabel = CIMResourceUtils.findLabelForResource(classResource);
+
+            UpdateAction.execute(new UpdateRequest().add(update.build()), ctx.getRdfGraph());
+
+            ctx.commit(
+                    "Replaced all associations for class \"%s\" (%s)"
+                            .formatted(classLabel, classUUID));
+        }
+    }
+
+    private String buildAssociationMessage(
+            String action,
+            GraphContext session,
+            AssociationPairDTO dto,
+            CIMAssociationPair cimPair) {
+        var from = cimPair.getFrom();
+        var to = cimPair.getTo();
+        var fromClassLabel =
+                CIMResourceUtils.findLabelForResource(
+                        CIMResourceUtils.findResourceForUri(
+                                session.getRdfGraph(), dto.getFrom().getDomain()));
+        var toClassLabel =
+                CIMResourceUtils.findLabelForResource(
+                        CIMResourceUtils.findResourceForUri(
+                                session.getRdfGraph(), dto.getTo().getDomain()));
+        return "%s association \"%s.%s\" (%s) → \"%s.%s\" (%s)"
+                .formatted(
+                        action,
+                        fromClassLabel,
+                        from.getLabel().getValue(),
+                        from.getUuid(),
+                        toClassLabel,
+                        to.getLabel().getValue(),
+                        to.getUuid());
     }
 }

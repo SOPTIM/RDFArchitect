@@ -26,8 +26,8 @@ import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
+import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
-import org.rdfarchitect.dl.rdf.resources.DL;
 
 import java.util.UUID;
 
@@ -81,10 +81,12 @@ public class DiagramLayoutServiceUtils {
      * Helper method for creating and inserting a {@link DiagramObjectPoint} into a given model.
      *
      * @param diagramLayoutModel the model into which the diagram object point is inserted
+     * @param diagrammUUID the uuid of the diagram
      * @param diagramObjectMRID the mRID of the diagram object the point belongs to
      */
-    public void insertDiagramObjectPoint(Model diagramLayoutModel, MRID diagramObjectMRID) {
-        insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID, 0, 0);
+    public void insertDiagramObjectPoint(
+            Model diagramLayoutModel, UUID diagrammUUID, MRID diagramObjectMRID) {
+        insertDiagramObjectPoint(diagramLayoutModel, diagramObjectMRID, diagrammUUID, 0, 0);
     }
 
     /**
@@ -92,21 +94,26 @@ public class DiagramLayoutServiceUtils {
      *
      * @param diagramLayoutModel the model into which the diagram object point is inserted
      * @param diagramObjectMRID the mRID of the diagram object the point belongs to
+     * @param diagrammUUID the UUID of the diagram
      * @param xPosition the x position of the diagram object point
      * @param yPosition the y position of the diagram object point
      */
     public void insertDiagramObjectPoint(
-            Model diagramLayoutModel, MRID diagramObjectMRID, float xPosition, float yPosition) {
+            Model diagramLayoutModel,
+            MRID diagramObjectMRID,
+            UUID diagrammUUID,
+            float xPosition,
+            float yPosition) {
+
+        var existingPoints =
+                DLObjectFetcher.fetchDiagramDOPPerClass(diagramLayoutModel, diagrammUUID);
+
         var maxZPosition =
-                diagramLayoutModel.listObjectsOfProperty(DL.zPosition).toSet().stream()
-                        .max(
-                                (o1, o2) -> {
-                                    var z1 = o1.asLiteral().getInt();
-                                    var z2 = o2.asLiteral().getInt();
-                                    return Integer.compare(z1, z2);
-                                })
-                        .map(o -> o.asLiteral().getInt())
+                existingPoints.values().stream()
+                        .map(dop -> dop.getPosition().getZ())
+                        .max(Integer::compare)
                         .orElse(0);
+
         var diagramObjectPoint =
                 DiagramObjectPoint.builder()
                         .mRID(new MRID(UUID.randomUUID()))

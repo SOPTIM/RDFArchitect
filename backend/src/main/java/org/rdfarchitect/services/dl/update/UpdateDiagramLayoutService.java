@@ -19,29 +19,26 @@ package org.rdfarchitect.services.dl.update;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.rdf.model.Model;
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.data.dto.Diagram;
-import org.rdfarchitect.dl.data.dto.DiagramObject;
-import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.OrientationKind;
-import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
+import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateDiagramLayoutService
-        implements CreateDiagramLayoutUseCase, EnsureDiagramLayoutForCIMCollectionUseCase {
+public class UpdateDiagramLayoutService implements CreateDiagramLayoutUseCase {
 
     private static final String DEFAULT_PACKAGE_NAME = "default";
 
@@ -50,170 +47,67 @@ public class UpdateDiagramLayoutService
 
     @Override
     public void createDiagramLayout(GraphIdentifier graphIdentifier) {
-        var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-
         var allPackagesGraphFilter = new GraphFilter(false);
-        CIMCollection allPackagesCIMCollection =
-                converter.convert(graphIdentifier, allPackagesGraphFilter);
+        var allPackagesCIMCollection = converter.convert(graphIdentifier, allPackagesGraphFilter);
 
-        // set filter to also include classes outside the package
         var packageGraphFilter = new GraphFilter(false);
         packageGraphFilter.setIncludeInheritance(true);
         packageGraphFilter.setIncludeAssociations(true);
         packageGraphFilter.setIncludeRelationsToExternalPackages(true);
-
-        // create DL diagram for the default package
-        DLUpdates.insertDiagram(
-                diagramLayoutModel,
-                Diagram.builder()
-                        .mRID(diagramLayout.getDefaultPackageMRID())
-                        .name(graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME)
-                        .orientation(OrientationKind.NEGATIVE)
-                        .build());
-        // create DOs and DOPs for the default package
         packageGraphFilter.setPackageUUID(null);
         var defaultPackageClassesCIMCollection =
                 converter.convert(graphIdentifier, packageGraphFilter);
-        for (var cimClassOrEnum : defaultPackageClassesCIMCollection.getClassesAndEnums()) {
-            var diagramObjectMRID =
-                    DiagramLayoutServiceUtils.insertDiagramObject(
-                            diagramLayoutModel,
-                            diagramLayout.getDefaultPackageMRID().getUuid(),
-                            cimClassOrEnum.getLabel().getValue(),
-                            cimClassOrEnum.getUuid());
-            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                    diagramLayoutModel, diagramObjectMRID);
+
+        Map<CIMPackage, CIMCollection> classesByPackage = new LinkedHashMap<>();
+        for (var cimPackage : allPackagesCIMCollection.getPackages()) {
+            packageGraphFilter.setPackageUUID(cimPackage.getUuid().toString());
+            classesByPackage.put(
+                    cimPackage, converter.convert(graphIdentifier, packageGraphFilter));
         }
 
-        // create DOs and DOPs for each frontend diagram
-        for (var cimPackage : allPackagesCIMCollection.getPackages()) {
-            DiagramLayoutServiceUtils.insertDiagram(
-                    diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var diagramLayout = ctx.getDiagramLayout();
+            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
 
-            packageGraphFilter.setPackageUUID(cimPackage.getUuid().toString());
-            var classesCIMCollection = converter.convert(graphIdentifier, packageGraphFilter);
+            DLUpdates.insertDiagram(
+                    diagramLayoutModel,
+                    Diagram.builder()
+                            .mRID(diagramLayout.getDefaultPackageMRID())
+                            .name(graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME)
+                            .orientation(OrientationKind.NEGATIVE)
+                            .build());
 
-            for (var cimClassOrEnum : classesCIMCollection.getClassesAndEnums()) {
-                var diagramObjectMRID =
+            for (var cimClassOrEnum : defaultPackageClassesCIMCollection.getClassesAndEnums()) {
+                var doMRID =
                         DiagramLayoutServiceUtils.insertDiagramObject(
                                 diagramLayoutModel,
-                                cimPackage.getUuid(),
+                                diagramLayout.getDefaultPackageMRID().getUuid(),
                                 cimClassOrEnum.getLabel().getValue(),
                                 cimClassOrEnum.getUuid());
                 DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        diagramLayoutModel, diagramObjectMRID);
-            }
-        }
-    }
-
-    @Override
-    public void ensureDiagramLayoutExists(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, CIMCollection cimCollection) {
-        var diagramLayout = databasePort.getGraphWithContext(graphIdentifier).getDiagramLayout();
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-
-        var resolvedUUID =
-                diagramUUID != null ? diagramUUID : diagramLayout.getDefaultPackageMRID().getUuid();
-
-        // ensure a DL diagram exists for the requested package or diagram
-        var diagram = DLObjectFetcher.fetchDiagram(diagramLayoutModel, resolvedUUID);
-        if (diagram == null) {
-            String packageName =
-                    getDiagramName(diagramLayout, graphIdentifier, cimCollection, resolvedUUID);
-
-            if (packageName == null) {
-                throw new IllegalArgumentException(
-                        "Diagram with UUID " + resolvedUUID + " not found");
+                        diagramLayoutModel,
+                        packageGraphFilter.getPackageUUID() == null
+                                ? diagramLayout.getDefaultPackageMRID().getUuid()
+                                : UUID.fromString(packageGraphFilter.getPackageUUID()),
+                        doMRID);
             }
 
-            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, resolvedUUID, packageName);
-        }
-
-        ensureDiagramObjectsExist(resolvedUUID, cimCollection, diagramLayoutModel);
-    }
-
-    @Override
-    public void ensureDiagramLayoutExists(
-            String datasetName, UUID diagramUUID, CIMCollection cimCollection) {
-        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
-        var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-
-        // ensure a DL diagram exists for the requested package or diagram
-        var diagram = DLObjectFetcher.fetchDiagram(diagramLayoutModel, diagramUUID);
-        if (diagram == null) {
-            String diagramName = getDiagramName(datasetName, diagramUUID);
-
-            if (diagramName == null) {
-                throw new IllegalArgumentException(
-                        "Custom diagram with UUID " + diagramUUID + " not found");
+            for (var entry : classesByPackage.entrySet()) {
+                var cimPackage = entry.getKey();
+                DiagramLayoutServiceUtils.insertDiagram(
+                        diagramLayoutModel, cimPackage.getUuid(), cimPackage.getLabel().getValue());
+                for (var cimClassOrEnum : entry.getValue().getClassesAndEnums()) {
+                    var doMRID =
+                            DiagramLayoutServiceUtils.insertDiagramObject(
+                                    diagramLayoutModel,
+                                    cimPackage.getUuid(),
+                                    cimClassOrEnum.getLabel().getValue(),
+                                    cimClassOrEnum.getUuid());
+                    DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                            diagramLayoutModel, cimPackage.getUuid(), doMRID);
+                }
             }
-
-            DiagramLayoutServiceUtils.insertDiagram(diagramLayoutModel, diagramUUID, diagramName);
+            ctx.commit();
         }
-
-        ensureDiagramObjectsExist(diagramUUID, cimCollection, diagramLayoutModel);
-    }
-
-    private void ensureDiagramObjectsExist(
-            UUID diagramUUID, CIMCollection cimCollection, Model diagramLayoutModel) {
-        var cimClasses = cimCollection.getClassesAndEnums();
-        var diagramObjects =
-                DLObjectFetcher.fetchDiagramDOs(diagramLayoutModel, new MRID(diagramUUID));
-        var existingMRIDs =
-                diagramObjects.stream()
-                        .map(DiagramObject::getBelongsToIdentifiedObject)
-                        .collect(Collectors.toSet());
-        for (var cimClass : cimClasses) {
-            if (!existingMRIDs.contains(new MRID(cimClass.getUuid()))) {
-                var diagramObjectMRID =
-                        DiagramLayoutServiceUtils.insertDiagramObject(
-                                diagramLayoutModel,
-                                diagramUUID,
-                                cimClass.getLabel().getValue(),
-                                cimClass.getUuid());
-                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                        diagramLayoutModel, diagramObjectMRID);
-            }
-        }
-    }
-
-    private String getDiagramName(
-            DiagramLayout diagramLayout,
-            GraphIdentifier graphIdentifier,
-            CIMCollection cimCollection,
-            UUID diagramUUID) {
-        if (diagramUUID == diagramLayout.getDefaultPackageMRID().getUuid()) {
-            return graphIdentifier.graphUri() + "/" + DEFAULT_PACKAGE_NAME;
-        }
-
-        for (var cimPackage : cimCollection.getPackages()) {
-            if (cimPackage.getUuid().equals(diagramUUID)) {
-                return cimPackage.getLabel().getValue();
-            }
-        }
-
-        for (var customDiagram :
-                databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams().values()) {
-            if (customDiagram.getDiagramId().equals(diagramUUID)) {
-                return customDiagram.getName();
-            }
-        }
-
-        return null;
-    }
-
-    private String getDiagramName(String datasetName, UUID diagramUUID) {
-        var crossProfileUUID = databasePort.getCrossProfileDiagramUUID(datasetName);
-        if (diagramUUID.equals(crossProfileUUID)) {
-            return "CrossProfileDiagram";
-        }
-
-        for (var customDiagram : databasePort.getDatasetDiagrams(datasetName).values()) {
-            if (customDiagram.getDiagramId().equals(diagramUUID)) {
-                return customDiagram.getName();
-            }
-        }
-        return null;
     }
 }

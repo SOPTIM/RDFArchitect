@@ -25,6 +25,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
@@ -47,6 +48,15 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+    // Namespaces that the backend auto-adds when an ontology is created.
+    // Added client-side here (without persisting) so they already appear
+    // in the namespace selection while the dialog is open.
+    const ONTOLOGY_DEFAULT_NAMESPACES = [
+        { substitutedPrefix: "dcat:", prefix: "http://www.w3.org/ns/dcat#" },
+        { substitutedPrefix: "dct:", prefix: "http://purl.org/dc/terms/" },
+        { substitutedPrefix: "owl:", prefix: "http://www.w3.org/2002/07/owl#" },
+    ];
+
     let showAddKnownEntriesPopUp = $state(false);
     let showDiscardSaveConfirmDialog = $state(false);
 
@@ -62,17 +72,36 @@
 
     let disableSubmit = $derived(!hasChanges || !isValid);
 
+    /**
+     * Returns the namespace list extended with the ontology default
+     * namespaces (dcat, dct, owl) that are missing. A namespace counts as
+     * present if its IRI (`prefix`) already exists. Nothing is persisted here;
+     * the backend adds these on save when the ontology is created.
+     */
+    function withOntologyDefaultNamespaces(currentNamespaces) {
+        const existing = currentNamespaces ?? [];
+        const missing = ONTOLOGY_DEFAULT_NAMESPACES.filter(
+            defaultNs => !existing.some(ns => ns.prefix === defaultNs.prefix),
+        );
+        return [...existing, ...missing];
+    }
+
     async function onOpen() {
         if (!namespaces) {
             namespaces = await getNamespaces(dataset);
         }
+
+        namespaces = withOntologyDefaultNamespaces(namespaces);
+        const resolvedNamespaces = namespaces ?? [];
+
         if (!ontology) {
-            ontologyObject = new ReactiveOntology();
+            ontologyObject = ReactiveOntology.empty(resolvedNamespaces);
         } else {
             ontologyObject = new ReactiveOntology(
                 ontology.uuid,
                 ontology.namespace,
                 ontology.entries,
+                resolvedNamespaces,
             );
         }
     }
@@ -108,6 +137,7 @@
                     ontology.uuid,
                     ontology.namespace,
                     ontology.entries,
+                    namespaces ?? withOntologyDefaultNamespaces([]),
                 );
             }
             ontologyObject.save();
@@ -205,7 +235,7 @@
     <div class="mx-2 flex h-full flex-col">
         {#key ontologyObject}
             {#if ontologyObject}
-                <div class="mb-2 w-150">
+                <div class="mb-2 flex w-150 flex-col">
                     <SearchableSelect
                         label="Namespace:"
                         placeholder="*namespace"
@@ -219,9 +249,15 @@
                             )}
                         accessIdentifier={namespace =>
                             `${namespace.substitutedPrefix} (${namespace?.prefix})`}
-                        callOnValidChange={value =>
-                            (ontologyObject.namespace.value = value?.prefix)}
+                        callOnChange={value =>
+                            (ontologyObject.namespace.value =
+                                value?.prefix !== undefined
+                                    ? value.prefix
+                                    : value)}
                         {readonly}
+                    />
+                    <ViolationMessages
+                        violations={ontologyObject?.namespace.violations}
                     />
                 </div>
 

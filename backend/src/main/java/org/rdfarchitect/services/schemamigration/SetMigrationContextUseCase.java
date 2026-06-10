@@ -42,6 +42,14 @@ public interface SetMigrationContextUseCase {
     void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema);
 
     /**
+     * Sets the migration context for a stored original schema and an uploaded updated schema.
+     *
+     * @param originalSchema the graph identifier of the original schema loaded in memory
+     * @param updatedSchema the uploaded updated schema
+     */
+    void setMigrationContext(GraphIdentifier originalSchema, MultipartFile updatedSchema);
+
+    /**
      * Sets the migration context for the two uploaded schema files.
      *
      * @param originalSchema the graph identifier of the edited schema loaded in memory

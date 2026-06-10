@@ -25,7 +25,7 @@ import static utils.TestUtils.readMultipartFileFromFile;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
-import org.apache.jena.query.TxnType;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.vocabulary.RDF;
@@ -34,7 +34,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
-import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
@@ -48,7 +47,6 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.ChangeLogService;
 import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
@@ -74,8 +72,7 @@ class UpdateClassServiceTest {
     @BeforeEach
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
-        var mockChangeLogService = mock(ChangeLogService.class);
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
         var mockCustomDiagramService = mock(CustomDiagramService.class);
         updateClassService =
@@ -83,7 +80,6 @@ class UpdateClassServiceTest {
                         databasePort,
                         classMapper,
                         packageMapper,
-                        mockChangeLogService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
@@ -109,39 +105,37 @@ class UpdateClassServiceTest {
 
         updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "newClass", null);
 
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.READ);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "newClass"),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "newClass"),
+                                            RDF.type.asNode(),
+                                            RDFS.Class.asNode()))
                     .isTrue();
             assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "newClass"),
-                                    RDFS.label.asNode(),
-                                    new RDFSLabel("newClass", "en").asLangLiteral().asNode()))
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "newClass"),
+                                            RDFS.label.asNode(),
+                                            new RDFSLabel("newClass", "en")
+                                                    .asLangLiteral()
+                                                    .asNode()))
                     .isTrue();
-        } finally {
-            graph.end();
         }
     }
 
     @Test
     void addClass_packageWithSameIriExists_throwsConflict() {
         var packageUri = PREFIX + "packageCollision";
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.WRITE);
-            graph.add(
-                    NodeFactory.createURI(packageUri),
-                    RDF.type.asNode(),
-                    CIMS.classCategory.asNode());
-            graph.commit();
-        } finally {
-            graph.end();
+        var graphCtx = databasePort.getGraphWithContext(graphIdentifier);
+        try (var ctx = graphCtx.begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph()
+                    .add(
+                            NodeFactory.createURI(packageUri),
+                            RDF.type.asNode(),
+                            CIMS.classCategory.asNode());
+            ctx.commit();
         }
 
         var packageDTO =
@@ -162,16 +156,14 @@ class UpdateClassServiceTest {
                 .isInstanceOf(ResourceConflictException.class)
                 .hasMessageContaining("package with the same IRI");
 
-        try {
-            graph.begin(TxnType.READ);
+        try (var ctx = graphCtx.begin(ReadWrite.READ)) {
             assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(packageUri),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(packageUri),
+                                            RDF.type.asNode(),
+                                            RDFS.Class.asNode()))
                     .isFalse();
-        } finally {
-            graph.end();
         }
     }
 
@@ -187,47 +179,52 @@ class UpdateClassServiceTest {
 
         updateClassService.replaceClass(graphIdentifier, newClass);
 
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.READ);
-
-            assertThat(graph.contains(NodeFactory.createURI(PREFIX + "class"), Node.ANY, Node.ANY))
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "class"),
+                                            Node.ANY,
+                                            Node.ANY))
                     .isFalse();
-            assertThat(graph.contains(Node.ANY, Node.ANY, NodeFactory.createURI(PREFIX + "class")))
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            Node.ANY,
+                                            Node.ANY,
+                                            NodeFactory.createURI(PREFIX + "class")))
                     .isFalse();
 
             assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "newClass"),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "newClass"),
+                                            RDF.type.asNode(),
+                                            RDFS.Class.asNode()))
                     .isTrue();
             assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "newClass"),
-                                    RDFS.label.asNode(),
-                                    label.asLangLiteral().asNode()))
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "newClass"),
+                                            RDFS.label.asNode(),
+                                            label.asLangLiteral().asNode()))
                     .isTrue();
             assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "subClass"),
-                                    RDFS.subClassOf.asNode(),
-                                    NodeFactory.createURI(PREFIX + "newClass")))
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "subClass"),
+                                            RDFS.subClassOf.asNode(),
+                                            NodeFactory.createURI(PREFIX + "newClass")))
                     .isTrue();
-        } finally {
-            graph.end();
         }
     }
 
     @Test
     void deleteClass_removesClassResourceFromGraph() {
-        updateClassService.deleteClass(graphIdentifier, CLASS_UUID);
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        var model = ModelFactory.createModelForGraph(graph);
-        var classResource = model.createResource(PREFIX + "class");
-
-        try {
-            graph.begin(TxnType.READ);
+        updateClassService.deleteClass(graphIdentifier, UUID.fromString(CLASS_UUID));
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            var classResource = model.createResource(PREFIX + "class");
             var statements = model.listStatements(classResource, null, (RDFNode) null).toList();
             assertThat(statements).hasSize(1);
             assertThat(statements.getFirst().getSubject()).hasToString(PREFIX + "class");
@@ -241,141 +238,6 @@ class UpdateClassServiceTest {
                                             (RDFNode) null)
                                     .hasNext())
                     .isFalse();
-        } finally {
-            graph.end();
         }
-    }
-
-    @Test
-    void copyClass_copyExistingClass() {
-        var targetPackageDTO =
-                PackageDTO.builder()
-                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
-                        .prefix(PREFIX)
-                        .label("newPackage")
-                        .build();
-
-        var request = new CopyClassRequestDTO();
-        request.setTargetPackage(targetPackageDTO);
-        request.setCopyAsAbstract(false);
-        request.setCopyAttributes(true);
-        request.setCopyAssociations(false);
-
-        updateClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.READ);
-
-            assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
-                    .isTrue();
-
-            assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
-                                    RDFS.label.asNode(),
-                                    new RDFSLabel("oldLabel-Copy", "en").asLangLiteral().asNode()))
-                    .isTrue();
-        } finally {
-            graph.end();
-        }
-    }
-
-    @Test
-    void copyClass_copyExistingClass_abstract() {
-        var targetPackageDTO =
-                PackageDTO.builder()
-                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
-                        .prefix(PREFIX)
-                        .label("newPackage")
-                        .build();
-
-        var request = new CopyClassRequestDTO();
-        request.setTargetPackage(targetPackageDTO);
-        request.setCopyAsAbstract(true);
-        request.setCopyAttributes(false);
-        request.setCopyAssociations(false);
-
-        updateClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.READ);
-
-            assertThat(
-                            graph.contains(
-                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
-                                    RDF.type.asNode(),
-                                    RDFS.Class.asNode()))
-                    .isTrue();
-
-            assertThat(
-                            graph.contains(
-                                    Node.ANY,
-                                    RDFS.domain.asNode(),
-                                    NodeFactory.createURI(PREFIX + "oldLabel-Copy")))
-                    .isFalse();
-        } finally {
-            graph.end();
-        }
-    }
-
-    @Test
-    void copyClass_copyAsAbstract_doesNotCopySuperClass() {
-        var targetPackageDTO =
-                PackageDTO.builder()
-                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
-                        .prefix(PREFIX)
-                        .label("newPackage")
-                        .build();
-
-        var request = new CopyClassRequestDTO();
-        request.setTargetPackage(targetPackageDTO);
-        request.setCopyAsAbstract(true);
-        request.setCopyAttributes(false);
-        request.setCopyAssociations(false);
-
-        updateClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-
-        var graph = databasePort.getGraphWithContext(graphIdentifier).getRdfGraph();
-        try {
-            graph.begin(TxnType.READ);
-
-            var copyUri = NodeFactory.createURI(PREFIX + "oldLabel-Copy");
-
-            assertThat(graph.contains(copyUri, RDFS.subClassOf.asNode(), Node.ANY)).isFalse();
-        } finally {
-            graph.end();
-        }
-    }
-
-    @Test
-    void copyClass_returnsNewClassUUID() {
-        var targetPackageDTO =
-                PackageDTO.builder()
-                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
-                        .prefix(PREFIX)
-                        .label("newPackage")
-                        .build();
-
-        var request = new CopyClassRequestDTO();
-        request.setTargetPackage(targetPackageDTO);
-        request.setCopyAsAbstract(false);
-        request.setCopyAttributes(false);
-        request.setCopyAssociations(false);
-
-        var newClassUUID =
-                updateClassService.copyClass(
-                        graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-
-        assertThat(newClassUUID).isNotNull();
-        assertThat(newClassUUID).isNotEqualTo(UUID.fromString(CLASS_UUID));
     }
 }

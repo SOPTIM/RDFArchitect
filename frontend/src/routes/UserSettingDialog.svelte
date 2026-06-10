@@ -25,13 +25,21 @@
 
     let { showDialog = $bindable() } = $props();
 
+    const DEFAULT_SETTINGS = {
+        usePackagePrefix: false,
+        defaultExportFormat: supportedRDFMediaTypes[0].mimeType,
+        showPackagePrefix: false,
+        normalizeComments: true,
+    };
+
     let localSettings = $state({});
+    let savedSettings = $derived({ ...DEFAULT_SETTINGS, ...userSettings.all });
     let isModified = $derived(
-        JSON.stringify(localSettings) !== JSON.stringify(userSettings.all),
+        JSON.stringify(localSettings) !== JSON.stringify(savedSettings),
     );
 
     function onOpen() {
-        localSettings = { ...userSettings.all };
+        localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all };
     }
 
     function onClose() {
@@ -52,7 +60,8 @@
     {onOpen}
     {onClose}
     saveChanges={save}
-    discardChanges={() => (localSettings = { ...userSettings.all })}
+    discardChanges={() =>
+        (localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all })}
     hasChanges={isModified}
     size="w-1/3"
     title="Settings"
@@ -73,15 +82,14 @@
                 options={supportedRDFMediaTypes}
                 getOptionLabel={v => v.name}
                 getOptionValue={v => v.mimeType}
-                value={localSettings["defaultExportFormat"] ??
-                    supportedRDFMediaTypes[0].mimeType}
+                value={localSettings["defaultExportFormat"]}
                 onChange={v => (localSettings["defaultExportFormat"] = v)}
             />
         </USC.Section>
         <USC.Section title="Visualization">
             <CheckBoxEditControl
                 label="Show 'Package_' Prefix"
-                value={localSettings["showPackagePrefix"] ?? false}
+                value={localSettings["showPackagePrefix"]}
                 callOnInputTrue={() =>
                     (localSettings["showPackagePrefix"] = true)}
                 callOnInputFalse={() =>
@@ -92,7 +100,7 @@
         <USC.Section title="Normalization">
             <CheckBoxEditControl
                 label="Normalize comments to xsd:String"
-                value={localSettings["normalizeComments"] ?? true}
+                value={localSettings["normalizeComments"]}
                 callOnInputTrue={() =>
                     (localSettings["normalizeComments"] = true)}
                 callOnInputFalse={() =>

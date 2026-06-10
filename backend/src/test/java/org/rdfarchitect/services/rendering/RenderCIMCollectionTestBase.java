@@ -17,14 +17,11 @@
 
 package org.rdfarchitect.services.rendering;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
-import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
-import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
@@ -46,11 +43,9 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
 import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
-import org.rdfarchitect.services.dl.update.EnsureDiagramLayoutForCIMCollectionUseCase;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 class RenderCIMCollectionTestBase {
@@ -62,33 +57,10 @@ class RenderCIMCollectionTestBase {
 
     @BeforeAll
     static void setUpEnvironment() {
-        // das anfragen der layout informationen wird weg gemocked
-        FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase =
-                mock(FetchRenderingLayoutDataUseCase.class);
-        EnsureDiagramLayoutForCIMCollectionUseCase ensureDiagramLayoutForCIMCollectionUseCase =
-                mock(EnsureDiagramLayoutForCIMCollectionUseCase.class);
-
-        var mockXYPosition = mock(XYZPosition.class);
-        when(mockXYPosition.getX()).thenReturn(0f);
-        when(mockXYPosition.getY()).thenReturn(0f);
-
-        var mockDop = mock(DiagramObjectPoint.class);
-        when(mockDop.getPosition()).thenReturn(mockXYPosition);
-
-        var mockMap = mock(Map.class);
-        when(mockMap.get(any(UUID.class))).thenReturn(mockDop);
-
-        var mockLayoutData = RenderingLayoutData.builder().classLayoutingData(mockMap).build();
-        when(fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(any(), any()))
-                .thenReturn(mockLayoutData);
-        when(fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(any(), any()))
-                .thenReturn(mockLayoutData);
-
+        var fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
         mermaidRenderer = new RenderCIMCollectionMermaidService();
         svelteFlowRenderer =
-                new RenderCIMCollectionSvelteFlowService(
-                        fetchRenderingLayoutDataUseCase,
-                        ensureDiagramLayoutForCIMCollectionUseCase);
+                new RenderCIMCollectionSvelteFlowService(fetchRenderingLayoutDataUseCase);
     }
 
     @BeforeEach
@@ -125,8 +97,8 @@ class RenderCIMCollectionTestBase {
         cimCollection.getClasses().add(cimClass.build());
     }
 
-    protected void addAttribute(String classLabel, String attributeLabel, XSDDatatype datatype) {
-        var uri = new URI(URI_PREFIX + classLabel + "." + attributeLabel);
+    protected void addAttribute(String attributeLabel, XSDDatatype datatype) {
+        var uri = new URI(URI_PREFIX + "class1" + "." + attributeLabel);
         var label = new RDFSLabel(attributeLabel);
 
         var dataTypeUri = new URI(datatype.getURI());
@@ -141,8 +113,7 @@ class RenderCIMCollectionTestBase {
                         .dataType(dataType)
                         .domain(
                                 new RDFSDomain(
-                                        new URI(URI_PREFIX + classLabel),
-                                        new RDFSLabel(classLabel)))
+                                        new URI(URI_PREFIX + "class1"), new RDFSLabel("class1")))
                         .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
                         .stereotype(new CIMSStereotype(CIMStereotypes.attribute.getURI()))
                         .build();
@@ -150,18 +121,14 @@ class RenderCIMCollectionTestBase {
         cimCollection.getAttributes().add(attribute);
     }
 
-    protected void addAssociation(
-            String domainLabel,
-            String rangeLabel,
-            AssociationUsed fromAssociationUsed,
-            AssociationUsed toAssociationUsed) {
-        var fromUri = new URI(URI_PREFIX + domainLabel + "." + rangeLabel);
-        var toUri = new URI(URI_PREFIX + rangeLabel + "." + domainLabel);
+    protected void addAssociation(String rangeLabel, AssociationUsed toAssociationUsed) {
+        var fromUri = new URI(URI_PREFIX + "class1" + "." + rangeLabel);
+        var toUri = new URI(URI_PREFIX + rangeLabel + "." + "class1");
         var fromLabel = new RDFSLabel(fromUri.getSuffix());
         var toLabel = new RDFSLabel(toUri.getSuffix());
 
-        var domainUri = new URI(URI_PREFIX + domainLabel);
-        var domainRDFSLabel = new RDFSLabel(domainLabel);
+        var domainUri = new URI(URI_PREFIX + "class1");
+        var domainRDFSLabel = new RDFSLabel("class1");
 
         var rangeUri = new URI(URI_PREFIX + rangeLabel);
         var rangeRDFSLabel = new RDFSLabel(rangeLabel);
@@ -176,7 +143,7 @@ class RenderCIMCollectionTestBase {
                         .inverseRoleName(new CIMSInverseRoleName(toUri))
                         .associationUsed(
                                 new CIMSAssociationUsed(
-                                        fromAssociationUsed == AssociationUsed.YES ? "Yes" : "No"))
+                                        AssociationUsed.YES == AssociationUsed.YES ? "Yes" : "No"))
                         .multiplicity(new CIMSMultiplicity(URI_PREFIX + "M:1"))
                         .build();
 
@@ -198,9 +165,9 @@ class RenderCIMCollectionTestBase {
         cimCollection.getAssociations().add(to);
     }
 
-    protected void addEnum(String packageLabel, String enumLabel) {
-        var uri = new URI(URI_PREFIX + enumLabel);
-        var label = new RDFSLabel(enumLabel);
+    protected void addEnum(String packageLabel) {
+        var uri = new URI(URI_PREFIX + "enum1");
+        var label = new RDFSLabel("enum1");
 
         var cimEnum =
                 CIMClass.builder()
@@ -221,15 +188,13 @@ class RenderCIMCollectionTestBase {
         cimCollection.getEnums().add(cimEnum.build());
     }
 
-    protected void addEnumEntry(String enumLabel, String enumEntryLabel) {
+    protected void addEnumEntry(String enumEntryLabel) {
         var enumEntry =
                 CIMEnumEntry.builder()
                         .uuid(UUID.randomUUID())
                         .uri(new URI(URI_PREFIX + enumEntryLabel))
                         .label(new RDFSLabel(enumEntryLabel))
-                        .type(
-                                new RDFType(
-                                        new URI(URI_PREFIX + enumLabel), new RDFSLabel(enumLabel)))
+                        .type(new RDFType(new URI(URI_PREFIX + "enum1"), new RDFSLabel("enum1")))
                         .build();
 
         cimCollection.getEnumEntries().add(enumEntry);

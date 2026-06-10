@@ -40,16 +40,16 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const rowKey = $derived(`${change.changeId}::row`);
-    const additionsKey = $derived(`${change.changeId}::additions`);
-    const deletionsKey = $derived(`${change.changeId}::deletions`);
 
     async function restoreVersion(changeId) {
         console.log("restoreVersion", changeId);
+
         const res = await bec.restoreVersion(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
             changeId,
         );
+
         if (res.ok) {
             console.log("Version restored successfully");
             forceReloadTrigger.trigger();
@@ -67,23 +67,39 @@
     }
 
     function hasTriples(change) {
-        return (
-            (change.additions && change.additions.length > 0) ||
-            (change.deletions && change.deletions.length > 0)
+        return change.contextDeltas?.some(
+            context =>
+                (context.additions && context.additions.length > 0) ||
+                (context.deletions && context.deletions.length > 0),
         );
     }
 
+    function isDataLost(change) {
+        return change.contextDeltas?.some(
+            context => context.additions === null || context.deletions === null,
+        );
+    }
     function toggleRowExpanded() {
         setExpanded(rowKey, !getExpanded(rowKey));
     }
 
     function formatTimestamp(rawTimestamp) {
         const date = new Date(rawTimestamp);
+
         const pad = n => n.toString().padStart(2, "0");
+
         return (
             `${pad(date.getDate())}-${pad(date.getMonth() + 1)}-${date.getFullYear()} ` +
             `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
         );
+    }
+
+    function getAdditionsKey(contextName) {
+        return `${change.changeId}::${contextName}::additions`;
+    }
+
+    function getDeletionsKey(contextName) {
+        return `${change.changeId}::${contextName}::deletions`;
     }
 </script>
 
@@ -95,6 +111,7 @@
     <td class="p-4">
         {formatTimestamp(change.timestamp)}
     </td>
+
     <td class="p-4 text-center">
         {#if hasTriples(change)}
             <button
@@ -106,10 +123,15 @@
             </button>
         {/if}
     </td>
+
     <td class="w-px p-4 text-center whitespace-nowrap">
         {#if newest}
             <span class="text-default-text text-sm">Current Version</span>
-        {:else if hasTriples(change)}
+        {:else if isDataLost(change)}
+            <span class="text-default-text text-sm">
+                Can no longer be restored
+            </span>
+        {:else}
             <ButtonControl
                 disabled={readonly}
                 title={readonly ? "cannot restore in readonly dataset" : ""}
@@ -117,10 +139,6 @@
             >
                 Restore Version
             </ButtonControl>
-        {:else}
-            <span class="text-default-text text-sm">
-                Can no longer be restored
-            </span>
         {/if}
     </td>
 </tr>
@@ -128,28 +146,42 @@
 {#if getExpanded(rowKey)}
     <tr>
         <td colspan="4" class="p-0">
-            <div class="space-y-4 p-4">
-                {#if change.additions?.length}
-                    <TripleTable
-                        triples={change.additions}
-                        color="green"
-                        title="Additions"
-                        expandedKey={additionsKey}
-                        {getExpanded}
-                        {setExpanded}
-                    />
-                {/if}
+            <div class="space-y-6 p-2">
+                {#each change.contextDeltas ?? [] as context}
+                    {#if context.additions?.length || context.deletions?.length}
+                        <div class="border-border rounded-xl border p-2">
+                            <h3 class="mb-2 font-semibold">
+                                Context: {context.contextName}
+                            </h3>
 
-                {#if change.deletions?.length}
-                    <TripleTable
-                        triples={change.deletions}
-                        color="red"
-                        title="Deletions"
-                        expandedKey={deletionsKey}
-                        {getExpanded}
-                        {setExpanded}
-                    />
-                {/if}
+                            {#if context.additions?.length}
+                                <TripleTable
+                                    triples={context.additions}
+                                    color="green"
+                                    title="Additions"
+                                    expandedKey={getAdditionsKey(
+                                        context.contextName,
+                                    )}
+                                    {getExpanded}
+                                    {setExpanded}
+                                />
+                            {/if}
+                            <div class="h-1"></div>
+                            {#if context.deletions?.length}
+                                <TripleTable
+                                    triples={context.deletions}
+                                    color="red"
+                                    title="Deletions"
+                                    expandedKey={getDeletionsKey(
+                                        context.contextName,
+                                    )}
+                                    {getExpanded}
+                                    {setExpanded}
+                                />
+                            {/if}
+                        </div>
+                    {/if}
+                {/each}
             </div>
         </td>
     </tr>

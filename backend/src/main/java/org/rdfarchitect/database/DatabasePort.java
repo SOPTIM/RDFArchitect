@@ -19,7 +19,6 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
-import org.rdfarchitect.database.inmemory.GraphWithContext;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
@@ -30,12 +29,12 @@ import java.util.UUID;
 public interface DatabasePort {
 
     /**
-     * Get a {@link GraphWithContext} from the database.
+     * Get a {@link GraphContext} for the specified graph.
      *
      * @param graphIdentifier The identifier of the graph.
-     * @return {@link GraphWithContext}
+     * @return {@link GraphContext}
      */
-    GraphWithContext getGraphWithContext(GraphIdentifier graphIdentifier);
+    GraphContext getGraphWithContext(GraphIdentifier graphIdentifier);
 
     /**
      * Get all {@link CustomDiagram} for a dataset.
@@ -93,44 +92,6 @@ public interface DatabasePort {
      * @param graphIdentifier identifies dataset and graph URI
      */
     void createEmptyGraph(GraphIdentifier graphIdentifier);
-
-    /**
-     * Indicates whether there is a forward change that can be re-applied on the graph.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     * @return {@code true} if redo is possible, otherwise {@code false}
-     */
-    Boolean canRedo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Indicates whether there is a previous change that can be undone on the graph.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     * @return {@code true} if undo is possible, otherwise {@code false}
-     */
-    Boolean canUndo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Re-applies the next change in the graph history.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void redo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Reverts the latest change recorded in the graph history.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     */
-    void undo(GraphIdentifier graphIdentifier);
-
-    /**
-     * Restores a historic version of the graph identified by {@code graphIdentifier}.
-     *
-     * @param graphIdentifier identifies dataset and graph URI
-     * @param versionId historic version to restore
-     */
-    void restore(GraphIdentifier graphIdentifier, UUID versionId);
 
     /**
      * Lists all graph URIs belonging to the dataset.

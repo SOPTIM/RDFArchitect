@@ -169,7 +169,7 @@
         if (cancelled.cancelled) return;
         const newReactiveClass = mapClassDtoToReactiveClass(
             classDto,
-            context.classes,
+            context,
             uuid => context.targetClassInfos.find(cls => cls.uuid === uuid),
         );
         reactiveClass = adoptUnsavedClassChanges(

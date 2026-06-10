@@ -25,7 +25,7 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.services.ExpandURIUseCase;
-import org.rdfarchitect.services.diagrams.AddToDiagramUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes")
@@ -48,7 +49,7 @@ public class CustomDiagramAllClassesRESTController {
 
     private final ExpandURIUseCase expandURIUseCase;
 
-    private final AddToDiagramUseCase addToDiagramUseCase;
+    private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @PostMapping
     public String addToDiagram(
@@ -77,8 +78,10 @@ public class CustomDiagramAllClassesRESTController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        addToDiagramUseCase.addToDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classes);
+        customDiagramLayoutUseCase.addClassesToCustomDiagram(
+                new GraphIdentifier(datasetName, extendedGraphURI),
+                UUID.fromString(diagramId),
+                classes);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes\" from \"{}\"",

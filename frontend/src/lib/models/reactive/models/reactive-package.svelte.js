@@ -28,12 +28,12 @@ export class ReactivePackage {
         label = "",
         namespace = "",
         comment = null,
+        compareNamespaces = [],
     } = {}) {
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.label = new ReactiveValueWrapper(label, isInvalidLabel);
-        this.namespace = new ReactiveValueWrapper(
-            namespace,
-            isInvalidNamespace,
+        this.namespace = new ReactiveValueWrapper(namespace, namespace =>
+            isInvalidNamespace(namespace, compareNamespaces),
         );
         this.comment = new ReactiveValueWrapper(comment);
     }

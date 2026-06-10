@@ -231,8 +231,8 @@
             return;
         }
 
-        switch (event.code) {
-            case "KeyZ":
+        switch (event.key.toLowerCase()) {
+            case "z":
                 event.preventDefault();
                 if (event.shiftKey) {
                     if (canRedo && (await redo())) {
@@ -246,18 +246,18 @@
                     }
                 }
                 break;
-            case "KeyY":
+            case "y":
                 event.preventDefault();
                 if (canRedo && (await redo())) {
                     await reload();
                     toastStore.info("Redone");
                 }
                 break;
-            case "KeyC":
+            case "c":
                 event.preventDefault();
                 if (canCopyClass) copyClass();
                 break;
-            case "KeyV":
+            case "v":
                 event.preventDefault();
                 if (canPasteClass) {
                     if (event.shiftKey && isLeftAltPressed) {

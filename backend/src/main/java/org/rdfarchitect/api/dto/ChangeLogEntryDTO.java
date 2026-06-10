@@ -28,6 +28,5 @@ public class ChangeLogEntryDTO {
     private String changeId;
     private String timestamp;
     private String message;
-    private List<TripleDTO> additions;
-    private List<TripleDTO> deletions;
+    private List<ContextDeltaDTO> contextDeltas;
 }

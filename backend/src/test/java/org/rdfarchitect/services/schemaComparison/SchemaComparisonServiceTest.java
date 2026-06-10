@@ -57,7 +57,7 @@ class SchemaComparisonServiceTest {
 
     @BeforeEach
     void setUp() {
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(), new SchemaConfig());
+        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         service = new SchemaComparisonService(databasePort);
 
         var file = readMultipartFileFromFile(PATH, "inMemoryGraph.ttl");
