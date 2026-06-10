@@ -31,6 +31,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,16 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
+    public String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier) {
+        return getOrCreateSessionDataStore().getCrossProfileDiagramColor(graphIdentifier);
+    }
+
+    @Override
+    public void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color) {
+        getOrCreateSessionDataStore().setCrossProfileDiagramColor(graphIdentifier, color);
+    }
+
+    @Override
     public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         return getOrCreateSessionDataStore().getGraphWithContext(graphIdentifier);
     }
@@ -89,6 +100,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
                         .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))
                         .setNsPrefixes(newGraph.getPrefixMapping());
         store.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
+        store.setCrossProfileDiagramColor(
+                graphIdentifier, CrossProfileUtils.generateRandomDarkColor());
     }
 
     @Override

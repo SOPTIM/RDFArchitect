@@ -132,6 +132,32 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
+    public String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier) {
+        lock.lock();
+        try {
+            assertThatDatasetExists(graphIdentifier.datasetName());
+            return graphCollections
+                    .get(graphIdentifier.datasetName())
+                    .getCrossProfileDiagramColor(graphIdentifier.graphUri());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color) {
+        lock.lock();
+        try {
+            assertThatDatasetExists(graphIdentifier.datasetName());
+            graphCollections
+                    .get(graphIdentifier.datasetName())
+                    .setCrossProfileDiagramColor(graphIdentifier.graphUri(), color);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
     public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
         lock.lock();
         try {

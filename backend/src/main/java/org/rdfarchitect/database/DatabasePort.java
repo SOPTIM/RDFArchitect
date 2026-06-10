@@ -61,6 +61,22 @@ public interface DatabasePort {
     UUID getCrossProfileDiagramUUID(String datasetName);
 
     /**
+     * Returns the color of the given graph in the CrossProfileDiagram.
+     *
+     * @param graphIdentifier The identifier of the graph.
+     * @return The color as hex code of the graph.
+     */
+    String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier);
+
+    /**
+     * Sets the color of the given graph in the CrossProfileDiagram.
+     *
+     * @param graphIdentifier The identifier of the graph.
+     * @param color The color as hex code.
+     */
+    void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color);
+
+    /**
      * Loads the namespace prefix mapping for the dataset.
      *
      * @param datasetName literal dataset name

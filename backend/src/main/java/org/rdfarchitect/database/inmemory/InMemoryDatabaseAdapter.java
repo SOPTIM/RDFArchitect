@@ -58,6 +58,16 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier) {
+        return database.getCrossProfileDiagramColor(graphIdentifier);
+    }
+
+    @Override
+    public void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color) {
+        database.setCrossProfileDiagramColor(graphIdentifier, color);
+    }
+
+    @Override
     public PrefixMapping getPrefixMapping(String datasetName) {
         return database.getPrefixMapping(datasetName);
     }

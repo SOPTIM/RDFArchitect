@@ -19,13 +19,13 @@ package org.rdfarchitect.services.diagrams;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.GraphSourcedDTO;
 import org.rdfarchitect.api.dto.crossProfileDiagram.MergedClassDTO;
-import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
@@ -54,10 +54,8 @@ public class CustomDiagramService
         implements GetCustomDiagramsUseCase,
                 ReplaceCustomDiagramUseCase,
                 DeleteCustomDiagramUseCase,
-                AddToDiagramUseCase,
                 RemoveFromDiagramUseCase,
                 CrossProfileColorUseCase {
-                RemoveFromDiagramUseCase {
 
     private final DatabasePort databasePort;
     private final GetClassListUseCase getClassListUseCase;
@@ -86,8 +84,7 @@ public class CustomDiagramService
         for (var graphUri : graphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
             var classList = getClassListUseCase.getFullClassList(graphIdentifier);
-            var graphColor =
-                    databasePort.getGraphWithContext(graphIdentifier).getCrossProfileDiagramColor();
+            var graphColor = databasePort.getCrossProfileDiagramColor(graphIdentifier);
 
             for (var dto : classList) {
                 var classUri = dto.getPrefix() + dto.getLabel();
@@ -194,7 +191,8 @@ public class CustomDiagramService
                                             crossProfileDiagramUUID,
                                             merged.getClassUri(),
                                             merged.getUuid());
-                            DiagramLayoutServiceUtils.insertDiagramObjectPoint(model, doMRID);
+                            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                                    model, crossProfileDiagramUUID, doMRID);
                         }
                     }
                 });
@@ -293,8 +291,7 @@ public class CustomDiagramService
         var colorsDTO = new CrossProfileDiagramColorDataDTO(new HashMap<>());
         for (var graphUri : graphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            var graphColor =
-                    databasePort.getGraphWithContext(graphIdentifier).getCrossProfileDiagramColor();
+            var graphColor = databasePort.getCrossProfileDiagramColor(graphIdentifier);
             colorsDTO.getGraphColors().put(graphUri, graphColor);
         }
         return colorsDTO;
@@ -307,7 +304,8 @@ public class CustomDiagramService
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
             var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
             if (dto.getGraphColors().containsKey(graphUri)) {
-                graphWithContext.setCrossProfileDiagramColor(dto.getGraphColors().get(graphUri));
+                databasePort.setCrossProfileDiagramColor(
+                        graphIdentifier, dto.getGraphColors().get(graphUri));
             }
         }
     }

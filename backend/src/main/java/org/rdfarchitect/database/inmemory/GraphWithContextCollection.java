@@ -64,8 +64,8 @@ public class GraphWithContextCollection {
 
     @Getter private final UUID crossProfileDiagramUUID = UUID.randomUUID();
 
-    // lock to prohibit dirty reads/writes
-    private final ReentrantLock lock = new ReentrantLock();
+    private final ConcurrentMap<String, String> crossProfileDiagramColors =
+            new ConcurrentHashMap<>();
 
     // universal prefix map for all graphs
     private final PrefixMapping prefixes = new PrefixMappingImpl();
@@ -236,5 +236,13 @@ public class GraphWithContextCollection {
         if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
             throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
         }
+    }
+
+    public String getCrossProfileDiagramColor(String graphUri) {
+        return crossProfileDiagramColors.getOrDefault(graphUri, null);
+    }
+
+    public void setCrossProfileDiagramColor(String graphUri, String color) {
+        crossProfileDiagramColors.put(graphUri, color);
     }
 }

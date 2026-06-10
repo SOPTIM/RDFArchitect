@@ -87,6 +87,22 @@ public interface SessionDataStore {
     UUID getCrossProfileDiagramUUID(String datasetName);
 
     /**
+     * Returns the color of the given graph in the CrossProfileDiagram.
+     *
+     * @param graphIdentifier The identifier of the graph.
+     * @return The color as hex code of the graph.
+     */
+    String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier);
+
+    /**
+     * Sets the color of the given graph in the CrossProfileDiagram.
+     *
+     * @param graphIdentifier The identifier of the graph.
+     * @param color The color as hex code.
+     */
+    void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color);
+
+    /**
      * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will
      * be created. If the graph already exists, nothing happens.
      *

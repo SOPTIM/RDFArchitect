@@ -42,10 +42,12 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     public RenderingLayoutData fetchRenderingLayoutData(
             GraphIdentifier graphIdentifier, UUID packageUUID) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            DiagramLayoutDelta diagramLayout = ctx.getDiagramLayout();
-            var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-            return diagramLayout.read(
-                            () -> fetchRenderingLayoutData(diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, packageUUID));
+            DiagramLayoutDelta diagramLayoutDelta = ctx.getDiagramLayout();
+            var diagramLayoutModel = diagramLayoutDelta.getDiagramLayoutModel();
+            return fetchRenderingLayoutData(
+                    diagramLayoutDelta.getDefaultPackageMRID().getUuid(),
+                    diagramLayoutModel,
+                    packageUUID);
         }
     }
 
@@ -54,7 +56,11 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
         return diagramLayout.read(
-                () -> fetchRenderingLayoutData(diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, diagramId));
+                () ->
+                        fetchRenderingLayoutData(
+                                diagramLayout.getDefaultPackageMRID().getUuid(),
+                                diagramLayoutModel,
+                                diagramId));
     }
 
     private RenderingLayoutData fetchRenderingLayoutData(

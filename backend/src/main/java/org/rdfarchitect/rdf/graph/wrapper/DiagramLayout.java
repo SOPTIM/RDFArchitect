@@ -27,6 +27,7 @@ import org.rdfarchitect.dl.rdf.resources.CIM;
 
 import java.util.UUID;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 public class DiagramLayout {
 
@@ -42,7 +43,7 @@ public class DiagramLayout {
         diagramLayoutModel.setNsPrefix("rdf", RDF.uri);
     }
 
-    public <T> T read(java.util.function.Supplier<T> action) {
+    public <T> T read(Supplier<T> action) {
         rwLock.readLock().lock();
         try {
             return action.get();
