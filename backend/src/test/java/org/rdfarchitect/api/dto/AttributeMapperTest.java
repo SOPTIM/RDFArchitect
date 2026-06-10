@@ -59,7 +59,7 @@ class AttributeMapperTest {
                                         new RDFSLabel("TestClass", "en")))
                         .dataType(
                                 new CIMSDataType(
-                                        new URI("http://www.w3.org/2001/XMLSchema#String"),
+                                        new URI("http://www.w3.org/2001/XMLSchema#string"),
                                         new RDFSLabel("String", "en"),
                                         CIMSDataType.Type.PRIMITIVE))
                         .stereotype(
@@ -106,13 +106,13 @@ class AttributeMapperTest {
         void toDTO_fullAttribute() {
             cimAttribute.setComment(
                     new RDFSComment(
-                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#string")));
             cimAttribute.setFixedValue(
                     new CIMSIsFixed(
-                            "FixedValue", new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            "FixedValue", new URI("http://www.w3.org/2001/XMLSchema#string")));
             cimAttribute.setDefaultValue(
                     new CIMSIsDefault(
-                            "DefaultValue", new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            "DefaultValue", new URI("http://www.w3.org/2001/XMLSchema#string")));
 
             var dto = attributeMapper.toDTO(cimAttribute);
 
@@ -169,7 +169,7 @@ class AttributeMapperTest {
                                     .isEqualTo(
                                             new CIMSDataType(
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"),
+                                                            "http://www.w3.org/2001/XMLSchema#string"),
                                                     new RDFSLabel("String", "en"),
                                                     CIMSDataType.Type.PRIMITIVE)),
                     () -> assertThat(mappedCIMAttribute.getComment()).isNull(),
@@ -217,7 +217,7 @@ class AttributeMapperTest {
                                     .isEqualTo(
                                             new CIMSDataType(
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"),
+                                                            "http://www.w3.org/2001/XMLSchema#string"),
                                                     new RDFSLabel("String", "en"),
                                                     CIMSDataType.Type.PRIMITIVE)),
                     () ->
@@ -226,7 +226,7 @@ class AttributeMapperTest {
                                             new RDFSComment(
                                                     "Test comment",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                                                            "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
                             assertThat(mappedCIMAttribute.getStereotype())
                                     .isEqualTo(

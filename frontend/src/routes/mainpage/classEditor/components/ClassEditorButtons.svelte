@@ -185,7 +185,7 @@
     <FaIconButton
         callOnClick={closeClassEditor}
         icon={faXmark}
-        variant="danger"
+        variant="contrast"
         containerClass="w-auto"
         title="Close class editor"
     />

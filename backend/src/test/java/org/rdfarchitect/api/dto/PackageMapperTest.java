@@ -81,7 +81,7 @@ class PackageMapperTest {
                             UUID.randomUUID());
             cimPackage.setComment(
                     new RDFSComment(
-                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#string")));
             cimPackage.setBelongsToCategory(belongsToCategory);
 
             var dto = packageMapper.toDTO(cimPackage);
@@ -159,7 +159,7 @@ class PackageMapperTest {
                                             new RDFSComment(
                                                     "Test comment",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                                                            "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
                             assertThat(mappedCIMPackage.getBelongsToCategory())
                                     .isEqualTo(expectedBelongsToCategory));

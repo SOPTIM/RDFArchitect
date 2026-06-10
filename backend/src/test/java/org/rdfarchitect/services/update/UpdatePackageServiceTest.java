@@ -128,7 +128,7 @@ class UpdatePackageServiceTest {
                     .isEqualTo(
                             new RDFSComment(
                                     "This is a test package",
-                                    new URI("http://www.w3.org/2001/XMLSchema#String")));
+                                    new URI("http://www.w3.org/2001/XMLSchema#string")));
         }
     }
 
