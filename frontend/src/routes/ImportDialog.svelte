@@ -314,7 +314,7 @@
         {#if !datasetSelectionLocked}
             <label for={datasetInputId} class="mb-1">Dataset</label>
             <input
-                class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
+                class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                 type="text"
                 id={datasetInputId}
                 list={datasetListId}
@@ -354,7 +354,7 @@
                 bind:value={fileInputValue}
             />
             <div
-                class={`border-border hover:border-orange flex w-full flex-col rounded border-2 border-dashed px-4 py-6 transition-colors  ${dragActive ? "border-orange bg-orange/10" : "bg-window-background"}`}
+                class={`border-border hover:border-blue flex w-full flex-col rounded border-2 border-dashed px-4 py-6 transition-colors  ${dragActive ? "border-blue bg-blue/10" : "bg-window-background"}`}
                 role="group"
                 ondragover={event => {
                     event.preventDefault();
@@ -418,7 +418,7 @@
                             <div class="flex-1">
                                 <input
                                     id={`graph-uri-${index}`}
-                                    class="border-border bg-window-background focus:border-orange ring-none w-full rounded border-2 p-2 text-sm outline-none"
+                                    class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                     type="text"
                                     value={fileEntry.isZip
                                         ? fileEntry.file.name
