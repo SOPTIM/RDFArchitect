@@ -109,6 +109,12 @@ public class MigrationContextRESTController {
             var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(
                     fileA, new GraphIdentifier(datasetB, extendedGraphURIB));
+        }
+        // stored to file
+        else if (datasetA != null && graphA != null && fileA != null) {
+            var extendedGraphURIA = expandURIUseCase.expandUri(datasetA, graphA);
+            setMigrationContextUseCase.setMigrationContext(
+                    new GraphIdentifier(datasetA, extendedGraphURIA), fileA);
         } else {
             logger.warn(
                     "Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.",
