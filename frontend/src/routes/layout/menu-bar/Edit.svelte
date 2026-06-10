@@ -34,6 +34,10 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import {
+        enableEditing,
+        disableEditing,
+    } from "$lib/actions/editingActions.js";
+    import {
         undo as doUndo,
         redo as doRedo,
     } from "$lib/actions/versionControlActions.js";
@@ -246,14 +250,6 @@
     }
     async function redo() {
         if (await doRedo()) reload();
-    }
-
-    async function enableEditing(datasetName) {
-        await bec.enableEditing(datasetName);
-    }
-
-    async function disableEditing(datasetName) {
-        await bec.disableEditing(datasetName);
     }
 
     function copyClass() {
