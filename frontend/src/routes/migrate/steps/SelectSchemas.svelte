@@ -214,7 +214,9 @@
 
         {#if compareMode === CompareMode.STORED_TO_STORED}
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">Before</span>
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    Before
+                </span>
                 <DatasetAndGraphSelection
                     bind:dataset={datasetA}
                     bind:graph={graphA}
@@ -235,7 +237,9 @@
             </div>
 
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">After</span>
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    After
+                </span>
                 <DatasetAndGraphSelection
                     bind:dataset={datasetB}
                     bind:graph={graphB}
@@ -245,8 +249,12 @@
 
         {#if compareMode === CompareMode.FILE_TO_STORED}
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">Before</span>
-                <div class="border-border bg-background-subtle rounded border p-3">
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    Before
+                </span>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
                     <FileSelectButton bind:file={fileA} />
                 </div>
             </div>
@@ -265,7 +273,9 @@
             </div>
 
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">After</span>
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    After
+                </span>
                 <DatasetAndGraphSelection
                     bind:dataset={datasetB}
                     bind:graph={graphB}
@@ -275,7 +285,9 @@
 
         {#if compareMode === CompareMode.STORED_TO_FILE}
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">Before</span>
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    Before
+                </span>
                 <DatasetAndGraphSelection
                     bind:dataset={datasetA}
                     bind:graph={graphA}
@@ -296,8 +308,12 @@
             </div>
 
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">After</span>
-                <div class="border-border bg-background-subtle rounded border p-3">
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    After
+                </span>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
                     <FileSelectButton bind:file={fileA} />
                 </div>
             </div>
@@ -305,8 +321,12 @@
 
         {#if compareMode === CompareMode.FILE_TO_FILE}
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">Before</span>
-                <div class="border-border bg-background-subtle rounded border p-3">
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    Before
+                </span>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
                     <FileSelectButton bind:file={fileA} />
                 </div>
             </div>
@@ -325,8 +345,12 @@
             </div>
 
             <div class="flex flex-col gap-1.5">
-                <span class="text-text-subtle px-1 text-xs font-medium">After</span>
-                <div class="border-border bg-background-subtle rounded border p-3">
+                <span class="text-text-subtle px-1 text-xs font-medium">
+                    After
+                </span>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
                     <FileSelectButton
                         bind:file={fileB}
                         label="Select second file"
