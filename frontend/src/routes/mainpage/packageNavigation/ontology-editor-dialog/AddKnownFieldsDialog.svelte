@@ -163,7 +163,7 @@
         showDialog = false;
     }}
     disablePrimary={disableSubmit}
-    title="Select fields to add"
+    title="Select Fields to Add"
 >
     <div class="flex flex-col pb-1">
         <div

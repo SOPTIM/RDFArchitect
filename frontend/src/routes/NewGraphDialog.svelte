@@ -166,9 +166,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add schema"
+    primaryLabel="Add Schema"
     onPrimary={addGraph}
-    title="Add schema"
+    title="Add Schema"
     disablePrimary={disableSubmit}
 >
     <div class="mx-2 flex h-full flex-col">
