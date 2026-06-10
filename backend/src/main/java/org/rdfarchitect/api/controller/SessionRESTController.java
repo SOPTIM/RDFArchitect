@@ -38,7 +38,8 @@ public class SessionRESTController {
 
     @Operation(
             summary = "Reset session",
-            description = "Invalidates the current session, discarding all unsaved changes. A new session is created on the next request.",
+            description =
+                    "Invalidates the current session, discarding all unsaved changes. A new session is created on the next request.",
             tags = {"session"},
             responses = {@ApiResponse(responseCode = "204")})
     @DeleteMapping
