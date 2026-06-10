@@ -19,17 +19,17 @@
     import { v4 as uuidv4 } from "uuid";
 
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
+    import { CONCRETE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     const { classStereotypes } = $props();
 
-    const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
     const classEditorContext = getContext("classEditor");
     const id = uuidv4();
 
     let readonly = $derived(classEditorContext.readonly);
 
-    let isAbstract = $derived(!classStereotypes.contains(concreteStereotype));
+    let isAbstract = $derived(!classStereotypes.contains(CONCRETE_STEREOTYPE));
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -52,9 +52,9 @@
                 indicateChanges={isAbstract.isModified}
                 value={isAbstract}
                 callOnInputTrue={() =>
-                    classStereotypes.remove(concreteStereotype)}
+                    classStereotypes.remove(CONCRETE_STEREOTYPE)}
                 callOnInputFalse={() =>
-                    classStereotypes.append(concreteStereotype)}
+                    classStereotypes.append(CONCRETE_STEREOTYPE)}
                 disabled={readonly}
             />
         </div>
