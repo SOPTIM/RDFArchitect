@@ -31,6 +31,8 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.exception.security.DatasetAccessDeniedException;
 
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 
 @RequiredArgsConstructor
 public class DatasetFilter implements Filter {
@@ -75,7 +77,8 @@ public class DatasetFilter implements Filter {
         if (uri != null && uri.startsWith("/api/datasets/")) {
             String remaining = uri.substring(14);
             int slashIndex = remaining.indexOf('/');
-            return slashIndex == -1 ? remaining : remaining.substring(0, slashIndex);
+            String encoded = slashIndex == -1 ? remaining : remaining.substring(0, slashIndex);
+            return URLDecoder.decode(encoded, StandardCharsets.UTF_8);
         }
         return null;
     }

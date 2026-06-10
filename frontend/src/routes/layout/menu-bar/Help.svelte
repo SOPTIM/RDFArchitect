@@ -17,20 +17,28 @@
 
 <script>
     import {
+        faArrowsRotate,
         faCircleInfo,
         faCircleQuestion,
         faCommentDots,
     } from "@fortawesome/free-solid-svg-icons";
 
+    import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
 
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const externalResources = {
         help: "https://github.com/SOPTIM/RDFArchitect#readme",
         feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
+
+    let showResetSessionDialog = $state(false);
 
     function openExternalResource(key) {
         const target = externalResources[key];
@@ -43,6 +51,16 @@
     function navigateHomepage() {
         editorState.reset();
         goto("/");
+    }
+
+    async function resetSession() {
+        try {
+            await bec.resetSession();
+        } catch {
+            toastStore.error("Reset failed", "Could not reset the session.");
+            return;
+        }
+        window.location.reload();
     }
 </script>
 
@@ -64,5 +82,31 @@
         <Menubar.Item.Button onSelect={navigateHomepage} faIcon={faCircleInfo}>
             About
         </Menubar.Item.Button>
+        <Menubar.Separator />
+        <Menubar.Item.Button
+            onSelect={() => (showResetSessionDialog = true)}
+            faIcon={faArrowsRotate}
+            variant="danger"
+        >
+            Reset Session
+        </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>
+
+<ActionDialog
+    bind:showDialog={showResetSessionDialog}
+    title="Reset Session?"
+    primaryLabel="Reset Session"
+    primaryVariant="danger"
+    onPrimary={resetSession}
+>
+    <div class="space-y-2 px-3 py-3">
+        <p class="text-default-text text-sm leading-relaxed">
+            This will discard all unsaved changes and reload all data from the
+            database.
+        </p>
+        <p class="text-default-text text-sm leading-relaxed">
+            Use this to recover if the application is not responding correctly.
+        </p>
+    </div>
+</ActionDialog>
