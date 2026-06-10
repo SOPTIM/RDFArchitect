@@ -32,7 +32,7 @@
     <label for={selectId} class="text-default-text">{label}</label>
     <select
         id={selectId}
-        class="border-border bg-window-background focus:border-orange h-9 w-fit rounded border-2 p-2"
+        class="border-border bg-window-background focus:border-blue h-9 w-fit rounded border-2 p-2"
         {value}
         onchange={e => onChange?.(e.currentTarget.value)}
     >

@@ -89,4 +89,103 @@ class ImportGraphsServiceTest {
 
         verify(createDiagramLayoutUseCaseMock, times(2)).createDiagramLayout(any());
     }
+
+    @Test
+    void importGraphs_propertiesWithoutCimMetadata_areReportedAsUndisplayable() {
+        var datasetName = "ds";
+
+        // Gadget.color and Gadget.owner are plain rdf:Property declarations without the
+        // UML#attribute stereotype or cims:AssociationUsed, so they cannot be displayed.
+        // Gadget.size is a conformant attribute and Gadget.parent a conformant association.
+        var schema =
+                """
+                @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                @prefix cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#> .
+                @prefix uml:  <http://iec.ch/TC57/NonStandard/UML#> .
+                @prefix ex:   <http://example.com/> .
+
+                ex:Gadget a rdfs:Class ; rdfs:label "Gadget"@en .
+
+                ex:Gadget.color a rdf:Property ;
+                    rdfs:label  "color"@en ;
+                    rdfs:domain ex:Gadget ;
+                    rdfs:range  ex:String .
+
+                ex:Gadget.owner a rdf:Property ;
+                    rdfs:label  "owner"@en ;
+                    rdfs:domain ex:Gadget ;
+                    rdfs:range  ex:Owner .
+
+                ex:Gadget.size a rdf:Property ;
+                    rdfs:label      "size"@en ;
+                    rdfs:domain     ex:Gadget ;
+                    cims:stereotype uml:attribute ;
+                    rdfs:range      ex:String .
+
+                ex:Gadget.parent a rdf:Property ;
+                    rdfs:label           "parent"@en ;
+                    rdfs:domain          ex:Gadget ;
+                    cims:AssociationUsed "Yes" ;
+                    rdfs:range           ex:Gadget .
+                """;
+
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "schema.ttl",
+                        "text/turtle",
+                        schema.getBytes(StandardCharsets.UTF_8));
+
+        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file), null);
+
+        assertThat(result.failedFileNames()).isEmpty();
+        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
+        assertThat(result.warnings()).hasSize(1);
+
+        var warning = result.warnings().getFirst();
+        assertThat(warning.fileName()).isEqualTo("schema.ttl");
+        assertThat(warning.undisplayableProperties()).containsExactlyInAnyOrder("color", "owner");
+    }
+
+    @Test
+    void importGraphs_conformantSchema_producesNoWarnings() {
+        var datasetName = "ds";
+
+        var schema =
+                """
+                @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+                @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+                @prefix cims: <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#> .
+                @prefix uml:  <http://iec.ch/TC57/NonStandard/UML#> .
+                @prefix ex:   <http://example.com/> .
+
+                ex:Gadget a rdfs:Class ; rdfs:label "Gadget"@en .
+
+                ex:Gadget.size a rdf:Property ;
+                    rdfs:label      "size"@en ;
+                    rdfs:domain     ex:Gadget ;
+                    cims:stereotype uml:attribute ;
+                    rdfs:range      ex:String .
+
+                ex:Gadget.parent a rdf:Property ;
+                    rdfs:label           "parent"@en ;
+                    rdfs:domain          ex:Gadget ;
+                    cims:AssociationUsed "Yes" ;
+                    rdfs:range           ex:Gadget .
+                """;
+
+        var file =
+                new MockMultipartFile(
+                        "graph",
+                        "schema.ttl",
+                        "text/turtle",
+                        schema.getBytes(StandardCharsets.UTF_8));
+
+        var result = importGraphsUseCase.importGraphs(datasetName, List.of(file), null);
+
+        assertThat(result.failedFileNames()).isEmpty();
+        assertThat(result.importedGraphUris()).containsExactly(RDFA.GRAPH_URI + "schema");
+        assertThat(result.warnings()).isEmpty();
+    }
 }
