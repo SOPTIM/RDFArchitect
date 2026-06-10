@@ -21,11 +21,17 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.jena.graph.Graph;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.riot.RDFLanguages;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.jetbrains.annotations.NotNull;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.dl.update.packagelayout.CreateDiagramLayoutUseCase;
@@ -43,6 +49,7 @@ import java.io.InputStream;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -103,20 +110,59 @@ public class ImportGraphsService implements ImportGraphsUseCase {
         try {
             var graphUri = normalizeGraphUri(requestedUri, file.getOriginalFilename());
             graphUri = ensureUniqueGraphUri(graphUri, reservedGraphUris);
-            var graphIdentifier = replaceGraph(datasetName, graphUri, file);
+            var graph = parseGraph(file, graphUri);
+            var undisplayableProperties = findUndisplayableProperties(graph);
+            var graphIdentifier = replaceGraph(datasetName, graphUri, graph);
             result.importedGraphUris().add(graphUri);
+            if (!undisplayableProperties.isEmpty()) {
+                result.warnings()
+                        .add(
+                                new ImportWarning(
+                                        file.getOriginalFilename(), undisplayableProperties));
+            }
             createDiagramLayoutUseCase.createDiagramLayout(graphIdentifier);
         } catch (RuntimeException _) {
             result.failedFileNames().add(file.getOriginalFilename());
         }
     }
 
-    private GraphIdentifier replaceGraph(String datasetName, String graphUri, MultipartFile file) {
+    private GraphIdentifier replaceGraph(String datasetName, String graphUri, Graph graph) {
         var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-        var graph = parseGraph(file, graphUri);
         databasePort.deleteGraph(graphIdentifier);
         databasePort.createGraph(graphIdentifier, graph);
         return graphIdentifier;
+    }
+
+    /**
+     * Finds properties that are imported but will not be displayed in the editor. RDFArchitect only
+     * renders an {@code rdf:Property} that has a domain as an attribute (when it carries the {@code
+     * UML#attribute} stereotype) or as an association (when it carries {@code
+     * cims:AssociationUsed}). A domain-bound property with neither marker is stored but stays
+     * invisible, so we surface it as a warning instead of dropping it silently.
+     *
+     * @param graph the parsed graph to inspect
+     * @return the names (labels, falling back to URIs) of properties that will not be displayed
+     */
+    private List<String> findUndisplayableProperties(Graph graph) {
+        var model = ModelFactory.createModelForGraph(graph);
+        var undisplayableProperties = new ArrayList<String>();
+        model.listSubjectsWithProperty(RDF.type, RDF.Property)
+                .filterKeep(Resource::isURIResource)
+                .filterKeep(property -> property.hasProperty(RDFS.domain))
+                .filterDrop(
+                        property -> property.hasProperty(CIMS.stereotype, CIMStereotypes.attribute))
+                .filterDrop(property -> property.hasProperty(CIMS.associationUsed))
+                .forEachRemaining(property -> undisplayableProperties.add(propertyName(property)));
+        return undisplayableProperties;
+    }
+
+    private String propertyName(Resource property) {
+        var label = property.getProperty(RDFS.label);
+        if (label != null && label.getObject().isLiteral()) {
+            return label.getString();
+        }
+        var localName = property.getLocalName();
+        return localName == null || localName.isBlank() ? property.getURI() : localName;
     }
 
     private void importZipFile(
