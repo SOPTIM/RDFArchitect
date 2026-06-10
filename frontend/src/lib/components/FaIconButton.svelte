@@ -23,15 +23,17 @@
         disabled = false,
         icon,
         text,
+        labelClass = "",
+        containerClass = "w-full",
         ...restProps
     } = $props();
 </script>
 
-<div class="w-full">
+<div class={containerClass}>
     <ButtonControl {disabled} {callOnClick} {...restProps}>
         <div class="flex size-full items-center justify-center gap-2">
             {#if text}
-                <p>
+                <p class={labelClass}>
                     {text}
                 </p>
             {/if}
