@@ -34,6 +34,6 @@ public class MappingUtils {
         if (comment == null) {
             return null;
         }
-        return new RDFSComment(comment, new URI("http://www.w3.org/2001/XMLSchema#String"));
+        return new RDFSComment(comment, new URI("http://www.w3.org/2001/XMLSchema#string"));
     }
 }

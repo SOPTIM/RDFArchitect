@@ -84,7 +84,7 @@ class EnumEntryMapperTest {
         void toDTO_fullEnumEntry() {
             cimEnumEntry.setComment(
                     new RDFSComment(
-                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            "Test comment", new URI("http://www.w3.org/2001/XMLSchema#string")));
             cimEnumEntry.setStereotype(
                     new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#enumeration"));
 
@@ -156,7 +156,7 @@ class EnumEntryMapperTest {
                                             new RDFSComment(
                                                     "Test comment",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                                                            "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
                             assertThat(mappedCIMEnumEntry.getStereotype())
                                     .isEqualTo(
