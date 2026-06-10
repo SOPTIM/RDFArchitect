@@ -169,7 +169,7 @@
         <FaIconButton
             callOnClick={closeClassEditor}
             icon={faXmark}
-            variant="danger"
+            variant="contrast"
             text="Close"
             title="Close class editor"
         />
