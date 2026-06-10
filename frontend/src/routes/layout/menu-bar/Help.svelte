@@ -17,6 +17,7 @@
 
 <script>
     import {
+        faArrowsRotate,
         faCircleInfo,
         faCircleQuestion,
         faCommentDots,
@@ -25,12 +26,16 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import ResetSessionDialog from "../../ResetSessionDialog.svelte";
+
     import { goto } from "$app/navigation";
 
     const externalResources = {
         help: "https://rdfarchitect.soptim.de",
         feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
+
+    let showResetSessionDialog = $state(false);
 
     function openExternalResource(key) {
         const target = externalResources[key];
@@ -64,5 +69,15 @@
         <Menubar.Item.Button onSelect={navigateHomepage} faIcon={faCircleInfo}>
             About
         </Menubar.Item.Button>
+        <Menubar.Separator />
+        <Menubar.Item.Button
+            onSelect={() => (showResetSessionDialog = true)}
+            faIcon={faArrowsRotate}
+            variant="danger"
+        >
+            Reset Session
+        </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>
+
+<ResetSessionDialog bind:showDialog={showResetSessionDialog} />

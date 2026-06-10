@@ -642,4 +642,12 @@ export class BackendConnection {
             credentials: "include",
         });
     }
+
+    async resetSession() {
+        const url = `${PUBLIC_BACKEND_URL}/session`;
+        return fetch(url, {
+            method: "DELETE",
+            credentials: "include",
+        });
+    }
 }
