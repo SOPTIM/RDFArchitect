@@ -28,6 +28,7 @@ import {
     isInvalidClassLabel,
     isInvalidNamespace,
     isInvalidStereotype,
+    isManuallyEnteredConcreteStereotype,
     isInvalidUuid,
     isInvalidPackage,
     isInvalidSuperClass,
@@ -35,8 +36,11 @@ import {
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
 function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
-    stereotype.violationChecks.push(stereotype =>
-        isInvalidStereotype(stereotype, stereotypesArray),
+    stereotype.violationChecks.push(value =>
+        isInvalidStereotype(value, stereotypesArray),
+    );
+    stereotype.violationChecks.push(value =>
+        isManuallyEnteredConcreteStereotype(value, stereotype.isModified),
     );
 }
 

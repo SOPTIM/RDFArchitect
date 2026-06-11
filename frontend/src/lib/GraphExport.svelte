@@ -275,7 +275,7 @@
     {/if}
     <label for="media-types-Download" class="mt-2 mb-1">Media type</label>
     <select
-        class=" border-border bg-window-background focus:border-orange h-9 w-fit rounded border-2 p-2"
+        class=" border-border bg-window-background focus:border-blue h-9 w-fit rounded border-2 p-2"
         id="media-types-Download"
         bind:value={selectedMediaType}
     >

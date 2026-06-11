@@ -175,7 +175,7 @@
         {#if !datasetSelectionLocked}
             <label for={datasetInputId} class="mb-1">Dataset</label>
             <input
-                class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
+                class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                 type="text"
                 id={datasetInputId}
                 list={datasetListId}
@@ -205,7 +205,7 @@
 
         <label for={graphInputId} class="mt-2 mb-1">Schema (RDFS)</label>
         <input
-            class="border-border bg-window-background focus:border-orange ring-none h-9 w-full rounded border-2 p-2 outline-none"
+            class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
             type="text"
             id={graphInputId}
             placeholder={defaultGraphUriPrefix}

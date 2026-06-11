@@ -23,14 +23,26 @@
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
+    import { CONCRETE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     let { classStereotypes, stereotype } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const concreteStereotype = "http://iec.ch/TC57/NonStandard/UML#concrete";
-    let suggestedStereotypes = $derived(classEditorContext.stereotypes);
+
+    // The concrete stereotype is managed via the "Abstract" checkbox, so it
+    // must not be offered as a regular, manually selectable stereotype.
+    let suggestedStereotypes = $derived(
+        withoutConcrete(classEditorContext.stereotypes),
+    );
     let readonly = $derived(classEditorContext.readonly);
+
+    // The persisted concrete stereotype is surfaced by the "Abstract" checkbox
+    // and hidden from the list. A row the user has just edited to the concrete
+    // URI stays visible so its violation message can explain the checkbox.
+    let isManagedConcrete = $derived(
+        stereotype.value === CONCRETE_STEREOTYPE && !stereotype.isModified,
+    );
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -39,16 +51,20 @@
 
     $effect(() => {
         editorState.selectedContext.subscribe();
-        suggestedStereotypes = classEditorContext.stereotypes;
+        suggestedStereotypes = withoutConcrete(classEditorContext.stereotypes);
     });
 
     onMount(() => {
         readonly = classEditorContext.readonly;
-        suggestedStereotypes = classEditorContext.stereotypes;
+        suggestedStereotypes = withoutConcrete(classEditorContext.stereotypes);
     });
+
+    function withoutConcrete(stereotypes) {
+        return (stereotypes ?? []).filter(s => s !== CONCRETE_STEREOTYPE);
+    }
 </script>
 
-{#if stereotype.value !== concreteStereotype}
+{#if !isManagedConcrete}
     <tr>
         <td>
             <div class="flex gap-0.5">

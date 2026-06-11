@@ -26,16 +26,30 @@ public interface ImportGraphsUseCase {
 
     /**
      * Result of a graph import operation, separating successfully imported graph URIs from the
-     * filenames of files that failed to import.
+     * filenames of files that failed to import and any non-fatal warnings raised while importing.
      *
      * @param importedGraphUris the URIs of successfully imported graphs
      * @param failedFileNames the original filenames of files that could not be imported
+     * @param warnings non-fatal warnings about content that was imported but cannot be displayed
      */
-    record ImportResult(List<String> importedGraphUris, List<String> failedFileNames) {
+    record ImportResult(
+            List<String> importedGraphUris,
+            List<String> failedFileNames,
+            List<ImportWarning> warnings) {
         public ImportResult() {
-            this(new ArrayList<>(), new ArrayList<>());
+            this(new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
         }
     }
+
+    /**
+     * Warning about a successfully imported file whose content is not fully representable in the
+     * editor. The triples are stored, but the listed properties will not be displayed as attributes
+     * or associations because they lack the CIM metadata RDFArchitect relies on.
+     *
+     * @param fileName the original filename the warning relates to
+     * @param undisplayableProperties names of the properties that will not be displayed
+     */
+    record ImportWarning(String fileName, List<String> undisplayableProperties) {}
 
     /**
      * Imports multiple graphs into the specified dataset.
