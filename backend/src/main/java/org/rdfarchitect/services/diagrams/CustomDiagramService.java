@@ -83,7 +83,12 @@ public class CustomDiagramService
 
         for (var graphUri : graphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            var classList = getClassListUseCase.getFullClassList(graphIdentifier);
+            List<ClassUMLAdaptedDTO> classList;
+            if (includeProperties) {
+                classList = getClassListUseCase.getFullClassList(graphIdentifier);
+            } else {
+                classList = getClassListUseCase.getClassList(graphIdentifier, false);
+            }
             var graphColor = databasePort.getCrossProfileDiagramColor(graphIdentifier);
 
             for (var dto : classList) {
