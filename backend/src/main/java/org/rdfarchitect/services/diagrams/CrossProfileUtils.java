@@ -25,9 +25,9 @@ import java.util.Random;
 @UtilityClass
 public class CrossProfileUtils {
 
-    public static String generateRandomDarkColor() {
-        Random random = new Random();
+    private static final Random random = new Random();
 
+    public static String generateRandomDarkColor() {
         float hue = random.nextFloat();
         float saturation = 0.5f + random.nextFloat() * 0.5f;
         float brightness = 0.3f + random.nextFloat() * 0.4f;
