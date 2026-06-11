@@ -134,7 +134,7 @@
             icon={faDiagramProject}
             text="Constraints"
             labelClass={labelHideClass}
-            containerClass="w-auto"
+            containerClass="flex-1"
             title="View Constraints (SHACL)"
         />
 
@@ -152,7 +152,7 @@
                 icon={faFloppyDisk}
                 text="Save"
                 labelClass={labelHideClass}
-                containerClass="w-auto"
+                containerClass="flex-1"
                 disabled={!reactiveClass.isValid || !reactiveClass.isModified}
                 title="Save class"
             />
@@ -162,7 +162,7 @@
                 disabled={!reactiveClass.isModified}
                 text="Reset"
                 labelClass={labelHideClass}
-                containerClass="w-auto"
+                containerClass="flex-1"
                 title="Reset changes"
             />
             <FaIconButton
@@ -171,7 +171,7 @@
                 variant="danger"
                 text="Delete"
                 labelClass={labelHideClass}
-                containerClass="w-auto"
+                containerClass="flex-1"
                 title="Delete class"
             />
             <DeleteDependenciesDialog
