@@ -70,6 +70,10 @@
     });
 
     function selectClass() {
+        if (!diagramId && !editorState.selectedDiagram.getProperty("id")) {
+            showClassInPackage();
+            return;
+        }
         if (!diagramId) {
             classNavEntry.parent?.open();
         }
