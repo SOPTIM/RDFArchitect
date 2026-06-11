@@ -15,7 +15,7 @@
  *
  */
 
-import * as validUrl from "valid-url";
+import { validateIri } from "validate-iri";
 
 export class URI {
     prefix: string | null = null;
@@ -39,7 +39,9 @@ export class URI {
         if (!input) {
             throw new Error("URI must not be null or empty");
         }
-        if (!validUrl.isUri(input)) {
+
+        const error = validateIri(input);
+        if (error) {
             throw new Error(`Invalid IRI: ${input}`);
         }
 
@@ -59,9 +61,6 @@ export class URI {
             suffix = input;
         }
 
-        if (!suffix) {
-            throw new Error(`IRI must have a local name: ${input}`);
-        }
         if (!prefix) {
             throw new Error(`IRI must have a namespace: ${input}`);
         }

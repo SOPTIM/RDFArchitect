@@ -78,21 +78,15 @@
 - **License:** MIT
 - **URL:** [https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/eslint](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/eslint)
 
-### @types/valid-url
-- **Package:** @types/valid-url
-- **Version:** 1.0.7
-- **License:** MIT
-- **URL:** [https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/valid-url](https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/valid-url)
-
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.60.1
+- **Version:** 8.60.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.0
+- **Version:** 1.5.2
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
@@ -132,7 +126,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.4.1
+- **Version:** 10.4.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -150,7 +144,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.19.0
+- **Version:** 3.17.1
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -191,7 +185,7 @@
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 4.1.0
+- **Version:** 4.0.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
@@ -203,7 +197,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.1
+- **Version:** 5.55.9
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -215,7 +209,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.7.1
+- **Version:** 1.6.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -245,7 +239,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.60.1
+- **Version:** 8.60.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -255,12 +249,6 @@
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 
-### valid-url
-- **Package:** valid-url
-- **Version:** 1.0.9
-- **License:** Unknown
-- **URL:** [git://github.com/ogt/valid-url](git://github.com/ogt/valid-url)
-
 ### validate-iri
 - **Package:** validate-iri
 - **Version:** 1.0.1
@@ -269,13 +257,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.0.16
+- **Version:** 8.0.14
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.8
+- **Version:** 4.1.7
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 

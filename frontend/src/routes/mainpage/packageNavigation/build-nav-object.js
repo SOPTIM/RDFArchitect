@@ -239,6 +239,13 @@ async function getPackages(datasetName, graphURI) {
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
+    console.log(
+        "Populating package",
+        packageNavObject.id,
+        "with classes:",
+        allClasses,
+    );
+    allClasses = allClasses ?? [];
     const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
         .sort((a, b) => a.label.localeCompare(b.label))
@@ -279,6 +286,13 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
 async function getClasses(datasetName, graphURI) {
     try {
         const res = await bec.getClasses(datasetName, graphURI);
+        console.warn(
+            "Fetched classes for dataset " +
+                datasetName +
+                " and graph " +
+                graphURI,
+            res,
+        );
         return await res.json();
     } catch (err) {
         console.error(

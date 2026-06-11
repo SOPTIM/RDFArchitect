@@ -21,8 +21,10 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import org.apache.jena.atlas.lib.StrUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.irix.IRIException;
@@ -36,7 +38,8 @@ import org.apache.jena.irix.IRIx;
                         + "to json), the object structure ist always used.")
 public class URI {
 
-    private IRIx iri;
+    @Getter private String prefix;
+    @Getter private String suffix;
 
     public URI(String uri) {
         if (uri == null) {
@@ -46,45 +49,35 @@ public class URI {
             throw new IllegalArgumentException("URI must not be empty");
         }
         try {
-            this.iri = IRIx.create(uri);
+            IRIx iri = IRIx.create(StrUtils.encodeHex(uri, '%', new char[] {'%', ' '}));
+            if (iri.scheme() == null) {
+                throw new IllegalArgumentException("IRI must be absolute: " + uri);
+            }
         } catch (IRIException e) {
             throw new IllegalArgumentException("Invalid IRI: " + uri, e);
         }
-        if (getSuffix().isEmpty()) {
-            throw new IllegalArgumentException("IRI must have a local name: " + uri);
-        }
-        if (getPrefix() == null || getPrefix().isEmpty()) {
-            throw new IllegalArgumentException("IRI must have a namespace: " + uri);
-        }
-    }
+        int hash = uri.indexOf('#');
+        int slash = uri.lastIndexOf('/');
 
-    public String getPrefix() {
-        String full = iri.str();
-        int hash = full.indexOf('#');
         if (hash >= 0) {
-            return full.substring(0, hash + 1);
+            this.prefix = uri.substring(0, hash + 1);
+            this.suffix = uri.substring(hash + 1);
+        } else if (slash >= 0) {
+            this.prefix = uri.substring(0, slash + 1);
+            this.suffix = uri.substring(slash + 1);
+        } else {
+            this.prefix = uri;
+            this.suffix = "";
         }
-        int slash = full.lastIndexOf('/');
-        return slash >= 0 ? full.substring(0, slash + 1) : null;
-    }
-
-    public String getSuffix() {
-        String full = iri.str();
-        int hash = full.indexOf('#');
-        if (hash >= 0) {
-            return full.substring(hash + 1);
-        }
-        int slash = full.lastIndexOf('/');
-        return slash >= 0 ? full.substring(slash + 1) : full;
     }
 
     @Override
     public String toString() {
-        return iri.str();
+        return prefix + suffix;
     }
 
     public Node toNode() {
-        return NodeFactory.createURI(iri.str());
+        return NodeFactory.createURI(this.toString());
     }
 
     @Override

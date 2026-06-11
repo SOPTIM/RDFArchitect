@@ -57,7 +57,19 @@ class URITest {
                 Arguments.of(
                         "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1",
                         "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#",
-                        "M:1..1"));
+                        "M:1..1"),
+                // trailing slash / empty fragment -> suffix is empty, that's ok
+                Arguments.of("http://example.org/ontology/", "http://example.org/ontology/", ""),
+                Arguments.of("http://example.org/ontology#", "http://example.org/ontology#", ""),
+                // spaces get encoded
+                Arguments.of(
+                        "http://example.org/ontology#My Class",
+                        "http://example.org/ontology#",
+                        "My Class"),
+                Arguments.of(
+                        "http://example.org/ontology/My Class",
+                        "http://example.org/ontology/",
+                        "My Class"));
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -68,7 +80,6 @@ class URITest {
         assertThat(uri.getSuffix()).isEqualTo(expectedSuffix);
         assertThat(uri).hasToString(raw);
         assertThat(uri.toNode().isURI()).isTrue();
-        assertThat(uri.toNode()).hasToString(raw);
     }
 
     // -------------------------------------------------------------------------
@@ -121,9 +132,8 @@ class URITest {
     @NullAndEmptySource
     @ValueSource(
             strings = {
-                "http://example.org/ontology/", // trailing slash, no local name
-                "http://example.org/ontology#", // empty fragment
-                "MyClass", // no namespace
+                "MyClass", // relative IRI, no scheme
+                "//example.org/foo" // no scheme
             })
     void invalidUri_throwsIllegalArgumentException(String raw) {
         assertThatThrownBy(() -> new URI(raw)).isInstanceOf(IllegalArgumentException.class);

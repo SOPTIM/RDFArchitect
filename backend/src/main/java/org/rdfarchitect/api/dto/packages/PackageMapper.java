@@ -77,6 +77,13 @@ public interface PackageMapper {
     }
 
     default URI buildURI(PackageDTO dto) {
+        if (dto.getPrefix() == null
+                || dto.getPrefix().isEmpty()
+                || dto.getLabel() == null
+                || dto.getLabel().isEmpty()) {
+            System.out.println(dto.getLabel());
+            System.out.println(dto.getPrefix());
+        }
         return new URI(dto.getPrefix() + dto.getLabel());
     }
 
