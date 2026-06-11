@@ -15,10 +15,9 @@
  *
  */
 
-
 import { CreateClientConfig } from "./generated/client";
 
-export const createClientConfig: CreateClientConfig = (config) => ({
+export const createClientConfig: CreateClientConfig = config => ({
     ...config,
     baseUrl: "http://localhost:8080/",
     credentials: "include",

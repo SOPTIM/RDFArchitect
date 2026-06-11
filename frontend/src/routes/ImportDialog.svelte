@@ -21,10 +21,9 @@
     import { v4 as uuidv4 } from "uuid";
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {
@@ -78,6 +77,7 @@
     function onClose() {
         clearInputs();
     }
+
     function clearInputs() {
         datasetNameUserInput = "";
         files = [];
@@ -200,109 +200,44 @@
         return formData;
     }
 
-    function putFiles(files, datasetname) {
-        return fetch(
-            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetname)}/graphs/content`,
-            {
-                method: "PUT",
-                body: buildRequestBody(files),
-                credentials: "include",
-            },
-        );
-    }
-    async function parseResponse(response, datasetName) {
-        if (!response.ok) {
-            console.log("failed to insert data");
-            toastStore.error(
-                "Import failed",
-                `Could not import into "${datasetName}".`,
-            );
-            return;
-        }
-
-        const body = await response.json();
-        console.log(body.message);
-
-        const failedImports = body.failedImports ?? [];
-        if (failedImports.length > 0) {
-            console.warn("failed imports:", failedImports);
-        }
-
-        //only update the selected dataset and graph if at least one import was successful, otherwise keep the old selection
-        const importedGraphUris = body.importedGraphUris ?? [];
-        if (importedGraphUris.length === 0) {
-            toastStore.error(
-                "Import failed",
-                failedImports.length > 0
-                    ? `${failedImports.length} file(s) could not be imported.`
-                    : "No graphs were imported.",
-            );
-            return;
-        }
-        console.log("imported graphs:", importedGraphUris);
-
-        editorState.selectedDataset.updateValue(datasetName);
-        editorState.selectedGraph.updateValue(importedGraphUris[0]);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedClassDataset.updateValue(null);
-        editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClassUUID.updateValue(null);
-
-        const importedCount = importedGraphUris.length;
-        const summary = `${importedCount} graph${importedCount === 1 ? "" : "s"} imported into "${datasetName}".`;
-        if (failedImports.length > 0) {
-            toastStore.warning(
-                "Import partially succeeded",
-                `${summary} ${failedImports.length} file(s) were skipped.`,
-            );
-        } else {
-            toastStore.success("Import complete", summary);
-        }
-
-        notifyUndisplayableProperties(body.warnings ?? []);
-    }
-
-    function notifyUndisplayableProperties(warnings) {
-        if (warnings.length === 0) {
-            return;
-        }
-        const total = warnings.reduce(
-            (sum, warning) =>
-                sum + (warning.undisplayableProperties?.length ?? 0),
-            0,
-        );
-        const details = warnings
-            .map(
-                warning =>
-                    `${warning.fileName}: ${(warning.undisplayableProperties ?? []).join(", ")}`,
-            )
-            .join("; ");
-        toastStore.warning(
-            "Some properties could not be displayed",
-            `${total} propert${total === 1 ? "y" : "ies"} ${total === 1 ? "is" : "are"} missing the CIM stereotype or association metadata RDFArchitect needs to show ${total === 1 ? "it" : "them"} (${details}).`,
-        );
-    }
-
     async function importGraphs() {
         const datasetNameUserInputLocal = getUserInputDatasetName();
-        const filesLocal = files;
-        console.warn(
-            "Importing files into dataset:",
+        const { data } = await graphStore.importGraphs(
             datasetNameUserInputLocal,
+            buildRequestBody(files),
         );
-        try {
-            const res = await putFiles(filesLocal, datasetNameUserInputLocal);
-            await parseResponse(res, datasetNameUserInputLocal);
-            await datasetStore.load(true);
-        } catch (e) {
-            console.log("failed to insert data:");
-            console.log(e);
-            toastStore.error(
-                "Import failed",
-                "An unexpected error occurred while importing.",
+
+        if (data.importedGraphUris?.length > 0) {
+            editorState.selectedDataset.updateValue(datasetNameUserInputLocal);
+            editorState.selectedGraph.updateValue(
+                data.importedGraphUris[0] || null,
             );
-        } finally {
+            editorState.selectedDiagram.updateValue({ type: null, id: null });
+            editorState.selectedClassDataset.updateValue(null);
+            editorState.selectedClassGraph.updateValue(null);
+            editorState.selectedClassUUID.updateValue(null);
             forceReloadTrigger.trigger();
+        }
+
+        function notifyUndisplayableProperties(warnings) {
+            if (warnings.length === 0) {
+                return;
+            }
+            const total = warnings.reduce(
+                (sum, warning) =>
+                    sum + (warning.undisplayableProperties?.length ?? 0),
+                0,
+            );
+            const details = warnings
+                .map(
+                    warning =>
+                        `${warning.fileName}: ${(warning.undisplayableProperties ?? []).join(", ")}`,
+                )
+                .join("; ");
+            toastStore.warning(
+                "Some properties could not be displayed",
+                `${total} propert${total === 1 ? "y" : "ies"} ${total === 1 ? "is" : "are"} missing the CIM stereotype or association metadata RDFArchitect needs to show ${total === 1 ? "it" : "them"} (${details}).`,
+            );
         }
     }
 </script>

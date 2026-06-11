@@ -24,7 +24,6 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapNamespaceDtoToReactiveNamespace } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { mapReactiveNamespaceToNamespaceDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveNamespace } from "$lib/models/reactive/models/reactive-namespace.svelte.js";
@@ -38,7 +37,6 @@
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     let { showDialog = $bindable() } = $props();
-
 
     let datasetName = $state("");
     let readonly = $state(false);
@@ -85,26 +83,12 @@
         const namespaceDTOs = plainReactiveNamespaces.map(namespace => {
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
-        try {
-            const res = await datasetStore.saveNamespaces(datasetName, namespaceDTOs);
-            if (res && res.error) {
-                toastStore.error(
-                    "Save failed",
-                    `Could not save namespaces for "${datasetName}".`,
-                );
-                return;
-            }
-            toastStore.success(
-                "Namespaces saved",
-                `Updated for "${datasetName}".`,
-            );
-        } catch (err) {
-            console.error("Failed to save namespaces:", err);
-            toastStore.error(
-                "Save failed",
-                "An unexpected error occurred while saving namespaces.",
-            );
-        } finally {
+        const { error } = await datasetStore.saveNamespaces(
+            datasetName,
+            namespaceDTOs,
+        );
+
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }

@@ -15,13 +15,10 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { classStore } from "$lib/stores/ClassStore.ts";
 import { packageStore } from "$lib/stores/PackageStore.ts";
 
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 export async function createPackageListForGraph(datasetName, graphURI) {
     await packageStore.load(datasetName, graphURI);
@@ -46,18 +43,14 @@ export async function createPackageListForGraph(datasetName, graphURI) {
         });
 }
 
-async function getClasses(datasetName, graphURI) {
-    const res = await bec.getClasses(datasetName, graphURI);
-    return await res.json();
-}
-
 export async function createClassListForGraph(
     datasetName,
     graphURI,
     selectedClasses,
 ) {
     try {
-        const classList = (await getClasses(datasetName, graphURI)) ?? [];
+        await classStore.load(datasetName, graphURI);
+        const classList = await classStore.getClasses(datasetName, graphURI);
 
         const grouped = {};
 

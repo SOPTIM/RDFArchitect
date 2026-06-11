@@ -17,13 +17,12 @@
 
 import { get } from "svelte/store";
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+import { classStore } from "$lib/stores/ClassStore.ts";
 import { datasetStore } from "$lib/stores/DatasetStore.ts";
-import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+import { graphStore } from "$lib/stores/GraphStore.ts";
 import { packageStore } from "$lib/stores/PackageStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
@@ -33,8 +32,6 @@ import {
     isSelectedPackage,
     isSelectedClass,
 } from "./packageNavigationUtils.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 /**
  * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
@@ -65,7 +62,10 @@ export async function getNavEntryList(existingDatasetNavList) {
     const freshEntries = datasets
         .sort((a, b) => a.label.localeCompare(b.label))
         .map(dataset =>
-            reuseOrCreate(existingDatasetNavList, { label: dataset.label, id: dataset.label }),
+            reuseOrCreate(existingDatasetNavList, {
+                label: dataset.label,
+                id: dataset.label,
+            }),
         );
 
     const result = existingDatasetNavList ?? [];
@@ -108,8 +108,8 @@ async function populateDataset(datasetNavEntry) {
 
 async function getGraphNames(datasetName) {
     try {
-        await graphURIStore.load(datasetName);
-        return graphURIStore.getGraphURIs(datasetName);
+        await graphStore.load(datasetName);
+        return graphStore.getGraphURIs(datasetName);
     } catch (err) {
         console.error(
             "Error fetching graph names for dataset " + datasetName,
@@ -122,9 +122,16 @@ async function getGraphNames(datasetName) {
 export async function populateGraph(datasetNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
     await packageStore.load(datasetNavObject.id, graphNavObject.id);
-    const packageData = packageStore.getPackages(datasetNavObject.id, graphNavObject.id);
+    const packageData = packageStore.getPackages(
+        datasetNavObject.id,
+        graphNavObject.id,
+    );
 
-    const allClasses = await getClasses(datasetNavObject.id, graphNavObject.id);
+    await classStore.load(datasetNavObject.id, graphNavObject.id);
+    const allClasses = await classStore.getClasses(
+        datasetNavObject.id,
+        graphNavObject.id,
+    );
 
     const freshEntries = [
         ...packageData.internal.map(pack =>
@@ -231,20 +238,4 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     }
 
     return packageNavObject;
-}
-
-async function getClasses(datasetName, graphURI) {
-    try {
-        const res = await bec.getClasses(datasetName, graphURI);
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching classes for dataset " +
-                datasetName +
-                " and graph " +
-                graphURI,
-            err,
-        );
-        return [];
-    }
 }

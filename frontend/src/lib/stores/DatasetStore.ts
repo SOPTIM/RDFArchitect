@@ -17,6 +17,7 @@
 
 import { writable, get } from "svelte/store";
 
+import { describeError } from "./StoreLogging";
 import {
     listDatasets,
     deleteDataset,
@@ -25,6 +26,7 @@ import {
     enableEditing,
     disableEditing,
 } from "../api/generated";
+import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
 export type DatasetInfo = {
     label: string;
@@ -39,6 +41,11 @@ type DatasetsState = {
     error: unknown;
 };
 
+// Generic envelope used by all mutating store methods.
+type Result<T = void> = { error: unknown; data?: T };
+
+const LOG_PREFIX = "[datasetStore]";
+
 export const datasetStore = createDatasetStore();
 
 function createDatasetStore() {
@@ -47,7 +54,7 @@ function createDatasetStore() {
         fetchedAt: null,
         pending: null,
         error: null,
-    }); // ← kein Start-Callback
+    });
 
     const { subscribe: baseSubscribe, update } = store;
 
@@ -64,6 +71,8 @@ function createDatasetStore() {
         return baseSubscribe(run, invalidate);
     }
 
+    // ----- Load -----
+
     async function load(force = false) {
         const state = get(store);
 
@@ -74,6 +83,10 @@ function createDatasetStore() {
             try {
                 const { data, error } = await listDatasets();
                 if (error) {
+                    console.error(
+                        `${LOG_PREFIX} Failed to load datasets:`,
+                        await describeError(error),
+                    );
                     update(s => ({
                         ...s,
                         pending: null,
@@ -98,6 +111,10 @@ function createDatasetStore() {
                     fetchedAt: Date.now(),
                 }));
             } catch (err) {
+                console.error(
+                    `${LOG_PREFIX} Unexpected error while loading datasets:`,
+                    err,
+                );
                 update(s => ({
                     ...s,
                     pending: null,
@@ -110,27 +127,11 @@ function createDatasetStore() {
         return promise;
     }
 
-    async function remove(datasetName: string) {
-        const { error } = await deleteDataset({ path: { datasetName } });
-        if (error) return { error };
-
-        update(s => ({
-            ...s,
-            data: s.data?.filter(d => d.label !== datasetName) ?? null,
-        }));
-        return { error: null };
-    }
-
-    function invalidate() {
-        void load(true);
-    }
+    // ----- Getters -----
 
     function isReadOnly(datasetName: string): boolean | null {
         const dataset = get(store).data?.find(d => d.label === datasetName);
         if (!dataset) {
-            console.warn(
-                `isReadOnly called before dataset "${datasetName}" was loaded`,
-            );
             return null;
         }
         return dataset.readonly;
@@ -139,24 +140,69 @@ function createDatasetStore() {
     function getNamespaces(datasetName: string): CimPrefixPair[] {
         const dataset = get(store).data?.find(d => d.label === datasetName);
         if (!dataset) {
-            console.warn(`getNamespaces called before dataset "${datasetName}" was loaded`);
             return [];
         }
         return dataset.prefixes;
     }
 
+    // ----- Mutations -----
+
+    async function remove(datasetName: string): Promise<Result> {
+        console.log(`${LOG_PREFIX} Deleting dataset "${datasetName}"`);
+
+        const { error } = await deleteDataset({ path: { datasetName } });
+
+        if (error) {
+            const msg = await describeError(error);
+            console.error(
+                `${LOG_PREFIX} Could not delete dataset "${datasetName}":`,
+                msg,
+            );
+            toastStore.error(
+                "Delete failed",
+                `Could not delete dataset "${datasetName}".`,
+            );
+            return { error };
+        }
+
+        update(s => ({
+            ...s,
+            data: s.data?.filter(d => d.label !== datasetName) ?? null,
+        }));
+
+        console.log(`${LOG_PREFIX} Deleted dataset "${datasetName}"`);
+        toastStore.success("Dataset deleted", `"${datasetName}" was deleted.`);
+
+        return { error: null };
+    }
+
     async function saveNamespaces(
         datasetName: string,
         namespaces: CimPrefixPair[],
-    ) {
+    ): Promise<Result> {
+        console.log(
+            `${LOG_PREFIX} Saving ${namespaces.length} namespace(s) for "${datasetName}"`,
+        );
+
         const { error } = await replaceNamespaces({
             path: { datasetName },
             body: namespaces,
         });
 
-        if (error) return { error };
+        if (error) {
+            const msg = await describeError(error);
+            console.error(
+                `${LOG_PREFIX} Could not save namespaces for "${datasetName}":`,
+                msg,
+            );
+            toastStore.error(
+                "Save failed",
+                `Could not save namespaces for "${datasetName}".`,
+            );
+            return { error };
+        }
 
-        // Update prefixes in store so getNamespaces() returns fresh data
+        // Keep getNamespaces() consistent with what the backend now holds.
         update(s => ({
             ...s,
             data:
@@ -167,15 +213,41 @@ function createDatasetStore() {
                 ) ?? null,
         }));
 
+        console.log(`${LOG_PREFIX} Saved namespaces for "${datasetName}"`);
+        toastStore.success(
+            "Namespaces saved",
+            `Namespaces for "${datasetName}" were updated.`,
+        );
+
         return { error: null };
     }
 
-    async function updateReadonly(datasetName: string, readonly: boolean) {
+    async function updateReadonly(
+        datasetName: string,
+        readonly: boolean,
+    ): Promise<Result> {
+        console.log(
+            `${LOG_PREFIX} Setting readonly=${readonly} for "${datasetName}"`,
+        );
+
         const res = readonly
             ? await disableEditing({ path: { datasetName } })
             : await enableEditing({ path: { datasetName } });
 
         if (res?.error) {
+            const msg = await describeError(res.error);
+            console.error(
+                `${LOG_PREFIX} Could not update readonly flag for "${datasetName}":`,
+                msg,
+            );
+            toastStore.error(
+                readonly
+                    ? "Could not disable editing"
+                    : "Could not enable editing",
+                readonly
+                    ? `Dataset "${datasetName}" remains editable.`
+                    : `Dataset "${datasetName}" remains read-only.`,
+            );
             return { error: res };
         }
 
@@ -187,7 +259,21 @@ function createDatasetStore() {
                 ) ?? null,
         }));
 
+        console.log(
+            `${LOG_PREFIX} Updated readonly=${readonly} for "${datasetName}"`,
+        );
+        toastStore.success(
+            readonly ? "Editing disabled" : "Editing enabled",
+            `"${datasetName}" is now ${readonly ? "read-only" : "editable"}.`,
+        );
+
         return { error: null };
+    }
+
+    // ----- Invalidation -----
+
+    function invalidate() {
+        void load(true);
     }
 
     return {

@@ -23,17 +23,15 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onDestroy, onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
 
     import DeleteDependenciesDialog from "../../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -47,8 +45,6 @@
         classToOpenNext,
         closeClassEditor,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const classEditorContext = getContext("classEditor");
 
@@ -106,35 +102,18 @@
     }
 
     async function saveChangesToBackend(classDto) {
-        const classLabel = classDto.label ?? classDto.uuid;
-        const res = await bec.replaceClass(
+        const { error } = await classStore.replaceClass(
             datasetName,
             graphUri,
             classDto.uuid,
             classDto,
         );
-        const responseText = await res.text();
-        if (res.ok) {
-            console.log(
-                "Successfully saved unsaved changes to class:",
-                responseText,
-            );
+        if (!error) {
             reactiveClass.save();
             editorState.selectedClassUUID.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
-            toastStore.success("Class saved", `"${classLabel}" was saved.`);
-        } else {
-            console.error(
-                "Could not save unsaved changes to class:",
-                responseText,
-            );
-            toastStore.error(
-                "Save failed",
-                `Could not save class "${classLabel}".`,
-            );
         }
-        forceReloadTrigger.trigger();
     }
 
     export function saveFromShortcut() {

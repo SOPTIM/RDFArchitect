@@ -107,7 +107,9 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await datasetStore.isReadOnly(dataset) : false;
+        isDatasetReadOnly = dataset
+            ? await datasetStore.isReadOnly(dataset)
+            : false;
     });
 
     $effect(() => {

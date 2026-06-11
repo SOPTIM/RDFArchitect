@@ -29,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import {
@@ -97,38 +98,15 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            let res = await bec.getClassInfo(datasetName, graphUri, classUuid);
-            let resText = await res.text();
-            if (!resText) {
-                return closeClassEditor({
-                    datasetName: datasetName,
-                    graphUri: graphUri,
-                    classUuid: null,
-                });
-            }
-            let classData;
-            try {
-                classData = JSON.parse(resText);
-            } catch (e) {
-                console.error(
-                    "Failed to parse class data for class UUID",
-                    classUuid,
-                    "in dataset",
-                    datasetName,
-                    "and graph",
-                    graphUri,
-                    ":",
-                    e,
-                );
-                return closeClassEditor({
-                    datasetName: datasetName,
-                    graphUri: graphUri,
-                    classUuid: null,
-                });
-            }
+            await classStore.loadClassInfo(datasetName, graphUri, classUuid);
+            const classDto = classStore.getClassInfo(
+                datasetName,
+                graphUri,
+                classUuid,
+            );
             isDatasetReadOnly = datasetStore.isReadOnly(datasetName);
             await loadContext();
-            await loadReactiveClass(cancellation, classData);
+            await loadReactiveClass(cancellation, classDto);
         })();
 
         return () => {
@@ -221,11 +199,18 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                const res = await bec.getClassInfo(datasetName, graphUri, uuid);
-                if (!res || !res.ok) return null;
-                const text = await res.text();
-                if (!text) return null;
-                return JSON.parse(text);
+                await classStore.loadClassInfo(
+                    datasetName,
+                    graphUri,
+                    classUuid,
+                );
+                const res = await classStore.getClassInfo(
+                    datasetName,
+                    graphUri,
+                    uuid,
+                );
+                if (!res) return null;
+                return res;
             }),
         );
         if (cancelled.cancelled) return;

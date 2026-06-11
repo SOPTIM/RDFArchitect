@@ -29,10 +29,6 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
-    import {
-        enableEditing,
-        disableEditing,
-    } from "$lib/actions/editingActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
@@ -68,7 +64,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readonly = await datasetStore.isReadOnly(datasetNavEntry.label);
+        readonly = datasetStore.isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {
@@ -104,9 +100,13 @@
         if (!datasetNavEntry?.id || !readonly) {
             return;
         }
-        if (!(await enableEditing(datasetNavEntry.id))) {
-            return;
-        }
+
+        const { error } = await datasetStore.updateReadonly(
+            datasetNavEntry.id,
+            false,
+        );
+        if (error) return;
+
         readonly = false;
         forceReloadTrigger.trigger();
     }
@@ -115,7 +115,11 @@
         if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        if (!(await disableEditing(datasetNavEntry.id))) {
+        const { error } = await datasetStore.updateReadonly(
+            datasetNavEntry.id,
+            true,
+        );
+        if (error) {
             return;
         }
         readonly = true;

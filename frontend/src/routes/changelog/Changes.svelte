@@ -39,7 +39,8 @@
     $effect(async () => {
         forceReloadTrigger.subscribe();
         if (selectedDatasetName) {
-            readonlyDataset = await datasetStore.isReadOnly(selectedDatasetName);
+            readonlyDataset =
+                await datasetStore.isReadOnly(selectedDatasetName);
         }
     });
 

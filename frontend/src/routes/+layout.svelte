@@ -19,13 +19,6 @@
     import "../app.css";
     import { onMount } from "svelte";
 
-    import { enableEditing } from "$lib/actions/editingActions.js";
-    import {
-        fetchCanRedo,
-        fetchCanUndo,
-        redo,
-        undo,
-    } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import {
         installBackendFetchInterceptor,
@@ -40,6 +33,7 @@
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
     import {
         editorState,
@@ -77,7 +71,7 @@
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
-            ? await datasetStore.isReadOnly(selectedDataset)
+            ? datasetStore.isReadOnly(selectedDataset)
             : false;
     });
 
@@ -91,9 +85,12 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        if (!(await enableEditing(selectedDataset))) {
-            return;
-        }
+        const { error } = await datasetStore.updateReadonly(
+            selectedDataset,
+            false,
+        );
+        if (error) return;
+
         forceReloadTrigger.trigger();
         editorState.selectedClassUUID.trigger();
         editorState.selectedDiagram.trigger();
@@ -120,8 +117,8 @@
     }
 
     async function fetchUndoRedo() {
-        canUndo = await fetchCanUndo();
-        canRedo = await fetchCanRedo();
+        canUndo = versionControlStore.canUndo();
+        canRedo = versionControlStore.canRedo();
     }
 
     async function reload() {
@@ -155,9 +152,9 @@
 
     async function handleUndoRedo(isRedo) {
         if (isRedo) {
-            if (canRedo && (await redo())) await reload();
+            if (canRedo && (await versionControlStore.redo())) await reload();
         } else {
-            if (canUndo && (await undo())) await reload();
+            if (canUndo && (await versionControlStore.undo())) await reload();
         }
     }
 
