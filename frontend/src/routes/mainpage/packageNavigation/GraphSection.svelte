@@ -215,7 +215,7 @@
                         }}
                         faIcon={faGear}
                     >
-                        Edit profile header
+                        Edit Profile Header
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => {
@@ -224,7 +224,7 @@
                         variant="danger"
                         faIcon={faTrash}
                     >
-                        Delete profile header
+                        Delete Profile Header
                     </ContextMenu.Item.Button>
                 {:else}
                     <ContextMenu.Item.Button
@@ -233,7 +233,7 @@
                         }}
                         faIcon={faPlus}
                     >
-                        Create profile header
+                        Create Profile Header
                     </ContextMenu.Item.Button>
                 {/if}
                 <ContextMenu.Separator />
@@ -244,7 +244,7 @@
                     }}
                     faIcon={faEye}
                 >
-                    View profile header
+                    View Profile Header
                 </ContextMenu.Item.Button>
                 <ContextMenu.Separator />
             {/if}

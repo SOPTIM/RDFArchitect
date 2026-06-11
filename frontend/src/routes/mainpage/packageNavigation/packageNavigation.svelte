@@ -91,7 +91,7 @@
                 onSelect={() => (showNewGraphDialog = true)}
                 faIcon={faDiagramProject}
             >
-                Add schema
+                Add Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => (showImportDialog = true)}
