@@ -36,7 +36,7 @@
 <div class="flex h-full min-h-0 flex-col">
     <div class="text-default-text flex min-h-0 w-full flex-1 flex-col">
         <label for={id} class="text-blue block font-normal">Comment</label>
-        {#if editClassComment}
+        {#if editClassComment || readonly}
             <div
                 class="text-default-text border-border min-h-0 flex-1 overflow-auto rounded-xs border border-solid p-2
                         {readonly
