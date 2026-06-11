@@ -28,7 +28,7 @@ import java.util.List;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
-@SuperBuilder(toBuilder = true, toBuilderMethodName = "toBuilder", toBuilderMethodAnnotations = @Override)
+@SuperBuilder(toBuilder = true)
 @NoArgsConstructor
 public class CIMMergedClass extends CIMClass {
 
