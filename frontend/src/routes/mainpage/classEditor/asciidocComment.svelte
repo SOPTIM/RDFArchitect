@@ -16,10 +16,11 @@
   -->
 
 <script>
-    import Asciidoctor from "asciidoctor";
+    import AsciidoctorModule from "asciidoctor";
 
     const { comment } = $props();
-    const asciidoctor = Asciidoctor();
+    const createAsciidoctor = AsciidoctorModule.default ?? AsciidoctorModule;
+    const asciidoctor = createAsciidoctor();
     let convertedClassComment = $derived(
         comment ? asciidoctor.convert(comment, { safe: "secure" }) : "",
     );

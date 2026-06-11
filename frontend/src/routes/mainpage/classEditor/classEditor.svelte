@@ -281,11 +281,11 @@
     });
 </script>
 
-<div class="relative h-screen w-full">
+<div class="relative h-full w-full">
     <Splitpanes
         theme="opencgmes-theme"
         horizontal
-        class="bg-window-background h-screen"
+        class="bg-window-background h-full"
     >
         {#if reactiveClass}
             <Pane
