@@ -183,28 +183,21 @@
         return datasetNameUserInput || DEFAULT_DATASET_NAME;
     }
 
-    function buildRequestBody(files) {
-        let formData = new FormData();
-        files.forEach(fileEntry => {
-            formData.append("files", fileEntry.file);
-            formData.append(
-                "graphUris",
-                fileEntry.isZip
-                    ? ""
-                    : ensureGraphNamespaceUri(
-                          fileEntry.graphUri,
-                          fileEntry.file.label,
-                      ),
-            );
-        });
-        return formData;
-    }
-
     async function importGraphs() {
         const datasetNameUserInputLocal = getUserInputDatasetName();
+        const filesLocal = files.map(entry => entry.file);
+        const graphUrisLocal = files.map(entry =>
+            entry.isZip
+                ? ""
+                : ensureGraphNamespaceUri(
+                      entry.graphUri,
+                      entry.file.label,
+                  ),
+        );
         const { data } = await graphStore.importGraphs(
             datasetNameUserInputLocal,
-            buildRequestBody(files),
+            filesLocal,
+            graphUrisLocal
         );
 
         if (data.importedGraphUris?.length > 0) {
@@ -216,6 +209,7 @@
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClassUUID.updateValue(null);
+            datasetStore.invalidate();
             forceReloadTrigger.trigger();
         }
 

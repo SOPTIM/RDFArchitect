@@ -24,6 +24,7 @@ import {
     Uri,
     replaceGraphs,
     GraphBulkImportResponse,
+    replaceGraph,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -152,8 +153,8 @@ function createGraphStore() {
             `${LOG_PREFIX} Adding empty graph "${graphURI}" to dataset "${datasetName}"`,
         );
 
-        const { error } = await replaceGraphs({
-            path: { datasetName },
+        const { error } = await replaceGraph({
+            path: { datasetName, graphURI },
         });
 
         if (error) {
@@ -178,13 +179,14 @@ function createGraphStore() {
 
     async function importGraphs(
         datasetName: string,
-        body: FormData,
+        files: File[],
+        graphUris: string[]
     ): Promise<Result<GraphBulkImportResponse>> {
         console.log(
             `${LOG_PREFIX} Importing graphs into dataset "${datasetName}"`,
         );
 
-        if (!(body instanceof FormData) || !body.has("files")) {
+        if (!files || files.length === 0) {
             const error = new Error(
                 "At least one file is required for import.",
             );
@@ -195,7 +197,10 @@ function createGraphStore() {
 
         const { data, error } = await replaceGraphs({
             path: { datasetName },
-            body,
+            body: {
+                files: files,
+            },
+            query: { graphUris },
         });
 
         if (error) {
@@ -238,7 +243,6 @@ function createGraphStore() {
             );
         }
 
-        console.log(`${LOG_PREFIX} Imported ${importedCount} graphs`);
         return { error: null, data };
     }
 

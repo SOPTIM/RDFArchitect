@@ -66,10 +66,10 @@ public class GraphBulkContentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(description = "The files containing the graph data") @RequestPart("files")
+            @Parameter(description = "The files containing the graph data") @RequestParam("files")
                     List<MultipartFile> files,
             @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-                    @RequestPart(value = "graphUris", required = false)
+                    @RequestParam(value = "graphUris", required = false)
                     List<String> graphUris) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/content\" from \"{}\".",

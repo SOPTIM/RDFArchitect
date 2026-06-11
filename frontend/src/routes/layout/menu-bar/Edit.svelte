@@ -34,9 +34,7 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
         copyState,
@@ -44,6 +42,7 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
@@ -58,8 +57,6 @@
     import NewPackageDialog from "../../NewPackageDialog.svelte";
 
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const shortcutsUnregister = [];
 
@@ -186,12 +183,10 @@
         if (!hasGraphSelected) {
             return null;
         }
-        const res = await bec.getOntology(selectedDataset, selectedGraph);
-        let content = await res.text();
-        if (!content) {
-            return null;
-        }
-        return JSON.parse(content);
+
+        await ontologyStore.loadOntology(selectedDataset, selectedGraph);
+        const { data } = await ontologyStore.getOntologyForGraph(selectedDataset, selectedGraph);
+        return data;
     }
 
     async function requestEnableEditing() {
@@ -362,9 +357,9 @@
 
     function toggleReadonly() {
         if (isDatasetReadOnly) {
-            datasetStore.updateReadonly(datasetName, false);
+            datasetStore.updateReadonly(editorState.selectedDatatset.getValue(), false);
         } else {
-            datasetStore.updateReadonly(datasetName, true);
+            datasetStore.updateReadonly(editorState.selectedDatatset.getValue(), true);
         }
     }
 </script>

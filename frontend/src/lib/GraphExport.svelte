@@ -27,6 +27,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
@@ -74,15 +75,16 @@
 
     $effect(async () => {
         if (selectedDatasetName && graphURI) {
-            let ontologyJSON = await getOntology(selectedDatasetName, graphURI);
-            if (!ontologyJSON) {
+            await ontologyStore.loadOntology(selectedDatasetName, graphURI);
+            const { data, error } = await ontologyStore.getOntologyForGraph(selectedDatasetName, graphURI);
+            if (error) {
                 ontology = null;
                 return;
             }
             ontology = new ReactiveOntology(
-                ontologyJSON.uuid,
-                ontologyJSON.namespace,
-                ontologyJSON.entries,
+                data.uuid,
+                data.namespace,
+                data.entries,
                 namespaces,
             );
         }
@@ -125,15 +127,6 @@
         });
     }
 
-    async function getOntology(datasetName) {
-        const res = await bec.getOntology(datasetName, graphURI);
-        let content = await res.text();
-        if (!content) {
-            return content;
-        }
-        return JSON.parse(content);
-    }
-
     // This function is called from the parent component when the user clicks the export button
     export async function handleExport(getAPIRoute) {
         if (
@@ -150,19 +143,14 @@
                     ontology.entries.append(entry);
                 }
             }
-            const ontologyRes = await bec.putOntology(
+            const { error } = await ontologyStore.replaceOntology(
                 selectedDatasetName,
                 graphURI,
                 ontology.getPlainObject(),
             );
-            if (ontologyRes && ontologyRes.ok === false) {
-                toastStore.error(
-                    "Profile header update failed",
-                    "Could not persist the generated profile header entries; export aborted.",
-                );
-                return;
+            if (!error) {
+                forceReloadTrigger.trigger();
             }
-            forceReloadTrigger.trigger();
         }
         try {
             const response = await fetchGraphFile(getAPIRoute);
