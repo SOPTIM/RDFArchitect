@@ -109,7 +109,7 @@
                                                         </td>
                                                         <td class="px-3 py-2">
                                                             <select
-                                                                class="border-border text-default-text focus:border-orange w-full rounded-md border bg-white px-2 py-1 text-sm outline-none focus:border-2"
+                                                                class="border-border text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm outline-none focus:border-2"
                                                                 bind:value={
                                                                     deletedEntry.replacementValue
                                                                 }

@@ -153,7 +153,7 @@
                                                         <td class="px-3 py-2">
                                                             <textarea
                                                                 rows="3"
-                                                                class="border-border text-default-text focus:border-orange w-full resize-y rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
+                                                                class="border-border text-default-text focus:border-blue w-full resize-y rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
                                                                 placeholder="SPARQL Mapping for default value"
                                                                 bind:value={
                                                                     association.mapping

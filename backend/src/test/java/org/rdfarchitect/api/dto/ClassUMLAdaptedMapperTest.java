@@ -93,7 +93,7 @@ class ClassUMLAdaptedMapperTest {
             cimClass.setComment(
                     new RDFSComment(
                             "This is a test class",
-                            new URI("http://www.w3.org/2001/XMLSchema#String")));
+                            new URI("http://www.w3.org/2001/XMLSchema#string")));
             cimClass.setStereotypes(
                     List.of(
                             new CIMSStereotype("Entsoe"),
@@ -192,7 +192,7 @@ class ClassUMLAdaptedMapperTest {
                                             new RDFSComment(
                                                     "This is a test class",
                                                     new URI(
-                                                            "http://www.w3.org/2001/XMLSchema#String"))),
+                                                            "http://www.w3.org/2001/XMLSchema#string"))),
                     () ->
                             assertThat(mappedCIMClass.getStereotypes())
                                     .isEqualTo(

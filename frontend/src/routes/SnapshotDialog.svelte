@@ -122,7 +122,7 @@
             <p class="mb-1">Snapshot Link</p>
             <div class="flex items-center gap-2">
                 <div
-                    class="border-border bg-window-background focus:border-orange h-9 w-full rounded border-2 p-2"
+                    class="border-border bg-window-background focus:border-blue h-9 w-full rounded border-2 p-2"
                 >
                     {base64Token
                         ? `${window.location.origin}/?snapshot=${base64Token}`

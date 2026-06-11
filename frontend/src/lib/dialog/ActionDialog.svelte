@@ -131,7 +131,7 @@
                 </div>
                 <div class="size-8">
                     <FaIconButton
-                        variant="danger"
+                        variant="contrast"
                         callOnClick={() => {
                             let onCloseRes = onClose();
                             if (onCloseRes || onCloseRes === undefined)

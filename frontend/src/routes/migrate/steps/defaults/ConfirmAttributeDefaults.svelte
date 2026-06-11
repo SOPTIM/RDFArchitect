@@ -198,7 +198,7 @@
                                                         <td class="px-3 py-2">
                                                             {#if attribute.allowedValues && attribute.allowedValues.length > 0}
                                                                 <select
-                                                                    class="border-border text-default-text focus:border-orange w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
+                                                                    class="border-border text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
                                                                     disabled={isDisabled(
                                                                         attribute,
                                                                     )}
@@ -225,7 +225,7 @@
                                                             {:else}
                                                                 <input
                                                                     type="text"
-                                                                    class="border-border text-default-text focus:border-orange w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
+                                                                    class="border-border text-default-text focus:border-blue w-full rounded-md border bg-white px-2 py-1 text-sm placeholder-gray-400 outline-none focus:border-2 disabled:cursor-not-allowed"
                                                                     placeholder="..."
                                                                     disabled={isDisabled(
                                                                         attribute,

@@ -84,9 +84,15 @@ public class GraphBulkContentRESTController {
         var msg = result.failedFileNames().isEmpty() ? "success" : "failed imports";
         return ResponseEntity.ok(
                 new GraphBulkImportResponse(
-                        msg, result.failedFileNames(), result.importedGraphUris()));
+                        msg,
+                        result.failedFileNames(),
+                        result.importedGraphUris(),
+                        result.warnings()));
     }
 
     public record GraphBulkImportResponse(
-            String message, List<String> failedImports, List<String> importedGraphUris) {}
+            String message,
+            List<String> failedImports,
+            List<String> importedGraphUris,
+            List<ImportGraphsUseCase.ImportWarning> warnings) {}
 }

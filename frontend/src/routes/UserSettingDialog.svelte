@@ -109,7 +109,7 @@
         </USC.Section>
         <USC.Section title="Normalization">
             <CheckBoxEditControl
-                label="Normalize comments to xsd:String"
+                label="Normalize comments to xsd:string"
                 value={localSettings["normalizeComments"]}
                 callOnInputTrue={() =>
                     (localSettings["normalizeComments"] = true)}

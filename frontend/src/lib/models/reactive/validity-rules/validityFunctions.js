@@ -17,6 +17,7 @@
 import { validate as uuidValidate } from "uuid";
 import { IriValidationStrategy, validateIri } from "validate-iri";
 
+import { CONCRETE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
 import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/index.js";
 
 export function isInvalidUuid(uuid) {
@@ -212,10 +213,30 @@ export function isInvalidStereotype(stereotype, existingStereotypes) {
     if (!stereotype || stereotype.trim() === "") {
         violations.push("must not be empty");
     }
-    if (existingStereotypes.filter(s => s.equals(stereotype)).length > 1) {
+    if (
+        stereotype !== CONCRETE_STEREOTYPE &&
+        existingStereotypes.filter(s => s.equals(stereotype)).length > 1
+    ) {
         violations.push("must be unique");
     }
     return violations;
+}
+
+/**
+ * Flags a stereotype that the user has manually set to the concrete URI. The
+ * concrete stereotype is managed exclusively through the "Abstract" checkbox,
+ * so it must not be entered as a regular stereotype. Only modified entries are
+ * flagged, so a class loaded with a persisted concrete stereotype (which is
+ * surfaced via the checkbox and hidden from the list) stays valid.
+ * @param {string} stereotype - the current stereotype value
+ * @param {boolean} isModified - whether the entry differs from its saved value
+ * @returns {string[]} the violations
+ */
+export function isManuallyEnteredConcreteStereotype(stereotype, isModified) {
+    if (isModified && stereotype === CONCRETE_STEREOTYPE) {
+        return ['use the "Abstract" checkbox to mark a class as concrete'];
+    }
+    return [];
 }
 
 export function isNotEmptyValidation(value) {
