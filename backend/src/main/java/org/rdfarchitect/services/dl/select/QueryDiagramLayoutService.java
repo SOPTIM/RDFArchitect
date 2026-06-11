@@ -55,12 +55,8 @@ public class QueryDiagramLayoutService implements FetchRenderingLayoutDataUseCas
     public RenderingLayoutData fetchGlobalRenderingLayoutData(String datasetName, UUID diagramId) {
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
         var diagramLayoutModel = diagramLayout.getDiagramLayoutModel();
-        return diagramLayout.read(
-                () ->
-                        fetchRenderingLayoutData(
-                                diagramLayout.getDefaultPackageMRID().getUuid(),
-                                diagramLayoutModel,
-                                diagramId));
+        return fetchRenderingLayoutData(
+                diagramLayout.getDefaultPackageMRID().getUuid(), diagramLayoutModel, diagramId);
     }
 
     private RenderingLayoutData fetchRenderingLayoutData(

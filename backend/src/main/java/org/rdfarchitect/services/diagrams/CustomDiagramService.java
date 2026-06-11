@@ -167,35 +167,31 @@ public class CustomDiagramService
             DiagramLayout diagramLayout,
             UUID crossProfileDiagramUUID,
             Map<String, MergedClassDTO> mergeMap) {
-        diagramLayout.write(
-                () -> {
-                    var model = diagramLayout.getDiagramLayoutModel();
-                    if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
-                        DiagramLayoutServiceUtils.insertDiagram(
-                                model, crossProfileDiagramUUID, "CrossProfileDiagram");
-                    }
-                    var existingDOs =
-                            DLObjectFetcher.fetchDiagramDOs(
-                                    model, new MRID(crossProfileDiagramUUID));
-                    var existingClassUUIDs =
-                            existingDOs.stream()
-                                    .map(DiagramObject::getBelongsToIdentifiedObject)
-                                    .map(MRID::getUuid)
-                                    .collect(Collectors.toSet());
 
-                    for (var merged : mergeMap.values()) {
-                        if (!existingClassUUIDs.contains(merged.getUuid())) {
-                            var doMRID =
-                                    DiagramLayoutServiceUtils.insertDiagramObject(
-                                            model,
-                                            crossProfileDiagramUUID,
-                                            merged.getClassUri(),
-                                            merged.getUuid());
-                            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
-                                    model, crossProfileDiagramUUID, doMRID);
-                        }
-                    }
-                });
+        var model = diagramLayout.getDiagramLayoutModel();
+        if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
+            DiagramLayoutServiceUtils.insertDiagram(
+                    model, crossProfileDiagramUUID, "CrossProfileDiagram");
+        }
+        var existingDOs = DLObjectFetcher.fetchDiagramDOs(model, new MRID(crossProfileDiagramUUID));
+        var existingClassUUIDs =
+                existingDOs.stream()
+                        .map(DiagramObject::getBelongsToIdentifiedObject)
+                        .map(MRID::getUuid)
+                        .collect(Collectors.toSet());
+
+        for (var merged : mergeMap.values()) {
+            if (!existingClassUUIDs.contains(merged.getUuid())) {
+                var doMRID =
+                        DiagramLayoutServiceUtils.insertDiagramObject(
+                                model,
+                                crossProfileDiagramUUID,
+                                merged.getClassUri(),
+                                merged.getUuid());
+                DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                        model, crossProfileDiagramUUID, doMRID);
+            }
+        }
     }
 
     @Override
