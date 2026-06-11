@@ -18,11 +18,9 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -33,38 +31,20 @@
         classLabel,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     async function removeFromDiagram() {
-        try {
-            const res = graphUri
-                ? await bec.removeFromCustomGraphDiagram(
-                      lockedDatasetName,
-                      graphUri,
-                      diagramId,
-                      classId,
-                  )
-                : await bec.removeFromCustomDatasetDiagram(
-                      lockedDatasetName,
-                      diagramId,
-                      classId,
-                  );
-            if (res && res.ok === false) {
-                toastStore.error(
-                    "Remove failed",
-                    classLabel
-                        ? `Could not remove class "${classLabel}" from the diagram.`
-                        : "Could not remove class from the diagram.",
-                );
-                return;
-            }
-            toastStore.success(
-                "Class removed",
-                classLabel
-                    ? `"${classLabel}" was removed from the diagram.`
-                    : "Class was removed from the diagram.",
-            );
-        } finally {
+        const { error } = graphUri
+            ? await customDiagramStore.removeClassFromGraphDiagram(
+                  lockedDatasetName,
+                  graphUri,
+                  diagramId,
+                  classId,
+              )
+            : await customDiagramStore.removeClassFromDatasetDiagram(
+                  lockedDatasetName,
+                  diagramId,
+                  classId,
+              );
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }

@@ -51,7 +51,8 @@
     let generatedOntologyEntries = $state([]);
 
     let namespaces = $derived(
-        $datasetStore.data?.find(d => d.label === selectedDatasetName)?.prefixes ?? new Set()
+        $datasetStore.data?.find(d => d.label === selectedDatasetName)
+            ?.prefixes ?? new Set(),
     );
     let hasOntology = $derived(!!ontology);
 

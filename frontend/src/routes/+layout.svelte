@@ -19,13 +19,6 @@
     import "../app.css";
     import { onMount } from "svelte";
 
-    import { enableEditing } from "$lib/actions/editingActions.js";
-    import {
-        undo,
-        fetchCanUndo,
-        redo,
-        fetchCanRedo,
-    } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import {
         installBackendFetchInterceptor,
@@ -39,6 +32,7 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
     import {
         copyState,
@@ -92,7 +86,7 @@
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
-            ? await datasetStore.isReadOnly(selectedDataset)
+            ? datasetStore.isReadOnly(selectedDataset)
             : false;
     });
 
@@ -106,9 +100,12 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        if (!(await enableEditing(selectedDataset))) {
-            return;
-        }
+        const { error } = await datasetStore.updateReadonly(
+            selectedDataset,
+            false,
+        );
+        if (error) return;
+
         forceReloadTrigger.trigger();
         editorState.selectedClassUUID.trigger();
         editorState.selectedDiagram.trigger();
@@ -135,8 +132,8 @@
     }
 
     async function fetchUndoRedo() {
-        canUndo = await fetchCanUndo();
-        canRedo = await fetchCanRedo();
+        canUndo = versionControlStore.canUndo();
+        canRedo = versionControlStore.canRedo();
     }
 
     async function reload() {
@@ -231,22 +228,19 @@
             case "KeyZ":
                 event.preventDefault();
                 if (event.shiftKey) {
-                    if (canRedo && (await redo())) {
+                    if (canRedo && (await versionControlStore.redo())) {
                         await reload();
-                        toastStore.info("Redone");
                     }
                 } else {
-                    if (canUndo && (await undo())) {
+                    if (canUndo && (await versionControlStore.undo())) {
                         await reload();
-                        toastStore.info("Undone");
                     }
                 }
                 break;
             case "KeyY":
                 event.preventDefault();
-                if (canRedo && (await redo())) {
+                if (canRedo && (await versionControlStore.redo())) {
                     await reload();
-                    toastStore.info("Redone");
                 }
                 break;
             case "KeyC":

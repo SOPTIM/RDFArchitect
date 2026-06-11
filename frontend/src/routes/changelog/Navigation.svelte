@@ -26,7 +26,7 @@
         editorState,
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     let datasetList = $state([]);
     let selectedDatasetName = $derived(editorState.selectedDataset.getValue());
@@ -50,10 +50,12 @@
                 graphs: [],
                 showContents: showDatasetContents,
             });
-            await graphURIStore.load(datasetName);
-            graphURIStore.getGraphNames(datasetName).forEach(graphUri =>
-                newDatasetList.at(-1).graphs.push(graphUri),
-            );
+            await graphStore.load(datasetName);
+            graphStore
+                .getGraphNames(datasetName)
+                .forEach(graphUri =>
+                    newDatasetList.at(-1).graphs.push(graphUri),
+                );
         }
         datasetList = newDatasetList;
     }

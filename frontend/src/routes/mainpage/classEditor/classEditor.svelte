@@ -29,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import {
@@ -48,7 +49,6 @@
     import Package from "./components/Package.svelte";
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
-
 
     const { datasetName, graphUri, classUuid } = $props();
 
@@ -154,9 +154,13 @@
     }
 
     async function loadReactiveClass(cancelled) {
-        const classDto = await (
-            await bec.getClassInfo(datasetName, graphUri, classUuid)
-        ).json();
+        await classStore.loadClassInfo(datasetName, graphUri, classUuid);
+        const classDto = classStore.getClassInfo(
+            datasetName,
+            graphUri,
+            classUuid,
+        );
+        console.log("classInfo:", classDto);
         if (cancelled.cancelled) return;
         const newReactiveClass = mapClassDtoToReactiveClass(
             classDto,
@@ -179,11 +183,18 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                const res = await bec.getClassInfo(datasetName, graphUri, uuid);
-                if (!res || !res.ok) return null;
-                const text = await res.text();
-                if (!text) return null;
-                return JSON.parse(text);
+                await classStore.loadClassInfo(
+                    datasetName,
+                    graphUri,
+                    classUuid,
+                );
+                const res = await classStore.getClassInfo(
+                    datasetName,
+                    graphUri,
+                    uuid,
+                );
+                if (!res) return null;
+                return res;
             }),
         );
         if (cancelled.cancelled) return;

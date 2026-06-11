@@ -19,13 +19,12 @@
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
@@ -34,8 +33,8 @@
     let graphs = $state(null);
 
     async function onOpen() {
-        await graphURIStore.load(datasetName);
-        graphs = graphURIStore.getGraphURIs(datasetName);
+        await graphStore.load(datasetName);
+        graphs = graphStore.getGraphURIs(datasetName);
     }
 
     function onClose() {
@@ -46,23 +45,11 @@
         try {
             if (datasetName) {
                 const res = await datasetStore.remove(datasetName);
-                if (res.error) {
-                    toastStore.error(
-                        "Delete failed",
-                        `Could not delete dataset "${datasetName}".`,
-                    );
-                    return;
-                }
+                if (res.error) return;
             }
 
             if (editorState.selectedDataset.getValue() === datasetName) {
                 editorState.reset();
-            }
-            if (datasetName) {
-                toastStore.success(
-                    "Dataset deleted",
-                    `"${datasetName}" was removed.`,
-                );
             }
         } finally {
             forceReloadTrigger.trigger();

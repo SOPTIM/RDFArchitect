@@ -16,19 +16,18 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { isValidDiagramName } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
@@ -36,7 +35,6 @@
         createPackageListForGraph,
     } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -47,7 +45,6 @@
         allDiagrams = [],
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let localDiagramName = $state();
     let localDiagramId = $state();
 
@@ -77,8 +74,9 @@
 
     async function fetchGraphs() {
         try {
-            await graphURIStore.load(lockedDatasetName);
-            graphs = graphURIStore.getGraphURIs(lockedDatasetName)
+            await graphStore.load(lockedDatasetName);
+            graphs = graphStore
+                .getGraphURIs(lockedDatasetName)
                 .map(graph => {
                     return {
                         ...graph,
@@ -183,34 +181,21 @@
             classes: selectedClassList,
         };
 
-        try {
-            const res = await bec.putCustomDatasetDiagram(
-                lockedDatasetName,
-                localDiagramId,
-                diagramData,
-            );
+        const { error } = await customDiagramStore.saveDatasetDiagram(
+            lockedDatasetName,
+            localDiagramId,
+            diagramData,
+        );
 
-            if (res.ok) {
-                editorState.selectedDataset.updateValue(lockedDatasetName);
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CUSTOM_DATASET_DIAGRAM,
-                    id: localDiagramId,
-                });
-                toastStore.success(
-                    "Diagram saved",
-                    `"${localDiagramName}" was saved.`,
-                );
-            } else {
-                console.error("Failed to save diagram");
-                toastStore.error(
-                    "Save failed",
-                    `Could not save diagram "${localDiagramName}".`,
-                );
-            }
-        } finally {
-            forceReloadTrigger.trigger();
-        }
+        if (error) return;
+
+        editorState.selectedDataset.updateValue(lockedDatasetName);
+        editorState.selectedGraph.updateValue(null);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+            id: localDiagramId,
+        });
+        forceReloadTrigger.trigger();
     }
 </script>
 

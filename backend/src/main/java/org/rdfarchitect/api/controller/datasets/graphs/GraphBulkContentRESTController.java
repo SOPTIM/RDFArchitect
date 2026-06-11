@@ -34,6 +34,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -65,10 +66,10 @@ public class GraphBulkContentRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(description = "The files containing the graph data") @RequestParam("files")
+            @Parameter(description = "The files containing the graph data") @RequestPart("files")
                     List<MultipartFile> files,
             @Parameter(description = "Optional graph URIs, one per file. Defaults to file names.")
-                    @RequestParam(value = "graphUris", required = false)
+                    @RequestPart(value = "graphUris", required = false)
                     List<String> graphUris) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/content\" from \"{}\".",

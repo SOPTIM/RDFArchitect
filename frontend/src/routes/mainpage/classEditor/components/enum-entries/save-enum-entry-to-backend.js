@@ -15,11 +15,8 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { editorState } from "$lib/sharedState.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/ClassStore.ts";
 
 export async function saveApiEnumEntryToBackend(
     dataset,
@@ -28,19 +25,23 @@ export async function saveApiEnumEntryToBackend(
     enumEntry,
     isNewEnumEntry,
 ) {
-    const saveEnumEntryCall = isNewEnumEntry
-        ? bec.postEnumEntry(dataset, graph, classUUID, enumEntry)
-        : bec.putEnumEntry(dataset, graph, classUUID, enumEntry);
+    const res = isNewEnumEntry
+        ? await classStore.addEnumEntry(dataset, graph, classUUID, enumEntry)
+        : await classStore.replaceEnumEntry(
+              dataset,
+              graph,
+              classUUID,
+              enumEntry,
+          );
 
     try {
-        const res = await saveEnumEntryCall;
-        if (res.ok) {
-            const enumEntryUUID = await res.json();
+        if (!res.error) {
+            const enumEntryUUID = res.data;
             console.log("Successfully saved enum entry:", enumEntryUUID);
             return { ok: true, enumEntryUUID };
         }
 
-        const errorText = await res.text();
+        const errorText = await res.error;
         console.error("Could not save enum entry:", errorText);
         return { ok: false, errorText };
     } finally {

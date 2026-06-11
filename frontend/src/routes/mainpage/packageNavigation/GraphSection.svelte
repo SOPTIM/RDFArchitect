@@ -36,12 +36,6 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
-    import {
-        undo,
-        fetchCanUndo,
-        redo,
-        fetchCanRedo,
-    } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
@@ -50,6 +44,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
@@ -114,8 +109,14 @@
 
     async function initialize() {
         ontology = await getOntology();
-        canUndo = await fetchCanUndo(datasetNavEntry.id, graphNavEntry.id);
-        canRedo = await fetchCanRedo(datasetNavEntry.id, graphNavEntry.id);
+        canUndo = versionControlStore.canUndo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
+        canRedo = versionControlStore.canRedo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
     }
 
     async function getOntology() {
@@ -185,9 +186,11 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    undo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) forceReloadTrigger.trigger();
-                    });
+                    versionControlStore
+                        .undo(datasetNavEntry.id, graphNavEntry.id)
+                        .then(success => {
+                            if (success) forceReloadTrigger.trigger();
+                        });
                 }}
                 disabled={readonly || !canUndo}
                 faIcon={faRotateLeft}
@@ -197,9 +200,11 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    redo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) forceReloadTrigger.trigger();
-                    });
+                    versionControlStore
+                        .redo(datasetNavEntry.id, graphNavEntry.id)
+                        .then(success => {
+                            if (success) forceReloadTrigger.trigger();
+                        });
                 }}
                 disabled={readonly || !canRedo}
                 faIcon={faRotateRight}

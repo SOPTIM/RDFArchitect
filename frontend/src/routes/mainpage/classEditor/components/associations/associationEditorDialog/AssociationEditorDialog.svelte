@@ -22,6 +22,7 @@
     import { mapReactiveAssociationToAssociationDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
 
     import Direct from "./Direct.svelte";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
@@ -37,8 +38,6 @@
     let isNewAssociation = $state(true);
     let readonly = $derived(classEditorContext?.readonly);
 
-    let bec = $derived(classEditorContext?.backendConnection);
-
     $effect(() => {
         (async () => {
             const targetValue = association?.target?.value;
@@ -48,17 +47,13 @@
 
             const existingClassInfo = ctx.getTargetClassInfoByUuid(targetValue);
             if (!existingClassInfo) {
-                const res = await bec.getClassInfo(
+                const res = await classStore.getClassInfo(
                     ctx.datasetName,
                     ctx.graphUri,
                     targetValue,
                 );
-                if (res && res.ok) {
-                    const text = await res.text();
-                    if (text) {
-                        const classInfo = await res.json();
-                        ctx.addTargetClassInfo(classInfo);
-                    }
+                if (res) {
+                    ctx.addTargetClassInfo(res);
                 }
             }
 

@@ -65,7 +65,9 @@ function generateLicenseContent() {
 
     let markdown = "# Third-Party Licenses\n\n";
 
-    for (const pkg of packages.toSorted((a, b) => a.label.localeCompare(b.label))) {
+    for (const pkg of packages.toSorted((a, b) =>
+        a.label.localeCompare(b.label),
+    )) {
         markdown += `### ${pkg.label}\n`;
         markdown += `- **Package:** ${pkg.label}\n`;
         markdown += `- **Version:** ${pkg.version}\n`;

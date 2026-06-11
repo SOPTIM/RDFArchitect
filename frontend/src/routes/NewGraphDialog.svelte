@@ -18,11 +18,9 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphURIStore } from "$lib/stores/GraphURIStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     import {
         DiagramType,
@@ -65,6 +63,7 @@
             datasetIsReadOnly ||
             graphExists,
     );
+
     function resolveGraphUri(graphInput) {
         const trimmedInput = graphInput.trim();
         if (!trimmedInput) {
@@ -109,61 +108,30 @@
             return;
         }
 
-        await graphURIStore.load(datasetNameUserInput);
-        graphNames = graphURIStore.getGraphs(datasetNameUserInput);
+        await graphStore.load(datasetNameUserInput);
+        graphNames = graphStore.getGraphs(datasetNameUserInput);
     }
 
     async function addGraph() {
         const datasetNameLocal = datasetNameUserInput;
         const graphURILocal = resolvedGraphUri;
 
-        const promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetNameLocal) +
-                "/graphs/" +
-                encodeURIComponent(graphURILocal) +
-                "/content",
-            {
-                method: "PUT",
-                credentials: "include",
-            },
-        ).then(res => {
-            if (res.ok) {
-                editorState.selectedDataset.updateValue(datasetNameLocal);
-                editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: "default",
-                });
-                editorState.selectedClassUUID.updateValue(null);
-                toastStore.success(
-                    "Schema created",
-                    `"${graphURILocal}" was added to "${datasetNameLocal}".`,
-                );
-            } else {
-                console.log("failed to create graph");
-                toastStore.error(
-                    "Create failed",
-                    `Could not create schema "${graphURILocal}".`,
-                );
-            }
-        });
+        const { error } = await graphStore.addEmptyGraph(
+            datasetNameLocal,
+            graphURILocal,
+        );
+        if (error) return;
 
-        promise
-            .catch(e => {
-                console.log("failed to create graph:");
-                console.log(e);
-                toastStore.error(
-                    "Create failed",
-                    "An unexpected error occurred while creating the schema.",
-                );
-            })
-            .finally(() => {
-                graphURIStore.invalidateDataset(datasetNameLocal);
-                datasetStore.load(true);
-                forceReloadTrigger.trigger();
-            });
+        editorState.selectedDataset.updateValue(datasetNameLocal);
+        editorState.selectedGraph.updateValue(graphURILocal);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: "default",
+        });
+        editorState.selectedClassUUID.updateValue(null);
+
+        graphStore.invalidateDataset(datasetNameLocal);
+        forceReloadTrigger.trigger();
     }
 </script>
 

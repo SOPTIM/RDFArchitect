@@ -42,8 +42,8 @@
     const datasetSelectionLocked = $derived(!!lockedDatasetName);
 
     function onOpen() {
-        datasetName = lockedDatasetName ?? editorState.selectedDataset.getValue();
-
+        datasetName =
+            lockedDatasetName ?? editorState.selectedDataset.getValue();
     }
 
     async function snapshotDataset() {

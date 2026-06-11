@@ -37,26 +37,6 @@ export class BackendConnection {
         });
     }
 
-    async getClassInfo(datasetName, graphURI, classUUID) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
-        return fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async getClasses(datasetName, graphURI, includeExternalClasses = false) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes?includeExternalClasses=${includeExternalClasses}`;
-        return fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
     async getXSDPrimitives() {
         const url = `${PUBLIC_BACKEND_URL}/primitiveDatatypes`;
         return fetch(url, {
@@ -97,51 +77,6 @@ export class BackendConnection {
         });
     }
 
-    async putAttribute(datasetName, graphURI, classUUID, attribute) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/attributes/${encodeURIComponent(attribute.uuid)}`;
-        return await fetch(url, {
-            method: "PUT",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(attribute),
-            credentials: "include",
-        });
-    }
-
-    async postAttribute(datasetName, graphURI, classUUID, attribute) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/attributes`;
-        return await fetch(url, {
-            method: "POST",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(attribute),
-            credentials: "include",
-        });
-    }
-
-    async putAssociationPair(
-        datasetName,
-        graphURI,
-        classUUID,
-        associationPair,
-    ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/associations/${encodeURIComponent(associationPair.from.uuid)}`;
-        return await fetch(url, {
-            method: "PUT",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(associationPair),
-            credentials: "include",
-        });
-    }
-
-    async postAssociationPair(datasetName, graphURI, classUUID, association) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/associations`;
-        return await fetch(url, {
-            method: "POST",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(association),
-            credentials: "include",
-        });
-    }
-
     async getDeleteRelation(datasetName, graphURI, resourceUuid) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/uuid/${encodeURIComponent(resourceUuid)}/deletion-impact`;
         return await fetch(url, {
@@ -157,26 +92,6 @@ export class BackendConnection {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(deleteRequests),
-            credentials: "include",
-        });
-    }
-
-    async postEnumEntry(datasetName, graphURI, classUUID, enumEntry) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries`;
-        return await fetch(url, {
-            method: "POST",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(enumEntry),
-            credentials: "include",
-        });
-    }
-
-    async putEnumEntry(datasetName, graphURI, classUUID, enumEntry) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries/${encodeURIComponent(enumEntry.uuid)}`;
-        return await fetch(url, {
-            method: "PUT",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(enumEntry),
             credentials: "include",
         });
     }
@@ -257,24 +172,6 @@ export class BackendConnection {
         });
     }
 
-    async enableEditing(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/readonly`;
-        return await fetch(url, {
-            method: "PUT",
-            mode: "cors",
-            credentials: "include",
-        });
-    }
-
-    async disableEditing(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/readonly`;
-        return await fetch(url, {
-            method: "DELETE",
-            mode: "cors",
-            credentials: "include",
-        });
-    }
-
     async getChangelog(datasetName, graphURI) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/changes`;
         return await fetch(url, {
@@ -293,17 +190,6 @@ export class BackendConnection {
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: version,
-            credentials: "include",
-        });
-    }
-
-    async putPackage(datasetName, graphURI, pack) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(pack.uuid)}`;
-        return await fetch(url, {
-            method: "PUT",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            mode: "cors",
-            body: JSON.stringify(pack),
             credentials: "include",
         });
     }
@@ -449,91 +335,6 @@ export class BackendConnection {
             method: "GET",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async putCustomDiagram(datasetName, graphURI, diagramId, newDiagram) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
-        return await fetch(url, {
-            method: "PUT",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(newDiagram),
-            credentials: "include",
-        });
-    }
-
-    async putCustomDatasetDiagram(datasetName, diagramId, newDiagram) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
-        return await fetch(url, {
-            method: "PUT",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(newDiagram),
-            credentials: "include",
-        });
-    }
-
-    async addToCustomGraphDiagram(datasetName, graphURI, diagramId, classes) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
-        return await fetch(url, {
-            method: "POST",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(classes),
-            credentials: "include",
-        });
-    }
-
-    async addToCustomDatasetDiagram(datasetName, diagramId, classes) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
-        return await fetch(url, {
-            method: "POST",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(classes),
-            credentials: "include",
-        });
-    }
-
-    async removeFromCustomGraphDiagram(
-        datasetName,
-        graphURI,
-        diagramId,
-        classId,
-    ) {
-        console.log(
-            `Removing class ${classId} from diagram ${diagramId} in dataset ${datasetName}`,
-        );
-
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
-        return await fetch(url, {
-            method: "DELETE",
-            credentials: "include",
-        });
-    }
-
-    async removeFromCustomDatasetDiagram(datasetName, diagramId, classId) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
-        return await fetch(url, {
-            method: "DELETE",
-            credentials: "include",
-        });
-    }
-
-    async deleteCustomDatasetDiagram(datasetName, diagramId) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
-        return await fetch(url, {
-            method: "DELETE",
-            credentials: "include",
-        });
-    }
-
-    async deleteCustomGraphDiagram(datasetName, graphUri, diagramId) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/diagrams/${encodeURIComponent(diagramId)}`;
-        return await fetch(url, {
-            method: "DELETE",
             credentials: "include",
         });
     }

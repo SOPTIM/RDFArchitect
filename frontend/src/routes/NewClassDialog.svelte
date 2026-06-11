@@ -23,11 +23,10 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -38,7 +37,6 @@
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
     import { getClasses } from "./mainpage/classEditor/fetch-class-editor-context.js";
-
 
     let {
         showDialog = $bindable(),
@@ -195,66 +193,35 @@
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
-        try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(datasetNameLocal) +
-                    "/graphs/" +
-                    encodeURIComponent(graphURILocal) +
-                    "/classes",
-                {
-                    method: "POST",
-                    headers: new Headers({
-                        "Content-Type": "application/json",
-                    }),
-                    body: JSON.stringify(requestBody),
-                    credentials: "include",
-                },
-            );
-            if (res.ok) {
-                const uuid = await res.text();
-                console.log("successfully added class");
-                onClassCreated({
-                    classUUID: uuid,
-                    datasetName: datasetNameLocal,
-                    graphURI: graphURILocal,
-                    packageUUID: selectedPackageUUID,
-                    className: classNameLocal.value,
-                });
-                editorState.selectedDataset.updateValue(datasetNameLocal);
-                editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: selectedPackageUUID,
-                });
-                editorState.selectedClassDataset.updateValue(datasetNameLocal);
-                editorState.selectedClassGraph.updateValue(graphURILocal);
-                editorState.selectedClassUUID.updateValue(uuid);
-                toastStore.success(
-                    "Class created",
-                    `"${classNameLocal.value}" was added.`,
-                );
-            } else {
-                console.log("failed to insert data");
-                toastStore.error(
-                    "Create failed",
-                    `Could not create class "${classNameLocal.value}".`,
-                );
-            }
-        } catch (e) {
-            console.log("failed to add class:", e);
-            toastStore.error(
-                "Create failed",
-                "An unexpected error occurred while creating the class.",
-            );
-        } finally {
-            forceReloadTrigger.trigger();
-            editorState.selectedDataset.trigger();
-            editorState.selectedGraph.trigger();
-            editorState.selectedDiagram.trigger();
-            editorState.selectedClassUUID.trigger();
-        }
+        const { data, error } = await classStore.addClass(
+            datasetName,
+            graphURILocal,
+            requestBody,
+        );
+        if (error) return;
+
+        onClassCreated({
+            classUUID: data,
+            datasetName: datasetNameLocal,
+            graphURI: graphURILocal,
+            packageUUID: selectedPackageUUID,
+            className: classNameLocal.value,
+        });
+        editorState.selectedDataset.updateValue(datasetNameLocal);
+        editorState.selectedGraph.updateValue(graphURILocal);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: selectedPackageUUID,
+        });
+        editorState.selectedClassDataset.updateValue(datasetNameLocal);
+        editorState.selectedClassGraph.updateValue(graphURILocal);
+        editorState.selectedClassUUID.updateValue(data);
+
+        forceReloadTrigger.trigger();
+        editorState.selectedDataset.trigger();
+        editorState.selectedGraph.trigger();
+        editorState.selectedDiagram.trigger();
+        editorState.selectedClassUUID.trigger();
     }
 </script>
 
