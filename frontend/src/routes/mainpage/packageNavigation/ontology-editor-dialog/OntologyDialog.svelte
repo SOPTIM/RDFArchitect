@@ -19,18 +19,16 @@
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SearchableSelect from "$lib/components/SearchableSelect.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
     import OntologyEntryRow from "./OntologyEntryRow.svelte";
@@ -44,8 +42,6 @@
         readonly,
         onSubmit,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let showAddKnownEntriesPopUp = $state(false);
     let showDiscardSaveConfirmDialog = $state(false);
@@ -135,30 +131,18 @@
         if (!graphUri) {
             return null;
         }
-        const res = await bec.getOntology(dataset, graphUri);
-        let content = await res.text();
-        if (!content) {
-            return null;
-        }
-        return JSON.parse(content);
+        await ontologyStore.loadOntology(dataset, graphUri);
+        const { data } = await ontologyStore.getOntologyForGraph(dataset, graphUri);
+        return data;
     }
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
-        const res = ontologyObject.uuid.value
-            ? await bec.putOntology(datasetName, graphUri, serializable)
-            : await bec.postOntology(datasetName, graphUri, serializable);
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Save failed",
-                "Could not save the profile header.",
-            );
-            return;
+        if (ontologyObject.uuid.value) {
+            await ontologyStore.replaceOntology(datasetName, graphUri, serializable);
+        } else {
+            await ontologyStore.createOntology(datasetName, graphUri, serializable);
         }
-        toastStore.success(
-            "Profile header saved",
-            "The profile header was saved.",
-        );
     }
 
     function scrollEntriesToBottom() {

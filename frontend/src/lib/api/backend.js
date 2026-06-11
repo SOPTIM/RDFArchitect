@@ -235,38 +235,6 @@ export class BackendConnection {
         });
     }
 
-    async getOntology(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
-        return await fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async postOntology(datasetName, graphURI, newOntology) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
-        return await fetch(url, {
-            method: "POST",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(newOntology),
-            credentials: "include",
-        });
-    }
-
-    async putOntology(datasetName, graphURI, newOntology) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
-        return await fetch(url, {
-            method: "PUT",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(newOntology),
-            credentials: "include",
-        });
-    }
-
     async generateOntologyEntries(datasetName, graphURI) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology/generate`;
         return await fetch(url, {
@@ -295,26 +263,6 @@ export class BackendConnection {
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(body),
-            credentials: "include",
-        });
-    }
-
-    async getCustomDiagramsForGraph(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams`;
-        return await fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
-            credentials: "include",
-        });
-    }
-
-    async getCustomDiagramsForDataset(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams`;
-        return await fetch(url, {
-            method: "GET",
-            mode: "cors",
-            headers: new Headers({ "Content-Type": "application/json" }),
             credentials: "include",
         });
     }

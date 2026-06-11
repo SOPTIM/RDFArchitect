@@ -33,15 +33,14 @@
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         copyState,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
@@ -56,9 +55,7 @@
     import NewPackageDialog from "../../NewPackageDialog.svelte";
 
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
+    
     let showNewClassDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
@@ -126,12 +123,10 @@
         if (!hasGraphSelected) {
             return null;
         }
-        const res = await bec.getOntology(selectedDataset, selectedGraph);
-        let content = await res.text();
-        if (!content) {
-            return null;
-        }
-        return JSON.parse(content);
+
+        await ontologyStore.loadOntology(selectedDataset, selectedGraph);
+        const { data } = await ontologyStore.getOntologyForGraph(selectedDataset, selectedGraph);
+        return data;
     }
 
     async function requestEnableEditing() {

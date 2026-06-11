@@ -125,16 +125,8 @@ async function populateDataset(datasetNavEntry) {
 }
 
 async function getGraphNames(datasetName) {
-    try {
-        await graphStore.load(datasetName);
-        return graphStore.getGraphURIs(datasetName);
-    } catch (err) {
-        console.error(
-            "Error fetching graph names for dataset " + datasetName,
-            err,
-        );
-        return [];
-    }
+    await graphStore.load(datasetName);
+    return graphStore.getGraphs(datasetName) ?? [];
 }
 
 export async function populateGraph(datasetNavObject, graphNavObject) {

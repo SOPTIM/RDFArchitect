@@ -21,8 +21,6 @@ import { describeError } from "./StoreLogging";
 import {
     getCustomDiagramList,
     getCustomDiagramList1,
-    getDiagramRenderingData,
-    getDiagramRenderingData1,
     replaceDiagram,
     replaceDiagram1,
     deleteDiagram,
@@ -32,7 +30,6 @@ import {
     removeFromDiagram,
     removeFromDiagram1,
     type CustomDiagram,
-    type RenderingDataDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -45,22 +42,11 @@ type ListState<T> = {
     error: unknown;
 };
 
-type ItemState<T> = {
-    data: T | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
 type StoreState = {
     // key: dataset
     datasetLists: Map<string, ListState<CustomDiagram>>;
     // key: dataset::graph
     graphLists: Map<string, ListState<CustomDiagram>>;
-    // key: dataset::diagramId
-    datasetRenderings: Map<string, ItemState<RenderingDataDto>>;
-    // key: dataset::graph::diagramId
-    graphRenderings: Map<string, ItemState<RenderingDataDto>>;
 };
 
 const LOG_PREFIX = "[customDiagramStore]";
@@ -74,29 +60,13 @@ const emptyListState = (): ListState<CustomDiagram> => ({
     error: null,
 });
 
-const emptyItemState = <T>(): ItemState<T> => ({
-    data: null,
-    fetchedAt: null,
-    pending: null,
-    error: null,
-});
-
 const graphListKey = (datasetName: string, graphURI: string) =>
     `${datasetName}::${graphURI}`;
-const datasetRenderingKey = (datasetName: string, diagramId: string) =>
-    `${datasetName}::${diagramId}`;
-const graphRenderingKey = (
-    datasetName: string,
-    graphURI: string,
-    diagramId: string,
-) => `${datasetName}::${graphURI}::${diagramId}`;
 
 function createCustomDiagramStore() {
     const store = writable<StoreState>({
         datasetLists: new Map(),
         graphLists: new Map(),
-        datasetRenderings: new Map(),
-        graphRenderings: new Map(),
     });
 
     const { subscribe, update } = store;
@@ -140,56 +110,6 @@ function createCustomDiagramStore() {
         const map = new Map(state.graphLists);
         map.set(key, next);
         return { ...state, graphLists: map };
-    }
-
-    function getDatasetRenderingState(
-        state: StoreState,
-        datasetName: string,
-        diagramId: string,
-    ): ItemState<RenderingDataDto> {
-        return (
-            state.datasetRenderings.get(
-                datasetRenderingKey(datasetName, diagramId),
-            ) ?? emptyItemState<RenderingDataDto>()
-        );
-    }
-
-    function getGraphRenderingState(
-        state: StoreState,
-        datasetName: string,
-        graphURI: string,
-        diagramId: string,
-    ): ItemState<RenderingDataDto> {
-        return (
-            state.graphRenderings.get(
-                graphRenderingKey(datasetName, graphURI, diagramId),
-            ) ?? emptyItemState<RenderingDataDto>()
-        );
-    }
-
-    function setDatasetRenderingState(
-        state: StoreState,
-        datasetName: string,
-        diagramId: string,
-        next: ItemState<RenderingDataDto>,
-    ): StoreState {
-        const key = datasetRenderingKey(datasetName, diagramId);
-        const map = new Map(state.datasetRenderings);
-        map.set(key, next);
-        return { ...state, datasetRenderings: map };
-    }
-
-    function setGraphRenderingState(
-        state: StoreState,
-        datasetName: string,
-        graphURI: string,
-        diagramId: string,
-        next: ItemState<RenderingDataDto>,
-    ): StoreState {
-        const key = graphRenderingKey(datasetName, graphURI, diagramId);
-        const map = new Map(state.graphRenderings);
-        map.set(key, next);
-        return { ...state, graphRenderings: map };
     }
 
     // ---------- loaders ----------
@@ -325,208 +245,6 @@ function createCustomDiagramStore() {
         );
 
         return pending;
-    }
-
-    async function loadDatasetDiagramRendering(
-        datasetName: string,
-        diagramId: string,
-        force = false,
-    ): Promise<Result<RenderingDataDto>> {
-        if (!datasetName || !diagramId) return { error: null };
-
-        const current = getDatasetRenderingState(
-            get(store),
-            datasetName,
-            diagramId,
-        );
-        if (!force && current.data) return { error: null, data: current.data };
-        if (current.pending) {
-            await current.pending;
-            const next = getDatasetRenderingState(
-                get(store),
-                datasetName,
-                diagramId,
-            );
-            return { error: next.error, data: next.data ?? undefined };
-        }
-
-        const pending = (async () => {
-            try {
-                const { data, error } = await getDiagramRenderingData1({
-                    path: { datasetName, diagramId },
-                });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load dataset diagram rendering`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setDatasetRenderingState(s, datasetName, diagramId, {
-                            ...getDatasetRenderingState(
-                                s,
-                                datasetName,
-                                diagramId,
-                            ),
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setDatasetRenderingState(s, datasetName, diagramId, {
-                        data: data ?? null,
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error loading dataset diagram rendering`,
-                    err,
-                );
-                update(s =>
-                    setDatasetRenderingState(s, datasetName, diagramId, {
-                        ...getDatasetRenderingState(s, datasetName, diagramId),
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setDatasetRenderingState(s, datasetName, diagramId, {
-                ...getDatasetRenderingState(s, datasetName, diagramId),
-                pending,
-            }),
-        );
-
-        await pending;
-        const next = getDatasetRenderingState(
-            get(store),
-            datasetName,
-            diagramId,
-        );
-        return { error: next.error, data: next.data ?? undefined };
-    }
-
-    async function loadGraphDiagramRendering(
-        datasetName: string,
-        graphURI: string,
-        diagramId: string,
-        force = false,
-    ): Promise<Result<RenderingDataDto>> {
-        if (!datasetName || !graphURI || !diagramId) return { error: null };
-
-        const current = getGraphRenderingState(
-            get(store),
-            datasetName,
-            graphURI,
-            diagramId,
-        );
-        if (!force && current.data) return { error: null, data: current.data };
-        if (current.pending) {
-            await current.pending;
-            const next = getGraphRenderingState(
-                get(store),
-                datasetName,
-                graphURI,
-                diagramId,
-            );
-            return { error: next.error, data: next.data ?? undefined };
-        }
-
-        const pending = (async () => {
-            try {
-                const { data, error } = await getDiagramRenderingData({
-                    path: { datasetName, graphURI, diagramId },
-                });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load graph diagram rendering`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setGraphRenderingState(
-                            s,
-                            datasetName,
-                            graphURI,
-                            diagramId,
-                            {
-                                ...getGraphRenderingState(
-                                    s,
-                                    datasetName,
-                                    graphURI,
-                                    diagramId,
-                                ),
-                                pending: null,
-                                error,
-                            },
-                        ),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setGraphRenderingState(
-                        s,
-                        datasetName,
-                        graphURI,
-                        diagramId,
-                        {
-                            data: data ?? null,
-                            fetchedAt: Date.now(),
-                            pending: null,
-                            error: null,
-                        },
-                    ),
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error loading graph diagram rendering`,
-                    err,
-                );
-                update(s =>
-                    setGraphRenderingState(
-                        s,
-                        datasetName,
-                        graphURI,
-                        diagramId,
-                        {
-                            ...getGraphRenderingState(
-                                s,
-                                datasetName,
-                                graphURI,
-                                diagramId,
-                            ),
-                            pending: null,
-                            error: err,
-                        },
-                    ),
-                );
-            }
-        })();
-
-        update(s =>
-            setGraphRenderingState(s, datasetName, graphURI, diagramId, {
-                ...getGraphRenderingState(s, datasetName, graphURI, diagramId),
-                pending,
-            }),
-        );
-
-        await pending;
-        const next = getGraphRenderingState(
-            get(store),
-            datasetName,
-            graphURI,
-            diagramId,
-        );
-        return { error: next.error, data: next.data ?? undefined };
     }
 
     // ---------- mutations ----------
@@ -746,34 +464,11 @@ function createCustomDiagramStore() {
         return getGraphListState(get(store), datasetName, graphURI).data;
     }
 
-    function getDatasetDiagramRendering(
-        datasetName: string,
-        diagramId: string,
-    ): RenderingDataDto | null {
-        return getDatasetRenderingState(get(store), datasetName, diagramId)
-            .data;
-    }
-
-    function getGraphDiagramRendering(
-        datasetName: string,
-        graphURI: string,
-        diagramId: string,
-    ): RenderingDataDto | null {
-        return getGraphRenderingState(
-            get(store),
-            datasetName,
-            graphURI,
-            diagramId,
-        ).data;
-    }
-
     // ---------- invalidation ----------
     function invalidateDataset(datasetName: string) {
         update(s => {
             const datasetLists = new Map(s.datasetLists);
             const graphLists = new Map(s.graphLists);
-            const datasetRenderings = new Map(s.datasetRenderings);
-            const graphRenderings = new Map(s.graphRenderings);
 
             datasetLists.delete(datasetName);
 
@@ -781,19 +476,10 @@ function createCustomDiagramStore() {
             for (const key of graphLists.keys()) {
                 if (key.startsWith(datasetPrefix)) graphLists.delete(key);
             }
-            for (const key of datasetRenderings.keys()) {
-                if (key.startsWith(datasetPrefix))
-                    datasetRenderings.delete(key);
-            }
-            for (const key of graphRenderings.keys()) {
-                if (key.startsWith(datasetPrefix)) graphRenderings.delete(key);
-            }
 
             return {
                 datasetLists,
                 graphLists,
-                datasetRenderings,
-                graphRenderings,
             };
         });
     }
@@ -801,16 +487,10 @@ function createCustomDiagramStore() {
     function invalidateGraph(datasetName: string, graphURI: string) {
         update(s => {
             const graphLists = new Map(s.graphLists);
-            const graphRenderings = new Map(s.graphRenderings);
 
             graphLists.delete(graphListKey(datasetName, graphURI));
 
-            const prefix = `${datasetName}::${graphURI}::`;
-            for (const key of graphRenderings.keys()) {
-                if (key.startsWith(prefix)) graphRenderings.delete(key);
-            }
-
-            return { ...s, graphLists, graphRenderings };
+            return { ...s, graphLists };
         });
     }
 
@@ -829,14 +509,10 @@ function createCustomDiagramStore() {
         // loaders
         loadDatasetDiagrams,
         loadGraphDiagrams,
-        loadDatasetDiagramRendering,
-        loadGraphDiagramRendering,
 
         // getters
         getDatasetDiagrams,
         getGraphDiagrams,
-        getDatasetDiagramRendering,
-        getGraphDiagramRendering,
 
         // mutations
         saveDatasetDiagram,
