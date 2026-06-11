@@ -47,6 +47,8 @@ public interface EnumEntryMapper {
 
     @Mapping(target = "uri", source = ".")
     @Mapping(target = "type", source = ".")
+    @Mapping(target = "graphUri", ignore = true)
+    @Mapping(target = "color", ignore = true)
     CIMEnumEntry toCIMObject(EnumEntryDTO dto);
 
     List<CIMEnumEntry> toCIMObjectList(List<EnumEntryDTO> dtoList);
