@@ -162,29 +162,15 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
             CIMCollection cimCollection) {
         if (filter.getAllowedUUIDs() != null && !filter.getAllowedUUIDs().isEmpty()) {
             fetchSpecifiedClasses(graph, graphIdentifier, filter, cimCollection);
-        } else if (filter.getPackageUUID() != null && !filter.getPackageUUID().equals("default")) {
+        } else {
             fetchClassesInPackage(graph, graphIdentifier, filter, cimCollection);
             fetchExternalAssociatedClasses(graph, graphIdentifier, filter, cimCollection);
             fetchExternallyInheritanceRelatedClasses(graph, graphIdentifier, filter, cimCollection);
-        } else {
-            fetchAllClasses(graph, graphIdentifier, filter, cimCollection);
         }
 
         clearSuperClassRelations(filter, cimCollection);
         clearSuperClassRelationsToExternalClasses(filter, cimCollection);
         clearInheritanceToNonExistingClasses(cimCollection);
-    }
-
-    private void fetchAllClasses(
-            Graph graph,
-            GraphIdentifier graphIdentifier,
-            GraphFilter filter,
-            CIMCollection cimCollection) {
-        var classQueryBuilder =
-                CIMQueries.getClassesQuery(
-                        databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                        graphIdentifier.graphUri());
-        fetchClasses(graph, graphIdentifier, filter, cimCollection, classQueryBuilder);
     }
 
     private void clearSuperClassRelations(GraphFilter filter, CIMCollection cimCollection) {
