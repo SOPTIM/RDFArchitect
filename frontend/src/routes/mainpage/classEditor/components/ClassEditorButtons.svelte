@@ -123,36 +123,30 @@
 
 <!--
   - @container lets the labels collapse based on this row's own width (the
-  - class editor lives in a resizable split pane), not the viewport. Below
-  - ~28rem the labels are hidden via {labelHideClass} so the buttons stay
+  - class editor lives in a resizable split pane), not the viewport. Once the
+  - row is too narrow, {labelHideClass} hides the labels so the buttons stay
   - readable as icon-only instead of clipping their text.
 -->
 <div class="@container flex items-center gap-1">
-    <div class="flex min-w-0 grow gap-1">
+    <!--
+      - grid-flow-col + auto-cols-fr makes every action button equal width
+      - (matching the widest), while the grid stays content-sized so the row
+      - is left-aligned instead of stretching to full width.
+    -->
+    <div class="grid grid-flow-col auto-cols-fr gap-1">
         <FaIconButton
             callOnClick={() => (showSHACLClassDialog = true)}
             icon={faDiagramProject}
             text="Constraints"
             labelClass={labelHideClass}
-            containerClass="flex-1"
             title="View Constraints (SHACL)"
         />
-
-        <SHACLClassSpecificPopUp
-            {datasetName}
-            {graphUri}
-            {reactiveClass}
-            bind:showDialog={showSHACLClassDialog}
-            class={reactiveClass}
-        />
-
         {#if !readonly}
             <FaIconButton
                 callOnClick={() => saveChanges(reactiveClass)}
                 icon={faFloppyDisk}
                 text="Save"
                 labelClass={labelHideClass}
-                containerClass="flex-1"
                 disabled={!reactiveClass.isValid || !reactiveClass.isModified}
                 title="Save class"
             />
@@ -162,7 +156,6 @@
                 disabled={!reactiveClass.isModified}
                 text="Reset"
                 labelClass={labelHideClass}
-                containerClass="flex-1"
                 title="Reset changes"
             />
             <FaIconButton
@@ -171,14 +164,7 @@
                 variant="danger"
                 text="Delete"
                 labelClass={labelHideClass}
-                containerClass="flex-1"
                 title="Delete class"
-            />
-            <DeleteDependenciesDialog
-                {datasetName}
-                {graphUri}
-                resourceUuid={reactiveClass.uuid.value}
-                bind:showDialog={showDeleteDependenciesDialog}
             />
         {/if}
     </div>
@@ -186,10 +172,24 @@
         callOnClick={closeClassEditor}
         icon={faXmark}
         variant="contrast"
-        containerClass="w-auto"
+        containerClass="ml-auto w-auto"
         title="Close class editor"
     />
 </div>
+
+<SHACLClassSpecificPopUp
+    {datasetName}
+    {graphUri}
+    {reactiveClass}
+    bind:showDialog={showSHACLClassDialog}
+    class={reactiveClass}
+/>
+<DeleteDependenciesDialog
+    {datasetName}
+    {graphUri}
+    resourceUuid={reactiveClass.uuid.value}
+    bind:showDialog={showDeleteDependenciesDialog}
+/>
 
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}
