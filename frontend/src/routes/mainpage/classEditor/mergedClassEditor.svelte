@@ -91,7 +91,7 @@
                 <ClassEditor
                     {datasetName}
                     graphUri={activeSource.graphUri}
-                    classUuid={activeSource.classUuid}
+                    classUuid={activeSource.classUUID}
                 />
             </div>
         {/key}
