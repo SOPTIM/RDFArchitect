@@ -23,15 +23,21 @@
         useInternalNode,
     } from "@xyflow/svelte";
 
+    import { userSettings } from "$lib/userSettings.svelte.js";
+
     import { getEdgeParams } from "./edgeUtils.ts";
 
     let { id, source, target, data } = $props();
-
-    const style = "stroke-width: 2px; stroke: #000";
     let markerEnd = data.useToAssociation ? "url(#associationTo)" : "";
     let markerStart = data.useFromAssociation ? "url(#associationFrom)" : "";
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
+
+    let style = $derived(
+        userSettings.get("useColoredPropertiesInMergedView") && data.color
+            ? `stroke-width: 2px; stroke: ${data.color};`
+            : "stroke-width: 2px; stroke: #000;",
+    );
 
     let edgeParams = $derived.by(() => {
         if (sourceNode.current && targetNode.current) {

@@ -23,6 +23,9 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.rdfarchitect.api.dto.association.AssociationPairMapper;
+import org.rdfarchitect.api.dto.attributes.AttributeMapper;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -45,6 +48,9 @@ class DiagramToCIMCollectionConverterServiceTest {
 
     private DatabasePort databasePort;
     private GraphToCIMCollectionConverterService converter;
+    private AttributeMapper attributeMapper;
+    private EnumEntryMapper enumEntryMapper;
+    private AssociationPairMapper associationPairMapper;
     private DiagramToCIMCollectionConverterService service;
 
     private GraphIdentifier graphIdentifier;
@@ -53,7 +59,16 @@ class DiagramToCIMCollectionConverterServiceTest {
     void setUp() {
         databasePort = mock(DatabasePort.class);
         converter = mock(GraphToCIMCollectionConverterService.class);
-        service = new DiagramToCIMCollectionConverterService(databasePort, converter);
+        attributeMapper = mock(AttributeMapper.class);
+        enumEntryMapper = mock(EnumEntryMapper.class);
+        associationPairMapper = mock(AssociationPairMapper.class);
+        service =
+                new DiagramToCIMCollectionConverterService(
+                        databasePort,
+                        converter,
+                        attributeMapper,
+                        enumEntryMapper,
+                        associationPairMapper);
 
         graphIdentifier = new GraphIdentifier("dataset", "http://example.org#graph");
     }

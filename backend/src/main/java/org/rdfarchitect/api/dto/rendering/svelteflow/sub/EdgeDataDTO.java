@@ -30,4 +30,5 @@ public class EdgeDataDTO {
     private boolean useToAssociation;
     private boolean useFromAssociation;
     private String graphUri;
+    private String color;
 }

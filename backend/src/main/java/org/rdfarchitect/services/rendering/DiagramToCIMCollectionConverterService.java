@@ -149,15 +149,16 @@ public class DiagramToCIMCollectionConverterService
         for (var graphSourcedPair : mergedClass.getAssociationPairs()) {
             var pair = associationPairMapper.toCIMObject(graphSourcedPair.getValue());
             var graphUri = graphSourcedPair.getGraphUri();
+            var color = graphSourcedPair.getGraphColor();
             if (pair.getFrom() != null) {
                 collection
                         .getAssociations()
-                        .add(pair.getFrom().toBuilder().graphUri(graphUri).build());
+                        .add(pair.getFrom().toBuilder().graphUri(graphUri).color(color).build());
             }
             if (pair.getTo() != null) {
                 collection
                         .getAssociations()
-                        .add(pair.getTo().toBuilder().graphUri(graphUri).build());
+                        .add(pair.getTo().toBuilder().graphUri(graphUri).color(color).build());
             }
         }
     }

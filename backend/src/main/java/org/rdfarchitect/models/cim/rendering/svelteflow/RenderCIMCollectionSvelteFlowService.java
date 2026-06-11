@@ -356,6 +356,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
                         .graphUri(from.getGraphUri())
+                        .color(from.getColor())
                         .build();
 
         return EdgeDTO.builder()

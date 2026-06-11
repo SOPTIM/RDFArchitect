@@ -41,6 +41,8 @@ public class CIMAssociation {
 
     private String graphUri;
 
+    private String color;
+
     private RDFSLabel label;
 
     private RDFSComment comment;
