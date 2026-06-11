@@ -159,7 +159,7 @@ function createGraphStore() {
 
         if (error) {
             console.error(
-                'Failed to create empty graph "${graphURI}" to dataset "${datasetName}"`',
+                `Failed to create empty graph "${graphURI}" to dataset "${datasetName}"`,
             );
             toastStore.error(
                 "Create failed",
