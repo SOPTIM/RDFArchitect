@@ -25,6 +25,6 @@ import java.util.UUID;
 @Data
 @AllArgsConstructor
 public class ClassSourceDTO {
-    private UUID classUuid;
+    private UUID uuid;
     private String graphUri;
 }

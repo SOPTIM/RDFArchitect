@@ -302,7 +302,6 @@ public class CustomDiagramService
         var graphUris = databasePort.listGraphUris(datasetName);
         for (var graphUri : graphUris) {
             var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            var graphWithContext = databasePort.getGraphWithContext(graphIdentifier);
             if (dto.getGraphColors().containsKey(graphUri)) {
                 databasePort.setCrossProfileDiagramColor(
                         graphIdentifier, dto.getGraphColors().get(graphUri));
