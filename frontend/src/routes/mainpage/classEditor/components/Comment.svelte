@@ -62,7 +62,7 @@
         {/if}
     </div>
     {#if !readonly}
-        <div class="flex shrink-0 items-end justify-end space-x-1">
+        <div class="mt-1 flex shrink-0 items-end justify-end space-x-1">
             <FaIconButton
                 callOnClick={() => (editClassComment = !editClassComment)}
                 text={editClassComment ? "Edit" : "Preview"}
