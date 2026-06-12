@@ -128,7 +128,9 @@
                 datasetOfClassToOpenNext,
             );
             editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-            editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
+            editorState.selectedClassType.updateValue(
+                classTypeOfClassToOpenNext,
+            );
             editorState.selectedClassUUID.updateValue(classToOpenNext);
         }
     }
@@ -137,7 +139,7 @@
         saveChanges();
         editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        ditorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
+        editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
         editorState.selectedClassUUID.updateValue(classToOpenNext);
     }
 </script>
