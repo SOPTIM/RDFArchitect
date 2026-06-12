@@ -20,6 +20,7 @@ export let eventStack;
 class EventStack {
     constructor() {
         this.stack = [];
+        this.actionGuard = null;
     }
 
     stack;
@@ -43,6 +44,24 @@ class EventStack {
             return;
         }
         this.stack.at(-1)(...args);
+    }
+
+    registerActionGuard(fn) {
+        this.actionGuard = fn;
+    }
+
+    unregisterActionGuard(fn) {
+        if (this.actionGuard === fn) {
+            this.actionGuard = null;
+        }
+    }
+
+    guardAction(action) {
+        if (this.actionGuard) {
+            const result = this.actionGuard(action);
+            return result ?? Promise.resolve(false);
+        }
+        return action();
     }
 }
 eventStack = new EventStack();
