@@ -210,7 +210,6 @@
     }
 
     async function fetchCrossProfileRenderingData() {
-        console.log("fetchCrossProfileRenderingData");
         try {
             const res = await bec.getCrossProfileDiagramRenderingDataForDataset(
                 editorState.selectedDataset.getValue(),
@@ -223,7 +222,6 @@
                 response = JSON.parse(responseText);
                 renderingFormat = response.format;
                 displayDiagram = true;
-                console.log("fetched crossProfileDIagram data:", response);
             }
         } catch (error) {
             console.error("Error fetching cross profile diagram data:", error);

@@ -21,15 +21,46 @@
         faFileExport,
     } from "@fortawesome/free-solid-svg-icons";
 
+    import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        ClassType,
+        DiagramType,
+        editorState,
+    } from "$lib/sharedState.svelte.js";
 
+    import ClassEntry from "./ClassEntry.svelte";
     import CrossProfileColorDialog from "./custom-diagram-dialogs/CrossProfileColorDialog.svelte";
 
     let { datasetNavEntry } = $props();
 
     let showColorDialog = $state(false);
+    let isOpen = $state(false);
+    let classes = $state([]);
+
+    const isMergedViewSelected = $derived(
+        !editorState.selectedGraph.getValue() &&
+            editorState.selectedDataset.getValue() === datasetNavEntry.label &&
+            editorState.selectedDiagram.getProperty("type") ===
+                DiagramType.CROSS_PROFILE,
+    );
+
+    $effect(() => {
+        if (!datasetNavEntry.label) return;
+        getCrossProfileDiagram(datasetNavEntry.label).then(diagram => {
+            classes = diagram?.classes ?? [];
+        });
+    });
+
+    function selectMergedView() {
+        editorState.selectedDataset.updateValue(datasetNavEntry.label);
+        editorState.selectedGraph.updateValue(null);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CROSS_PROFILE,
+            id: datasetNavEntry.crossProfileID,
+        });
+    }
 </script>
 
 <div
@@ -44,20 +75,14 @@
             level={2}
             label="Merged View"
             icon={faObjectGroup}
-            hasChildren={false}
-            isSelected={!editorState.selectedGraph.getValue() &&
-                editorState.selectedDataset.getValue() ===
-                    datasetNavEntry.label &&
-                editorState.selectedDiagram.getProperty("type") ===
-                    DiagramType.CROSS_PROFILE}
+            hasChildren={classes.length > 0}
+            expanded={isOpen}
+            isSelected={isMergedViewSelected}
             onclick={() => {
-                editorState.selectedDataset.updateValue(datasetNavEntry.label);
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CROSS_PROFILE,
-                    id: datasetNavEntry.crossProfileID,
-                });
+                selectMergedView();
+                isOpen = !isOpen;
             }}
+            onToggle={() => (isOpen = !isOpen)}
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
@@ -71,6 +96,29 @@
         </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
+
+{#if isOpen && classes.length > 0}
+    <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
+        {#each classes as cls (cls.uuid)}
+            <ClassEntry
+                {datasetNavEntry}
+                graphNavEntry={{ id: null }}
+                classNavEntry={{
+                    id: cls.uuid,
+                    label: cls.label,
+                    tooltip: cls.label,
+                    parent: {
+                        id: datasetNavEntry.crossProfileID,
+                        open: () => selectMergedView(),
+                    },
+                }}
+                classType={ClassType.MERGED_CLASS}
+                diagramType={DiagramType.CROSS_PROFILE}
+                readonly={true}
+            />
+        {/each}
+    </div>
+{/if}
 
 <CrossProfileColorDialog
     bind:showDialog={showColorDialog}

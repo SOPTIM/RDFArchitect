@@ -55,6 +55,8 @@
         namespaces = [],
         readonly = false,
         onPackChange = () => {},
+        classType = ClassType.NORMAL_CLASS,
+        diagramType = DiagramType.PACKAGE,
     } = $props();
 
     let showDeleteDependenciesDialog = $state(false);
@@ -84,15 +86,16 @@
             eventStack.executeNewestEvent(classNavEntry.id);
             editorState.selectedClassDataset.updateValue(datasetNavEntry.id);
             editorState.selectedClassGraph.updateValue(graphNavEntry.id);
-            editorState.selectedClassType.updateValue(ClassType.NORMAL_CLASS);
+            editorState.selectedClassType.updateValue(classType);
             editorState.selectedClassUUID.updateValue(classNavEntry.id);
             return;
         }
         //The event executed to open the discard confirm delete dialog
         eventStack.executeNewestEvent({
             datasetName: datasetNavEntry.id,
-            graphUri: graphNavEntry.id,
+            graphUri: graphNavEntry?.id ?? null,
             classUuid: classNavEntry.id,
+            classType: classType,
         });
     }
 
@@ -107,8 +110,9 @@
     function showClassInPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
+        editorState.selectedClassType.updateValue(classType);
         editorState.selectedDiagram.updateValue({
-            type: DiagramType.PACKAGE,
+            type: diagramType,
             id: classNavEntry.parent?.id ?? "default",
         });
         selectClass();
@@ -139,78 +143,82 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={copyClass}
-            faIcon={faCopy}
-            altText="Ctrl+C"
-        >
-            Copy
-        </ContextMenu.Item.Button>
-        <ContextMenu.Separator />
+        {#if classType === ClassType.NORMAL_CLASS}
+            <ContextMenu.Item.Button
+                onSelect={copyClass}
+                faIcon={faCopy}
+                altText="Ctrl+C"
+            >
+                Copy
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+        {/if}
         <ContextMenu.Item.Button
             onSelect={showClassInPackage}
             faIcon={faArrowUpRightFromSquare}
         >
             Show in diagram
         </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                showSHACLDialog = true;
-            }}
-            faIcon={faDiagramProject}
-        >
-            Constraints
-        </ContextMenu.Item.Button>
-        <ContextMenu.Separator />
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                showExtendClassDialog = true;
-            }}
-            faIcon={faFileExport}
-        >
-            Extend Class
-        </ContextMenu.Item.Button>
-        {#if !diagramId}
+        {#if classType === ClassType.NORMAL_CLASS}
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    showAddToGraphDiagramDialog = true;
+                    showSHACLDialog = true;
                 }}
-                faIcon={faObjectGroup}
+                faIcon={faDiagramProject}
             >
-                Add to Profile Diagram
+                Constraints
             </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    showAddToDatasetDiagramDialog = true;
+                    showExtendClassDialog = true;
                 }}
-                faIcon={faObjectGroup}
+                faIcon={faFileExport}
             >
-                Add to Dataset Diagram
+                Extend Class
             </ContextMenu.Item.Button>
-        {/if}
-        <ContextMenu.Separator />
-        {#if diagramId}
+            {#if !diagramId}
+                <ContextMenu.Item.Button
+                    onSelect={() => {
+                        showAddToGraphDiagramDialog = true;
+                    }}
+                    faIcon={faObjectGroup}
+                >
+                    Add to Profile Diagram
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={() => {
+                        showAddToDatasetDiagramDialog = true;
+                    }}
+                    faIcon={faObjectGroup}
+                >
+                    Add to Dataset Diagram
+                </ContextMenu.Item.Button>
+            {/if}
+            <ContextMenu.Separator />
+            {#if diagramId}
+                <ContextMenu.Item.Button
+                    onSelect={() => {
+                        showRemoveFromDiagramDialog = true;
+                    }}
+                    faIcon={faMinus}
+                    variant="danger"
+                >
+                    Remove from Diagram
+                </ContextMenu.Item.Button>
+            {/if}
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    showRemoveFromDiagramDialog = true;
+                    selectClass();
+                    showDeleteDependenciesDialog = true;
                 }}
-                faIcon={faMinus}
+                disabled={readonly}
+                faIcon={faTrash}
                 variant="danger"
             >
-                Remove from Diagram
+                Delete Class
             </ContextMenu.Item.Button>
         {/if}
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                selectClass();
-                showDeleteDependenciesDialog = true;
-            }}
-            disabled={readonly}
-            faIcon={faTrash}
-            variant="danger"
-        >
-            Delete Class
-        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 

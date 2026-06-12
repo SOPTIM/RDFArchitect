@@ -102,6 +102,7 @@ public class CustomDiagramService
                                         new MergedClassDTO(
                                                 mergedUuid,
                                                 uri,
+                                                dto.getLabel(),
                                                 new ArrayList<>(),
                                                 new ArrayList<>(),
                                                 new ArrayList<>(),

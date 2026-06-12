@@ -35,6 +35,7 @@ public class MergedClassDTO {
 
     private UUID uuid;
     private String classUri;
+    private String label;
     private List<ClassSourceDTO> sources;
     private List<GraphSourcedDTO<SuperClassDTO>> superClasses;
     private List<GraphSourcedDTO<AttributeDTO>> attributes;
