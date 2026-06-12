@@ -67,11 +67,6 @@ function syncList(targetArray, freshEntries, parent = null) {
  * @returns {Promise<NavEntry[]>}
  */
 export async function getNavEntryList(existingDatasetNavList) {
-    console.log(
-        "started Building navObj with existingNavObj: ",
-        existingDatasetNavList,
-    );
-
     const freshEntries = (await getDatasetNames())
         .sort((a, b) => a.localeCompare(b))
         .map(label =>
@@ -95,8 +90,6 @@ export async function getNavEntryList(existingDatasetNavList) {
             );
         }
     }
-
-    console.log("finished Building navObj: ", result);
     return result;
 }
 

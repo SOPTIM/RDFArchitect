@@ -128,7 +128,6 @@
             type: DiagramType.PACKAGE,
             id: packageNavEntry.id,
         });
-        console.log(editorState.selectedDiagram.getValue());
     }
 
     function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
