@@ -40,6 +40,7 @@
     let {
         reactiveClass,
         showDiscardSaveConfirmDialog = $bindable(),
+        pendingAction = $bindable(),
         datasetOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
@@ -112,6 +113,33 @@
         }
         forceReloadTrigger.trigger();
     }
+
+    function handleCancel() {
+        pendingAction = null;
+    }
+
+    function handleDiscard() {
+        reactiveClass.reset();
+        if (pendingAction) {
+            pendingAction();
+            pendingAction = null;
+        } else {
+            editorState.selectedClassDataset.updateValue(
+                datasetOfClassToOpenNext,
+            );
+            editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
+            editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
+            editorState.selectedClassUUID.updateValue(classToOpenNext);
+        }
+    }
+
+    function handleSave() {
+        saveChanges();
+        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
+        editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
+        ditorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
+        editorState.selectedClassUUID.updateValue(classToOpenNext);
+    }
 </script>
 
 <div class="flex gap-1">
@@ -179,19 +207,9 @@
 
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}
-    onDiscard={() => {
-        reactiveClass.reset();
-        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
-        editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
-    }}
-    onSave={() => {
-        saveChanges();
-        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
-        editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
-    }}
-    disableSave={!reactiveClass?.isModified || !reactiveClass?.isValid}
+    onDiscard={handleDiscard}
+    onSave={handleSave}
+    onCancel={handleCancel}
+    disableSave={!reactiveClass?.isValid}
+    hideSave={!!pendingAction}
 />

@@ -85,6 +85,8 @@
     let classToOpenNext = $state(null);
     let classTypeOfClassToOpenNext = $state(null);
 
+    let pendingAction = $state(null);
+
     let isEnum = $derived(
         reactiveClass?.stereotypes.contains(enumerationStereotype),
     );
@@ -97,9 +99,38 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
+            let res = await bec.getClassInfo(datasetName, graphUri, classUuid);
+            let resText = await res.text();
+            if (!resText) {
+                return closeClassEditor({
+                    datasetName: datasetName,
+                    graphUri: graphUri,
+                    classUuid: null,
+                });
+            }
+            let classData;
+            try {
+                classData = JSON.parse(resText);
+            } catch (e) {
+                console.error(
+                    "Failed to parse class data for class UUID",
+                    classUuid,
+                    "in dataset",
+                    datasetName,
+                    "and graph",
+                    graphUri,
+                    ":",
+                    e,
+                );
+                return closeClassEditor({
+                    datasetName: datasetName,
+                    graphUri: graphUri,
+                    classUuid: null,
+                });
+            }
             isDatasetReadOnly = await isReadOnly(datasetName);
             await loadContext();
-            await loadReactiveClass(cancellation);
+            await loadReactiveClass(cancellation, classData);
         })();
 
         return () => {
@@ -113,11 +144,26 @@
         isDatasetReadOnly = await isReadOnly(datasetName);
     });
 
-    onMount(() => eventStack.addEvent(closeClassEditor));
+    onMount(() => {
+        eventStack.addEvent(closeClassEditor);
+        eventStack.registerActionGuard(withUnsavedChangesCheck);
+    });
 
-    onDestroy(() => eventStack.removeEvent(closeClassEditor));
+    onDestroy(() => {
+        eventStack.removeEvent(closeClassEditor);
+        eventStack.unregisterActionGuard(withUnsavedChangesCheck);
+    });
 
-    function closeClassEditor(
+    function withUnsavedChangesCheck(action) {
+        if (reactiveClass?.isModified) {
+            pendingAction = action;
+            showDiscardSaveConfirmDialog = true;
+            return;
+        }
+        return action();
+    }
+
+    export function closeClassEditor(
         {
             datasetName = null,
             graphUri = null,
@@ -162,13 +208,10 @@
         editorState.selectedContext.trigger();
     }
 
-    async function loadReactiveClass(cancelled) {
-        const classDto = await (
-            await bec.getClassInfo(datasetName, graphUri, classUuid)
-        ).json();
+    async function loadReactiveClass(cancelled, classDTO) {
         if (cancelled.cancelled) return;
         const newReactiveClass = mapClassDtoToReactiveClass(
-            classDto,
+            classDTO,
             context,
             uuid => context.targetClassInfos.find(cls => cls.uuid === uuid),
         );
@@ -238,7 +281,6 @@
         get backendConnection() {
             return bec;
         },
-        // get Objects by identifier functions
         get getClassByUuid() {
             return function (uuid) {
                 return context.classes.find(cls => cls.uuid === uuid);
@@ -296,6 +338,7 @@
                     <ClassEditorButtons
                         {reactiveClass}
                         bind:showDiscardSaveConfirmDialog
+                        bind:pendingAction
                         {datasetOfClassToOpenNext}
                         {graphOfClassToOpenNext}
                         {classToOpenNext}
