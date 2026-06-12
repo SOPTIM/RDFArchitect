@@ -127,46 +127,58 @@ public class CustomDiagramService
     private static void mergeProperties(
             String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
         if (dto.getAttributes() != null) {
-            dto.getAttributes()
-                    .forEach(
-                            attr ->
-                                    merged.getAttributes()
-                                            .add(
-                                                    new GraphSourcedDTO<>(
-                                                            graphUri, graphColor, attr)));
+            mergeAttributes(graphUri, dto, merged, graphColor);
         }
         if (dto.getEnumEntries() != null) {
-            dto.getEnumEntries()
-                    .forEach(
-                            entry ->
-                                    merged.getEnumEntries()
-                                            .add(
-                                                    new GraphSourcedDTO<>(
-                                                            graphUri, graphColor, entry)));
+            mergeEnumEntries(graphUri, dto, merged, graphColor);
         }
         if (dto.getAssociationPairs() != null) {
-            dto.getAssociationPairs()
-                    .forEach(
-                            assoc ->
-                                    merged.getAssociationPairs()
-                                            .add(
-                                                    new GraphSourcedDTO<>(
-                                                            graphUri, graphColor, assoc)));
+            mergeAssociationPairs(graphUri, dto, merged, graphColor);
         }
         if (dto.getSuperClass() != null) {
             merged.getSuperClasses()
                     .add(new GraphSourcedDTO<>(graphUri, graphColor, dto.getSuperClass()));
         }
         if (dto.getStereotypes() != null) {
-            dto.getStereotypes()
-                    .forEach(
-                            stereotype -> {
-                                if (!merged.getStereotypes()
-                                        .contains(new CIMSStereotype(stereotype))) {
-                                    merged.getStereotypes().add(new CIMSStereotype(stereotype));
-                                }
-                            });
+            mergeStereotypes(dto, merged);
         }
+    }
+
+    private static void mergeAttributes(
+            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
+        dto.getAttributes()
+                .forEach(
+                        attr ->
+                                merged.getAttributes()
+                                        .add(new GraphSourcedDTO<>(graphUri, graphColor, attr)));
+    }
+
+    private static void mergeEnumEntries(
+            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
+        dto.getEnumEntries()
+                .forEach(
+                        entry ->
+                                merged.getEnumEntries()
+                                        .add(new GraphSourcedDTO<>(graphUri, graphColor, entry)));
+    }
+
+    private static void mergeAssociationPairs(
+            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
+        dto.getAssociationPairs()
+                .forEach(
+                        assoc ->
+                                merged.getAssociationPairs()
+                                        .add(new GraphSourcedDTO<>(graphUri, graphColor, assoc)));
+    }
+
+    private static void mergeStereotypes(ClassUMLAdaptedDTO dto, MergedClassDTO merged) {
+        dto.getStereotypes()
+                .forEach(
+                        stereotype -> {
+                            if (!merged.getStereotypes().contains(new CIMSStereotype(stereotype))) {
+                                merged.getStereotypes().add(new CIMSStereotype(stereotype));
+                            }
+                        });
     }
 
     private static void doDiagramLayout(
