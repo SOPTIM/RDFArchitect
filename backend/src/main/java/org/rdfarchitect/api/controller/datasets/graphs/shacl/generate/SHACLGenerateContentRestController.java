@@ -17,6 +17,9 @@
 
 package org.rdfarchitect.api.controller.datasets.graphs.shacl.generate;
 
+import static org.rdfarchitect.models.cim.rdf.resources.RDFA.NS_PREFIX_SHACL;
+import static org.rdfarchitect.models.cim.rdf.resources.RDFA.NS_URI_SHACL;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -90,7 +93,7 @@ public class SHACLGenerateContentRestController {
         var result =
                 shaclGenerateUseCase.exportGeneratedSHACLGraph(
                         new GraphIdentifier(datasetName, extendedGraphURI),
-                        PrefixEntry.create("rdfash", "http://www.example.com/shacl#"));
+                        PrefixEntry.create(NS_PREFIX_SHACL, NS_URI_SHACL));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".",

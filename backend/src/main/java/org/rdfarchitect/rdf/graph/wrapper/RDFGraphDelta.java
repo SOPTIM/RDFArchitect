@@ -249,7 +249,9 @@ public class RDFGraphDelta implements Graph, TransactionParticipant, Rewindable 
 
     @Override
     public boolean hasChanges() {
-        return !currentDelta.getAdditions().isEmpty() || !currentDelta.getDeletions().isEmpty();
+        return !currentDelta.getAdditions().isEmpty()
+                || !currentDelta.getDeletions().isEmpty()
+                || currentDelta.hasPrefixChanges();
     }
 
     // -------------------------------------------------------------------------

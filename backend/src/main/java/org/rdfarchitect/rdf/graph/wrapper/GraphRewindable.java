@@ -278,7 +278,9 @@ public class GraphRewindable implements Graph, Transactional, Rewindable {
      * @return True if the current graph is the same as the last version, otherwise false.
      */
     protected boolean noChangesInTransaction() {
-        return currentDelta.getAdditions().isEmpty() && currentDelta.getDeletions().isEmpty();
+        return currentDelta.getAdditions().isEmpty()
+                && currentDelta.getDeletions().isEmpty()
+                && !currentDelta.hasPrefixChanges();
     }
 
     // Graph
