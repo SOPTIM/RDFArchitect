@@ -46,7 +46,7 @@ class UpdatePackageLayoutServiceTest extends DiagramLayoutServicesTestBase {
                 PackageDTO.builder()
                         .uuid(PACKAGE_A_UUID)
                         .label(PACKAGE_A_LABEL)
-                        .prefix("ex")
+                        .prefix("http://example.org#")
                         .build();
         service.createPackageLayoutData(graphIdentifier, packageDTO, PACKAGE_A_UUID);
 

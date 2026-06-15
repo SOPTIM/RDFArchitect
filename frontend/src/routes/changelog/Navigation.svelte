@@ -28,6 +28,8 @@
         editorState,
     } from "$lib/sharedState.svelte.js";
 
+    import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
+
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let datasetList = $state([]);
     let selectedDatasetName = $derived(editorState.selectedDataset.getValue());
@@ -67,10 +69,6 @@
     async function getGraphUris(datasetName) {
         const res = await bec.getGraphNames(datasetName);
         return await res.json();
-    }
-
-    function getUri(uri) {
-        return uri.prefix ? uri.prefix + uri.suffix : uri.suffix;
     }
 </script>
 

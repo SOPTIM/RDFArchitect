@@ -21,13 +21,15 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import org.apache.jena.atlas.lib.StrUtils;
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.irix.IRIException;
+import org.apache.jena.irix.IRIx;
 
-@Data
 @NoArgsConstructor
 @JsonDeserialize(using = URIDeserializer.class)
 @Schema(
@@ -36,21 +38,40 @@ import org.apache.jena.graph.NodeFactory;
                         + "to json), the object structure ist always used.")
 public class URI {
 
-    private String prefix;
-    private String suffix;
+    @Getter private String prefix;
+    @Getter private String suffix;
 
     public URI(String uri) {
-        String[] split = uri.split("#", 2);
-        if (split.length == 2) {
-            // split
-            prefix = split[0] + "#";
-            suffix = split[1];
+        if (uri == null) {
+            throw new IllegalArgumentException("URI must not be null");
+        }
+        if (uri.isEmpty()) {
+            throw new IllegalArgumentException("URI must not be empty");
+        }
+        try {
+            IRIx iri = IRIx.create(StrUtils.encodeHex(uri, '%', new char[] {'%', ' '}));
+            if (iri.scheme() == null) {
+                throw new IllegalArgumentException("IRI must be absolute: " + uri);
+            }
+        } catch (IRIException e) {
+            throw new IllegalArgumentException("Invalid IRI: " + uri, e);
+        }
+        int hash = uri.indexOf('#');
+        int slash = uri.lastIndexOf('/');
+
+        if (hash >= 0) {
+            this.prefix = uri.substring(0, hash + 1);
+            this.suffix = uri.substring(hash + 1);
+        } else if (slash >= 0) {
+            this.prefix = uri.substring(0, slash + 1);
+            this.suffix = uri.substring(slash + 1);
         } else {
-            prefix = null;
-            suffix = uri;
+            this.prefix = uri;
+            this.suffix = "";
         }
     }
 
+    @Override
     public String toString() {
         return prefix + suffix;
     }
@@ -59,6 +80,7 @@ public class URI {
         return NodeFactory.createURI(this.toString());
     }
 
+    @Override
     public boolean equals(Object obj) {
         if (obj instanceof URI other) {
             return this.toString().equals(other.toString());
@@ -66,6 +88,7 @@ public class URI {
         return false;
     }
 
+    @Override
     public int hashCode() {
         return this.toString().hashCode();
     }
