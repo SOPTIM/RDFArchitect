@@ -109,7 +109,7 @@ public interface AttributeMapper {
 
     default CIMSDataType buildDataType(DataTypeDTO dto) {
         URI uri;
-        if (dto.getPrefix().startsWith(XSD.getURI())) {
+        if (dto.getPrefix().equalsIgnoreCase(XSD.getURI())) {
             uri = new URI(XSDDatatypeMapper.classLabelToDatatype(dto.getLabel()).getURI());
         } else {
             uri = new URI(dto.getPrefix() + dto.getLabel());
