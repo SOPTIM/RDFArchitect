@@ -21,11 +21,13 @@
         faCircleInfo,
         faCircleQuestion,
         faCommentDots,
+        faKeyboard,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import KeyboardShortcutsDialog from "../../KeyboardShortcutsDialog.svelte";
     import ResetSessionDialog from "../../ResetSessionDialog.svelte";
 
     import { goto } from "$app/navigation";
@@ -35,6 +37,7 @@
         feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
 
+    let showKeyboardShortcutsDialog = $state(false);
     let showResetSessionDialog = $state(false);
 
     function openExternalResource(key) {
@@ -48,6 +51,10 @@
     function navigateHomepage() {
         editorState.reset();
         goto("/");
+    }
+
+    export function openKeyboardShortcuts() {
+        showKeyboardShortcutsDialog = true;
     }
 </script>
 
@@ -69,6 +76,13 @@
         <Menubar.Item.Button onSelect={navigateHomepage} faIcon={faCircleInfo}>
             About
         </Menubar.Item.Button>
+        <Menubar.Item.Button
+            onSelect={() => (showKeyboardShortcutsDialog = true)}
+            faIcon={faKeyboard}
+            altText="?"
+        >
+            Keyboard Shortcuts
+        </Menubar.Item.Button>
         <Menubar.Separator />
         <Menubar.Item.Button
             onSelect={() => (showResetSessionDialog = true)}
@@ -79,5 +93,7 @@
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>
+
+<KeyboardShortcutsDialog bind:showDialog={showKeyboardShortcutsDialog} />
 
 <ResetSessionDialog bind:showDialog={showResetSessionDialog} />

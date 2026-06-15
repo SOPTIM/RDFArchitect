@@ -64,6 +64,12 @@
     let canRedo = $state(false);
     let menubarValue = $state(undefined);
 
+    let searchbar = $state(null);
+    let fileMenu = $state(null);
+    let editMenu = $state(null);
+    let viewMenu = $state(null);
+    let helpMenu = $state(null);
+
     let isDatasetReadOnly = $state(false);
 
     let isLeftAltPressed = false;
@@ -200,12 +206,29 @@
     }
 
     async function handleKeydown(event) {
+        let key = event.key.toLowerCase();
         if (event.code === "AltLeft") {
             isLeftAltPressed = true;
         }
 
         if (event.key === "Escape" && !event.defaultPrevented) {
             eventStack.executeNewestEvent();
+            return;
+        }
+
+        if (key === "?" && !event.ctrlKey && !isLeftAltPressed) {
+            const target = event.target;
+            if (
+                target instanceof HTMLElement &&
+                (target.isContentEditable ||
+                    target.tagName === "INPUT" ||
+                    target.tagName === "TEXTAREA" ||
+                    target.tagName === "SELECT")
+            ) {
+                return;
+            }
+            event.preventDefault();
+            helpMenu?.openKeyboardShortcuts();
             return;
         }
 
@@ -216,7 +239,6 @@
         if (!hasCtrl && !hasCtrlAltViaAltGr) return;
 
         // Undo/Redo always fires, even when an input is focused
-        let key = event.key.toLowerCase();
         if (key === "z" || key === "y") {
             if (
                 document.querySelector('[role="dialog"], [role="alertdialog"]')
@@ -260,7 +282,11 @@
         switch (event.code) {
             case "KeyC":
                 event.preventDefault();
-                if (canCopyClass) copyClass();
+                if (event.shiftKey) {
+                    viewMenu?.openCompare();
+                } else {
+                    if (canCopyClass) copyClass();
+                }
                 break;
             case "KeyV":
                 if (!canPasteClass) break;
@@ -273,6 +299,80 @@
                     await pasteClass(false, true, false);
                 } else {
                     await pasteClass(false, true, true);
+                }
+                break;
+            case "KeyF":
+                event.preventDefault();
+                searchbar?.focusInput();
+                break;
+            case "KeyI":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    fileMenu?.openSHACLImport();
+                } else {
+                    fileMenu?.openImport();
+                }
+                break;
+            case "KeyE":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    fileMenu?.openSHACLExport();
+                } else if (isLeftAltPressed) {
+                    editMenu?.toggleReadonly();
+                } else {
+                    fileMenu?.openExport();
+                }
+                break;
+            case "KeyS":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    fileMenu?.openSnapshot();
+                } else if (isLeftAltPressed) {
+                    fileMenu?.openUserSettings();
+                }
+                break;
+            case "KeyN":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    editMenu?.openNewClass();
+                } else if (isLeftAltPressed) {
+                    editMenu?.openNewPackage();
+                }
+                break;
+            case "KeyH":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    await goto("/changelog");
+                }
+                break;
+            case "KeyM":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    await goto("/migrate");
+                }
+                break;
+            case "KeyA":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    editMenu?.openManageNamespaces();
+                }
+                break;
+            case "KeyP":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    editMenu?.openProfileHeader();
+                }
+                break;
+            case "KeyK":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    editMenu?.launchPackageEditor();
+                }
+                break;
+            case "KeyL":
+                event.preventDefault();
+                if (event.shiftKey) {
+                    viewMenu?.openSHACLFullView();
                 }
                 break;
         }
@@ -303,15 +403,16 @@
                             bind:value={menubarValue}
                             class="toolbar-menubar"
                         >
-                            <File {isDatasetReadOnly} />
+                            <File {isDatasetReadOnly} bind:this={fileMenu} />
                             <Edit
                                 {canRedo}
                                 {canUndo}
                                 {isDatasetReadOnly}
                                 {reload}
+                                bind:this={editMenu}
                             />
-                            <View />
-                            <Help />
+                            <View bind:this={viewMenu} />
+                            <Help bind:this={helpMenu} />
                         </Menubar.Root>
                     {/if}
                 </div>
@@ -321,7 +422,7 @@
             <div class="w-1/3">
                 {#if page.url.pathname === "/mainpage"}
                     <div class="w-full">
-                        <Searchbar />
+                        <Searchbar bind:this={searchbar} />
                     </div>
                 {/if}
             </div>

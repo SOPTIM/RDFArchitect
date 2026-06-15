@@ -170,6 +170,7 @@
                 }}
                 disabled={readonly}
                 faIcon={faPlus}
+                altText="Ctrl+Alt+N"
             >
                 New Package
             </ContextMenu.Item.Button>
@@ -191,6 +192,7 @@
                 }}
                 disabled={readonly || !canUndo}
                 faIcon={faRotateLeft}
+                altText="Ctrl+Z"
             >
                 Undo
             </ContextMenu.Item.Button>
@@ -203,6 +205,7 @@
                 }}
                 disabled={readonly || !canRedo}
                 faIcon={faRotateRight}
+                altText="Ctrl+Y"
             >
                 Redo
             </ContextMenu.Item.Button>
@@ -214,6 +217,7 @@
                             showEditOntologyDialog = true;
                         }}
                         faIcon={faGear}
+                        altText="Ctrl+Shift+P"
                     >
                         Edit Profile Header
                     </ContextMenu.Item.Button>
@@ -232,6 +236,7 @@
                             showEditOntologyDialog = true;
                         }}
                         faIcon={faPlus}
+                        altText="Ctrl+Shift+P"
                     >
                         Create Profile Header
                     </ContextMenu.Item.Button>
@@ -254,6 +259,7 @@
                     goto("/changelog");
                 }}
                 faIcon={faClockRotateLeft}
+                altText="Ctrl+Shift+H"
             >
                 Changelog
             </ContextMenu.Item.Button>
@@ -263,6 +269,7 @@
                     showCompareDialog = true;
                 }}
                 faIcon={faCodeBranch}
+                altText="Ctrl+Shift+C"
             >
                 Compare...
             </ContextMenu.Item.Button>
@@ -272,6 +279,7 @@
                     goto("/migrate");
                 }}
                 faIcon={faRightLeft}
+                altText="Ctrl+Shift+M"
             >
                 Migrate...
             </ContextMenu.Item.Button>
@@ -287,6 +295,7 @@
                         }}
                         disabled={readonly}
                         faIcon={faUpload}
+                        altText="Ctrl+Shift+I"
                     >
                         Import
                     </ContextMenu.Item.Button>
@@ -296,6 +305,7 @@
                             showSHACLExportDialog = true;
                         }}
                         faIcon={faDownload}
+                        altText="Ctrl+Shift+E"
                     >
                         Export
                     </ContextMenu.Item.Button>
@@ -305,6 +315,7 @@
                             showSHACLFullViewDialog = true;
                         }}
                         faIcon={faEye}
+                        altText="Ctrl+Shift+L"
                     >
                         Open
                     </ContextMenu.Item.Button>
@@ -316,6 +327,7 @@
                     showExportDialog = true;
                 }}
                 faIcon={faFileExport}
+                altText="Ctrl+E"
             >
                 Export Schema
             </ContextMenu.Item.Button>

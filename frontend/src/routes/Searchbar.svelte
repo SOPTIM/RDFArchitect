@@ -45,6 +45,7 @@
     let selectedFilter = $state({ name: "All Datasets", value: "all" });
     let queryString = $state("");
     let searchResults = $state([]);
+    let inputElement = $state(null);
 
     function selectSubject(searchResult) {
         editorState.selectedDataset.updateValue(searchResult.datasetName);
@@ -202,6 +203,11 @@
             },
         };
     }
+
+    export function focusInput() {
+        inputElement?.focus();
+        inputElement?.select();
+    }
 </script>
 
 <form onsubmit={submitQuery}>
@@ -252,6 +258,7 @@
                 type="text"
                 id="query-string"
                 autocomplete="off"
+                bind:this={inputElement}
                 bind:value={queryString}
                 placeholder="Search..."
                 class="bg-input-default-background text-default-text focus:border-blue border-input-default-background disabled:bg-button-disabled-background read-only:bg-default-background h-full w-full rounded border p-1 px-2 font-[350] outline-none"

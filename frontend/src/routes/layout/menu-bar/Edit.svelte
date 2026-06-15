@@ -166,7 +166,7 @@
         showNamespaceDialog = true;
     }
 
-    function launchPackageEditor() {
+    export function launchPackageEditor() {
         if (!selectedPackageDetails) return;
         packageDialogTarget = { ...selectedPackageDetails };
         packageDialogDataset = selectedDataset;
@@ -274,6 +274,32 @@
             copyAssociations,
         );
     }
+
+    export function openNewClass() {
+        showNewClassDialog = true;
+    }
+
+    export function openNewPackage() {
+        showNewPackageDialog = true;
+    }
+
+    export function toggleReadonly() {
+        if (isDatasetReadOnly) {
+            requestEnableEditing();
+        } else {
+            requestDisableEditing();
+        }
+    }
+
+    export function openManageNamespaces() {
+        showNamespaceDialog = true;
+    }
+
+    export function openProfileHeader() {
+        if (!hasGraphSelected || (isDatasetReadOnly && !graphHasOntology))
+            return;
+        showEditOntologyDialog = true;
+    }
 </script>
 
 <Menubar.Menu value="edit">
@@ -287,12 +313,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showNewClassDialog = true)}
                     faIcon={faCube}
+                    altText="Ctrl+Shift+N"
                 >
                     Class
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showNewPackageDialog = true)}
                     faIcon={faFolderPlus}
+                    altText="Ctrl+Alt+N"
                 >
                     Package
                 </Menubar.Item.Button>
@@ -318,6 +346,7 @@
                             ? faEye
                             : faPen
                         : faPlus}
+                    altText="Ctrl+Shift+P"
                 >
                     Profile header
                 </Menubar.Item.Button>
@@ -325,6 +354,7 @@
                     onSelect={launchPackageEditor}
                     disabled={!selectedPackageDetails}
                     faIcon={canEditCurrentPackage ? faPen : faEye}
+                    altText="Ctrl+Shift+K"
                 >
                     Package
                 </Menubar.Item.Button>
@@ -400,6 +430,7 @@
                 onSelect={() => requestEnableEditing()}
                 disabled={!hasDatasetSelected || !isDatasetReadOnly}
                 faIcon={faPenToSquare}
+                altText="Ctrl+Alt+E"
             >
                 Enable Editing
             </Menubar.Item.Button>
@@ -408,6 +439,7 @@
                 onSelect={() => requestDisableEditing()}
                 disabled={!hasDatasetSelected || isDatasetReadOnly}
                 faIcon={faLock}
+                altText="Ctrl+Alt+E"
             >
                 Disable Editing
             </Menubar.Item.Button>
@@ -416,6 +448,7 @@
             onSelect={() => openNamespaceManager()}
             disabled={!canAccessNamespaces}
             faIcon={faTags}
+            altText="Ctrl+Shift+A"
         >
             {#if isDatasetReadOnly}
                 View Namespaces

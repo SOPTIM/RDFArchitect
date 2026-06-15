@@ -58,6 +58,30 @@
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
     });
+
+    export function openImport() {
+        showImportDialog = true;
+    }
+
+    export function openSHACLImport() {
+        showSHACLUploadDialog = true;
+    }
+
+    export function openExport() {
+        showExportDialog = true;
+    }
+
+    export function openSHACLExport() {
+        showSHACLExportDialog = true;
+    }
+
+    export function openSnapshot() {
+        showSnapshotDialog = true;
+    }
+
+    export function openUserSettings() {
+        showUserSettingDialog = true;
+    }
 </script>
 
 <Menubar.Menu value="file">
@@ -71,12 +95,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showImportDialog = true)}
                     faIcon={faFileImport}
+                    altText="Ctrl+I"
                 >
                     Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLUploadDialog = true)}
                     faIcon={faUpload}
+                    altText="Ctrl+Shift+I"
                 >
                     Constraints (SHACL)
                 </Menubar.Item.Button>
@@ -90,12 +116,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showExportDialog = true)}
                     faIcon={faFileExport}
+                    altText="Ctrl+E"
                 >
                     Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLExportDialog = true)}
                     faIcon={faDownload}
+                    altText="Ctrl+Shift+E"
                 >
                     Constraints (SHACL)
                 </Menubar.Item.Button>
@@ -105,6 +133,7 @@
         <Menubar.Item.Button
             onSelect={() => (showUserSettingDialog = true)}
             faIcon={faGear}
+            altText="Ctrl+Alt+S"
         >
             Settings
         </Menubar.Item.Button>
@@ -112,6 +141,7 @@
         <Menubar.Item.Button
             onSelect={() => (showSnapshotDialog = true)}
             faIcon={faShare}
+            altText="Ctrl+Shift+S"
         >
             Share Snapshot
         </Menubar.Item.Button>

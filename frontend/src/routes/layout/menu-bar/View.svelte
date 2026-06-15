@@ -47,6 +47,16 @@
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
     });
+
+    export function openCompare() {
+        showCompareDialog = true;
+    }
+
+    export function openSHACLFullView() {
+        if (hasGraphSelected) {
+            showSHACLFullViewDialog = true;
+        }
+    }
 </script>
 
 <Menubar.Menu value="view">
@@ -55,18 +65,21 @@
         <Menubar.Item.Button
             onSelect={() => goto("/changelog")}
             faIcon={faClockRotateLeft}
+            altText="Ctrl+Shift+H"
         >
             Changelog
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => (showCompareDialog = true)}
             faIcon={faCodeBranch}
+            altText="Ctrl+Shift+C"
         >
             Compare Schemas
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => goto("/migrate")}
             faIcon={faRightLeft}
+            altText="Ctrl+Shift+M"
         >
             Migrate Schema
         </Menubar.Item.Button>
@@ -74,6 +87,7 @@
             onSelect={() => (showSHACLFullViewDialog = true)}
             disabled={!hasGraphSelected}
             faIcon={faEye}
+            altText="Ctrl+Shift+L"
         >
             Constraints (SHACL)
         </Menubar.Item.Button>
