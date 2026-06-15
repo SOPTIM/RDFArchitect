@@ -218,10 +218,18 @@
         // Undo/Redo always fires, even when an input is focused
         let key = event.key.toLowerCase();
         if (key === "z" || key === "y") {
+            if (event.target?.closest?.(".cm-editor")) {
+                console.debug(
+                    `${event.code} blocked because a codemirror editor is focused.`,
+                );
+                return;
+            }
             if (
                 document.querySelector('[role="dialog"], [role="alertdialog"]')
             ) {
-                console.log(`${event.code} blocked because a dialog is open.`);
+                console.debug(
+                    `${event.code} blocked because a dialog is open.`,
+                );
                 return;
             }
 
