@@ -32,7 +32,9 @@ public class XSDDatatypeMapper {
         var typeListIterator = TypeMapper.getInstance().listTypes();
         while (typeListIterator.hasNext()) {
             var dt = typeListIterator.next();
-            if (dt.getURI().equalsIgnoreCase(xsdUri)) {
+            if (primitiveDatatypeClassLabel.equals("string")
+                    ? dt.getURI().equals(xsdUri)
+                    : dt.getURI().equalsIgnoreCase(xsdUri)) {
                 return dt;
             }
         }

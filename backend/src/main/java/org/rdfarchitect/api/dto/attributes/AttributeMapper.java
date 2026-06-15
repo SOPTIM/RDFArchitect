@@ -18,6 +18,7 @@
 package org.rdfarchitect.api.dto.attributes;
 
 import org.apache.jena.datatypes.TypeMapper;
+import org.apache.jena.vocabulary.XSD;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -108,7 +109,7 @@ public interface AttributeMapper {
 
     default CIMSDataType buildDataType(DataTypeDTO dto) {
         URI uri;
-        if (dto.getType() == DataTypeDTO.Type.PRIMITIVE) {
+        if (dto.getPrefix().startsWith(XSD.getURI())) {
             uri = new URI(XSDDatatypeMapper.classLabelToDatatype(dto.getLabel()).getURI());
         } else {
             uri = new URI(dto.getPrefix() + dto.getLabel());
