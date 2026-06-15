@@ -42,6 +42,13 @@
     let ctrlPressed = $state(false);
 
     let showButtons = $derived(isHover && !ctrlPressed);
+
+    function handleKeyDown(e) {
+        ctrlPressed = e.ctrlKey;
+        if ((e.ctrlKey || e.metaKey) && (e.key === "z" || e.key === "y")) {
+            e.preventDefault();
+        }
+    }
 </script>
 
 <svelte:window
@@ -90,6 +97,7 @@
             bind:value
             oninput={() => callOnInput(value)}
             onchange={() => callOnChange(value)}
+            onkeydown={handleKeyDown}
             {disabled}
             {readonly}
             {list}
