@@ -35,12 +35,22 @@ import {
     isInvalidDatatypeUri,
 } from "$lib/models/reactive/validity-rules/validityFunctions.js";
 
-function initializeStereotypeViolationChecks(stereotype, stereotypesArray) {
-    stereotype.violationChecks.push(value =>
-        isInvalidStereotype(value, stereotypesArray),
-    );
-    stereotype.violationChecks.push(value =>
-        isManuallyEnteredConcreteStereotype(value, stereotype.isModified),
+function initializeStereotypeViolationChecks(
+    stereotype,
+    stereotypesArray,
+    reactiveNamespace,
+    reactiveLabel,
+) {
+    stereotype.violationChecks.push(
+        value =>
+            isInvalidStereotype(
+                value,
+                stereotypesArray,
+                reactiveNamespace,
+                reactiveLabel,
+            ),
+        value =>
+            isManuallyEnteredConcreteStereotype(value, stereotype.isModified),
     );
 }
 
@@ -115,10 +125,20 @@ export class ReactiveClass {
         let compareClasses = context.classes.filter(c => c.uuid !== uuid);
         this.uuid = new ReactiveValueWrapper(uuid, isInvalidUuid);
         this.namespace = new ReactiveValueWrapper(namespace, namespace =>
-            isInvalidNamespace(namespace, context.namespaces),
+            isInvalidNamespace(
+                namespace,
+                context.namespaces,
+                this.label,
+                this.stereotypes,
+            ),
         );
         this.label = new ReactiveValueWrapper(label, label =>
-            isInvalidClassLabel(label, this.namespace.value, compareClasses),
+            isInvalidClassLabel(
+                label,
+                this.namespace,
+                compareClasses,
+                this.stereotypes,
+            ),
         );
 
         this.package = new ReactiveValueWrapper(pack, isInvalidPackage);
@@ -130,7 +150,13 @@ export class ReactiveClass {
         this.stereotypes = new ReactiveObjectsArrayWrapper(
             stereotypes,
             ReactiveValueWrapper,
-            initializeStereotypeViolationChecks,
+            (stereotype, stereotypesArray) =>
+                initializeStereotypeViolationChecks(
+                    stereotype,
+                    stereotypesArray,
+                    this.namespace,
+                    this.label,
+                ),
         );
         this.attributes = new ReactiveObjectsArrayWrapper(
             attributes,

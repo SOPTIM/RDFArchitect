@@ -658,6 +658,7 @@ public class CIMUpdates {
                 .build()
                 .addDelete(CIMQueryVars.URI, ANY_1, ANY_2)
                 .addWhere(CIMQueryVars.TYPE_URI, RDFA.uuid, classUUID.toString())
+                .addWhere(CIMQueryVars.TYPE_URI, CIMS.stereotype, CIMStereotypes.enumeration)
                 .addWhere(CIMQueryVars.URI, RDF.type, CIMQueryVars.TYPE_URI)
                 .addWhere(CIMQueryVars.URI, ANY_1, ANY_2);
     }
@@ -734,6 +735,7 @@ public class CIMUpdates {
                         .addDelete(CIMQueryVars.URI, "?pre", "?ref")
                         .addWhere("?ref", RDFA.uuid, uuid.toString())
                         .addWhere(CIMQueryVars.URI, "?pre", "?ref")
+                        .addFilter(new ExprFactory().ne("?pre", RDF.type))
                         .addInsert(CIMQueryVars.URI, "?pre", newURI.toNode());
         UpdateExecutionFactory.create(updateReferencesToThis.build(), dataset).execute();
     }
