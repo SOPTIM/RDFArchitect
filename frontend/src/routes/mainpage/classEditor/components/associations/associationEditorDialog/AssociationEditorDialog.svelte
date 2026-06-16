@@ -54,9 +54,13 @@
                     targetValue,
                 );
                 if (res && res.ok) {
-                    const classInfo = await res.json();
-                    if (classInfo) {
-                        ctx.addTargetClassInfo(classInfo);
+                    try {
+                        const classInfo = await res.json();
+                        if (classInfo) {
+                            ctx.addTargetClassInfo(classInfo);
+                        }
+                    } catch {
+                        /*No class found*/
                     }
                 }
             }
