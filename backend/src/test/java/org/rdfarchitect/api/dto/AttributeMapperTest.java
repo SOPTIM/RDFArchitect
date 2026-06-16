@@ -60,7 +60,7 @@ class AttributeMapperTest {
                         .dataType(
                                 new CIMSDataType(
                                         new URI("http://www.w3.org/2001/XMLSchema#string"),
-                                        new RDFSLabel("String", "en"),
+                                        new RDFSLabel("string", "en"),
                                         CIMSDataType.Type.PRIMITIVE))
                         .stereotype(
                                 new CIMSStereotype("http://iec.ch/TC57/NonStandard/UML#attribute"))
@@ -78,7 +78,7 @@ class AttributeMapperTest {
                         .multiplicity("0...1")
                         .dataType(
                                 new DataTypeDTO(
-                                        "String",
+                                        "string",
                                         "http://www.w3.org/2001/XMLSchema#",
                                         DataTypeDTO.Type.PRIMITIVE))
                         .build();
@@ -170,7 +170,7 @@ class AttributeMapperTest {
                                             new CIMSDataType(
                                                     new URI(
                                                             "http://www.w3.org/2001/XMLSchema#string"),
-                                                    new RDFSLabel("String", "en"),
+                                                    new RDFSLabel("string", "en"),
                                                     CIMSDataType.Type.PRIMITIVE)),
                     () -> assertThat(mappedCIMAttribute.getComment()).isNull(),
                     () ->
@@ -218,7 +218,7 @@ class AttributeMapperTest {
                                             new CIMSDataType(
                                                     new URI(
                                                             "http://www.w3.org/2001/XMLSchema#string"),
-                                                    new RDFSLabel("String", "en"),
+                                                    new RDFSLabel("string", "en"),
                                                     CIMSDataType.Type.PRIMITIVE)),
                     () ->
                             assertThat(mappedCIMAttribute.getComment())
