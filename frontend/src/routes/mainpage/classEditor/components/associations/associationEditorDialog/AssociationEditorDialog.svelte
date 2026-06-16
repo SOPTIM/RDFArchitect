@@ -60,7 +60,7 @@
                             ctx.addTargetClassInfo(classInfo);
                         }
                     } catch {
-                        /*No class found*/
+                        // No class found.
                     }
                 }
             }
