@@ -54,9 +54,8 @@
                     targetValue,
                 );
                 if (res && res.ok) {
-                    const text = await res.text();
-                    if (text) {
-                        const classInfo = await res.json();
+                    const classInfo = await res.json();
+                    if (classInfo) {
                         ctx.addTargetClassInfo(classInfo);
                     }
                 }
