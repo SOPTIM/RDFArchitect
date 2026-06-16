@@ -23,8 +23,10 @@
         faCommentDots,
         faKeyboard,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import KeyboardShortcutsDialog from "../../KeyboardShortcutsDialog.svelte";
@@ -40,6 +42,18 @@
     let showKeyboardShortcutsDialog = $state(false);
     let showResetSessionDialog = $state(false);
 
+    onMount(() => {
+        shortcutStore.register(
+            "keyboardShortcuts",
+            "?",
+            () => (showKeyboardShortcutsDialog = true),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutStore.unregister("keyboardShortcuts");
+    });
+
     function openExternalResource(key) {
         const target = externalResources[key];
         if (!target) return;
@@ -51,10 +65,6 @@
     function navigateHomepage() {
         editorState.reset();
         goto("/");
-    }
-
-    export function openKeyboardShortcuts() {
-        showKeyboardShortcutsDialog = true;
     }
 </script>
 

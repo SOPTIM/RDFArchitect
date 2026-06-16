@@ -20,11 +20,13 @@
         faCaretDown,
         faMagnifyingGlass,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         DiagramType,
@@ -46,6 +48,13 @@
     let queryString = $state("");
     let searchResults = $state([]);
     let inputElement = $state(null);
+
+    onMount(() => {
+        shortcutStore.register("focusSearch", "ctrl+f", () => focusInput());
+    });
+    onDestroy(() => {
+        shortcutStore.unregister("focusSearch");
+    });
 
     function selectSubject(searchResult) {
         editorState.selectedDataset.updateValue(searchResult.datasetName);
@@ -204,7 +213,7 @@
         };
     }
 
-    export function focusInput() {
+    function focusInput() {
         inputElement?.focus();
         inputElement?.select();
     }

@@ -236,7 +236,7 @@
                             showEditOntologyDialog = true;
                         }}
                         faIcon={faPlus}
-                        altText="Ctrl+Shift+P"
+                        altText="Ctrl+Alt+P"
                     >
                         Create Profile Header
                     </ContextMenu.Item.Button>

@@ -22,8 +22,10 @@
         faRightLeft,
         faEye,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -33,6 +35,7 @@
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
 
     import { goto } from "$app/navigation";
+
     let showSHACLFullViewDialog = $state(false);
     let showCompareDialog = $state(false);
 
@@ -48,15 +51,28 @@
         forceReloadTrigger.subscribe();
     });
 
-    export function openCompare() {
-        showCompareDialog = true;
-    }
+    onMount(() => {
+        shortcutStore.register("changelog", "ctrl+shift+h", () =>
+            goto("/changelog"),
+        );
+        shortcutStore.register(
+            "compare",
+            "ctrl+shift+c",
+            () => (showCompareDialog = true),
+        );
+        shortcutStore.register("migrate", "ctrl+shift+m", () =>
+            goto("/migrate"),
+        );
+        shortcutStore.register("shaclFullView", "ctrl+shift+l", () => {
+            if (hasGraphSelected) showSHACLFullViewDialog = true;
+        });
+    });
 
-    export function openSHACLFullView() {
-        if (hasGraphSelected) {
-            showSHACLFullViewDialog = true;
-        }
-    }
+    onDestroy(() => {
+        ["changelog", "compare", "migrate", "shaclFullView"].forEach(id =>
+            shortcutStore.unregister(id),
+        );
+    });
 </script>
 
 <Menubar.Menu value="view">

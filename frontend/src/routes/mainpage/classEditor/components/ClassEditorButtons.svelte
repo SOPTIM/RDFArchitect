@@ -21,12 +21,13 @@
         faRotateLeft,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext, onMount } from "svelte";
+    import { getContext, onDestroy, onMount } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
@@ -70,6 +71,15 @@
         graphUri = classEditorContext.graphUri;
     });
 
+    onMount(() => {
+        shortcutStore.register("saveClass", "ctrl+s", () => {
+            if (reactiveClass?.isValid && reactiveClass?.isModified)
+                saveFromShortcut();
+        });
+    });
+
+    onDestroy(() => shortcutStore.unregister("saveClass"));
+
     function saveChanges() {
         console.log("Saving changes for class");
         const classDto = mapReactiveClassToClassDto(
@@ -111,6 +121,12 @@
             );
         }
         forceReloadTrigger.trigger();
+    }
+
+    export function saveFromShortcut() {
+        if (!readonly && reactiveClass?.isValid && reactiveClass?.isModified) {
+            saveChanges();
+        }
     }
 
     function handleCancel() {

@@ -44,8 +44,10 @@
             shortcuts: [
                 { description: "Undo", keys: ["Ctrl", "Z"] },
                 { description: "Redo", keys: ["Ctrl", "Y"] },
+                { description: "Save Class", keys: ["Ctrl", "S"] },
                 { description: "New Class", keys: ["Ctrl", "Shift", "N"] },
                 { description: "New Package", keys: ["Ctrl", "Alt", "N"] },
+                { description: "Edit Package", keys: ["Ctrl", "Shift", "K"] },
                 { description: "Copy Class", keys: ["Ctrl", "C"] },
                 { description: "Paste", keys: ["Ctrl", "V"] },
                 {
@@ -62,7 +64,7 @@
                 },
                 {
                     description: "Enable / Disable Editing",
-                    keys: ["Ctrl", "Alt", "E"],
+                    keys: ["Ctrl", "Alt", "R"],
                 },
                 {
                     description: "Manage Namespaces",
@@ -70,9 +72,8 @@
                 },
                 {
                     description: "Create / Edit Profile Header",
-                    keys: ["Ctrl", "Shift", "P"],
+                    keys: ["Ctrl", "Alt", "P"],
                 },
-                { description: "Edit Package", keys: ["Ctrl", "Shift", "K"] },
             ],
         },
         {
@@ -108,44 +109,87 @@
     title="Keyboard Shortcuts"
     titleIcon={faKeyboard}
     readonly
-    size="w-1/3"
+    size="w-full max-w-3xl"
 >
-    <div class="mx-2 flex flex-col gap-6 overflow-y-auto py-2 max-h-96">
-        {#each sections as section}
-            <div>
-                <h3
-                    class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
-                >
-                    {section.title}
-                </h3>
-                <div class="flex flex-col gap-1">
-                    {#each section.shortcuts as shortcut}
-                        <div
-                            class="flex items-center justify-between rounded px-2 py-1 hover:bg-black/5"
-                        >
-                            <span class="text-default-text text-sm">
-                                {shortcut.description}
-                            </span>
-                            <div class="flex items-center gap-1">
-                                {#each shortcut.keys as key, i}
-                                    {#if i > 0}
-                                        <span
-                                            class="text-default-text text-xs opacity-50"
+    <div
+        class="mx-2 flex flex-col gap-6 overflow-y-auto py-2 max-h-96 sm:flex-row sm:gap-x-6"
+    >
+        <div class="flex flex-1 flex-col gap-6">
+            {#each sections.slice(0, 2) as section}
+                <div>
+                    <h3
+                        class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
+                    >
+                        {section.title}
+                    </h3>
+                    <div class="flex flex-col gap-1">
+                        {#each section.shortcuts as shortcut}
+                            <div
+                                class="flex items-center justify-between rounded px-2 py-1 hover:bg-black/5"
+                            >
+                                <span class="text-default-text text-sm">
+                                    {shortcut.description}
+                                </span>
+                                <div class="flex items-center gap-1">
+                                    {#each shortcut.keys as key, i}
+                                        {#if i > 0}
+                                            <span
+                                                class="text-default-text text-xs opacity-50"
+                                            >
+                                                +
+                                            </span>
+                                        {/if}
+                                        <kbd
+                                            class="border-border bg-window-background text-default-text rounded border px-2 py-0.5 font-mono text-xs shadow-sm"
                                         >
-                                            +
-                                        </span>
-                                    {/if}
-                                    <kbd
-                                        class="border-border bg-window-background text-default-text rounded border px-2 py-0.5 font-mono text-xs shadow-sm"
-                                    >
-                                        {key}
-                                    </kbd>
-                                {/each}
+                                            {key}
+                                        </kbd>
+                                    {/each}
+                                </div>
                             </div>
-                        </div>
-                    {/each}
+                        {/each}
+                    </div>
                 </div>
-            </div>
-        {/each}
+            {/each}
+        </div>
+
+        <div class="flex flex-1 flex-col gap-6">
+            {#each sections.slice(2) as section}
+                <div>
+                    <h3
+                        class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
+                    >
+                        {section.title}
+                    </h3>
+                    <div class="flex flex-col gap-1">
+                        {#each section.shortcuts as shortcut}
+                            <div
+                                class="flex items-center justify-between rounded px-2 py-1 hover:bg-black/5"
+                            >
+                                <span class="text-default-text text-sm">
+                                    {shortcut.description}
+                                </span>
+                                <div class="flex items-center gap-1">
+                                    {#each shortcut.keys as key, i}
+                                        {#if i > 0}
+                                            <span
+                                                class="text-default-text text-xs opacity-50"
+                                            >
+                                                +
+                                            </span>
+                                        {/if}
+                                        <kbd
+                                            class="border-border bg-window-background text-default-text rounded border px-2 py-0.5 font-mono text-xs shadow-sm"
+                                        >
+                                            {key}
+                                        </kbd>
+                                    {/each}
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/each}
+        </div>
     </div>
 </ActionDialog>

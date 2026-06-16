@@ -37,6 +37,7 @@
     import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
@@ -63,12 +64,6 @@
     let canUndo = $state(false);
     let canRedo = $state(false);
     let menubarValue = $state(undefined);
-
-    let searchbar = $state(null);
-    let fileMenu = $state(null);
-    let editMenu = $state(null);
-    let viewMenu = $state(null);
-    let helpMenu = $state(null);
 
     let isDatasetReadOnly = $state(false);
 
@@ -206,176 +201,80 @@
     }
 
     async function handleKeydown(event) {
-        let key = event.key.toLowerCase();
-        if (event.code === "AltLeft") {
-            isLeftAltPressed = true;
-        }
+        if (event.code === "AltLeft") isLeftAltPressed = true;
 
         if (event.key === "Escape" && !event.defaultPrevented) {
             eventStack.executeNewestEvent();
             return;
         }
 
-        if (key === "?" && !event.ctrlKey && !isLeftAltPressed) {
-            const target = event.target;
-            if (
-                target instanceof HTMLElement &&
-                (target.isContentEditable ||
-                    target.tagName === "INPUT" ||
-                    target.tagName === "TEXTAREA" ||
-                    target.tagName === "SELECT")
-            ) {
-                return;
+        const key = event.key.toLowerCase();
+        const hasCtrl = event.ctrlKey || event.metaKey;
+        const target = event.target;
+        const isInputFocused =
+            target instanceof HTMLElement &&
+            (target.isContentEditable ||
+                target.tagName === "INPUT" ||
+                target.tagName === "TEXTAREA" ||
+                target.tagName === "SELECT");
+
+        if (key === "?" && !hasCtrl && !isLeftAltPressed) {
+            if (!isInputFocused) {
+                event.preventDefault();
+                shortcutStore.handleEvent(event);
             }
-            event.preventDefault();
-            helpMenu?.openKeyboardShortcuts();
             return;
         }
 
-        const hasCtrl = event.ctrlKey || event.metaKey;
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
-
         if (!hasCtrl && !hasCtrlAltViaAltGr) return;
 
-        // Undo/Redo always fires, even when an input is focused
         if (key === "z" || key === "y") {
+            if (isInputFocused) {
+                return;
+            }
             if (
                 document.querySelector('[role="dialog"], [role="alertdialog"]')
             ) {
                 console.log(`${event.code} blocked because a dialog is open.`);
                 return;
             }
-
             event.preventDefault();
-
             const isRedo = key === "y" || (key === "z" && event.shiftKey);
-
             if (isRedo) {
-                if (canRedo && (await redo())) {
-                    await reload();
-                } else if (!canRedo) {
+                if (canRedo && (await redo())) await reload();
+                else if (!canRedo)
                     console.log("Redo blocked: nothing to redo.");
-                }
             } else {
-                if (canUndo && (await undo())) {
-                    await reload();
-                } else if (!canUndo) {
+                if (canUndo && (await undo())) await reload();
+                else if (!canUndo)
                     console.log("Undo blocked: nothing to undo.");
-                }
             }
             return;
         }
 
-        // All other shortcuts: skip when an input-like element is focused
-        const target = event.target;
-        if (
-            target instanceof HTMLElement &&
-            (target.isContentEditable ||
-                target.tagName === "INPUT" ||
-                target.tagName === "TEXTAREA" ||
-                target.tagName === "SELECT")
-        ) {
+        if (key === "c" && !event.shiftKey) {
+            if (canCopyClass) {
+                event.preventDefault();
+                copyClass();
+            }
             return;
         }
 
-        switch (event.code) {
-            case "KeyC":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    viewMenu?.openCompare();
-                } else {
-                    if (canCopyClass) copyClass();
-                }
-                break;
-            case "KeyV":
-                if (!canPasteClass) break;
-                event.preventDefault();
-                if (event.shiftKey && isLeftAltPressed) {
-                    await pasteClass(true, false, false);
-                } else if (event.shiftKey) {
-                    await pasteClass(false, false, true);
-                } else if (isLeftAltPressed) {
-                    await pasteClass(false, true, false);
-                } else {
-                    await pasteClass(false, true, true);
-                }
-                break;
-            case "KeyF":
-                event.preventDefault();
-                searchbar?.focusInput();
-                break;
-            case "KeyI":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    fileMenu?.openSHACLImport();
-                } else {
-                    fileMenu?.openImport();
-                }
-                break;
-            case "KeyE":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    fileMenu?.openSHACLExport();
-                } else if (isLeftAltPressed) {
-                    editMenu?.toggleReadonly();
-                } else {
-                    fileMenu?.openExport();
-                }
-                break;
-            case "KeyS":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    fileMenu?.openSnapshot();
-                } else if (isLeftAltPressed) {
-                    fileMenu?.openUserSettings();
-                }
-                break;
-            case "KeyN":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    editMenu?.openNewClass();
-                } else if (isLeftAltPressed) {
-                    editMenu?.openNewPackage();
-                }
-                break;
-            case "KeyH":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    await goto("/changelog");
-                }
-                break;
-            case "KeyM":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    await goto("/migrate");
-                }
-                break;
-            case "KeyA":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    editMenu?.openManageNamespaces();
-                }
-                break;
-            case "KeyP":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    editMenu?.openProfileHeader();
-                }
-                break;
-            case "KeyK":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    editMenu?.launchPackageEditor();
-                }
-                break;
-            case "KeyL":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    viewMenu?.openSHACLFullView();
-                }
-                break;
+        if (key === "v") {
+            if (!canPasteClass) return;
+            event.preventDefault();
+            if (event.shiftKey && isLeftAltPressed)
+                await pasteClass(true, false, false);
+            else if (event.shiftKey) await pasteClass(false, false, true);
+            else if (isLeftAltPressed) await pasteClass(false, true, false);
+            else await pasteClass(false, true, true);
+            return;
         }
+
+        if (isInputFocused) return;
+        shortcutStore.handleEvent(event);
     }
 </script>
 
@@ -403,16 +302,15 @@
                             bind:value={menubarValue}
                             class="toolbar-menubar"
                         >
-                            <File {isDatasetReadOnly} bind:this={fileMenu} />
+                            <File {isDatasetReadOnly} />
                             <Edit
                                 {canRedo}
                                 {canUndo}
                                 {isDatasetReadOnly}
                                 {reload}
-                                bind:this={editMenu}
                             />
-                            <View bind:this={viewMenu} />
-                            <Help bind:this={helpMenu} />
+                            <View />
+                            <Help />
                         </Menubar.Root>
                     {/if}
                 </div>
@@ -422,7 +320,7 @@
             <div class="w-1/3">
                 {#if page.url.pathname === "/mainpage"}
                     <div class="w-full">
-                        <Searchbar bind:this={searchbar} />
+                        <Searchbar />
                     </div>
                 {/if}
             </div>

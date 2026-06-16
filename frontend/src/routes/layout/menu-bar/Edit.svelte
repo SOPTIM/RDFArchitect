@@ -32,6 +32,7 @@
         faPaste,
         faCopy,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import {
         enableEditing,
@@ -44,6 +45,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
         copyState,
         editorState,
@@ -125,6 +127,46 @@
         ontology = await getOntology();
         packages = await getPackages();
         await refreshSelectedPackageDetails(packages);
+    });
+
+    onMount(() => {
+        shortcutStore.register(
+            "newClass",
+            "ctrl+shift+n",
+            () => (showNewClassDialog = true),
+        );
+        shortcutStore.register(
+            "newPackage",
+            "ctrl+alt+n",
+            () => (showNewPackageDialog = true),
+        );
+        shortcutStore.register(
+            "namespaces",
+            "ctrl+shift+a",
+            () => (showNamespaceDialog = true),
+        );
+        shortcutStore.register(
+            "profileHeader",
+            "ctrl+alt+p",
+            () => (showEditOntologyDialog = true),
+        );
+        shortcutStore.register("editPackage", "ctrl+shift+k", () =>
+            launchPackageEditor(),
+        );
+        shortcutStore.register("toggleEdit", "ctrl+alt+r", () =>
+            toggleReadonly(),
+        );
+    });
+
+    onDestroy(() => {
+        [
+            "newClass",
+            "newPackage",
+            "namespaces",
+            "profileHeader",
+            "editPackage",
+            "toggleEdit",
+        ].forEach(id => shortcutStore.unregister(id));
     });
 
     async function getOntology() {
@@ -275,30 +317,13 @@
         );
     }
 
-    export function openNewClass() {
-        showNewClassDialog = true;
-    }
-
-    export function openNewPackage() {
-        showNewPackageDialog = true;
-    }
-
-    export function toggleReadonly() {
+    function toggleReadonly() {
+        console.warn("toggle readonly");
         if (isDatasetReadOnly) {
             requestEnableEditing();
         } else {
             requestDisableEditing();
         }
-    }
-
-    export function openManageNamespaces() {
-        showNamespaceDialog = true;
-    }
-
-    export function openProfileHeader() {
-        if (!hasGraphSelected || (isDatasetReadOnly && !graphHasOntology))
-            return;
-        showEditOntologyDialog = true;
     }
 </script>
 
@@ -346,7 +371,7 @@
                             ? faEye
                             : faPen
                         : faPlus}
-                    altText="Ctrl+Shift+P"
+                    altText="Ctrl+Alt+P"
                 >
                     Profile header
                 </Menubar.Item.Button>
@@ -430,7 +455,7 @@
                 onSelect={() => requestEnableEditing()}
                 disabled={!hasDatasetSelected || !isDatasetReadOnly}
                 faIcon={faPenToSquare}
-                altText="Ctrl+Alt+E"
+                altText="Ctrl+Alt+R"
             >
                 Enable Editing
             </Menubar.Item.Button>
@@ -439,7 +464,7 @@
                 onSelect={() => requestDisableEditing()}
                 disabled={!hasDatasetSelected || isDatasetReadOnly}
                 faIcon={faLock}
-                altText="Ctrl+Alt+E"
+                altText="Ctrl+Alt+R"
             >
                 Disable Editing
             </Menubar.Item.Button>

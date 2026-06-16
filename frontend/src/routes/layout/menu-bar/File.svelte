@@ -25,8 +25,10 @@
         faTrash,
         faUpload,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
@@ -59,29 +61,49 @@
         editorState.selectedGraph.subscribe();
     });
 
-    export function openImport() {
-        showImportDialog = true;
-    }
+    onMount(() => {
+        shortcutStore.register(
+            "import",
+            "ctrl+i",
+            () => (showImportDialog = true),
+        );
+        shortcutStore.register(
+            "export",
+            "ctrl+e",
+            () => (showExportDialog = true),
+        );
+        shortcutStore.register(
+            "shaclImport",
+            "ctrl+shift+i",
+            () => (showSHACLUploadDialog = true),
+        );
+        shortcutStore.register(
+            "shaclExport",
+            "ctrl+shift+e",
+            () => (showSHACLExportDialog = true),
+        );
+        shortcutStore.register(
+            "snapshot",
+            "ctrl+shift+s",
+            () => (showSnapshotDialog = true),
+        );
+        shortcutStore.register(
+            "settings",
+            "ctrl+alt+s",
+            () => (showUserSettingDialog = true),
+        );
+    });
 
-    export function openSHACLImport() {
-        showSHACLUploadDialog = true;
-    }
-
-    export function openExport() {
-        showExportDialog = true;
-    }
-
-    export function openSHACLExport() {
-        showSHACLExportDialog = true;
-    }
-
-    export function openSnapshot() {
-        showSnapshotDialog = true;
-    }
-
-    export function openUserSettings() {
-        showUserSettingDialog = true;
-    }
+    onDestroy(() => {
+        [
+            "import",
+            "export",
+            "shaclImport",
+            "shaclExport",
+            "snapshot",
+            "settings",
+        ].forEach(id => shortcutStore.unregister(id));
+    });
 </script>
 
 <Menubar.Menu value="file">

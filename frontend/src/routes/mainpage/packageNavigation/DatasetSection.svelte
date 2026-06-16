@@ -199,7 +199,7 @@
                 <ContextMenu.Item.Button
                     onSelect={() => requestEnableEditing()}
                     faIcon={faPenToSquare}
-                    altText="Ctrl+Alt+E"
+                    altText="Ctrl+Alt+R"
                 >
                     Enable Editing
                 </ContextMenu.Item.Button>
@@ -207,7 +207,7 @@
                 <ContextMenu.Item.Button
                     onSelect={() => requestDisableEditing()}
                     faIcon={faLock}
-                    altText="Ctrl+Alt+E"
+                    altText="Ctrl+Alt+R"
                 >
                     Disable Editing
                 </ContextMenu.Item.Button>
