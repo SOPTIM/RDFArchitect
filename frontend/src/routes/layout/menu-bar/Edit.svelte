@@ -156,6 +156,21 @@
         shortcutStore.register("toggleEdit", "ctrl+alt+r", () =>
             toggleReadonly(),
         );
+        shortcutStore.register("copyClass", "ctrl+c", () =>
+            copyClassWithShortcut(),
+        );
+        shortcutStore.register("paste", "ctrl+v", () =>
+            pasteClassWithShortcut(false, true, true),
+        );
+        shortcutStore.register("pasteWithoutAttributes", "ctrl+shift+v", () =>
+            pasteClassWithShortcut(false, false, true),
+        );
+        shortcutStore.register("pasteWithoutAssociations", "ctrl+alt+v", () =>
+            pasteClassWithShortcut(false, true, false),
+        );
+        shortcutStore.register("pasteBare", "ctrl+shift+alt+v", () =>
+            pasteClassWithShortcut(true, false, false),
+        );
     });
 
     onDestroy(() => {
@@ -166,6 +181,11 @@
             "profileHeader",
             "editPackage",
             "toggleEdit",
+            "copyClass",
+            "paste",
+            "pasteWithoutAttributes",
+            "pasteWithoutAssociations",
+            "pasteBare",
         ].forEach(id => shortcutStore.unregister(id));
     });
 
@@ -208,7 +228,7 @@
         showNamespaceDialog = true;
     }
 
-    export function launchPackageEditor() {
+    function launchPackageEditor() {
         if (!selectedPackageDetails) return;
         packageDialogTarget = { ...selectedPackageDetails };
         packageDialogDataset = selectedDataset;
@@ -315,6 +335,22 @@
             copyAttributes,
             copyAssociations,
         );
+    }
+
+    function copyClassWithShortcut() {
+        if (!disableCopyClassButton) {
+            copyClass();
+        }
+    }
+
+    function pasteClassWithShortcut(
+        copyAsAbstract,
+        copyAttributes,
+        copyAssociations,
+    ) {
+        if (!disablePasteButton) {
+            pasteClass(copyAsAbstract, copyAttributes, copyAssociations);
+        }
     }
 
     function toggleReadonly() {

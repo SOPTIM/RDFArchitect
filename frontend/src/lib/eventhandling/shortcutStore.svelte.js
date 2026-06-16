@@ -66,7 +66,7 @@ function normalizeEvent(event) {
     const parts = [];
     if (event.ctrlKey || event.metaKey) parts.push("ctrl");
     if (event.shiftKey) parts.push("shift");
-    if (event.altKey) parts.push("alt");
+    if (event.altKey || event.code === "AltLeft") parts.push("alt");
     parts.push(
         event.code.replace("Key", "").replace("Digit", "").toLowerCase(),
     );
