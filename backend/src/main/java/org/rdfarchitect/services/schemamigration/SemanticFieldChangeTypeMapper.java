@@ -21,6 +21,7 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
@@ -79,7 +80,8 @@ public class SemanticFieldChangeTypeMapper {
         } else if (predicate.equals(CIMS.multiplicity.toString())) {
             if (propertyChange.getTo() != null) {
                 var newMultiplicity =
-                        CIMPropertyUtils.resolveMultiplicity(propertyChange.getTo().split("#")[1]);
+                        CIMPropertyUtils.resolveMultiplicity(
+                                new URI(propertyChange.getTo()).getSuffix());
                 // only syntactic change in multiplicity
                 if (propertyChange.getFrom() != null
                         && CIMPropertyUtils.resolveMultiplicity(propertyChange.getFrom())
@@ -112,10 +114,11 @@ public class SemanticFieldChangeTypeMapper {
         } else if (predicate.equals(CIMS.multiplicity.toString())) {
             if (propertyChange.getTo() != null
                     && propertyChange.getFrom() != null
-                    && CIMPropertyUtils.resolveMultiplicity(propertyChange.getFrom().split("#")[1])
+                    && CIMPropertyUtils.resolveMultiplicity(
+                                    new URI(propertyChange.getFrom()).getSuffix())
                             .equals(
                                     CIMPropertyUtils.resolveMultiplicity(
-                                            propertyChange.getTo().split("#")[1]))) {
+                                            new URI(propertyChange.getTo()).getSuffix()))) {
                 return null;
             }
             return SemanticFieldChangeType.MULTIPLICITY_CHANGE;

@@ -72,9 +72,9 @@
     );
 
     let isProtectedPackage = $derived(
-        packageNavEntry?.id === "default" || packageNavEntry?.data.external,
+        packageNavEntry?.data.uuid == null || packageNavEntry?.data.external,
     );
-    // Ensure selection-dependent UI updates without remounting the component.
+
     const selectionTrigger = $derived([
         editorState.selectedDataset.subscribe(),
         editorState.selectedGraph.subscribe(),
@@ -128,12 +128,11 @@
             type: DiagramType.PACKAGE,
             id: packageNavEntry.id,
         });
-        console.log(editorState.selectedDiagram.getValue());
     }
 
     function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
         let packageDTO = new Package({
-            uuid: packageNavEntry.id,
+            uuid: packageNavEntry.data.uuid,
             label: packageNavEntry.data.label,
             prefix: packageNavEntry.data?.prefix,
         });
@@ -310,5 +309,5 @@
     bind:showDialog={showDeleteDependenciesDialog}
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}
-    resourceUuid={packageNavEntry.id}
+    resourceUuid={packageNavEntry.data.uuid}
 />

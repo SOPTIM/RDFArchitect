@@ -42,7 +42,7 @@ export async function getPackages(datasetName, graphUri) {
         }),
     );
 
-    console.log("PACKAGES:", packages);
+    console.debug("PACKAGES:", packages);
     return packages;
 }
 
@@ -92,15 +92,16 @@ export async function getDataTypes(datasetName, graphUri) {
             sensitivity: "base",
         }),
     );
-    console.log("DATATYPES:", datatypes);
+    console.debug("DATATYPES:", datatypes);
     return datatypes;
 }
 
 export async function getClasses(datasetName, graphUri) {
     const res = await bec.getClasses(datasetName, graphUri, true);
     let classesDto = await res.json();
+    console.warn("classesDTO", classesDto);
     let classes = classesDto.map(cls => new Class(cls));
-    console.log("CLASSES:", classes);
+    console.debug("CLASSES:", classes);
     return classes;
 }
 
@@ -108,12 +109,12 @@ export async function getStereotypes(datasetName, graphUri) {
     const res = await bec.getStereotypes(datasetName, graphUri);
     let stereotypesJSON = await res.json();
 
-    console.log("STEREOTYPES:", stereotypesJSON);
+    console.debug("STEREOTYPES:", stereotypesJSON);
     return stereotypesJSON;
 }
 
 export async function getNamespaces(datasetName) {
-    const prefixes = await getNamespacesFromApi(datasetName);
-    console.log("PREFIXES:", prefixes);
-    return prefixes;
+    const namespaces = await getNamespacesFromApi(datasetName);
+    console.debug("NAMESPACES:", namespaces);
+    return namespaces;
 }

@@ -23,6 +23,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
 
     import {
         DiagramType,
@@ -54,11 +55,7 @@
     const resolvedGraphUri = $derived(resolveGraphUri(graphUriUserInput));
     const graphExists = $derived(
         !!resolvedGraphUri &&
-            graphNames.some(
-                g =>
-                    (g.prefix == null ? "" : g.prefix) + g.suffix ===
-                    resolvedGraphUri,
-            ),
+            graphNames.some(g => new URI(g).toString() === resolvedGraphUri),
     );
     const disableSubmit = $derived(
         !datasetNameUserInput ||
@@ -166,9 +163,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add schema"
+    primaryLabel="Add Schema"
     onPrimary={addGraph}
-    title="Add schema"
+    title="Add Schema"
     disablePrimary={disableSubmit}
 >
     <div class="mx-2 flex h-full flex-col">

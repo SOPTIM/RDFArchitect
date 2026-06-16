@@ -33,6 +33,7 @@ import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource.AffectedResourceReason;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMPackageUtils;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceTypeIdentifyingUtils;
@@ -283,14 +284,20 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
 
     private ResourceIdentifier createResourceIdentifier(Resource resource) {
         var uuid = CIMResourceUtils.findUuidForResource(resource);
-        var label = resource.getLocalName();
+        String label;
+        String namespace;
+        try {
+            var parsedUri = new URI(resource.getURI());
+            label = parsedUri.getSuffix();
+            namespace = parsedUri.getPrefix();
+        } catch (IllegalArgumentException _) {
+            label = resource.getLocalName();
+            namespace = resource.getNameSpace();
+        }
         if (resource.hasProperty(RDFS.label)) {
             label = resource.getProperty(RDFS.label).getString();
         }
-        return new ResourceIdentifier()
-                .setUuid(uuid)
-                .setLabel(label)
-                .setNamespace(resource.getNameSpace());
+        return new ResourceIdentifier().setUuid(uuid).setLabel(label).setNamespace(namespace);
     }
 
     private Graph getCopyOfDatabaseGraph(GraphIdentifier graphIdentifier) {

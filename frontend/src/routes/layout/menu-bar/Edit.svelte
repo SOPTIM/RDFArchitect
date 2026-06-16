@@ -274,7 +274,6 @@
             copyAssociations,
         );
     }
-    $inspect("selectedPackageDetails: ", selectedPackageDetails);
 </script>
 
 <Menubar.Menu value="edit">

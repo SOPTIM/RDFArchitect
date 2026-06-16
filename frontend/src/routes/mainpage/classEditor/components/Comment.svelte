@@ -16,13 +16,12 @@
   -->
 <script>
     import { faEye, faGear } from "@fortawesome/free-solid-svg-icons";
-    import { getContext, onMount } from "svelte";
+    import { getContext } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
 
     import AsciidocComment from "../asciidocComment.svelte";
 
@@ -32,19 +31,12 @@
     const id = uuidv4();
     let editClassComment = $state(false);
     let readonly = $derived(classEditorContext.readonly);
-
-    $effect(() => {
-        editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
-    });
-
-    onMount(() => (readonly = classEditorContext.readonly));
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col">
-    <div class="text-default-text flex h-full w-full flex-col">
+<div class="flex h-full min-h-0 flex-col">
+    <div class="text-default-text flex min-h-0 w-full flex-1 flex-col">
         <label for={id} class="text-blue block font-normal">Comment</label>
-        {#if editClassComment}
+        {#if editClassComment || readonly}
             <div
                 class="text-default-text border-border min-h-0 flex-1 overflow-auto rounded-xs border border-solid p-2
                         {readonly
@@ -69,13 +61,13 @@
             </div>
         {/if}
     </div>
+    {#if !readonly}
+        <div class="mt-1 flex shrink-0 items-end justify-end space-x-1">
+            <FaIconButton
+                callOnClick={() => (editClassComment = !editClassComment)}
+                text={editClassComment ? "Edit" : "Preview"}
+                icon={editClassComment ? faGear : faEye}
+            />
+        </div>
+    {/if}
 </div>
-{#if !readonly}
-    <div class="flex shrink-0 items-end justify-end space-x-1">
-        <FaIconButton
-            callOnClick={() => (editClassComment = !editClassComment)}
-            text={editClassComment ? "Edit" : "Preview"}
-            icon={editClassComment ? faGear : faEye}
-        />
-    </div>
-{/if}

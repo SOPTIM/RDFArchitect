@@ -204,14 +204,48 @@
             isLeftAltPressed = true;
         }
 
-        if (event.key === "Escape") {
-            if (event.defaultPrevented) {
-                return;
-            }
+        if (event.key === "Escape" && !event.defaultPrevented) {
             eventStack.executeNewestEvent();
             return;
         }
 
+        const hasCtrl = event.ctrlKey || event.metaKey;
+        const hasCtrlAltViaAltGr =
+            event.getModifierState("AltGraph") && isLeftAltPressed;
+
+        if (!hasCtrl && !hasCtrlAltViaAltGr) return;
+
+        // Undo/Redo always fires, even when an input is focused
+        let key = event.key.toLowerCase();
+        if (key === "z" || key === "y") {
+            if (
+                document.querySelector('[role="dialog"], [role="alertdialog"]')
+            ) {
+                console.log(`${event.code} blocked because a dialog is open.`);
+                return;
+            }
+
+            event.preventDefault();
+
+            const isRedo = key === "y" || (key === "z" && event.shiftKey);
+
+            if (isRedo) {
+                if (canRedo && (await redo())) {
+                    await reload();
+                } else if (!canRedo) {
+                    console.log("Redo blocked: nothing to redo.");
+                }
+            } else {
+                if (canUndo && (await undo())) {
+                    await reload();
+                } else if (!canUndo) {
+                    console.log("Undo blocked: nothing to undo.");
+                }
+            }
+            return;
+        }
+
+        // All other shortcuts: skip when an input-like element is focused
         const target = event.target;
         if (
             target instanceof HTMLElement &&
@@ -223,52 +257,22 @@
             return;
         }
 
-        const hasCtrl = event.ctrlKey || event.metaKey;
-        const hasCtrlAltViaAltGr =
-            event.getModifierState("AltGraph") && isLeftAltPressed;
-
-        if (!hasCtrl && !hasCtrlAltViaAltGr) {
-            return;
-        }
-
-        switch (event.key.toLowerCase()) {
-            case "z":
-                event.preventDefault();
-                if (event.shiftKey) {
-                    if (canRedo && (await redo())) {
-                        await reload();
-                        toastStore.info("Redone");
-                    }
-                } else {
-                    if (canUndo && (await undo())) {
-                        await reload();
-                        toastStore.info("Undone");
-                    }
-                }
-                break;
-            case "y":
-                event.preventDefault();
-                if (canRedo && (await redo())) {
-                    await reload();
-                    toastStore.info("Redone");
-                }
-                break;
-            case "c":
+        switch (event.code) {
+            case "KeyC":
                 event.preventDefault();
                 if (canCopyClass) copyClass();
                 break;
-            case "v":
+            case "KeyV":
+                if (!canPasteClass) break;
                 event.preventDefault();
-                if (canPasteClass) {
-                    if (event.shiftKey && isLeftAltPressed) {
-                        await pasteClass(true, false, false);
-                    } else if (event.shiftKey) {
-                        await pasteClass(false, false, true);
-                    } else if (isLeftAltPressed) {
-                        await pasteClass(false, true, false);
-                    } else {
-                        await pasteClass(false, true, true);
-                    }
+                if (event.shiftKey && isLeftAltPressed) {
+                    await pasteClass(true, false, false);
+                } else if (event.shiftKey) {
+                    await pasteClass(false, false, true);
+                } else if (isLeftAltPressed) {
+                    await pasteClass(false, true, false);
+                } else {
+                    await pasteClass(false, true, true);
                 }
                 break;
         }

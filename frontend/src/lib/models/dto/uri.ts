@@ -15,29 +15,67 @@
  *
  */
 
-export class URI {
-    prefix: string;
-    suffix: string;
+import { validateIri } from "validate-iri";
 
-    constructor(input) {
+export class URI {
+    prefix: string | null = null;
+    suffix: string = "";
+
+    constructor(input: string | { prefix: string | null; suffix: string }) {
         if (typeof input === "string") {
-            const split = input.split("#", 2);
-            if (split.length === 2) {
-                this.prefix = split[0] + "#";
-                this.suffix = split[1];
-            } else {
-                this.prefix = null;
-                this.suffix = input;
-            }
-        } else if (typeof input === "object" && input !== null) {
+            const { prefix, suffix } = URI.parse(input);
+            this.prefix = prefix;
+            this.suffix = suffix;
+        } else {
             this.prefix = input.prefix ?? null;
             this.suffix = input.suffix ?? "";
         }
     }
-    equals(other: URI) {
+
+    private static parse(input: string): {
+        prefix: string | null;
+        suffix: string;
+    } {
+        if (!input) {
+            throw new Error("URI must not be null or empty");
+        }
+
+        const error = validateIri(input);
+        if (error) {
+            throw new Error(`Invalid IRI: ${input}`);
+        }
+
+        const hash = input.indexOf("#");
+        const slash = input.lastIndexOf("/");
+
+        let prefix: string | null;
+        let suffix: string;
+        if (hash >= 0) {
+            prefix = input.substring(0, hash + 1);
+            suffix = input.substring(hash + 1);
+        } else if (slash >= 0) {
+            prefix = input.substring(0, slash + 1);
+            suffix = input.substring(slash + 1);
+        } else {
+            prefix = null;
+            suffix = input;
+        }
+
+        if (!prefix) {
+            throw new Error(`IRI must have a namespace: ${input}`);
+        }
+
+        return { prefix, suffix };
+    }
+
+    toString(): string {
+        return (this.prefix ?? "") + this.suffix;
+    }
+
+    equals(other: URI): boolean {
         if (!(other instanceof URI)) {
             return false;
         }
-        return this.prefix === other.prefix && this.suffix === other.suffix;
+        return this.toString() === other.toString();
     }
 }

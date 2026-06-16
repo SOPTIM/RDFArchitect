@@ -62,7 +62,7 @@
     bind:showDialog
     primaryLabel="Save"
     onPrimary={submit}
-    title="Select filters"
+    title="Select Filters"
 >
     <div class="flex flex-col space-y-2">
         {#each options as option}

@@ -14,10 +14,16 @@
  *    limitations under the License.
  *
  */
+import { untrack } from "svelte";
 import { validate as uuidValidate } from "uuid";
 import { IriValidationStrategy, validateIri } from "validate-iri";
 
-import { CONCRETE_STEREOTYPE } from "$lib/models/stereotype-constants.js";
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+import {
+    CONCRETE_STEREOTYPE,
+    ENUMERATION_STEREOTYPE,
+    RDFS_NAMESPACE_URI,
+} from "$lib/models/stereotype-constants.js";
 import { getNCNameViolations } from "$lib/rdf-syntax-grammar/namespace/prefix/index.js";
 
 export function isInvalidUuid(uuid) {
@@ -36,8 +42,14 @@ export function isInvalidLabel(label) {
     return isNotEmptyValidation(label);
 }
 
-export function isInvalidClassLabel(label, namespace, compareClasses) {
+export function isInvalidClassLabel(
+    label,
+    reactiveNamespace,
+    compareClasses,
+    ReactiveStereotypes,
+) {
     const violations = [];
+    const namespace = reactiveNamespace?.getPlainObject();
     if (!label || label.trim() === "") {
         violations.push("must not be empty");
     }
@@ -49,6 +61,14 @@ export function isInvalidClassLabel(label, namespace, compareClasses) {
         ) {
             violations.push("must be unique");
         }
+    }
+
+    if (
+        label === "Class" &&
+        namespace === RDFS_NAMESPACE_URI &&
+        ReactiveStereotypes?.getPlainObject().includes(ENUMERATION_STEREOTYPE)
+    ) {
+        violations.push("enumeration cannot be named rdfs:Class");
     }
     return violations;
 }
@@ -131,7 +151,12 @@ export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
     return violations;
 }
 
-export function isInvalidNamespace(namespace, compareNamespaces) {
+export function isInvalidNamespace(
+    namespace,
+    compareNamespaces,
+    ReactiveLabel,
+    ReactiveStereotypes,
+) {
     const violations = isNotEmptyValidation(namespace);
     if (violations.length > 0) return violations;
 
@@ -148,6 +173,15 @@ export function isInvalidNamespace(namespace, compareNamespaces) {
         violations.push('must end with "#" or "/"');
     }
 
+    if (
+        ReactiveLabel?.getPlainObject() === "Class" &&
+        namespace === RDFS_NAMESPACE_URI &&
+        ReactiveStereotypes?.getPlainObject().includes(ENUMERATION_STEREOTYPE)
+    ) {
+        violations.push(
+            'enumeration called "Class" cannot be in namespace rdfs',
+        );
+    }
     return violations;
 }
 
@@ -208,7 +242,12 @@ export function isInvalidTarget(target) {
     return violations;
 }
 
-export function isInvalidStereotype(stereotype, existingStereotypes) {
+export function isInvalidStereotype(
+    stereotype,
+    existingStereotypes,
+    reactiveNamespace,
+    reactiveLabel,
+) {
     const violations = [];
     if (!stereotype || stereotype.trim() === "") {
         violations.push("must not be empty");
@@ -218,6 +257,19 @@ export function isInvalidStereotype(stereotype, existingStereotypes) {
         existingStereotypes.filter(s => s.equals(stereotype)).length > 1
     ) {
         violations.push("must be unique");
+    }
+    if (
+        stereotype === ENUMERATION_STEREOTYPE &&
+        reactiveLabel?.value === "Class" &&
+        reactiveNamespace?.getPlainObject() === RDFS_NAMESPACE_URI
+    ) {
+        untrack(() =>
+            toastStore.warning(
+                "rdfs:Class cannot be an enum",
+                "This is a known limitation",
+            ),
+        );
+        violations.push("Cannot transform rdfs:Class into an enum");
     }
     return violations;
 }

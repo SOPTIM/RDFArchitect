@@ -30,6 +30,7 @@
         onDiscard = () => {},
         onSave = () => {},
         disableSave = false,
+        hideSave = false,
         ...restProps
     } = $props();
 
@@ -39,7 +40,7 @@
     }
 
     function handleKeyDown(event) {
-        if (event.key === "Enter" && !disableSave) {
+        if (event.key === "Enter" && !disableSave && !hideSave) {
             event.preventDefault();
             closeDialog(onSave);
         }
@@ -64,7 +65,7 @@
             <p class="text-sm leading-relaxed">
                 {#if disableSave}
                     Cannot save because the changes are invalid.
-                {:else}
+                {:else if !hideSave}
                     Do you want to save before continuing?
                 {/if}
             </p>
@@ -89,14 +90,16 @@
             />
         </div>
 
-        <div>
-            <FaIconButton
-                callOnClick={() => closeDialog(onSave)}
-                icon={faFloppyDisk}
-                disabled={disableSave}
-                text="Save"
-                title="Save changes"
-            />
-        </div>
+        {#if !hideSave}
+            <div>
+                <FaIconButton
+                    callOnClick={() => closeDialog(onSave)}
+                    icon={faFloppyDisk}
+                    disabled={disableSave}
+                    text="Save"
+                    title="Save changes"
+                />
+            </div>
+        {/if}
     </div>
 </AlertDialog>
