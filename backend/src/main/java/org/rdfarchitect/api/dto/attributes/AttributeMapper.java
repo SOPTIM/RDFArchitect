@@ -109,14 +109,8 @@ public interface AttributeMapper {
     }
 
     default CIMSDataType buildDataType(DataTypeDTO dto) {
-        URI uri;
-        if (dto.getType() == DataTypeDTO.Type.PRIMITIVE) {
-            uri = new URI(XSDDatatypeMapper.classLabelToDatatype(dto.getLabel()).getURI());
-        } else {
-            uri = new URI(dto.getPrefix() + dto.getLabel());
-        }
         return new CIMSDataType(
-                uri,
+                new URI(dto.getPrefix() + dto.getLabel()),
                 new RDFSLabel(dto.getLabel(), "en"),
                 CIMSDataType.Type.valueOf(dto.getType().toString()));
     }
