@@ -15,21 +15,17 @@
  *
  */
 
-/**
- * Normalizes a keyboard event into a string key like "ctrl+shift+s"
- * For special characters (non-alphanumeric single chars), modifiers are ignored
- * because they are part of the character itself (e.g. Shift+ß = ? on German keyboards)
- */
-
 export const shortcutStore = {
     /**
      * @param {string} id - unique identifier
-     * @param {string | string[]} keys - e.g. "ctrl+s" or ["ctrl+s", "ctrl+shift+s"]
+     * @param {string[] | string[][]} keys - e.g. ["ctrl", "s"] or [["ctrl", "s"], ["ctrl", "shift", "s"]]
      * @param {() => void} handler
      */
     register(id, keys, handler) {
-        const keyList = Array.isArray(keys) ? keys : [keys];
-        registry[id] = { keys: keyList, handler };
+        // Normalize to an array of key-combinations
+        const combinations = Array.isArray(keys[0]) ? keys : [keys];
+        const normalizedCombos = combinations.map(normalizeCombo);
+        registry[id] = { combos: normalizedCombos, handler };
     },
 
     unregister(id) {
@@ -42,8 +38,8 @@ export const shortcutStore = {
      */
     handleEvent(event) {
         const normalized = normalizeEvent(event);
-        for (const { keys, handler } of Object.values(registry)) {
-            if (keys.includes(normalized)) {
+        for (const { combos, handler } of Object.values(registry)) {
+            if (combos.includes(normalized)) {
                 event.preventDefault();
                 handler();
                 return true;
@@ -53,12 +49,32 @@ export const shortcutStore = {
     },
 };
 
+const MODIFIER_ORDER = ["ctrl", "shift", "alt"];
+
 const registry = $state({});
+
+/**
+ * Normalizes a key-combination array into a canonical string.
+ * Order of modifiers does not matter: ["shift", "ctrl", "s"] === ["ctrl", "shift", "s"]
+ * @param {string[]} combo
+ * @returns {string} e.g. "ctrl+shift+s"
+ */
+function normalizeCombo(combo) {
+    const keys = combo.map(k => k.toLowerCase());
+    const modifiers = MODIFIER_ORDER.filter(m => keys.includes(m));
+    const nonModifiers = keys.filter(k => !MODIFIER_ORDER.includes(k));
+    return [...modifiers, ...nonModifiers].join("+");
+}
+
+/**
+ * Normalizes a keyboard event into a canonical string key like "ctrl+shift+s".
+ * For special characters (non-alphanumeric single chars), modifiers are ignored
+ * because they are part of the character itself (e.g. Shift+ß = ? on German keyboards)
+ */
 function normalizeEvent(event) {
     const key = event.key.toLowerCase();
     const isSpecialChar = key.length === 1 && !/[a-z0-9]/.test(key);
 
-    // Sonderzeichen (z.B. ? € @): Modifier ignorieren, nur das Zeichen
     if (isSpecialChar) {
         return key;
     }

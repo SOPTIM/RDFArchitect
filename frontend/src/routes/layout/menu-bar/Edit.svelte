@@ -132,43 +132,47 @@
     onMount(() => {
         shortcutStore.register(
             "newClass",
-            "ctrl+shift+n",
+            ["ctrl", "shift", "n"],
             () => (showNewClassDialog = true),
         );
         shortcutStore.register(
             "newPackage",
-            "ctrl+alt+n",
+            ["ctrl", "alt", "n"],
             () => (showNewPackageDialog = true),
         );
         shortcutStore.register(
             "namespaces",
-            "ctrl+shift+a",
+            ["ctrl", "shift", "a"],
             () => (showNamespaceDialog = true),
         );
         shortcutStore.register(
             "profileHeader",
-            "ctrl+alt+p",
+            ["ctrl", "alt", "p"],
             () => (showEditOntologyDialog = true),
         );
-        shortcutStore.register("editPackage", "ctrl+shift+k", () =>
+        shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
             launchPackageEditor(),
         );
-        shortcutStore.register("toggleEdit", "ctrl+alt+r", () =>
+        shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
             toggleReadonly(),
         );
-        shortcutStore.register("copyClass", "ctrl+c", () =>
+        shortcutStore.register("copyClass", ["ctrl", "c"], () =>
             copyClassWithShortcut(),
         );
-        shortcutStore.register("paste", "ctrl+v", () =>
+        shortcutStore.register("paste", ["ctrl", "v"], () =>
             pasteClassWithShortcut(false, true, true),
         );
-        shortcutStore.register("pasteWithoutAttributes", "ctrl+shift+v", () =>
-            pasteClassWithShortcut(false, false, true),
+        shortcutStore.register(
+            "pasteWithoutAttributes",
+            ["ctrl", "shift", "v"],
+            () => pasteClassWithShortcut(false, false, true),
         );
-        shortcutStore.register("pasteWithoutAssociations", "ctrl+alt+v", () =>
-            pasteClassWithShortcut(false, true, false),
+        shortcutStore.register(
+            "pasteWithoutAssociations",
+            ["ctrl", "alt", "v"],
+            () => pasteClassWithShortcut(false, true, false),
         );
-        shortcutStore.register("pasteBare", "ctrl+shift+alt+v", () =>
+        shortcutStore.register("pasteBare", ["ctrl", "shift", "alt", "v"], () =>
             pasteClassWithShortcut(true, false, false),
         );
     });

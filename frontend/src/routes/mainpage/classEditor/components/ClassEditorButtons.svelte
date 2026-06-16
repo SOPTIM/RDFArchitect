@@ -72,7 +72,7 @@
     });
 
     onMount(() => {
-        shortcutStore.register("saveClass", "ctrl+s", () => {
+        shortcutStore.register("saveClass", ["ctrl", "s"], () => {
             if (reactiveClass?.isValid && reactiveClass?.isModified)
                 saveFromShortcut();
         });

@@ -52,18 +52,18 @@
     });
 
     onMount(() => {
-        shortcutStore.register("changelog", "ctrl+shift+h", () =>
+        shortcutStore.register("changelog", ["ctrl", "shift", "h"], () =>
             goto("/changelog"),
         );
         shortcutStore.register(
             "compare",
-            "ctrl+shift+c",
+            ["ctrl", "shift", "c"],
             () => (showCompareDialog = true),
         );
-        shortcutStore.register("migrate", "ctrl+shift+m", () =>
+        shortcutStore.register("migrate", ["ctrl", "shift", "m"], () =>
             goto("/migrate"),
         );
-        shortcutStore.register("shaclFullView", "ctrl+shift+l", () => {
+        shortcutStore.register("shaclFullView", ["ctrl", "shift", "l"], () => {
             if (hasGraphSelected) showSHACLFullViewDialog = true;
         });
     });

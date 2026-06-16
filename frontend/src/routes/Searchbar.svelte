@@ -50,7 +50,9 @@
     let inputElement = $state(null);
 
     onMount(() => {
-        shortcutStore.register("focusSearch", "ctrl+f", () => focusInput());
+        shortcutStore.register("focusSearch", ["ctrl", "f"], () =>
+            focusInput(),
+        );
     });
     onDestroy(() => {
         shortcutStore.unregister("focusSearch");

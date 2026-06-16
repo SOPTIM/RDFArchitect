@@ -45,7 +45,7 @@
     onMount(() => {
         shortcutStore.register(
             "keyboardShortcuts",
-            "?",
+            ["?"],
             () => (showKeyboardShortcutsDialog = true),
         );
     });

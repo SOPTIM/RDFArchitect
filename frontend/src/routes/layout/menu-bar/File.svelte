@@ -64,32 +64,32 @@
     onMount(() => {
         shortcutStore.register(
             "import",
-            "ctrl+i",
+            ["ctrl", "i"],
             () => (showImportDialog = true),
         );
         shortcutStore.register(
             "export",
-            "ctrl+e",
+            ["ctrl", "e"],
             () => (showExportDialog = true),
         );
         shortcutStore.register(
             "shaclImport",
-            "ctrl+shift+i",
+            ["ctrl", "shift", "i"],
             () => (showSHACLUploadDialog = true),
         );
         shortcutStore.register(
             "shaclExport",
-            "ctrl+shift+e",
+            ["ctrl", "shift", "e"],
             () => (showSHACLExportDialog = true),
         );
         shortcutStore.register(
             "snapshot",
-            "ctrl+shift+s",
+            ["ctrl", "shift", "s"],
             () => (showSnapshotDialog = true),
         );
         shortcutStore.register(
             "settings",
-            "ctrl+alt+s",
+            ["ctrl", "alt", "s"],
             () => (showUserSettingDialog = true),
         );
     });
