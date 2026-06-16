@@ -46,7 +46,6 @@ import org.rdfarchitect.models.cim.data.CIMObjectFactory;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder;
@@ -270,10 +269,9 @@ public class QueryGraphService
         var cimPackageList = CIMObjectFactory.createCIMPackageList(internalPackageQueryResultSet);
 
         // add blank package
-        URI uri = new URI(BLANK_PACKAGE_NAME);
         var blankPackage =
                 CIMPackage.builder()
-                        .uri(uri)
+                        .uri(null)
                         .label(new RDFSLabel(BLANK_PACKAGE_NAME, BLANK_PACKAGE_LANG))
                         .build();
         cimPackageList.add(blankPackage);

@@ -15,6 +15,7 @@
   -
   -->
 <script>
+    import { URI } from "$lib/models/dto/index.ts";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
     let {
@@ -35,7 +36,7 @@
                     showNodeShapes[i] = !showNodeShapes[i];
                 }}
             >
-                {nodeShape.id.split("#", 2)[1] + ":"}
+                {new URI(nodeShape.id).suffix + ":"}
             </button>
         </div>
         {#if showNodeShapes[i]}

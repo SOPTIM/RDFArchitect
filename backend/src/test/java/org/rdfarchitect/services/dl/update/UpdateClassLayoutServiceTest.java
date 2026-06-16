@@ -50,7 +50,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
                 PackageDTO.builder()
                         .uuid(PACKAGE_A_UUID)
                         .label(PACKAGE_A_LABEL)
-                        .prefix("ex")
+                        .prefix("http://example.org#")
                         .build();
         service.createClassLayoutData(
                 graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, null);
@@ -67,7 +67,7 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
                 PackageDTO.builder()
                         .uuid(PACKAGE_A_UUID)
                         .label(PACKAGE_A_LABEL)
-                        .prefix("ex")
+                        .prefix("http://example.org#")
                         .build();
         var classLayoutPosition = new ClassLayoutPositionDTO();
         classLayoutPosition.setXPosition(123.0F);

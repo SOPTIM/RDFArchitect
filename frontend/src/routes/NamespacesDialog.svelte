@@ -78,6 +78,15 @@
     }
 
     async function saveNamespaces() {
+        // Colon normalization: add trailing ":" if missing
+        namespaces.values.forEach(namespace => {
+            if (
+                namespace.prefix.value &&
+                !namespace.prefix.value.includes(":")
+            ) {
+                namespace.prefix.value = namespace.prefix.value + ":";
+            }
+        });
         namespaces?.save();
         const plainReactiveNamespaces = namespaces.getPlainObject();
         const namespaceDTOs = plainReactiveNamespaces.map(namespace => {
