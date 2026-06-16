@@ -29,6 +29,7 @@ import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
 import org.rdfarchitect.models.changes.triplechanges.TriplePackageChange;
 import org.rdfarchitect.models.changes.triplechanges.TriplePropertyChange;
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
@@ -87,7 +88,7 @@ public class TripleChangeAnalyser {
      */
     private TriplePackageChange comparePackage(
             Graph originalGraph, Graph updatedGraph, String packageURI) {
-        var label = packageURI.split("#")[1];
+        var label = new URI(packageURI).getSuffix();
         var packageChange = TriplePackageChange.builder().uri(packageURI).label(label).build();
         if (!originalGraph.contains(
                         NodeFactory.createURI(packageURI),
@@ -162,7 +163,7 @@ public class TripleChangeAnalyser {
      */
     private TripleClassChange compareClass(
             Graph originalGraph, Graph updatedGraph, String classURI) {
-        var label = classURI.split("#")[1];
+        var label = new URI(classURI).getSuffix();
         var classChange = TripleClassChange.builder().label(label).uri(classURI).build();
 
         var classChanges = compareResource(originalGraph, updatedGraph, classURI);
@@ -322,7 +323,7 @@ public class TripleChangeAnalyser {
         for (String attributeURI : attributes) {
             var nestedChange = new TripleResourceChange();
             nestedChange.setUri(attributeURI);
-            nestedChange.setLabel(attributeURI.split("#")[1].split("\\.", 2)[1]);
+            nestedChange.setLabel(new URI(attributeURI).getSuffix().split("\\.", 2)[1]);
 
             var attrChanges = compareResource(originalGraph, updatedGraph, attributeURI);
             if (!attrChanges.isEmpty()) {
@@ -352,7 +353,7 @@ public class TripleChangeAnalyser {
         for (String associationURI : associations) {
             TripleResourceChange nestedChange = new TripleResourceChange();
             nestedChange.setUri(associationURI);
-            nestedChange.setLabel(associationURI.split("#")[1]);
+            nestedChange.setLabel(new URI(associationURI).getSuffix());
 
             var assocChanges = compareResource(originalGraph, updatedGraph, associationURI);
             if (!assocChanges.isEmpty()) {
@@ -382,7 +383,7 @@ public class TripleChangeAnalyser {
         for (String enumEntryURI : enumEntries) {
             var nestedChange = new TripleResourceChange();
             nestedChange.setUri(enumEntryURI);
-            nestedChange.setLabel(enumEntryURI.split("#")[1].split("\\.", 2)[1]);
+            nestedChange.setLabel(new URI(enumEntryURI).getSuffix().split("\\.", 2)[1]);
 
             var enumEntryChanges = compareResource(originalGraph, updatedGraph, enumEntryURI);
             if (!enumEntryChanges.isEmpty()) {

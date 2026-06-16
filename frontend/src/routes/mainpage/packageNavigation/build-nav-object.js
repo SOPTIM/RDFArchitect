@@ -32,12 +32,6 @@ import {
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-/**
- * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
- * @param {NavEntry[]} existingList
- * @param {object} props
- * @returns {NavEntry}
- */
 function reuseOrCreate(existingList, props) {
     const existing = existingList?.find(e => e.id === props.id);
     if (existing) {
@@ -49,23 +43,12 @@ function reuseOrCreate(existingList, props) {
     return new NavEntry(props);
 }
 
-/**
- * @description Replaces the contents of targetArray in place, keeping the array reference. Sets parent on each entry.
- * @param {NavEntry[]} targetArray
- * @param {NavEntry[]} freshEntries
- * @param {NavEntry|null} parent
- */
 function syncList(targetArray, freshEntries, parent = null) {
     targetArray.length = 0;
     targetArray.push(...freshEntries);
     freshEntries.forEach(entry => (entry.parent = parent));
 }
 
-/**
- * @description Loads all datasets and populates their children. Reuses existing NavEntries to preserve UI state.
- * @param {NavEntry[]} existingDatasetNavList
- * @returns {Promise<NavEntry[]>}
- */
 export async function getNavEntryList(existingDatasetNavList) {
     const freshEntries = (await getDatasetNames())
         .sort((a, b) => a.localeCompare(b))
@@ -205,26 +188,29 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
 
 /**
  * @description Reuses or creates a package NavEntry.
- * @param {NavEntry[]} existingPackageList
- * @param {object} packObj
- * @param {boolean} isExternal
- * @returns {NavEntry}
+ * id is always the UUID (or "default" for the default package) for backend calls.
+ * navKey is a unique string for Svelte's {#each} key.
  */
 function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
+    const label = packObj.label ?? "default";
     const id = packObj.uuid ?? "default";
-    const displayLabel = getPackageDisplayLabel(packObj.label);
-    return reuseOrCreate(existingPackageList, {
+    const navKey = (packObj.prefix ?? "") + label;
+    const displayLabel = getPackageDisplayLabel(label);
+    const entry = reuseOrCreate(existingPackageList, {
         id,
-        tooltip: packObj.prefix + packObj.label,
+        tooltip: (packObj.prefix ?? "") + label,
         label: displayLabel,
         data: {
-            uuid: id,
+            uuid: packObj.uuid,
             prefix: packObj.prefix,
-            label: packObj.label,
+            label: label,
             comment: packObj.comment,
             external: isExternal,
+            navKey,
         },
     });
+    entry.navKey = navKey;
+    return entry;
 }
 
 async function getPackages(datasetName, graphURI) {
@@ -246,6 +232,13 @@ async function getPackages(datasetName, graphURI) {
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
+    console.log(
+        "Populating package",
+        packageNavObject.id,
+        "with classes:",
+        allClasses,
+    );
+    allClasses = allClasses ?? [];
     const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
         .sort((a, b) => a.label.localeCompare(b.label))
@@ -286,6 +279,13 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
 async function getClasses(datasetName, graphURI) {
     try {
         const res = await bec.getClasses(datasetName, graphURI);
+        console.warn(
+            "Fetched classes for dataset " +
+                datasetName +
+                " and graph " +
+                graphURI,
+            res,
+        );
         return await res.json();
     } catch (err) {
         console.error(

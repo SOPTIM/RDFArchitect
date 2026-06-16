@@ -28,6 +28,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
@@ -203,7 +204,7 @@ public class InheritanceChangeHandler {
                 var propertyChange =
                         new SemanticResourceChange(
                                 property, SemanticResourceChangeType.DELETED_FROM_INHERITANCE);
-                propertyChange.setLabel(property.getURI().split("#")[1]);
+                propertyChange.setLabel(new URI(property.getURI()).getSuffix());
 
                 if (CIMPropertyUtils.isAttribute(property)) {
                     derivingClassChange
@@ -238,7 +239,7 @@ public class InheritanceChangeHandler {
                 var propertyChange =
                         new SemanticResourceChange(
                                 property, SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
-                propertyChange.setLabel(property.getURI().split("#")[1]);
+                propertyChange.setLabel(new URI(property.getURI()).getSuffix());
                 if (CIMPropertyUtils.isAttribute(property)) {
                     derivingClassChange
                             .getAttributes()

@@ -108,7 +108,7 @@
                 className = new ReactiveValueWrapper(currentValue, label =>
                     isInvalidClassLabel(
                         label,
-                        classURINamespace?.value,
+                        classURINamespace,
                         compareClasses,
                     ),
                 );
@@ -124,11 +124,7 @@
         classURINamespace = new ReactiveValueWrapper(null);
 
         className = new ReactiveValueWrapper("", label =>
-            isInvalidClassLabel(
-                label,
-                classURINamespace?.value,
-                compareClasses,
-            ),
+            isInvalidClassLabel(label, classURINamespace, compareClasses),
         );
 
         if (!datasetName) {

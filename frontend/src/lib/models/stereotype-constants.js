@@ -23,3 +23,7 @@
  */
 export const CONCRETE_STEREOTYPE =
     "http://iec.ch/TC57/NonStandard/UML#concrete";
+
+export const ENUMERATION_STEREOTYPE =
+    "http://iec.ch/TC57/NonStandard/UML#enumeration";
+export const RDFS_NAMESPACE_URI = "http://www.w3.org/2000/01/rdf-schema#";

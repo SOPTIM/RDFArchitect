@@ -213,7 +213,7 @@ class CIMAssociationToMermaidBuilderTest {
     @Test
     void build_associationWithNullMultiplicity_throwsException() {
         // Arrange
-        setUpAssociations(AssociationUsed.YES, "", AssociationUsed.YES, "");
+        setUpAssociations(AssociationUsed.YES, "placeholder", AssociationUsed.YES, "placeholder");
         from.setMultiplicity(null);
         to.setMultiplicity(null);
         var cimAssociationMermaidBuilder =
@@ -226,7 +226,7 @@ class CIMAssociationToMermaidBuilderTest {
     @Test
     void build_associationWithNullAssociationUsed_throwsException() {
         // Arrange
-        setUpAssociations(AssociationUsed.YES, "", AssociationUsed.YES, "");
+        setUpAssociations(AssociationUsed.YES, "placeholder", AssociationUsed.YES, "placeholder");
         from.setAssociationUsed(null);
         to.setAssociationUsed(null);
         var cimAssociationMermaidBuilder =

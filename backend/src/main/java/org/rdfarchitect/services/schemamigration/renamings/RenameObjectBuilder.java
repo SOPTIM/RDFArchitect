@@ -25,6 +25,7 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.ArrayList;
@@ -190,9 +191,10 @@ public class RenameObjectBuilder {
                 || mergedChange.getSemanticFieldChangeType()
                         == SemanticFieldChangeType.MULTIPLICITY_CHANGE) {
             var oldMultiplicity =
-                    CIMPropertyUtils.resolveMultiplicity(deletedChange.getFrom().split("#")[1]);
+                    CIMPropertyUtils.resolveMultiplicity(
+                            new URI(deletedChange.getFrom()).getSuffix());
             var newMultiplicity =
-                    CIMPropertyUtils.resolveMultiplicity(addedChange.getTo().split("#")[1]);
+                    CIMPropertyUtils.resolveMultiplicity(new URI(addedChange.getTo()).getSuffix());
             if (oldMultiplicity.equals(newMultiplicity)) {
                 return;
             }
