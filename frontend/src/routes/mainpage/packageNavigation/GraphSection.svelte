@@ -170,7 +170,7 @@
                 }}
                 disabled={readonly}
                 faIcon={faPlus}
-                altText="Ctrl+Alt+N"
+                altText="Alt+N"
             >
                 New Package
             </ContextMenu.Item.Button>

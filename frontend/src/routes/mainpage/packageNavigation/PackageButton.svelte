@@ -174,7 +174,7 @@
                 }}
                 disabled={readonly}
                 faIcon={faPlus}
-                altText="Ctrl+Shift+N"
+                altText="Shift+N"
             >
                 New Class
             </ContextMenu.Item.Button>

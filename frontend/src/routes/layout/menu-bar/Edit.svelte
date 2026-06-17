@@ -135,12 +135,12 @@
         shortcutsUnregister.push(
             shortcutStore.register(
                 "newClass",
-                ["ctrl", "shift", "n"],
+                ["shift", "n"],
                 () => (showNewClassDialog = true),
             ),
             shortcutStore.register(
                 "newPackage",
-                ["ctrl", "alt", "n"],
+                ["alt", "n"],
                 () => (showNewPackageDialog = true),
             ),
             shortcutStore.register(
@@ -371,14 +371,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showNewClassDialog = true)}
                     faIcon={faCube}
-                    altText="Ctrl+Shift+N"
+                    altText="Shift+N"
                 >
                     Class
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showNewPackageDialog = true)}
                     faIcon={faFolderPlus}
-                    altText="Ctrl+Alt+N"
+                    altText="Alt+N"
                 >
                     Package
                 </Menubar.Item.Button>
