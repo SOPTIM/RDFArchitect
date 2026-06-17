@@ -39,19 +39,23 @@
         feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
 
+    const shortcutsUnregister = [];
+
     let showKeyboardShortcutsDialog = $state(false);
     let showResetSessionDialog = $state(false);
 
     onMount(() => {
-        shortcutStore.register(
-            "keyboardShortcuts",
-            ["?"],
-            () => (showKeyboardShortcutsDialog = true),
+        shortcutsUnregister.push(
+            shortcutStore.register(
+                "keyboardShortcuts",
+                ["?"],
+                () => (showKeyboardShortcutsDialog = true),
+            ),
         );
     });
 
     onDestroy(() => {
-        shortcutStore.unregister("keyboardShortcuts");
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 
     function openExternalResource(key) {

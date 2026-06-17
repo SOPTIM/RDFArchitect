@@ -42,6 +42,8 @@
 
     let { isDatasetReadOnly } = $props();
 
+    const shortcutsUnregister = [];
+
     let showExportDialog = $state(false);
     let showSnapshotDialog = $state(false);
     let showImportDialog = $state(false);
@@ -62,47 +64,42 @@
     });
 
     onMount(() => {
-        shortcutStore.register(
-            "import",
-            ["ctrl", "i"],
-            () => (showImportDialog = true),
-        );
-        shortcutStore.register(
-            "export",
-            ["ctrl", "e"],
-            () => (showExportDialog = true),
-        );
-        shortcutStore.register(
-            "shaclImport",
-            ["ctrl", "shift", "i"],
-            () => (showSHACLUploadDialog = true),
-        );
-        shortcutStore.register(
-            "shaclExport",
-            ["ctrl", "shift", "e"],
-            () => (showSHACLExportDialog = true),
-        );
-        shortcutStore.register(
-            "snapshot",
-            ["ctrl", "shift", "s"],
-            () => (showSnapshotDialog = true),
-        );
-        shortcutStore.register(
-            "settings",
-            ["ctrl", "alt", "s"],
-            () => (showUserSettingDialog = true),
+        shortcutsUnregister.push(
+            shortcutStore.register(
+                "import",
+                ["ctrl", "i"],
+                () => (showImportDialog = true),
+            ),
+            shortcutStore.register(
+                "export",
+                ["ctrl", "e"],
+                () => (showExportDialog = true),
+            ),
+            shortcutStore.register(
+                "shaclImport",
+                ["ctrl", "shift", "i"],
+                () => (showSHACLUploadDialog = true),
+            ),
+            shortcutStore.register(
+                "shaclExport",
+                ["ctrl", "shift", "e"],
+                () => (showSHACLExportDialog = true),
+            ),
+            shortcutStore.register(
+                "snapshot",
+                ["ctrl", "shift", "s"],
+                () => (showSnapshotDialog = true),
+            ),
+            shortcutStore.register(
+                "settings",
+                ["ctrl", "alt", "s"],
+                () => (showUserSettingDialog = true),
+            ),
         );
     });
 
     onDestroy(() => {
-        [
-            "import",
-            "export",
-            "shaclImport",
-            "shaclExport",
-            "snapshot",
-            "settings",
-        ].forEach(id => shortcutStore.unregister(id));
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 </script>
 

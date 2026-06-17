@@ -44,6 +44,8 @@
         { name: "Current Package", value: "package" },
     ];
 
+    const shortcutsUnregister = [];
+
     let showScopeDropdown = $state(false);
     let selectedFilter = $state({ name: "All Datasets", value: "all" });
     let queryString = $state("");
@@ -51,12 +53,15 @@
     let inputElement = $state(null);
 
     onMount(() => {
-        shortcutStore.register("focusSearch", ["ctrl", "f"], () =>
-            focusInput(),
+        shortcutsUnregister.push(
+            shortcutStore.register("focusSearch", ["ctrl", "f"], () =>
+                focusInput(),
+            ),
         );
     });
+
     onDestroy(() => {
-        shortcutStore.unregister("focusSearch");
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 
     function selectSubject(searchResult) {

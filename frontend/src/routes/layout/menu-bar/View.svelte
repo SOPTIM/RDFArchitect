@@ -36,6 +36,8 @@
 
     import { goto } from "$app/navigation";
 
+    const shortcutsUnregister = [];
+
     let showSHACLFullViewDialog = $state(false);
     let showCompareDialog = $state(false);
 
@@ -52,26 +54,30 @@
     });
 
     onMount(() => {
-        shortcutStore.register("changelog", ["ctrl", "shift", "h"], () =>
-            goto("/changelog"),
+        shortcutsUnregister.push(
+            shortcutStore.register("changelog", ["ctrl", "shift", "h"], () =>
+                goto("/changelog"),
+            ),
+            shortcutStore.register(
+                "compare",
+                ["ctrl", "shift", "c"],
+                () => (showCompareDialog = true),
+            ),
+            shortcutStore.register("migrate", ["ctrl", "shift", "m"], () =>
+                goto("/migrate"),
+            ),
+            shortcutStore.register(
+                "shaclFullView",
+                ["ctrl", "shift", "l"],
+                () => {
+                    if (hasGraphSelected) showSHACLFullViewDialog = true;
+                },
+            ),
         );
-        shortcutStore.register(
-            "compare",
-            ["ctrl", "shift", "c"],
-            () => (showCompareDialog = true),
-        );
-        shortcutStore.register("migrate", ["ctrl", "shift", "m"], () =>
-            goto("/migrate"),
-        );
-        shortcutStore.register("shaclFullView", ["ctrl", "shift", "l"], () => {
-            if (hasGraphSelected) showSHACLFullViewDialog = true;
-        });
     });
 
     onDestroy(() => {
-        ["changelog", "compare", "migrate", "shaclFullView"].forEach(id =>
-            shortcutStore.unregister(id),
-        );
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 </script>
 

@@ -23,9 +23,15 @@ export const shortcutStore = {
      */
     register(id, keys, handler) {
         // Normalize to an array of key-combinations
+        if (registry[id]) {
+            console.warn(
+                `Shortcut with id "${id}" is already registered. Overwriting.`,
+            );
+        }
         const combinations = Array.isArray(keys[0]) ? keys : [keys];
         const normalizedCombos = combinations.map(normalizeCombo);
         registry[id] = { combos: normalizedCombos, handler };
+        return () => this.unregister(id);
     },
 
     unregister(id) {
@@ -51,7 +57,7 @@ export const shortcutStore = {
 
 const MODIFIER_ORDER = ["ctrl", "shift", "alt"];
 
-const registry = $state({});
+const registry = {};
 
 /**
  * Normalizes a key-combination array into a canonical string.

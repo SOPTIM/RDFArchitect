@@ -66,6 +66,8 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+    const shortcutsUnregister = [];
+
     let showNewClassDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
@@ -130,67 +132,59 @@
     });
 
     onMount(() => {
-        shortcutStore.register(
-            "newClass",
-            ["ctrl", "shift", "n"],
-            () => (showNewClassDialog = true),
-        );
-        shortcutStore.register(
-            "newPackage",
-            ["ctrl", "alt", "n"],
-            () => (showNewPackageDialog = true),
-        );
-        shortcutStore.register(
-            "namespaces",
-            ["ctrl", "shift", "a"],
-            () => (showNamespaceDialog = true),
-        );
-        shortcutStore.register(
-            "profileHeader",
-            ["ctrl", "alt", "p"],
-            () => (showEditOntologyDialog = true),
-        );
-        shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
-            launchPackageEditor(),
-        );
-        shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
-            toggleReadonly(),
-        );
-        shortcutStore.register("copyClass", ["ctrl", "c"], () =>
-            copyClassWithShortcut(),
-        );
-        shortcutStore.register("paste", ["ctrl", "v"], () =>
-            pasteClassWithShortcut(false, true, true),
-        );
-        shortcutStore.register(
-            "pasteWithoutAttributes",
-            ["ctrl", "shift", "v"],
-            () => pasteClassWithShortcut(false, false, true),
-        );
-        shortcutStore.register(
-            "pasteWithoutAssociations",
-            ["ctrl", "alt", "v"],
-            () => pasteClassWithShortcut(false, true, false),
-        );
-        shortcutStore.register("pasteBare", ["ctrl", "shift", "alt", "v"], () =>
-            pasteClassWithShortcut(true, false, false),
+        shortcutsUnregister.push(
+            shortcutStore.register(
+                "newClass",
+                ["ctrl", "shift", "n"],
+                () => (showNewClassDialog = true),
+            ),
+            shortcutStore.register(
+                "newPackage",
+                ["ctrl", "alt", "n"],
+                () => (showNewPackageDialog = true),
+            ),
+            shortcutStore.register(
+                "namespaces",
+                ["ctrl", "shift", "a"],
+                () => (showNamespaceDialog = true),
+            ),
+            shortcutStore.register(
+                "profileHeader",
+                ["ctrl", "alt", "p"],
+                () => (showEditOntologyDialog = true),
+            ),
+            shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
+                launchPackageEditor(),
+            ),
+            shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
+                toggleReadonly(),
+            ),
+            shortcutStore.register("copyClass", ["ctrl", "c"], () =>
+                copyClassWithShortcut(),
+            ),
+            shortcutStore.register("paste", ["ctrl", "v"], () =>
+                pasteClassWithShortcut(false, true, true),
+            ),
+            shortcutStore.register(
+                "pasteWithoutAttributes",
+                ["ctrl", "shift", "v"],
+                () => pasteClassWithShortcut(false, false, true),
+            ),
+            shortcutStore.register(
+                "pasteWithoutAssociations",
+                ["ctrl", "alt", "v"],
+                () => pasteClassWithShortcut(false, true, false),
+            ),
+            shortcutStore.register(
+                "pasteBare",
+                ["ctrl", "shift", "alt", "v"],
+                () => pasteClassWithShortcut(true, false, false),
+            ),
         );
     });
 
     onDestroy(() => {
-        [
-            "newClass",
-            "newPackage",
-            "namespaces",
-            "profileHeader",
-            "editPackage",
-            "toggleEdit",
-            "copyClass",
-            "paste",
-            "pasteWithoutAttributes",
-            "pasteWithoutAssociations",
-            "pasteBare",
-        ].forEach(id => shortcutStore.unregister(id));
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 
     async function getOntology() {
@@ -358,7 +352,6 @@
     }
 
     function toggleReadonly() {
-        console.warn("toggle readonly");
         if (isDatasetReadOnly) {
             requestEnableEditing();
         } else {

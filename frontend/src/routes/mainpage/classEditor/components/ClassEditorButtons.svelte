@@ -52,6 +52,8 @@
 
     const classEditorContext = getContext("classEditor");
 
+    const shortcutsUnregister = [];
+
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLClassDialog = $state(false);
     let readonly = $derived(classEditorContext.readonly);
@@ -80,13 +82,17 @@
     });
 
     onMount(() => {
-        shortcutStore.register("saveClass", ["ctrl", "s"], () => {
-            if (reactiveClass?.isValid && reactiveClass?.isModified)
-                saveFromShortcut();
-        });
+        shortcutsUnregister.push(
+            shortcutStore.register("saveClass", ["ctrl", "s"], () => {
+                if (reactiveClass?.isValid && reactiveClass?.isModified)
+                    saveFromShortcut();
+            }),
+        );
     });
 
-    onDestroy(() => shortcutStore.unregister("saveClass"));
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
+    });
 
     function saveChanges() {
         console.log("Saving changes for class");

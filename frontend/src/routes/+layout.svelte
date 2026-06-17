@@ -160,10 +160,8 @@
     async function handleUndoRedo(isRedo) {
         if (isRedo) {
             if (canRedo && (await redo())) await reload();
-            else if (!canRedo) console.log("Redo blocked: nothing to redo.");
         } else {
             if (canUndo && (await undo())) await reload();
-            else if (!canUndo) console.log("Undo blocked: nothing to undo.");
         }
     }
 
@@ -179,22 +177,12 @@
         const hasCtrl = event.ctrlKey || event.metaKey;
         const inputFocused = isInputElement(event.target);
 
-        if (key === "?" && !hasCtrl && !isLeftAltPressed) {
-            if (inputFocused) return;
-            event.preventDefault();
-            shortcutStore.handleEvent(event);
-            return;
-        }
-
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
         if (hasCtrl || hasCtrlAltViaAltGr) {
             if (key === "z" || key === "y") {
                 if (inputFocused) return;
                 if (isDialogOpen()) {
-                    console.log(
-                        `${event.code} blocked because a dialog is open.`,
-                    );
                     return;
                 }
                 event.preventDefault();
