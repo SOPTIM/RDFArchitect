@@ -82,7 +82,6 @@
         }
         onPackChange();
         if (!editorState.selectedClassUUID.getValue()) {
-            console.warn("here: ", { diagramId });
             eventStack.executeNewestEvent(classNavEntry.id);
             editorState.selectedClassDataset.updateValue(datasetNavEntry.id);
             editorState.selectedClassGraph.updateValue(graphNavEntry.id);

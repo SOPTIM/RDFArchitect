@@ -319,7 +319,6 @@
                         : ClassType.NORMAL_CLASS,
                 );
                 editorState.selectedClassUUID.updateValue(id);
-                console.log(editorState.selectedClassType.getValue());
             } else {
                 eventStack.executeNewestEvent({
                     datasetName: editorState.selectedDataset.getValue(),
