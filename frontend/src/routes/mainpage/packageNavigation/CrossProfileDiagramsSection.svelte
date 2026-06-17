@@ -80,7 +80,6 @@
             isSelected={isMergedViewSelected}
             onclick={() => {
                 selectMergedView();
-                isOpen = !isOpen;
             }}
             onToggle={() => (isOpen = !isOpen)}
         />
