@@ -19,6 +19,7 @@ package org.rdfarchitect.api.dto.enumentries;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.MappingUtils;
 import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
@@ -40,7 +41,7 @@ public interface EnumEntryMapper {
     @Mapping(target = "label", source = "label.value")
     @Mapping(target = "prefix", source = "uri.prefix")
     @Mapping(target = "comment", source = "comment.value")
-    @Mapping(target = "type", source = "type.uri.suffix")
+    @Mapping(target = "type", source = "type", qualifiedByName = "mapTypeToString")
     EnumEntryDTO toDTO(CIMEnumEntry entity);
 
     List<EnumEntryDTO> toDTOList(List<CIMEnumEntry> entityList);
@@ -68,5 +69,10 @@ public interface EnumEntryMapper {
 
     default CIMSStereotype buildStereotype(String stereotype) {
         return stereotype != null ? new CIMSStereotype(CIMStereotypes.enumerationString) : null;
+    }
+
+    @Named("mapTypeToString")
+    default String mapTypeToString(RDFType type) {
+        return type != null ? type.getUri().toString() : null;
     }
 }
