@@ -20,11 +20,13 @@
         faCaretDown,
         faMagnifyingGlass,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import {
@@ -42,10 +44,25 @@
         { name: "Current Package", value: "package" },
     ];
 
+    const shortcutsUnregister = [];
+
     let showScopeDropdown = $state(false);
     let selectedFilter = $state({ name: "All Datasets", value: "all" });
     let queryString = $state("");
     let searchResults = $state([]);
+    let inputElement = $state(null);
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register("focusSearch", ["ctrl", "f"], () =>
+                focusInput(),
+            ),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
+    });
 
     function selectSubject(searchResult) {
         editorState.selectedDataset.updateValue(searchResult.datasetName);
@@ -198,6 +215,11 @@
             },
         };
     }
+
+    function focusInput() {
+        inputElement?.focus();
+        inputElement?.select();
+    }
 </script>
 
 <form onsubmit={submitQuery}>
@@ -243,14 +265,17 @@
                 </div>
             {/if}
         </div>
-        <div class="relative h-full w-full flex-col">
+        <div
+            class="relative h-full w-full flex-col bg-white focus-within:bg-lightblue rounded"
+        >
             <input
                 type="text"
                 id="query-string"
                 autocomplete="off"
+                bind:this={inputElement}
                 bind:value={queryString}
                 placeholder="Search..."
-                class="bg-input-default-background text-default-text focus:border-blue border-input-default-background disabled:bg-button-disabled-background read-only:bg-default-background h-full w-full rounded border p-1 px-2 font-[350] outline-none"
+                class="bg-transparent text-default-text focus:border-blue border-input-default-background disabled:bg-button-disabled-background read-only:bg-default-background h-full w-full rounded border p-1 px-2 font-[350] outline-none"
                 oninput={submitQuery}
             />
 

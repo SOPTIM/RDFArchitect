@@ -22,8 +22,10 @@
         faRightLeft,
         faEye,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -33,6 +35,9 @@
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
 
     import { goto } from "$app/navigation";
+
+    const shortcutsUnregister = [];
+
     let showSHACLFullViewDialog = $state(false);
     let showCompareDialog = $state(false);
 
@@ -47,6 +52,33 @@
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
     });
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register("changelog", ["ctrl", "shift", "h"], () =>
+                goto("/changelog"),
+            ),
+            shortcutStore.register(
+                "compare",
+                ["ctrl", "shift", "c"],
+                () => (showCompareDialog = true),
+            ),
+            shortcutStore.register("migrate", ["ctrl", "shift", "m"], () =>
+                goto("/migrate"),
+            ),
+            shortcutStore.register(
+                "shaclFullView",
+                ["ctrl", "shift", "l"],
+                () => {
+                    if (hasGraphSelected) showSHACLFullViewDialog = true;
+                },
+            ),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
+    });
 </script>
 
 <Menubar.Menu value="view">
@@ -55,18 +87,21 @@
         <Menubar.Item.Button
             onSelect={() => goto("/changelog")}
             faIcon={faClockRotateLeft}
+            altText="Ctrl+Shift+H"
         >
             Changelog
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => (showCompareDialog = true)}
             faIcon={faCodeBranch}
+            altText="Ctrl+Shift+C"
         >
             Compare Schemas
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => goto("/migrate")}
             faIcon={faRightLeft}
+            altText="Ctrl+Shift+M"
         >
             Migrate Schema
         </Menubar.Item.Button>
@@ -74,6 +109,7 @@
             onSelect={() => (showSHACLFullViewDialog = true)}
             disabled={!hasGraphSelected}
             faIcon={faEye}
+            altText="Ctrl+Shift+L"
         >
             Constraints (SHACL)
         </Menubar.Item.Button>

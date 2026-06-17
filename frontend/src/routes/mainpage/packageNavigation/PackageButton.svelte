@@ -174,6 +174,7 @@
                 }}
                 disabled={readonly}
                 faIcon={faPlus}
+                altText="Shift+N"
             >
                 New Class
             </ContextMenu.Item.Button>
@@ -240,6 +241,7 @@
                 }}
                 disabled={disablePackageAction}
                 faIcon={packageActionIcon}
+                altText="Ctrl+Shift+K"
             >
                 {packageActionLabel}
             </ContextMenu.Item.Button>
