@@ -60,37 +60,57 @@ const MODIFIER_ORDER = ["ctrl", "shift", "alt"];
 const registry = {};
 
 /**
+ * Returns true for single-character keys that are not alphanumeric
+ * (e.g. "?", "/", "@"). Shift is part of the character itself on many
+ * keyboard layouts (e.g. Shift+ß = ? on German keyboards) and is therefore
+ * never included for these keys.
+ */
+function isSpecialChar(key) {
+    return key.length === 1 && !/[a-z0-9]/.test(key);
+}
+
+/**
  * Normalizes a key-combination array into a canonical string.
  * Order of modifiers does not matter: ["shift", "ctrl", "s"] === ["ctrl", "shift", "s"]
+ * For special characters, Shift is dropped (it is part of the character).
  * @param {string[]} combo
- * @returns {string} e.g. "ctrl+shift+s"
+ * @returns {string} e.g. "ctrl+shift+s" or "ctrl+?"
  */
 function normalizeCombo(combo) {
     const keys = combo.map(k => k.toLowerCase());
-    const modifiers = MODIFIER_ORDER.filter(m => keys.includes(m));
     const nonModifiers = keys.filter(k => !MODIFIER_ORDER.includes(k));
+    const special = nonModifiers.some(isSpecialChar);
+
+    const modifiers = MODIFIER_ORDER.filter(m => {
+        if (special && m === "shift") return false;
+        return keys.includes(m);
+    });
+
     return [...modifiers, ...nonModifiers].join("+");
 }
 
 /**
  * Normalizes a keyboard event into a canonical string key like "ctrl+shift+s".
- * For special characters (non-alphanumeric single chars), modifiers are ignored
- * because they are part of the character itself (e.g. Shift+ß = ? on German keyboards)
+ * For special characters (e.g. "?"), Shift is ignored because it is part of
+ * the character itself, but Ctrl/Alt are kept so "?" and "Ctrl+?" can be
+ * registered independently.
  */
 function normalizeEvent(event) {
     const key = event.key.toLowerCase();
-    const isSpecialChar = key.length === 1 && !/[a-z0-9]/.test(key);
-
-    if (isSpecialChar) {
-        return key;
-    }
+    const special = isSpecialChar(key);
 
     const parts = [];
     if (event.ctrlKey || event.metaKey) parts.push("ctrl");
-    if (event.shiftKey) parts.push("shift");
+    if (event.shiftKey && !special) parts.push("shift");
     if (event.altKey || event.code === "AltLeft") parts.push("alt");
-    parts.push(
-        event.code.replace("Key", "").replace("Digit", "").toLowerCase(),
-    );
+
+    if (special) {
+        parts.push(key);
+    } else {
+        parts.push(
+            event.code.replace("Key", "").replace("Digit", "").toLowerCase(),
+        );
+    }
+
     return parts.join("+");
 }
