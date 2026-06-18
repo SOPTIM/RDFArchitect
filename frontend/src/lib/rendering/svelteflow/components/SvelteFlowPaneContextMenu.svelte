@@ -129,6 +129,7 @@
                 onSelect={openNewClassDialog}
                 {disabled}
                 faIcon={faPlus}
+                altText="Shift+N"
             >
                 Add class
             </ContextMenu.Item.Button>

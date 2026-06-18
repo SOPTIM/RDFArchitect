@@ -170,6 +170,7 @@
                 }}
                 disabled={readonly}
                 faIcon={faFileImport}
+                altText="Ctrl+I"
             >
                 Import Schema
             </ContextMenu.Item.Button>
@@ -188,6 +189,7 @@
                     showNamespacesDialog = true;
                 }}
                 faIcon={faTags}
+                altText="Ctrl+Shift+A"
             >
                 {#if readonly}
                     View Namespaces
@@ -201,6 +203,7 @@
                     showSnapshotDialog = true;
                 }}
                 faIcon={faShare}
+                altText="Ctrl+Shift+S"
             >
                 Share Snapshot
             </ContextMenu.Item.Button>
@@ -208,6 +211,7 @@
                 <ContextMenu.Item.Button
                     onSelect={() => requestEnableEditing()}
                     faIcon={faPenToSquare}
+                    altText="Ctrl+Alt+R"
                 >
                     Enable Editing
                 </ContextMenu.Item.Button>
@@ -215,6 +219,7 @@
                 <ContextMenu.Item.Button
                     onSelect={() => requestDisableEditing()}
                     faIcon={faLock}
+                    altText="Ctrl+Alt+R"
                 >
                     Disable Editing
                 </ContextMenu.Item.Button>

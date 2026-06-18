@@ -21,12 +21,13 @@
         faRotateLeft,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext, onMount } from "svelte";
+    import { getContext, onDestroy, onMount } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
@@ -51,6 +52,8 @@
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const classEditorContext = getContext("classEditor");
+
+    const shortcutsUnregister = [];
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLClassDialog = $state(false);
@@ -77,6 +80,19 @@
         readonly = classEditorContext.readonly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
+    });
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register("saveClass", ["ctrl", "s"], () => {
+                if (reactiveClass?.isValid && reactiveClass?.isModified)
+                    saveFromShortcut();
+            }),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 
     function saveChanges() {
@@ -120,6 +136,12 @@
             );
         }
         forceReloadTrigger.trigger();
+    }
+
+    export function saveFromShortcut() {
+        if (!readonly && reactiveClass?.isValid && reactiveClass?.isModified) {
+            saveChanges();
+        }
     }
 
     function handleCancel() {

@@ -21,11 +21,15 @@
         faCircleInfo,
         faCircleQuestion,
         faCommentDots,
+        faKeyboard,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
+    import KeyboardShortcutsDialog from "../../KeyboardShortcutsDialog.svelte";
     import ResetSessionDialog from "../../ResetSessionDialog.svelte";
 
     import { goto } from "$app/navigation";
@@ -35,7 +39,24 @@
         feedback: "https://github.com/SOPTIM/RDFArchitect/discussions",
     };
 
+    const shortcutsUnregister = [];
+
+    let showKeyboardShortcutsDialog = $state(false);
     let showResetSessionDialog = $state(false);
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register(
+                "keyboardShortcuts",
+                ["?"],
+                () => (showKeyboardShortcutsDialog = true),
+            ),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
+    });
 
     function openExternalResource(key) {
         const target = externalResources[key];
@@ -69,6 +90,13 @@
         <Menubar.Item.Button onSelect={navigateHomepage} faIcon={faCircleInfo}>
             About
         </Menubar.Item.Button>
+        <Menubar.Item.Button
+            onSelect={() => (showKeyboardShortcutsDialog = true)}
+            faIcon={faKeyboard}
+            altText="?"
+        >
+            Keyboard Shortcuts
+        </Menubar.Item.Button>
         <Menubar.Separator />
         <Menubar.Item.Button
             onSelect={() => (showResetSessionDialog = true)}
@@ -79,5 +107,7 @@
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>
+
+<KeyboardShortcutsDialog bind:showDialog={showKeyboardShortcutsDialog} />
 
 <ResetSessionDialog bind:showDialog={showResetSessionDialog} />

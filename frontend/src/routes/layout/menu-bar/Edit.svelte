@@ -32,6 +32,7 @@
         faPaste,
         faCopy,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import {
         enableEditing,
@@ -44,6 +45,7 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
         copyState,
         editorState,
@@ -63,6 +65,8 @@
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+
+    const shortcutsUnregister = [];
 
     let showNewClassDialog = $state(false);
     let showNewGraphDialog = $state(false);
@@ -125,6 +129,62 @@
         ontology = await getOntology();
         packages = await getPackages();
         await refreshSelectedPackageDetails(packages);
+    });
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register(
+                "newClass",
+                ["shift", "n"],
+                () => (showNewClassDialog = true),
+            ),
+            shortcutStore.register(
+                "newPackage",
+                ["alt", "n"],
+                () => (showNewPackageDialog = true),
+            ),
+            shortcutStore.register(
+                "namespaces",
+                ["ctrl", "shift", "a"],
+                () => (showNamespaceDialog = true),
+            ),
+            shortcutStore.register(
+                "profileHeader",
+                ["ctrl", "alt", "p"],
+                () => (showEditOntologyDialog = true),
+            ),
+            shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
+                launchPackageEditor(),
+            ),
+            shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
+                toggleReadonly(),
+            ),
+            shortcutStore.register("copyClass", ["ctrl", "c"], () =>
+                copyClassWithShortcut(),
+            ),
+            shortcutStore.register("paste", ["ctrl", "v"], () =>
+                pasteClassWithShortcut(false, true, true),
+            ),
+            shortcutStore.register(
+                "pasteWithoutAttributes",
+                ["ctrl", "shift", "v"],
+                () => pasteClassWithShortcut(false, false, true),
+            ),
+            shortcutStore.register(
+                "pasteWithoutAssociations",
+                ["ctrl", "alt", "v"],
+                () => pasteClassWithShortcut(false, true, false),
+            ),
+            shortcutStore.register(
+                "pasteBare",
+                ["ctrl", "shift", "alt", "v"],
+                () => pasteClassWithShortcut(true, false, false),
+            ),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 
     async function getOntology() {
@@ -274,6 +334,30 @@
             copyAssociations,
         );
     }
+
+    function copyClassWithShortcut() {
+        if (!disableCopyClassButton) {
+            copyClass();
+        }
+    }
+
+    function pasteClassWithShortcut(
+        copyAsAbstract,
+        copyAttributes,
+        copyAssociations,
+    ) {
+        if (!disablePasteButton) {
+            pasteClass(copyAsAbstract, copyAttributes, copyAssociations);
+        }
+    }
+
+    function toggleReadonly() {
+        if (isDatasetReadOnly) {
+            requestEnableEditing();
+        } else {
+            requestDisableEditing();
+        }
+    }
 </script>
 
 <Menubar.Menu value="edit">
@@ -287,12 +371,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showNewClassDialog = true)}
                     faIcon={faCube}
+                    altText="Shift+N"
                 >
                     Class
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showNewPackageDialog = true)}
                     faIcon={faFolderPlus}
+                    altText="Alt+N"
                 >
                     Package
                 </Menubar.Item.Button>
@@ -318,6 +404,7 @@
                             ? faEye
                             : faPen
                         : faPlus}
+                    altText="Ctrl+Alt+P"
                 >
                     Profile header
                 </Menubar.Item.Button>
@@ -325,6 +412,7 @@
                     onSelect={launchPackageEditor}
                     disabled={!selectedPackageDetails}
                     faIcon={canEditCurrentPackage ? faPen : faEye}
+                    altText="Ctrl+Shift+K"
                 >
                     Package
                 </Menubar.Item.Button>
@@ -400,6 +488,7 @@
                 onSelect={() => requestEnableEditing()}
                 disabled={!hasDatasetSelected || !isDatasetReadOnly}
                 faIcon={faPenToSquare}
+                altText="Ctrl+Alt+R"
             >
                 Enable Editing
             </Menubar.Item.Button>
@@ -408,6 +497,7 @@
                 onSelect={() => requestDisableEditing()}
                 disabled={!hasDatasetSelected || isDatasetReadOnly}
                 faIcon={faLock}
+                altText="Ctrl+Alt+R"
             >
                 Disable Editing
             </Menubar.Item.Button>
@@ -416,6 +506,7 @@
             onSelect={() => openNamespaceManager()}
             disabled={!canAccessNamespaces}
             faIcon={faTags}
+            altText="Ctrl+Shift+A"
         >
             {#if isDatasetReadOnly}
                 View Namespaces
