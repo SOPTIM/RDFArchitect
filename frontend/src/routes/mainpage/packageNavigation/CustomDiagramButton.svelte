@@ -107,7 +107,7 @@
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
                 {level}
-                label={diagram.label}
+                label={diagram.name}
                 icon={packageIcon}
                 isSelected={isSelectedCustomDiagram(
                     datasetNavEntry.id,
@@ -116,7 +116,7 @@
                 )}
                 hasChildren={hasClasses}
                 expanded={diagram.showContents}
-                title={diagram.label}
+                title={diagram.name}
                 onclick={selectDiagram}
                 onToggle={toggleDiagramContentsVisibility}
             />

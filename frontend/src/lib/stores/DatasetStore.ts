@@ -273,7 +273,12 @@ function createDatasetStore() {
     // ----- Invalidation -----
 
     function invalidate() {
-        void load(true);
+        update(s => ({
+            ...s,
+            data: null,
+            fetchedAt: null,
+            pending: null,
+        }));
     }
 
     return {

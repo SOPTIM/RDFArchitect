@@ -162,16 +162,27 @@
             return null;
         }
         await ontologyStore.loadOntology(dataset, graphUri);
-        const { data } = await ontologyStore.getOntologyForGraph(dataset, graphUri);
+        const { data } = await ontologyStore.getOntologyForGraph(
+            dataset,
+            graphUri,
+        );
         return data;
     }
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
         if (ontologyObject.uuid.value) {
-            await ontologyStore.replaceOntology(datasetName, graphUri, serializable);
+            await ontologyStore.replaceOntology(
+                datasetName,
+                graphUri,
+                serializable,
+            );
         } else {
-            await ontologyStore.createOntology(datasetName, graphUri, serializable);
+            await ontologyStore.createOntology(
+                datasetName,
+                graphUri,
+                serializable,
+            );
         }
     }
 

@@ -185,7 +185,10 @@
         }
 
         await ontologyStore.loadOntology(selectedDataset, selectedGraph);
-        const { data } = await ontologyStore.getOntologyForGraph(selectedDataset, selectedGraph);
+        const { data } = await ontologyStore.getOntologyForGraph(
+            selectedDataset,
+            selectedGraph,
+        );
         return data;
     }
 

@@ -18,9 +18,8 @@
     import { faCaretDown, faCaretUp } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { restoreVersion } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         editorState,
@@ -37,20 +36,17 @@
         readonly,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     const rowKey = $derived(`${change.changeId}::row`);
 
-    async function restoreVersion(changeId) {
+    async function callRestoreVersion(changeId) {
         console.log("restoreVersion", changeId);
 
-        const res = await bec.restoreVersion(
+        const { error } = await restoreVersion(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
             changeId,
         );
-
-        if (res.ok) {
+        if (!error) {
             console.log("Version restored successfully");
             forceReloadTrigger.trigger();
             toastStore.success(
@@ -58,7 +54,7 @@
                 "The selected version has been restored.",
             );
         } else {
-            console.error("Failed to restore version:", res.statusText);
+            console.error("Failed to restore version:", error);
             toastStore.error(
                 "Restore failed",
                 "Could not restore the selected version.",
@@ -135,7 +131,7 @@
             <ButtonControl
                 disabled={readonly}
                 title={readonly ? "cannot restore in readonly dataset" : ""}
-                callOnClick={() => restoreVersion(change.changeId)}
+                callOnClick={() => callRestoreVersion(change.changeId)}
             >
                 Restore Version
             </ButtonControl>

@@ -15,8 +15,6 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         forceReloadTrigger,
         editorState,
@@ -26,8 +24,6 @@
     import ChangesRow from "./ChangesRow.svelte";
 
     const { getExpanded, setExpanded, cleanExpandedStateMap } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let changelog = $state();
 
@@ -39,8 +35,7 @@
     $effect(async () => {
         forceReloadTrigger.subscribe();
         if (selectedDatasetName) {
-            readonlyDataset =
-                await datasetStore.isReadOnly(selectedDatasetName);
+            readonlyDataset = datasetStore.isReadOnly(selectedDatasetName);
         }
     });
 
@@ -55,15 +50,18 @@
         if (!selectedDatasetName || !selectedGraphUri) {
             return;
         }
-        const res = await bec.getChangelog(
-            selectedDatasetName,
-            selectedGraphUri,
-        );
-        if (res.ok) {
-            changelog = await res.json();
+        const { data, error } = await getChangelog({
+            path: {
+                datasetName: selectedDatasetName,
+                graphURI: selectedGraphUri,
+            },
+        });
+        if (!error) {
+            changelog = data;
+            changelog.reverse();
             cleanExpandedStateMap(changelog);
         } else {
-            console.error("Failed to fetch changelog:", res.statusText);
+            console.error("Failed to fetch changelog:", error);
         }
     }
 </script>

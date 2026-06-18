@@ -42,7 +42,8 @@
     async function fetchNavigationObject() {
         await datasetStore.load();
         const newDatasetList = [];
-        for (const datasetName of $datasetStore.data) {
+        for (const dataset of $datasetStore.data) {
+            const datasetName = dataset.label;
             let showDatasetContents = datasetName === selectedDatasetName;
             showDatasetContents |= datasetList.find(
                 datasetObject => datasetObject.label === datasetName,
@@ -54,7 +55,7 @@
             });
             await graphStore.load(datasetName);
             graphStore
-                .getGraphNames(datasetName)
+                .getGraphs(datasetName)
                 .forEach(graphUri =>
                     newDatasetList.at(-1).graphs.push(graphUri),
                 );

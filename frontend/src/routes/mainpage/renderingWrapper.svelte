@@ -20,11 +20,14 @@
     import { SvelteFlowProvider } from "@xyflow/svelte";
     import { untrack } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        getCustomDatasetViewRenderingData,
+        getCustomProfileViewRenderingData,
+        getRenderingDataParameterized,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
     import SvelteFlowWrapper from "$lib/rendering/svelteflow/svelteFlowWrapper.svelte";
     import {
@@ -36,8 +39,6 @@
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const MERMAID_FORMAT = "MERMAID";
     const SVELTEFLOW_FORMAT = "SVELTEFLOW";
@@ -131,46 +132,36 @@
                 filter.includeRelationsToExternalPackages,
         };
 
-        try {
-            const res = await bec.fetchFilteredRenderingData(
-                datasetName,
-                graphUri,
-                graphFilter,
-            );
+        const { data, error } = await getRenderingDataParameterized({
+            path: { datasetName: datasetName, graphURI: graphUri },
+            body: graphFilter,
+        });
 
-            const responseText = await res.text();
-            if (!responseText) {
-                response = null;
-                renderingFormat = null;
-                displayDiagram = false;
-                isLoading = false;
-            } else {
-                const parsedResponse = JSON.parse(responseText);
-                response = parsedResponse;
-                renderingFormat = parsedResponse.format;
-                displayDiagram = true;
-            }
-        } catch (error) {
-            console.error("Error fetching diagram data:", error);
+        if (error) {
             response = null;
             renderingFormat = null;
             displayDiagram = false;
             isLoading = false;
+        } else {
+            response = data;
+            renderingFormat = data.format;
+            displayDiagram = true;
         }
     }
 
     async function fetchDatasetDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomDatasetDiagramRenderingData(
-                editorState.selectedDataset.getValue(),
-                diagramId,
-            );
+            const { data, error } = await getCustomDatasetViewRenderingData({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    diagramId: diagramId,
+                },
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 displayDiagram = false;
             } else {
-                response = JSON.parse(responseText);
+                response = data;
                 renderingFormat = response.format;
                 displayDiagram = true;
             }
@@ -185,17 +176,18 @@
 
     async function fetchGraphDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomGraphDiagramRenderingData(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                diagramId,
-            );
+            const { data, error } = await getCustomProfileViewRenderingData({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramId: diagramId,
+                },
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 displayDiagram = false;
             } else {
-                response = JSON.parse(responseText);
+                response = data;
                 renderingFormat = response.format;
                 displayDiagram = true;
             }

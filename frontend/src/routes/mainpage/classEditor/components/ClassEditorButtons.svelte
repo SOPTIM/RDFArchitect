@@ -32,6 +32,7 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
 
     import DeleteDependenciesDialog from "../../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -91,7 +92,6 @@
     });
 
     function saveChanges() {
-        console.log("Saving changes for class");
         const classDto = mapReactiveClassToClassDto(
             reactiveClass,
             classEditorContext.getClassByUuid,
@@ -99,6 +99,7 @@
             classEditorContext.getPackageByUuid,
         );
         saveChangesToBackend(classDto);
+        datatypesStore.invalidateGraph(datasetName, graphUri);
     }
 
     async function saveChangesToBackend(classDto) {

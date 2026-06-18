@@ -15,13 +15,14 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
 import { classStore } from "$lib/stores/ClassStore.ts";
+import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
 import { packageStore } from "$lib/stores/PackageStore.ts";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import {
+    getXSDPrimitives,
+    loadXsdPrimitives,
+} from "$lib/stores/XSDDatatypesStore.ts";
 
 export async function getPackages(datasetName, graphUri) {
     // fetch packages
@@ -48,19 +49,21 @@ export async function getPackages(datasetName, graphUri) {
 }
 
 export async function getDataTypes(datasetName, graphUri) {
-    // fetch xsd datatypes
-    const xsd = await bec.getXSDPrimitives();
-    let xsdPrimitivesDto = await xsd.json();
-    // fetch primitive datatypes
-    const resPrimitivesClasses = await bec.getPrimitives(datasetName, graphUri);
-    let primitivesDto = await resPrimitivesClasses.json();
-    // fetch other datatypes (e.g. CIMDatatype)
-    const resDataTypes = await bec.getDataTypes(datasetName, graphUri);
-    let dataTypesDto = await resDataTypes.json();
+    await loadXsdPrimitives();
+    await datatypesStore.loadForGraph(datasetName, graphUri);
+    const xsd = await getXSDPrimitives();
+    const primitivesDto = await datatypesStore.getPrimitives(
+        datasetName,
+        graphUri,
+    );
+    const dataTypesDto = await datatypesStore.getDatatypes(
+        datasetName,
+        graphUri,
+    );
 
     // combine all datatypes into one list
     let datatypes = [];
-    for (const xsdDatatype of xsdPrimitivesDto) {
+    for (const xsdDatatype of xsd) {
         datatypes.push(
             new DataType({
                 prefix: xsdDatatype.prefix,
@@ -103,12 +106,4 @@ export async function getClasses(datasetName, graphUri) {
     let classes = classDTOs.map(cls => new Class(cls));
     console.debug("CLASSES:", classes);
     return classes;
-}
-
-export async function getStereotypes(datasetName, graphUri) {
-    const res = await bec.getStereotypes(datasetName, graphUri);
-    let stereotypesJSON = await res.json();
-
-    console.debug("STEREOTYPES:", stereotypesJSON);
-    return stereotypesJSON;
 }

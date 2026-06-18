@@ -19,9 +19,7 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
@@ -31,12 +29,12 @@
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/ClassStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
 
     import {
         getClasses,
         getDataTypes,
         getPackages,
-        getStereotypes,
     } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
@@ -54,7 +52,6 @@
 
     const enumerationStereotype =
         "http://iec.ch/TC57/NonStandard/UML#enumeration";
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const context = {
         namespaces: [],
@@ -159,6 +156,7 @@
     }
 
     async function loadContext() {
+        await datatypesStore.loadForGraph(graphUri);
         [
             context.classes,
             context.packages,
@@ -169,7 +167,7 @@
             getClasses(datasetName, graphUri),
             getPackages(datasetName, graphUri),
             getDataTypes(datasetName, graphUri),
-            getStereotypes(datasetName, graphUri),
+            datatypesStore.getStereotypes(datasetName, graphUri),
             datasetStore.getNamespaces(datasetName),
         ]);
         loadingContext = false;
@@ -252,9 +250,6 @@
         },
         get targetClassInfos() {
             return context.targetClassInfos;
-        },
-        get backendConnection() {
-            return bec;
         },
         get getClassByUuid() {
             return function (uuid) {
