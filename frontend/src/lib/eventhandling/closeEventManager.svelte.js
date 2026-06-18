@@ -17,6 +17,11 @@
 
 export let eventStack;
 
+export const EventType = {
+    DIALOG: "dialog",
+    CLASS_EDITOR: "classEditor",
+};
+
 class EventStack {
     constructor() {
         this.stack = [];
@@ -27,9 +32,9 @@ class EventStack {
 
     /**
      * @param {() => void} event - the close handler
-     * @param {string} [type] - optional category, e.g. "dialog" or "classEditor"
+     * @param {string} [type] - optional category, e.g. "DIALOG" or "CLASS_EDITOR"
      */
-    addEvent(event, type = "dialog") {
+    addEvent(event, type = EventType.DIALOG) {
         this.stack.push({ event, type });
     }
 

@@ -15,7 +15,10 @@
  *
  */
 
-import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+import {
+    eventStack,
+    EventType,
+} from "$lib/eventhandling/closeEventManager.svelte.js";
 
 export const shortcutStore = {
     /**
@@ -54,7 +57,7 @@ export const shortcutStore = {
                 event.preventDefault();
                 eventStack.guardAction(() => {
                     if (closeDialogs) {
-                        eventStack.closeAllExcept(["classEditor"]);
+                        eventStack.closeAllExcept([EventType.CLASS_EDITOR]);
                     }
                     handler();
                 });

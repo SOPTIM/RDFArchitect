@@ -23,7 +23,10 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import {
+        eventStack,
+        EventType,
+    } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
@@ -144,7 +147,7 @@
     });
 
     onMount(() => {
-        eventStack.addEvent(closeClassEditor, "classEditor");
+        eventStack.addEvent(closeClassEditor, EventType.CLASS_EDITOR);
         eventStack.registerActionGuard(withUnsavedChangesCheck);
     });
 
