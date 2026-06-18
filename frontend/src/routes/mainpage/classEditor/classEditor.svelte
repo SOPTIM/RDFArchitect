@@ -144,7 +144,7 @@
     });
 
     onMount(() => {
-        eventStack.addEvent(closeClassEditor);
+        eventStack.addEvent(closeClassEditor, "classEditor");
         eventStack.registerActionGuard(withUnsavedChangesCheck);
     });
 

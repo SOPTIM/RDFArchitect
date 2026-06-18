@@ -50,6 +50,7 @@
                 "keyboardShortcuts",
                 ["?"],
                 () => (showKeyboardShortcutsDialog = true),
+                true,
             ),
         );
     });

@@ -137,27 +137,37 @@
                 "newClass",
                 ["shift", "n"],
                 () => (showNewClassDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "newPackage",
                 ["alt", "n"],
                 () => (showNewPackageDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "namespaces",
                 ["ctrl", "shift", "a"],
                 () => (showNamespaceDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "profileHeader",
                 ["ctrl", "alt", "p"],
                 () => (showEditOntologyDialog = true),
+                true,
             ),
-            shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
-                launchPackageEditor(),
+            shortcutStore.register(
+                "editPackage",
+                ["ctrl", "shift", "k"],
+                () => launchPackageEditor(),
+                true,
             ),
-            shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
-                toggleReadonly(),
+            shortcutStore.register(
+                "toggleEdit",
+                ["ctrl", "alt", "r"],
+                () => toggleReadonly(),
+                true,
             ),
             shortcutStore.register("copyClass", ["ctrl", "c"], () =>
                 copyClassWithShortcut(),

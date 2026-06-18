@@ -25,12 +25,16 @@ class EventStack {
 
     stack;
 
-    addEvent(event) {
-        this.stack.push(event);
+    /**
+     * @param {() => void} event - the close handler
+     * @param {string} [type] - optional category, e.g. "dialog" or "classEditor"
+     */
+    addEvent(event, type = "dialog") {
+        this.stack.push({ event, type });
     }
 
     removeEvent(event) {
-        const idOfEvent = this.stack.indexOf(event);
+        const idOfEvent = this.stack.findIndex(e => e.event === event);
         if (idOfEvent === -1) return;
         this.stack.splice(idOfEvent, 1);
     }
@@ -43,7 +47,26 @@ class EventStack {
             );
             return;
         }
-        this.stack.at(-1)(...args);
+        this.stack.at(-1).event(...args);
+    }
+
+    /**
+     * Closes all open events whose type is not in the excludedTypes list.
+     * Used when opening a new dialog via shortcut: all other dialogs close,
+     * but e.g. the ClassEditor (type "classEditor") stays open.
+     * @param {string[]} excludedTypes
+     */
+    closeAllExcept(excludedTypes = []) {
+        const toClose = this.stack
+            .filter(e => !excludedTypes.includes(e.type))
+            .reverse();
+
+        for (const { event } of toClose) {
+            if (event() === false) {
+                return false;
+            }
+        }
+        return true;
     }
 
     registerActionGuard(fn) {

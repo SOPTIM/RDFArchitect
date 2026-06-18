@@ -15,13 +15,16 @@
  *
  */
 
+import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+
 export const shortcutStore = {
     /**
      * @param {string} id - unique identifier
      * @param {string[] | string[][]} keys - e.g. ["ctrl", "s"] or [["ctrl", "s"], ["ctrl", "shift", "s"]]
      * @param {() => void} handler
+     * @param closeDialogs define if the shortcut should close open dialogs (default: false). If true, all open dialogs will be closed before executing the handler.
      */
-    register(id, keys, handler) {
+    register(id, keys, handler, closeDialogs = false) {
         // Normalize to an array of key-combinations
         if (registry[id]) {
             console.warn(
@@ -30,7 +33,7 @@ export const shortcutStore = {
         }
         const combinations = Array.isArray(keys[0]) ? keys : [keys];
         const normalizedCombos = combinations.map(normalizeCombo);
-        registry[id] = { combos: normalizedCombos, handler };
+        registry[id] = { combos: normalizedCombos, handler, closeDialogs };
         return () => this.unregister(id);
     },
 
@@ -44,10 +47,17 @@ export const shortcutStore = {
      */
     handleEvent(event) {
         const normalized = normalizeEvent(event);
-        for (const { combos, handler } of Object.values(registry)) {
+        for (const { combos, handler, closeDialogs } of Object.values(
+            registry,
+        )) {
             if (combos.includes(normalized)) {
                 event.preventDefault();
-                handler();
+                eventStack.guardAction(() => {
+                    if (closeDialogs) {
+                        eventStack.closeAllExcept(["classEditor"]);
+                    }
+                    handler();
+                });
                 return true;
             }
         }
