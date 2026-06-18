@@ -22,9 +22,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import java.util.List;
-import java.util.UUID;
+
 import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
@@ -42,6 +42,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.UUID;
+
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/packages")
 @RequiredArgsConstructor
@@ -54,44 +57,40 @@ public class AllPackagesRESTController {
     private final ListInternalPackagesUseCase listInternalPackagesUseCase;
     private final ListExternalPackagesUseCase listExternalPackagesUseCase;
 
-    /**
-     * Record for response to frontend, contains two lists for internal and external packages.
-     */
+    /** Record for response to frontend, contains two lists for internal and external packages. */
     public record ListPackagesResponse(
-            List<PackageDTO> internalPackageList, List<PackageDTO> externalPackageList) {
-    }
+            List<PackageDTO> internalPackageList, List<PackageDTO> externalPackageList) {}
 
     @Operation(
             summary = "list packages",
             description = "Get two lists of packages: internal and external packages.",
             tags = {"graph"},
             responses = {
-                    @ApiResponse(
-                            responseCode = "200",
-                            content =
-                            @Content(
-                                    mediaType = "application/json",
-                                    schema =
-                                    @Schema(
-                                            implementation =
-                                                    ListPackagesResponse
-                                                            .class)))
+                @ApiResponse(
+                        responseCode = "200",
+                        content =
+                                @Content(
+                                        mediaType = "application/json",
+                                        schema =
+                                                @Schema(
+                                                        implementation =
+                                                                ListPackagesResponse.class)))
             })
     @GetMapping
     public ListPackagesResponse listPackages(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(
-                    value = HttpHeaders.ORIGIN,
-                    required = false,
-                    defaultValue = "unknown")
-            String originURL,
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-            String datasetName,
+                    String datasetName,
             @Parameter(
-                    description =
-                            "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI) {
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",
                 datasetName,
@@ -124,22 +123,22 @@ public class AllPackagesRESTController {
     @PostMapping
     public UUID addPackage(
             @Parameter(description = "The name/url of the inquirer.")
-            @RequestHeader(
-                    value = HttpHeaders.ORIGIN,
-                    required = false,
-                    defaultValue = "unknown")
-            String originURL,
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
-            String datasetName,
+                    String datasetName,
             @Parameter(
-                    description =
-                            "The url encoded uri of the graph, or \"default\" to access the default graph.")
-            @PathVariable
-            String graphURI,
+                            description =
+                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String graphURI,
             @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                    description = "DTO for the package to be created")
-            @RequestBody
-            PackageDTO packageDTO) {
+                            description = "DTO for the package to be created")
+                    @RequestBody
+                    PackageDTO packageDTO) {
 
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/packages\" from \"{}\".",

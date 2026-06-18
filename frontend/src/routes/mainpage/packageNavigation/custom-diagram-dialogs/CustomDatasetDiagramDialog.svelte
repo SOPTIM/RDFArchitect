@@ -73,22 +73,17 @@
     }
 
     async function fetchGraphs() {
-        try {
-            await graphStore.load(lockedDatasetName);
-            graphs = graphStore
-                .getGraphURIs(lockedDatasetName)
-                .map(graph => {
-                    return {
-                        ...graph,
-                        selected: false,
-                        expanded: false,
-                    };
-                })
-                .sort((a, b) => getUri(a).localeCompare(getUri(b)));
-        } catch (err) {
-            console.error("Failed to load graphs:", err);
-            graphs = [];
-        }
+        await graphStore.load(lockedDatasetName);
+        graphs = graphStore
+            .getGraphs(lockedDatasetName)
+            .map(graph => {
+                return {
+                    ...graph,
+                    selected: false,
+                    expanded: false,
+                };
+            })
+            .sort((a, b) => getUri(a).localeCompare(getUri(b)));
     }
 
     async function createPackageMap() {

@@ -28,8 +28,10 @@
     import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
     import { onMount, untrack } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import {
+        updateClassPositions,
+        updateDatasetClassPositions,
+    } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
         editorState,
@@ -51,7 +53,6 @@
         isLoading = $bindable(false),
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const nodeTypes = {
         class: ClassNode,
     };
@@ -107,9 +108,7 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset
-            ? await datasetStore.isReadOnly(dataset)
-            : false;
+        isDatasetReadOnly = dataset ? datasetStore.isReadOnly(dataset) : false;
     });
 
     $effect(() => {
@@ -419,12 +418,14 @@
             };
         });
 
-        bec.updateClassPositions(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            editorState.selectedDiagram.getProperty("id"),
-            classPositionDTOList,
-        );
+        updateClassPositions({
+            path: {
+                datasetName: editorState.selectedDataset.getValue(),
+                graphURI: editorState.selectedGraph.getValue(),
+                diagramUUID: editorState.selectedDiagram.getProperty("id"),
+            },
+            body: classPositionDTOList,
+        });
     }
 
     function moveToLayer(classUuid, layer) {
@@ -467,18 +468,22 @@
         const diagramUUID = editorState.selectedDiagram.getProperty("id");
 
         if (editorState.selectedGraph.getValue()) {
-            bec.updateClassPositions(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                diagramUUID,
-                classPositionDTOList,
-            );
+            updateClassPositions({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: classPositionDTOList,
+            });
         } else {
-            bec.updateGlobalClassPositions(
-                editorState.selectedDataset.getValue(),
-                diagramUUID,
-                classPositionDTOList,
-            );
+            updateDatasetClassPositions({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: classPositionDTOList,
+            });
         }
     }
 

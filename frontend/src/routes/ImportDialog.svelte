@@ -189,15 +189,12 @@
         const graphUrisLocal = files.map(entry =>
             entry.isZip
                 ? ""
-                : ensureGraphNamespaceUri(
-                      entry.graphUri,
-                      entry.file.label,
-                  ),
+                : ensureGraphNamespaceUri(entry.graphUri, entry.file.label),
         );
         const { data } = await graphStore.importGraphs(
             datasetNameUserInputLocal,
             filesLocal,
-            graphUrisLocal
+            graphUrisLocal,
         );
 
         if (data.importedGraphUris?.length > 0) {

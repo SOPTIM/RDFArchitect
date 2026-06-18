@@ -19,7 +19,6 @@
     import "../app.css";
     import { onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import {
         installBackendFetchInterceptor,
         probeBackendConnection,
@@ -28,10 +27,10 @@
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
     import {
@@ -52,8 +51,6 @@
 
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let canUndo = $state(false);
     let canRedo = $state(false);
@@ -115,8 +112,8 @@
     async function loadSnapshot() {
         const base64Param = page.url.searchParams.get("snapshot");
         if (base64Param) {
-            const res = await bec.loadSnapshot(base64Param);
-            if (res.ok) {
+            const { error } = await loadSnapshot({ path: { base64Param } });
+            if (!error) {
                 await goto("/mainpage");
                 toastStore.success(
                     "Snapshot loaded",
@@ -166,15 +163,12 @@
         copyAttributes,
         copyAssociations,
     ) {
-        const res = await bec.getPackages(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-        );
-        const packagesJSON = await res.json();
-        let packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+        const dataset = editorState.selectedDataset.getValue();
+        const graph = editorState.selectedGraph.getValue();
+        await packageStore.load(dataset, graph);
+        const res = await packageStore.getPackages(dataset, graph);
+        let packages = [...res.internal, ...res.external];
+
         const selectedPackageUUID =
             editorState.selectedDiagram.getProperty("id") === "default"
                 ? null

@@ -180,7 +180,7 @@ function createGraphStore() {
     async function importGraphs(
         datasetName: string,
         files: File[],
-        graphUris: string[]
+        graphUris: string[],
     ): Promise<Result<GraphBulkImportResponse>> {
         console.log(
             `${LOG_PREFIX} Importing graphs into dataset "${datasetName}"`,

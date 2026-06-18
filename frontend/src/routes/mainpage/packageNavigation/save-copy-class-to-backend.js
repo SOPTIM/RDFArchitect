@@ -15,17 +15,13 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import {
     copyState,
     DiagramType,
     editorState,
     forceReloadTrigger,
 } from "$lib/sharedState.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/ClassStore.ts";
 
 export async function saveCopyClass(
     datasetName,
@@ -45,33 +41,24 @@ export async function saveCopyClass(
         copyAttributes: copyAttributes,
         copyAssociations: copyAssociations,
     };
-    try {
-        const res = await bec.postCopyClass(
-            copyState.datasetName.getValue(),
-            copyState.graphURI.getValue(),
-            copyState.classUUID.getValue(),
-            payload,
-        );
-        if (res.ok) {
-            const json = await res.json();
-            const uuid = json.uuid;
-            const name = json.name;
-            editorState.selectedDataset.updateValue(datasetName);
-            editorState.selectedClassDataset.updateValue(datasetName);
-            editorState.selectedGraph.updateValue(graphURI);
-            editorState.selectedClassGraph.updateValue(graphURI);
-            editorState.selectedDiagram.updateValue({
-                type: DiagramType.PACKAGE,
-                id: packageDTO?.uuid ?? "default",
-            });
-            editorState.selectedClassUUID.updateValue(uuid);
-            toastStore.success("Class pasted", `"${name}" was pasted.`);
-        } else {
-            const errorText = await res.text();
-            console.error("Could not copy class:", errorText);
-            toastStore.error("Paste failed", `Could not paste class.`);
-        }
-    } finally {
+
+    const { data } = await classStore.copyClass(
+        copyState.datasetName.getValue(),
+        copyState.graphURI.getValue(),
+        copyState.classUUID.getValue(),
+        payload,
+    );
+    if (data) {
+        const uuid = data.uuid;
+        editorState.selectedDataset.updateValue(datasetName);
+        editorState.selectedClassDataset.updateValue(datasetName);
+        editorState.selectedGraph.updateValue(graphURI);
+        editorState.selectedClassGraph.updateValue(graphURI);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: packageDTO?.uuid ?? "default",
+        });
+        editorState.selectedClassUUID.updateValue(uuid);
         forceReloadTrigger.trigger();
     }
 }

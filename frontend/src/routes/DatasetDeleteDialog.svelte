@@ -34,7 +34,7 @@
 
     async function onOpen() {
         await graphStore.load(datasetName);
-        graphs = graphStore.getGraphURIs(datasetName);
+        graphs = graphStore.getGraphs(datasetName);
     }
 
     function onClose() {

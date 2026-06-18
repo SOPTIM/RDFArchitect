@@ -22,9 +22,8 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { search } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         DiagramType,
@@ -33,7 +32,6 @@
     } from "$lib/sharedState.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
-    const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const filters = [
         { name: "All Datasets", value: "all" },
         { name: "Current Dataset", value: "dataset" },
@@ -115,24 +113,26 @@
 
     async function fetchSearchResults(query, body) {
         const tempSearchResults = [];
-        const response = await backend.getSearchResults(query, body);
-        if (response.ok) {
-            const res = await response.json();
+        const { data, error } = await search({
+            query: query,
+            body: body,
+        });
+        if (!error) {
             if (
-                res.internalSearchResults.length === 0 &&
-                res.externalSearchResults.length === 0
+                data.internalSearchResults.length === 0 &&
+                data.externalSearchResults.length === 0
             ) {
                 tempSearchResults.push({
                     message: "No results found",
                 });
             } else {
-                for (const searchResult of res.internalSearchResults) {
+                for (const searchResult of data.internalSearchResults) {
                     tempSearchResults.push({
                         ...searchResult,
                         external: false,
                     });
                 }
-                for (const searchResult of res.externalSearchResults) {
+                for (const searchResult of data.externalSearchResults) {
                     tempSearchResults.push({
                         ...searchResult,
                         external: true,
@@ -149,10 +149,7 @@
             });
             searchResults = tempSearchResults;
         } else {
-            console.error(
-                "Error fetching search results:",
-                response.statusText,
-            );
+            console.error("Error fetching search results:", error);
             toastStore.error(
                 "Search failed",
                 "Could not fetch search results. Please try again.",

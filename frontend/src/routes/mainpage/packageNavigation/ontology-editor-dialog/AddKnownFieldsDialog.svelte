@@ -15,11 +15,9 @@
   -
   -->
 <script>
-    import { getKnownFields } from "$lib/api/apiGlobalUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -30,7 +28,6 @@
         graphUri,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let knownFields = $state([]);
     let generatedEntries = $state([]);
 
@@ -49,10 +46,13 @@
     let disableSubmit = $derived(!knownFields.some(entry => entry.toAdd));
 
     async function onOpen() {
-        knownFields = await getKnownFields();
-        generatedEntries = await (
-            await bec.generateOntologyEntries(dataset, graphUri)
-        ).json();
+        await ontologyStore.loadKnownFields();
+        knownFields = ontologyStore.getKnownFields();
+        const { data } = await ontologyStore.generateOntologyEntries(
+            dataset,
+            graphUri,
+        );
+        generatedEntries = data;
         setToAdd();
         resetOverride();
         resetGenerate();

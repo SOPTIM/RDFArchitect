@@ -18,14 +18,13 @@
 <script>
     import { faPaste, faPlus } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         copyState,
         DiagramType,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     import {
         getContextMenuTriggerStyle,
@@ -43,8 +42,6 @@
         onClassCreated = () => {},
         onClose = () => {},
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let triggerRef = $state(null);
     let open = $state(false);
@@ -88,15 +85,12 @@
         copyAttributes,
         copyAssociations,
     ) {
-        const res = await bec.getPackages(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-        );
-        const packagesJSON = await res.json();
-        let packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+        const dataset = editorState.selectedDataset.getValue();
+        const graph = editorState.selectedGraph.getValue();
+        await packageStore.load(dataset, graph);
+        const res = await packageStore.getPackages(dataset, graph);
+        let packages = [...res.internal, ...res.external];
+
         const selectedPackageUUID =
             editorState.selectedDiagram.getProperty("id") === "default"
                 ? null

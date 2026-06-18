@@ -51,7 +51,8 @@ public class DatasetRESTController {
 
     @Operation(
             summary = "List datasets",
-            description = "Lists all non-snapshots datasets including their prefixes and read-only status.",
+            description =
+                    "Lists all non-snapshots datasets including their prefixes and read-only status.",
             tags = {"dataset"},
             responses = {@ApiResponse(responseCode = "200")})
     @GetMapping

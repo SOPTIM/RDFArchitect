@@ -55,7 +55,7 @@
     import NewPackageDialog from "../../NewPackageDialog.svelte";
 
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
-    
+
     let showNewClassDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
@@ -125,7 +125,10 @@
         }
 
         await ontologyStore.loadOntology(selectedDataset, selectedGraph);
-        const { data } = await ontologyStore.getOntologyForGraph(selectedDataset, selectedGraph);
+        const { data } = await ontologyStore.getOntologyForGraph(
+            selectedDataset,
+            selectedGraph,
+        );
         return data;
     }
 

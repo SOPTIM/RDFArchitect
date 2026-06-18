@@ -48,38 +48,34 @@ export async function createClassListForGraph(
     graphURI,
     selectedClasses,
 ) {
-    try {
-        await classStore.load(datasetName, graphURI);
-        const classList = await classStore.getClasses(datasetName, graphURI);
+    await classStore.load(datasetName, graphURI);
+    const classList = await classStore.getClasses(datasetName, graphURI);
 
-        const grouped = {};
+    const grouped = {};
 
-        for (const cls of classList) {
-            const packageId = getPackageId(cls.package);
-            if (!grouped[packageId]) {
-                grouped[packageId] = [];
-            }
-
-            cls.selected = !!selectedClasses.some(
-                selected => selected.uuid === cls.uuid,
-            );
-
-            grouped[packageId].push({
-                ...cls,
-                packageUUID: packageId,
-            });
+    for (const cls of classList) {
+        const packageId = getPackageId(cls.package);
+        if (!grouped[packageId]) {
+            grouped[packageId] = [];
         }
 
-        for (const key of Object.keys(grouped)) {
-            grouped[key].sort((a, b) =>
-                (a.label ?? "").localeCompare(b.label ?? "", undefined, {
-                    sensitivity: "base",
-                }),
-            );
-        }
+        cls.selected = !!selectedClasses.some(
+            selected => selected.uuid === cls.uuid,
+        );
 
-        return grouped;
-    } catch (err) {
-        console.error("Failed to load classes:", err);
+        grouped[packageId].push({
+            ...cls,
+            packageUUID: packageId,
+        });
     }
+
+    for (const key of Object.keys(grouped)) {
+        grouped[key].sort((a, b) =>
+            (a.label ?? "").localeCompare(b.label ?? "", undefined, {
+                sensitivity: "base",
+            }),
+        );
+    }
+
+    return grouped;
 }

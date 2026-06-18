@@ -37,7 +37,7 @@ type State = { byGraph: Map<string, Flags> };
 const LOG = "[versionControlStore]";
 
 export const versionControlStore = createStore();
-const key = (d: string, g: string) => `${d}::${g}`;
+const key = (dataset: string, graph: string) => `${dataset}::${graph}`;
 
 function emptyFlags(): Flags {
     return { canUndo: false, canRedo: false, pending: null };
@@ -47,38 +47,38 @@ function createStore() {
     const store = writable<State>({ byGraph: new Map() });
     const { subscribe, update } = store;
 
-    function patch(d: string, g: string, next: Partial<Flags>) {
+    function patch(dataset: string, graph: string, next: Partial<Flags>) {
         update(s => {
             const m = new Map(s.byGraph);
-            const cur = m.get(key(d, g)) ?? emptyFlags();
-            m.set(key(d, g), { ...cur, ...next });
+            const cur = m.get(key(dataset, graph)) ?? emptyFlags();
+            m.set(key(dataset, graph), { ...cur, ...next });
             return { byGraph: m };
         });
     }
 
-    async function refresh(d: string, g: string) {
-        if (!d || !g) return;
+    async function refresh(dataset: string, graph: string) {
+        if (!dataset || !graph) return;
         const [u, r] = await Promise.all([
-            sdkCanUndo({ path: { datasetName: d, graphURI: g } }),
-            sdkCanRedo({ path: { datasetName: d, graphURI: g } }),
+            sdkCanUndo({ path: { datasetName: dataset, graphURI: graph } }),
+            sdkCanRedo({ path: { datasetName: dataset, graphURI: graph } }),
         ]);
-        patch(d, g, {
+        patch(dataset, graph, {
             canUndo: !u.error && u.data === true,
             canRedo: !r.error && r.data === true,
         });
     }
 
-    function canUndo(d: string, g: string): boolean {
-        return get(store).byGraph.get(key(d, g))?.canUndo ?? false;
+    function canUndo(dataset: string, graph: string): boolean {
+        return get(store).byGraph.get(key(dataset, graph))?.canUndo ?? false;
     }
 
-    function canRedo(d: string, g: string): boolean {
-        return get(store).byGraph.get(key(d, g))?.canRedo ?? false;
+    function canRedo(dataset: string, graph: string): boolean {
+        return get(store).byGraph.get(key(dataset, graph))?.canRedo ?? false;
     }
 
-    async function doUndo(d: string, g: string) {
+    async function doUndo(dataset: string, graph: string) {
         const { error } = await sdkUndo({
-            path: { datasetName: d, graphURI: g },
+            path: { datasetName: dataset, graphURI: graph },
         });
         if (error) {
             console.error(`${LOG} undo failed`, error);
@@ -86,15 +86,15 @@ function createStore() {
             return { error };
         }
         toastStore.info("Undone");
-        classStore.invalidateGraph(d, g);
-        packageStore.invalidateGraph(d, g);
-        await refresh(d, g);
+        classStore.invalidateGraph(dataset, graph);
+        packageStore.invalidateGraph(dataset, graph);
+        await refresh(dataset, graph);
         return { error: null };
     }
 
-    async function doRedo(d: string, g: string) {
+    async function doRedo(dataset: string, graph: string) {
         const { error } = await sdkRedo({
-            path: { datasetName: d, graphURI: g },
+            path: { datasetName: dataset, graphURI: graph },
         });
         if (error) {
             console.error(`${LOG} redo failed`, error);
@@ -102,9 +102,9 @@ function createStore() {
             return { error };
         }
         toastStore.info("Redone");
-        classStore.invalidateGraph(d, g);
-        packageStore.invalidateGraph(d, g);
-        await refresh(d, g);
+        classStore.invalidateGraph(dataset, graph);
+        packageStore.invalidateGraph(dataset, graph);
+        await refresh(dataset, graph);
         return { error: null };
     }
 

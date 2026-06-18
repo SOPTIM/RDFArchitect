@@ -20,9 +20,8 @@
     import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { createSnapshot } from "$lib/api/generated/index.ts";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
@@ -31,8 +30,6 @@
     import { editorState } from "../lib/sharedState.svelte.js";
 
     let { showDialog = $bindable(), lockedDatasetName } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const datasetSelectId = `datasetSelect-${uuidv4()}`;
 
@@ -47,9 +44,11 @@
     }
 
     async function snapshotDataset() {
-        const res = await bec.createSnapshot(datasetName);
-        if (res.ok) {
-            base64Token = await res.text();
+        const { data, error } = await createSnapshot({
+            path: { datasetName: datasetName },
+        });
+        if (!error) {
+            base64Token = data;
             console.log(
                 "Successfully created snapshot for dataset",
                 datasetName,
@@ -59,10 +58,7 @@
                 `Share link created for "${datasetName}".`,
             );
         } else {
-            console.error(
-                "Error creating snapshot for dataset:",
-                res.statusText,
-            );
+            console.error("Error creating snapshot for dataset:", error);
             toastStore.error(
                 "Snapshot failed",
                 `Could not create a snapshot for "${datasetName}".`,

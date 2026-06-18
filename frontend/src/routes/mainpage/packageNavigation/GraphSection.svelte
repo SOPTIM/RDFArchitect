@@ -106,7 +106,10 @@
 
     async function initialize() {
         await ontologyStore.loadOntology(datasetNavEntry.id, graphNavEntry.id);
-        const { data } = await ontologyStore.getOntologyForGraph(datasetNavEntry.id, graphNavEntry.id);
+        const { data } = await ontologyStore.getOntologyForGraph(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
         ontology = data;
         canUndo = versionControlStore.canUndo(
             datasetNavEntry.id,

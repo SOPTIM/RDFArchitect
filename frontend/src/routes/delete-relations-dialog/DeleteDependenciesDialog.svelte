@@ -18,8 +18,10 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import {
+        deleteResources,
+        getDeletionImpact,
+    } from "$lib/api/generated/index.ts";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
@@ -36,8 +38,6 @@
         graphUri,
         resourceUuid,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let deleteDependencies = $state(null);
 
@@ -106,12 +106,14 @@
             );
             showDialog = false;
         }
-        let res = await bec.getDeleteRelation(
-            datasetName,
-            graphUri,
-            resourceUuid,
-        );
-        deleteDependencies = await res.json();
+        let { data } = await getDeletionImpact({
+            path: {
+                datasetName: datasetName,
+                graphURI: graphUri,
+                uuid: resourceUuid,
+            },
+        });
+        deleteDependencies = data;
 
         selectedActions = new Map();
         initSelectedActions(deleteDependencies);
@@ -148,9 +150,13 @@
         checkSelectedCopyClass(payload);
         console.log("Submit delete with selections:", payload);
         const label = deleteDependencies.resourceIdentifier.label;
-        let res = await bec.deleteResources(datasetName, graphUri, payload);
-        if (!res.ok) {
-            console.error("Failed to delete resources:", await res.text());
+
+        let { error } = await deleteResources({
+            path: { datasetName: datasetName, graphURI: graphUri },
+            body: payload,
+        });
+        if (error) {
+            console.error("Failed to delete resources:", error);
             toastStore.error(
                 "Delete failed",
                 label

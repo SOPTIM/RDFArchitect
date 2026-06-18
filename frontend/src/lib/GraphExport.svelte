@@ -20,10 +20,8 @@
     import { onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
@@ -41,8 +39,6 @@
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedDatasetName = $state(null);
     let graphURI = $state(null);
@@ -75,7 +71,10 @@
     $effect(async () => {
         if (selectedDatasetName && graphURI) {
             await ontologyStore.loadOntology(selectedDatasetName, graphURI);
-            const { data, error } = await ontologyStore.getOntologyForGraph(selectedDatasetName, graphURI);
+            const { data, error } = await ontologyStore.getOntologyForGraph(
+                selectedDatasetName,
+                graphURI,
+            );
             if (error) {
                 ontology = null;
                 return;
@@ -90,11 +89,11 @@
 
     $effect(async () => {
         if (selectedDatasetName && graphURI && hasOntology) {
-            const res = await bec.generateOntologyEntries(
+            const { data } = await ontologyStore.generateOntologyEntries(
                 selectedDatasetName,
                 graphURI,
             );
-            generatedOntologyEntries = await res.json();
+            generatedOntologyEntries = data;
             generatedOntologyEntries.forEach(entry => (entry.generate = true));
             return;
         }

@@ -19,7 +19,9 @@ package org.rdfarchitect.api.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
+
 import java.util.List;
 
 @Data

@@ -20,12 +20,13 @@ import { writable, get } from "svelte/store";
 import { describeError } from "./StoreLogging";
 import {
     getOntology,
-    getOntology2,
     createOntology,
     replaceOntology,
     type OntologyDto,
     type OntologyEntry,
     type OntologyField,
+    getKnownOntologyFields,
+    getOntologyEntries,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -42,6 +43,7 @@ type GraphKey = `${string}::${string}`;
 
 type OntologyStoreState = {
     byGraph: Map<GraphKey, LoadState<OntologyDto>>;
+    knownFields: LoadState<OntologyField[]>;
 };
 
 const LOG_PREFIX = "[ontologyStore]";
@@ -64,6 +66,7 @@ function makeGraphKey(datasetName: string, graphURI: string): GraphKey {
 function createOntologyStore() {
     const store = writable<OntologyStoreState>({
         byGraph: new Map(),
+        knownFields: createEmptyLoadState<OntologyField[]>(),
     });
 
     const { subscribe, update } = store;
@@ -106,6 +109,13 @@ function createOntologyStore() {
                 error: null,
             });
         });
+    }
+
+    function patchKnownFields(patch: Partial<LoadState<OntologyField[]>>) {
+        update(s => ({
+            ...s,
+            knownFields: { ...s.knownFields, ...patch },
+        }));
     }
 
     // ---------- load ontology for graph ----------
@@ -193,7 +203,61 @@ function createOntologyStore() {
         return getGraphState(get(store), key).data;
     }
 
-    // ---------- generate ontology entries ----------
+    // ---------- known ontology fields (global) ----------
+
+    async function loadKnownFields(force = false) {
+        const slot = get(store).knownFields;
+
+        if (!force && slot.data !== null) return;
+        if (slot.pending !== null) return slot.pending;
+
+        console.log(
+            `${LOG_PREFIX} Loading known ontology fields (force=${force})`,
+        );
+
+        const pending = (async () => {
+            try {
+                const { data, error } = await getKnownOntologyFields();
+
+                if (error) {
+                    console.error(
+                        `${LOG_PREFIX} Failed to load known ontology fields:`,
+                        await describeError(error),
+                    );
+                    patchKnownFields({ pending: null, error });
+                    return;
+                }
+
+                const fields = data ?? [];
+                patchKnownFields({
+                    data: fields,
+                    fetchedAt: Date.now(),
+                    pending: null,
+                    error: null,
+                });
+
+                console.log(
+                    `${LOG_PREFIX} Loaded ${fields.length} known ontology field${fields.length === 1 ? "" : "s"}`,
+                );
+            } catch (err) {
+                console.error(
+                    `${LOG_PREFIX} Unexpected error while loading known ontology fields:`,
+                    err,
+                );
+                patchKnownFields({ pending: null, error: err });
+            }
+        })();
+
+        patchKnownFields({ pending });
+
+        return pending;
+    }
+
+    function getKnownFields(): OntologyField[] | null {
+        return get(store).knownFields.data;
+    }
+
+    // ---------- generated ontology entries ----------
 
     async function generateOntologyEntries(
         datasetName: string,
@@ -203,7 +267,7 @@ function createOntologyStore() {
             `${LOG_PREFIX} Generating ontology entries for dataset="${datasetName}", graph="${graphURI}"`,
         );
 
-        const { data, error } = await getOntology2({
+        const { data, error } = await getOntologyEntries({
             path: { datasetName, graphURI },
         });
 
@@ -292,10 +356,7 @@ function createOntologyStore() {
                 `${LOG_PREFIX} Could not replace ontology:`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Save failed",
-                "Could not save ontology changes.",
-            );
+            toastStore.error("Save failed", "Could not save ontology changes.");
             return { error };
         }
 
@@ -314,6 +375,9 @@ function createOntologyStore() {
 
     function invalidateGraph(datasetName: string, graphURI: string) {
         const key = makeGraphKey(datasetName, graphURI);
+        console.log(
+            `${LOG_PREFIX} Invalidating ontology cache for dataset="${datasetName}", graph="${graphURI}"`,
+        );
         update(s => {
             const byGraph = new Map(s.byGraph);
             byGraph.delete(key);
@@ -323,6 +387,9 @@ function createOntologyStore() {
 
     function invalidateDataset(datasetName: string) {
         const prefix = `${datasetName}::`;
+        console.log(
+            `${LOG_PREFIX} Invalidating ontology cache for dataset="${datasetName}"`,
+        );
         update(s => {
             const byGraph = new Map(s.byGraph);
             for (const key of byGraph.keys()) {
@@ -332,17 +399,11 @@ function createOntologyStore() {
         });
     }
 
-    function invalidateKnownFields() {
-        update(s => ({
-            ...s,
-            knownFields: createEmptyLoadState<OntologyField[]>(),
-        }));
-    }
-
     function invalidateAll() {
+        console.log(`${LOG_PREFIX} Invalidating all ontology caches`);
         update(() => ({
-            knownFields: createEmptyLoadState<OntologyField[]>(),
             byGraph: new Map(),
+            knownFields: createEmptyLoadState<OntologyField[]>(),
         }));
     }
 
@@ -354,6 +415,10 @@ function createOntologyStore() {
         getOntologyForGraph,
         generateOntologyEntries,
 
+        // known fields (global)
+        loadKnownFields,
+        getKnownFields,
+
         // mutations
         createOntology: createOntologyForGraph,
         replaceOntology: replaceOntologyForGraph,
@@ -361,7 +426,6 @@ function createOntologyStore() {
         // invalidation
         invalidateGraph,
         invalidateDataset,
-        invalidateKnownFields,
         invalidateAll,
     };
 }

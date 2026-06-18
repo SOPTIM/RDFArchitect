@@ -26,9 +26,9 @@
     import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { editorState } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
-
-    import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
 
     let {
         showDialog = $bindable(),
@@ -64,18 +64,27 @@
             classEditorContext.reactiveClass.namespace.backup +
                 classEditorContext.reactiveClass.label.backup,
         );
-        const result = await saveApiEnumEntryToBackend(
-            classEditorContext.datasetName,
-            classEditorContext.graphUri,
-            classEditorContext.reactiveClass.uuid.value,
-            apiEnumEntry,
-            isNewEnumEntry,
-        );
-        if (!result.ok) {
-            return;
-        }
 
-        enumEntry.uuid.value = result.enumEntryUUID;
+        const { error, data } = isNewEnumEntry
+            ? await classStore.addEnumEntry(
+                  classEditorContext.datasetName,
+                  classEditorContext.graphUri,
+                  classEditorContext.reactiveClass.uuid.value,
+                  apiEnumEntry,
+              )
+            : await classStore.replaceEnumEntry(
+                  classEditorContext.datasetName,
+                  classEditorContext.graphUri,
+                  classEditorContext.reactiveClass.uuid.value,
+                  apiEnumEntry,
+              );
+
+        if (error) return;
+
+        editorState.selectedClassUUID.trigger();
+        editorState.selectedDiagram.trigger();
+
+        enumEntry.uuid.value = data;
         enumEntry.save();
         if (isNewEnumEntry) {
             enumEntries.append(enumEntry);

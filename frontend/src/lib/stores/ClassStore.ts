@@ -34,7 +34,6 @@ import {
     // association mutations
     createAssociation,
     replaceAssociation,
-    replaceAllAssociations,
     // enum entry mutations
     createEnumEntry,
     replaceEnumEntry,
@@ -462,19 +461,13 @@ function createClassStore() {
                 `${LOG_PREFIX} Could not create class`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Create failed",
-                "Die Klasse konnte nicht erstellt werden.",
-            );
+            toastStore.error("Create failed", "Class could not be created.");
             return { error };
         }
 
         invalidateGraph(datasetName, graphURI);
         console.log(`${LOG_PREFIX} Created class with uuid="${data ?? ""}"`);
-        toastStore.success(
-            "Klasse erstellt",
-            "Die Klasse wurde erfolgreich erstellt.",
-        );
+        toastStore.success("Klasse erstellt", "Class successfully created.");
         return { error: null, data: data ?? undefined };
     }
 
@@ -495,10 +488,7 @@ function createClassStore() {
                 `${LOG_PREFIX} Could not replace class classUUID="${classUUID}"`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Speichern fehlgeschlagen",
-                "Die Klasse konnte nicht gespeichert werden.",
-            );
+            toastStore.error("Save failed", "Class could not be saved.");
             return { error };
         }
 
@@ -509,10 +499,7 @@ function createClassStore() {
             uuid: classUUID,
         }));
         console.log(`${LOG_PREFIX} Replaced class classUUID="${classUUID}"`);
-        toastStore.success(
-            "Klasse gespeichert",
-            "Die Änderungen wurden übernommen.",
-        );
+        toastStore.success("Class saved", "Changes were applied.");
         return { error: null };
     }
 
@@ -531,16 +518,13 @@ function createClassStore() {
                 `${LOG_PREFIX} Could not delete class classUUID="${classUUID}"`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Delete failed",
-                "Die Klasse konnte nicht gelöscht werden.",
-            );
+            toastStore.error("Delete failed", "Class could not be deleted.");
             return { error };
         }
 
         removeClassLocally(datasetName, graphURI, classUUID);
         console.log(`${LOG_PREFIX} Deleted class classUUID="${classUUID}"`);
-        toastStore.success("Klasse gelöscht", "Die Klasse wurde entfernt.");
+        toastStore.success("Class deleted", "Class was deleted.");
         return { error: null };
     }
 
@@ -562,15 +546,15 @@ function createClassStore() {
                 await describeError(error),
             );
             toastStore.error(
-                "Erweiterung fehlgeschlagen",
-                "Die Klasse konnte nicht erweitert werden.",
+                "Extension failed",
+                "Class could not be extended.",
             );
             return { error };
         }
 
         invalidateGraph(datasetName, graphURI);
         console.log(`${LOG_PREFIX} Extended class classUUID="${classUUID}"`);
-        toastStore.success("Klasse erweitert", "Die Klasse wurde erweitert.");
+        toastStore.success("Class extended", "Class was extended.");
         return { error: null, data: data ?? undefined };
     }
 
@@ -593,10 +577,7 @@ function createClassStore() {
                 `${LOG_PREFIX} Could not copy class classUUID="${classUUID}"`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Kopieren fehlgeschlagen",
-                "Die Klasse konnte nicht kopiert werden.",
-            );
+            toastStore.error("Copy failed", "Class could not be copied.");
             return { error };
         }
 
@@ -604,10 +585,7 @@ function createClassStore() {
             invalidateGraph(request.targetDatasetName, request.targetGraphURI);
         }
         console.log(`${LOG_PREFIX} Copied class classUUID="${classUUID}"`);
-        toastStore.success(
-            "Klasse kopiert",
-            "Die Klasse wurde erfolgreich kopiert.",
-        );
+        toastStore.success("Class copied", "Class was successfully copied.");
         return { error: null, data: data ?? undefined };
     }
 
@@ -635,8 +613,8 @@ function createClassStore() {
                 await describeError(error),
             );
             toastStore.error(
-                "Attribut hinzufügen fehlgeschlagen",
-                "Das Attribut konnte nicht erstellt werden.",
+                "Add attribute failed",
+                "Attribute could not be added.",
             );
             return { error };
         }
@@ -654,8 +632,8 @@ function createClassStore() {
             `${LOG_PREFIX} Added attribute uuid="${newUUID ?? ""}" to class classUUID="${classUUID}"`,
         );
         toastStore.success(
-            "Attribut erstellt",
-            "Das Attribut wurde hinzugefügt.",
+            "Attribute added",
+            "Attribute was added successfully.",
         );
         return { error: null, data: newUUID };
     }
@@ -693,10 +671,7 @@ function createClassStore() {
                 `${LOG_PREFIX} Could not replace attribute uuid="${attribute.uuid}"`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Speichern fehlgeschlagen",
-                "Das Attribut konnte nicht gespeichert werden.",
-            );
+            toastStore.error("Save failed", "Attribute could not be saved.");
             return { error };
         }
 
@@ -709,8 +684,8 @@ function createClassStore() {
             `${LOG_PREFIX} Replaced attribute uuid="${attribute.uuid}"`,
         );
         toastStore.success(
-            "Attribut gespeichert",
-            "Die Änderungen am Attribut wurden übernommen.",
+            "Attribute saved",
+            "Changes on the attribute successfully saved.",
         );
         return { error: null };
     }
@@ -735,7 +710,7 @@ function createClassStore() {
             );
             toastStore.error(
                 "Delete failed",
-                "Das Attribut konnte nicht gelöscht werden.",
+                "Attribute could not be deleted.",
             );
             return { error };
         }
@@ -748,7 +723,10 @@ function createClassStore() {
             ),
         }));
         console.log(`${LOG_PREFIX} Deleted attribute uuid="${attributeUUID}"`);
-        toastStore.success("Attribut gelöscht", "Das Attribut wurde entfernt.");
+        toastStore.success(
+            "Attribute deleted",
+            "Attribute was removed successfully.",
+        );
         return { error: null };
     }
 
@@ -776,8 +754,8 @@ function createClassStore() {
                 await describeError(error),
             );
             toastStore.error(
-                "Enum-Wert hinzufügen fehlgeschlagen",
-                "Der Enum-Wert konnte nicht erstellt werden.",
+                "Add enum entry failed.",
+                "Enum entry could not be created.",
             );
             return { error };
         }
@@ -791,8 +769,8 @@ function createClassStore() {
             `${LOG_PREFIX} Added enum entry to class classUUID="${classUUID}"`,
         );
         toastStore.success(
-            "Enum-Wert erstellt",
-            "Der Enum-Wert wurde hinzugefügt.",
+            "Enum entry created",
+            "Enum entry was added successfully.",
         );
         return { error: null };
     }
@@ -830,10 +808,7 @@ function createClassStore() {
                 `${LOG_PREFIX} Could not replace enum entry uuid="${enumEntry.uuid}"`,
                 await describeError(error),
             );
-            toastStore.error(
-                "Speichern fehlgeschlagen",
-                "Der Enum-Wert konnte nicht gespeichert werden.",
-            );
+            toastStore.error("Save failed", "Enum entry could not be saved.");
             return { error };
         }
 
@@ -845,10 +820,7 @@ function createClassStore() {
         console.log(
             `${LOG_PREFIX} Replaced enum entry uuid="${enumEntry.uuid}"`,
         );
-        toastStore.success(
-            "Enum-Wert gespeichert",
-            "Die Änderungen wurden übernommen.",
-        );
+        toastStore.success("Enum entry saved", "Changes were applied.");
         return { error: null };
     }
 
@@ -874,7 +846,7 @@ function createClassStore() {
             );
             toastStore.error(
                 "Delete failed",
-                "Der Enum-Wert konnte nicht gelöscht werden.",
+                "Enum entry could not be deleted.",
             );
             return { error };
         }
@@ -888,8 +860,8 @@ function createClassStore() {
         }));
         console.log(`${LOG_PREFIX} Deleted enum entry uuid="${enumEntryUUID}"`);
         toastStore.success(
-            "Enum-Wert gelöscht",
-            "Der Enum-Wert wurde entfernt.",
+            "Enum entry deleted",
+            "Enum entry was successfully deleted.",
         );
         return { error: null };
     }
@@ -918,8 +890,8 @@ function createClassStore() {
                 await describeError(error),
             );
             toastStore.error(
-                "Assoziation hinzufügen fehlgeschlagen",
-                "Die Assoziation konnte nicht erstellt werden.",
+                "Add association failed",
+                "Association could not be created.",
             );
             return { error };
         }
@@ -941,8 +913,8 @@ function createClassStore() {
             `${LOG_PREFIX} Added association pair to class classUUID="${classUUID}"`,
         );
         toastStore.success(
-            "Assoziation erstellt",
-            "Die Assoziation wurde hinzugefügt.",
+            "Association added",
+            "Association was added successfully.",
         );
         return { error: null, data: enriched };
     }
@@ -977,8 +949,8 @@ function createClassStore() {
                 await describeError(error),
             );
             toastStore.error(
-                "Speichern fehlgeschlagen",
-                "Die Assoziation konnte nicht gespeichert werden.",
+                "Save failed",
+                "Association could not be replaced.",
             );
             return { error };
         }
@@ -1001,52 +973,8 @@ function createClassStore() {
         console.log(
             `${LOG_PREFIX} Replaced association pair uuid="${associationUUID}"`,
         );
-        toastStore.success(
-            "Assoziation gespeichert",
-            "Die Änderungen wurden übernommen.",
-        );
+        toastStore.success("Association saved", "Changes were applied.");
         return { error: null, data: data };
-    }
-
-    async function replaceAllAssociationPairs(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-        pairs: AssociationPairDto[],
-    ): Promise<Result> {
-        console.log(
-            `${LOG_PREFIX} Replacing all association pairs for class classUUID="${classUUID}", count=${pairs.length}`,
-        );
-
-        const { error } = await replaceAllAssociations({
-            path: { datasetName, graphURI, classUUID },
-            body: pairs,
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not replace all association pairs`,
-                await describeError(error),
-            );
-            toastStore.error(
-                "Speichern fehlgeschlagen",
-                "Die Assoziationen konnten nicht gespeichert werden.",
-            );
-            return { error };
-        }
-
-        const key = makeKey(datasetName, graphURI);
-        mutateClassInPlace(key, classUUID, prev => ({
-            ...prev,
-            associationPairs: pairs,
-        }));
-        console.log(
-            `${LOG_PREFIX} Replaced all association pairs for class classUUID="${classUUID}"`,
-        );
-        toastStore.success(
-            "Assoziationen gespeichert",
-            "Alle Assoziationen wurden aktualisiert.",
-        );
-        return { error: null };
     }
 
     async function deleteAssociationPair(
@@ -1071,7 +999,7 @@ function createClassStore() {
             );
             toastStore.error(
                 "Delete failed",
-                "Die Assoziation konnte nicht gelöscht werden.",
+                "Association could not be deleted.",
             );
             return { error };
         }
@@ -1087,8 +1015,8 @@ function createClassStore() {
             `${LOG_PREFIX} Deleted association pair uuid="${associationUUID}"`,
         );
         toastStore.success(
-            "Assoziation gelöscht",
-            "Die Assoziation wurde entfernt.",
+            "Association deleted",
+            "Association successfully deleted.",
         );
         return { error: null };
     }
@@ -1164,7 +1092,6 @@ function createClassStore() {
 
         // getters
         getClasses,
-        getClass,
         getClassInfo,
         getAttributes,
         getEnumEntries,
@@ -1190,7 +1117,6 @@ function createClassStore() {
         // association mutations
         addAssociationPair,
         replaceAssociationPair: replaceAssociationPair,
-        replaceAllAssociationPairs,
         deleteAssociationPair,
 
         // invalidation

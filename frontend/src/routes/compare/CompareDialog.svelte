@@ -15,11 +15,14 @@
   -
   -->
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        compareSchemas,
+        compareSchemasFromFiles,
+        compareStoredSchemas,
+    } from "$lib/api/generated/index.ts";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         editorState,
@@ -34,8 +37,6 @@
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const CompareMode = Object.freeze({
         STORED_TO_STORED: 0,
@@ -126,24 +127,27 @@
         let response;
         switch (compareMode) {
             case CompareMode.FILE_TO_FILE:
-                response = await bec.compareSchemasFromFiles(fileA, fileB);
+                response = await compareSchemasFromFiles({
+                    body: { fileA, fileB },
+                });
                 break;
             case CompareMode.FILE_TO_STORED:
-                response = await bec.compareSchemas(datasetB, graphB, fileA);
+                response = await compareSchemas({
+                    path: { datasetName: datasetB, graphURI: graphB },
+                    body: fileA,
+                });
                 break;
             case CompareMode.STORED_TO_STORED:
-                response = await bec.compareDatasetSchemas(
-                    datasetA,
-                    graphA,
-                    datasetB,
-                    graphB,
-                );
+                response = await compareStoredSchemas({
+                    path: { datasetName: datasetA, graphURI: graphA },
+                    query: { otherDataset: datasetB, otherGraph: graphB },
+                });
                 break;
             default:
                 throw new Error(`Unknown compareMode: ${compareMode}`);
         }
 
-        const changeList = await response.json();
+        const changeList = response.data;
         changeList.sort((a, b) => a.label.localeCompare(b.label));
         compareState.changeList.updateValue(changeList);
         migrationState.set({

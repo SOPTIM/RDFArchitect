@@ -20,15 +20,22 @@
     import { onMount } from "svelte";
 
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { DiagramType, editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
     import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
-    import { isSelectedDataset, isSelectedGraph } from "./packageNavigationUtils.svelte.js";
+    import {
+        isSelectedDataset,
+        isSelectedGraph,
+    } from "./packageNavigationUtils.svelte.js";
 
     let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
         $props();
-    
+
     let diagramsExpanded = $state(false);
     let diagrams = $state([]);
     let classesByDiagram = $state({});
@@ -72,11 +79,21 @@
         try {
             let diagramList;
             if (graphNavEntry) {
-                await customDiagramStore.loadGraphDiagrams(datasetNavEntry.id, graphNavEntry.id);
-                diagramList = await customDiagramStore.getGraphDiagrams(datasetNavEntry.id, graphNavEntry.id);
+                await customDiagramStore.loadGraphDiagrams(
+                    datasetNavEntry.id,
+                    graphNavEntry.id,
+                );
+                diagramList = await customDiagramStore.getGraphDiagrams(
+                    datasetNavEntry.id,
+                    graphNavEntry.id,
+                );
             } else {
-                await customDiagramStore.loadDatasetDiagrams(datasetNavEntry.id);
-                diagramList = await customDiagramStore.getDatasetDiagrams(datasetNavEntry.id);
+                await customDiagramStore.loadDatasetDiagrams(
+                    datasetNavEntry.id,
+                );
+                diagramList = await customDiagramStore.getDatasetDiagrams(
+                    datasetNavEntry.id,
+                );
             }
             const previous = diagrams ?? [];
             const selectedDiagramId =
@@ -165,7 +182,6 @@
             id: null,
         });
     }
-
 </script>
 
 {#if diagrams.length > 0}

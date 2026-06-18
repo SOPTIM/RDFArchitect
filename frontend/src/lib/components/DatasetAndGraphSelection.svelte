@@ -50,7 +50,7 @@
         }
 
         await graphStore.load(dataset);
-        graphNames = graphStore.getGraphURIs(dataset);
+        graphNames = graphStore.getGraphs(dataset);
         const valid = graphNames.some(graphName => getUri(graphName) === graph);
         if (!valid && !graphLocked) {
             graph = null;
@@ -73,7 +73,7 @@
 
         if (dataset) {
             await graphStore.load(dataset);
-            graphNames = graphStore.getGraphURIs(dataset);
+            graphNames = graphStore.getGraphs(dataset);
         } else {
             graphNames = [];
         }

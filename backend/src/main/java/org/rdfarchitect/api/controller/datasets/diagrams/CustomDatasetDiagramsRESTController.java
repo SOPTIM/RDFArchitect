@@ -59,7 +59,7 @@ public class CustomDatasetDiagramsRESTController {
     private final ReplaceCustomDiagramUseCase replaceCustomDiagram;
 
     @GetMapping
-    public RenderingDataDTO getDiagramRenderingData(
+    public RenderingDataDTO getCustomDatasetViewRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
