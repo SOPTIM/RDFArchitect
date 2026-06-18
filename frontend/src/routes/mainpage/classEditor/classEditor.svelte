@@ -92,7 +92,7 @@
     );
 
     $effect(() => {
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         forceReloadTrigger.subscribe();
 
         const cancellation = { cancelled: false };
@@ -186,8 +186,10 @@
         }
         editorState.selectedClassDataset.updateValue(datasetName);
         editorState.selectedClassGraph.updateValue(graphUri);
-        editorState.selectedClassType.updateValue(classType);
-        editorState.selectedClassUUID.updateValue(classUuid);
+        editorState.selectedClass.updateValue({
+            type: classType,
+            id: classUuid,
+        });
     }
 
     async function loadContext() {

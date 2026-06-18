@@ -71,11 +71,7 @@
         <USC.Section title="Export">
             <CheckBoxEditControl
                 label="Use 'Package_' prefix"
-                value={localSettings["usePackagePrefix"]}
-                callOnInputTrue={() =>
-                    (localSettings["usePackagePrefix"] = true)}
-                callOnInputFalse={() =>
-                    (localSettings["usePackagePrefix"] = false)}
+                bind:value={localSettings["usePackagePrefix"]}
                 labelFirst={false}
             />
             <USC.Item.SingleSelect
@@ -90,31 +86,19 @@
         <USC.Section title="Visualization">
             <CheckBoxEditControl
                 label="Show 'Package_' Prefix"
-                value={localSettings["showPackagePrefix"]}
-                callOnInputTrue={() =>
-                    (localSettings["showPackagePrefix"] = true)}
-                callOnInputFalse={() =>
-                    (localSettings["showPackagePrefix"] = false)}
+                bind:value={localSettings["showPackagePrefix"]}
                 labelFirst={false}
             />
             <CheckBoxEditControl
                 label="Use colored properties in merged view"
-                value={localSettings["useColoredPropertiesInMergedView"]}
-                callOnInputTrue={() =>
-                    (localSettings["useColoredPropertiesInMergedView"] = true)}
-                callOnInputFalse={() =>
-                    (localSettings["useColoredPropertiesInMergedView"] = false)}
+                bind:value={localSettings["useColoredPropertiesInMergedView"]}
                 labelFirst={false}
             />
         </USC.Section>
         <USC.Section title="Normalization">
             <CheckBoxEditControl
                 label="Normalize comments to xsd:string"
-                value={localSettings["normalizeComments"]}
-                callOnInputTrue={() =>
-                    (localSettings["normalizeComments"] = true)}
-                callOnInputFalse={() =>
-                    (localSettings["normalizeComments"] = false)}
+                bind:value={localSettings["normalizeComments"]}
                 labelFirst={false}
             />
         </USC.Section>

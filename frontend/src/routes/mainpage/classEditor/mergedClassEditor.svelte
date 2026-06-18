@@ -57,8 +57,7 @@
     function closeMergedClassEditor() {
         editorState.selectedClassDataset.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClassType.updateValue(null);
-        editorState.selectedClassUUID.updateValue(null);
+        editorState.selectedClass.updateValue({ type: null, id: null });
     }
 </script>
 

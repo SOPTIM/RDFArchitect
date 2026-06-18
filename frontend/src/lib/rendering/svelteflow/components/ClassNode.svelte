@@ -25,7 +25,7 @@
     let { id, data, dragging } = $props();
 
     const highlighted = $derived(
-        editorState.selectedClassUUID.getValue() === id,
+        editorState.selectedClass.getProperty("id") === id,
     );
 
     const label = $derived(data.label);

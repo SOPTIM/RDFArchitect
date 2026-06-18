@@ -42,7 +42,7 @@ export const DiagramType = {
 };
 
 export const ClassType = {
-    NORMAL_CLASS: "normalClass",
+    SINGLE_CLASS: "singleClass",
     MERGED_CLASS: "mergedClass",
 };
 
@@ -54,7 +54,7 @@ export const ClassType = {
  *  selectedDiagram: StateObjectPair<Object | null>,
  *  selectedClassDataset: StateValuePair<string | null>,
  *  selectedClassGraph: StateValuePair<string | null>,
- *  selectedClassUUID: StateValuePair<string | null>,
+ *  selectedClass: StateObjectPair<Object | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
  *  selectedContext: StateValuePair<string | null>,
  *  reset: () => void
@@ -67,8 +67,7 @@ export const editorState = {
     selectedDiagram: new StateObjectPair({ type: null, id: null }),
     selectedClassDataset: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
-    selectedClassType: new StateValuePair(),
-    selectedClassUUID: new StateValuePair(),
+    selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
 
@@ -78,8 +77,7 @@ export const editorState = {
         this.selectedDiagram.updateValue({ type: null, id: null });
         this.selectedClassDataset.updateValue(null);
         this.selectedClassGraph.updateValue(null);
-        this.selectedClassType.updateValue(null);
-        this.selectedClassUUID.updateValue(null);
+        this.selectedClass.updateValue({ type: null, id: null });
         this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);
     },

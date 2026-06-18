@@ -55,7 +55,7 @@
         namespaces = [],
         readonly = false,
         onPackChange = () => {},
-        classType = ClassType.NORMAL_CLASS,
+        classType = ClassType.SINGLE_CLASS,
         diagramType = DiagramType.PACKAGE,
     } = $props();
 
@@ -81,12 +81,14 @@
             classNavEntry.parent?.open();
         }
         onPackChange();
-        if (!editorState.selectedClassUUID.getValue()) {
+        if (!editorState.selectedClass.getProperty("id")) {
             eventStack.executeNewestEvent(classNavEntry.id);
             editorState.selectedClassDataset.updateValue(datasetNavEntry.id);
             editorState.selectedClassGraph.updateValue(graphNavEntry.id);
-            editorState.selectedClassType.updateValue(classType);
-            editorState.selectedClassUUID.updateValue(classNavEntry.id);
+            editorState.selectedClass.updateValue({
+                type: classType,
+                id: classNavEntry.id,
+            });
             return;
         }
         //The event executed to open the discard confirm delete dialog
@@ -109,7 +111,7 @@
     function showClassInPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedClassType.updateValue(classType);
+        //editorState.selectedClassType.updateValue(classType);
         editorState.selectedDiagram.updateValue({
             type: diagramType,
             id: classNavEntry.parent?.id ?? "default",
@@ -142,7 +144,7 @@
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
-        {#if classType === ClassType.NORMAL_CLASS}
+        {#if classType === ClassType.SINGLE_CLASS}
             <ContextMenu.Item.Button
                 onSelect={copyClass}
                 faIcon={faCopy}
@@ -158,7 +160,7 @@
         >
             Show in diagram
         </ContextMenu.Item.Button>
-        {#if classType === ClassType.NORMAL_CLASS}
+        {#if classType === ClassType.SINGLE_CLASS}
             <ContextMenu.Item.Button
                 onSelect={() => {
                     showSHACLDialog = true;

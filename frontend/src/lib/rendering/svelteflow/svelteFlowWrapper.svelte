@@ -117,8 +117,8 @@
     });
 
     $effect(() => {
-        editorState.selectedClassUUID.subscribe();
-        const selectedUUID = editorState.selectedClassUUID.getValue();
+        editorState.selectedClass.subscribe();
+        const selectedUUID = editorState.selectedClass.getProperty("id");
         untrack(() => {
             if (!selectedUUID) {
                 resetTemporaryFront();
@@ -304,7 +304,7 @@
 
             bringToFrontTemporarily(id);
 
-            if (!editorState.selectedClassUUID.getValue()) {
+            if (!editorState.selectedClass.getProperty("id")) {
                 eventStack.executeNewestEvent(id);
                 editorState.selectedClassDataset.updateValue(
                     editorState.selectedDataset.getValue(),
@@ -312,13 +312,15 @@
                 editorState.selectedClassGraph.updateValue(
                     nodeClickEvent.node.data.graphUri,
                 );
-                editorState.selectedClassType.updateValue(
+                const classType =
                     editorState.selectedDiagram.getProperty("type") ===
-                        DiagramType.CROSS_PROFILE
+                    DiagramType.CROSS_PROFILE
                         ? ClassType.MERGED_CLASS
-                        : ClassType.NORMAL_CLASS,
-                );
-                editorState.selectedClassUUID.updateValue(id);
+                        : ClassType.SINGLE_CLASS;
+                editorState.selectedClass.updateValue({
+                    type: classType,
+                    id: id,
+                });
             } else {
                 eventStack.executeNewestEvent({
                     datasetName: editorState.selectedDataset.getValue(),
@@ -328,7 +330,7 @@
                         editorState.selectedDiagram.getProperty("type") ===
                         DiagramType.CROSS_PROFILE
                             ? ClassType.MERGED_CLASS
-                            : ClassType.NORMAL_CLASS,
+                            : ClassType.SINGLE_CLASS,
                 });
             }
 

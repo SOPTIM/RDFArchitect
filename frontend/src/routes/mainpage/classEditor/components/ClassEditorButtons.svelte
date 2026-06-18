@@ -121,7 +121,7 @@
                 responseText,
             );
             reactiveClass.save();
-            editorState.selectedClassUUID.trigger();
+            editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
             toastStore.success("Class saved", `"${classLabel}" was saved.`);
@@ -158,10 +158,10 @@
                 datasetOfClassToOpenNext,
             );
             editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-            editorState.selectedClassType.updateValue(
-                classTypeOfClassToOpenNext,
-            );
-            editorState.selectedClassUUID.updateValue(classToOpenNext);
+            editorState.selectedClass.updateValue({
+                type: classTypeOfClassToOpenNext,
+                id: classToOpenNext,
+            });
         }
     }
 
@@ -169,8 +169,10 @@
         saveChanges();
         editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassType.updateValue(classTypeOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
+        editorState.selectedClass.updateValue({
+            type: classTypeOfClassToOpenNext,
+            id: classToOpenNext,
+        });
     }
 </script>
 

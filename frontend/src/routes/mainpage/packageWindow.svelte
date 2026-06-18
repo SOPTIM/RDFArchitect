@@ -38,20 +38,21 @@
 
     const selectionTrigger = $derived([
         editorState.selectedDiagram.subscribe(),
-        editorState.selectedClassUUID.subscribe(),
+        editorState.selectedClass.subscribe(),
     ]);
     const isClassSelected = $derived(
-        selectionTrigger && !!editorState.selectedClassUUID.getValue(),
+        selectionTrigger && !!editorState.selectedClass.getProperty("id"),
     );
     const classEditorKey = $derived(
-        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClassUUID.getValue() ?? ""}::${editorState.selectedClassUUID.subscribe()}`,
+        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClass.getProperty("id") ?? ""}::${editorState.selectedClass.subscribe()}`,
     );
     const renderingKey = $derived(
         `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
     );
 
     const isMergedClass = $derived(
-        editorState.selectedClassType.getValue() === ClassType.MERGED_CLASS,
+        editorState.selectedClass.getProperty("type") ===
+            ClassType.MERGED_CLASS,
     );
 
     $effect(() => {
@@ -78,7 +79,7 @@
 
     function handleSplitPaneResize(event) {
         if (event.detail && event.detail.length > 1) {
-            if (!editorState.selectedClassUUID.getValue()) {
+            if (!editorState.selectedClass.getProperty("id")) {
                 return;
             }
             classEditorPaneWidth = event.detail[1].size;
@@ -120,13 +121,17 @@
                     {#if isMergedClass}
                         <MergedClassEditor
                             datasetName={classDatasetName}
-                            classUuid={editorState.selectedClassUUID.getValue()}
+                            classUuid={editorState.selectedClass.getProperty(
+                                "id",
+                            )}
                         />
                     {:else}
                         <ClassEditor
                             datasetName={classDatasetName}
                             graphUri={classGraphUri}
-                            classUuid={editorState.selectedClassUUID.getValue()}
+                            classUuid={editorState.selectedClass.getProperty(
+                                "id",
+                            )}
                         />
                     {/if}
                 {/key}

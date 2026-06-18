@@ -236,10 +236,10 @@
                 });
                 editorState.selectedClassDataset.updateValue(datasetNameLocal);
                 editorState.selectedClassGraph.updateValue(graphURILocal);
-                editorState.selectedClassType.updateValue(
-                    ClassType.NORMAL_CLASS,
-                );
-                editorState.selectedClassUUID.updateValue(uuid);
+                editorState.selectedClass.updateValue({
+                    type: ClassType.SINGLE_CLASS,
+                    id: uuid,
+                });
                 toastStore.success(
                     "Class created",
                     `"${classNameLocal.value}" was added.`,
@@ -262,7 +262,7 @@
             editorState.selectedDataset.trigger();
             editorState.selectedGraph.trigger();
             editorState.selectedDiagram.trigger();
-            editorState.selectedClassUUID.trigger();
+            editorState.selectedClass.trigger();
         }
     }
 </script>

@@ -47,7 +47,7 @@
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();

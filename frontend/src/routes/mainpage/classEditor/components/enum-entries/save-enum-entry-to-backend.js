@@ -44,7 +44,7 @@ export async function saveApiEnumEntryToBackend(
         console.error("Could not save enum entry:", errorText);
         return { ok: false, errorText };
     } finally {
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
     }
 }
