@@ -21,12 +21,13 @@
         faRotateLeft,
         faTrash,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext, onMount } from "svelte";
+    import { getContext, onDestroy, onMount } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
@@ -51,9 +52,19 @@
 
     const classEditorContext = getContext("classEditor");
 
+    const shortcutsUnregister = [];
+
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLClassDialog = $state(false);
     let readonly = $derived(classEditorContext.readonly);
+
+    // Hide the button labels (icon-only) once this row gets too narrow to fit
+    // them. Readonly mode only shows Constraints + Close, so it can keep the
+    // label far longer; edit mode has four labels and collapses earlier.
+    // Both branches must be complete literals so Tailwind's scanner emits them.
+    let labelHideClass = $derived(
+        readonly ? "@max-[12rem]:hidden" : "@max-[30rem]:hidden",
+    );
     let datasetName = $derived(classEditorContext.datasetName);
     let graphUri = $derived(classEditorContext.graphUri);
 
@@ -68,6 +79,19 @@
         readonly = classEditorContext.readonly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
+    });
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register("saveClass", ["ctrl", "s"], () => {
+                if (reactiveClass?.isValid && reactiveClass?.isModified)
+                    saveFromShortcut();
+            }),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
     });
 
     function saveChanges() {
@@ -113,6 +137,12 @@
         forceReloadTrigger.trigger();
     }
 
+    export function saveFromShortcut() {
+        if (!readonly && reactiveClass?.isValid && reactiveClass?.isModified) {
+            saveChanges();
+        }
+    }
+
     function handleCancel() {
         pendingAction = null;
     }
@@ -139,68 +169,75 @@
     }
 </script>
 
-<div class="flex gap-1">
-    <div class="w-1/5">
+<!--
+  - @container lets the labels collapse based on this row's own width (the
+  - class editor lives in a resizable split pane), not the viewport. Once the
+  - row is too narrow, {labelHideClass} hides the labels so the buttons stay
+  - readable as icon-only instead of clipping their text.
+-->
+<div class="@container flex items-center gap-1">
+    <!--
+      - grid-flow-col + auto-cols-fr makes every action button equal width
+      - (matching the widest), while the grid stays content-sized so the row
+      - is left-aligned instead of stretching to full width.
+    -->
+    <div class="grid grid-flow-col auto-cols-fr gap-1">
         <FaIconButton
             callOnClick={() => (showSHACLClassDialog = true)}
             icon={faDiagramProject}
             text="Constraints"
+            labelClass={labelHideClass}
             title="View Constraints (SHACL)"
         />
-
-        <SHACLClassSpecificPopUp
-            {datasetName}
-            {graphUri}
-            {reactiveClass}
-            bind:showDialog={showSHACLClassDialog}
-            class={reactiveClass}
-        />
-    </div>
-    {#if !readonly}
-        <div class="w-1/5">
+        {#if !readonly}
             <FaIconButton
                 callOnClick={() => saveChanges(reactiveClass)}
                 icon={faFloppyDisk}
-                text={"Save"}
+                text="Save"
+                labelClass={labelHideClass}
                 disabled={!reactiveClass.isValid || !reactiveClass.isModified}
                 title="Save class"
             />
-        </div>
-        <div class="w-1/5">
             <FaIconButton
                 callOnClick={() => reactiveClass.reset()}
                 icon={faRotateLeft}
                 disabled={!reactiveClass.isModified}
                 text="Reset"
+                labelClass={labelHideClass}
                 title="Reset changes"
             />
-        </div>
-        <div class="w-1/5">
             <FaIconButton
                 callOnClick={() => (showDeleteDependenciesDialog = true)}
                 icon={faTrash}
                 variant="danger"
                 text="Delete"
+                labelClass={labelHideClass}
                 title="Delete class"
             />
-            <DeleteDependenciesDialog
-                {datasetName}
-                {graphUri}
-                resourceUuid={reactiveClass.uuid.value}
-                bind:showDialog={showDeleteDependenciesDialog}
-            />
-        </div>
-    {/if}
-    <div class="ml-auto w-1/5">
-        <FaIconButton
-            callOnClick={closeClassEditor}
-            icon={faXmark}
-            variant="contrast"
-            text="Close"
-            title="Close class editor"
-        />
+        {/if}
     </div>
+    <FaIconButton
+        callOnClick={closeClassEditor}
+        icon={faXmark}
+        variant="contrast"
+        containerClass="ml-auto w-auto"
+        title="Close class editor"
+    />
 </div>
+
+<SHACLClassSpecificPopUp
+    {datasetName}
+    {graphUri}
+    {reactiveClass}
+    bind:showDialog={showSHACLClassDialog}
+    class={reactiveClass}
+/>
+<DeleteDependenciesDialog
+    {datasetName}
+    {graphUri}
+    resourceUuid={reactiveClass.uuid.value}
+    bind:showDialog={showDeleteDependenciesDialog}
+/>
 
 <DiscardCancelConfirmDialog
     bind:showDialog={showDiscardSaveConfirmDialog}

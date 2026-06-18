@@ -25,8 +25,10 @@
         faTrash,
         faUpload,
     } from "@fortawesome/free-solid-svg-icons";
+    import { onDestroy, onMount } from "svelte";
 
     import { Menubar } from "$lib/components/bitsui/menubar";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
@@ -39,6 +41,8 @@
     import UserSettingDialog from "../../UserSettingDialog.svelte";
 
     let { isDatasetReadOnly } = $props();
+
+    const shortcutsUnregister = [];
 
     let showExportDialog = $state(false);
     let showSnapshotDialog = $state(false);
@@ -58,6 +62,45 @@
         editorState.selectedDataset.subscribe();
         editorState.selectedGraph.subscribe();
     });
+
+    onMount(() => {
+        shortcutsUnregister.push(
+            shortcutStore.register(
+                "import",
+                ["ctrl", "i"],
+                () => (showImportDialog = true),
+            ),
+            shortcutStore.register(
+                "export",
+                ["ctrl", "e"],
+                () => (showExportDialog = true),
+            ),
+            shortcutStore.register(
+                "shaclImport",
+                ["ctrl", "shift", "i"],
+                () => (showSHACLUploadDialog = true),
+            ),
+            shortcutStore.register(
+                "shaclExport",
+                ["ctrl", "shift", "e"],
+                () => (showSHACLExportDialog = true),
+            ),
+            shortcutStore.register(
+                "snapshot",
+                ["ctrl", "shift", "s"],
+                () => (showSnapshotDialog = true),
+            ),
+            shortcutStore.register(
+                "settings",
+                ["ctrl", "alt", "s"],
+                () => (showUserSettingDialog = true),
+            ),
+        );
+    });
+
+    onDestroy(() => {
+        shortcutsUnregister.forEach(unregister => unregister());
+    });
 </script>
 
 <Menubar.Menu value="file">
@@ -71,12 +114,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showImportDialog = true)}
                     faIcon={faFileImport}
+                    altText="Ctrl+I"
                 >
                     Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLUploadDialog = true)}
                     faIcon={faUpload}
+                    altText="Ctrl+Shift+I"
                 >
                     Constraints (SHACL)
                 </Menubar.Item.Button>
@@ -90,12 +135,14 @@
                 <Menubar.Item.Button
                     onSelect={() => (showExportDialog = true)}
                     faIcon={faFileExport}
+                    altText="Ctrl+E"
                 >
                     Schema (RDFS)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showSHACLExportDialog = true)}
                     faIcon={faDownload}
+                    altText="Ctrl+Shift+E"
                 >
                     Constraints (SHACL)
                 </Menubar.Item.Button>
@@ -105,6 +152,7 @@
         <Menubar.Item.Button
             onSelect={() => (showUserSettingDialog = true)}
             faIcon={faGear}
+            altText="Ctrl+Alt+S"
         >
             Settings
         </Menubar.Item.Button>
@@ -112,6 +160,7 @@
         <Menubar.Item.Button
             onSelect={() => (showSnapshotDialog = true)}
             faIcon={faShare}
+            altText="Ctrl+Shift+S"
         >
             Share Snapshot
         </Menubar.Item.Button>

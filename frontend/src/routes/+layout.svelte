@@ -21,10 +21,10 @@
 
     import { enableEditing } from "$lib/actions/editingActions.js";
     import {
-        undo,
+        fetchCanRedo,
         fetchCanUndo,
         redo,
-        fetchCanRedo,
+        undo,
     } from "$lib/actions/versionControlActions.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import {
@@ -37,11 +37,10 @@
     import ToastContainer from "$lib/components/ToastContainer.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
-        copyState,
-        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -49,7 +48,6 @@
     import File from "./layout/menu-bar/File.svelte";
     import Help from "./layout/menu-bar/Help.svelte";
     import View from "./layout/menu-bar/View.svelte";
-    import { saveCopyClass } from "./mainpage/packageNavigation/save-copy-class-to-backend.js";
     import Searchbar from "./Searchbar.svelte";
 
     import { goto } from "$app/navigation";
@@ -67,19 +65,6 @@
     let isDatasetReadOnly = $state(false);
 
     let isLeftAltPressed = false;
-    let canCopyClass = $derived(editorState.selectedClassUUID.getValue());
-    let canPasteClass = $derived(
-        !isDatasetReadOnly &&
-            editorState.selectedDataset.getValue() &&
-            editorState.selectedGraph.getValue() &&
-            editorState.selectedDiagram.getProperty("id") &&
-            editorState.selectedDiagram.getProperty("type") ===
-                DiagramType.PACKAGE &&
-            copyState.datasetName.getValue() &&
-            copyState.datasetName.getValue() &&
-            copyState.graphURI.getValue() &&
-            copyState.classUUID.getValue(),
-    );
 
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
 
@@ -156,134 +141,60 @@
         goto("/mainpage");
     }
 
-    function copyClass() {
-        copyState.classUUID.updateValue(
-            editorState.selectedClassUUID.getValue(),
-        );
-        copyState.graphURI.updateValue(
-            editorState.selectedClassGraph.getValue(),
-        );
-        copyState.datasetName.updateValue(
-            editorState.selectedClassDataset.getValue(),
+    function isInputElement(target) {
+        return (
+            target instanceof HTMLElement &&
+            (target.isContentEditable ||
+                target.tagName === "INPUT" ||
+                target.tagName === "TEXTAREA" ||
+                target.tagName === "SELECT")
         );
     }
 
-    async function pasteClass(
-        copyAsAbstract,
-        copyAttributes,
-        copyAssociations,
-    ) {
-        const res = await bec.getPackages(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
+    function isDialogOpen() {
+        return !!document.querySelector(
+            '[role="dialog"], [role="alertdialog"]',
         );
-        const packagesJSON = await res.json();
-        let packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
-        const selectedPackageUUID =
-            editorState.selectedDiagram.getProperty("id") === "default"
-                ? null
-                : editorState.selectedDiagram.getProperty("id");
-        let packageDTO = selectedPackageUUID
-            ? (packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null)
-            : null;
-        await saveCopyClass(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            packageDTO,
-            copyAsAbstract,
-            copyAttributes,
-            copyAssociations,
-        );
+    }
+
+    async function handleUndoRedo(isRedo) {
+        if (isRedo) {
+            if (canRedo && (await redo())) await reload();
+        } else {
+            if (canUndo && (await undo())) await reload();
+        }
     }
 
     async function handleKeydown(event) {
-        if (event.code === "AltLeft") {
-            isLeftAltPressed = true;
-        }
+        if (event.code === "AltLeft") isLeftAltPressed = true;
 
         if (event.key === "Escape" && !event.defaultPrevented) {
             eventStack.executeNewestEvent();
             return;
         }
 
+        const key = event.key.toLowerCase();
         const hasCtrl = event.ctrlKey || event.metaKey;
+        const inputFocused = isInputElement(event.target);
+
         const hasCtrlAltViaAltGr =
             event.getModifierState("AltGraph") && isLeftAltPressed;
-
-        if (!hasCtrl && !hasCtrlAltViaAltGr) return;
-
-        // Undo/Redo always fires, even when an input is focused
-        let key = event.key.toLowerCase();
-        if (key === "z" || key === "y") {
-            if (event.target?.closest?.(".cm-editor")) {
-                console.debug(
-                    `${event.code} blocked because a codemirror editor is focused.`,
+        if (hasCtrl || hasCtrlAltViaAltGr) {
+            if (key === "z" || key === "y") {
+                if (inputFocused) return;
+                if (isDialogOpen()) {
+                    return;
+                }
+                event.preventDefault();
+                await handleUndoRedo(
+                    key === "y" || (key === "z" && event.shiftKey),
                 );
                 return;
             }
-            if (
-                document.querySelector('[role="dialog"], [role="alertdialog"]')
-            ) {
-                console.debug(
-                    `${event.code} blocked because a dialog is open.`,
-                );
-                return;
-            }
-
-            event.preventDefault();
-
-            const isRedo = key === "y" || (key === "z" && event.shiftKey);
-
-            if (isRedo) {
-                if (canRedo && (await redo())) {
-                    await reload();
-                } else if (!canRedo) {
-                    console.log("Redo blocked: nothing to redo.");
-                }
-            } else {
-                if (canUndo && (await undo())) {
-                    await reload();
-                } else if (!canUndo) {
-                    console.log("Undo blocked: nothing to undo.");
-                }
-            }
-            return;
         }
 
-        // All other shortcuts: skip when an input-like element is focused
-        const target = event.target;
-        if (
-            target instanceof HTMLElement &&
-            (target.isContentEditable ||
-                target.tagName === "INPUT" ||
-                target.tagName === "TEXTAREA" ||
-                target.tagName === "SELECT")
-        ) {
-            return;
-        }
-
-        switch (event.code) {
-            case "KeyC":
-                event.preventDefault();
-                if (canCopyClass) copyClass();
-                break;
-            case "KeyV":
-                if (!canPasteClass) break;
-                event.preventDefault();
-                if (event.shiftKey && isLeftAltPressed) {
-                    await pasteClass(true, false, false);
-                } else if (event.shiftKey) {
-                    await pasteClass(false, false, true);
-                } else if (isLeftAltPressed) {
-                    await pasteClass(false, true, false);
-                } else {
-                    await pasteClass(false, true, true);
-                }
-                break;
-        }
+        if (inputFocused) return;
+        shortcutStore.handleEvent(event);
     }
 </script>
 
