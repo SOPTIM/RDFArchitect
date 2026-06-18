@@ -53,7 +53,7 @@ function generateLicenseContent() {
                 .replace(/\.git$/, "");
 
             packages.push({
-                name: pkg.label,
+                name: pkg.name,
                 version: pkg.version,
                 license,
                 reference,
@@ -66,10 +66,10 @@ function generateLicenseContent() {
     let markdown = "# Third-Party Licenses\n\n";
 
     for (const pkg of packages.toSorted((a, b) =>
-        a.label.localeCompare(b.label),
+        a.name.localeCompare(b.name),
     )) {
-        markdown += `### ${pkg.label}\n`;
-        markdown += `- **Package:** ${pkg.label}\n`;
+        markdown += `### ${pkg.name}\n`;
+        markdown += `- **Package:** ${pkg.name}\n`;
         markdown += `- **Version:** ${pkg.version}\n`;
         markdown += `- **License:** ${pkg.license}\n`;
         if (pkg.reference) {
