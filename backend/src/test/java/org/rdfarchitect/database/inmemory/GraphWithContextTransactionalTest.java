@@ -25,21 +25,30 @@ import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.config.GraphCompressionConfig;
 import org.rdfarchitect.exception.graph.GraphNotInATransactionException;
 import org.rdfarchitect.exception.graph.GraphTransactionException;
 import org.rdfarchitect.exception.graph.GraphVersionControlException;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 class GraphWithContextTransactionalTest {
+
+    private final GraphCompressionConfig graphConfig = new GraphCompressionConfig();
 
     private GraphWithContextTransactional ctx;
     private Triple triple;
     private Triple triple2;
+    private int originalTimeout;
 
     @BeforeEach
     void setUp() {
+        originalTimeout = GraphCompressionConfig.getLockTimeoutSeconds();
         ctx = new GraphWithContextTransactional(GraphFactory.createDefaultGraph());
         triple = TestRDFUtils.triple("s p o");
         triple2 = TestRDFUtils.triple("s2 p2 o2");
@@ -47,6 +56,7 @@ class GraphWithContextTransactionalTest {
 
     @AfterEach
     void tearDown() {
+        graphConfig.setLockTimeoutSeconds(originalTimeout);
         if (ctx.isInTransaction()) {
             ctx.end();
         }
@@ -85,6 +95,82 @@ class GraphWithContextTransactionalTest {
 
         assertThatExceptionOfType(GraphTransactionException.class)
                 .isThrownBy(() -> ctx.begin(ReadWrite.WRITE));
+    }
+
+    // -------------------------------------------------------------------------
+    // begin — lock timeout
+    // -------------------------------------------------------------------------
+
+    @Test
+    void begin_whenWriteLockHeldByAnotherThread_timesOut() throws InterruptedException {
+        graphConfig.setLockTimeoutSeconds(1);
+
+        var lockAcquired = new CountDownLatch(1);
+        var releaseLock = new CountDownLatch(1);
+        var holder = startLockHolder(ReadWrite.WRITE, lockAcquired, releaseLock);
+
+        try {
+            assertThat(lockAcquired.await(5, TimeUnit.SECONDS)).isTrue();
+
+            assertThatExceptionOfType(GraphTransactionException.class)
+                    .isThrownBy(() -> ctx.begin(ReadWrite.WRITE))
+                    .withMessageContaining("Timeout");
+        } finally {
+            releaseLock.countDown();
+            holder.join();
+        }
+    }
+
+    @Test
+    void begin_read_whenReadLockHeldByAnotherThread_doesNotBlock() throws InterruptedException {
+        var lockAcquired = new CountDownLatch(1);
+        var releaseLock = new CountDownLatch(1);
+        var holder = startLockHolder(ReadWrite.READ, lockAcquired, releaseLock);
+
+        try {
+            assertThat(lockAcquired.await(5, TimeUnit.SECONDS)).isTrue();
+
+            // read locks are shared — this must not block
+            assertThatNoException().isThrownBy(() -> ctx.begin(ReadWrite.READ));
+            ctx.end();
+        } finally {
+            releaseLock.countDown();
+            holder.join();
+        }
+    }
+
+    @Test
+    void begin_whenInterruptedWhileWaiting_throwsAndRestoresInterruptFlag()
+            throws InterruptedException {
+        graphConfig.setLockTimeoutSeconds(2);
+
+        var lockAcquired = new CountDownLatch(1);
+        var releaseLock = new CountDownLatch(1);
+        var holder = startLockHolder(ReadWrite.WRITE, lockAcquired, releaseLock);
+        assertThat(lockAcquired.await(5, TimeUnit.SECONDS)).isTrue();
+
+        var caught = new AtomicReference<Throwable>();
+        var interruptFlagSet = new AtomicBoolean(false);
+        var waiter =
+                new Thread(
+                        () -> {
+                            try {
+                                ctx.begin(ReadWrite.WRITE);
+                            } catch (Throwable t) {
+                                caught.set(t);
+                                interruptFlagSet.set(Thread.currentThread().isInterrupted());
+                            }
+                        });
+        waiter.start();
+        Thread.sleep(200); // give the waiter a moment to block on the lock
+        waiter.interrupt();
+        waiter.join();
+
+        releaseLock.countDown();
+        holder.join();
+
+        assertThat(caught.get()).isInstanceOf(GraphTransactionException.class);
+        assertThat(interruptFlagSet.get()).isTrue();
     }
 
     // -------------------------------------------------------------------------
@@ -675,5 +761,33 @@ class GraphWithContextTransactionalTest {
         try (var _ = ctx.begin(ReadWrite.READ)) {
             assertThat(ctx.getChangeLog().getUndoHistory()).size().isEqualTo(1);
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // helpers
+    // -------------------------------------------------------------------------
+
+    /**
+     * Starts a thread that begins a transaction in the given mode, signals {@code lockAcquired}
+     * once the lock is held, then blocks until {@code releaseLock} is counted down before ending
+     * the transaction.
+     */
+    private Thread startLockHolder(
+            ReadWrite mode, CountDownLatch lockAcquired, CountDownLatch releaseLock) {
+        var holder =
+                new Thread(
+                        () -> {
+                            ctx.begin(mode);
+                            lockAcquired.countDown();
+                            try {
+                                releaseLock.await();
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                            } finally {
+                                ctx.end();
+                            }
+                        });
+        holder.start();
+        return holder;
     }
 }
