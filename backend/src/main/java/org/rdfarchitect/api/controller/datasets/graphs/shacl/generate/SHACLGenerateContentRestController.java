@@ -28,6 +28,7 @@ import org.apache.jena.riot.RDFFormat;
 import org.apache.jena.riot.system.PrefixEntry;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.rdfarchitect.services.shacl.SHACLGenerateUseCase;
@@ -90,7 +91,7 @@ public class SHACLGenerateContentRestController {
         var result =
                 shaclGenerateUseCase.exportGeneratedSHACLGraph(
                         new GraphIdentifier(datasetName, extendedGraphURI),
-                        PrefixEntry.create("rdfash", "http://www.example.com/shacl#"));
+                        PrefixEntry.create(RDFA.NS_PREFIX_SHACL, RDFA.NS_URI_SHACL));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/shacl/generate/string\" to \"{}\".",
