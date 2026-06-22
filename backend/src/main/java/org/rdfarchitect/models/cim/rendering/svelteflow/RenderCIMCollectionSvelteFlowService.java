@@ -30,7 +30,6 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.models.cim.data.dto.CIMAssociation;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
-import org.rdfarchitect.models.cim.data.dto.CIMMergedClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
@@ -255,18 +254,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         List<EdgeDTO> inheritanceEdgeDTOList = new ArrayList<>();
         for (var cimClass : renderContext.cimCollection.getClasses()) {
             if (cimClass.getSuperClass() != null) {
-                inheritanceEdgeDTOList.add(
-                        assembleInheritanceEdgeDTO(
-                                renderContext,
-                                cimClass.getUri(),
-                                cimClass.getSuperClass().getUri()));
-            }
-            if (cimClass instanceof CIMMergedClass cimMergedClass) {
-                for (var superClass : cimMergedClass.getSuperClasses()) {
-                    inheritanceEdgeDTOList.add(
-                            assembleInheritanceEdgeDTO(
-                                    renderContext, cimClass.getUri(), superClass.getUri()));
-                }
+                inheritanceEdgeDTOList.add(assembleInheritanceEdgeDTO(renderContext, cimClass));
             }
         }
         return inheritanceEdgeDTOList;
@@ -275,14 +263,13 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
     /**
      * Assembles an inheritance edge from a class to its superclass.
      *
-     * @param classURI The URI of the child class
-     * @param superClassURI The URI of the parent class
+     * @param cimClass The child class
      * @return EdgeDTO representing the inheritance relationship
      */
-    private EdgeDTO assembleInheritanceEdgeDTO(
-            RenderContext renderContext, URI classURI, URI superClassURI) {
-        var classUUID = renderContext.uriToUUIDMap.get(classURI.toString());
-        var superClassUUID = renderContext.uriToUUIDMap.get(superClassURI.toString());
+    private EdgeDTO assembleInheritanceEdgeDTO(RenderContext renderContext, CIMClass cimClass) {
+        var classUUID = renderContext.uriToUUIDMap.get(cimClass.getUri().toString());
+        var superClassUUID =
+                renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
 
         return EdgeDTO.builder()
                 .id(UUID.randomUUID().toString())
