@@ -18,19 +18,42 @@
 package org.rdfarchitect.models.cim.data.dto;
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 
 import java.util.List;
+import java.util.Objects;
 
-@EqualsAndHashCode(callSuper = true)
 @Data
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor
 public class CIMMergedClass extends CIMClass {
 
     private List<RDFSSubClassOf> superClasses;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof CIMMergedClass that)) {
+            return false;
+        }
+        if (!super.equals(o)) {
+            return false;
+        }
+        return Objects.equals(superClasses, that.superClasses);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), superClasses);
+    }
+
+    @Override
+    protected boolean canEqual(Object other) {
+        return other instanceof CIMMergedClass;
+    }
 }
