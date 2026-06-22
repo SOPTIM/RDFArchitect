@@ -19,7 +19,6 @@ package org.rdfarchitect.api.dto.enumentries;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.MappingUtils;
 import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
@@ -48,8 +47,6 @@ public interface EnumEntryMapper {
 
     @Mapping(target = "uri", source = ".")
     @Mapping(target = "type", source = ".")
-    @Mapping(target = "graphUri", ignore = true)
-    @Mapping(target = "color", ignore = true)
     CIMEnumEntry toCIMObject(EnumEntryDTO dto);
 
     List<CIMEnumEntry> toCIMObjectList(List<EnumEntryDTO> dtoList);
@@ -69,10 +66,5 @@ public interface EnumEntryMapper {
 
     default CIMSStereotype buildStereotype(String stereotype) {
         return stereotype != null ? new CIMSStereotype(CIMStereotypes.enumerationString) : null;
-    }
-
-    @Named("mapTypeToString")
-    default String mapTypeToString(RDFType type) {
-        return type != null ? type.getUri().toString() : null;
     }
 }

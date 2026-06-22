@@ -48,8 +48,6 @@ public interface AssociationMapper {
     @Mapping(target = "uri", source = "dto")
     @Mapping(target = "domain", source = "dto")
     @Mapping(target = "inverseRoleName", expression = "java(buildInverseRoleName(inverseUri))")
-    @Mapping(target = "graphUri", ignore = true)
-    @Mapping(target = "color", ignore = true)
     CIMAssociation toCIMObject(AssociationDTO dto, String inverseUri);
 
     default String toDomain(URI value) {
