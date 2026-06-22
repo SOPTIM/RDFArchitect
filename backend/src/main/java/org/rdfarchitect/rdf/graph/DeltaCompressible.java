@@ -25,6 +25,7 @@ import org.apache.jena.graph.GraphUtil;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.graph.compose.CompositionBase;
 import org.apache.jena.graph.impl.SimpleEventManager;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.jetbrains.annotations.NotNull;
@@ -49,6 +50,12 @@ public class DeltaCompressible extends CompositionBase {
     /** -- GETTER -- Answer the graph of all triples removed. */
     @Getter private Graph deletions;
 
+    /**
+     * Records prefix changes as a delta over the base graph's prefix mapping, mirroring the way
+     * {@link #additions} and {@link #deletions} record triple changes.
+     */
+    private DeltaPrefixMapping prefixMapping;
+
     @Getter private final UUID versionId = UUID.randomUUID();
 
     public DeltaCompressible(@NotNull Graph base) {
@@ -56,14 +63,18 @@ public class DeltaCompressible extends CompositionBase {
         this.base = base;
         this.additions = GraphMemFactory.createDefaultGraph();
         this.deletions = GraphMemFactory.createDefaultGraph();
+        this.prefixMapping = new DeltaPrefixMapping(base.getPrefixMapping());
     }
 
     public void compress() {
         var newBase = GraphFactory.createDefaultGraph();
         GraphUtil.add(newBase, this.find());
+        // Fold the prefix delta into the new base, then start a fresh (empty) prefix delta.
+        newBase.getPrefixMapping().setNsPrefixes(getPrefixMapping().getNsPrefixMap());
         base = newBase;
         additions = GraphMemFactory.createDefaultGraph();
         deletions = GraphMemFactory.createDefaultGraph();
+        prefixMapping = new DeltaPrefixMapping(base.getPrefixMapping());
     }
 
     /** Add the triple to the graph, ie add it to the additions, remove it from the removals. */
@@ -93,6 +104,22 @@ public class DeltaCompressible extends CompositionBase {
         ExtendedIterator<Triple> iterator =
                 base.find(t).filterDrop(deletions::contains).andThen(additions.find(t));
         return SimpleEventManager.notifyingRemove(this, iterator);
+    }
+
+    /**
+     * Returns the delta-aware prefix mapping. Writes are recorded as additions/deletions over the
+     * base prefix mapping; reads fold the delta over the base.
+     */
+    @Override
+    public PrefixMapping getPrefixMapping() {
+        return prefixMapping;
+    }
+
+    /**
+     * @return {@code true} if any prefix has been added or removed relative to the base
+     */
+    public boolean hasPrefixChanges() {
+        return prefixMapping.hasChanges();
     }
 
     @Override
