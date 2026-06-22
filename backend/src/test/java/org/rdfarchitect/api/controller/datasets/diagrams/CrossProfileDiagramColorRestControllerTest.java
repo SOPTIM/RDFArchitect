@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.services.diagrams.CrossProfileColorUseCase;
 import org.springframework.http.HttpHeaders;
 
@@ -40,7 +40,7 @@ class CrossProfileDiagramColorRestControllerTest {
     }
 
     @Test
-    void getCrossProfileColors_returnsDTOFromUseCase() {
+    void getCrossProfileColors_validDataset_returnsDTOFromUseCase() {
         var expectedDTO = new CrossProfileDiagramColorDataDTO(Map.of("graph-a", "#ff0000"));
         when(colorUseCase.getCrossProfileColors("my-dataset")).thenReturn(expectedDTO);
 
@@ -51,7 +51,7 @@ class CrossProfileDiagramColorRestControllerTest {
     }
 
     @Test
-    void updateCrossProfileColors_invokesUseCaseWithPayload() {
+    void updateCrossProfileColors_validColorData_invokesUseCase() {
         var colorData = new CrossProfileDiagramColorDataDTO(Map.of("graph-a", "#00ff00"));
 
         controller.updateCrossProfileColors(HttpHeaders.ORIGIN, "my-dataset", colorData);

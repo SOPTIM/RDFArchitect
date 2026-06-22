@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.diagrams;
 
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 

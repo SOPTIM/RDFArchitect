@@ -15,32 +15,17 @@
  *
  */
 
-package org.rdfarchitect.models.cim.data.dto;
+package org.rdfarchitect.api.dto.cross_profile_diagram;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFType;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-
+import java.util.List;
 import java.util.UUID;
 
 @Data
-@Builder(toBuilder = true)
-public class CIMEnumEntry {
-
-    private UUID uuid;
-
-    private URI uri;
-
-    private RDFType type;
-
-    private RDFSLabel label;
-
-    private RDFSComment comment;
-
-    private CIMSStereotype stereotype;
+@AllArgsConstructor
+public class CrossProfileDiagramDTO {
+    private UUID diagramId;
+    private List<MergedClassDTO> classes;
 }

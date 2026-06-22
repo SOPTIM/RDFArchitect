@@ -66,6 +66,7 @@
     let showNamespacesDialog = $state(false);
     let readonly = $state(false);
     let namespaces = $state([]);
+    let crossProfileID = $state();
 
     let wasDatasetSelected = false;
 
@@ -87,7 +88,7 @@
 
     onMount(async () => {
         let res = await bec.getCrossProfileID(datasetNavEntry.label);
-        datasetNavEntry.crossProfileID = await res.text();
+        crossProfileID = await res.text();
     });
 
     async function fetchNamespaces() {
@@ -250,7 +251,7 @@
                 />
             {/each}
 
-            <CrossProfileDiagramsSection {datasetNavEntry} />
+            <CrossProfileDiagramsSection {datasetNavEntry} {crossProfileID} />
 
             <CustomDiagramsSection
                 {datasetNavEntry}

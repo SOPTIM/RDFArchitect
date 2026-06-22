@@ -21,11 +21,11 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
-import org.rdfarchitect.api.dto.crossProfileDiagram.ClassSourceDTO;
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
-import org.rdfarchitect.api.dto.crossProfileDiagram.GraphSourcedDTO;
-import org.rdfarchitect.api.dto.crossProfileDiagram.MergedClassDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.GraphSourceDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.MergedClassDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
@@ -76,7 +76,8 @@ public class CustomDiagramService
     public CrossProfileDiagramDTO getCrossProfileDiagram(
             String datasetName, boolean includeProperties, boolean doLayout) {
         var graphUris = databasePort.listGraphUris(datasetName);
-        var crossProfileDiagramUUID = databasePort.getCrossProfileDiagramUUID(datasetName);
+        var crossProfileDiagramInfo = databasePort.getCrossProfileDiagramInfo(datasetName);
+        var crossProfileDiagramUUID = crossProfileDiagramInfo.getCrossProfileDiagramUUID();
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
 
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
@@ -89,7 +90,7 @@ public class CustomDiagramService
             } else {
                 classList = getClassListUseCase.getClassList(graphIdentifier, false);
             }
-            var graphColor = databasePort.getCrossProfileDiagramColor(graphIdentifier);
+            var graphColor = crossProfileDiagramInfo.getColor(graphUri);
 
             for (var dto : classList) {
                 var classUri = dto.getPrefix() + dto.getLabel();
@@ -99,16 +100,11 @@ public class CustomDiagramService
                         mergeMap.computeIfAbsent(
                                 classUri,
                                 uri ->
-                                        new MergedClassDTO(
-                                                mergedUuid,
-                                                uri,
-                                                dto.getLabel(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>(),
-                                                new ArrayList<>()));
+                                        MergedClassDTO.builder()
+                                                .uuid(mergedUuid)
+                                                .classUri(uri)
+                                                .label(dto.getLabel())
+                                                .build());
 
                 merged.getSources().add(new ClassSourceDTO(dto.getUuid(), graphUri));
 
@@ -137,7 +133,7 @@ public class CustomDiagramService
         }
         if (dto.getSuperClass() != null) {
             merged.getSuperClasses()
-                    .add(new GraphSourcedDTO<>(graphUri, graphColor, dto.getSuperClass()));
+                    .add(new GraphSourceDTO<>(graphUri, graphColor, dto.getSuperClass()));
         }
         if (dto.getStereotypes() != null) {
             mergeStereotypes(dto, merged);
@@ -150,7 +146,7 @@ public class CustomDiagramService
                 .forEach(
                         attr ->
                                 merged.getAttributes()
-                                        .add(new GraphSourcedDTO<>(graphUri, graphColor, attr)));
+                                        .add(new GraphSourceDTO<>(graphUri, graphColor, attr)));
     }
 
     private static void mergeEnumEntries(
@@ -159,7 +155,7 @@ public class CustomDiagramService
                 .forEach(
                         entry ->
                                 merged.getEnumEntries()
-                                        .add(new GraphSourcedDTO<>(graphUri, graphColor, entry)));
+                                        .add(new GraphSourceDTO<>(graphUri, graphColor, entry)));
     }
 
     private static void mergeAssociationPairs(
@@ -168,7 +164,7 @@ public class CustomDiagramService
                 .forEach(
                         assoc ->
                                 merged.getAssociationPairs()
-                                        .add(new GraphSourcedDTO<>(graphUri, graphColor, assoc)));
+                                        .add(new GraphSourceDTO<>(graphUri, graphColor, assoc)));
     }
 
     private static void mergeStereotypes(ClassUMLAdaptedDTO dto, MergedClassDTO merged) {
@@ -304,8 +300,8 @@ public class CustomDiagramService
         var graphUris = databasePort.listGraphUris(datasetName);
         var colorsDTO = new CrossProfileDiagramColorDataDTO(new HashMap<>());
         for (var graphUri : graphUris) {
-            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            var graphColor = databasePort.getCrossProfileDiagramColor(graphIdentifier);
+            var graphColor =
+                    databasePort.getCrossProfileDiagramInfo(datasetName).getColor(graphUri);
             colorsDTO.getGraphColors().put(graphUri, graphColor);
         }
         return colorsDTO;
@@ -315,10 +311,10 @@ public class CustomDiagramService
     public void replaceCrossProfileColors(String datasetName, CrossProfileDiagramColorDataDTO dto) {
         var graphUris = databasePort.listGraphUris(datasetName);
         for (var graphUri : graphUris) {
-            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
             if (dto.getGraphColors().containsKey(graphUri)) {
-                databasePort.setCrossProfileDiagramColor(
-                        graphIdentifier, dto.getGraphColors().get(graphUri));
+                databasePort
+                        .getCrossProfileDiagramInfo(datasetName)
+                        .setColor(graphUri, dto.getGraphColors().get(graphUri));
             }
         }
     }

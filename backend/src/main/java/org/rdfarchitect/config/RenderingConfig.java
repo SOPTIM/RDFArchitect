@@ -20,6 +20,8 @@ package org.rdfarchitect.config;
 import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
 import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
+import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
+import org.rdfarchitect.models.dto.rendering.svelteflow.RenderCrossProfileDiagramSvelteFlowService;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -40,5 +42,11 @@ public class RenderingConfig {
             case "mermaid" -> new RenderCIMCollectionMermaidService();
             default -> new RenderCIMCollectionMermaidService();
         };
+    }
+
+    @Bean
+    public RenderCrossProfileDiagramUseCase renderCrossProfileDiagramPort(
+            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase) {
+        return new RenderCrossProfileDiagramSvelteFlowService(fetchRenderingLayoutDataUseCase);
     }
 }

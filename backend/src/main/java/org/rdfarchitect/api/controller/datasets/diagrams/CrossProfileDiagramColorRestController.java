@@ -21,7 +21,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.services.diagrams.CrossProfileColorUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

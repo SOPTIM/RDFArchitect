@@ -22,10 +22,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
-import org.rdfarchitect.services.rendering.DiagramToCIMCollectionConverterUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -43,13 +41,9 @@ public class CrossProfileDiagramRenderingRestController {
     private static final Logger logger =
             LoggerFactory.getLogger(CrossProfileDiagramRenderingRestController.class);
 
-    private final DiagramToCIMCollectionConverterUseCase converter;
-
-    private final RenderCIMCollectionUseCase renderer;
+    private final RenderCrossProfileDiagramUseCase renderer;
 
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
-
-    private final DatabasePort databasePort;
 
     @GetMapping
     public RenderingDataDTO getCrossProfileRenderingData(
@@ -69,13 +63,7 @@ public class CrossProfileDiagramRenderingRestController {
         var crossProfileDiagram =
                 getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, true, true);
 
-        var cimCollection = converter.convert(crossProfileDiagram);
-
-        var result =
-                renderer.renderGlobalUML(
-                        cimCollection,
-                        datasetName,
-                        databasePort.getCrossProfileDiagramUUID(datasetName));
+        var result = renderer.renderCrossProfileDiagramUML(crossProfileDiagram, datasetName);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagramRendering\" from \"{}\"",

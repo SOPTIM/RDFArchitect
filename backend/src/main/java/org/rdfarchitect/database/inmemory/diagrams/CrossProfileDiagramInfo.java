@@ -15,15 +15,25 @@
  *
  */
 
-package org.rdfarchitect.api.dto.crossProfileDiagram;
+package org.rdfarchitect.database.inmemory.diagrams;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 
-@Data
-@AllArgsConstructor
-public class GraphSourcedDTO<T> {
-    private String graphUri;
-    private String graphColor;
-    private T value;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+
+public class CrossProfileDiagramInfo {
+
+    @Getter private final UUID crossProfileDiagramUUID = UUID.randomUUID();
+
+    private final ConcurrentMap<String, String> colors = new ConcurrentHashMap<>();
+
+    public String getColor(String graphUri) {
+        return colors.getOrDefault(graphUri, null);
+    }
+
+    public void setColor(String graphUri, String color) {
+        colors.put(graphUri, color);
+    }
 }

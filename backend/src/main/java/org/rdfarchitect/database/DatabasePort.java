@@ -19,6 +19,7 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
@@ -53,28 +54,12 @@ public interface DatabasePort {
     DiagramLayout getDatasetDiagramLayout(String datasetName);
 
     /**
-     * Returns the fixed UUID of the CrossProfileDiagram for the given dataset.
+     * Returns the information of the CrossProfileDiagram of the given dataset.
      *
      * @param datasetName literal dataset name
-     * @return UUID of the CrossProfileDiagram for the dataset
+     * @return {@link CrossProfileDiagramInfo} of the CrossProfileDiagram for the dataset
      */
-    UUID getCrossProfileDiagramUUID(String datasetName);
-
-    /**
-     * Returns the color of the given graph in the CrossProfileDiagram.
-     *
-     * @param graphIdentifier The identifier of the graph.
-     * @return The color as hex code of the graph.
-     */
-    String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier);
-
-    /**
-     * Sets the color of the given graph in the CrossProfileDiagram.
-     *
-     * @param graphIdentifier The identifier of the graph.
-     * @param color The color as hex code.
-     */
-    void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color);
+    CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName);
 
     /**
      * Loads the namespace prefix mapping for the dataset.

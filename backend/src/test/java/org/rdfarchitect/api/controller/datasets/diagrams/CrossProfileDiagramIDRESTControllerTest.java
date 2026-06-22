@@ -23,29 +23,34 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.springframework.http.HttpHeaders;
 
 import java.util.UUID;
 
-class CrossProfileDiagramIDControllerTest {
+class CrossProfileDiagramIDRESTControllerTest {
 
     private DatabasePort databasePort;
-    private CrossProfileDiagramIDController controller;
+    private CrossProfileDiagramIDRESTController controller;
 
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
-        controller = new CrossProfileDiagramIDController(databasePort);
+        controller = new CrossProfileDiagramIDRESTController(databasePort);
     }
 
     @Test
-    void getCrossProfileData_returnsUUIDStringFromDatabasePort() {
+    void getCrossProfileRenderingData_validDataset_returnsUUIDString() {
         var uuid = UUID.randomUUID();
-        when(databasePort.getCrossProfileDiagramUUID("my-dataset")).thenReturn(uuid);
+        var crossProfileDiagramInfo = mock(CrossProfileDiagramInfo.class);
+        when(crossProfileDiagramInfo.getCrossProfileDiagramUUID()).thenReturn(uuid);
+        when(databasePort.getCrossProfileDiagramInfo("my-dataset"))
+                .thenReturn(crossProfileDiagramInfo);
 
         var result = controller.getCrossProfileRenderingData(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(uuid.toString());
-        verify(databasePort).getCrossProfileDiagramUUID("my-dataset");
+        verify(databasePort).getCrossProfileDiagramInfo("my-dataset");
+        verify(crossProfileDiagramInfo).getCrossProfileDiagramUUID();
     }
 }

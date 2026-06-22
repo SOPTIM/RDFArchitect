@@ -15,17 +15,13 @@
  *
  */
 
-package org.rdfarchitect.api.dto.crossProfileDiagram;
+package org.rdfarchitect.models.dto.rendering;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 
-import java.util.List;
-import java.util.UUID;
+public interface RenderCrossProfileDiagramUseCase {
 
-@Data
-@AllArgsConstructor
-public class CrossProfileDiagramDTO {
-    private UUID diagramId;
-    private List<MergedClassDTO> classes;
+    RenderingDataDTO renderCrossProfileDiagramUML(
+            CrossProfileDiagramDTO diagram, String datasetName);
 }

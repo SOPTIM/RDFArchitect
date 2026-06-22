@@ -25,6 +25,7 @@ import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
@@ -53,18 +54,8 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
-    public UUID getCrossProfileDiagramUUID(String datasetName) {
-        return database.getCrossProfileDiagramUUID(datasetName);
-    }
-
-    @Override
-    public String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier) {
-        return database.getCrossProfileDiagramColor(graphIdentifier);
-    }
-
-    @Override
-    public void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color) {
-        database.setCrossProfileDiagramColor(graphIdentifier, color);
+    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
+        return database.getCrossProfileDiagramInfo(datasetName);
     }
 
     @Override

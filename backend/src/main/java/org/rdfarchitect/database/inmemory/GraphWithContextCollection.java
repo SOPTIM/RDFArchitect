@@ -29,6 +29,7 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -62,10 +63,8 @@ public class GraphWithContextCollection {
 
     @Getter private final DiagramLayout diagramLayout = new DiagramLayout();
 
-    @Getter private final UUID crossProfileDiagramUUID = UUID.randomUUID();
-
-    private final ConcurrentMap<String, String> crossProfileDiagramColors =
-            new ConcurrentHashMap<>();
+    @Getter
+    private final CrossProfileDiagramInfo crossProfileDiagramInfo = new CrossProfileDiagramInfo();
 
     // universal prefix map for all graphs
     private final PrefixMapping prefixes = new PrefixMappingImpl();
@@ -236,13 +235,5 @@ public class GraphWithContextCollection {
         if (!graphUri.equals(DEFAULT_GRAPH_NAME) && !RDFUtils.isURL(graphUri)) {
             throw new IllegalArgumentException("Graph Uri " + graphUri + " is not a valid URI");
         }
-    }
-
-    public String getCrossProfileDiagramColor(String graphUri) {
-        return crossProfileDiagramColors.getOrDefault(graphUri, null);
-    }
-
-    public void setCrossProfileDiagramColor(String graphUri, String color) {
-        crossProfileDiagramColors.put(graphUri, color);
     }
 }

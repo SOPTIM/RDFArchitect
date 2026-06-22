@@ -33,7 +33,7 @@
     import ClassEntry from "./ClassEntry.svelte";
     import CrossProfileColorDialog from "./custom-diagram-dialogs/CrossProfileColorDialog.svelte";
 
-    let { datasetNavEntry } = $props();
+    let { datasetNavEntry, crossProfileID } = $props();
 
     let showColorDialog = $state(false);
     let isOpen = $state(false);
@@ -47,7 +47,6 @@
     );
 
     $effect(() => {
-        if (!datasetNavEntry.label) return;
         getCrossProfileDiagram(datasetNavEntry.label).then(diagram => {
             classes = diagram?.classes ?? [];
         });
@@ -58,7 +57,7 @@
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.CROSS_PROFILE,
-            id: datasetNavEntry.crossProfileID,
+            id: crossProfileID,
         });
     }
 </script>
@@ -107,7 +106,7 @@
                     label: cls.label,
                     tooltip: cls.label,
                     parent: {
-                        id: datasetNavEntry.crossProfileID,
+                        id: crossProfileID,
                         open: () => selectMergedView(),
                     },
                 }}

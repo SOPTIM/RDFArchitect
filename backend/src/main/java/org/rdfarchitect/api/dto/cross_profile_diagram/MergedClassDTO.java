@@ -15,9 +15,10 @@
  *
  */
 
-package org.rdfarchitect.api.dto.crossProfileDiagram;
+package org.rdfarchitect.api.dto.cross_profile_diagram;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 
 import org.rdfarchitect.api.dto.SuperClassDTO;
@@ -26,20 +27,25 @@ import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
+@Builder
 public class MergedClassDTO {
 
     private UUID uuid;
     private String classUri;
     private String label;
-    private List<ClassSourceDTO> sources;
-    private List<GraphSourcedDTO<SuperClassDTO>> superClasses;
-    private List<GraphSourcedDTO<AttributeDTO>> attributes;
-    private List<GraphSourcedDTO<EnumEntryDTO>> enumEntries;
-    private List<GraphSourcedDTO<AssociationPairDTO>> associationPairs;
-    private List<CIMSStereotype> stereotypes;
+    @Builder.Default private List<ClassSourceDTO> sources = new ArrayList<>();
+    @Builder.Default private List<GraphSourceDTO<SuperClassDTO>> superClasses = new ArrayList<>();
+    @Builder.Default private List<GraphSourceDTO<AttributeDTO>> attributes = new ArrayList<>();
+    @Builder.Default private List<GraphSourceDTO<EnumEntryDTO>> enumEntries = new ArrayList<>();
+
+    @Builder.Default
+    private List<GraphSourceDTO<AssociationPairDTO>> associationPairs = new ArrayList<>();
+
+    @Builder.Default private List<CIMSStereotype> stereotypes = new ArrayList<>();
 }

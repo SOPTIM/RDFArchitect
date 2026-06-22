@@ -21,22 +21,14 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.association.AssociationPairMapper;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
-import org.rdfarchitect.api.dto.crossProfileDiagram.MergedClassDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
-import org.rdfarchitect.models.cim.data.dto.CIMMergedClass;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFType;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -110,84 +102,5 @@ public class DiagramToCIMCollectionConverterService
         target.getAttributes().addAll(source.getAttributes());
         target.getEnumEntries().addAll(source.getEnumEntries());
         target.getAssociations().addAll(source.getAssociations());
-    }
-
-    @Override
-    public CIMCollection convert(CrossProfileDiagramDTO diagram) {
-        var collection = new CIMCollection();
-
-        for (var mergedClass : diagram.getClasses()) {
-            var uri = new URI(mergedClass.getClassUri());
-            var superClasses = new ArrayList<RDFSSubClassOf>();
-            for (var superClassDTO : mergedClass.getSuperClasses()) {
-                var superClass = superClassDTO.getValue();
-                superClasses.add(
-                        new RDFSSubClassOf(
-                                new URI(superClass.getPrefix() + superClass.getLabel()),
-                                new RDFSLabel(superClass.getLabel())));
-            }
-            var label = new RDFSLabel(uri.getSuffix());
-            var cimClass =
-                    CIMMergedClass.builder()
-                            .uuid(mergedClass.getUuid())
-                            .uri(uri)
-                            .label(label)
-                            .superClasses(superClasses)
-                            .stereotypes(mergedClass.getStereotypes())
-                            .build();
-            collection.getClasses().add(cimClass);
-
-            convertAttributes(mergedClass, collection);
-            convertEnumEntries(mergedClass, collection);
-            convertAssociationPairs(mergedClass, collection);
-        }
-
-        return collection;
-    }
-
-    private void convertAssociationPairs(MergedClassDTO mergedClass, CIMCollection collection) {
-        for (var graphSourcedPair : mergedClass.getAssociationPairs()) {
-            var pair = associationPairMapper.toCIMObject(graphSourcedPair.getValue());
-            var graphUri = graphSourcedPair.getGraphUri();
-            var color = graphSourcedPair.getGraphColor();
-            if (pair.getFrom() != null) {
-                collection
-                        .getAssociations()
-                        .add(pair.getFrom().toBuilder().graphUri(graphUri).color(color).build());
-            }
-            if (pair.getTo() != null) {
-                collection
-                        .getAssociations()
-                        .add(pair.getTo().toBuilder().graphUri(graphUri).color(color).build());
-            }
-        }
-    }
-
-    private void convertEnumEntries(MergedClassDTO mergedClass, CIMCollection collection) {
-        for (var graphSourcedEntry : mergedClass.getEnumEntries()) {
-            var cimEnumEntry = enumEntryMapper.toCIMObject(graphSourcedEntry.getValue());
-            cimEnumEntry =
-                    cimEnumEntry.toBuilder()
-                            .type(
-                                    new RDFType(
-                                            new URI(mergedClass.getClassUri()),
-                                            new RDFSLabel(graphSourcedEntry.getValue().getLabel())))
-                            .graphUri(graphSourcedEntry.getGraphUri())
-                            .color(graphSourcedEntry.getGraphColor())
-                            .build();
-            collection.getEnumEntries().add(cimEnumEntry);
-        }
-    }
-
-    private void convertAttributes(MergedClassDTO mergedClass, CIMCollection collection) {
-        for (var graphSourcedAttr : mergedClass.getAttributes()) {
-            var cimAttribute = attributeMapper.toCIMObject(graphSourcedAttr.getValue());
-            cimAttribute =
-                    cimAttribute.toBuilder()
-                            .graphUri(graphSourcedAttr.getGraphUri())
-                            .color(graphSourcedAttr.getGraphColor())
-                            .build();
-            collection.getAttributes().add(cimAttribute);
-        }
     }
 }

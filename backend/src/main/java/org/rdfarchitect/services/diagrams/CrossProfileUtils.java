@@ -27,10 +27,15 @@ public class CrossProfileUtils {
 
     private static final Random random = new Random();
 
+    private static final float MIN_SATURATION = 0.5f;
+    private static final float RANGE_SATURATION = 0.5f;
+    private static final float MIN_BRIGHTNESS = 0.3f;
+    private static final float RANGE_BRIGHTNESS = 0.4f;
+
     public static String generateRandomDarkColor() {
         float hue = random.nextFloat();
-        float saturation = 0.5f + random.nextFloat() * 0.5f;
-        float brightness = 0.3f + random.nextFloat() * 0.4f;
+        float saturation = MIN_SATURATION + random.nextFloat() * RANGE_SATURATION;
+        float brightness = MIN_BRIGHTNESS + random.nextFloat() * RANGE_BRIGHTNESS;
 
         Color color = Color.getHSBColor(hue, saturation, brightness);
         return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());

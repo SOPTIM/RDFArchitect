@@ -465,12 +465,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                                 databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMEnumEntryList(enumEntriesQuery.build());
 
-        enumEntryList.forEach(
-                cimEnumEntry -> {
-                    cimEnumEntry =
-                            cimEnumEntry.toBuilder().graphUri(graphIdentifier.graphUri()).build();
-                    cimCollection.getEnumEntries().add(cimEnumEntry);
-                });
+        enumEntryList.forEach(cimEnumEntry -> cimCollection.getEnumEntries().add(cimEnumEntry));
     }
 
     private void fetchAssociations(
@@ -509,19 +504,11 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
 
         associationList.forEach(
                 cimAssociation -> {
-                    var finalCimAssociation = cimAssociation;
                     if (cimCollection.getClasses().stream()
                             .anyMatch(
                                     cimClass ->
                                             cimClass.getUri()
-                                                    .equals(
-                                                            finalCimAssociation
-                                                                    .getRange()
-                                                                    .getUri()))) {
-                        cimAssociation =
-                                cimAssociation.toBuilder()
-                                        .graphUri(graphIdentifier.graphUri())
-                                        .build();
+                                                    .equals(cimAssociation.getRange().getUri()))) {
                         cimCollection.getAssociations().add(cimAssociation);
                     }
                 });

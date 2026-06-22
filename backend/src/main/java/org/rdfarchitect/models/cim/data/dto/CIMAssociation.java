@@ -39,10 +39,6 @@ public class CIMAssociation {
 
     private URI uri;
 
-    private String graphUri;
-
-    private String color;
-
     private RDFSLabel label;
 
     private RDFSComment comment;

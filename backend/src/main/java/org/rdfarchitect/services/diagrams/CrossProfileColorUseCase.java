@@ -17,7 +17,7 @@
 
 package org.rdfarchitect.services.diagrams;
 
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramColorDataDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 
 public interface CrossProfileColorUseCase {
 

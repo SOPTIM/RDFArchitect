@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.springframework.http.HttpHeaders;
 
@@ -41,7 +41,7 @@ class CrossProfileDiagramRestControllerTest {
     }
 
     @Test
-    void getCrossProfileData_returnsDTOFromUseCase() {
+    void getCrossProfileRenderingData_validDataset_returnsDTOFromUseCase() {
         var expectedDTO = new CrossProfileDiagramDTO(UUID.randomUUID(), List.of());
         when(getCustomDiagramsUseCase.getCrossProfileDiagram("my-dataset", false, false))
                 .thenReturn(expectedDTO);

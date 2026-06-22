@@ -34,10 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/datasets/{datasetName}/crossprofilediagramID")
 @RequiredArgsConstructor
-public class CrossProfileDiagramIDController {
+public class CrossProfileDiagramIDRESTController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(CrossProfileDiagramIDController.class);
+            LoggerFactory.getLogger(CrossProfileDiagramIDRESTController.class);
 
     private final DatabasePort databasePort;
 
@@ -56,10 +56,16 @@ public class CrossProfileDiagramIDController {
                 datasetName,
                 originURL);
 
+        var result =
+                databasePort
+                        .getCrossProfileDiagramInfo(datasetName)
+                        .getCrossProfileDiagramUUID()
+                        .toString();
+
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
                 datasetName,
                 originURL);
-        return databasePort.getCrossProfileDiagramUUID(datasetName).toString();
+        return result;
     }
 }

@@ -21,6 +21,7 @@
     import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "../../mainpage/classEditor/classEditor.svelte";
@@ -48,10 +49,11 @@
     onDestroy(() => eventStack.removeEvent(closeMergedClassEditor));
 
     function extractGraphLabel(graphUri) {
-        const hash = graphUri.lastIndexOf("#");
-        const slash = graphUri.lastIndexOf("/");
-        const idx = Math.max(hash, slash);
-        return idx >= 0 ? graphUri.substring(idx + 1) : graphUri;
+        try {
+            return new URI(graphUri).suffix;
+        } catch {
+            return graphUri;
+        }
     }
 
     function closeMergedClassEditor() {

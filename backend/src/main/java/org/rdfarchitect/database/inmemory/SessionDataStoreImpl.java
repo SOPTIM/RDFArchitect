@@ -32,6 +32,7 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
@@ -121,37 +122,11 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
-    public UUID getCrossProfileDiagramUUID(String datasetName) {
+    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
         lock.lock();
         try {
             assertThatDatasetExists(datasetName);
-            return graphCollections.get(datasetName).getCrossProfileDiagramUUID();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public String getCrossProfileDiagramColor(GraphIdentifier graphIdentifier) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(graphIdentifier.datasetName());
-            return graphCollections
-                    .get(graphIdentifier.datasetName())
-                    .getCrossProfileDiagramColor(graphIdentifier.graphUri());
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public void setCrossProfileDiagramColor(GraphIdentifier graphIdentifier, String color) {
-        lock.lock();
-        try {
-            assertThatDatasetExists(graphIdentifier.datasetName());
-            graphCollections
-                    .get(graphIdentifier.datasetName())
-                    .setCrossProfileDiagramColor(graphIdentifier.graphUri(), color);
+            return graphCollections.get(datasetName).getCrossProfileDiagramInfo();
         } finally {
             lock.unlock();
         }

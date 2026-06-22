@@ -15,16 +15,15 @@
  *
  */
 
-package org.rdfarchitect.api.dto.crossProfileDiagram;
+package org.rdfarchitect.api.dto.cross_profile_diagram;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.UUID;
+import java.util.Map;
 
 @Data
 @AllArgsConstructor
-public class ClassSourceDTO {
-    private UUID classUUID;
-    private String graphUri;
+public class CrossProfileDiagramColorDataDTO {
+    Map<String, String> graphColors;
 }

@@ -20,6 +20,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
@@ -31,11 +32,7 @@
 
     let originalJson = $state("");
 
-    let hasChanges = $derived(
-        JSON.stringify(
-            colorEntries.map(e => ({ graphURI: e.graphURI, color: e.color })),
-        ) !== originalJson,
-    );
+    let hasChanges = $derived(JSON.stringify(colorEntries) !== originalJson);
 
     async function onOpen() {
         if (!datasetName) return;
@@ -52,6 +49,7 @@
             const res = await bec.getCrossProfileColorData(datasetName);
             if (!res.ok) {
                 toastStore.error("Load failed", "Could not load color data.");
+                console.error("Failed to load color data");
                 return;
             }
             const data = await res.json();
@@ -80,6 +78,7 @@
                     "Save failed",
                     `Could not save color data for "${datasetName}".`,
                 );
+                console.error("Failed to save color data");
                 return;
             }
             toastStore.success(
@@ -102,14 +101,15 @@
     }
 
     function snapshotOriginal() {
-        originalJson = JSON.stringify(
-            colorEntries.map(e => ({ graphURI: e.graphURI, color: e.color })),
-        );
+        originalJson = JSON.stringify(colorEntries);
     }
 
     function shortName(uri) {
-        const match = uri.match(/[#/]([^#/]+)\/?$/);
-        return match ? match[1] : uri;
+        try {
+            return new URI(uri).suffix;
+        } catch {
+            return uri;
+        }
     }
 </script>
 

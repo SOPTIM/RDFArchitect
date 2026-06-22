@@ -173,8 +173,6 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                             .label(cimAttribute.getLabel().getValue())
                             .type(cimAttribute.getDataType().getLabel().getValue())
                             .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
-                            .graphUri(cimAttribute.getGraphUri())
-                            .color(cimAttribute.getColor())
                             .build());
         }
 
@@ -225,11 +223,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 continue;
             }
             enumEntries.add(
-                    EnumEntryDTO.builder()
-                            .label(cimEnumEntry.getLabel().getValue())
-                            .graphUri(cimEnumEntry.getGraphUri())
-                            .color(cimEnumEntry.getColor())
-                            .build());
+                    EnumEntryDTO.builder().label(cimEnumEntry.getLabel().getValue()).build());
         }
 
         return enumEntries;
@@ -355,8 +349,6 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                         .fromMultiplicity(fromMultiplicity)
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
-                        .graphUri(from.getGraphUri())
-                        .color(from.getColor())
                         .build();
 
         return EdgeDTO.builder()

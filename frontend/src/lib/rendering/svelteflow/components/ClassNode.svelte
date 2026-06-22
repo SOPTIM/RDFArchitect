@@ -18,6 +18,7 @@
 <script>
     import { Handle, Position } from "@xyflow/svelte";
 
+    import { URI } from "$lib/models/dto/index.ts";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -61,11 +62,11 @@
     }
 
     function getGraphLabel(graphURI) {
-        if (!graphURI) return graphURI;
-        const hashIndex = graphURI.lastIndexOf("#");
-        const slashIndex = graphURI.lastIndexOf("/");
-        const splitIndex = Math.max(hashIndex, slashIndex);
-        return splitIndex >= 0 ? graphURI.slice(splitIndex + 1) : graphURI;
+        try {
+            return new URI(graphURI).suffix;
+        } catch {
+            return graphURI;
+        }
     }
 </script>
 

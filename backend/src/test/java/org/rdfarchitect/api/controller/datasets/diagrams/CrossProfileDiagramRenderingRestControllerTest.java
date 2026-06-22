@@ -22,13 +22,10 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.crossProfileDiagram.CrossProfileDiagramDTO;
+import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.database.DatabasePort;
-import org.rdfarchitect.models.cim.data.dto.CIMCollection;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
-import org.rdfarchitect.services.rendering.DiagramToCIMCollectionConverterUseCase;
 import org.springframework.http.HttpHeaders;
 
 import java.util.List;
@@ -36,43 +33,33 @@ import java.util.UUID;
 
 class CrossProfileDiagramRenderingRestControllerTest {
 
-    private DiagramToCIMCollectionConverterUseCase converter;
-    private RenderCIMCollectionUseCase renderer;
+    private RenderCrossProfileDiagramUseCase renderer;
     private GetCustomDiagramsUseCase getCustomDiagramsUseCase;
-    private DatabasePort databasePort;
     private CrossProfileDiagramRenderingRestController controller;
 
     @BeforeEach
     void setUp() {
-        converter = mock(DiagramToCIMCollectionConverterUseCase.class);
-        renderer = mock(RenderCIMCollectionUseCase.class);
+        renderer = mock(RenderCrossProfileDiagramUseCase.class);
         getCustomDiagramsUseCase = mock(GetCustomDiagramsUseCase.class);
-        databasePort = mock(DatabasePort.class);
         controller =
-                new CrossProfileDiagramRenderingRestController(
-                        converter, renderer, getCustomDiagramsUseCase, databasePort);
+                new CrossProfileDiagramRenderingRestController(renderer, getCustomDiagramsUseCase);
     }
 
     @Test
-    void getCrossProfileRenderingData_orchestratesUseCasesAndReturnsRenderingDTO() {
+    void getCrossProfileRenderingData_validDataset_returnsRenderingDTO() {
         var diagramUUID = UUID.randomUUID();
         var diagram = new CrossProfileDiagramDTO(diagramUUID, List.of());
-        var cimCollection = mock(CIMCollection.class);
         var expectedRendering = mock(RenderingDataDTO.class);
 
         when(getCustomDiagramsUseCase.getCrossProfileDiagram("my-dataset", true, true))
                 .thenReturn(diagram);
-        when(converter.convert(diagram)).thenReturn(cimCollection);
-        when(databasePort.getCrossProfileDiagramUUID("my-dataset")).thenReturn(diagramUUID);
-        when(renderer.renderGlobalUML(cimCollection, "my-dataset", diagramUUID))
+        when(renderer.renderCrossProfileDiagramUML(diagram, "my-dataset"))
                 .thenReturn(expectedRendering);
 
         var result = controller.getCrossProfileRenderingData(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(expectedRendering);
         verify(getCustomDiagramsUseCase).getCrossProfileDiagram("my-dataset", true, true);
-        verify(converter).convert(diagram);
-        verify(databasePort).getCrossProfileDiagramUUID("my-dataset");
-        verify(renderer).renderGlobalUML(cimCollection, "my-dataset", diagramUUID);
+        verify(renderer).renderCrossProfileDiagramUML(diagram, "my-dataset");
     }
 }

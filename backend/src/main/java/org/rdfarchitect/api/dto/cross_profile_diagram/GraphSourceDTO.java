@@ -15,16 +15,15 @@
  *
  */
 
-package org.rdfarchitect.database.inmemory.diagrams;
+package org.rdfarchitect.api.dto.cross_profile_diagram;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.List;
-
 @Data
 @AllArgsConstructor
-public class GraphSourced<T> {
-    private List<String> graphUris;
+public class GraphSourceDTO<T> {
+    private String graphUri;
+    private String graphColor;
     private T value;
 }
