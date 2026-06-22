@@ -19,9 +19,6 @@ package org.rdfarchitect.services.rendering;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.association.AssociationPairMapper;
-import org.rdfarchitect.api.dto.attributes.AttributeMapper;
-import org.rdfarchitect.api.dto.enumentries.EnumEntryMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
@@ -40,10 +37,6 @@ public class DiagramToCIMCollectionConverterService
     private final DatabasePort databasePort;
 
     private final GraphToCIMCollectionConverterService converter;
-
-    private final AttributeMapper attributeMapper;
-    private final EnumEntryMapper enumEntryMapper;
-    private final AssociationPairMapper associationPairMapper;
 
     @Override
     public CIMCollection convert(GraphIdentifier graphIdentifier, String diagramId) {
