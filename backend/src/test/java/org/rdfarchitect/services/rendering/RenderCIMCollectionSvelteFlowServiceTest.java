@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.rendering;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
@@ -196,6 +197,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderGlobalUML_emptyCollection_emptyArrays() {
+        when(diagramConverter.convert(any(), any())).thenReturn(cimCollection);
+
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML("myDataset", null);
 
         assertThat(result.getNodes()).isEmpty();
@@ -212,6 +215,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
     void renderGlobalUML_singleClass_createsNodeWithCorrectData() {
         addPackage("package_package1");
         addClass("package_package1", "class1");
+        when(diagramConverter.convert(any(), any())).thenReturn(cimCollection);
 
         var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML("myDataset", null);
 

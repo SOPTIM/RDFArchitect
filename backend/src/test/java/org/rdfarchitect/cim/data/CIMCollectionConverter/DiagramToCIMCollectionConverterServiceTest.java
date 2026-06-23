@@ -20,7 +20,9 @@ package org.rdfarchitect.cim.data.CIMCollectionConverter;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.sparql.graph.GraphFactory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -71,20 +73,21 @@ class DiagramToCIMCollectionConverterServiceTest {
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
         map.put(diagramId, diagram);
 
-        var graph = mockGraph(map);
-        when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
+        var ctx = mock(GraphContext.class);
+        when(ctx.getCustomDiagrams()).thenReturn(map);
+        var rdfGraph = GraphFactory.createDefaultGraph();
+        when(ctx.getRdfGraph()).thenReturn(rdfGraph);
 
         var expected = new CIMCollection();
-        when(converter.convert(eq(graphIdentifier), any())).thenReturn(expected);
+        when(converter.convert(eq(rdfGraph), eq(graphIdentifier), any(GraphFilter.class)))
+                .thenReturn(expected);
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var result = service.convert(ctx, graphIdentifier, diagramId);
-            assertThat(result).isSameAs(expected);
-        }
+        var result = service.convert(ctx, graphIdentifier, diagramId);
+        assertThat(result).isSameAs(expected);
 
         // verify filter content
         ArgumentCaptor<GraphFilter> captor = ArgumentCaptor.forClass(GraphFilter.class);
-        verify(converter).convert(eq(graphIdentifier), captor.capture());
+        verify(converter).convert(eq(rdfGraph), eq(graphIdentifier), captor.capture());
 
         var filter = captor.getValue();
         assertThat(filter.getAllowedUUIDs())
@@ -120,6 +123,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         map.put(diagramId, diagram);
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockGraphWithReadLock();
 
         var cimClass1 = createTestClass("TestClass1");
         var cimClass2 = createTestClass("TestClass2");
@@ -128,12 +132,15 @@ class DiagramToCIMCollectionConverterServiceTest {
         partial.getClasses().add(cimClass1);
         partial.getClasses().add(cimClass2);
 
-        when(converter.convert(any(), any())).thenReturn(partial);
+        when(converter.convert(
+                        any(Graph.class), any(GraphIdentifier.class), any(GraphFilter.class)))
+                .thenReturn(partial);
 
         var result = service.convert("dataset", diagramId);
 
         assertThat(result.getClasses()).containsExactly(cimClass1, cimClass2);
-        verify(converter, times(1)).convert(any(), any());
+        verify(converter, times(1))
+                .convert(any(Graph.class), any(GraphIdentifier.class), any(GraphFilter.class));
     }
 
     @Test
@@ -152,6 +159,7 @@ class DiagramToCIMCollectionConverterServiceTest {
         map.put(diagramId, diagram);
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockGraphWithReadLock();
 
         var cimClassA = createTestClass("ClassA");
         var cimClassB = createTestClass("ClassB");
@@ -162,13 +170,15 @@ class DiagramToCIMCollectionConverterServiceTest {
         var partial2 = new CIMCollection();
         partial2.getClasses().add(cimClassB);
 
-        when(converter.convert(any(), any())).thenReturn(partial1, partial2);
+        when(converter.convert(
+                        any(Graph.class), any(GraphIdentifier.class), any(GraphFilter.class)))
+                .thenReturn(partial1, partial2);
 
         var result = service.convert("dataset", diagramId);
 
         assertThat(result.getClasses()).containsExactlyInAnyOrder(cimClassA, cimClassB);
-
-        verify(converter, times(2)).convert(any(), any());
+        verify(converter, times(2))
+                .convert(any(Graph.class), any(GraphIdentifier.class), any(GraphFilter.class));
     }
 
     @Test
@@ -187,17 +197,19 @@ class DiagramToCIMCollectionConverterServiceTest {
         map.put(diagramId, diagram);
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
+        mockGraphWithReadLock();
 
-        when(converter.convert(any(), any())).thenReturn(new CIMCollection());
+        when(converter.convert(
+                        any(Graph.class), any(GraphIdentifier.class), any(GraphFilter.class)))
+                .thenReturn(new CIMCollection());
 
         service.convert("dataset", diagramId);
 
         ArgumentCaptor<GraphIdentifier> captor = ArgumentCaptor.forClass(GraphIdentifier.class);
-
-        verify(converter, times(2)).convert(captor.capture(), any());
+        verify(converter, times(2))
+                .convert(any(Graph.class), captor.capture(), any(GraphFilter.class));
 
         var identifiers = captor.getAllValues();
-
         assertThat(identifiers)
                 .extracting(GraphIdentifier::graphUri)
                 .containsExactlyInAnyOrder(
@@ -227,13 +239,16 @@ class DiagramToCIMCollectionConverterServiceTest {
         var result = service.convert("dataset", diagramId);
 
         assertThat(result.getClasses()).isEmpty();
-        verify(converter, never()).convert(any(), any());
+        verify(converter, never())
+                .convert(any(Graph.class), any(GraphIdentifier.class), any(GraphFilter.class));
     }
 
-    private GraphContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {
-        GraphContext graph = mock(GraphContext.class);
-        when(graph.getCustomDiagrams()).thenReturn(diagrams);
-        return graph;
+    private void mockGraphWithReadLock() {
+        GraphContext outerCtx = mock(GraphContext.class);
+        GraphContext innerCtx = mock(GraphContext.class);
+        when(innerCtx.getRdfGraph()).thenReturn(GraphFactory.createDefaultGraph());
+        when(outerCtx.begin(ReadWrite.READ)).thenReturn(innerCtx);
+        when(databasePort.getGraphWithContext(any(GraphIdentifier.class))).thenReturn(outerCtx);
     }
 
     private CIMClass createTestClass(String label) {

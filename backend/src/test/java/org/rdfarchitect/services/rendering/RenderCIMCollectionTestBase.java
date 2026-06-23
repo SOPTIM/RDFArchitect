@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.rendering;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.BeforeAll;
@@ -55,20 +56,23 @@ class RenderCIMCollectionTestBase {
     protected static RenderCIMCollectionMermaidService mermaidRenderer;
     protected static RenderCIMCollectionSvelteFlowService svelteFlowRenderer;
 
+    protected static DiagramToCIMCollectionConverterUseCase diagramConverter;
+    protected static FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
+
     @BeforeAll
     static void setUpEnvironment() {
-        var fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
-        var diagramToCIMCollectionConverterUseCase =
-                mock(DiagramToCIMCollectionConverterUseCase.class);
+        fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
+        diagramConverter = mock(DiagramToCIMCollectionConverterUseCase.class);
         mermaidRenderer = new RenderCIMCollectionMermaidService();
         svelteFlowRenderer =
                 new RenderCIMCollectionSvelteFlowService(
-                        fetchRenderingLayoutDataUseCase, diagramToCIMCollectionConverterUseCase);
+                        fetchRenderingLayoutDataUseCase, diagramConverter);
     }
 
     @BeforeEach
     void resetEnvironment() {
         cimCollection = new CIMCollection();
+        reset(diagramConverter, fetchRenderingLayoutDataUseCase);
     }
 
     protected void addPackage(String packageLabel) {
