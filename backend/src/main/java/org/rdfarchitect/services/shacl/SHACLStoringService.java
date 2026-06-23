@@ -81,23 +81,14 @@ public class SHACLStoringService
 
     @Override
     public void replaceCustomSHACLGraph(GraphIdentifier graphIdentifier, Graph shacl) {
-        var normalized = GraphUtils.normalizeBlankNodes(shacl);
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var storedGraph = ctx.getCustomSHACL();
-
-            var toDelete = storedGraph.find().filterKeep(t -> !normalized.contains(t)).toList();
-            var toAdd = normalized.find().filterKeep(t -> !storedGraph.contains(t)).toList();
-
-            if (toDelete.isEmpty() && toAdd.isEmpty()) {
-                return;
-            }
-
-            toDelete.forEach(storedGraph::delete);
-            toAdd.forEach(storedGraph::add);
-
+            storedGraph.clear();
             var storedModel = ModelFactory.createModelForGraph(storedGraph);
+            var newModel = ModelFactory.createModelForGraph(GraphUtils.normalizeBlankNodes(shacl));
             storedModel.clearNsPrefixMap();
-            storedModel.setNsPrefixes(ModelFactory.createModelForGraph(normalized));
+            storedModel.add(newModel);
+            storedModel.setNsPrefixes(newModel);
 
             ctx.commit("Replace custom SHACL");
         }
