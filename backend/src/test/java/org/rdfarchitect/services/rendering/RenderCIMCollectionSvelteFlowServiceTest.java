@@ -196,9 +196,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
 
     @Test
     void renderGlobalUML_emptyCollection_emptyArrays() {
-        var result =
-                (SvelteFlowDTO)
-                        svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML("myDataset", null);
 
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
@@ -207,7 +205,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
     @Test
     void renderGlobalUML_nullCollection_throwsException() {
         assertThatException()
-                .isThrownBy(() -> svelteFlowRenderer.renderGlobalUML(null, "myDataset", null));
+                .isThrownBy(() -> svelteFlowRenderer.renderGlobalUML("myDataset", null));
     }
 
     @Test
@@ -215,9 +213,7 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
         addPackage("package_package1");
         addClass("package_package1", "class1");
 
-        var result =
-                (SvelteFlowDTO)
-                        svelteFlowRenderer.renderGlobalUML(cimCollection, "myDataset", null);
+        var result = (SvelteFlowDTO) svelteFlowRenderer.renderGlobalUML("myDataset", null);
 
         assertThat(result.getNodes()).hasSize(1);
         assertThat(result.getNodes().getFirst().getData().getLabel()).isEqualTo("class1");

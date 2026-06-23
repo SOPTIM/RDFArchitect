@@ -40,9 +40,9 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSPrimitiveData
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rendering.mermaid.RenderCIMCollectionMermaidService;
-import org.rdfarchitect.models.cim.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
+import org.rdfarchitect.services.rendering.mermaid.RenderCIMCollectionMermaidService;
+import org.rdfarchitect.services.rendering.svelteflow.RenderCIMCollectionSvelteFlowService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,9 +58,12 @@ class RenderCIMCollectionTestBase {
     @BeforeAll
     static void setUpEnvironment() {
         var fetchRenderingLayoutDataUseCase = mock(FetchRenderingLayoutDataUseCase.class);
+        var diagramToCIMCollectionConverterUseCase =
+                mock(DiagramToCIMCollectionConverterUseCase.class);
         mermaidRenderer = new RenderCIMCollectionMermaidService();
         svelteFlowRenderer =
-                new RenderCIMCollectionSvelteFlowService(fetchRenderingLayoutDataUseCase);
+                new RenderCIMCollectionSvelteFlowService(
+                        fetchRenderingLayoutDataUseCase, diagramToCIMCollectionConverterUseCase);
     }
 
     @BeforeEach

@@ -15,9 +15,10 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rendering.mermaid;
+package org.rdfarchitect.services.rendering.mermaid;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
@@ -26,13 +27,15 @@ import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.models.cim.rendering.RenderingUtils;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMAssociationToMermaidBuilder;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMClassToMermaidBuilder;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMEnumEntryToMermaidBuilder;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMPackageToMermaidBuilder;
+import org.rdfarchitect.services.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMAssociationToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMClassToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMEnumEntryToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMPackageToMermaidBuilder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,6 +46,9 @@ import java.util.UUID;
  * Converts a {@link CIMCollection} to a String that can be rendered as a UML diagram using the
  * mermaid syntax.
  */
+@Service
+@ConditionalOnProperty(name = "rendering.renderer", havingValue = "mermaid")
+@RequiredArgsConstructor
 public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUseCase {
 
     @Override
@@ -75,8 +81,7 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     }
 
     @Override
-    public RenderingDataDTO renderGlobalUML(
-            CIMCollection cimCollection, String datasetName, UUID diagramId) {
+    public RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId) {
         throw new UnsupportedOperationException(
                 "Rendering dataset diagrams is not supported for the mermaid renderer.");
     }

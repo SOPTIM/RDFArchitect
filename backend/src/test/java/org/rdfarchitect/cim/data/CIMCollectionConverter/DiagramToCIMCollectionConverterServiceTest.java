@@ -20,6 +20,7 @@ package org.rdfarchitect.cim.data.CIMCollectionConverter;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -76,9 +77,10 @@ class DiagramToCIMCollectionConverterServiceTest {
         var expected = new CIMCollection();
         when(converter.convert(eq(graphIdentifier), any())).thenReturn(expected);
 
-        var result = service.convert(graphIdentifier, diagramId.toString());
-
-        assertThat(result).isSameAs(expected);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var result = service.convert(ctx, graphIdentifier, diagramId);
+            assertThat(result).isSameAs(expected);
+        }
 
         // verify filter content
         ArgumentCaptor<GraphFilter> captor = ArgumentCaptor.forClass(GraphFilter.class);
@@ -98,8 +100,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(emptyDiagrams);
 
-        var idString = diagramId.toString();
-        assertThatThrownBy(() -> service.convert("dataset", idString))
+        assertThatThrownBy(() -> service.convert("dataset", diagramId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Diagram with ID");
     }
@@ -129,7 +130,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         when(converter.convert(any(), any())).thenReturn(partial);
 
-        var result = service.convert("dataset", diagramId.toString());
+        var result = service.convert("dataset", diagramId);
 
         assertThat(result.getClasses()).containsExactly(cimClass1, cimClass2);
         verify(converter, times(1)).convert(any(), any());
@@ -163,7 +164,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         when(converter.convert(any(), any())).thenReturn(partial1, partial2);
 
-        var result = service.convert("dataset", diagramId.toString());
+        var result = service.convert("dataset", diagramId);
 
         assertThat(result.getClasses()).containsExactlyInAnyOrder(cimClassA, cimClassB);
 
@@ -189,7 +190,7 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         when(converter.convert(any(), any())).thenReturn(new CIMCollection());
 
-        service.convert("dataset", diagramId.toString());
+        service.convert("dataset", diagramId);
 
         ArgumentCaptor<GraphIdentifier> captor = ArgumentCaptor.forClass(GraphIdentifier.class);
 
@@ -207,7 +208,7 @@ class DiagramToCIMCollectionConverterServiceTest {
     void convert_datasetDiagramNotFound_throwsIllegalArgumentException() {
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(new ConcurrentHashMap<>());
 
-        var id = UUID.randomUUID().toString();
+        var id = UUID.randomUUID();
         assertThatThrownBy(() -> service.convert("dataset", id))
                 .isInstanceOf(IllegalArgumentException.class);
     }
@@ -223,16 +224,10 @@ class DiagramToCIMCollectionConverterServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        var result = service.convert("dataset", diagramId.toString());
+        var result = service.convert("dataset", diagramId);
 
         assertThat(result.getClasses()).isEmpty();
         verify(converter, never()).convert(any(), any());
-    }
-
-    @Test
-    void convert_invalidUUID_throwsIllegalArgumentException() {
-        assertThatThrownBy(() -> service.convert("dataset", "not-a-uuid"))
-                .isInstanceOf(IllegalArgumentException.class);
     }
 
     private GraphContext mockGraph(ConcurrentHashMap<UUID, CustomDiagram> diagrams) {

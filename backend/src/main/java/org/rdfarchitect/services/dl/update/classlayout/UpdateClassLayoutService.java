@@ -33,8 +33,10 @@ import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -248,6 +250,14 @@ public class UpdateClassLayoutService
         if (classes.isEmpty()) {
             return;
         }
+        var graphUris =
+                classes.stream().map(c -> c.getGraphUri().toString()).collect(Collectors.toSet());
+        var existingGraphUris = new HashSet<>(databasePort.listGraphUris(datasetName));
+        if (!existingGraphUris.containsAll(graphUris)) {
+            throw new IllegalArgumentException(
+                    "Some referenced graphs do not exist in dataset: " + datasetName);
+        }
+
         var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
         if (diagram != null) {
             var updated = diagram.getClasses();

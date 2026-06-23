@@ -19,13 +19,21 @@ package org.rdfarchitect.services.rendering;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
+import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.database.DatabasePort;
+import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.CIMCollection;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,54 +46,103 @@ public class DiagramToCIMCollectionConverterService
 
     private final GraphToCIMCollectionConverterService converter;
 
+    private record GraphEntry(GraphIdentifier graphIdentifier, List<String> classUUIDs) {}
+
+    private record CopiedGraph(GraphEntry entry, Graph graph) {}
+
     @Override
-    public CIMCollection convert(GraphIdentifier graphIdentifier, String diagramId) {
-        var diagrams = databasePort.getGraphWithContext(graphIdentifier).getCustomDiagrams();
-        var diagramUUID = UUID.fromString(diagramId);
-        if (!diagrams.containsKey(diagramUUID)) {
+    public CIMCollection convert(GraphContext ctx, GraphIdentifier identifier, UUID diagramId) {
+        var diagrams = ctx.getCustomDiagrams();
+        if (!diagrams.containsKey(diagramId)) {
             throw new IllegalArgumentException(
-                    "Diagram with ID " + diagramId + " not found in graph " + graphIdentifier);
+                    "Diagram with ID "
+                            + diagramId.toString()
+                            + " not found in graph "
+                            + identifier);
         }
 
-        var diagram = diagrams.get(diagramUUID);
+        var diagram = diagrams.get(diagramId);
         var classUUIDs =
                 diagram.getClasses().stream().map(cls -> cls.getUuid().toString()).toList();
-        var filter = new GraphFilter(true);
-        filter.setIncludeRelationsToExternalPackages(false);
-        filter.setAllowedUUIDs(classUUIDs);
-        return converter.convert(graphIdentifier, filter);
+        return converter.convert(ctx.getRdfGraph(), identifier, buildFilter(classUUIDs));
     }
 
     @Override
-    public CIMCollection convert(String datasetName, String diagramId) {
+    public CIMCollection convert(String datasetName, UUID diagramId) {
+        var diagram = getDiagram(datasetName, diagramId);
+        var graphEntries = buildSortedGraphEntries(datasetName, diagram);
+        var copiedGraphs = copyGraphsUnderLocks(graphEntries);
+        return convertAndMerge(copiedGraphs);
+    }
+
+    private CustomDiagram getDiagram(String datasetName, UUID diagramId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
-        var diagramUUID = UUID.fromString(diagramId);
-        if (!diagrams.containsKey(diagramUUID)) {
+        if (!diagrams.containsKey(diagramId)) {
             throw new IllegalArgumentException(
-                    "Diagram with ID " + diagramId + " not found in dataset " + datasetName);
+                    "Diagram with ID "
+                            + diagramId.toString()
+                            + " not found in dataset "
+                            + datasetName);
         }
+        return diagrams.get(diagramId);
+    }
 
-        var diagram = diagrams.get(diagramUUID);
-        // Group ClassInDiagram entries by graphUri
-        var classesByGraph =
-                diagram.getClasses().stream()
-                        .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri));
+    private List<GraphEntry> buildSortedGraphEntries(String datasetName, CustomDiagram diagram) {
+        return diagram.getClasses().stream()
+                .collect(Collectors.groupingBy(ClassInDiagram::getGraphUri))
+                .entrySet()
+                .stream()
+                .sorted(Comparator.comparing(e -> e.getKey().toString()))
+                .map(
+                        e ->
+                                new GraphEntry(
+                                        new GraphIdentifier(datasetName, e.getKey().toString()),
+                                        e.getValue().stream()
+                                                .map(c -> c.getUuid().toString())
+                                                .toList()))
+                .toList();
+    }
 
+    private List<CopiedGraph> copyGraphsUnderLocks(List<GraphEntry> graphEntries) {
+        var copiedGraphs = new ArrayList<CopiedGraph>(graphEntries.size());
+        var contexts = new ArrayList<GraphContext>(graphEntries.size());
+        try {
+            for (var entry : graphEntries) {
+                var ctx =
+                        databasePort
+                                .getGraphWithContext(entry.graphIdentifier())
+                                .begin(ReadWrite.READ);
+                contexts.add(ctx);
+                copiedGraphs.add(new CopiedGraph(entry, GraphUtils.deepCopy(ctx.getRdfGraph())));
+            }
+        } finally {
+            releaseAll(contexts);
+        }
+        return copiedGraphs;
+    }
+
+    private void releaseAll(List<GraphContext> contexts) {
+        for (var ctx : contexts) {
+            ctx.close();
+        }
+    }
+
+    private CIMCollection convertAndMerge(List<CopiedGraph> copiedGraphs) {
         var mergedCollection = new CIMCollection();
-
-        for (var entry : classesByGraph.entrySet()) {
-            var graphIdentifier = new GraphIdentifier(datasetName, entry.getKey().toString());
-            var classUUIDs = entry.getValue().stream().map(c -> c.getUuid().toString()).toList();
-
-            var filter = new GraphFilter(true);
-            filter.setIncludeRelationsToExternalPackages(false);
-            filter.setAllowedUUIDs(classUUIDs);
-
-            var partial = converter.convert(graphIdentifier, filter);
+        for (var copied : copiedGraphs) {
+            var filter = buildFilter(copied.entry().classUUIDs());
+            var partial =
+                    converter.convert(copied.graph(), copied.entry().graphIdentifier(), filter);
             mergeInto(mergedCollection, partial);
         }
-
         return mergedCollection;
+    }
+
+    private GraphFilter buildFilter(List<String> classUUIDs) {
+        var filter = new GraphFilter(true);
+        filter.setIncludeRelationsToExternalPackages(false);
+        filter.setAllowedUUIDs(classUUIDs);
+        return filter;
     }
 
     private void mergeInto(CIMCollection target, CIMCollection source) {
