@@ -40,10 +40,6 @@ public class CIMAttribute {
 
     private URI uri;
 
-    private String graphUri;
-
-    private String color;
-
     private RDFSLabel label;
 
     private RDFSDomain domain;

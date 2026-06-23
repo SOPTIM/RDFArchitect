@@ -372,12 +372,7 @@ public class GraphToCIMCollectionConverterService implements GraphToCIMCollectio
                                 databasePort.getPrefixMapping(graphIdentifier.datasetName()))
                         .fetchCIMAttributeList(attributesQuery.build());
 
-        attributeList.forEach(
-                cimAttribute -> {
-                    cimAttribute =
-                            cimAttribute.toBuilder().graphUri(graphIdentifier.graphUri()).build();
-                    cimCollection.getAttributes().add(cimAttribute);
-                });
+        attributeList.forEach(cimAttribute -> cimCollection.getAttributes().add(cimAttribute));
     }
 
     // enums

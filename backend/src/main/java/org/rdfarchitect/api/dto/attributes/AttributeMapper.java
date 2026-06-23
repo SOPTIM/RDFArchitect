@@ -67,8 +67,6 @@ public interface AttributeMapper {
                     "java(new CIMSStereotype(\"http://iec.ch/TC57/NonStandard/UML#attribute\"))")
     @Mapping(target = "fixedValue", source = ".")
     @Mapping(target = "defaultValue", source = ".")
-    @Mapping(target = "graphUri", ignore = true)
-    @Mapping(target = "color", ignore = true)
     CIMAttribute toCIMObject(AttributeDTO dto);
 
     List<CIMAttribute> toCIMObjectList(List<AttributeDTO> dtoList);
