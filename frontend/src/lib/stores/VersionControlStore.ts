@@ -17,6 +17,7 @@
 
 import { writable, get } from "svelte/store";
 
+import { editorState } from "../sharedState.svelte.js";
 import { classStore } from "./ClassStore";
 import { packageStore } from "./PackageStore";
 import {
@@ -68,17 +69,27 @@ function createStore() {
         });
     }
 
-    function canUndo(dataset: string, graph: string): boolean {
-        return get(store).byGraph.get(key(dataset, graph))?.canUndo ?? false;
+    function canUndo(dataset?: string, graph?: string): boolean {
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) return false;
+        return get(store).byGraph.get(key(targets.dataset, targets.graph))?.canUndo ?? false;
     }
 
-    function canRedo(dataset: string, graph: string): boolean {
-        return get(store).byGraph.get(key(dataset, graph))?.canRedo ?? false;
+    function canRedo(dataset?: string, graph?: string): boolean {
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) return false;
+        return get(store).byGraph.get(key(targets.dataset, targets.graph))?.canRedo ?? false;
     }
 
-    async function doUndo(dataset: string, graph: string) {
+    async function doUndo(dataset?: string, graph?: string) {
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) {
+            console.error(`${LOG} undo failed`, "No undo target selected.");
+            toastStore.error("Undo failed", "No undo target selected.");
+            return { error: "No undo target selected."};
+        }
         const { error } = await sdkUndo({
-            path: { datasetName: dataset, graphURI: graph },
+            path: { datasetName: targets.dataset, graphURI: targets.graph },
         });
         if (error) {
             console.error(`${LOG} undo failed`, error);
@@ -86,15 +97,21 @@ function createStore() {
             return { error };
         }
         toastStore.info("Undone");
-        classStore.invalidateGraph(dataset, graph);
-        packageStore.invalidateGraph(dataset, graph);
-        await refresh(dataset, graph);
+        classStore.invalidateGraph(targets.dataset, targets.graph);
+        packageStore.invalidateGraph(targets.dataset, targets.graph);
+        await refresh(targets.dataset, targets.graph);
         return { error: null };
     }
 
-    async function doRedo(dataset: string, graph: string) {
+    async function doRedo(dataset?: string, graph?: string) {
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) {
+            console.error(`${LOG} redo failed`, "No redo target selected.");
+            toastStore.error("Redo failed", "No redo target selected.");
+            return { error: "No redo target selected." };
+        }
         const { error } = await sdkRedo({
-            path: { datasetName: dataset, graphURI: graph },
+            path: { datasetName: targets.dataset, graphURI: targets.graph },
         });
         if (error) {
             console.error(`${LOG} redo failed`, error);
@@ -102,9 +119,9 @@ function createStore() {
             return { error };
         }
         toastStore.info("Redone");
-        classStore.invalidateGraph(dataset, graph);
-        packageStore.invalidateGraph(dataset, graph);
-        await refresh(dataset, graph);
+        classStore.invalidateGraph(targets.dataset, targets.graph);
+        packageStore.invalidateGraph(targets.dataset, targets.graph);
+        await refresh(targets.dataset, targets.graph);
         return { error: null };
     }
 
@@ -116,4 +133,10 @@ function createStore() {
         undo: doUndo,
         redo: doRedo,
     };
+}
+
+function resolveTargets(dataset?: string, graph?: string) {
+    const d = dataset ?? editorState.selectedDataset.getValue();
+    const g = graph ?? editorState.selectedGraph.getValue();
+    return d && g ? { dataset: d, graph: g } : null;
 }

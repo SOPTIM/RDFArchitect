@@ -31,7 +31,6 @@
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
     import {
@@ -148,11 +147,18 @@
     }
 
     async function handleUndoRedo(isRedo) {
-        if (isRedo) {
-            if (canRedo && (await versionControlStore.redo())) await reload();
-        } else {
-            if (canUndo && (await versionControlStore.undo())) await reload();
-        }
+        if (isRedo && !canRedo) return;
+        if (!isRedo && !canUndo) return;
+
+        await eventStack.guardAction(async () => {
+            const { error } = isRedo
+                ? await versionControlStore.redo()
+                : await versionControlStore.undo();
+
+            if (!error) {
+                await reload();
+            }
+        });
     }
 
     async function handleKeydown(event) {

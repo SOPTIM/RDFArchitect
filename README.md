@@ -139,17 +139,12 @@ When backend routes or DTOs change, regenerate and commit the contract from the 
 
 ```bash
 cd backend
-mvn -B -Dopenapi.export=true -Dtest=OpenApiSpecExportTest -DfailIfNoTests=false test
+mvn exec:java@export-openapi
 # writes ../frontend/openapi.json - commit the result
 ```
 
 Backend CI runs the same export and fails if `frontend/openapi.json` is out of date, so the
-committed contract can never drift from the controllers. To regenerate the client against a
-live backend instead of the committed file, set `OPENAPI_INPUT`:
-
-```bash
-OPENAPI_INPUT=http://localhost:8080/v3/api-docs npm run api:generate
-```
+committed contract can never drift from the controllers.
 
 ## Development Workflows
 

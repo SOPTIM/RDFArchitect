@@ -43,7 +43,7 @@ jobs:
       - name: Integration tests
         run: mvn -B verify
       - name: Export OpenAPI spec
-        run: mvn -B -Dopenapi.export=true -Dtest=OpenApiSpecExportTest -DfailIfNoTests=false test
+        run: mvn exec:java@export-openapi
       - name: Verify committed OpenAPI spec is up to date
         run: git diff --exit-code -- ../frontend/openapi.json
       - name: Update third-party licenses (Renovate PRs only)

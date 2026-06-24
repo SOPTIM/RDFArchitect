@@ -326,32 +326,41 @@
         },
         "type" : "object"
       },
+      "ChangeLog" : {
+        "properties" : {
+          "redoHistory" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ChangeLogEntry"
+            },
+            "type" : "array"
+          },
+          "undoHistory" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ChangeLogEntry"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "ChangeLogEntry" : {
         "properties" : {
-          "additions" : {
-            "properties" : {
-              "enqueued" : {
-                "deprecated" : true,
-                "type" : "boolean"
-              }
-            },
-            "type" : "object"
-          },
           "changeId" : {
             "format" : "uuid",
             "type" : "string"
           },
-          "deletions" : {
-            "properties" : {
-              "enqueued" : {
-                "deprecated" : true,
-                "type" : "boolean"
-              }
+          "contextDeltas" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ContextDelta"
             },
-            "type" : "object"
+            "type" : "array"
           },
           "message" : {
             "type" : "string"
+          },
+          "steps" : {
+            "format" : "int32",
+            "type" : "integer"
           },
           "timestamp" : {
             "format" : "date-time",
@@ -528,6 +537,32 @@
         },
         "type" : "object"
       },
+      "ContextDelta" : {
+        "properties" : {
+          "additions" : {
+            "properties" : {
+              "enqueued" : {
+                "deprecated" : true,
+                "type" : "boolean"
+              }
+            },
+            "type" : "object"
+          },
+          "contextName" : {
+            "type" : "string"
+          },
+          "deletions" : {
+            "properties" : {
+              "enqueued" : {
+                "deprecated" : true,
+                "type" : "boolean"
+              }
+            },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
       "CopyClassRequestDTO" : {
         "properties" : {
           "copyAsAbstract" : {
@@ -591,23 +626,7 @@
         "type" : "object"
       },
       "CustomDiagram" : {
-        "description" : "DTO for the diagram to be replaced.",
-        "properties" : {
-          "classes" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ClassInDiagram"
-            },
-            "type" : "array"
-          },
-          "diagramId" : {
-            "format" : "uuid",
-            "type" : "string"
-          },
-          "name" : {
-            "type" : "string"
-          }
-        },
-        "type" : "object"
+        "description" : "DTO for the diagram to be replaced."
       },
       "DataTypeDTO" : {
         "properties" : {
@@ -711,15 +730,10 @@
           },
           "message" : {
             "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
-      "GraphChangeLog" : {
-        "properties" : {
-          "entries" : {
+          },
+          "warnings" : {
             "items" : {
-              "$ref" : "#/components/schemas/ChangeLogEntry"
+              "$ref" : "#/components/schemas/ImportWarning"
             },
             "type" : "array"
           }
@@ -751,6 +765,20 @@
           },
           "packageUUID" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ImportWarning" : {
+        "properties" : {
+          "fileName" : {
+            "type" : "string"
+          },
+          "undisplayableProperties" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1709,7 +1737,7 @@
       "url" : "https://www.apache.org/licenses/LICENSE-2.0"
     },
     "title" : "RDFArchitect backend",
-    "version" : "1.0.0-43-gb09e7103"
+    "version" : "1.1.0-43-gb44545e4"
   },
   "openapi" : "3.1.0",
   "paths" : {
@@ -1921,16 +1949,7 @@
         ],
         "responses" : {
           "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/CustomDiagram"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
+            "content" : { },
             "description" : "OK"
           }
         },
@@ -2485,7 +2504,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/GraphChangeLog"
+                  "$ref" : "#/components/schemas/ChangeLog"
                 }
               }
             },
@@ -4591,16 +4610,7 @@
         ],
         "responses" : {
           "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/CustomDiagram"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
+            "content" : { },
             "description" : "OK"
           }
         },
@@ -4767,11 +4777,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CustomDiagram"
-              }
-            }
+            "application/json" : { }
           },
           "required" : true
         },
@@ -7563,6 +7569,21 @@
         "summary" : "Search the graph",
         "tags" : [
           "dataset"
+        ]
+      }
+    },
+    "/api/session" : {
+      "delete" : {
+        "description" : "Invalidates the current session, discarding all unsaved changes. A new session is created on the next request.",
+        "operationId" : "resetSession",
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "summary" : "Reset session",
+        "tags" : [
+          "session"
         ]
       }
     },
