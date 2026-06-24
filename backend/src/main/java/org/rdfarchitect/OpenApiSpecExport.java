@@ -37,7 +37,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-/** * Exports the springdoc OpenAPI document to a deterministic JSON file so the frontend can generate * its API client offline (in CI and in Docker) without a running backend. * * <p>Runs as a standalone Maven goal: {@code mvn compile exec:java@export-openapi}. The output * path defaults to {@code ../frontend/openapi.json} (relative to the backend module) and can be * overridden with the first program argument or {@code -Dopenapi.export.path=...}. * * <p>Boots the full Spring application on an ephemeral port (server.port=0), fetches the spec, * normalizes it, writes it to disk, and shuts the context down. CI runs this and diffs the result * so the committed spec can never drift from the controllers. */
+/**
+ * * Exports the springdoc OpenAPI document to a deterministic JSON file so the frontend can
+ * generate * its API client offline (in CI and in Docker) without a running backend. * *
+ *
+ * <p>Runs as a standalone Maven goal: {@code mvn compile exec:java@export-openapi}. The output *
+ * path defaults to {@code ../frontend/openapi.json} (relative to the backend module) and can be *
+ * overridden with the first program argument or {@code -Dopenapi.export.path=...}. * *
+ *
+ * <p>Boots the full Spring application on an ephemeral port (server.port=0), fetches the spec, *
+ * normalizes it, writes it to disk, and shuts the context down. CI runs this and diffs the result *
+ * so the committed spec can never drift from the controllers.
+ */
 public final class OpenApiSpecExport {
 
     private static final String DEFAULT_OUTPUT_PATH = "../frontend/openapi.json";
@@ -87,7 +98,12 @@ public final class OpenApiSpecExport {
         return Path.of(System.getProperty("openapi.export.path", DEFAULT_OUTPUT_PATH));
     }
 
-    /**     * Re-serializes the spec with sorted keys and a fixed {@code \n} indenter so the output is     * stable across runs and operating systems. The {@code servers} entry is dropped because it     * reflects the request URL and is overridden at runtime by the frontend client ({@code     * src/lib/api/hey-api.ts}); keeping it adds no value to the committed contract.     */
+    /**
+     * * Re-serializes the spec with sorted keys and a fixed {@code \n} indenter so the output is *
+     * stable across runs and operating systems. The {@code servers} entry is dropped because it *
+     * reflects the request URL and is overridden at runtime by the frontend client ({@code *
+     * src/lib/api/hey-api.ts}); keeping it adds no value to the committed contract.
+     */
     private static String formatDeterministically(String rawSpec) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
@@ -103,7 +119,12 @@ public final class OpenApiSpecExport {
         return mapper.writer(printer).writeValueAsString(spec) + "\n";
     }
 
-    /**     * Sorts every {@code required} string array in the document. springdoc derives this list from     * field reflection, whose order is not guaranteed across JVMs; {@code required} is an unordered     * set in OpenAPI, so sorting it makes the committed contract robust against that variance.     */
+    /**
+     * * Sorts every {@code required} string array in the document. springdoc derives this list from
+     * * field reflection, whose order is not guaranteed across JVMs; {@code required} is an
+     * unordered * set in OpenAPI, so sorting it makes the committed contract robust against that
+     * variance.
+     */
     private static void sortRequiredArrays(Object node) {
         if (node instanceof Map<?, ?> map) {
             Object required = map.get("required");

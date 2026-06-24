@@ -209,27 +209,6 @@
             datasetStore.invalidate();
             forceReloadTrigger.trigger();
         }
-
-        function notifyUndisplayableProperties(warnings) {
-            if (warnings.length === 0) {
-                return;
-            }
-            const total = warnings.reduce(
-                (sum, warning) =>
-                    sum + (warning.undisplayableProperties?.length ?? 0),
-                0,
-            );
-            const details = warnings
-                .map(
-                    warning =>
-                        `${warning.fileName}: ${(warning.undisplayableProperties ?? []).join(", ")}`,
-                )
-                .join("; ");
-            toastStore.warning(
-                "Some properties could not be displayed",
-                `${total} propert${total === 1 ? "y" : "ies"} ${total === 1 ? "is" : "are"} missing the CIM stereotype or association metadata RDFArchitect needs to show ${total === 1 ? "it" : "them"} (${details}).`,
-            );
-        }
     }
 </script>
 

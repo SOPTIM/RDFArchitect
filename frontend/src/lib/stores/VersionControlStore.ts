@@ -72,13 +72,19 @@ function createStore() {
     function canUndo(dataset?: string, graph?: string): boolean {
         const targets = resolveTargets(dataset, graph);
         if (!targets) return false;
-        return get(store).byGraph.get(key(targets.dataset, targets.graph))?.canUndo ?? false;
+        return (
+            get(store).byGraph.get(key(targets.dataset, targets.graph))
+                ?.canUndo ?? false
+        );
     }
 
     function canRedo(dataset?: string, graph?: string): boolean {
         const targets = resolveTargets(dataset, graph);
         if (!targets) return false;
-        return get(store).byGraph.get(key(targets.dataset, targets.graph))?.canRedo ?? false;
+        return (
+            get(store).byGraph.get(key(targets.dataset, targets.graph))
+                ?.canRedo ?? false
+        );
     }
 
     async function doUndo(dataset?: string, graph?: string) {
@@ -86,7 +92,7 @@ function createStore() {
         if (!targets) {
             console.error(`${LOG} undo failed`, "No undo target selected.");
             toastStore.error("Undo failed", "No undo target selected.");
-            return { error: "No undo target selected."};
+            return { error: "No undo target selected." };
         }
         const { error } = await sdkUndo({
             path: { datasetName: targets.dataset, graphURI: targets.graph },

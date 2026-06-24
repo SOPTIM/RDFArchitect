@@ -24,16 +24,11 @@
     import { ReactivePackage } from "$lib/models/reactive/models/reactive-package.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
     import {
         getPackageDisplayLabel,
         restorePackageLabelPrefix,
     } from "$lib/utils/package-label.js";
-
-    import {
-        getPackages,
-    } from "./classEditor/fetch-class-editor-context.js";
 
     let {
         showDialog = $bindable(),

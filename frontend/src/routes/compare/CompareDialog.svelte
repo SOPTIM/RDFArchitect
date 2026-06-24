@@ -200,7 +200,10 @@
                 });
                 break;
             case CompareMode.STORED_TO_FILE:
-                response = await bec.compareSchemas(datasetA, graphA, fileA);
+                response = await compareSchemas({
+                    path: { datasetA, graphA },
+                    body: fileB,
+                });
                 invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:

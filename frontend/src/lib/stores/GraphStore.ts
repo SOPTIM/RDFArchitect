@@ -25,6 +25,7 @@ import {
     replaceGraphs,
     GraphBulkImportResponse,
     replaceGraph,
+    ImportWarning,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -243,6 +244,8 @@ function createGraphStore() {
             );
         }
 
+        notifyUndisplayableProperties(data?.warnings ?? []);
+
         return { error: null, data };
     }
 
@@ -315,4 +318,30 @@ function createGraphStore() {
         invalidateDataset,
         invalidateAll,
     };
+}
+
+function notifyUndisplayableProperties(warnings: ImportWarning[]) {
+    if (warnings.length === 0) return;
+
+    const total = warnings.reduce(
+        (sum, w) => sum + (w.undisplayableProperties?.length ?? 0),
+        0,
+    );
+    if (total === 0) return;
+
+    const details = warnings
+        .map(
+            w =>
+                `${w.fileName}: ${(w.undisplayableProperties ?? []).join(", ")}`,
+        )
+        .join("; ");
+
+    toastStore.warning(
+        "Some properties could not be displayed",
+        `${total} propert${total === 1 ? "y" : "ies"} ${
+            total === 1 ? "is" : "are"
+        } missing the CIM stereotype or association metadata RDFArchitect needs to show ${
+            total === 1 ? "it" : "them"
+        } (${details}).`,
+    );
 }

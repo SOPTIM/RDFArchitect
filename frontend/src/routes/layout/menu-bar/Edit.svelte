@@ -360,9 +360,15 @@
 
     function toggleReadonly() {
         if (isDatasetReadOnly) {
-            datasetStore.updateReadonly(editorState.selectedDatatset.getValue(), false);
+            datasetStore.updateReadonly(
+                editorState.selectedDatatset.getValue(),
+                false,
+            );
         } else {
-            datasetStore.updateReadonly(editorState.selectedDatatset.getValue(), true);
+            datasetStore.updateReadonly(
+                editorState.selectedDatatset.getValue(),
+                true,
+            );
         }
     }
 </script>
