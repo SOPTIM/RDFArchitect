@@ -115,6 +115,11 @@ public final class OpenApiSpecExport {
 
         Map<String, Object> spec = mapper.readValue(rawSpec, new TypeReference<>() {});
         spec.remove("servers");
+        if (spec.get("info") instanceof Map<?, ?> info) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> writableInfo = (Map<String, Object>) info;
+            writableInfo.remove("version");
+        }
         sortRequiredArrays(spec);
         return mapper.writer(printer).writeValueAsString(spec) + "\n";
     }
