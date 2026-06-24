@@ -28,6 +28,7 @@
         ClassType,
         DiagramType,
         editorState,
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -47,6 +48,7 @@
     );
 
     $effect(() => {
+        forceReloadTrigger.subscribe();
         getCrossProfileDiagram(datasetNavEntry.label).then(diagram => {
             classes = diagram?.classes ?? [];
         });
@@ -100,6 +102,7 @@
         {#each classes as cls (cls.uuid)}
             <ClassEntry
                 {datasetNavEntry}
+                diagramId={editorState.selectedDiagram.getProperty("id")}
                 graphNavEntry={{ id: null }}
                 classNavEntry={{
                     id: cls.uuid,

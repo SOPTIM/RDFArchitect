@@ -111,7 +111,6 @@
     function showClassInPackage() {
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
-        //editorState.selectedClassType.updateValue(classType);
         editorState.selectedDiagram.updateValue({
             type: diagramType,
             id: classNavEntry.parent?.id ?? "default",

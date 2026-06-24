@@ -21,11 +21,13 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
+import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.GraphSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.MergedClassDTO;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
@@ -40,9 +42,11 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -112,6 +116,19 @@ public class CustomDiagramService
                     mergeProperties(graphUri, dto, merged, graphColor);
                 }
             }
+            var attributeComparator =
+                    Comparator.comparing(GraphSourceDTO<AttributeDTO>::getGraphUri)
+                            .thenComparing(a -> a.getValue().getLabel().toLowerCase(Locale.ROOT));
+            var enumEntryComparator =
+                    Comparator.comparing(GraphSourceDTO<EnumEntryDTO>::getGraphUri)
+                            .thenComparing(e -> e.getValue().getLabel().toLowerCase(Locale.ROOT));
+
+            mergeMap.values()
+                    .forEach(
+                            merged -> {
+                                merged.getAttributes().sort(attributeComparator);
+                                merged.getEnumEntries().sort(enumEntryComparator);
+                            });
         }
         if (doLayout) {
             doDiagramLayout(diagramLayout, crossProfileDiagramUUID, mergeMap);

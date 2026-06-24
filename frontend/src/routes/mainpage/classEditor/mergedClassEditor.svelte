@@ -14,6 +14,9 @@
   -    limitations under the License.
   -
   -->
+<script module>
+    let persisted = { classUuid: null, sourceUuid: null };
+</script>
 
 <script>
     import { onMount, onDestroy } from "svelte";
@@ -22,7 +25,11 @@
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        ClassType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "../../mainpage/classEditor/classEditor.svelte";
 
@@ -35,12 +42,52 @@
     let activeSource = $derived(mergedClass?.sources?.[activeTabIndex] ?? null);
 
     $effect(() => {
+        if (activeSource?.classUUID) {
+            persisted = {
+                classUuid: classUuid,
+                sourceUuid: activeSource.classUUID,
+            };
+        }
+    });
+
+    $effect(() => {
         if (!datasetName || !classUuid) return;
+        forceReloadTrigger.subscribe();
+
+        const savedSourceUuid =
+            persisted.classUuid === classUuid ? persisted.sourceUuid : null;
+
         loading = true;
         getCrossProfileDiagram(datasetName)
             .then(diagram => {
-                mergedClass =
-                    diagram?.classes?.find(c => c.uuid === classUuid) ?? null;
+                const classes = diagram?.classes ?? [];
+
+                let found = savedSourceUuid
+                    ? classes.find(c =>
+                          c.sources?.some(s => s.classUUID === savedSourceUuid),
+                      )
+                    : null;
+
+                if (!found) {
+                    found = classes.find(c => c.uuid === classUuid) ?? null;
+                }
+
+                mergedClass = found;
+
+                if (found) {
+                    const newIndex = found.sources?.findIndex(
+                        s => s.classUUID === savedSourceUuid,
+                    );
+                    activeTabIndex =
+                        newIndex != null && newIndex >= 0 ? newIndex : 0;
+                }
+
+                if (found && found.uuid !== classUuid) {
+                    editorState.selectedClass.updateValue({
+                        type: ClassType.MERGED_CLASS,
+                        id: found.uuid,
+                    });
+                }
             })
             .finally(() => (loading = false));
     });
@@ -72,31 +119,33 @@
         </div>
     </div>
 {:else if mergedClass && mergedClass.sources?.length > 0}
-    <div class="border-border border-b px-2 py-1">
-        <select
-            class="border-button-border bg-window-background text-default-text w-full rounded border border-solid px-2 py-1 text-sm outline-none"
-            onchange={e => (activeTabIndex = Number(e.target.value))}
-            value={activeTabIndex}
-        >
-            {#each mergedClass.sources as source, i}
-                <option value={i} title={source.graphUri}>
-                    {extractGraphLabel(source.graphUri)}
-                </option>
-            {/each}
-        </select>
-    </div>
+    <div class="flex h-full flex-col">
+        <div class="border-border border-b px-2 py-1 shrink-0">
+            <select
+                class="border-button-border bg-window-background text-default-text w-full rounded border border-solid px-2 py-1 text-sm outline-none h-8"
+                onchange={e => (activeTabIndex = Number(e.target.value))}
+                value={activeTabIndex}
+            >
+                {#each mergedClass.sources as source, i}
+                    <option value={i} title={source.graphUri}>
+                        {extractGraphLabel(source.graphUri)}
+                    </option>
+                {/each}
+            </select>
+        </div>
 
-    {#if activeSource}
-        {#key activeSource.classUuid + activeSource.graphUri}
-            <div class="h-full overflow-auto">
-                <ClassEditor
-                    {datasetName}
-                    graphUri={activeSource.graphUri}
-                    classUuid={activeSource.classUUID}
-                />
-            </div>
-        {/key}
-    {/if}
+        {#if activeSource}
+            {#key activeSource.classUuid + activeSource.graphUri}
+                <div class="h-full overflow-auto">
+                    <ClassEditor
+                        {datasetName}
+                        graphUri={activeSource.graphUri}
+                        classUuid={activeSource.classUUID}
+                    />
+                </div>
+            {/key}
+        {/if}
+    </div>
 {:else}
     <p class="text-default-text p-4 text-sm italic">
         No sources available for this class.

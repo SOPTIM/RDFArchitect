@@ -74,6 +74,13 @@
         isSelectedDataset(datasetNavEntry.label),
     );
 
+    const packagesWithClassesCount = $derived(
+        (datasetNavEntry.children ?? [])
+            .flatMap(graphNavEntry => graphNavEntry.children ?? [])
+            .filter(packageNavEntry => packageNavEntry.children?.length > 0)
+            .length,
+    );
+
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
         readonly = await isReadOnly(datasetNavEntry.label);
@@ -251,7 +258,12 @@
                 />
             {/each}
 
-            <CrossProfileDiagramsSection {datasetNavEntry} {crossProfileID} />
+            {#if packagesWithClassesCount > 1}
+                <CrossProfileDiagramsSection
+                    {datasetNavEntry}
+                    {crossProfileID}
+                />
+            {/if}
 
             <CustomDiagramsSection
                 {datasetNavEntry}

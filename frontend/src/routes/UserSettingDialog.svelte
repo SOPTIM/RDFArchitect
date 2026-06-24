@@ -85,7 +85,7 @@
         </USC.Section>
         <USC.Section title="Visualization">
             <CheckBoxEditControl
-                label="Show 'Package_' Prefix"
+                label="Show 'Package_' prefix"
                 bind:value={localSettings["showPackagePrefix"]}
                 labelFirst={false}
             />

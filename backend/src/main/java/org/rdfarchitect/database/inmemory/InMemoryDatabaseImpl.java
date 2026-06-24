@@ -101,6 +101,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         var datasetName = graphIdentifier.datasetName();
         var isNewDataset = !store.listDatasets().contains(datasetName);
         store.create(graphIdentifier, GraphFactory.createDefaultGraph());
+        store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
+                .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
         if (isNewDataset) {
             store.enableEditing(datasetName);
             var configNamespaces = schemaConfig.getNamespaces();
