@@ -39,7 +39,7 @@
     let classEditorContext = $state();
 
     let isNewEnumEntry = $state(true);
-    let readonly = $derived(classEditorContext?.readonly);
+    let readonly = $derived(classEditorContext?.readOnly);
 
     function onOpen() {
         classEditorContext = getContext("classEditor");

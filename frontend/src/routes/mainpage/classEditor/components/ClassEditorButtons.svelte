@@ -53,7 +53,7 @@
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLClassDialog = $state(false);
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     // Hide the button labels (icon-only) once this row gets too narrow to fit
     // them. Readonly mode only shows Constraints + Close, so it can keep the
@@ -67,13 +67,13 @@
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
     });

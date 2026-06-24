@@ -66,7 +66,7 @@
             const selectedDataset = $datasetStore.data.find(
                 option => option.label === dataset,
             );
-            if (!selectedDataset || selectedDataset.readonly) {
+            if (!selectedDataset || selectedDataset.readOnly) {
                 dataset = null;
             }
         }
@@ -95,10 +95,10 @@
         bind:value={dataset}
         options={$datasetStore.data}
         getOptionIsDisabled={dataset =>
-            !allowSelectionOfReadonlyDatasets && dataset.readonly}
+            !allowSelectionOfReadonlyDatasets && dataset.readOnly}
         getOptionValue={dataset => dataset.label}
         getOptionLabel={dataset =>
-            dataset.label + (dataset.readonly ? " (readonly)" : "")}
+            dataset.label + (dataset.readOnly ? " (readonly)" : "")}
         disabled={datasetLocked || ($datasetStore.data?.length ?? 0) === 0}
         placeholder="Select dataset"
         onchange={() => (graph = null)}

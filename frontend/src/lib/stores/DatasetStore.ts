@@ -30,7 +30,7 @@ import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
 export type DatasetInfo = {
     label: string;
-    readonly: boolean | null;
+    readOnly: boolean | null;
     prefixes: CimPrefixPair[];
 };
 
@@ -99,7 +99,7 @@ function createDatasetStore() {
 
                 const nextData: DatasetInfo[] = datasets.map(dataset => ({
                     label: dataset.name ?? "",
-                    readonly: dataset.readonly ?? null,
+                    readOnly: dataset.readOnly ?? null,
                     prefixes: dataset.prefixes ?? [],
                 }));
 
@@ -134,7 +134,7 @@ function createDatasetStore() {
         if (!dataset) {
             return null;
         }
-        return dataset.readonly;
+        return dataset.readOnly;
     }
 
     function getNamespaces(datasetName: string): CimPrefixPair[] {
@@ -224,27 +224,27 @@ function createDatasetStore() {
 
     async function updateReadonly(
         datasetName: string,
-        readonly: boolean,
+        readOnly: boolean,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Setting readonly=${readonly} for "${datasetName}"`,
+            `${LOG_PREFIX} Setting readOnly=${readOnly} for "${datasetName}"`,
         );
 
-        const res = readonly
+        const res = readOnly
             ? await disableEditing({ path: { datasetName } })
             : await enableEditing({ path: { datasetName } });
 
         if (res?.error) {
             const msg = await describeError(res.error);
             console.error(
-                `${LOG_PREFIX} Could not update readonly flag for "${datasetName}":`,
+                `${LOG_PREFIX} Could not update readOnly flag for "${datasetName}":`,
                 msg,
             );
             toastStore.error(
-                readonly
+                readOnly
                     ? "Could not disable editing"
                     : "Could not enable editing",
-                readonly
+                readOnly
                     ? `Dataset "${datasetName}" remains editable.`
                     : `Dataset "${datasetName}" remains read-only.`,
             );
@@ -255,16 +255,16 @@ function createDatasetStore() {
             ...s,
             data:
                 s.data?.map(d =>
-                    d.label === datasetName ? { ...d, readonly } : d,
+                    d.label === datasetName ? { ...d, readOnly } : d,
                 ) ?? null,
         }));
 
         console.log(
-            `${LOG_PREFIX} Updated readonly=${readonly} for "${datasetName}"`,
+            `${LOG_PREFIX} Updated readOnly=${readOnly} for "${datasetName}"`,
         );
         toastStore.success(
-            readonly ? "Editing disabled" : "Editing enabled",
-            `"${datasetName}" is now ${readonly ? "read-only" : "editable"}.`,
+            readOnly ? "Editing disabled" : "Editing enabled",
+            `"${datasetName}" is now ${readOnly ? "read-only" : "editable"}.`,
         );
 
         return { error: null };

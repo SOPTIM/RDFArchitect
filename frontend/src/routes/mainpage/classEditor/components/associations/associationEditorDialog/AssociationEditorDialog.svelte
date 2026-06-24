@@ -36,7 +36,7 @@
 
     let classEditorContext = $state();
     let isNewAssociation = $state(true);
-    let readonly = $derived(classEditorContext?.readonly);
+    let readonly = $derived(classEditorContext?.readOnly);
 
     $effect(() => {
         (async () => {

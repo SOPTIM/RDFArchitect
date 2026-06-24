@@ -17,6 +17,7 @@
 
 package org.rdfarchitect;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
@@ -28,6 +29,7 @@ import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -42,12 +44,16 @@ public final class OpenApiSpecExport {
 
     private OpenApiSpecExport() {}
 
-    static void main(String[] args) throws Exception {
+    public static void main(String[] args) throws IOException {
         // Use an ephemeral port so we never collide with a developer's running backend.
         System.setProperty("server.port", "0");
 
         try (ConfigurableApplicationContext ctx = SpringApplication.run(Launcher.class, args)) {
-            int port = Objects.requireNonNull(((WebServerApplicationContext) ctx).getWebServer()).getPort();
+            if (!(ctx instanceof WebServerApplicationContext webCtx)) {
+                throw new IllegalStateException(
+                        "Expected a WebServerApplicationContext but got " + ctx.getClass());
+            }
+            int port = Objects.requireNonNull(webCtx.getWebServer()).getPort();
             String rawSpec =
                     RestClient.create()
                             .get()
@@ -82,7 +88,7 @@ public final class OpenApiSpecExport {
     }
 
     /**     * Re-serializes the spec with sorted keys and a fixed {@code \n} indenter so the output is     * stable across runs and operating systems. The {@code servers} entry is dropped because it     * reflects the request URL and is overridden at runtime by the frontend client ({@code     * src/lib/api/hey-api.ts}); keeping it adds no value to the committed contract.     */
-    private static String formatDeterministically(String rawSpec) throws Exception {
+    private static String formatDeterministically(String rawSpec) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS);
 

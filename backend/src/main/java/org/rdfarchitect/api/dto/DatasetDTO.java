@@ -28,6 +28,6 @@ import java.util.List;
 @AllArgsConstructor
 public class DatasetDTO {
     private String name;
-    private boolean readonly;
+    private boolean readOnly;
     private List<CIMPrefixPair> prefixes;
 }
