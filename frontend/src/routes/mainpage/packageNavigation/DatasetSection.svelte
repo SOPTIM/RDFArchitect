@@ -46,7 +46,10 @@
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
-    import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
+    import {
+        datasetHighlight,
+        isSelectedDataset,
+    } from "./packageNavigationUtils.svelte.js";
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
@@ -72,6 +75,9 @@
 
     const isDatasetSelected = $derived(
         isSelectedDataset(datasetNavEntry.label),
+    );
+    const datasetSelectionState = $derived(
+        datasetHighlight(datasetNavEntry.label),
     );
 
     const packagesWithClassesCount = $derived(
@@ -111,7 +117,28 @@
         }
     }
 
+    function handleToggleDataset() {
+        const wasOpen = datasetNavEntry.isOpen;
+        datasetNavEntry.toggle();
+        if (!wasOpen) {
+            return;
+        }
+        // When collapsing, dissolve an active graph/package/diagram selected
+        // inside this dataset; the dataset itself becomes the selection. A class
+        // as the active selection is left untouched (tracked separately).
+        const kind = editorState.activeSelectionKind.getValue();
+        if (
+            (kind === "graph" || kind === "package" || kind === "diagram") &&
+            isSelectedDataset(datasetNavEntry.label)
+        ) {
+            editorState.selectedGraph.updateValue(null);
+            editorState.selectedDiagram.updateValue({ type: null, id: null });
+            editorState.activeSelectionKind.updateValue("dataset");
+        }
+    }
+
     function selectDataset() {
+        editorState.activeSelectionKind.updateValue("dataset");
         if (editorState.selectedDataset.getValue() === datasetNavEntry.label) {
             return;
         }
@@ -152,12 +179,13 @@
                 icon={faDatabase}
                 hasChildren={datasetNavEntry.children?.length > 0}
                 expanded={datasetNavEntry.isOpen}
-                isSelected={isDatasetSelected}
                 title={datasetNavEntry.tooltip}
                 badgeText={readonly ? "Read-only" : ""}
                 badgeVariant="readonly"
+                isSelected={datasetSelectionState === "active"}
+                ancestorSelected={datasetSelectionState === "ancestor"}
                 onclick={selectDataset}
-                onToggle={() => datasetNavEntry.toggle()}
+                onToggle={handleToggleDataset}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>

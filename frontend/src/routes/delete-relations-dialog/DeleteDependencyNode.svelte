@@ -47,6 +47,7 @@
         depth = 0,
         isRoot = false,
         disabled = false,
+        expandedByDefault = true,
     } = $props();
 
     const ACTIONS = {
@@ -102,7 +103,7 @@
         },
     };
 
-    let expanded = $state(isRoot);
+    let expanded = $state(isRoot && expandedByDefault);
 
     let bulkValue = $state(null);
 

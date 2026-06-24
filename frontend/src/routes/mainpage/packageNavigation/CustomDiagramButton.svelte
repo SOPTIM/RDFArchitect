@@ -88,6 +88,7 @@
     }
 
     function selectDiagram() {
+        editorState.activeSelectionKind.updateValue("diagram");
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
         editorState.selectedGraph.updateValue(
             graphNavEntry ? graphNavEntry.id : null,

@@ -41,7 +41,10 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
-    import { isSelectedPackage } from "./packageNavigationUtils.svelte.js";
+    import {
+        isSelectedPackage,
+        packageHighlight,
+    } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
@@ -64,12 +67,7 @@
 
     let wasPackageSelected = false;
 
-    let disablePasteButton = $derived(
-        readonly ||
-            !copyState.classUUID.getValue() ||
-            !copyState.graphURI.getValue() ||
-            !copyState.datasetName.getValue(),
-    );
+    let disablePasteButton = $derived(readonly || copyState.isEmpty);
 
     let isProtectedPackage = $derived(
         packageNavEntry?.data.uuid == null || packageNavEntry?.data.external,
@@ -88,6 +86,15 @@
                 datasetNavEntry.id,
                 graphNavEntry.id,
                 packageNavEntry.id,
+            ),
+    );
+    let packageSelectionState = $derived(
+        selectionTrigger &&
+            packageHighlight(
+                datasetNavEntry.id,
+                graphNavEntry.id,
+                packageNavEntry.id,
+                packageNavEntry.children,
             ),
     );
 
@@ -122,6 +129,7 @@
     }
 
     function selectPackage() {
+        editorState.activeSelectionKind.updateValue("package");
         editorState.selectedDataset.updateValue(datasetNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
         editorState.selectedDiagram.updateValue({
@@ -154,7 +162,8 @@
                 level={3}
                 label={packageNavEntry.label}
                 icon={packageNavEntry?.isOpen ? faFolderOpen : faFolder}
-                isSelected={isPackageSelected}
+                isSelected={packageSelectionState === "active"}
+                ancestorSelected={packageSelectionState === "ancestor"}
                 hasChildren={hasClasses}
                 expanded={packageNavEntry.isOpen}
                 title={packageNavEntry.tooltip}

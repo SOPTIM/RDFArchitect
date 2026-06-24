@@ -70,6 +70,10 @@ export const editorState = {
     selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
+    // The kind of resource the user selected last ("dataset" | "graph" |
+    // "package" | "diagram" | "class"). Drives the nav highlight so the active
+    // resource - not a still-selected class - shows as the most specific.
+    activeSelectionKind: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -80,6 +84,8 @@ export const editorState = {
         this.selectedClass.updateValue({ type: null, id: null });
         this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);
+        this.activeSelectionKind.updateValue(null);
+        multiSelectState.clear();
     },
 };
 
@@ -118,18 +124,106 @@ export const compareState = {
 };
 
 /**
- * Stores the state for copying a class, which is used on paste.
- * @type {{classUUID: StateValuePair<string | null>, graphURI: StateValuePair<string | null>, datasetName: StateValuePair<string | null>}}
+ * Stores the classes that were copied and are available for paste.
+ * Each entry is `{ classUUID, graphURI, datasetName }`. Supports copying multiple
+ * classes at once (multiselect).
+ * @type {{ entries: StateValuePair<Array<{classUUID: string, graphURI: string, datasetName: string}>> }}
  */
 export const copyState = {
-    classUUID: new StateValuePair(),
-    graphURI: new StateValuePair(),
-    datasetName: new StateValuePair(),
+    entries: new StateValuePair([]),
+
+    getEntries() {
+        return this.entries.getValue() ?? [];
+    },
+
+    get isEmpty() {
+        return this.getEntries().length === 0;
+    },
+
+    set(entries) {
+        this.entries.updateValue([...entries]);
+    },
+
+    removeByUuid(classUUID) {
+        this.entries.updateValue(
+            this.getEntries().filter(e => e.classUUID !== classUUID),
+        );
+    },
 
     reset() {
-        this.classUUID.updateValue(null);
-        this.graphURI.updateValue(null);
-        this.datasetName.updateValue(null);
+        this.entries.updateValue([]);
+    },
+};
+
+/**
+ * Tracks the multi-selection of classes in the package navigation (Explorer-style:
+ * Ctrl+Click toggles, Shift+Click selects a range). Each entry is
+ * `{ datasetName, graphUri, classUuid, classLabel, packageId, classNavEntry }`.
+ */
+export const multiSelectState = {
+    selectedClasses: new StateValuePair([]),
+    /** The last single/ctrl-clicked entry, used as the anchor for Shift+Click ranges. */
+    anchor: null,
+
+    _key(entry) {
+        return `${entry.datasetName}::${entry.graphUri}::${entry.classUuid}`;
+    },
+
+    getSelected() {
+        return this.selectedClasses.getValue() ?? [];
+    },
+
+    isSelected(datasetName, graphUri, classUuid) {
+        const key = `${datasetName}::${graphUri}::${classUuid}`;
+        return this.getSelected().some(e => this._key(e) === key);
+    },
+
+    get count() {
+        return this.getSelected().length;
+    },
+
+    get isMultiSelect() {
+        return this.count > 1;
+    },
+
+    /** True when all selected classes share the same dataset and graph. */
+    get isSingleGraph() {
+        const list = this.getSelected();
+        if (list.length === 0) {
+            return true;
+        }
+        const first = list[0];
+        return list.every(
+            e =>
+                e.datasetName === first.datasetName &&
+                e.graphUri === first.graphUri,
+        );
+    },
+
+    selectSingle(entry) {
+        this.anchor = entry;
+        this.selectedClasses.updateValue([entry]);
+    },
+
+    toggle(entry) {
+        const key = this._key(entry);
+        const list = this.getSelected();
+        const exists = list.some(e => this._key(e) === key);
+        const next = exists
+            ? list.filter(e => this._key(e) !== key)
+            : [...list, entry];
+        this.anchor = entry;
+        this.selectedClasses.updateValue(next);
+    },
+
+    /** Replaces the selection with the given contiguous range; keeps the anchor. */
+    selectRange(rangeEntries) {
+        this.selectedClasses.updateValue([...rangeEntries]);
+    },
+
+    clear() {
+        this.anchor = null;
+        this.selectedClasses.updateValue([]);
     },
 };
 

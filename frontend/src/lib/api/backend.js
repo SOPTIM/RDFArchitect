@@ -210,11 +210,12 @@ export class BackendConnection {
         });
     }
 
-    async getDeleteRelation(datasetName, graphURI, resourceUuid) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/uuid/${encodeURIComponent(resourceUuid)}/deletion-impact`;
+    async getDeletionImpact(datasetName, graphURI, resourceUuids) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/deletion-impact`;
         return await fetch(url, {
-            method: "GET",
+            method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(resourceUuids),
             credentials: "include",
         });
     }
@@ -506,13 +507,13 @@ export class BackendConnection {
         });
     }
 
-    async postCopyClass(datasetName, graphURI, classUUID, targetInfo) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/copy`;
+    async postPasteClasses(targetDatasetName, targetGraphURI, pasteRequest) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetDatasetName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(targetInfo),
+            body: JSON.stringify(pasteRequest),
             credentials: "include",
         });
     }
@@ -657,23 +658,23 @@ export class BackendConnection {
         datasetName,
         graphURI,
         diagramId,
-        classId,
+        classIds,
     ) {
-        console.log(
-            `Removing class ${classId} from diagram ${diagramId} in dataset ${datasetName}`,
-        );
-
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
         return await fetch(url, {
             method: "DELETE",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(classIds),
             credentials: "include",
         });
     }
 
-    async removeFromCustomDatasetDiagram(datasetName, diagramId, classId) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes/${encodeURIComponent(classId)}`;
+    async removeFromCustomDatasetDiagram(datasetName, diagramId, classIds) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
         return await fetch(url, {
             method: "DELETE",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(classIds),
             credentials: "include",
         });
     }

@@ -28,6 +28,8 @@
         label,
         level = 1,
         isSelected = false,
+        ancestorSelected = false,
+        classOpen = false,
         disabled = false,
         hasChildren = false,
         expanded = false,
@@ -99,7 +101,7 @@
 
 <button
     type="button"
-    class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${disabled ? "is-disabled" : ""}`}
+    class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${ancestorSelected ? "is-ancestor-selected" : ""} ${classOpen ? "is-class-open" : ""} ${disabled ? "is-disabled" : ""}`}
     {disabled}
     title={highlightLabel || title}
     onclick={handleClick}

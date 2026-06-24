@@ -35,6 +35,7 @@
         copyState,
         editorState,
         ClassType,
+        multiSelectState,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -42,7 +43,7 @@
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import ExtendClassDialog from "./ExtendClassDialog.svelte";
-    import { isSelectedClass } from "./packageNavigationUtils.svelte.js";
+    import { classHighlight } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
@@ -67,10 +68,117 @@
     let showRemoveFromDiagramDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
+    // "active" (blue) when the class is the most-specific selection, "secondary"
+    // (light blue) when it is open but another resource is the active selection.
+    const classState = $derived(
+        classHighlight(datasetNavEntry.id, graphNavEntry.id, classNavEntry.id),
+    );
     const shaclClass = $derived({
         uuid: { value: classNavEntry?.id },
         label: { value: classNavEntry?.label ?? "" },
     });
+
+    // Multiselect ------------------------------------------------------------
+    const isMultiSelected = $derived(
+        multiSelectState.isSelected(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+            classNavEntry.id,
+        ),
+    );
+    // True when this entry is part of an active (>1) multi-selection.
+    const multiActive = $derived(
+        multiSelectState.isMultiSelect && isMultiSelected,
+    );
+    // Actions are greyed out while the selection spans multiple graphs/datasets.
+    const crossGraphDisabled = $derived(
+        multiActive && !multiSelectState.isSingleGraph,
+    );
+    const selectedClassNavEntries = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classNavEntry)
+            : [classNavEntry],
+    );
+    const selectedClassIds = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classUuid)
+            : [classNavEntry.id],
+    );
+    const selectedClassLabels = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classLabel)
+            : [classNavEntry.label],
+    );
+
+    function buildSelectionEntry(navEntry = classNavEntry) {
+        return {
+            datasetName: datasetNavEntry.id,
+            graphUri: graphNavEntry.id,
+            classUuid: navEntry.id,
+            classLabel: navEntry.label,
+            packageId: navEntry.parent?.id ?? null,
+            classNavEntry: navEntry,
+        };
+    }
+
+    function onEntryClick(event) {
+        editorState.activeSelectionKind.updateValue("class");
+        if (event?.ctrlKey || event?.metaKey) {
+            multiSelectState.toggle(buildSelectionEntry());
+            return;
+        }
+        if (event?.shiftKey) {
+            selectRange();
+            return;
+        }
+        // Plain click: drop any multi-selection, keep this entry as the anchor
+        // for a subsequent Shift+Click, and do the regular single selection.
+        multiSelectState.clear();
+        multiSelectState.anchor = buildSelectionEntry();
+        selectClass();
+    }
+
+    function selectRange() {
+        const anchor = multiSelectState.anchor;
+        const siblings = classNavEntry.parent?.children ?? [];
+        const sameContext =
+            anchor &&
+            anchor.datasetName === datasetNavEntry.id &&
+            anchor.graphUri === graphNavEntry.id &&
+            anchor.packageId === (classNavEntry.parent?.id ?? null);
+        const anchorIdx = sameContext
+            ? siblings.findIndex(c => c.id === anchor.classUuid)
+            : -1;
+        const targetIdx = siblings.findIndex(c => c.id === classNavEntry.id);
+        if (anchorIdx === -1 || targetIdx === -1) {
+            // No usable anchor in this package list: behave like Ctrl+Click.
+            multiSelectState.toggle(buildSelectionEntry());
+            return;
+        }
+        const [start, end] =
+            anchorIdx <= targetIdx
+                ? [anchorIdx, targetIdx]
+                : [targetIdx, anchorIdx];
+        const range = siblings
+            .slice(start, end + 1)
+            .map(c => buildSelectionEntry(c));
+        multiSelectState.selectRange(range);
+    }
+
+    // On right-click of a class that is not part of the current multi-selection,
+    // reset the selection so the context menu matches the clicked class.
+    function onEntryContextMenu() {
+        if (
+            multiSelectState.count > 0 &&
+            !multiSelectState.isSelected(
+                datasetNavEntry.id,
+                graphNavEntry.id,
+                classNavEntry.id,
+            )
+        ) {
+            multiSelectState.clear();
+        }
+    }
 
     function selectClass() {
         if (!diagramId && !editorState.selectedDiagram.getProperty("id")) {
@@ -120,9 +228,20 @@
     }
 
     function copyClass() {
-        copyState.classUUID.updateValue(classNavEntry.id);
-        copyState.graphURI.updateValue(graphNavEntry.id);
-        copyState.datasetName.updateValue(datasetNavEntry.id);
+        const entries = multiActive
+            ? multiSelectState.getSelected().map(e => ({
+                  classUUID: e.classUuid,
+                  graphURI: e.graphUri,
+                  datasetName: e.datasetName,
+              }))
+            : [
+                  {
+                      classUUID: classNavEntry.id,
+                      graphURI: graphNavEntry.id,
+                      datasetName: datasetNavEntry.id,
+                  },
+              ];
+        copyState.set(entries);
     }
 </script>
 
@@ -132,29 +251,31 @@
             level={4}
             label={classNavEntry.label}
             icon={faFileLines}
-            isSelected={isSelectedClass(
-                datasetNavEntry.id,
-                graphNavEntry.id,
-                classNavEntry.id,
-            )}
+            isSelected={classState === "active"}
+            classOpen={classState === "secondary"}
             title={classNavEntry.tooltip}
             {highlightLabel}
-            onclick={selectClass}
+            onclick={onEntryClick}
+            oncontextmenu={onEntryContextMenu}
         />
     </ContextMenu.TriggerArea>
     <ContextMenu.Content>
         {#if classType === ClassType.SINGLE_CLASS}
             <ContextMenu.Item.Button
                 onSelect={copyClass}
+                disabled={crossGraphDisabled}
                 faIcon={faCopy}
                 altText="Ctrl+C"
             >
-                Copy
+                {multiActive
+                    ? `Copy ${selectedClassIds.length} classes`
+                    : "Copy"}
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
         {/if}
         <ContextMenu.Item.Button
             onSelect={showClassInPackage}
+            disabled={multiActive}
             faIcon={faArrowUpRightFromSquare}
         >
             Show in diagram
@@ -164,6 +285,7 @@
                 onSelect={() => {
                     showSHACLDialog = true;
                 }}
+                disabled={multiActive}
                 faIcon={faDiagramProject}
             >
                 Constraints
@@ -173,6 +295,7 @@
                 onSelect={() => {
                     showExtendClassDialog = true;
                 }}
+                disabled={multiActive}
                 faIcon={faFileExport}
             >
                 Extend Class
@@ -182,6 +305,7 @@
                     onSelect={() => {
                         showAddToGraphDiagramDialog = true;
                     }}
+                    disabled={crossGraphDisabled}
                     faIcon={faObjectGroup}
                 >
                     Add to Profile Diagram
@@ -190,6 +314,7 @@
                     onSelect={() => {
                         showAddToDatasetDiagramDialog = true;
                     }}
+                    disabled={crossGraphDisabled}
                     faIcon={faObjectGroup}
                 >
                     Add to Dataset Diagram
@@ -201,6 +326,7 @@
                     onSelect={() => {
                         showRemoveFromDiagramDialog = true;
                     }}
+                    disabled={crossGraphDisabled}
                     faIcon={faMinus}
                     variant="danger"
                 >
@@ -209,14 +335,19 @@
             {/if}
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    selectClass();
+                    if (!multiActive) {
+                        selectClass();
+                    }
                     showDeleteDependenciesDialog = true;
                 }}
-                disabled={readonly}
+                disabled={readonly || crossGraphDisabled}
                 faIcon={faTrash}
+                altText="Del"
                 variant="danger"
             >
-                Delete Class
+                {multiActive
+                    ? `Delete ${selectedClassIds.length} classes`
+                    : "Delete Class"}
             </ContextMenu.Item.Button>
         {/if}
     </ContextMenu.Content>
@@ -226,7 +357,7 @@
     bind:showDialog={showDeleteDependenciesDialog}
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}
-    resourceUuid={classNavEntry.id}
+    resourceUuids={selectedClassIds}
 />
 
 <SHACLClassSpecificPopUp
@@ -239,21 +370,21 @@
     bind:showDialog={showAddToGraphDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
-    classes={[classNavEntry]}
+    classes={selectedClassNavEntries}
 />
 <AddToDatasetDiagramDialog
     bind:showDialog={showAddToDatasetDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
-    classes={[classNavEntry]}
+    classes={selectedClassNavEntries}
 />
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
     lockedDatasetName={datasetNavEntry.id}
     graphUri={diagramGraphUri}
     {diagramId}
-    classId={classNavEntry.id}
-    classLabel={classNavEntry.label}
+    classIds={selectedClassIds}
+    classLabels={selectedClassLabels}
 />
 
 <ExtendClassDialog
