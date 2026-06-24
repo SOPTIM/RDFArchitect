@@ -143,6 +143,13 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
     --color-nav-hover-background: #e8efff;
     --color-nav-active-background: #d8e7ff;
     --color-nav-active-text: #0f3e78;
+    /* Less-specific levels in the selection path (ancestors of the active,
+       most-specific selection) get a neutral grey background. */
+    --color-nav-ancestor-background: #e6e9ee;
+    --color-nav-ancestor-text: var(--color-nav-text);
+    /* The open class when something else is the active selection: a lighter
+       blue so it stays visible but doesn't look like the active resource. */
+    --color-nav-open-class-background: #e8f1fc;
     --color-nav-text: #1f2937;
     --color-nav-secondary-text: #5c6676;
     --color-nav-badge-background: #1f75cb;

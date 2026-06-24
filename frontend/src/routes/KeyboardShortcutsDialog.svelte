@@ -49,6 +49,7 @@
                 { description: "New Package", keys: ["Alt", "N"] },
                 { description: "Edit Package", keys: ["Ctrl", "Shift", "K"] },
                 { description: "Copy Class", keys: ["Ctrl", "C"] },
+                { description: "Delete Class", keys: ["Del"] },
                 { description: "Paste", keys: ["Ctrl", "V"] },
                 {
                     description: "Paste without Attributes/Enum Entries",

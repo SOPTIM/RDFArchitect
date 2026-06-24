@@ -110,6 +110,7 @@
         if (!contextMenuClass) {
             return;
         }
+        dialogClass = contextMenuClass;
         showRemoveFromDiagramDialog = true;
         onClose();
     }
@@ -158,11 +159,13 @@
     }
 
     function copyClass() {
-        copyState.classUUID.updateValue(contextMenuClass.uuid);
-        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
-        copyState.datasetName.updateValue(
-            editorState.selectedDataset.getValue(),
-        );
+        copyState.set([
+            {
+                classUUID: contextMenuClass.uuid,
+                graphURI: editorState.selectedGraph.getValue(),
+                datasetName: editorState.selectedDataset.getValue(),
+            },
+        ]);
     }
 </script>
 
@@ -306,6 +309,6 @@
     lockedDatasetName={datasetName}
     {graphUri}
     diagramId={editorState.selectedDiagram.getProperty("id")}
-    classId={contextMenuClass.uuid}
-    classLabel={contextMenuClass.label}
+    classIds={dialogClass ? [dialogClass.uuid] : []}
+    classLabels={dialogClass ? [dialogClass.label] : []}
 />

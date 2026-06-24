@@ -23,7 +23,10 @@
     import { setContext, untrack } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
     import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
 
     import { getNavEntryList } from "./build-nav-object.js";
@@ -46,6 +49,16 @@
         );
         initialDatasetsLoaded = true;
         localReloadTrigger.trigger();
+    });
+
+    // Whenever a class becomes selected (from anywhere: nav, diagram, search,
+    // editor, ...), mark "class" as the active selection kind. Resource clicks
+    // (dataset/graph/package/diagram) set their own kind in their handlers.
+    $effect(() => {
+        editorState.selectedClass.subscribe();
+        if (editorState.selectedClass.getProperty("id")) {
+            untrack(() => editorState.activeSelectionKind.updateValue("class"));
+        }
     });
 
     setContext("packageNavigation", {

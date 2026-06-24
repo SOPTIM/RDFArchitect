@@ -53,11 +53,7 @@
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
-    let disablePasteButton = $derived(
-        !copyState.classUUID.getValue() ||
-            !copyState.graphURI.getValue() ||
-            !copyState.datasetName.getValue(),
-    );
+    let disablePasteButton = $derived(copyState.isEmpty);
 
     $effect(() => {
         syncContextMenuTrigger({
