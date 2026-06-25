@@ -15,11 +15,12 @@
   -
   -->
 <script>
-    import { faFloppyDisk, faXmark } from "@fortawesome/free-solid-svg-icons";
     import {
         faDiagramProject,
+        faFloppyDisk,
         faRotateLeft,
         faTrash,
+        faXmark,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onDestroy, onMount } from "svelte";
 
@@ -161,7 +162,7 @@
       - (matching the widest), while the grid stays content-sized so the row
       - is left-aligned instead of stretching to full width.
     -->
-    <div class="grid grid-flow-col auto-cols-fr gap-1">
+    <div class="grid auto-cols-fr grid-flow-col gap-1">
         <FaIconButton
             callOnClick={() => (showSHACLClassDialog = true)}
             icon={faDiagramProject}

@@ -222,7 +222,7 @@
                 <div class="bg-border h-px w-full"></div>
                 <button
                     onclick={swapSelections}
-                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs text-nowrap transition-colors"
                     title="Swap Before and After"
                 >
                     <Fa icon={faRightLeft} />
@@ -258,7 +258,7 @@
                 <div class="bg-border h-px w-full"></div>
                 <button
                     onclick={swapSelections}
-                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs text-nowrap transition-colors"
                     title="Swap Before and After"
                 >
                     <Fa icon={faRightLeft} />
@@ -293,7 +293,7 @@
                 <div class="bg-border h-px w-full"></div>
                 <button
                     onclick={swapSelections}
-                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs text-nowrap transition-colors"
                     title="Swap Before and After"
                 >
                     <Fa icon={faRightLeft} />
@@ -330,7 +330,7 @@
                 <div class="bg-border h-px w-full"></div>
                 <button
                     onclick={swapSelections}
-                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs transition-colors text-nowrap"
+                    class="text-text-subtle hover:bg-background-subtle flex items-center gap-1.5 rounded px-2 py-1 text-xs text-nowrap transition-colors"
                     title="Swap Before and After"
                 >
                     <Fa icon={faRightLeft} />

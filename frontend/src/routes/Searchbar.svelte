@@ -263,7 +263,7 @@
             {/if}
         </div>
         <div
-            class="relative h-full w-full flex-col bg-white focus-within:bg-lightblue rounded"
+            class="focus-within:bg-lightblue relative h-full w-full flex-col rounded bg-white"
         >
             <input
                 type="text"
@@ -272,7 +272,7 @@
                 bind:this={inputElement}
                 bind:value={queryString}
                 placeholder="Search..."
-                class="bg-transparent text-default-text focus:border-blue border-input-default-background disabled:bg-button-disabled-background read-only:bg-default-background h-full w-full rounded border p-1 px-2 font-[350] outline-none"
+                class="text-default-text focus:border-blue border-input-default-background disabled:bg-button-disabled-background read-only:bg-default-background h-full w-full rounded border bg-transparent p-1 px-2 font-[350] outline-none"
                 oninput={submitQuery}
             />
 
