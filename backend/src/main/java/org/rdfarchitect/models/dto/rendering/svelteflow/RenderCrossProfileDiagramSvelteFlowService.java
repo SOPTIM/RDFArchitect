@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.models.dto.rendering.svelteflow;
 
+import lombok.RequiredArgsConstructor;
+
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.GraphSourceDTO;
@@ -34,6 +36,8 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -43,15 +47,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+@Service
+@RequiredArgsConstructor
+@ConditionalOnProperty(
+        name = "rendering.renderer",
+        havingValue = "svelteflow",
+        matchIfMissing = true)
 public class RenderCrossProfileDiagramSvelteFlowService
         implements RenderCrossProfileDiagramUseCase {
 
     private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
-
-    public RenderCrossProfileDiagramSvelteFlowService(
-            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase) {
-        this.fetchRenderingLayoutDataUseCase = fetchRenderingLayoutDataUseCase;
-    }
 
     // CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
     private static final String CLASS_NODE_TYPE = "class";
