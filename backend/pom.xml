@@ -28,8 +28,8 @@
         <maven.compiler.release>25</maven.compiler.release>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <surefire-plugin.version>3.5.6</surefire-plugin.version> <!-- 3.3.0 -->
-        <jacoco.version>0.8.15</jacoco.version> <!-- 0.8.12 -->
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <jacoco.version>0.8.15</jacoco.version>
         <git-commit-id-maven-plugin.version>10.0.0</git-commit-id-maven-plugin.version>
         <mycila-license-plugin.version>5.0.0</mycila-license-plugin.version>
         <spotless-maven-plugin.version>3.7.0</spotless-maven-plugin.version>
