@@ -17,8 +17,8 @@
 
 package org.rdfarchitect.rdf.graph;
 
+import java.util.UUID;
 import lombok.Getter;
-
 import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.GraphMemFactory;
 import org.apache.jena.graph.GraphUtil;
@@ -29,8 +29,6 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.util.iterator.ExtendedIterator;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.UUID;
 
 /**
  * Graph operation for wrapping a base graph and leaving it unchanged while recording all the
@@ -133,7 +131,7 @@ public class DeltaCompressible extends CompositionBase {
     }
 
     @Override
-    public int graphBaseSize() {
+    protected int graphBaseSize() {
         return base.size() + additions.size() - deletions.size();
     }
 }
