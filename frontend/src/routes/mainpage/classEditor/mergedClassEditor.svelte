@@ -23,6 +23,7 @@
 
     import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import {
@@ -38,8 +39,11 @@
     let mergedClass = $state(null);
     let loading = $state(true);
 
-    let activeTabIndex = $state(0);
-    let activeSource = $derived(mergedClass?.sources?.[activeTabIndex] ?? null);
+    let activeSourceUuid = $state(null);
+    let activeSource = $derived(
+        mergedClass?.sources?.find(s => s.classUUID === activeSourceUuid) ??
+            null,
+    );
 
     $effect(() => {
         if (activeSource?.classUUID) {
@@ -75,11 +79,12 @@
                 mergedClass = found;
 
                 if (found) {
-                    const newIndex = found.sources?.findIndex(
+                    const hasSaved = found.sources?.some(
                         s => s.classUUID === savedSourceUuid,
                     );
-                    activeTabIndex =
-                        newIndex != null && newIndex >= 0 ? newIndex : 0;
+                    activeSourceUuid = hasSaved
+                        ? savedSourceUuid
+                        : (found.sources?.[0]?.classUUID ?? null);
                 }
 
                 if (found && found.uuid !== classUuid) {
@@ -121,21 +126,17 @@
 {:else if mergedClass && mergedClass.sources?.length > 0}
     <div class="flex h-full flex-col">
         <div class="border-border border-b px-2 py-1 shrink-0">
-            <select
-                class="border-button-border bg-window-background text-default-text w-full rounded border border-solid px-2 py-1 text-sm outline-none h-8"
-                onchange={e => (activeTabIndex = Number(e.target.value))}
-                value={activeTabIndex}
-            >
-                {#each mergedClass.sources as source, i}
-                    <option value={i} title={source.graphUri}>
-                        {extractGraphLabel(source.graphUri)}
-                    </option>
-                {/each}
-            </select>
+            <SelectEditControl
+                bind:value={activeSourceUuid}
+                options={mergedClass.sources}
+                getOptionValue={source => source.classUUID}
+                getOptionLabel={source => extractGraphLabel(source.graphUri)}
+                height={8}
+            />
         </div>
 
         {#if activeSource}
-            {#key activeSource.classUuid + activeSource.graphUri}
+            {#key activeSource.classUUID + activeSource.graphUri}
                 <div class="h-full overflow-auto">
                     <ClassEditor
                         {datasetName}

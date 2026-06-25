@@ -454,12 +454,20 @@
             };
         });
 
-        bec.updateClassPositions(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            editorState.selectedDiagram.getProperty("id"),
-            classPositionDTOList,
-        );
+        if (editorState.selectedGraph.getValue()) {
+            bec.updateClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                editorState.selectedDiagram.getProperty("id"),
+                classPositionDTOList,
+            );
+        } else {
+            bec.updateGlobalClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedDiagram.getProperty("id"),
+                classPositionDTOList,
+            );
+        }
     }
 
     function moveToLayer(classUuid, layer) {

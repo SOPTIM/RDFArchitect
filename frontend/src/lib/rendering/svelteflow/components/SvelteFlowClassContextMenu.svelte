@@ -173,8 +173,8 @@
         style={triggerStyle}
         {disabled}
     />
-    {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
-        <ContextMenu.Content>
+    <ContextMenu.Content>
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
             <ContextMenu.Item.Button
                 onSelect={copyClass}
                 faIcon={faCopy}
@@ -197,66 +197,68 @@
             >
                 Constraints
             </ContextMenu.Item.Button>
-            <ContextMenu.SubMenu.Root>
-                <ContextMenu.SubMenu.Trigger
-                    faIcon={faLayerGroup}
-                    disabled={classActionsDisabled}
+        {/if}
+        <ContextMenu.SubMenu.Root>
+            <ContextMenu.SubMenu.Trigger
+                faIcon={faLayerGroup}
+                disabled={classActionsDisabled}
+            >
+                Move
+            </ContextMenu.SubMenu.Trigger>
+            <ContextMenu.SubMenu.Content>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToTop();
+                    }}
+                    faIcon={faAnglesUp}
+                    disabled={classActionsDisabled || isAtFront}
                 >
-                    Move
-                </ContextMenu.SubMenu.Trigger>
-                <ContextMenu.SubMenu.Content>
-                    <ContextMenu.Item.Button
-                        onSelect={e => {
-                            e.preventDefault();
-                            handleMoveToTop();
-                        }}
-                        faIcon={faAnglesUp}
-                        disabled={classActionsDisabled || isAtFront}
-                    >
-                        Move to front
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={e => {
-                            e.preventDefault();
-                            handleMoveUp();
-                        }}
-                        faIcon={faAngleUp}
-                        disabled={classActionsDisabled || isAtFront}
-                    >
-                        Move up
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Counter
-                        value={classZIndex}
-                        min={0}
-                        max={nodeCount - 1}
-                        disabled={classActionsDisabled}
-                        onchange={handleLayerChange}
-                        onpersist={handleLayerPersist}
-                    >
-                        Layer
-                    </ContextMenu.Item.Counter>
-                    <ContextMenu.Item.Button
-                        onSelect={e => {
-                            e.preventDefault();
-                            handleMoveDown();
-                        }}
-                        faIcon={faAngleDown}
-                        disabled={classActionsDisabled || isAtBack}
-                    >
-                        Move down
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={e => {
-                            e.preventDefault();
-                            handleMoveToBottom();
-                        }}
-                        faIcon={faAnglesDown}
-                        disabled={classActionsDisabled || isAtBack}
-                    >
-                        Move to bottom
-                    </ContextMenu.Item.Button>
-                </ContextMenu.SubMenu.Content>
-            </ContextMenu.SubMenu.Root>
+                    Move to front
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveUp();
+                    }}
+                    faIcon={faAngleUp}
+                    disabled={classActionsDisabled || isAtFront}
+                >
+                    Move up
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Counter
+                    value={classZIndex}
+                    min={0}
+                    max={nodeCount - 1}
+                    disabled={classActionsDisabled}
+                    onchange={handleLayerChange}
+                    onpersist={handleLayerPersist}
+                >
+                    Layer
+                </ContextMenu.Item.Counter>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveDown();
+                    }}
+                    faIcon={faAngleDown}
+                    disabled={classActionsDisabled || isAtBack}
+                >
+                    Move down
+                </ContextMenu.Item.Button>
+                <ContextMenu.Item.Button
+                    onSelect={e => {
+                        e.preventDefault();
+                        handleMoveToBottom();
+                    }}
+                    faIcon={faAnglesDown}
+                    disabled={classActionsDisabled || isAtBack}
+                >
+                    Move to bottom
+                </ContextMenu.Item.Button>
+            </ContextMenu.SubMenu.Content>
+        </ContextMenu.SubMenu.Root>
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
             <ContextMenuSeparator />
             {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
                 <ContextMenu.Item.Button
@@ -275,8 +277,8 @@
             >
                 Delete class
             </ContextMenu.Item.Button>
-        </ContextMenu.Content>
-    {/if}
+        {/if}
+    </ContextMenu.Content>
 </ContextMenu.Root>
 
 <DeleteDependenciesDialog
