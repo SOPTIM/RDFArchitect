@@ -28,15 +28,15 @@
         <maven.compiler.release>25</maven.compiler.release>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <surefire-plugin.version>3.5.6</surefire-plugin.version> <!-- 3.3.0 -->
-        <jacoco.version>0.8.14</jacoco.version> <!-- 0.8.12 -->
+        <surefire-plugin.version>3.5.6</surefire-plugin.version>
+        <jacoco.version>0.8.15</jacoco.version>
         <git-commit-id-maven-plugin.version>10.0.0</git-commit-id-maven-plugin.version>
         <mycila-license-plugin.version>5.0.0</mycila-license-plugin.version>
-        <spotless-maven-plugin.version>3.6.0</spotless-maven-plugin.version>
+        <spotless-maven-plugin.version>3.7.0</spotless-maven-plugin.version>
         <google-java-format.version>1.35.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <checkstyle.version>13.5.0</checkstyle.version>
-        <spotbugs-maven-plugin.version>4.9.8.3</spotbugs-maven-plugin.version>
+        <checkstyle.version>13.6.0</checkstyle.version>
+        <spotbugs-maven-plugin.version>4.10.2.0</spotbugs-maven-plugin.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <lombok.version>1.18.46</lombok.version>
@@ -318,7 +318,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>4.1.0</version>
     </parent>
     <dependencies>
         <dependency>
@@ -352,7 +352,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
-            <version>4.0.6</version>
+            <version>4.1.0</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -371,7 +371,7 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <version>4.0.6</version>
+            <version>4.1.0</version>
         </dependency>
 
         <dependency>

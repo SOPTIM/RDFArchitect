@@ -97,8 +97,7 @@
                     oninput={() => callOnInput(value)}
                     onchange={() => callOnChange(value)}
                     {disabled}
-                    {readonly}
-                ></textarea>
+                    {readonly}></textarea>
 
                 <!-- unten rechts -->
                 <div
