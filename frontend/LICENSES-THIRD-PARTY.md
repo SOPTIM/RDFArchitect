@@ -14,7 +14,7 @@
 
 ### @faker-js/faker
 - **Package:** @faker-js/faker
-- **Version:** 10.4.0
+- **Version:** 10.5.0
 - **License:** MIT
 - **URL:** [https://fakerjs.dev](https://fakerjs.dev)
 
@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.61.1
+- **Version:** 2.65.2
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -68,7 +68,7 @@
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.3.0
+- **Version:** 4.3.1
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.60.1
+- **Version:** 8.61.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -126,7 +126,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.4.1
+- **Version:** 10.5.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -179,13 +179,13 @@
 
 ### prettier
 - **Package:** prettier
-- **Version:** 3.8.3
+- **Version:** 3.8.4
 - **License:** MIT
 - **URL:** [https://prettier.io](https://prettier.io)
 
 ### prettier-plugin-svelte
 - **Package:** prettier-plugin-svelte
-- **Version:** 4.1.0
+- **Version:** 4.1.1
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/prettier-plugin-svelte#readme](https://github.com/sveltejs/prettier-plugin-svelte#readme)
 
@@ -197,7 +197,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.1
+- **Version:** 5.56.3
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -209,7 +209,7 @@
 
 ### svelte-eslint-parser
 - **Package:** svelte-eslint-parser
-- **Version:** 1.7.1
+- **Version:** 1.8.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/svelte-eslint-parser#readme](https://github.com/sveltejs/svelte-eslint-parser#readme)
 
@@ -227,7 +227,7 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.3.0
+- **Version:** 4.3.1
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -239,7 +239,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.60.1
+- **Version:** 8.61.1
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -263,7 +263,7 @@
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.8
+- **Version:** 4.1.9
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 
