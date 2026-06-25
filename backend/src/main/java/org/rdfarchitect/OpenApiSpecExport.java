@@ -102,7 +102,10 @@ public final class OpenApiSpecExport {
      * * Re-serializes the spec with sorted keys and a fixed {@code \n} indenter so the output is *
      * stable across runs and operating systems. The {@code servers} entry is dropped because it *
      * reflects the request URL and is overridden at runtime by the frontend client ({@code *
-     * src/lib/api/hey-api.ts}); keeping it adds no value to the committed contract.
+     * src/lib/api/hey-api.ts}); keeping it adds no value to the committed contract. The {@code *
+     * info.version} is pinned to {@code 0.0.0} because it is derived from the build version (git *
+     * describe), which changes on every commit and would otherwise make the committed contract *
+     * drift on every build.
      */
     private static String formatDeterministically(String rawSpec) throws JsonProcessingException {
         ObjectMapper mapper = new ObjectMapper();
@@ -118,7 +121,7 @@ public final class OpenApiSpecExport {
         if (spec.get("info") instanceof Map<?, ?> info) {
             @SuppressWarnings("unchecked")
             Map<String, Object> writableInfo = (Map<String, Object>) info;
-            writableInfo.remove("version");
+            writableInfo.put("version", "0.0.0");
         }
         sortRequiredArrays(spec);
         return mapper.writer(printer).writeValueAsString(spec) + "\n";
