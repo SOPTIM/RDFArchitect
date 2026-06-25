@@ -46,12 +46,8 @@ public class SchemaValidationService implements SchemaValidationUseCase {
 
     // Required fields in the profile header (based on KnownOntologyFields)
     private static final Set<OntologyField> REQUIRED_ONTOLOGY_FIELDS = Set.of(
-            KnownOntologyFields.DCT_TITLE,
-            KnownOntologyFields.DCT_DESCRIPTION,
             KnownOntologyFields.OWL_VERSION_IRI,
-            KnownOntologyFields.OWL_VERSION_INFO,
-            KnownOntologyFields.DCT_ISSUED,
-            KnownOntologyFields.DCT_LANGUAGE
+            KnownOntologyFields.DCAT_KEYWORD
     );
 
     private final DatabasePort databasePort;
