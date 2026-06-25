@@ -133,7 +133,7 @@ public class DeltaCompressible extends CompositionBase {
     }
 
     @Override
-    public int graphBaseSize() {
+    protected int graphBaseSize() {
         return base.size() + additions.size() - deletions.size();
     }
 }

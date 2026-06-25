@@ -112,13 +112,13 @@
     size="w-full max-w-3xl"
 >
     <div
-        class="mx-2 flex flex-col gap-6 overflow-y-auto py-2 max-h-96 sm:flex-row sm:gap-x-6"
+        class="mx-2 flex max-h-96 flex-col gap-6 overflow-y-auto py-2 sm:flex-row sm:gap-x-6"
     >
         <div class="flex flex-1 flex-col gap-6">
             {#each sections.slice(0, 2) as section}
                 <div>
                     <h3
-                        class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
+                        class="text-default-text mb-2 text-sm font-semibold tracking-wide uppercase opacity-60"
                     >
                         {section.title}
                     </h3>
@@ -157,7 +157,7 @@
             {#each sections.slice(2) as section}
                 <div>
                     <h3
-                        class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
+                        class="text-default-text mb-2 text-sm font-semibold tracking-wide uppercase opacity-60"
                     >
                         {section.title}
                     </h3>
