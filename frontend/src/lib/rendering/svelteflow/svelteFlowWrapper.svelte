@@ -36,6 +36,7 @@
         DiagramType,
         editorState,
         forceReloadTrigger,
+        mergeSelections,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
@@ -180,7 +181,7 @@
     // remount and its onMount have run) - otherwise the first Escape would hit
     // closeClassEditor and only close the editor instead of clearing everything.
     $effect(() => {
-        multiSelectState.selectedClasses.subscribe();
+        multiSelectState.subscribe();
         editorState.selectedClass.subscribe();
         const hasSelection = multiSelectState.getSelected().length > 0;
         untrack(() => {
@@ -389,37 +390,11 @@
         };
     }
 
-    function selectionKeyOf(entry) {
-        return `${entry.datasetName}::${entry.graphUri}::${entry.classUuid}`;
-    }
-
-    function sameSelection(a, b) {
-        if (a.length !== b.length) {
-            return false;
-        }
-        const keysA = new Set(a.map(selectionKeyOf));
-        return b.every(entry => keysA.has(selectionKeyOf(entry)));
-    }
-
-    /** Unions two selection entry lists, keeping order and de-duplicating by key. */
-    function mergeSelections(base, additions) {
-        const seen = new Set(base.map(selectionKeyOf));
-        const merged = [...base];
-        for (const entry of additions) {
-            const key = selectionKeyOf(entry);
-            if (!seen.has(key)) {
-                seen.add(key);
-                merged.push(entry);
-            }
-        }
-        return merged;
-    }
-
     /**
      * Mirrors SvelteFlow's own node selection into the shared multiSelectState.
      * A Shift+box drag (boxAdditive) extends the prior selection instead of
-     * replacing it. Only writes when the selection actually changed - otherwise
-     * the new array reference would retrigger a render that re-emits
+     * replacing it. setSelection only writes on an actual change - otherwise the
+     * new array reference would retrigger a render that re-emits
      * onselectionchange, creating an infinite update loop.
      */
     function handleSelectionChange({ nodes: selectedNodes }) {
@@ -429,19 +404,15 @@
         const entries = boxAdditive
             ? mergeSelections(boxPriorSelection, boxed)
             : boxed;
-        untrack(() => {
-            if (sameSelection(multiSelectState.getSelected(), entries)) {
-                return;
-            }
-            multiSelectState.selectedClasses.updateValue(entries);
-        });
+        untrack(() => multiSelectState.setSelection(entries));
     }
 
-    /** Sets node.selected to match a single id (used to force-deselect a node). */
-    function setNodeSelected(nodeId, selected) {
+    /** Re-evaluates each node's `selected` flag via the predicate, writing once. */
+    function applyNodeSelection(shouldSelect) {
         let changed = false;
         const next = nodes.map(node => {
-            if (node.id === nodeId && !!node.selected !== selected) {
+            const selected = shouldSelect(node);
+            if (!!node.selected !== selected) {
                 changed = true;
                 return { ...node, selected };
             }
@@ -450,6 +421,13 @@
         if (changed) {
             nodes = next;
         }
+    }
+
+    /** Sets node.selected to match a single id (used to force-deselect a node). */
+    function setNodeSelected(nodeId, selected) {
+        applyNodeSelection(node =>
+            node.id === nodeId ? selected : !!node.selected,
+        );
     }
 
     /**
@@ -462,18 +440,7 @@
         const selectedIds = new Set(
             multiSelectState.getSelected().map(entry => entry.classUuid),
         );
-        let changed = false;
-        const next = nodes.map(node => {
-            const shouldSelect = selectedIds.has(node.id);
-            if (!!node.selected !== shouldSelect) {
-                changed = true;
-                return { ...node, selected: shouldSelect };
-            }
-            return node;
-        });
-        if (changed) {
-            nodes = next;
-        }
+        applyNodeSelection(node => selectedIds.has(node.id));
     }
 
     function handleSelectionEnd() {
@@ -510,6 +477,19 @@
         });
     }
 
+    /**
+     * Routes an open/switch/close of the class editor through the eventStack so
+     * the editor's unsaved-changes guard applies. classUuid=null closes it.
+     */
+    function routeClassEditor(graphUri, classUuid, classType) {
+        eventStack.executeNewestEvent({
+            datasetName: editorState.selectedDataset.getValue(),
+            graphUri,
+            classUuid,
+            classType,
+        });
+    }
+
     function handleNodeClick(nodeClickEvent) {
         closeContextMenus();
         if (nodeClickEvent.node.type !== "class") {
@@ -517,6 +497,7 @@
         }
         const id = nodeClickEvent.node.id;
         const event = nodeClickEvent.event;
+        const graphUri = nodeClickEvent.node.data.graphUri;
 
         // Ctrl is the pan modifier - it must not open or select a class.
         if (event?.ctrlKey || event?.metaKey) {
@@ -534,12 +515,7 @@
         // it from the selection and close the editor.
         if (event?.shiftKey) {
             if (editorState.selectedClass.getProperty("id") === id) {
-                eventStack.executeNewestEvent({
-                    datasetName: editorState.selectedDataset.getValue(),
-                    graphUri: nodeClickEvent.node.data.graphUri,
-                    classUuid: null,
-                    classType,
-                });
+                routeClassEditor(graphUri, null, classType);
                 queueMicrotask(() => setNodeSelected(id, false));
             }
             return;
@@ -548,7 +524,7 @@
         // A plain click reduces the selection to just this class. SvelteFlow
         // keeps the multi-selection when an already-selected node is clicked
         // (so the group stays draggable), so we collapse it explicitly here.
-        multiSelectState.selectedClasses.updateValue([
+        multiSelectState.setSelection([
             buildDiagramSelectionEntry(nodeClickEvent.node),
         ]);
         reflectSelectionToNodes();
@@ -560,20 +536,13 @@
             editorState.selectedClassDataset.updateValue(
                 editorState.selectedDataset.getValue(),
             );
-            editorState.selectedClassGraph.updateValue(
-                nodeClickEvent.node.data.graphUri,
-            );
+            editorState.selectedClassGraph.updateValue(graphUri);
             editorState.selectedClass.updateValue({
                 type: classType,
                 id: id,
             });
         } else {
-            eventStack.executeNewestEvent({
-                datasetName: editorState.selectedDataset.getValue(),
-                graphUri: nodeClickEvent.node.data.graphUri,
-                classUuid: id,
-                classType,
-            });
+            routeClassEditor(graphUri, id, classType);
         }
 
         event.stopPropagation();
@@ -747,17 +716,47 @@
             return;
         }
         // A Shift+drag (anywhere, including over a node) extends the current
-        // selection instead of replacing it.
-        boxAdditive = event.button === 0 && event.shiftKey;
-        if (boxAdditive) {
+        // selection; a Shift+click (no drag) stays a plain toggle. Additive mode
+        // is only armed once the pointer actually moves - otherwise a toggle-off
+        // would be merged straight back in from boxPriorSelection.
+        boxAdditive = false;
+        if (event.button === 0 && event.shiftKey) {
             boxPriorSelection = [...multiSelectState.getSelected()];
+            armAdditiveBoxOnDrag(event);
         }
     }
 
-    function handlePaneContextMenu({ event }) {
+    /**
+     * Switches the upcoming box selection to additive (extend) mode as soon as
+     * the pointer moves, so a stationary Shift+click stays a toggle. The capture
+     * listener runs before SvelteFlow's pane handler, so boxAdditive is already
+     * set when the box-start selection change arrives.
+     */
+    function armAdditiveBoxOnDrag(event) {
+        const { clientX: startX, clientY: startY } = event;
+        const onMove = moveEvent => {
+            if (moveEvent.clientX !== startX || moveEvent.clientY !== startY) {
+                boxAdditive = true;
+                stop();
+            }
+        };
+        const stop = () => {
+            window.removeEventListener("pointermove", onMove, true);
+            window.removeEventListener("pointerup", stop, true);
+        };
+        window.addEventListener("pointermove", onMove, true);
+        window.addEventListener("pointerup", stop, true);
+    }
+
+    /** Cancels the native context menu and closes any open custom menu. */
+    function consumeContextMenuEvent(event) {
         event.preventDefault();
         event.stopPropagation();
         closeContextMenus();
+    }
+
+    function handlePaneContextMenu({ event }) {
+        consumeContextMenuEvent(event);
         if (
             event.target instanceof Element &&
             event.target.closest(".svelte-flow__node")
@@ -793,15 +792,11 @@
     }
 
     function handleEdgeContextMenu({ event }) {
-        event.preventDefault();
-        event.stopPropagation();
-        closeContextMenus();
+        consumeContextMenuEvent(event);
     }
 
     function handleNodeContextMenu({ event, node }) {
-        event.preventDefault();
-        event.stopPropagation();
-        closeContextMenus();
+        consumeContextMenuEvent(event);
         // Explorer behaviour: right-clicking a node that is not part of the
         // current multi-selection reduces the selection to that single node so
         // the menu matches what the user sees.
@@ -812,9 +807,7 @@
                 node.id,
             )
         ) {
-            multiSelectState.selectedClasses.updateValue([
-                buildDiagramSelectionEntry(node),
-            ]);
+            multiSelectState.setSelection([buildDiagramSelectionEntry(node)]);
         }
         contextMenuClass = {
             uuid: node.id,

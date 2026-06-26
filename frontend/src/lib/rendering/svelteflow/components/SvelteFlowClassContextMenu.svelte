@@ -70,16 +70,12 @@
     let showSHACLDialog = $state(false);
     let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
-    // Snapshot of the selection taken when a batch dialog is opened, so it stays
-    // stable while the dialog is up.
+
     let dialogClassIds = $state([]);
     let dialogClassLabels = $state([]);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
-    // The diagram only ever holds a single-graph selection, so multi-selection
-    // simply means more than one class is selected. Single-class actions (Extend,
-    // Constraints, Move/Layer) are disabled while a multi-selection is active.
     const multiActive = $derived(multiSelectState.isMultiSelect);
     const selectionUuids = $derived(
         multiActive
@@ -186,19 +182,13 @@
     }
 
     function copyClass() {
-        const graphURI = editorState.selectedGraph.getValue();
-        const datasetName = editorState.selectedDataset.getValue();
         const entries = multiActive
-            ? multiSelectState.getSelected().map(e => ({
-                  classUUID: e.classUuid,
-                  graphURI: e.graphUri,
-                  datasetName: e.datasetName,
-              }))
+            ? multiSelectState.toCopyEntries()
             : [
                   {
                       classUUID: contextMenuClass.uuid,
-                      graphURI,
-                      datasetName,
+                      graphURI: editorState.selectedGraph.getValue(),
+                      datasetName: editorState.selectedDataset.getValue(),
                   },
               ];
         copyState.set(entries);

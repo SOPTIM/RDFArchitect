@@ -48,10 +48,10 @@
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import {
         copyState,
-        DiagramType,
         editorState,
         forceReloadTrigger,
         multiSelectState,
+        SelectionLevel,
     } from "$lib/sharedState.svelte.js";
 
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
@@ -60,6 +60,7 @@
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
+    import { inferSelectionLevel } from "../../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
     import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
@@ -120,8 +121,10 @@
             multiSelectState.getSelected().length === 0,
     );
 
-    // The class(es) targeted by the delete shortcut: the multi-selection if
-    // present (and within a single graph), otherwise the single selected class.
+    /*
+      The class(es) targeted by the delete shortcut: the multi-selection if
+        present (and within a single graph), otherwise the single selected class.
+    */
     let deleteClassSelection = $derived.by(() => {
         const selected = multiSelectState.getSelected();
         if (selected.length > 0) {
@@ -149,24 +152,24 @@
             !deleteClassSelection.singleGraph,
     );
 
-    // The most specific entity the delete shortcut acts on: a selected class
-    // takes precedence, then a package, then a graph, then the dataset.
+    // A custom diagram isn't deletable here, so it resolves to its graph/dataset.
     let deleteShortcutTarget = $derived.by(() => {
         if (deleteClassSelection) {
-            return "class";
+            return SelectionLevel.CLASS;
         }
-        const diagramType = editorState.selectedDiagram.getProperty("type");
-        const diagramId = editorState.selectedDiagram.getProperty("id");
-        if (diagramType === DiagramType.PACKAGE && diagramId) {
-            return "package";
+        switch (inferSelectionLevel()) {
+            case SelectionLevel.PACKAGE:
+                return SelectionLevel.PACKAGE;
+            case SelectionLevel.DIAGRAM:
+            case SelectionLevel.GRAPH:
+                return hasGraphSelected
+                    ? SelectionLevel.GRAPH
+                    : SelectionLevel.DATASET;
+            case SelectionLevel.DATASET:
+                return SelectionLevel.DATASET;
+            default:
+                return null;
         }
-        if (hasGraphSelected) {
-            return "graph";
-        }
-        if (hasDatasetSelected) {
-            return "dataset";
-        }
-        return null;
     });
 
     let disablePasteButton = $derived(
@@ -410,21 +413,20 @@
 
     function deleteSelectionWithShortcut() {
         switch (deleteShortcutTarget) {
-            case "class":
+            case SelectionLevel.CLASS:
                 if (!disableDeleteClassButton) {
                     showClassDeleteDependenciesDialog = true;
                 }
                 break;
-            case "package":
-                // launchPackageDeleteDialog already guards protected/readonly packages.
+            case SelectionLevel.PACKAGE:
                 launchPackageDeleteDialog();
                 break;
-            case "graph":
+            case SelectionLevel.GRAPH:
                 if (!isDatasetReadOnly) {
                     showGraphDeleteDialog = true;
                 }
                 break;
-            case "dataset":
+            case SelectionLevel.DATASET:
                 showDatasetDeleteDialog = true;
                 break;
         }

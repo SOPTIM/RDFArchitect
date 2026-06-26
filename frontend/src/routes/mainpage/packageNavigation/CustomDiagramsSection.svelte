@@ -169,13 +169,12 @@
         const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
             : DiagramType.CUSTOM_DATASET_DIAGRAM;
-        editorState.activeSelectionKind.updateValue("diagram");
-        editorState.selectedDataset.updateValue(datasetNavEntry.id);
-        editorState.selectedGraph.updateValue(graphNavEntry?.id);
-        editorState.selectedDiagram.updateValue({
-            type: diagramType,
-            id: null,
-        });
+        editorState.selectCustomDiagram(
+            datasetNavEntry.id,
+            graphNavEntry?.id,
+            null,
+            diagramType,
+        );
     }
 
     async function getGraphDiagrams(datasetName, graphURI) {

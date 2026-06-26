@@ -19,6 +19,7 @@ import {
     DiagramType,
     editorState,
     multiSelectState,
+    SelectionLevel,
 } from "$lib/sharedState.svelte.js";
 
 export function isSelectedDataset(dataset) {
@@ -81,61 +82,65 @@ function isCustomDiagramSelected() {
     );
 }
 
-/** Deepest level derived purely from the editor state, ignoring recency. */
-function inferDeepestLevel() {
-    if (editorState.selectedClass.getProperty("id")) {
-        return "class";
-    }
+/** Most-specific context level (package/diagram/graph/dataset), ignoring class. */
+function inferContextLevel() {
     if (isPackageSelectedAsDiagram()) {
-        return "package";
+        return SelectionLevel.PACKAGE;
     }
     if (isCustomDiagramSelected()) {
-        return "diagram";
+        return SelectionLevel.DIAGRAM;
     }
     if (editorState.selectedGraph.getValue()) {
-        return "graph";
+        return SelectionLevel.GRAPH;
     }
     if (editorState.selectedDataset.getValue()) {
-        return "dataset";
+        return SelectionLevel.DATASET;
     }
-    return "none";
+    return SelectionLevel.NONE;
+}
+
+/** Deepest level from the editor state alone, ignoring recency. */
+export function inferSelectionLevel() {
+    if (editorState.selectedClass.getProperty("id")) {
+        return SelectionLevel.CLASS;
+    }
+    return inferContextLevel();
 }
 
 /**
- * The deepest (most specific) level that currently holds a selection. Honors the
- * resource the user picked last (editorState.activeSelectionKind) so that, e.g.,
- * clicking a package while a class is still selected highlights the package - as
- * long as that selection still exists; otherwise falls back to inference.
+ * Most-specific level holding a selection. Prefers the last-clicked resource
+ * (activeSelectionKind) while it still exists, else falls back to inference.
  */
 function deepestSelectedLevel() {
     if (multiSelectState.getSelected().length > 0) {
-        return "class";
+        return SelectionLevel.CLASS;
     }
     switch (editorState.activeSelectionKind.getValue()) {
-        case "class":
-            if (editorState.selectedClass.getProperty("id")) return "class";
+        case SelectionLevel.CLASS:
+            if (editorState.selectedClass.getProperty("id"))
+                return SelectionLevel.CLASS;
             break;
-        case "package":
-            if (isPackageSelectedAsDiagram()) return "package";
+        case SelectionLevel.PACKAGE:
+            if (isPackageSelectedAsDiagram()) return SelectionLevel.PACKAGE;
             break;
-        case "diagram":
-            if (isCustomDiagramSelected()) return "diagram";
+        case SelectionLevel.DIAGRAM:
+            if (isCustomDiagramSelected()) return SelectionLevel.DIAGRAM;
             break;
-        case "graph":
-            if (editorState.selectedGraph.getValue()) return "graph";
+        case SelectionLevel.GRAPH:
+            if (editorState.selectedGraph.getValue())
+                return SelectionLevel.GRAPH;
             break;
-        case "dataset":
-            if (editorState.selectedDataset.getValue()) return "dataset";
+        case SelectionLevel.DATASET:
+            if (editorState.selectedDataset.getValue())
+                return SelectionLevel.DATASET;
             break;
     }
-    return inferDeepestLevel();
+    return inferSelectionLevel();
 }
 
 /**
- * The classes that are currently "open"/selected: the multi-selection set, or
- * the single selected class. These always stay highlighted (they indicate which
- * class is shown), independent of the last-clicked navigation resource. Each
- * entry has datasetName/graphUri/classUuid/packageId.
+ * The open/selected classes: the multi-selection set, or the single selected
+ * class. Always stay highlighted, independent of the last-clicked resource.
  */
 function getSelectedClasses() {
     const multi = multiSelectState.getSelected();
@@ -157,9 +162,8 @@ function getSelectedClasses() {
 }
 
 /**
- * Highlight state of a class entry: "active" (blue) when the class is the
- * most-specific active selection, "secondary" (light blue) when it is open but
- * a different resource is the active selection, otherwise null.
+ * Class highlight: "active" (blue) when it is the most-specific selection,
+ * "secondary" (light blue) when open but another resource is active, else null.
  */
 export function classHighlight(dataset, graph, classUuid) {
     const datasetLabel = dataset?.label ?? dataset;
@@ -174,17 +178,19 @@ export function classHighlight(dataset, graph, classUuid) {
     if (!isOpen) {
         return null;
     }
-    return deepestSelectedLevel() === "class" ? "active" : "secondary";
+    return deepestSelectedLevel() === SelectionLevel.CLASS
+        ? "active"
+        : "secondary";
 }
 
 /**
- * Highlight state of a dataset entry: "active" (most specific, blue),
- * "ancestor" (a less-specific level in the selection path, grey) or null.
+ * Dataset highlight: "active" (most specific, blue), "ancestor" (a less-specific
+ * level in the path, grey) or null.
  */
 export function datasetHighlight(dataset) {
     const datasetLabel = dataset?.label ?? dataset;
     const level = deepestSelectedLevel();
-    if (level === "class") {
+    if (level === SelectionLevel.CLASS) {
         return getSelectedClasses().some(c => c.datasetName === datasetLabel)
             ? "ancestor"
             : null;
@@ -192,7 +198,7 @@ export function datasetHighlight(dataset) {
     if (!isSelectedDataset(datasetLabel)) {
         return null;
     }
-    return level === "dataset" ? "active" : "ancestor";
+    return level === SelectionLevel.DATASET ? "active" : "ancestor";
 }
 
 /** Highlight state of a graph entry (see {@link datasetHighlight}). */
@@ -200,7 +206,7 @@ export function graphHighlight(dataset, graph) {
     const datasetLabel = dataset?.label ?? dataset;
     const graphUri = getUri(graph);
     const level = deepestSelectedLevel();
-    if (level === "class") {
+    if (level === SelectionLevel.CLASS) {
         return getSelectedClasses().some(
             c => c.datasetName === datasetLabel && c.graphUri === graphUri,
         )
@@ -210,22 +216,21 @@ export function graphHighlight(dataset, graph) {
     if (!isSelectedGraph(datasetLabel, graph)) {
         return null;
     }
-    return level === "graph" ? "active" : "ancestor";
+    return level === SelectionLevel.GRAPH ? "active" : "ancestor";
 }
 
 /**
- * Highlight state of a package entry (see {@link datasetHighlight}). The grey
- * "ancestor" state is decided by membership: the package is greyed when it
- * actually contains an open class. This is more reliable than deriving the
- * class's package from the editor state, which is only correct when the class
- * was opened from its package view. `classEntries` are the package's child class
- * nav entries (objects with an `id`, or plain uuid strings).
+ * Package highlight (see {@link datasetHighlight}). The grey "ancestor" state is
+ * decided by membership - greyed when the package contains an open class - which
+ * is more reliable than deriving the class's package from the editor state.
+ * `classEntries` are the package's child class nav entries (objects with `id`,
+ * or plain uuid strings).
  */
 export function packageHighlight(dataset, graph, pack, classEntries = []) {
     const datasetLabel = dataset?.label ?? dataset;
     const graphUri = getUri(graph);
     const level = deepestSelectedLevel();
-    if (level === "class") {
+    if (level === SelectionLevel.CLASS) {
         const childUuids = new Set(
             (classEntries ?? []).map(c => c?.id ?? c?.uuid ?? c),
         );
@@ -238,7 +243,10 @@ export function packageHighlight(dataset, graph, pack, classEntries = []) {
             ? "ancestor"
             : null;
     }
-    if (level === "package" && isSelectedPackage(dataset, graph, pack)) {
+    if (
+        level === SelectionLevel.PACKAGE &&
+        isSelectedPackage(dataset, graph, pack)
+    ) {
         return "active";
     }
     return null;

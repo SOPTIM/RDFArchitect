@@ -88,18 +88,15 @@
     }
 
     function selectDiagram() {
-        editorState.activeSelectionKind.updateValue("diagram");
-        editorState.selectedDataset.updateValue(datasetNavEntry.label);
-        editorState.selectedGraph.updateValue(
-            graphNavEntry ? graphNavEntry.id : null,
-        );
-        let diagramType = graphNavEntry
+        const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
             : DiagramType.CUSTOM_DATASET_DIAGRAM;
-        editorState.selectedDiagram.updateValue({
-            type: diagramType,
-            id: diagram.diagramId,
-        });
+        editorState.selectCustomDiagram(
+            datasetNavEntry.label,
+            graphNavEntry ? graphNavEntry.id : null,
+            diagram.diagramId,
+            diagramType,
+        );
     }
 </script>
 

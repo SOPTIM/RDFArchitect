@@ -26,8 +26,9 @@ import org.apache.jena.query.ReadWrite;
 import org.apache.jena.query.ResultSetFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.CopyClassResponseDTO;
+import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
+import org.rdfarchitect.api.dto.PasteSourceClassDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -50,70 +51,131 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
+import org.rdfarchitect.services.ExpandURIUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class CopyClassService implements CopyClassUseCase {
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
+    private final ExpandURIUseCase expandURIUseCase;
     private final boolean newValuesAsBlankNode;
 
     public CopyClassService(
             DatabasePort databasePort,
             PackageMapper packageMapper,
+            ExpandURIUseCase expandURIUseCase,
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode) {
         this.databasePort = databasePort;
         this.packageMapper = packageMapper;
+        this.expandURIUseCase = expandURIUseCase;
         this.newValuesAsBlankNode = newValuesAsBlankNode;
     }
 
     @Override
-    public CopyClassResponseDTO copyClass(
-            GraphIdentifier graphIdentifier,
-            UUID classUUID,
-            GraphIdentifier targetGraphIdentifier,
-            CopyClassRequestDTO copyClassRequestDTO) {
+    public List<CopyClassResponseDTO> copyClasses(
+            PasteClassesRequestDTO pasteRequest, GraphIdentifier targetGraphIdentifier) {
 
-        var cimClass = readSourceClass(graphIdentifier, classUUID.toString());
+        var sources = toSources(pasteRequest.getSources());
+        if (sources.isEmpty()) {
+            return List.of();
+        }
+        var options = toCopyOptions(pasteRequest);
+
+        var sourceClasses =
+                sources.stream()
+                        .map(
+                                source ->
+                                        readSourceClass(
+                                                source.graphIdentifier(),
+                                                source.classUUID().toString()))
+                        .toList();
+
+        var cimPackage = packageMapper.toCIMObject(options.targetPackage());
+        var prefixMapping = databasePort.getPrefixMapping(targetGraphIdentifier.datasetName());
+
+        var responses = new ArrayList<CopyClassResponseDTO>();
+        var messages = new ArrayList<String>();
 
         try (var ctx =
                 databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.WRITE)) {
             var targetGraph = ctx.getRdfGraph();
 
-            var label =
-                    constructUniqueLabel(
-                            cimClass.getLabel(),
-                            getExistingClassLabels(targetGraph, cimClass.getLabel()));
+            for (var cimClass : sourceClasses) {
+                var label =
+                        constructUniqueLabel(
+                                cimClass.getLabel(),
+                                getExistingClassLabels(targetGraph, cimClass.getLabel()));
 
-            var cimPackage = packageMapper.toCIMObject(copyClassRequestDTO.getTargetPackage());
-            var newCimClass =
-                    copyCimClass(
-                            cimClass,
-                            cimPackage,
-                            label,
-                            targetGraph,
-                            copyClassRequestDTO.isCopyAsAbstract(),
-                            copyClassRequestDTO.isCopyAttributes(),
-                            copyClassRequestDTO.isCopyAssociations());
+                var newCimClass =
+                        copyCimClass(
+                                cimClass,
+                                cimPackage,
+                                label,
+                                targetGraph,
+                                options.copyAsAbstract(),
+                                options.copyAttributes(),
+                                options.copyAssociations());
 
-            var newClassUUID =
-                    CIMUpdates.insertUMLAdaptedClass(
-                            targetGraph,
-                            databasePort.getPrefixMapping(targetGraphIdentifier.datasetName()),
-                            newCimClass,
-                            newValuesAsBlankNode);
+                var newClassUUID =
+                        CIMUpdates.insertUMLAdaptedClass(
+                                targetGraph, prefixMapping, newCimClass, newValuesAsBlankNode);
 
-            ctx.commit(buildCopyMessage(cimClass, copyClassRequestDTO, label));
-            return new CopyClassResponseDTO(newClassUUID.toString(), label.getValue());
+                messages.add(buildCopyMessage(cimClass, options, label));
+                responses.add(new CopyClassResponseDTO(newClassUUID.toString(), label.getValue()));
+            }
+
+            ctx.commit(buildCommitMessage(messages));
         }
+
+        return responses;
+    }
+
+    private List<CopyClassSource> toSources(List<PasteSourceClassDTO> sourceDTOs) {
+        if (sourceDTOs == null) {
+            return List.of();
+        }
+        return sourceDTOs.stream()
+                .map(
+                        dto -> {
+                            var expandedGraphURI =
+                                    expandURIUseCase.expandUri(
+                                            dto.getSourceDatasetName(), dto.getSourceGraphURI());
+                            var sourceGraphIdentifier =
+                                    new GraphIdentifier(
+                                            dto.getSourceDatasetName(), expandedGraphURI);
+                            return new CopyClassSource(
+                                    sourceGraphIdentifier, UUID.fromString(dto.getClassUUID()));
+                        })
+                .toList();
+    }
+
+    private CopyClassOptions toCopyOptions(PasteClassesRequestDTO pasteRequest) {
+        return new CopyClassOptions(
+                pasteRequest.getTargetPackage(),
+                pasteRequest.isCopyAsAbstract(),
+                pasteRequest.isCopyAttributes(),
+                pasteRequest.isCopyAssociations());
+    }
+
+    private String buildCommitMessage(List<String> messages) {
+        if (messages.size() == 1) {
+            return messages.get(0);
+        }
+        return "Pasted %d classes:%n%s"
+                .formatted(
+                        messages.size(),
+                        messages.stream().collect(Collectors.joining(String.format("%n"))));
     }
 
     private CIMClassUMLAdapted readSourceClass(GraphIdentifier graphIdentifier, String classUUID) {
@@ -127,22 +189,20 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private String buildCopyMessage(
-            CIMClassUMLAdapted sourceClass, CopyClassRequestDTO request, RDFSLabel label) {
+            CIMClassUMLAdapted sourceClass, CopyClassOptions options, RDFSLabel label) {
         var sourcePackage =
                 sourceClass.getBelongsToCategory() != null
                         ? sourceClass.getBelongsToCategory().getLabel().getValue()
                         : "default";
         var targetPackage =
-                request.getTargetPackage() != null
-                        ? request.getTargetPackage().getLabel()
-                        : "default";
+                options.targetPackage() != null ? options.targetPackage().getLabel() : "default";
 
         var suffix = "";
-        if (request.isCopyAsAbstract()) {
+        if (options.copyAsAbstract()) {
             suffix = " bare";
-        } else if (!request.isCopyAttributes()) {
+        } else if (!options.copyAttributes()) {
             suffix = " without attributes";
-        } else if (!request.isCopyAssociations()) {
+        } else if (!options.copyAssociations()) {
             suffix = " without associations";
         }
 

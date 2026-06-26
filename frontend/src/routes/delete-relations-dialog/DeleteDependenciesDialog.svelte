@@ -195,7 +195,6 @@
         }
     }
 
-    /** Removes any pasted classes from the copy buffer that are being deleted. */
     function pruneCopyState(payload) {
         if (copyState.isEmpty) return;
         for (const entry of payload) {
