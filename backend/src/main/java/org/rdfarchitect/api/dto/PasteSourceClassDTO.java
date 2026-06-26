@@ -22,7 +22,7 @@ import lombok.Data;
 /** Identifies a single class to be pasted, including the graph it originates from. */
 @Data
 public class PasteSourceClassDTO {
-    
+
     String sourceDatasetName;
     String sourceGraphURI;
     String classUUID;

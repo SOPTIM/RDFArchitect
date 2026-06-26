@@ -19,14 +19,23 @@
     import { Handle, Position } from "@xyflow/svelte";
 
     import { URI } from "$lib/models/dto/index.ts";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        editorState,
+        multiSelectState,
+    } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
 
     const highlighted = $derived(
-        editorState.selectedClass.getProperty("id") === id,
+        editorState.selectedClass.getProperty("id") === id ||
+            multiSelectState.isSelected(
+                editorState.selectedDataset.getValue(),
+                data.graphUri,
+                id,
+            ),
     );
 
     const label = $derived(data.label);
