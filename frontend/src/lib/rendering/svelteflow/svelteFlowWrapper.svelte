@@ -26,7 +26,7 @@
     } from "@xyflow/svelte";
     import ElkWorkerURL from "elkjs/lib/elk-worker.js?url";
     import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' import has a bug
-    import { onMount, untrack } from "svelte";
+    import { onDestroy, onMount, tick, untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
@@ -36,6 +36,7 @@
         DiagramType,
         editorState,
         forceReloadTrigger,
+        multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
@@ -63,12 +64,22 @@
 
     const EDGE_Z_INDEX = -1;
 
+    // Right-click is used both for panning (drag) and the context menu (click).
+    // We remember where the right button went down so a context-menu event that
+    // follows an actual drag (> threshold) can be suppressed as "this was a pan".
+    const RIGHT_DRAG_THRESHOLD_PX = 5;
+
     let nodes = $state.raw([...inputNodes]);
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
     let paneContextMenuRequest = $state(null);
     let classContextMenuRequest = $state(null);
     let contextMenuClass = $state(null);
+    // When a box selection is started with Shift held on the pane, it extends the
+    // existing selection instead of replacing it. boxPriorSelection snapshots the
+    // selection at drag start so the boxed classes can be merged into it.
+    let boxAdditive = false;
+    let boxPriorSelection = [];
 
     // Ordered list of node IDs from back (index 0) to front (index n-1).
     // Each node's zIndex equals its position in this array.
@@ -76,6 +87,28 @@
 
     // Temporarily elevated node (not persisted) — shown in front during click/drag/search
     let temporaryFrontNodeId = $state(null);
+
+    // Whether Control is currently held - the pan modifier. Used to show the grab
+    // cursor on the pane immediately, before the user starts dragging.
+    let ctrlHeld = $state(false);
+    // Whether Shift is currently held. While held, nodes are not draggable so a
+    // Shift+drag that starts on a node draws the (additive) selection box instead
+    // of moving the node.
+    let shiftHeld = $state(false);
+    let panningActive = $state(false);
+    let containerEl;
+    // Active Ctrl+left pan session: d3-zoom ignores ctrl-modified mouse events,
+    // so panning with Ctrl is driven manually via setViewport.
+    let manualPan = null;
+    // Suppresses the click that follows a Ctrl+pan so SvelteFlow's pane click
+    // handler does not clear the selection.
+    let suppressClick = false;
+    // Suppresses the contextmenu that follows a right-drag pan so no menu opens.
+    let suppressContextMenu = false;
+
+    // Tracks the diagram a selection belongs to, so switching diagrams clears the
+    // multi-selection (its class ids would otherwise refer to the previous diagram).
+    let lastSelectedDiagramId = null;
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
@@ -126,11 +159,55 @@
         });
     });
 
+    $effect(() => {
+        editorState.selectedDiagram.subscribe();
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        untrack(() => {
+            if (diagramId !== lastSelectedDiagramId) {
+                lastSelectedDiagramId = diagramId;
+                boxAdditive = false;
+                multiSelectState.clear();
+            }
+        });
+    });
+
+    // Keep the Escape handler on top of the eventStack while a selection exists,
+    // so a single Escape clears it (and then chains to the class editor's close).
+    // We also depend on selectedClass: opening or switching the open class
+    // destroys and remounts the keyed ClassEditor, which pushes a fresh
+    // closeClassEditor onto the stack. That mount happens in the same flush as
+    // this effect, so we re-assert on top again after tick() (i.e. once the
+    // remount and its onMount have run) - otherwise the first Escape would hit
+    // closeClassEditor and only close the editor instead of clearing everything.
+    $effect(() => {
+        multiSelectState.selectedClasses.subscribe();
+        editorState.selectedClass.subscribe();
+        const hasSelection = multiSelectState.getSelected().length > 0;
+        untrack(() => {
+            eventStack.removeEvent(escapeClearSelection);
+            if (!hasSelection) {
+                return;
+            }
+            eventStack.addEvent(escapeClearSelection);
+            tick().then(() => {
+                if (multiSelectState.getSelected().length === 0) {
+                    return;
+                }
+                eventStack.removeEvent(escapeClearSelection);
+                eventStack.addEvent(escapeClearSelection);
+            });
+        });
+    });
+
     onMount(() => {
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
             nodes: useNodes(),
         };
+    });
+
+    onDestroy(() => {
+        eventStack.removeEvent(escapeClearSelection);
     });
 
     function hasDefaultNodeLayout(diagramNodes) {
@@ -296,46 +373,210 @@
         return await res.json();
     }
 
+    /**
+     * Maps a SvelteFlow class node to a multiSelectState entry. All nodes in a
+     * diagram share the currently selected dataset/graph, so the selection can
+     * never span multiple graphs here.
+     */
+    function buildDiagramSelectionEntry(node) {
+        return {
+            datasetName: editorState.selectedDataset.getValue(),
+            graphUri: node.data?.graphUri,
+            classUuid: node.id,
+            classLabel: node.data?.label ?? node.id,
+            packageId: editorState.selectedDiagram.getProperty("id"),
+            classNavEntry: { id: node.id, label: node.data?.label ?? node.id },
+        };
+    }
+
+    function selectionKeyOf(entry) {
+        return `${entry.datasetName}::${entry.graphUri}::${entry.classUuid}`;
+    }
+
+    function sameSelection(a, b) {
+        if (a.length !== b.length) {
+            return false;
+        }
+        const keysA = new Set(a.map(selectionKeyOf));
+        return b.every(entry => keysA.has(selectionKeyOf(entry)));
+    }
+
+    /** Unions two selection entry lists, keeping order and de-duplicating by key. */
+    function mergeSelections(base, additions) {
+        const seen = new Set(base.map(selectionKeyOf));
+        const merged = [...base];
+        for (const entry of additions) {
+            const key = selectionKeyOf(entry);
+            if (!seen.has(key)) {
+                seen.add(key);
+                merged.push(entry);
+            }
+        }
+        return merged;
+    }
+
+    /**
+     * Mirrors SvelteFlow's own node selection into the shared multiSelectState.
+     * A Shift+box drag (boxAdditive) extends the prior selection instead of
+     * replacing it. Only writes when the selection actually changed - otherwise
+     * the new array reference would retrigger a render that re-emits
+     * onselectionchange, creating an infinite update loop.
+     */
+    function handleSelectionChange({ nodes: selectedNodes }) {
+        const boxed = (selectedNodes ?? [])
+            .filter(node => node.type === "class")
+            .map(buildDiagramSelectionEntry);
+        const entries = boxAdditive
+            ? mergeSelections(boxPriorSelection, boxed)
+            : boxed;
+        untrack(() => {
+            if (sameSelection(multiSelectState.getSelected(), entries)) {
+                return;
+            }
+            multiSelectState.selectedClasses.updateValue(entries);
+        });
+    }
+
+    /** Sets node.selected to match a single id (used to force-deselect a node). */
+    function setNodeSelected(nodeId, selected) {
+        let changed = false;
+        const next = nodes.map(node => {
+            if (node.id === nodeId && !!node.selected !== selected) {
+                changed = true;
+                return { ...node, selected };
+            }
+            return node;
+        });
+        if (changed) {
+            nodes = next;
+        }
+    }
+
+    /**
+     * Pushes the multiSelectState membership onto the diagram nodes' `selected`
+     * flag so group dragging moves every selected class - SvelteFlow clears its
+     * own selection at the start of a box drag, which would otherwise drop the
+     * classes that were only added via Shift+box.
+     */
+    function reflectSelectionToNodes() {
+        const selectedIds = new Set(
+            multiSelectState.getSelected().map(entry => entry.classUuid),
+        );
+        let changed = false;
+        const next = nodes.map(node => {
+            const shouldSelect = selectedIds.has(node.id);
+            if (!!node.selected !== shouldSelect) {
+                changed = true;
+                return { ...node, selected: shouldSelect };
+            }
+            return node;
+        });
+        if (changed) {
+            nodes = next;
+        }
+    }
+
+    function handleSelectionEnd() {
+        const wasAdditive = boxAdditive;
+        boxAdditive = false;
+        reflectSelectionToNodes();
+        // A replacing (non-additive) box selection drops the open class from the
+        // editor unless it is part of the new selection.
+        if (!wasAdditive) {
+            closeEditorIfClassDeselected();
+        }
+    }
+
+    /**
+     * Closes the class editor when the currently open class is no longer part of
+     * the multi-selection. Routed through the eventStack so the editor's
+     * unsaved-changes guard still applies.
+     */
+    function closeEditorIfClassDeselected() {
+        const openUuid = editorState.selectedClass.getProperty("id");
+        if (!openUuid) {
+            return;
+        }
+        const stillSelected = multiSelectState
+            .getSelected()
+            .some(entry => entry.classUuid === openUuid);
+        if (stillSelected) {
+            return;
+        }
+        eventStack.executeNewestEvent({
+            datasetName: editorState.selectedClassDataset.getValue(),
+            graphUri: editorState.selectedClassGraph.getValue(),
+            classUuid: null,
+        });
+    }
+
     function handleNodeClick(nodeClickEvent) {
         closeContextMenus();
-        if (nodeClickEvent.node.type === "class") {
-            const id = nodeClickEvent.node.id;
-            console.log("selecting class: ", id);
+        if (nodeClickEvent.node.type !== "class") {
+            return;
+        }
+        const id = nodeClickEvent.node.id;
+        const event = nodeClickEvent.event;
 
-            bringToFrontTemporarily(id);
+        // Ctrl is the pan modifier - it must not open or select a class.
+        if (event?.ctrlKey || event?.metaKey) {
+            return;
+        }
 
-            if (!editorState.selectedClass.getProperty("id")) {
-                eventStack.executeNewestEvent(id);
-                editorState.selectedClassDataset.updateValue(
-                    editorState.selectedDataset.getValue(),
-                );
-                editorState.selectedClassGraph.updateValue(
-                    nodeClickEvent.node.data.graphUri,
-                );
-                const classType =
-                    editorState.selectedDiagram.getProperty("type") ===
-                    DiagramType.CROSS_PROFILE
-                        ? ClassType.MERGED_CLASS
-                        : ClassType.SINGLE_CLASS;
-                editorState.selectedClass.updateValue({
-                    type: classType,
-                    id: id,
-                });
-            } else {
+        const classType =
+            editorState.selectedDiagram.getProperty("type") ===
+            DiagramType.CROSS_PROFILE
+                ? ClassType.MERGED_CLASS
+                : ClassType.SINGLE_CLASS;
+
+        // Shift toggles the class in the selection (handled by SvelteFlow). If
+        // the toggled class is the one currently open in the editor, also remove
+        // it from the selection and close the editor.
+        if (event?.shiftKey) {
+            if (editorState.selectedClass.getProperty("id") === id) {
                 eventStack.executeNewestEvent({
                     datasetName: editorState.selectedDataset.getValue(),
                     graphUri: nodeClickEvent.node.data.graphUri,
-                    classUuid: id,
-                    classType:
-                        editorState.selectedDiagram.getProperty("type") ===
-                        DiagramType.CROSS_PROFILE
-                            ? ClassType.MERGED_CLASS
-                            : ClassType.SINGLE_CLASS,
+                    classUuid: null,
+                    classType,
                 });
+                queueMicrotask(() => setNodeSelected(id, false));
             }
-
-            nodeClickEvent.event.stopPropagation();
+            return;
         }
+
+        // A plain click reduces the selection to just this class. SvelteFlow
+        // keeps the multi-selection when an already-selected node is clicked
+        // (so the group stays draggable), so we collapse it explicitly here.
+        multiSelectState.selectedClasses.updateValue([
+            buildDiagramSelectionEntry(nodeClickEvent.node),
+        ]);
+        reflectSelectionToNodes();
+
+        bringToFrontTemporarily(id);
+
+        if (!editorState.selectedClass.getProperty("id")) {
+            eventStack.executeNewestEvent(id);
+            editorState.selectedClassDataset.updateValue(
+                editorState.selectedDataset.getValue(),
+            );
+            editorState.selectedClassGraph.updateValue(
+                nodeClickEvent.node.data.graphUri,
+            );
+            editorState.selectedClass.updateValue({
+                type: classType,
+                id: id,
+            });
+        } else {
+            eventStack.executeNewestEvent({
+                datasetName: editorState.selectedDataset.getValue(),
+                graphUri: nodeClickEvent.node.data.graphUri,
+                classUuid: id,
+                classType,
+            });
+        }
+
+        event.stopPropagation();
     }
 
     function handleNodeMove(nodeMoveEvent) {
@@ -345,6 +586,172 @@
     function closeContextMenus() {
         paneContextMenuRequest = null;
         classContextMenuRequest = null;
+    }
+
+    function syncModifierKeys(event) {
+        ctrlHeld = event.ctrlKey;
+        shiftHeld = event.shiftKey;
+    }
+
+    /**
+     * Escape handler registered on the shared eventStack (the same stack the
+     * global Escape handler in +layout.svelte drives via executeNewestEvent). It
+     * is kept on top of the stack while a selection exists (see the effect below),
+     * so a single Escape clears the whole diagram selection and then chains to the
+     * next handler - the class editor's close - so the open class closes in the
+     * same press.
+     */
+    function escapeClearSelection(...args) {
+        // The shared eventStack's executeNewestEvent is also used to route class
+        // open/switch through the unsaved-changes guard, and those calls always
+        // pass arguments (a uuid or a {datasetName, graphUri, classUuid} object).
+        // Escape is the only caller that passes none. So when we are invoked with
+        // arguments we are not the intended handler: delegate to the entry beneath
+        // us and restore ourselves on top.
+        if (args.length > 0) {
+            eventStack.removeEvent(escapeClearSelection);
+            eventStack.executeNewestEvent(...args);
+            if (multiSelectState.getSelected().length > 0) {
+                eventStack.addEvent(escapeClearSelection);
+            }
+            return;
+        }
+        const hadOpenClass = !!editorState.selectedClass.getProperty("id");
+        closeContextMenus();
+        // Reset the additive-box state first: clearing the selection calls
+        // reflectSelectionToNodes(), which makes SvelteFlow emit an (empty)
+        // onselectionchange. If boxAdditive were still set, handleSelectionChange
+        // would merge boxPriorSelection back in and resurrect the selection.
+        boxAdditive = false;
+        boxPriorSelection = [];
+        multiSelectState.clear();
+        reflectSelectionToNodes();
+        eventStack.removeEvent(escapeClearSelection);
+        if (hadOpenClass) {
+            eventStack.executeNewestEvent();
+        }
+    }
+
+    /**
+     * Manually pans the canvas. Used for both Ctrl+left and the right mouse
+     * button, because d3-zoom rejects ctrl-modified mouse events and we want
+     * right-drag panning to work even when the gesture starts on a node.
+     * Ctrl+left hijacks the gesture (so nothing underneath reacts); the right
+     * button stays passive until it is recognised as a drag, so a plain
+     * right-click still opens the context menu.
+     */
+    function startManualPan(event) {
+        if (!svelteFlowAPI?.svelteFlow) {
+            return;
+        }
+        const isCtrlLeft = event.button === 0;
+        const viewport = svelteFlowAPI.svelteFlow.getViewport();
+        manualPan = {
+            startX: event.clientX,
+            startY: event.clientY,
+            vpX: viewport.x,
+            vpY: viewport.y,
+            zoom: viewport.zoom,
+            pointerId: event.pointerId,
+            button: event.button,
+            moved: false,
+        };
+
+        if (isCtrlLeft) {
+            // Take over the gesture entirely so neither node dragging nor
+            // selection nor the trailing click reacts, and show the grab cursor
+            // synchronously (before any drag).
+            event.preventDefault();
+            event.stopPropagation();
+            suppressClick = true;
+            panningActive = true;
+            if (containerEl) {
+                containerEl.style.cursor = "grabbing";
+                containerEl.setPointerCapture?.(event.pointerId);
+            }
+        }
+
+        window.addEventListener("pointermove", onManualPanMove);
+        window.addEventListener("pointerup", endManualPan, { once: true });
+    }
+
+    function onManualPanMove(event) {
+        if (!manualPan) {
+            return;
+        }
+        const dx = event.clientX - manualPan.startX;
+        const dy = event.clientY - manualPan.startY;
+
+        if (!manualPan.moved && Math.hypot(dx, dy) > RIGHT_DRAG_THRESHOLD_PX) {
+            manualPan.moved = true;
+            if (manualPan.button === 2) {
+                // The right button turned into a pan: show the grabbing cursor
+                // and suppress the contextmenu that fires on release.
+                panningActive = true;
+                suppressContextMenu = true;
+                if (containerEl) {
+                    containerEl.style.cursor = "grabbing";
+                }
+            }
+        }
+
+        // Ctrl+left pans from the first pixel; the right button only once the
+        // movement is recognised as a drag (so a plain click stays a click).
+        if (manualPan.button === 0 || manualPan.moved) {
+            svelteFlowAPI.svelteFlow.setViewport({
+                x: manualPan.vpX + dx,
+                y: manualPan.vpY + dy,
+                zoom: manualPan.zoom,
+            });
+        }
+    }
+
+    function endManualPan() {
+        if (containerEl) {
+            containerEl.style.cursor = "";
+            if (manualPan?.button === 0 && manualPan?.pointerId !== undefined) {
+                containerEl.releasePointerCapture?.(manualPan.pointerId);
+            }
+        }
+        manualPan = null;
+        panningActive = false;
+        window.removeEventListener("pointermove", onManualPanMove);
+    }
+
+    function handleContainerClickCapture(event) {
+        if (suppressClick) {
+            // Swallow the click after a Ctrl+pan so the pane's click handler does
+            // not clear the selection.
+            event.stopPropagation();
+            event.preventDefault();
+            suppressClick = false;
+        }
+    }
+
+    function handleContainerContextMenuCapture(event) {
+        if (suppressContextMenu) {
+            // Swallow the contextmenu that follows a right-drag pan before it
+            // reaches SvelteFlow's pane/node handlers.
+            event.preventDefault();
+            event.stopPropagation();
+            suppressContextMenu = false;
+        }
+    }
+
+    function handleContainerPointerDown(event) {
+        suppressClick = false;
+        suppressContextMenu = false;
+        // Ctrl+left and the right mouse button pan the canvas (handled manually).
+        if ((event.button === 0 && event.ctrlKey) || event.button === 2) {
+            startManualPan(event);
+            return;
+        }
+        // A Shift+drag (anywhere, including over a node) extends the current
+        // selection instead of replacing it.
+        boxAdditive = event.button === 0 && event.shiftKey;
+        if (boxAdditive) {
+            boxPriorSelection = [...multiSelectState.getSelected()];
+        }
     }
 
     function handlePaneContextMenu({ event }) {
@@ -395,6 +802,20 @@
         event.preventDefault();
         event.stopPropagation();
         closeContextMenus();
+        // Explorer behaviour: right-clicking a node that is not part of the
+        // current multi-selection reduces the selection to that single node so
+        // the menu matches what the user sees.
+        if (
+            !multiSelectState.isSelected(
+                editorState.selectedDataset.getValue(),
+                node.data?.graphUri,
+                node.id,
+            )
+        ) {
+            multiSelectState.selectedClasses.updateValue([
+                buildDiagramSelectionEntry(node),
+            ]);
+        }
         contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
@@ -616,26 +1037,48 @@
     }
 </script>
 
-<div class="relative h-full w-full">
+<svelte:window
+    onkeydown={syncModifierKeys}
+    onkeyup={syncModifierKeys}
+    onblur={() => {
+        ctrlHeld = false;
+        shiftHeld = false;
+    }}
+/>
+
+<div
+    bind:this={containerEl}
+    class={`relative h-full w-full ${ctrlHeld ? "ctrl-pan" : ""} ${panningActive ? "ctrl-panning" : ""}`}
+    onpointerdowncapture={handleContainerPointerDown}
+    onclickcapture={handleContainerClickCapture}
+    oncontextmenucapture={handleContainerContextMenuCapture}
+>
     <SvelteFlow
         bind:nodes
         bind:edges
         {nodeTypes}
         {edgeTypes}
-        nodesDraggable={!isDatasetReadOnly}
+        nodesDraggable={!isDatasetReadOnly && !shiftHeld}
         fitView
-        elementsSelectable={false}
+        elementsSelectable={!isDatasetReadOnly}
         nodesFocusable={false}
         onnodeclick={handleNodeClick}
         onnodecontextmenu={handleNodeContextMenu}
         onpaneclick={closeContextMenus}
         onpanecontextmenu={handlePaneContextMenu}
         onedgecontextmenu={handleEdgeContextMenu}
+        onselectionchange={handleSelectionChange}
+        onselectionend={handleSelectionEnd}
         onnodedragstart={({ node }) => bringToFrontTemporarily(node?.id)}
         onnodedragstop={handleNodeMove}
-        selectionMode={"full"}
+        selectionMode={"partial"}
+        selectionOnDrag={true}
+        panOnDrag={false}
+        panActivationKey={"Control"}
+        selectionKey={"Shift"}
         connectionMode={"loose"}
-        multiSelectionKey={null}
+        multiSelectionKey={"Shift"}
+        deleteKeyCode={null}
         minZoom={0.1}
         maxZoom={5}
     >
@@ -665,3 +1108,35 @@
         onPersistLayer={handlePersistLayer}
     />
 </div>
+
+<style>
+    /* Hide SvelteFlow's persistent multi-selection bounding box. Selected classes
+       are shown via the node highlight (multiSelectState) instead, and group
+       dragging still works by dragging any selected node. The active drag
+       rectangle (rendered separately as .svelte-flow__selection at the container
+       level) stays visible while the box is being drawn. */
+    :global(.svelte-flow__selection-wrapper) {
+        display: none;
+    }
+
+    /* While Control is held the pane pans (panActivationKey="Control"), so show
+       the grab cursor immediately - before the drag starts - and the grabbing
+       cursor while panning. */
+    .ctrl-pan :global(.svelte-flow__pane) {
+        cursor: grab;
+    }
+
+    /* While actively panning (Ctrl+left or right-drag), show the grabbing cursor
+       across the diagram. */
+    .ctrl-panning :global(.svelte-flow__pane),
+    .ctrl-panning :global(.svelte-flow__node) {
+        cursor: grabbing;
+    }
+
+    /* Selection drag box: a solid, slightly thicker border instead of the dotted
+       default. */
+    :global(.svelte-flow__selection) {
+        border: 2px solid var(--color-border-select);
+        background: rgba(31, 117, 203, 0.08);
+    }
+</style>
