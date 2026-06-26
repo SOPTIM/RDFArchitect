@@ -24,7 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMEnumEntryToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMEnumEntryToMermaidBuilder;
 
 class CIMEnumEntryToMermaidBuilderTest {
 

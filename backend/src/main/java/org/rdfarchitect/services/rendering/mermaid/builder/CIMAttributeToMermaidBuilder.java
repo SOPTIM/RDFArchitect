@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rendering.mermaid.builder;
+package org.rdfarchitect.services.rendering.mermaid.builder;
 
 import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 
