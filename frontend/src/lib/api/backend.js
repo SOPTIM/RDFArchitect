@@ -219,6 +219,7 @@ export class BackendConnection {
             credentials: "include",
         });
     }
+
     async deleteClass(datasetName, graphURI, classUUID) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return await fetch(url, {

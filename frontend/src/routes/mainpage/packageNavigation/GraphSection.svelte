@@ -49,6 +49,7 @@
     import {
         editorState,
         forceReloadTrigger,
+        SelectionLevel,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
@@ -147,28 +148,16 @@
         // active selection is left untouched (tracked separately).
         const kind = editorState.activeSelectionKind.getValue();
         if (
-            (kind === "package" || kind === "diagram") &&
+            (kind === SelectionLevel.PACKAGE ||
+                kind === SelectionLevel.DIAGRAM) &&
             isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)
         ) {
-            editorState.selectedDiagram.updateValue({ type: null, id: null });
-            editorState.activeSelectionKind.updateValue("graph");
+            editorState.dissolveToGraph();
         }
     }
 
     function focusGraphContext() {
-        editorState.activeSelectionKind.updateValue("graph");
-        const nextDataset = datasetNavEntry.label;
-        const nextGraph = graphNavEntry.id;
-        const previousDataset = editorState.selectedDataset.getValue();
-        const previousGraph = editorState.selectedGraph.getValue();
-        const graphChanged =
-            previousDataset !== nextDataset || previousGraph !== nextGraph;
-
-        editorState.selectedDataset.updateValue(nextDataset);
-        editorState.selectedGraph.updateValue(nextGraph);
-        if (graphChanged) {
-            editorState.selectedDiagram.updateValue({ type: null, id: null });
-        }
+        editorState.selectGraph(datasetNavEntry.label, graphNavEntry.id);
     }
 </script>
 

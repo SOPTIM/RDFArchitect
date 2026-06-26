@@ -68,8 +68,7 @@
     let showRemoveFromDiagramDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
-    // "active" (blue) when the class is the most-specific selection, "secondary"
-    // (light blue) when it is open but another resource is the active selection.
+
     const classState = $derived(
         classHighlight(datasetNavEntry.id, graphNavEntry.id, classNavEntry.id),
     );
@@ -78,7 +77,6 @@
         label: { value: classNavEntry?.label ?? "" },
     });
 
-    // Multiselect ------------------------------------------------------------
     const isMultiSelected = $derived(
         multiSelectState.isSelected(
             datasetNavEntry.id,
@@ -86,11 +84,11 @@
             classNavEntry.id,
         ),
     );
-    // True when this entry is part of an active (>1) multi-selection.
+
     const multiActive = $derived(
         multiSelectState.isMultiSelect && isMultiSelected,
     );
-    // Actions are greyed out while the selection spans multiple graphs/datasets.
+
     const crossGraphDisabled = $derived(
         multiActive && !multiSelectState.isSingleGraph,
     );
@@ -122,17 +120,28 @@
     }
 
     function onEntryClick(event) {
-        editorState.activeSelectionKind.updateValue("class");
+        editorState.markClassActive();
         if (event?.ctrlKey || event?.metaKey) {
-            multiSelectState.toggle(buildSelectionEntry());
+            const entry = buildSelectionEntry();
+            const anchor = multiSelectState.anchor;
+            if (
+                multiSelectState.getSelected().length === 0 &&
+                anchor &&
+                !(
+                    anchor.datasetName === entry.datasetName &&
+                    anchor.graphUri === entry.graphUri &&
+                    anchor.classUuid === entry.classUuid
+                )
+            ) {
+                multiSelectState.setSelection([anchor]);
+            }
+            multiSelectState.toggle(entry);
             return;
         }
         if (event?.shiftKey) {
             selectRange();
             return;
         }
-        // Plain click: drop any multi-selection, keep this entry as the anchor
-        // for a subsequent Shift+Click, and do the regular single selection.
         multiSelectState.clear();
         multiSelectState.anchor = buildSelectionEntry();
         selectClass();
@@ -151,7 +160,6 @@
             : -1;
         const targetIdx = siblings.findIndex(c => c.id === classNavEntry.id);
         if (anchorIdx === -1 || targetIdx === -1) {
-            // No usable anchor in this package list: behave like Ctrl+Click.
             multiSelectState.toggle(buildSelectionEntry());
             return;
         }
@@ -165,8 +173,6 @@
         multiSelectState.selectRange(range);
     }
 
-    // On right-click of a class that is not part of the current multi-selection,
-    // reset the selection so the context menu matches the clicked class.
     function onEntryContextMenu() {
         if (
             multiSelectState.count > 0 &&
@@ -229,11 +235,7 @@
 
     function copyClass() {
         const entries = multiActive
-            ? multiSelectState.getSelected().map(e => ({
-                  classUUID: e.classUuid,
-                  graphURI: e.graphUri,
-                  datasetName: e.datasetName,
-              }))
+            ? multiSelectState.toCopyEntries()
             : [
                   {
                       classUUID: classNavEntry.id,

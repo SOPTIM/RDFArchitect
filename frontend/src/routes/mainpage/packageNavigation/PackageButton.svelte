@@ -33,11 +33,7 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { Package } from "$lib/models/dto/index.ts";
-    import {
-        DiagramType,
-        copyState,
-        editorState,
-    } from "$lib/sharedState.svelte.js";
+    import { copyState, editorState } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -129,13 +125,11 @@
     }
 
     function selectPackage() {
-        editorState.activeSelectionKind.updateValue("package");
-        editorState.selectedDataset.updateValue(datasetNavEntry.id);
-        editorState.selectedGraph.updateValue(graphNavEntry.id);
-        editorState.selectedDiagram.updateValue({
-            type: DiagramType.PACKAGE,
-            id: packageNavEntry.id,
-        });
+        editorState.selectPackage(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+            packageNavEntry.id,
+        );
     }
 
     function pasteClass(copyAbstract, copyAttributes, copyAssociations) {

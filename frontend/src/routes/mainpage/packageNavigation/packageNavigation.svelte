@@ -51,13 +51,10 @@
         localReloadTrigger.trigger();
     });
 
-    // Whenever a class becomes selected (from anywhere: nav, diagram, search,
-    // editor, ...), mark "class" as the active selection kind. Resource clicks
-    // (dataset/graph/package/diagram) set their own kind in their handlers.
     $effect(() => {
         editorState.selectedClass.subscribe();
         if (editorState.selectedClass.getProperty("id")) {
-            untrack(() => editorState.activeSelectionKind.updateValue("class"));
+            untrack(() => editorState.markClassActive());
         }
     });
 

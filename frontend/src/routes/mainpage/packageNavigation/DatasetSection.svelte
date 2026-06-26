@@ -41,6 +41,7 @@
     import {
         editorState,
         forceReloadTrigger,
+        SelectionLevel,
     } from "$lib/sharedState.svelte.js";
 
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
@@ -123,28 +124,19 @@
         if (!wasOpen) {
             return;
         }
-        // When collapsing, dissolve an active graph/package/diagram selected
-        // inside this dataset; the dataset itself becomes the selection. A class
-        // as the active selection is left untouched (tracked separately).
         const kind = editorState.activeSelectionKind.getValue();
         if (
-            (kind === "graph" || kind === "package" || kind === "diagram") &&
+            (kind === SelectionLevel.GRAPH ||
+                kind === SelectionLevel.PACKAGE ||
+                kind === SelectionLevel.DIAGRAM) &&
             isSelectedDataset(datasetNavEntry.label)
         ) {
-            editorState.selectedGraph.updateValue(null);
-            editorState.selectedDiagram.updateValue({ type: null, id: null });
-            editorState.activeSelectionKind.updateValue("dataset");
+            editorState.dissolveToDataset();
         }
     }
 
     function selectDataset() {
-        editorState.activeSelectionKind.updateValue("dataset");
-        if (editorState.selectedDataset.getValue() === datasetNavEntry.label) {
-            return;
-        }
-        editorState.selectedGraph.updateValue(null);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedDataset.updateValue(datasetNavEntry.label);
+        editorState.selectDataset(datasetNavEntry.label);
     }
 
     async function requestEnableEditing() {

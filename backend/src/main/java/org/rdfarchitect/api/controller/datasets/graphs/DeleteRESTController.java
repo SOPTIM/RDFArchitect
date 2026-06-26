@@ -39,7 +39,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -88,12 +87,7 @@ public class DeleteRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var result = new LinkedHashMap<UUID, AffectedResource>();
-        for (var uuid : uuids) {
-            result.put(
-                    uuid,
-                    findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuid));
-        }
+        var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",

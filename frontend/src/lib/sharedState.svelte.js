@@ -24,11 +24,14 @@ import { writable } from "svelte/store";
  * The trigger can also be toggled manually.
  */
 
+import { MultiSelectState } from "./multiSelectState.svelte.js";
 import {
     SimpleTrigger,
     StateObjectPair,
     StateValuePair,
 } from "./statePrimitives.svelte.js";
+
+export { mergeSelections } from "./multiSelectState.svelte.js";
 
 /**
  * Defines the possible values that the type property of selectedDiagam can have.
@@ -44,6 +47,19 @@ export const DiagramType = {
 export const ClassType = {
     SINGLE_CLASS: "singleClass",
     MERGED_CLASS: "mergedClass",
+};
+
+/**
+ * Navigation levels, least to most specific. `activeSelectionKind` holds one to
+ * mark the last-picked level (recency the nested fields can't express alone).
+ */
+export const SelectionLevel = {
+    DATASET: "dataset",
+    GRAPH: "graph",
+    PACKAGE: "package",
+    DIAGRAM: "diagram",
+    CLASS: "class",
+    NONE: "none",
 };
 
 /**
@@ -70,9 +86,7 @@ export const editorState = {
     selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
-    // The kind of resource the user selected last ("dataset" | "graph" |
-    // "package" | "diagram" | "class"). Drives the nav highlight so the active
-    // resource - not a still-selected class - shows as the most specific.
+    // The level the user selected last; drives the nav highlight (see SelectionLevel).
     activeSelectionKind: new StateValuePair(),
 
     reset() {
@@ -86,6 +100,63 @@ export const editorState = {
         this.selectedContext.updateValue(null);
         this.activeSelectionKind.updateValue(null);
         multiSelectState.clear();
+    },
+
+    // Selection setters write the context fields and the active level together,
+    // so the level cannot drift out of sync with the selection.
+
+    selectDataset(datasetName) {
+        this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
+        if (this.selectedDataset.getValue() === datasetName) {
+            return;
+        }
+        this.selectedGraph.updateValue(null);
+        this.selectedDiagram.updateValue({ type: null, id: null });
+        this.selectedDataset.updateValue(datasetName);
+    },
+
+    selectGraph(datasetName, graphUri) {
+        this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
+        const graphChanged =
+            this.selectedDataset.getValue() !== datasetName ||
+            this.selectedGraph.getValue() !== graphUri;
+        this.selectedDataset.updateValue(datasetName);
+        this.selectedGraph.updateValue(graphUri);
+        if (graphChanged) {
+            this.selectedDiagram.updateValue({ type: null, id: null });
+        }
+    },
+
+    selectPackage(datasetName, graphUri, packageId) {
+        this.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
+        this.selectedDataset.updateValue(datasetName);
+        this.selectedGraph.updateValue(graphUri);
+        this.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: packageId,
+        });
+    },
+
+    selectCustomDiagram(datasetName, graphUri, diagramId, diagramType) {
+        this.activeSelectionKind.updateValue(SelectionLevel.DIAGRAM);
+        this.selectedDataset.updateValue(datasetName);
+        this.selectedGraph.updateValue(graphUri ?? null);
+        this.selectedDiagram.updateValue({ type: diagramType, id: diagramId });
+    },
+
+    markClassActive() {
+        this.activeSelectionKind.updateValue(SelectionLevel.CLASS);
+    },
+
+    dissolveToDataset() {
+        this.selectedGraph.updateValue(null);
+        this.selectedDiagram.updateValue({ type: null, id: null });
+        this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
+    },
+
+    dissolveToGraph() {
+        this.selectedDiagram.updateValue({ type: null, id: null });
+        this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
     },
 };
 
@@ -156,76 +227,10 @@ export const copyState = {
 };
 
 /**
- * Tracks the multi-selection of classes in the package navigation (Explorer-style:
- * Ctrl+Click toggles, Shift+Click selects a range). Each entry is
- * `{ datasetName, graphUri, classUuid, classLabel, packageId, classNavEntry }`.
+ * The shared multi-selection of classes (package navigation + rendered diagrams).
+ * See {@link MultiSelectState}.
  */
-export const multiSelectState = {
-    selectedClasses: new StateValuePair([]),
-    /** The last single/ctrl-clicked entry, used as the anchor for Shift+Click ranges. */
-    anchor: null,
-
-    _key(entry) {
-        return `${entry.datasetName}::${entry.graphUri}::${entry.classUuid}`;
-    },
-
-    getSelected() {
-        return this.selectedClasses.getValue() ?? [];
-    },
-
-    isSelected(datasetName, graphUri, classUuid) {
-        const key = `${datasetName}::${graphUri}::${classUuid}`;
-        return this.getSelected().some(e => this._key(e) === key);
-    },
-
-    get count() {
-        return this.getSelected().length;
-    },
-
-    get isMultiSelect() {
-        return this.count > 1;
-    },
-
-    /** True when all selected classes share the same dataset and graph. */
-    get isSingleGraph() {
-        const list = this.getSelected();
-        if (list.length === 0) {
-            return true;
-        }
-        const first = list[0];
-        return list.every(
-            e =>
-                e.datasetName === first.datasetName &&
-                e.graphUri === first.graphUri,
-        );
-    },
-
-    selectSingle(entry) {
-        this.anchor = entry;
-        this.selectedClasses.updateValue([entry]);
-    },
-
-    toggle(entry) {
-        const key = this._key(entry);
-        const list = this.getSelected();
-        const exists = list.some(e => this._key(e) === key);
-        const next = exists
-            ? list.filter(e => this._key(e) !== key)
-            : [...list, entry];
-        this.anchor = entry;
-        this.selectedClasses.updateValue(next);
-    },
-
-    /** Replaces the selection with the given contiguous range; keeps the anchor. */
-    selectRange(rangeEntries) {
-        this.selectedClasses.updateValue([...rangeEntries]);
-    },
-
-    clear() {
-        this.anchor = null;
-        this.selectedClasses.updateValue([]);
-    },
-};
+export const multiSelectState = new MultiSelectState();
 
 export const migrationState = writable({
     compareMode: null,

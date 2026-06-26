@@ -17,29 +17,28 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.CopyClassResponseDTO;
+import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
-import java.util.UUID;
+import java.util.List;
 
 public interface CopyClassUseCase {
 
     /**
-     * Constructs a class based on the given class and adds it to the specified graph.
+     * Constructs copies of the source classes described in the given paste request and adds them to
+     * the target graph. Resolving the source graphs and the shared copy options is part of this use
+     * case. All copies are written within a single write transaction so that the paste either
+     * succeeds or fails as a whole.
      *
-     * @param graphIdentifier The graph URI and database name of the graph of the class that will be
-     *     copied.
-     * @param classUUID The UUID of the class that will be copied.
-     * @param targetGraphIdentifier The graph URI and database name of the graph the new class will
-     *     be added in.
-     * @param copyClassRequestDTO The DTO that contains the information about how the class should
-     *     be copied, e.g. if attributes and associations should be copied as well.
-     * @return The UUID of the newly created class.
+     * @param pasteRequest The paste request containing the source classes (with their origin
+     *     dataset and graph) and the shared copy options, e.g. the target package and whether
+     *     attributes and associations should be copied as well.
+     * @param targetGraphIdentifier The graph URI and database name of the graph the new classes
+     *     will be added in.
+     * @return One response per source (in input order) containing the UUID and label of each newly
+     *     created class.
      */
-    CopyClassResponseDTO copyClass(
-            GraphIdentifier graphIdentifier,
-            UUID classUUID,
-            GraphIdentifier targetGraphIdentifier,
-            CopyClassRequestDTO copyClassRequestDTO);
+    List<CopyClassResponseDTO> copyClasses(
+            PasteClassesRequestDTO pasteRequest, GraphIdentifier targetGraphIdentifier);
 }

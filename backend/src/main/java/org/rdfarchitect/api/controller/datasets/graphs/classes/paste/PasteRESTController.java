@@ -22,10 +22,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.CopyClassRequestDTO;
 import org.rdfarchitect.api.dto.CopyClassResponseDTO;
 import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
-import org.rdfarchitect.api.dto.PasteSourceClassDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.CopyClassUseCase;
@@ -39,9 +37,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste")
@@ -88,12 +84,7 @@ public class PasteRESTController {
         var targetExtendedGraphURI = expandURIUseCase.expandUri(targetDatasetName, targetGraphURI);
         var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphURI);
 
-        var responses = new ArrayList<CopyClassResponseDTO>();
-        if (pasteRequest.getSources() != null) {
-            for (var source : pasteRequest.getSources()) {
-                responses.add(pasteSingle(source, targetGraphIdentifier, pasteRequest));
-            }
-        }
+        var responses = copyClassUseCase.copyClasses(pasteRequest, targetGraphIdentifier);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/paste\" to \"{}\".",
@@ -101,30 +92,5 @@ public class PasteRESTController {
                 targetGraphURI,
                 originURL);
         return responses;
-    }
-
-    private CopyClassResponseDTO pasteSingle(
-            PasteSourceClassDTO source,
-            GraphIdentifier targetGraphIdentifier,
-            PasteClassesRequestDTO pasteRequest) {
-        var sourceExtendedGraphURI =
-                expandURIUseCase.expandUri(
-                        source.getSourceDatasetName(), source.getSourceGraphURI());
-        var sourceGraphIdentifier =
-                new GraphIdentifier(source.getSourceDatasetName(), sourceExtendedGraphURI);
-
-        var copyClassRequest = new CopyClassRequestDTO();
-        copyClassRequest.setTargetDatasetName(targetGraphIdentifier.datasetName());
-        copyClassRequest.setTargetGraphURI(targetGraphIdentifier.graphUri());
-        copyClassRequest.setTargetPackage(pasteRequest.getTargetPackage());
-        copyClassRequest.setCopyAsAbstract(pasteRequest.isCopyAsAbstract());
-        copyClassRequest.setCopyAttributes(pasteRequest.isCopyAttributes());
-        copyClassRequest.setCopyAssociations(pasteRequest.isCopyAssociations());
-
-        return copyClassUseCase.copyClass(
-                sourceGraphIdentifier,
-                UUID.fromString(source.getClassUUID()),
-                targetGraphIdentifier,
-                copyClassRequest);
     }
 }
