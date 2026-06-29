@@ -29,6 +29,7 @@ export class PanController {
     #suppressContextMenu = false;
 
     #boxAdditive = false;
+    #boxToggle = false;
     #boxPriorSelection = [];
 
     #getSvelteFlow;
@@ -55,12 +56,16 @@ export class PanController {
         return this.#boxAdditive;
     }
 
+    get boxToggle() {
+        return this.#boxToggle;
+    }
+
     get boxPriorSelection() {
         return this.#boxPriorSelection;
     }
 
     syncModifierKeys(event) {
-        this.#ctrlHeld = event.ctrlKey;
+        this.#ctrlHeld = event.ctrlKey || event.metaKey;
         this.#shiftHeld = event.shiftKey;
     }
 
@@ -69,26 +74,35 @@ export class PanController {
         this.#shiftHeld = false;
     }
 
-    clearAdditive() {
+    clearBoxMode() {
         this.#boxAdditive = false;
+        this.#boxToggle = false;
     }
 
     resetBox() {
         this.#boxAdditive = false;
+        this.#boxToggle = false;
         this.#boxPriorSelection = [];
     }
 
     handleContainerPointerDown(event) {
         this.#suppressClick = false;
         this.#suppressContextMenu = false;
-        if ((event.button === 0 && event.ctrlKey) || event.button === 2) {
+        if (event.button === 2) {
             this.#startManualPan(event);
             return;
         }
         this.#boxAdditive = false;
-        if (event.button === 0 && event.shiftKey) {
+        this.#boxToggle = false;
+        if (event.button !== 0) {
+            return;
+        }
+        if (event.shiftKey) {
             this.#boxPriorSelection = [...multiSelectState.getSelected()];
-            this.#armAdditiveBoxOnDrag(event);
+            this.#armBoxOnDrag(event, "additive");
+        } else if (event.ctrlKey || event.metaKey) {
+            this.#boxPriorSelection = [...multiSelectState.getSelected()];
+            this.#armBoxOnDrag(event, "toggle");
         }
     }
 
@@ -113,7 +127,6 @@ export class PanController {
         if (!svelteFlow) {
             return;
         }
-        const isCtrlLeft = event.button === 0;
         const viewport = svelteFlow.getViewport();
         this.#manualPan = {
             startX: event.clientX,
@@ -125,18 +138,6 @@ export class PanController {
             button: event.button,
             moved: false,
         };
-
-        if (isCtrlLeft) {
-            event.preventDefault();
-            event.stopPropagation();
-            this.#suppressClick = true;
-            this.#panningActive = true;
-            const container = this.#getContainer();
-            if (container) {
-                container.style.cursor = "grabbing";
-                container.setPointerCapture?.(event.pointerId);
-            }
-        }
 
         window.addEventListener("pointermove", this.#onManualPanMove);
         window.addEventListener("pointerup", this.#endManualPan, {
@@ -166,7 +167,7 @@ export class PanController {
             }
         }
 
-        if (this.#manualPan.button === 0 || this.#manualPan.moved) {
+        if (this.#manualPan.moved) {
             this.#getSvelteFlow().setViewport({
                 x: this.#manualPan.vpX + dx,
                 y: this.#manualPan.vpY + dy,
@@ -179,23 +180,21 @@ export class PanController {
         const container = this.#getContainer();
         if (container) {
             container.style.cursor = "";
-            if (
-                this.#manualPan?.button === 0 &&
-                this.#manualPan?.pointerId !== undefined
-            ) {
-                container.releasePointerCapture?.(this.#manualPan.pointerId);
-            }
         }
         this.#manualPan = null;
         this.#panningActive = false;
         window.removeEventListener("pointermove", this.#onManualPanMove);
     };
 
-    #armAdditiveBoxOnDrag(event) {
+    #armBoxOnDrag(event, mode) {
         const { clientX: startX, clientY: startY } = event;
         const onMove = moveEvent => {
             if (moveEvent.clientX !== startX || moveEvent.clientY !== startY) {
-                this.#boxAdditive = true;
+                if (mode === "toggle") {
+                    this.#boxToggle = true;
+                } else {
+                    this.#boxAdditive = true;
+                }
                 stop();
             }
         };

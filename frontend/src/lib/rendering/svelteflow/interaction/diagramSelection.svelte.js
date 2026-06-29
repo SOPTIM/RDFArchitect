@@ -24,6 +24,7 @@ import {
     editorState,
     mergeSelections,
     multiSelectState,
+    toggleSelections,
 } from "$lib/sharedState.svelte.js";
 
 export class DiagramSelectionController {
@@ -76,17 +77,19 @@ export class DiagramSelectionController {
         const boxed = (selectedNodes ?? [])
             .filter(node => node.type === "class")
             .map(node => this.buildEntry(node));
-        const entries = this.#pan.boxAdditive
-            ? mergeSelections(this.#pan.boxPriorSelection, boxed)
-            : boxed;
+        const entries = this.#pan.boxToggle
+            ? toggleSelections(this.#pan.boxPriorSelection, boxed)
+            : this.#pan.boxAdditive
+              ? mergeSelections(this.#pan.boxPriorSelection, boxed)
+              : boxed;
         untrack(() => multiSelectState.setSelection(entries));
     }
 
     handleSelectionEnd() {
-        const wasAdditive = this.#pan.boxAdditive;
-        this.#pan.clearAdditive();
+        const builtOnPrior = this.#pan.boxAdditive || this.#pan.boxToggle;
+        this.#pan.clearBoxMode();
         this.reflectSelectionToNodes();
-        if (!wasAdditive) {
+        if (!builtOnPrior) {
             this.#closeEditorIfClassDeselected();
         }
     }
@@ -104,12 +107,6 @@ export class DiagramSelectionController {
         if (changed) {
             this.#setNodes(next);
         }
-    }
-
-    #setNodeSelected(nodeId, selected) {
-        this.#applyNodeSelection(node =>
-            node.id === nodeId ? selected : !!node.selected,
-        );
     }
 
     reflectSelectionToNodes() {
@@ -160,6 +157,14 @@ export class DiagramSelectionController {
         const graphUri = nodeClickEvent.node.data.graphUri;
 
         if (event?.ctrlKey || event?.metaKey) {
+            const entry = this.buildEntry(nodeClickEvent.node);
+            multiSelectState.setSelection(
+                toggleSelections(this.#pan.boxPriorSelection, [entry]),
+            );
+            multiSelectState.anchor = entry;
+            this.reflectSelectionToNodes();
+            this.#closeEditorIfClassDeselected();
+            event.stopPropagation();
             return;
         }
 
@@ -170,10 +175,13 @@ export class DiagramSelectionController {
                 : ClassType.SINGLE_CLASS;
 
         if (event?.shiftKey) {
-            if (editorState.selectedClass.getProperty("id") === id) {
-                this.#routeClassEditor(graphUri, null, classType);
-                queueMicrotask(() => this.#setNodeSelected(id, false));
-            }
+            const entry = this.buildEntry(nodeClickEvent.node);
+            multiSelectState.setSelection(
+                mergeSelections(this.#pan.boxPriorSelection, [entry]),
+            );
+            multiSelectState.anchor = entry;
+            this.reflectSelectionToNodes();
+            event.stopPropagation();
             return;
         }
 

@@ -38,7 +38,7 @@
         allGraphNavEntries,
         diagram = $bindable(),
         classes,
-        readOnly,
+        readonly,
         level = 4,
         onToggle,
     } = $props();
@@ -68,6 +68,13 @@
 
     let packageIcon = $derived(diagram.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(diagram.classes?.length > 0);
+
+    const rangeSiblings = $derived(
+        classes?.map(cls => ({
+            classNavEntry: cls,
+            graphNavEntry: getGraphNavEntryForClass(cls.id),
+        })) ?? [],
+    );
 
     async function toggleDiagramContentsVisibility() {
         await onToggle();
@@ -150,7 +157,8 @@
                     classNavEntry={cls}
                     diagramId={diagram.diagramId}
                     diagramGraphUri={graphNavEntry?.id}
-                    {readOnly}
+                    {rangeSiblings}
+                    {readonly}
                 />
             {/each}
         </div>

@@ -77,7 +77,6 @@
     const contextMenus = new ContextMenuController({
         getSvelteFlow: () => svelteFlowAPI?.svelteFlow,
         getIsReadOnly: () => isDatasetReadOnly,
-        buildSelectionEntry: node => selection.buildEntry(node),
     });
 
     const pan = new PanController({
@@ -100,8 +99,6 @@
     let isDatasetReadOnly = $state();
     let containerEl;
 
-    // Tracks the diagram a selection belongs to, so switching diagrams clears the
-    // multi-selection (its class ids would otherwise refer to the previous diagram).
     let lastSelectedDiagramId = null;
 
     let selectionZKey = "";
@@ -216,7 +213,7 @@
             return;
         }
         lastSelectedDiagramId = diagramId;
-        pan.clearAdditive();
+        pan.clearBoxMode();
         multiSelectState.clear();
     }
 
@@ -231,10 +228,6 @@
         nodes = nodeOrderCtrl.applyZIndices(nodes);
     }
 
-    // A single Escape must clear the selection before it closes the open class.
-    // Opening/switching a class remounts the keyed ClassEditor, which pushes its
-    // own close handler onto the stack in this same flush - so after tick() we
-    // re-assert our handler on top.
     function keepEscapeHandlerOnTop() {
         eventStack.removeEvent(selection.escapeClearSelection);
         if (multiSelectState.getSelected().length === 0) {
@@ -367,16 +360,16 @@
 
 <div
     bind:this={containerEl}
-    class={`relative h-full w-full ${pan.ctrlHeld ? "ctrl-pan" : ""} ${pan.panningActive ? "ctrl-panning" : ""}`}
+    class={`relative h-full w-full ${pan.panningActive ? "ctrl-panning" : ""}`}
 >
     <SvelteFlow
         bind:nodes
         bind:edges
         {nodeTypes}
         {edgeTypes}
-        nodesDraggable={!isDatasetReadOnly && !pan.shiftHeld}
+        nodesDraggable={!isDatasetReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
         fitView
-        elementsSelectable={!isDatasetReadOnly}
+        elementsSelectable={true}
         nodesFocusable={false}
         zIndexMode={"manual"}
         onnodeclick={e => selection.handleNodeClick(e)}
@@ -397,7 +390,6 @@
         selectionMode={"partial"}
         selectionOnDrag={true}
         panOnDrag={false}
-        panActivationKey={"Control"}
         selectionKey={"Shift"}
         connectionMode={"loose"}
         multiSelectionKey={"Shift"}
@@ -436,10 +428,6 @@
     /* Hide SvelteFlow's persistent multi-selection bounding box*/
     :global(.svelte-flow__selection-wrapper) {
         display: none;
-    }
-
-    .ctrl-pan :global(.svelte-flow__pane) {
-        cursor: grab;
     }
 
     .ctrl-panning :global(.svelte-flow__pane),

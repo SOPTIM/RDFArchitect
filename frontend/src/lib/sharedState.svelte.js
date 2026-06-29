@@ -31,7 +31,10 @@ import {
     StateValuePair,
 } from "./statePrimitives.svelte.js";
 
-export { mergeSelections } from "./multiSelectState.svelte.js";
+export {
+    mergeSelections,
+    toggleSelections,
+} from "./multiSelectState.svelte.js";
 
 /**
  * Defines the possible values that the type property of selectedDiagam can have.
@@ -102,10 +105,8 @@ export const editorState = {
         multiSelectState.clear();
     },
 
-    // Selection setters write the context fields and the active level together,
-    // so the level cannot drift out of sync with the selection.
-
     selectDataset(datasetName) {
+        multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
         if (this.selectedDataset.getValue() === datasetName) {
             return;
@@ -116,6 +117,7 @@ export const editorState = {
     },
 
     selectGraph(datasetName, graphUri) {
+        multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
         const graphChanged =
             this.selectedDataset.getValue() !== datasetName ||
@@ -128,6 +130,7 @@ export const editorState = {
     },
 
     selectPackage(datasetName, graphUri, packageId) {
+        multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
         this.selectedDataset.updateValue(datasetName);
         this.selectedGraph.updateValue(graphUri);
@@ -138,6 +141,7 @@ export const editorState = {
     },
 
     selectCustomDiagram(datasetName, graphUri, diagramId, diagramType) {
+        multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.DIAGRAM);
         this.selectedDataset.updateValue(datasetName);
         this.selectedGraph.updateValue(graphUri ?? null);
@@ -226,10 +230,6 @@ export const copyState = {
     },
 };
 
-/**
- * The shared multi-selection of classes (package navigation + rendered diagrams).
- * See {@link MultiSelectState}.
- */
 export const multiSelectState = new MultiSelectState();
 
 export const migrationState = writable({

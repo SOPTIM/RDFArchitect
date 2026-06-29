@@ -36,6 +36,14 @@ export function mergeSelections(base, additions) {
     return merged;
 }
 
+export function toggleSelections(base, toggled) {
+    const toggledKeys = new Set(toggled.map(entryKey));
+    const baseKeys = new Set(base.map(entryKey));
+    const kept = base.filter(entry => !toggledKeys.has(entryKey(entry)));
+    const added = toggled.filter(entry => !baseKeys.has(entryKey(entry)));
+    return [...kept, ...added];
+}
+
 /**
  * Tracks the multi-selection of classes, both in the package navigation and in
  * the rendered diagrams

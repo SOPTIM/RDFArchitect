@@ -53,35 +53,60 @@
         readonly: "nav-entry__badge--readonly",
     };
 
-    let clickTimeout;
+    let pointerHandled = false;
+
+    function isInteractiveTarget(event) {
+        return (
+            event.target.type === "checkbox" ||
+            event.target.closest('[role="checkbox"]')
+        );
+    }
+
+    function handlePointerDown(event) {
+        pointerHandled = false;
+        if (disabled) {
+            return;
+        }
+        if (event.button !== 0 || event.detail > 1) {
+            return;
+        }
+        if (event.pointerType && event.pointerType !== "mouse") {
+            return;
+        }
+        if (isInteractiveTarget(event)) {
+            return;
+        }
+        if (onToggle && event.target.closest(".nav-entry__chevron")) {
+            return;
+        }
+        pointerHandled = true;
+        fireClick(event);
+    }
 
     function handleClick(event) {
         if (disabled) {
             event.preventDefault();
             return;
         }
-        if (
-            event.target.type === "checkbox" ||
-            event.target.closest('[role="checkbox"]')
-        ) {
+        if (isInteractiveTarget(event)) {
             return;
         }
 
         if (event?.detail === 2) {
-            clearTimeout(clickTimeout);
             if (onToggle) {
                 onToggle(event);
             }
-        } else if (event?.detail === 1) {
-            clearTimeout(clickTimeout);
-            clickTimeout = setTimeout(() => {
-                if (showCheckbox) {
-                    selected = !selected;
-                    onSelect?.(event);
-                }
-                onclick?.(event);
-            }, 250);
+        } else if (event?.detail === 1 && !pointerHandled) {
+            fireClick(event);
         }
+    }
+
+    function fireClick(event) {
+        if (showCheckbox) {
+            selected = !selected;
+            onSelect?.(event);
+        }
+        onclick?.(event);
     }
 
     function handleToggle(event) {
@@ -104,6 +129,7 @@
     class={`nav-entry nav-entry--level-${level} ${isSelected ? "is-selected" : ""} ${ancestorSelected ? "is-ancestor-selected" : ""} ${classOpen ? "is-class-open" : ""} ${disabled ? "is-disabled" : ""}`}
     {disabled}
     title={highlightLabel || title}
+    onpointerdown={handlePointerDown}
     onclick={handleClick}
     {...restProps}
 >

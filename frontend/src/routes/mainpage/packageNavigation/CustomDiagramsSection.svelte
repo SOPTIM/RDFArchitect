@@ -34,7 +34,7 @@
         isSelectedGraph,
     } from "./packageNavigationUtils.svelte.js";
 
-    let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
+    let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readonly } =
         $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -218,7 +218,7 @@
                 {allGraphNavEntries}
                 bind:diagram={diagrams[index]}
                 classes={classesByDiagram[diagram.diagramId]}
-                {readOnly}
+                {readonly}
                 level={graphNavEntry ? 4 : 3}
                 onToggle={() => ensureClassesLoaded(diagram)}
             />
