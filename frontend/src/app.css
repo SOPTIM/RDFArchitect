@@ -120,6 +120,7 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
 
     --color-border: #e0e0e0;
     --color-border-select: #1f75cb;
+    --color-background-select: rgba(31, 117, 203, 0.08);
     --color-border-strong: #c6c6c6;
 
     /* RDFA-Colors */
