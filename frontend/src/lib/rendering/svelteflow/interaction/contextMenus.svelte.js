@@ -24,12 +24,10 @@ export class ContextMenuController {
 
     #getSvelteFlow;
     #getIsReadOnly;
-    #buildSelectionEntry;
 
-    constructor({ getSvelteFlow, getIsReadOnly, buildSelectionEntry }) {
+    constructor({ getSvelteFlow, getIsReadOnly }) {
         this.#getSvelteFlow = getSvelteFlow;
         this.#getIsReadOnly = getIsReadOnly;
-        this.#buildSelectionEntry = buildSelectionEntry;
     }
 
     get paneRequest() {
@@ -98,14 +96,13 @@ export class ContextMenuController {
 
     handleNodeContextMenu({ event, node }) {
         this.#consumeEvent(event);
-        if (
-            !multiSelectState.isSelected(
-                editorState.selectedDataset.getValue(),
-                node.data?.graphUri,
-                node.id,
-            )
-        ) {
-            multiSelectState.setSelection([this.#buildSelectionEntry(node)]);
+        const isInSelection = multiSelectState.isSelected(
+            editorState.selectedDataset.getValue(),
+            node.data?.graphUri,
+            node.id,
+        );
+        if (!isInSelection && multiSelectState.count > 0) {
+            multiSelectState.clear();
         }
         this.#contextMenuClass = {
             uuid: node.id,

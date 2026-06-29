@@ -32,9 +32,11 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
         DiagramType,
+        SelectionLevel,
         copyState,
         editorState,
         ClassType,
+        mergeSelections,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
@@ -53,6 +55,7 @@
         classNavEntry,
         diagramId,
         diagramGraphUri,
+        rangeSiblings = null,
         namespaces = [],
         readonly = false,
         onPackChange = () => {},
@@ -108,10 +111,13 @@
             : [classNavEntry.label],
     );
 
-    function buildSelectionEntry(navEntry = classNavEntry) {
+    function buildSelectionEntry(
+        navEntry = classNavEntry,
+        graphUri = graphNavEntry?.id,
+    ) {
         return {
             datasetName: datasetNavEntry.id,
-            graphUri: graphNavEntry.id,
+            graphUri,
             classUuid: navEntry.id,
             classLabel: navEntry.label,
             packageId: navEntry.parent?.id ?? null,
@@ -120,9 +126,18 @@
     }
 
     function onEntryClick(event) {
-        editorState.markClassActive();
-        if (event?.ctrlKey || event?.metaKey) {
-            const entry = buildSelectionEntry();
+        const additive = event?.ctrlKey || event?.metaKey;
+        const entry = buildSelectionEntry();
+        if (event?.shiftKey) {
+            editorState.markClassActive();
+            selectRange(additive);
+            return;
+        }
+        if (additive) {
+            if (deselectActiveSingleClass(entry)) {
+                return;
+            }
+            editorState.markClassActive();
             const anchor = multiSelectState.anchor;
             if (
                 multiSelectState.getSelected().length === 0 &&
@@ -136,29 +151,86 @@
                 multiSelectState.setSelection([anchor]);
             }
             multiSelectState.toggle(entry);
+            keepOpenClassLightWhenSelectionEmpty();
             return;
         }
-        if (event?.shiftKey) {
-            selectRange();
-            return;
-        }
+        editorState.markClassActive();
         multiSelectState.clear();
-        multiSelectState.anchor = buildSelectionEntry();
+        multiSelectState.anchor = entry;
         selectClass();
     }
 
-    function selectRange() {
-        const anchor = multiSelectState.anchor;
+    function deselectActiveSingleClass(entry) {
+        const isActiveSingle =
+            multiSelectState.getSelected().length === 0 &&
+            editorState.activeSelectionKind.getValue() ===
+                SelectionLevel.CLASS &&
+            isOpenPackageClass(entry);
+        if (!isActiveSingle) {
+            return false;
+        }
+        editorState.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
+        return true;
+    }
+
+    function keepOpenClassLightWhenSelectionEmpty() {
+        if (
+            multiSelectState.getSelected().length === 0 &&
+            isOpenPackageClass()
+        ) {
+            editorState.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
+        }
+    }
+
+    function isOpenPackageClass(entry = null) {
+        const uuid = editorState.selectedClass.getProperty("id");
+        if (
+            !uuid ||
+            editorState.selectedDiagram.getProperty("type") !==
+                DiagramType.PACKAGE
+        ) {
+            return false;
+        }
+        if (!entry) {
+            return true;
+        }
+        return (
+            uuid === entry.classUuid &&
+            editorState.selectedClassDataset.getValue() === entry.datasetName &&
+            editorState.selectedClassGraph.getValue() === entry.graphUri
+        );
+    }
+
+    function rangeUnits() {
+        if (rangeSiblings) {
+            return rangeSiblings.map(s => ({
+                navEntry: s.classNavEntry,
+                graphUri: s.graphNavEntry?.id,
+            }));
+        }
         const siblings = classNavEntry.parent?.children ?? [];
-        const sameContext =
-            anchor &&
-            anchor.datasetName === datasetNavEntry.id &&
-            anchor.graphUri === graphNavEntry.id &&
-            anchor.packageId === (classNavEntry.parent?.id ?? null);
-        const anchorIdx = sameContext
-            ? siblings.findIndex(c => c.id === anchor.classUuid)
+        return siblings.map(c => ({
+            navEntry: c,
+            graphUri: graphNavEntry?.id,
+        }));
+    }
+
+    function selectRange(additive = false) {
+        const anchor = multiSelectState.anchor;
+        const units = rangeUnits();
+        const anchorIdx = anchor
+            ? units.findIndex(
+                  u =>
+                      u.navEntry.id === anchor.classUuid &&
+                      u.graphUri === anchor.graphUri &&
+                      anchor.datasetName === datasetNavEntry.id,
+              )
             : -1;
-        const targetIdx = siblings.findIndex(c => c.id === classNavEntry.id);
+        const targetIdx = units.findIndex(
+            u =>
+                u.navEntry.id === classNavEntry.id &&
+                u.graphUri === graphNavEntry?.id,
+        );
         if (anchorIdx === -1 || targetIdx === -1) {
             multiSelectState.toggle(buildSelectionEntry());
             return;
@@ -167,9 +239,15 @@
             anchorIdx <= targetIdx
                 ? [anchorIdx, targetIdx]
                 : [targetIdx, anchorIdx];
-        const range = siblings
+        const range = units
             .slice(start, end + 1)
-            .map(c => buildSelectionEntry(c));
+            .map(u => buildSelectionEntry(u.navEntry, u.graphUri));
+        if (additive) {
+            multiSelectState.setSelection(
+                mergeSelections(multiSelectState.getSelected(), range),
+            );
+            return;
+        }
         multiSelectState.selectRange(range);
     }
 
@@ -355,43 +433,58 @@
     </ContextMenu.Content>
 </ContextMenu.Root>
 
-<DeleteDependenciesDialog
-    bind:showDialog={showDeleteDependenciesDialog}
-    datasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
-    resourceUuids={selectedClassIds}
-/>
+{#if showDeleteDependenciesDialog}
+    <DeleteDependenciesDialog
+        bind:showDialog={showDeleteDependenciesDialog}
+        datasetName={datasetNavEntry.id}
+        graphUri={graphNavEntry.id}
+        resourceUuids={selectedClassIds}
+    />
+{/if}
 
-<SHACLClassSpecificPopUp
-    datasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
-    reactiveClass={shaclClass}
-    bind:showDialog={showSHACLDialog}
-/>
-<AddToGraphDiagramDialog
-    bind:showDialog={showAddToGraphDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
-    classes={selectedClassNavEntries}
-/>
-<AddToDatasetDiagramDialog
-    bind:showDialog={showAddToDatasetDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
-    classes={selectedClassNavEntries}
-/>
-<RemoveFromDiagramDialog
-    bind:showDialog={showRemoveFromDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    graphUri={diagramGraphUri}
-    {diagramId}
-    classIds={selectedClassIds}
-    classLabels={selectedClassLabels}
-/>
+{#if showSHACLDialog}
+    <SHACLClassSpecificPopUp
+        datasetName={datasetNavEntry.id}
+        graphUri={graphNavEntry.id}
+        reactiveClass={shaclClass}
+        bind:showDialog={showSHACLDialog}
+    />
+{/if}
 
-<ExtendClassDialog
-    datasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
-    classUUID={classNavEntry.id}
-    bind:showDialog={showExtendClassDialog}
-/>
+{#if showAddToGraphDiagramDialog}
+    <AddToGraphDiagramDialog
+        bind:showDialog={showAddToGraphDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
+        classes={selectedClassNavEntries}
+    />
+{/if}
+
+{#if showAddToDatasetDiagramDialog}
+    <AddToDatasetDiagramDialog
+        bind:showDialog={showAddToDatasetDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
+        classes={selectedClassNavEntries}
+    />
+{/if}
+
+{#if showRemoveFromDiagramDialog}
+    <RemoveFromDiagramDialog
+        bind:showDialog={showRemoveFromDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        graphUri={diagramGraphUri}
+        {diagramId}
+        classIds={selectedClassIds}
+        classLabels={selectedClassLabels}
+    />
+{/if}
+
+{#if showExtendClassDialog}
+    <ExtendClassDialog
+        datasetName={datasetNavEntry.id}
+        graphUri={graphNavEntry.id}
+        classUUID={classNavEntry.id}
+        bind:showDialog={showExtendClassDialog}
+    />
+{/if}

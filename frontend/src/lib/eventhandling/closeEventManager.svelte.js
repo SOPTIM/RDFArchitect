@@ -37,7 +37,7 @@ class EventStack {
 
     executeNewestEvent(...args) {
         if (this.stack.length === 0) {
-            console.warn(
+            console.debug(
                 "Trying to execute newest event on an empty event stack",
                 this.stack.length,
             );

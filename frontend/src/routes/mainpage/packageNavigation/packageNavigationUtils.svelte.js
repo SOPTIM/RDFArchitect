@@ -22,6 +22,15 @@ import {
     SelectionLevel,
 } from "$lib/sharedState.svelte.js";
 
+const ANY_GRAPH = Symbol("anyGraph");
+
+function normContext(dataset, graph) {
+    return {
+        datasetLabel: dataset?.label ?? dataset,
+        graphUri: graph ? getUri(graph) : null,
+    };
+}
+
 export function isSelectedDataset(dataset) {
     if (dataset.label !== undefined) {
         dataset = dataset.label;
@@ -57,8 +66,7 @@ export function isSelectedClass(dataset, graph, cls) {
     if (typeof cls === "string") {
         cls = { uuid: cls };
     }
-    const datasetLabel = dataset?.label ?? dataset;
-    const graphUri = graph ? getUri(graph) : null;
+    const { datasetLabel, graphUri } = normContext(dataset, graph);
     return (
         editorState.selectedClass.getProperty("id") === cls.uuid &&
         editorState.selectedClassDataset.getValue() === datasetLabel &&
@@ -82,7 +90,6 @@ function isCustomDiagramSelected() {
     );
 }
 
-/** Most-specific context level (package/diagram/graph/dataset), ignoring class. */
 function inferContextLevel() {
     if (isPackageSelectedAsDiagram()) {
         return SelectionLevel.PACKAGE;
@@ -99,7 +106,6 @@ function inferContextLevel() {
     return SelectionLevel.NONE;
 }
 
-/** Deepest level from the editor state alone, ignoring recency. */
 export function inferSelectionLevel() {
     if (editorState.selectedClass.getProperty("id")) {
         return SelectionLevel.CLASS;
@@ -107,10 +113,6 @@ export function inferSelectionLevel() {
     return inferContextLevel();
 }
 
-/**
- * Most-specific level holding a selection. Prefers the last-clicked resource
- * (activeSelectionKind) while it still exists, else falls back to inference.
- */
 function deepestSelectedLevel() {
     if (multiSelectState.getSelected().length > 0) {
         return SelectionLevel.CLASS;
@@ -138,10 +140,6 @@ function deepestSelectedLevel() {
     return inferSelectionLevel();
 }
 
-/**
- * The open/selected classes: the multi-selection set, or the single selected
- * class. Always stay highlighted, independent of the last-clicked resource.
- */
 function getSelectedClasses() {
     const multi = multiSelectState.getSelected();
     if (multi.length > 0) {
@@ -161,39 +159,33 @@ function getSelectedClasses() {
     ];
 }
 
-/**
- * Class highlight: "active" (blue) when it is the most-specific selection,
- * "secondary" (light blue) when open but another resource is active, else null.
- */
-export function classHighlight(dataset, graph, classUuid) {
-    const datasetLabel = dataset?.label ?? dataset;
-    const graphUri = graph ? getUri(graph) : null;
-    const uuid = classUuid?.uuid ?? classUuid;
-    const isOpen = getSelectedClasses().some(
+function someOpenClass(datasetLabel, graphUri = ANY_GRAPH, matchUuid = null) {
+    return getSelectedClasses().some(
         c =>
             c.datasetName === datasetLabel &&
-            c.graphUri === graphUri &&
-            c.classUuid === uuid,
+            (graphUri === ANY_GRAPH || c.graphUri === graphUri) &&
+            (!matchUuid || matchUuid(c.classUuid)),
     );
-    if (!isOpen) {
-        return null;
-    }
-    return deepestSelectedLevel() === SelectionLevel.CLASS
-        ? "active"
-        : "secondary";
 }
 
-/**
- * Dataset highlight: "active" (most specific, blue), "ancestor" (a less-specific
- * level in the path, grey) or null.
- */
+export function classHighlight(dataset, graph, classUuid) {
+    const { datasetLabel, graphUri } = normContext(dataset, graph);
+    const uuid = classUuid?.uuid ?? classUuid;
+    const inSelection = someOpenClass(datasetLabel, graphUri, u => u === uuid);
+    if (inSelection && deepestSelectedLevel() === SelectionLevel.CLASS) {
+        return "active";
+    }
+    if (inSelection || isSelectedClass(dataset, graph, uuid)) {
+        return "secondary";
+    }
+    return null;
+}
+
 export function datasetHighlight(dataset) {
-    const datasetLabel = dataset?.label ?? dataset;
+    const { datasetLabel } = normContext(dataset);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
-        return getSelectedClasses().some(c => c.datasetName === datasetLabel)
-            ? "ancestor"
-            : null;
+        return someOpenClass(datasetLabel) ? "ancestor" : null;
     }
     if (!isSelectedDataset(datasetLabel)) {
         return null;
@@ -203,15 +195,10 @@ export function datasetHighlight(dataset) {
 
 /** Highlight state of a graph entry (see {@link datasetHighlight}). */
 export function graphHighlight(dataset, graph) {
-    const datasetLabel = dataset?.label ?? dataset;
-    const graphUri = getUri(graph);
+    const { datasetLabel, graphUri } = normContext(dataset, graph);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
-        return getSelectedClasses().some(
-            c => c.datasetName === datasetLabel && c.graphUri === graphUri,
-        )
-            ? "ancestor"
-            : null;
+        return someOpenClass(datasetLabel, graphUri) ? "ancestor" : null;
     }
     if (!isSelectedGraph(datasetLabel, graph)) {
         return null;
@@ -219,27 +206,14 @@ export function graphHighlight(dataset, graph) {
     return level === SelectionLevel.GRAPH ? "active" : "ancestor";
 }
 
-/**
- * Package highlight (see {@link datasetHighlight}). The grey "ancestor" state is
- * decided by membership - greyed when the package contains an open class - which
- * is more reliable than deriving the class's package from the editor state.
- * `classEntries` are the package's child class nav entries (objects with `id`,
- * or plain uuid strings).
- */
 export function packageHighlight(dataset, graph, pack, classEntries = []) {
-    const datasetLabel = dataset?.label ?? dataset;
-    const graphUri = getUri(graph);
+    const { datasetLabel, graphUri } = normContext(dataset, graph);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
         const childUuids = new Set(
             (classEntries ?? []).map(c => c?.id ?? c?.uuid ?? c),
         );
-        return getSelectedClasses().some(
-            c =>
-                c.datasetName === datasetLabel &&
-                c.graphUri === graphUri &&
-                childUuids.has(c.classUuid),
-        )
+        return someOpenClass(datasetLabel, graphUri, u => childUuids.has(u))
             ? "ancestor"
             : null;
     }

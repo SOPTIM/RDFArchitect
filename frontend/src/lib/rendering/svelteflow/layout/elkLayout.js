@@ -59,10 +59,6 @@ const LAYOUT_OPTIONS = {
     "elk.spacing.nodeNode": "60",
 };
 
-/**
- * Runs ELK's layered layout over the given nodes/edges and returns a new node
- * array with updated positions. Pure: it does not mutate its inputs.
- */
 export async function getLayoutedNodes(nodes, edges) {
     const elk = new ELK({
         //WEB WORKER: layouting is executed in a separate thread, preventing the frontend from blocking

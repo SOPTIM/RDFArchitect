@@ -33,7 +33,11 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { Package } from "$lib/models/dto/index.ts";
-    import { copyState, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        copyState,
+        editorState,
+        multiSelectState,
+    } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
@@ -73,6 +77,9 @@
         editorState.selectedDataset.subscribe(),
         editorState.selectedGraph.subscribe(),
         editorState.selectedDiagram.subscribe(),
+        editorState.activeSelectionKind.subscribe(),
+        editorState.selectedClass.subscribe(),
+        multiSelectState.subscribe(),
         getContext("packageNavigation").reloadTrigger?.subscribe(),
     ]);
 
@@ -281,38 +288,48 @@
     {/if}
 </div>
 
-<NewClassDialog
-    bind:showDialog={showNewClassDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
-    lockedPackage={packageNavEntry.data}
-/>
+{#if showNewClassDialog}
+    <NewClassDialog
+        bind:showDialog={showNewClassDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
+        lockedPackage={packageNavEntry.data}
+    />
+{/if}
 
-<AddToGraphDiagramDialog
-    bind:showDialog={showAddToGraphDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    lockedGraphUri={graphNavEntry.id}
-    classes={packageNavEntry.children}
-/>
+{#if showAddToGraphDiagramDialog}
+    <AddToGraphDiagramDialog
+        bind:showDialog={showAddToGraphDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
+        classes={packageNavEntry.children}
+    />
+{/if}
 
-<AddToDatasetDiagramDialog
-    bind:showDialog={showAddToDatasetDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
-    classes={packageNavEntry.children}
-/>
+{#if showAddToDatasetDiagramDialog}
+    <AddToDatasetDiagramDialog
+        bind:showDialog={showAddToDatasetDiagramDialog}
+        lockedDatasetName={datasetNavEntry.id}
+        graphUri={graphNavEntry.id}
+        classes={packageNavEntry.children}
+    />
+{/if}
 
-<PackageEditorDialog
-    bind:showDialog={showPackageEditorDialog}
-    datasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
-    pack={packageNavEntry.data}
-    {readonly}
-/>
+{#if showPackageEditorDialog}
+    <PackageEditorDialog
+        bind:showDialog={showPackageEditorDialog}
+        datasetName={datasetNavEntry.id}
+        graphUri={graphNavEntry.id}
+        pack={packageNavEntry.data}
+        {readonly}
+    />
+{/if}
 
-<DeleteDependenciesDialog
-    bind:showDialog={showDeleteDependenciesDialog}
-    datasetName={datasetNavEntry.id}
-    graphUri={graphNavEntry.id}
-    resourceUuid={packageNavEntry.data.uuid}
-/>
+{#if showDeleteDependenciesDialog}
+    <DeleteDependenciesDialog
+        bind:showDialog={showDeleteDependenciesDialog}
+        datasetName={datasetNavEntry.id}
+        graphUri={graphNavEntry.id}
+        resourceUuid={packageNavEntry.data.uuid}
+    />
+{/if}
