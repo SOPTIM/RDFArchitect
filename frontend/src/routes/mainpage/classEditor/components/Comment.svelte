@@ -30,7 +30,7 @@
     const classEditorContext = getContext("classEditor");
     const id = uuidv4();
     let editClassComment = $state(false);
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 </script>
 
 <div class="flex h-full min-h-0 flex-col">

@@ -16,18 +16,17 @@
   -->
 
 <script>
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     import {
         editorState,
@@ -46,7 +45,6 @@
         packageLabel: "packageNameNewPackage" + uuid,
         packageComment: "packageCommentNewPackage" + uuid,
     };
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let selectedDatasetName = $state(null);
     let selectedGraphURI = $state(null);
@@ -75,7 +73,7 @@
     );
 
     $effect(async () => {
-        namespaces = await getNamespaces(selectedDatasetName);
+        namespaces = datasetStore.getNamespaces(selectedDatasetName);
         packageURINamespace = null;
     });
 
@@ -96,7 +94,7 @@
         if (!selectedDatasetName) {
             return;
         }
-        namespaces = await getNamespaces(selectedDatasetName);
+        namespaces = datasetStore.getNamespaces(selectedDatasetName);
 
         if (selectedGraphURI) {
             await getResources(selectedDatasetName, selectedGraphURI);
@@ -129,12 +127,9 @@
             packages = [];
             return;
         }
-        const res = await bec.getPackages(datasetName, graphURI);
-        const packagesJSON = await res.json();
-        packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+
+        await packageStore.load(datasetName, graphURI);
+        return packageStore.getPackages(datasetName, graphURI);
     }
 
     async function getClasses(datasetName, graphURI) {
@@ -142,8 +137,7 @@
             classes = [];
             return;
         }
-        const res = await bec.getClasses(datasetName, graphURI);
-        classes = await res.json();
+        return classStore.getClasses(datasetName, graphURI);
     }
 
     function getExpandedNamespace(namespace) {
@@ -177,62 +171,22 @@
         if (!packageLabel.startsWith("Package_")) {
             packageLabel = "Package_" + packageLabel;
         }
-        let promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(ds) +
-                "/graphs/" +
-                encodeURIComponent(graph) +
-                "/packages",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(
-                    new Package({
-                        prefix: packageURINamespace,
-                        label: packageLabel,
-                        comment: packageComment,
-                    }),
-                ),
-                credentials: "include",
-            },
-        )
-            .then(async res => {
-                if (res.ok) {
-                    console.log("successfully added package");
-                    return res.json();
-                }
-                throw new Error(await res.text());
-            })
-            .then(uuid => {
-                console.log(
-                    `successfully added package ${packageLabel} with UUID ${uuid}`,
-                );
-                editorState.selectedDataset.updateValue(ds);
-                editorState.selectedGraph.updateValue(graph);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: uuid,
-                });
-                toastStore.success(
-                    "Package created",
-                    `"${packageLabel}" was added.`,
-                );
-            });
-        promise
-            .catch(e => {
-                console.log("failed to add package:");
-                console.log(e);
-                toastStore.error(
-                    "Create failed",
-                    `Could not create package "${packageLabel}".`,
-                );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+        const body = new Package({
+            prefix: packageURINamespace,
+            label: packageLabel,
+            comment: packageComment,
+        });
+        const { data, error } = packageStore.addPackage(ds, graph, body);
+
+        if (error) return;
+
+        editorState.selectedDataset.updateValue(ds);
+        editorState.selectedGraph.updateValue(graph);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: data,
+        });
+        forceReloadTrigger.trigger();
     }
 </script>
 

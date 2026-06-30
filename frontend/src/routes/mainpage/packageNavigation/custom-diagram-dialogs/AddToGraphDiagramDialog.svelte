@@ -16,12 +16,10 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -30,19 +28,16 @@
         classes,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     let selectedDiagram = $state(null);
     let diagramList = $state([]);
     let disableSubmit = $derived(!selectedDiagram);
 
     async function getCustomDiagrams() {
-        const res = await bec.getCustomDiagramsForGraph(
+        const { data } = await customDiagramStore.getGraphDiagrams(
             lockedDatasetName,
             lockedGraphUri,
         );
-        const allDiagrams = await res.json();
-        diagramList = allDiagrams.filter(diagram => {
+        diagramList = data.filter(diagram => {
             const classesToAddIds = new Set(classes.map(cls => cls.id));
             const diagramClassIds = new Set(
                 diagram.classes.map(cls => cls.uuid),
@@ -64,30 +59,16 @@
     }
 
     async function addToDiagram() {
-        const diagramName = selectedDiagram?.name;
-        const count = classes.length;
-        try {
-            const res = await bec.addToCustomGraphDiagram(
-                lockedDatasetName,
-                lockedGraphUri,
-                selectedDiagram.diagramId,
-                classes.map(cls => ({
-                    uuid: cls.id,
-                    graphUri: lockedGraphUri,
-                })),
-            );
-            if (res && res.ok === false) {
-                toastStore.error(
-                    "Add failed",
-                    `Could not add ${count === 1 ? "class" : "classes"} to "${diagramName}".`,
-                );
-                return;
-            }
-            toastStore.success(
-                "Added to diagram",
-                `${count} ${count === 1 ? "class" : "classes"} added to "${diagramName}".`,
-            );
-        } finally {
+        const { error } = await customDiagramStore.addClassesToGraphDiagram(
+            lockedDatasetName,
+            lockedGraphUri,
+            selectedDiagram.diagramId,
+            classes.map(cls => ({
+                uuid: cls.id,
+                graphUri: lockedGraphUri,
+            })),
+        );
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }
@@ -113,7 +94,7 @@
             placeholder={diagramList.length > 0
                 ? "Select diagram"
                 : "No diagrams available"}
-            getOptionLabel={diagram => diagram.name}
+            getOptionLabel={diagram => diagram.label}
         />
     </div>
 </ActionDialog>

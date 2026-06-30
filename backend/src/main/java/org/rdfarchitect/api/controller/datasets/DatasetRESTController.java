@@ -24,6 +24,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
 import org.slf4j.Logger;
@@ -50,11 +51,12 @@ public class DatasetRESTController {
 
     @Operation(
             summary = "List datasets",
-            description = "Lists all non-snapshots datasets",
+            description =
+                    "Lists all non-snapshots datasets including their prefixes and read-only status.",
             tags = {"dataset"},
             responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
-    public List<String> listDatasets(
+    public List<DatasetDTO> listDatasets(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

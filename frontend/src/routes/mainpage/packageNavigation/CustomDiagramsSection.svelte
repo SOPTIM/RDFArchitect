@@ -19,14 +19,13 @@
     import { faObjectGroup } from "@fortawesome/free-solid-svg-icons";
     import { onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import {
@@ -36,8 +35,6 @@
 
     let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
         $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let diagramsExpanded = $state(false);
     let diagrams = $state([]);
@@ -82,12 +79,21 @@
         try {
             let diagramList;
             if (graphNavEntry) {
-                diagramList = await getGraphDiagrams(
+                await customDiagramStore.loadGraphDiagrams(
+                    datasetNavEntry.id,
+                    graphNavEntry.id,
+                );
+                diagramList = await customDiagramStore.getGraphDiagrams(
                     datasetNavEntry.id,
                     graphNavEntry.id,
                 );
             } else {
-                diagramList = await getDatasetDiagrams(datasetNavEntry.id);
+                await customDiagramStore.loadDatasetDiagrams(
+                    datasetNavEntry.id,
+                );
+                diagramList = await customDiagramStore.getDatasetDiagrams(
+                    datasetNavEntry.id,
+                );
             }
             const previous = diagrams ?? [];
             const selectedDiagramId =
@@ -175,16 +181,6 @@
             type: diagramType,
             id: null,
         });
-    }
-
-    async function getGraphDiagrams(datasetName, graphURI) {
-        const res = await bec.getCustomDiagramsForGraph(datasetName, graphURI);
-        return await res.json();
-    }
-
-    async function getDatasetDiagrams(datasetName) {
-        const res = await bec.getCustomDiagramsForDataset(datasetName);
-        return await res.json();
     }
 </script>
 

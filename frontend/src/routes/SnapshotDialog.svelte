@@ -20,23 +20,20 @@
     import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { createSnapshot } from "$lib/api/generated/index.ts";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
 
     let { showDialog = $bindable(), lockedDatasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     const datasetSelectId = `datasetSelect-${uuidv4()}`;
 
     let datasetName = $state(null);
-    let datasets = $state([]);
     let base64Token = $state();
 
     const datasetSelectionLocked = $derived(!!lockedDatasetName);
@@ -44,17 +41,14 @@
     function onOpen() {
         datasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
-        if (datasetSelectionLocked) {
-            datasets = [{ label: lockedDatasetName }];
-        } else {
-            loadDatasets();
-        }
     }
 
     async function snapshotDataset() {
-        const res = await bec.createSnapshot(datasetName);
-        if (res.ok) {
-            base64Token = await res.text();
+        const { data, error } = await createSnapshot({
+            path: { datasetName: datasetName },
+        });
+        if (!error) {
+            base64Token = data;
             console.log(
                 "Successfully created snapshot for dataset",
                 datasetName,
@@ -64,21 +58,12 @@
                 `Share link created for "${datasetName}".`,
             );
         } else {
-            console.error(
-                "Error creating snapshot for dataset:",
-                res.statusText,
-            );
+            console.error("Error creating snapshot for dataset:", error);
             toastStore.error(
                 "Snapshot failed",
                 `Could not create a snapshot for "${datasetName}".`,
             );
         }
-    }
-
-    async function loadDatasets() {
-        const res = await bec.getDatasetNames();
-        const datasetNames = await res.json();
-        datasets = datasetNames.map(name => ({ label: name }));
     }
 
     async function copyToClipboard() {
@@ -111,10 +96,10 @@
         <SelectEditControl
             id={datasetSelectId}
             bind:value={datasetName}
-            options={datasets}
+            options={$datasetStore.data}
             getOptionValue={dataset => dataset.label}
             getOptionLabel={dataset => dataset.label}
-            disabled={datasetSelectionLocked || datasets.length === 0}
+            disabled={datasetSelectionLocked || datasetStore.data?.length === 0}
             placeholder="Select dataset"
         />
 

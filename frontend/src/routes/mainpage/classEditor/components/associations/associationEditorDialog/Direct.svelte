@@ -29,7 +29,7 @@
     const { association } = $props();
 
     const classEditorContext = getContext("classEditor");
-    const readonly = classEditorContext.readonly;
+    const readonly = classEditorContext.readOnly;
     const classes = classEditorContext.classes;
 </script>
 

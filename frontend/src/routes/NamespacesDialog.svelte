@@ -18,16 +18,12 @@
     import { tick } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapNamespaceDtoToReactiveNamespace } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { mapReactiveNamespaceToNamespaceDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveNamespace } from "$lib/models/reactive/models/reactive-namespace.svelte.js";
@@ -38,10 +34,9 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     let { showDialog = $bindable() } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let datasetName = $state("");
     let readonly = $state(false);
@@ -52,12 +47,13 @@
     async function onOpen() {
         datasetName = editorState.selectedDataset.getValue();
         if (!datasetName) return;
-        readonly = await isReadOnly(datasetName);
+        readonly = datasetStore.isReadOnly(datasetName);
         await loadNamespaces(datasetName);
     }
 
     async function loadNamespaces(datasetNameLocal) {
-        const namespaceDTOs = await getNamespaces(datasetNameLocal);
+        const namespaceDTOs = datasetStore.getNamespaces(datasetNameLocal);
+        console.log(namespaceDTOs);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });
@@ -70,11 +66,6 @@
                 );
             },
         );
-    }
-
-    async function isReadOnly(datasetNameLocal) {
-        const res = await bec.isReadOnly(datasetNameLocal);
-        return await res.json();
     }
 
     async function saveNamespaces() {
@@ -92,26 +83,12 @@
         const namespaceDTOs = plainReactiveNamespaces.map(namespace => {
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
-        try {
-            const res = await bec.replaceNamespaces(datasetName, namespaceDTOs);
-            if (res && res.ok === false) {
-                toastStore.error(
-                    "Save failed",
-                    `Could not save namespaces for "${datasetName}".`,
-                );
-                return;
-            }
-            toastStore.success(
-                "Namespaces saved",
-                `Updated for "${datasetName}".`,
-            );
-        } catch (err) {
-            console.error("Failed to save namespaces:", err);
-            toastStore.error(
-                "Save failed",
-                "An unexpected error occurred while saving namespaces.",
-            );
-        } finally {
+        const { error } = await datasetStore.saveNamespaces(
+            datasetName,
+            namespaceDTOs,
+        );
+
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }

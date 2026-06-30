@@ -79,7 +79,7 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
         violations.push("must not be empty");
     }
 
-    if (compareDiagrams?.some(d => d.name === diagramName)) {
+    if (compareDiagrams?.some(d => d.label === diagramName)) {
         violations.push("must be unique");
     }
 
@@ -93,12 +93,12 @@ export function isInvalidAssociationLabel(association, associations) {
         : (associations?.values ?? []);
     if (violations.length === 0) {
         if (
-            assocList.filter(
+            assocList.some(
                 a =>
                     a.label.value === association?.label?.value &&
                     a.namespace.value === association.namespace?.value &&
                     a !== association,
-            ).length > 0
+            )
         ) {
             violations.push("must be unique");
         } else if (
@@ -125,12 +125,12 @@ export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
     const assocList = targetClassDto?.associationPairs?.map(pair => pair) ?? [];
     if (violations.length === 0) {
         if (
-            assocList.filter(
+            assocList.some(
                 a =>
                     a.from.label === association?.inverse?.label?.value &&
                     a.from.prefix === association.inverse?.namespace?.value &&
                     a.from.uuid !== association.inverse?.uuid?.value,
-            ).length > 0
+            )
         ) {
             violations.push("must be unique");
         } else if (

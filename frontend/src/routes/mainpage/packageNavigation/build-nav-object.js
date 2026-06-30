@@ -15,12 +15,15 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+import { get } from "svelte/store";
+
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+import { classStore } from "$lib/stores/ClassStore.ts";
+import { datasetStore } from "$lib/stores/DatasetStore.ts";
+import { graphStore } from "$lib/stores/GraphStore.ts";
+import { packageStore } from "$lib/stores/PackageStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
 import {
@@ -30,8 +33,12 @@ import {
     isSelectedClass,
 } from "./packageNavigationUtils.svelte.js";
 
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
+/**
+ * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
+ * @param {NavEntry[]} existingList
+ * @param {object} props
+ * @returns {NavEntry}
+ */
 function reuseOrCreate(existingList, props) {
     const existing = existingList?.find(e => e.id === props.id);
     if (existing) {
@@ -50,44 +57,24 @@ function syncList(targetArray, freshEntries, parent = null) {
 }
 
 export async function getNavEntryList(existingDatasetNavList) {
-    const freshEntries = (await getDatasetNames())
-        .sort((a, b) => a.localeCompare(b))
-        .map(label =>
-            reuseOrCreate(existingDatasetNavList, { label, id: label }),
+    await datasetStore.load();
+    const datasets = get(datasetStore).data ?? [];
+    const freshEntries = datasets
+        .sort((a, b) => a.label.localeCompare(b.label))
+        .map(dataset =>
+            reuseOrCreate(existingDatasetNavList, {
+                label: dataset.label,
+                id: dataset.label,
+            }),
         );
 
     const result = existingDatasetNavList ?? [];
     syncList(result, freshEntries, null);
 
     for (const datasetNavEntry of result) {
-        try {
-            await populateDataset(datasetNavEntry);
-        } catch (err) {
-            console.error(
-                "Error populating dataset " + datasetNavEntry.id,
-                err,
-            );
-            toastStore.error(
-                "Failed to load dataset",
-                `Could not load graphs for dataset "${datasetNavEntry.id}". Other datasets are still available.`,
-            );
-        }
+        await populateDataset(datasetNavEntry);
     }
     return result;
-}
-
-async function getDatasetNames() {
-    try {
-        const res = await bec.getDatasetNames();
-        if (!res.ok) {
-            console.error(`Error fetching dataset names: HTTP ${res.status}`);
-            return [];
-        }
-        return await res.json();
-    } catch (err) {
-        console.error("Error fetching dataset names", err);
-        return [];
-    }
 }
 
 async function populateDataset(datasetNavEntry) {
@@ -120,37 +107,29 @@ async function populateDataset(datasetNavEntry) {
 }
 
 async function getGraphNames(datasetName) {
-    try {
-        const res = await bec.getGraphNames(datasetName);
-        if (!res.ok) {
-            console.error(
-                `Error fetching graph names for dataset "${datasetName}": HTTP ${res.status}`,
-            );
-            return [];
-        }
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching graph names for dataset " + datasetName,
-            err,
-        );
-        return [];
-    }
+    await graphStore.load(datasetName);
+    return graphStore.getGraphs(datasetName) ?? [];
 }
 
 export async function populateGraph(datasetNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
-    const packageApiObject = await getPackages(
+    await packageStore.load(datasetNavObject.id, graphNavObject.id);
+    const packageData = packageStore.getPackages(
         datasetNavObject.id,
         graphNavObject.id,
     );
-    const allClasses = await getClasses(datasetNavObject.id, graphNavObject.id);
+
+    await classStore.load(datasetNavObject.id, graphNavObject.id);
+    const allClasses = await classStore.getClasses(
+        datasetNavObject.id,
+        graphNavObject.id,
+    );
 
     const freshEntries = [
-        ...packageApiObject.internalPackageList.map(pack =>
+        ...packageData.internal.map(pack =>
             reuseOrCreatePackage(existingPackageList, pack, false),
         ),
-        ...packageApiObject.externalPackageList.map(pack =>
+        ...packageData.external.map(pack =>
             reuseOrCreatePackage(existingPackageList, pack, true),
         ),
     ].sort((a, b) => {
@@ -213,32 +192,9 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
     return entry;
 }
 
-async function getPackages(datasetName, graphURI) {
-    try {
-        const res = await bec.getPackages(datasetName, graphURI);
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching packages for dataset " +
-                datasetName +
-                " and graph " +
-                graphURI,
-            err,
-        );
-        return { internalPackageList: [], externalPackageList: [] };
-    }
-}
-
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
-    console.log(
-        "Populating package",
-        packageNavObject.id,
-        "with classes:",
-        allClasses,
-    );
-    allClasses = allClasses ?? [];
     const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
         .sort((a, b) => a.label.localeCompare(b.label))
@@ -274,27 +230,4 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     }
 
     return packageNavObject;
-}
-
-async function getClasses(datasetName, graphURI) {
-    try {
-        const res = await bec.getClasses(datasetName, graphURI);
-        console.warn(
-            "Fetched classes for dataset " +
-                datasetName +
-                " and graph " +
-                graphURI,
-            res,
-        );
-        return await res.json();
-    } catch (err) {
-        console.error(
-            "Error fetching classes for dataset " +
-                datasetName +
-                " and graph " +
-                graphURI,
-            err,
-        );
-        return [];
-    }
 }

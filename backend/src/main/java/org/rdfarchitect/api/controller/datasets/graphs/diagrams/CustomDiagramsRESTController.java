@@ -60,7 +60,7 @@ public class CustomDiagramsRESTController {
     private final ExpandURIUseCase expandURIUseCase;
 
     @GetMapping
-    public RenderingDataDTO getDiagramRenderingData(
+    public RenderingDataDTO getCustomProfileViewRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

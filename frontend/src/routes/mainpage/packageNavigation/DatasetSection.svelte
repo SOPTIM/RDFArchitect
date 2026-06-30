@@ -29,15 +29,11 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
-    import {
-        enableEditing,
-        disableEditing,
-    } from "$lib/actions/editingActions.js";
-    import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
@@ -68,7 +64,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readonly = await isReadOnly(datasetNavEntry.label);
+        readonly = datasetStore.isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {
@@ -84,7 +80,7 @@
             return;
         }
         try {
-            namespaces = await getNamespaces(datasetNavEntry.label);
+            namespaces = datasetStore.getNamespaces(datasetNavEntry.label);
         } catch (err) {
             console.error("Failed to load namespaces:", err);
             namespaces = [];
@@ -104,9 +100,13 @@
         if (!datasetNavEntry?.id || !readonly) {
             return;
         }
-        if (!(await enableEditing(datasetNavEntry.id))) {
-            return;
-        }
+
+        const { error } = await datasetStore.updateReadonly(
+            datasetNavEntry.id,
+            false,
+        );
+        if (error) return;
+
         readonly = false;
         forceReloadTrigger.trigger();
     }
@@ -115,7 +115,11 @@
         if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        if (!(await disableEditing(datasetNavEntry.id))) {
+        const { error } = await datasetStore.updateReadonly(
+            datasetNavEntry.id,
+            true,
+        );
+        if (error) {
             return;
         }
         readonly = true;

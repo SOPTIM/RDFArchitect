@@ -20,17 +20,16 @@
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     let datasetList = $state([]);
     let selectedDatasetName = $derived(editorState.selectedDataset.getValue());
     let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
@@ -41,9 +40,10 @@
     });
 
     async function fetchNavigationObject() {
-        const datasetNames = await getDatasetNames();
+        await datasetStore.load();
         const newDatasetList = [];
-        for (const datasetName of datasetNames) {
+        for (const dataset of $datasetStore.data) {
+            const datasetName = dataset.label;
             let showDatasetContents = datasetName === selectedDatasetName;
             showDatasetContents |= datasetList.find(
                 datasetObject => datasetObject.label === datasetName,
@@ -53,22 +53,14 @@
                 graphs: [],
                 showContents: showDatasetContents,
             });
-            const graphUris = await getGraphUris(datasetName);
-            graphUris.forEach(graphUri =>
-                newDatasetList.at(-1).graphs.push(graphUri),
-            );
+            await graphStore.load(datasetName);
+            graphStore
+                .getGraphs(datasetName)
+                .forEach(graphUri =>
+                    newDatasetList.at(-1).graphs.push(graphUri),
+                );
         }
         datasetList = newDatasetList;
-    }
-
-    async function getDatasetNames() {
-        const res = await bec.getDatasetNames();
-        return await res.json();
-    }
-
-    async function getGraphUris(datasetName) {
-        const res = await bec.getGraphNames(datasetName);
-        return await res.json();
     }
 </script>
 

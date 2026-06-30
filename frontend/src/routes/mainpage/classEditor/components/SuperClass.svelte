@@ -30,11 +30,11 @@
     const id = uuid();
 
     let classes = $derived(classEditorContext.classes);
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     $effect(() => {
@@ -43,7 +43,7 @@
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         classes = classEditorContext.classes;
     });
 

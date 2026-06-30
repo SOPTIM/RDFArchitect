@@ -17,9 +17,17 @@
 
 package org.rdfarchitect.services.select;
 
+import org.rdfarchitect.api.dto.DatasetDTO;
+
 import java.util.List;
 
 public interface ListDatasetsUseCase {
 
-    List<String> listDatasets();
+    /**
+     * List all datasets including their prefixes and read-only status. Snapshots are excluded from
+     * the list.
+     *
+     * @return List of dataset objects
+     */
+    List<DatasetDTO> listDatasets();
 }
