@@ -24,7 +24,11 @@ import lombok.Data;
 @Builder
 public class SchemaValidationIssue {
 
-    public enum Severity { ERROR, WARNING }
+    public enum Severity {
+        ERROR,
+        WARNING,
+        INFO
+    }
 
     private String resourceUri;
 

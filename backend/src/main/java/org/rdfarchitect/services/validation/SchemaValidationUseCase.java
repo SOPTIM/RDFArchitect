@@ -17,6 +17,7 @@
 
 package org.rdfarchitect.services.validation;
 
+import org.apache.jena.graph.Graph;
 import org.rdfarchitect.api.dto.validation.SchemaValidationReport;
 import org.rdfarchitect.database.GraphIdentifier;
 
@@ -25,8 +26,16 @@ public interface SchemaValidationUseCase {
     /**
      * Validates an RDFS-Schema
      *
-     * @param graphIdentifier the identifier of the graph
+     * @param graphIdentifier the RDF graph identifier of the graph to validate
      * @return Validation report with the found errors
      */
     SchemaValidationReport validateSchema(GraphIdentifier graphIdentifier);
+
+    /**
+     * Validates an RDFS-Schema
+     *
+     * @param graph the RDF graph to validate
+     * @return Validation report with the found errors
+     */
+    SchemaValidationReport validateSchema(Graph graph);
 }

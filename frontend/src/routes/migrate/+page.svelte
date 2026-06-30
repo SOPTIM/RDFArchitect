@@ -33,15 +33,20 @@
     import ConfirmAttributeRenames from "./steps/propertyrenames/ConfirmAttributeRenames.svelte";
     import ConfirmEnumEntryRenames from "./steps/propertyrenames/ConfirmEnumEntryRenames.svelte";
     import SelectSchemas from "./steps/SelectSchemas.svelte";
+    import ValidateSchemas from "./steps/ValidateSchemas.svelte";
 
     const steps = [
         { title: "Step 1: Select Schemas", component: SelectSchemas },
         {
-            title: "Step 2: Review Class Renames",
+            title: "Step 2: Validate Schemas",
+            component: ValidateSchemas,
+        },
+        {
+            title: "Step 3: Review Class Renames",
             component: ConfirmClassRenames,
         },
         {
-            title: "Step 3: Review Property Renames",
+            title: "Step 4: Review Property Renames",
             component: ConfirmPropertyRenames,
             substeps: [
                 { title: "Attributes", component: ConfirmAttributeRenames },
@@ -50,7 +55,7 @@
             ],
         },
         {
-            title: "Step 4: Review Default Values",
+            title: "Step 5: Review Default Values",
             component: ConfirmDefaults,
             substeps: [
                 {
@@ -67,7 +72,7 @@
                 },
             ],
         },
-        { title: "Step 5: Generate Script", component: Export },
+        { title: "Step 6: Generate Script", component: Export },
     ];
 
     let disableNext = $state(false);

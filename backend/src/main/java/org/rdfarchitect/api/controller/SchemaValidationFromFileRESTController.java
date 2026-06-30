@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs;
+package org.rdfarchitect.api.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,34 +26,34 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.validation.SchemaValidationReport;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/validate")
 @RequiredArgsConstructor
-public class SchemaValidationRESTController {
+@RequestMapping("api/validate")
+public class SchemaValidationFromFileRESTController {
+
+    private static final String GRAPH_URI = "http://example.org/graph";
 
     private static final Logger logger =
-            LoggerFactory.getLogger(SchemaValidationRESTController.class);
+            LoggerFactory.getLogger(SchemaValidationFromFileRESTController.class);
 
-    private final ExpandURIUseCase expandURIUseCase;
     private final SchemaValidationUseCase schemaValidationUseCase;
 
     @Operation(
             summary = "Validate schema",
             description =
-                    "Validates the RDFS schema of a graph for completeness, including the profile header.",
-            tags = {"graph"},
+                    "Validates the RDFS schema of a given graph file for completeness, including the profile header.",
             responses = {
                 @ApiResponse(
                         responseCode = "200",
@@ -65,7 +65,7 @@ public class SchemaValidationRESTController {
                                                         implementation =
                                                                 SchemaValidationReport.class)))
             })
-    @GetMapping
+    @PostMapping
     public SchemaValidationReport validateSchema(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -73,29 +73,22 @@ public class SchemaValidationRESTController {
                             required = false,
                             defaultValue = "unknown")
                     String originURL,
-            @Parameter(description = "The literal name of the dataset.") @PathVariable
-                    String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI) {
-        logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" from \"{}\".",
-                datasetName,
-                graphURI,
-                originURL);
+            @Parameter(description = "The graph file to validate.") @RequestParam("file")
+                    MultipartFile file) {
+        logger.info("Received POST request: \"/api/validation\" from \"{}\".", originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var report =
-                schemaValidationUseCase.validateSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+        var graph =
+                new GraphFileSourceBuilderImpl()
+                        .setFile(file)
+                        .setGraphName(GRAPH_URI)
+                        .build()
+                        .graph();
+
+        var report = schemaValidationUseCase.validateSchema(graph);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" to \"{}\".",
-                datasetName,
-                graphURI,
-                originURL);
+                "Sending response to POST request: \"/api/validation\" from \"{}\".", originURL);
+
         return report;
     }
 }

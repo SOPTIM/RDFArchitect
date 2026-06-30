@@ -278,6 +278,29 @@ export class BackendConnection {
         });
     }
 
+    async validateSchema(datasetName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/validate`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            credentials: "include",
+        });
+    }
+
+    async validateFile(file) {
+        const url = `${PUBLIC_BACKEND_URL}/validate`;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        return fetch(url, {
+            method: "POST",
+            mode: "cors",
+            body: formData,
+            credentials: "include",
+        });
+    }
+
     async compareSchemas(datasetName, graphURI, file) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/compare`;
         const formData = new FormData();
