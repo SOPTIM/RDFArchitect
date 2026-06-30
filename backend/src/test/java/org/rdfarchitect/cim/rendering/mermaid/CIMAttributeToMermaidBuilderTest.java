@@ -26,7 +26,7 @@ import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMAttributeToMermaidBuilder;
 
 class CIMAttributeToMermaidBuilderTest {
 

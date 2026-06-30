@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.65.2
+- **Version:** 2.67.0
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -80,13 +80,13 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.61.1
+- **Version:** 8.62.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.0
+- **Version:** 1.6.1
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
@@ -138,7 +138,7 @@
 
 ### eslint-plugin-import-x
 - **Package:** eslint-plugin-import-x
-- **Version:** 4.16.2
+- **Version:** 4.17.0
 - **License:** MIT
 - **URL:** [https://github.com/un-ts/eslint-plugin-import-x#readme](https://github.com/un-ts/eslint-plugin-import-x#readme)
 
@@ -156,7 +156,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.6.0
+- **Version:** 17.7.0
 - **License:** MIT
 
 ### jsdom
@@ -239,13 +239,13 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.61.1
+- **Version:** 8.62.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
 ### uuid
 - **Package:** uuid
-- **Version:** 14.0.0
+- **Version:** 14.0.1
 - **License:** MIT
 - **URL:** [https://github.com/uuidjs/uuid](https://github.com/uuidjs/uuid)
 

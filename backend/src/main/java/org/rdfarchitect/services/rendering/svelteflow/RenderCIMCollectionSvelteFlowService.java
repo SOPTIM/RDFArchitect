@@ -15,7 +15,9 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rendering.svelteflow;
+package org.rdfarchitect.services.rendering.svelteflow;
+
+import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
@@ -35,9 +37,12 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.models.cim.rendering.RenderingUtils;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
+import org.rdfarchitect.services.rendering.DiagramToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.RenderCIMCollectionUseCase;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -50,14 +55,17 @@ import java.util.UUID;
  * Converts a {@link CIMCollection} to a DTO Record that contains two JSON arrays with nodes and
  * edges used to render a UML diagram using the JavaScript library SvelteFlow.
  */
+@RequiredArgsConstructor
+@Service
+@ConditionalOnProperty(
+        name = "rendering.renderer",
+        havingValue = "svelteflow",
+        matchIfMissing = true)
 public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollectionUseCase {
 
     private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
 
-    public RenderCIMCollectionSvelteFlowService(
-            FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase) {
-        this.fetchRenderingLayoutDataUseCase = fetchRenderingLayoutDataUseCase;
-    }
+    private final DiagramToCIMCollectionConverterUseCase converter;
 
     // CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
     private static final String CLASS_NODE_TYPE = "class";
@@ -80,8 +88,8 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
     }
 
     @Override
-    public RenderingDataDTO renderGlobalUML(
-            CIMCollection cimCollection, String datasetName, UUID diagramId) {
+    public RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId) {
+        var cimCollection = converter.convert(datasetName, diagramId);
         var renderingLayoutData =
                 fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
                         datasetName, diagramId);

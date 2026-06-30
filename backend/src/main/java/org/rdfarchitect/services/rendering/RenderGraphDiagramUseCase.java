@@ -15,19 +15,14 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rendering.mermaid.builder;
+package org.rdfarchitect.services.rendering;
 
-import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
+import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
+import org.rdfarchitect.database.GraphIdentifier;
 
-public class CIMEnumEntryToMermaidBuilder {
+import java.util.UUID;
 
-    private final CIMEnumEntry cimEnumEntry;
+public interface RenderGraphDiagramUseCase {
 
-    public CIMEnumEntryToMermaidBuilder(CIMEnumEntry cimEnumEntry) {
-        this.cimEnumEntry = cimEnumEntry;
-    }
-
-    public StringBuilder build() {
-        return new StringBuilder().append(cimEnumEntry.getLabel().getValue()).append("\n");
-    }
+    RenderingDataDTO renderGraphDiagram(GraphIdentifier identifier, UUID diagramId);
 }
