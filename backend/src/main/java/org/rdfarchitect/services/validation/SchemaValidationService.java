@@ -208,6 +208,17 @@ public class SchemaValidationService implements SchemaValidationUseCase {
                                                 .build());
                             }
 
+                            // namespace required
+                            if (property.getNameSpace() == null
+                                    || property.getNameSpace().isEmpty()) {
+                                issues.add(
+                                        SchemaValidationIssue.builder()
+                                                .severity(Severity.ERROR)
+                                                .resourceUri(uri)
+                                                .message("Property is missing a namespace.")
+                                                .build());
+                            }
+
                             // rdfs:domain required
                             if (!property.hasProperty(RDFS.domain)) {
                                 issues.add(
