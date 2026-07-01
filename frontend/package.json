@@ -50,7 +50,7 @@
         "@sveltejs/adapter-static": "^3.0.8",
         "@tailwindcss/vite": "^4.1.8",
         "@xyflow/svelte": "^1.4.0",
-        "asciidoctor": "^3.0.4",
+        "asciidoctor": "^4.0.0",
         "bits-ui": "^2.11.5",
         "codemirror": "^6.0.2",
         "codemirror-lang-turtle": "^0.0.2",
