@@ -19,6 +19,7 @@ package org.rdfarchitect.database;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.shared.PrefixMapping;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
@@ -51,6 +52,14 @@ public interface DatabasePort {
      * @return diagram layout for the dataset
      */
     DiagramLayout getDatasetDiagramLayout(String datasetName);
+
+    /**
+     * Returns the information of the CrossProfileDiagram of the given dataset.
+     *
+     * @param datasetName literal dataset name
+     * @return {@link CrossProfileDiagramInfo} of the CrossProfileDiagram for the dataset
+     */
+    CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName);
 
     /**
      * Loads the namespace prefix mapping for the dataset.

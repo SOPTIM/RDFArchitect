@@ -27,9 +27,11 @@ public class GraphCompressionConfig {
 
     private static final int DEFAULT_MAX_VERSIONS = 20;
     private static final int DEFAULT_COMPRESS_COUNT = 5;
+    private static final int DEFAULT_LOCK_TIMEOUT_SECONDS = 30;
 
     @Getter private static int maxVersions = DEFAULT_MAX_VERSIONS;
     @Getter private static int compressCount = DEFAULT_COMPRESS_COUNT;
+    @Getter private static int lockTimeoutSeconds = DEFAULT_LOCK_TIMEOUT_SECONDS;
 
     @Value("${graph.maxVersions:" + DEFAULT_MAX_VERSIONS + "}")
     @SuppressWarnings("java:S2696")
@@ -41,5 +43,11 @@ public class GraphCompressionConfig {
     @SuppressWarnings("java:S2696")
     public void setCompressCount(int compressCount) {
         GraphCompressionConfig.compressCount = compressCount;
+    }
+
+    @Value("${graph.lockTimeoutSeconds:" + DEFAULT_LOCK_TIMEOUT_SECONDS + "}")
+    @SuppressWarnings("java:S2696")
+    public void setLockTimeoutSeconds(int lockTimeoutSeconds) {
+        GraphCompressionConfig.lockTimeoutSeconds = lockTimeoutSeconds;
     }
 }

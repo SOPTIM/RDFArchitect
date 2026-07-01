@@ -174,28 +174,30 @@
         {disabled}
     />
     <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={copyClass}
-            faIcon={faCopy}
-            altText="Ctrl+C"
-        >
-            Copy
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={openExtendClassDialog}
-            faIcon={faFileExport}
-        >
-            Extend Class
-        </ContextMenu.Item.Button>
-        <ContextMenu.Separator />
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                showSHACLDialog = true;
-            }}
-            faIcon={faDiagramProject}
-        >
-            Constraints
-        </ContextMenu.Item.Button>
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+            <ContextMenu.Item.Button
+                onSelect={copyClass}
+                faIcon={faCopy}
+                altText="Ctrl+C"
+            >
+                Copy
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={openExtendClassDialog}
+                faIcon={faFileExport}
+            >
+                Extend Class
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showSHACLDialog = true;
+                }}
+                faIcon={faDiagramProject}
+            >
+                Constraints
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger
                 faIcon={faLayerGroup}
@@ -256,24 +258,26 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
-        <ContextMenuSeparator />
-        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+            <ContextMenuSeparator />
+            {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
+                <ContextMenu.Item.Button
+                    onSelect={openRemoveFromDiagramDialog}
+                    faIcon={faMinus}
+                    variant="danger"
+                >
+                    Remove from Diagram
+                </ContextMenu.Item.Button>
+            {/if}
             <ContextMenu.Item.Button
-                onSelect={openRemoveFromDiagramDialog}
-                faIcon={faMinus}
+                onSelect={openDeleteClassDialog}
+                disabled={classActionsDisabled}
+                faIcon={faTrash}
                 variant="danger"
             >
-                Remove from Diagram
+                Delete class
             </ContextMenu.Item.Button>
         {/if}
-        <ContextMenu.Item.Button
-            onSelect={openDeleteClassDialog}
-            disabled={classActionsDisabled}
-            faIcon={faTrash}
-            variant="danger"
-        >
-            Delete class
-        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 

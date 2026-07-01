@@ -75,7 +75,7 @@ class EnumEntryMapperTest {
                     () -> assertThat(dto.getUuid()).isEqualTo(cimEnumEntry.getUuid()),
                     () -> assertThat(dto.getPrefix()).isEqualTo("http://example.org#"),
                     () -> assertThat(dto.getLabel()).isEqualTo("TestEnumEntry"),
-                    () -> assertThat(dto.getType()).isEqualTo("TestEnum"),
+                    () -> assertThat(dto.getType()).isEqualTo("http://example.org#TestEnum"),
                     () -> assertThat(dto.getComment()).isNull(),
                     () -> assertThat(dto.getStereotype()).isNull());
         }
@@ -94,7 +94,7 @@ class EnumEntryMapperTest {
                     () -> assertThat(dto.getUuid()).isEqualTo(cimEnumEntry.getUuid()),
                     () -> assertThat(dto.getPrefix()).isEqualTo("http://example.org#"),
                     () -> assertThat(dto.getLabel()).isEqualTo("TestEnumEntry"),
-                    () -> assertThat(dto.getType()).isEqualTo("TestEnum"),
+                    () -> assertThat(dto.getType()).isEqualTo("http://example.org#TestEnum"),
                     () -> assertThat(dto.getComment()).isEqualTo("Test comment"),
                     () -> assertThat(dto.getStereotype()).isEqualTo("enum"));
         }

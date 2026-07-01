@@ -32,6 +32,8 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
+        ClassType,
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
@@ -115,8 +117,8 @@
     });
 
     $effect(() => {
-        editorState.selectedClassUUID.subscribe();
-        const selectedUUID = editorState.selectedClassUUID.getValue();
+        editorState.selectedClass.subscribe();
+        const selectedUUID = editorState.selectedClass.getProperty("id");
         untrack(() => {
             if (!selectedUUID) {
                 resetTemporaryFront();
@@ -302,7 +304,7 @@
 
             bringToFrontTemporarily(id);
 
-            if (!editorState.selectedClassUUID.getValue()) {
+            if (!editorState.selectedClass.getProperty("id")) {
                 eventStack.executeNewestEvent(id);
                 editorState.selectedClassDataset.updateValue(
                     editorState.selectedDataset.getValue(),
@@ -310,12 +312,25 @@
                 editorState.selectedClassGraph.updateValue(
                     nodeClickEvent.node.data.graphUri,
                 );
-                editorState.selectedClassUUID.updateValue(id);
+                const classType =
+                    editorState.selectedDiagram.getProperty("type") ===
+                    DiagramType.CROSS_PROFILE
+                        ? ClassType.MERGED_CLASS
+                        : ClassType.SINGLE_CLASS;
+                editorState.selectedClass.updateValue({
+                    type: classType,
+                    id: id,
+                });
             } else {
                 eventStack.executeNewestEvent({
                     datasetName: editorState.selectedDataset.getValue(),
                     graphUri: nodeClickEvent.node.data.graphUri,
                     classUuid: id,
+                    classType:
+                        editorState.selectedDiagram.getProperty("type") ===
+                        DiagramType.CROSS_PROFILE
+                            ? ClassType.MERGED_CLASS
+                            : ClassType.SINGLE_CLASS,
                 });
             }
 
@@ -439,12 +454,20 @@
             };
         });
 
-        bec.updateClassPositions(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            editorState.selectedDiagram.getProperty("id"),
-            classPositionDTOList,
-        );
+        if (editorState.selectedGraph.getValue()) {
+            bec.updateClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                editorState.selectedDiagram.getProperty("id"),
+                classPositionDTOList,
+            );
+        } else {
+            bec.updateGlobalClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedDiagram.getProperty("id"),
+                classPositionDTOList,
+            );
+        }
     }
 
     function moveToLayer(classUuid, layer) {
@@ -485,6 +508,7 @@
         }
 
         const diagramUUID = editorState.selectedDiagram.getProperty("id");
+        if (!diagramUUID) return;
 
         if (editorState.selectedGraph.getValue()) {
             bec.updateClassPositions(

@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rendering;
+package org.rdfarchitect.services.rendering;
 
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
@@ -39,15 +39,12 @@ public interface RenderCIMCollectionUseCase {
     RenderingDataDTO renderUML(CIMCollection cimCollection, RenderingLayoutData layoutData);
 
     /**
-     * Generates the rendering data for a CIMCollection that belongs to a dataset-level custom
-     * diagram.
+     * Generates the rendering data for a dataset-level custom diagram.
      *
-     * @param cimCollection the CIMCollection to be converted
      * @param datasetName the dataset name that the collection belongs to
      * @param diagramId the id of the custom diagram that should be rendered
      * @return a dto that contains all data required to render a UML diagram for the given
      *     collection
      */
-    RenderingDataDTO renderGlobalUML(
-            CIMCollection cimCollection, String datasetName, UUID diagramId);
+    RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId);
 }

@@ -118,7 +118,7 @@
             {#each sections.slice(0, 2) as section}
                 <div>
                     <h3
-                        class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
+                        class="text-default-text mb-2 text-sm font-semibold tracking-wide uppercase opacity-60"
                     >
                         {section.title}
                     </h3>
@@ -157,7 +157,7 @@
             {#each sections.slice(2) as section}
                 <div>
                     <h3
-                        class="text-default-text mb-2 text-sm font-semibold uppercase tracking-wide opacity-60"
+                        class="text-default-text mb-2 text-sm font-semibold tracking-wide uppercase opacity-60"
                     >
                         {section.title}
                     </h3>

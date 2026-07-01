@@ -55,7 +55,7 @@ export function isSelectedClass(dataset, graph, cls) {
     const datasetLabel = dataset?.label ?? dataset;
     const graphUri = graph ? getUri(graph) : null;
     return (
-        editorState.selectedClassUUID.getValue() === cls.uuid &&
+        editorState.selectedClass.getProperty("id") === cls.uuid &&
         editorState.selectedClassDataset.getValue() === datasetLabel &&
         editorState.selectedClassGraph.getValue() === graphUri
     );

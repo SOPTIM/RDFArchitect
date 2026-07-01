@@ -15,19 +15,20 @@
  *
  */
 
-package org.rdfarchitect.models.cim.rendering.mermaid.builder;
+package org.rdfarchitect.services.dl.update.classlayout;
 
-import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
+import java.util.UUID;
 
-public class CIMEnumEntryToMermaidBuilder {
+public interface CrossProfileDiagramLayoutUseCase {
 
-    private final CIMEnumEntry cimEnumEntry;
-
-    public CIMEnumEntryToMermaidBuilder(CIMEnumEntry cimEnumEntry) {
-        this.cimEnumEntry = cimEnumEntry;
-    }
-
-    public StringBuilder build() {
-        return new StringBuilder().append(cimEnumEntry.getLabel().getValue()).append("\n");
-    }
+    /**
+     * Migrates the CrossProfileDiagram layout entry for a class whose IRI has changed.
+     *
+     * @param datasetName the literal name of the dataset
+     * @param oldMergedUuid the UUID derived from the old class IRI
+     * @param newMergedUuid the UUID derived from the new class IRI
+     * @param newClassUri the full IRI of the renamed class
+     */
+    void migrateLayoutToNewClassUri(
+            String datasetName, UUID oldMergedUuid, UUID newMergedUuid, String newClassUri);
 }

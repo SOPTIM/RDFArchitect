@@ -48,7 +48,7 @@
 		 */
         window.getClassInformation = nodeId => {
             console.log("selecting class: ", nodeId);
-            editorState.selectedClassUUID.updateValue(nodeId);
+            editorState.selectedClass.updateValue(nodeId);
         };
     });
 

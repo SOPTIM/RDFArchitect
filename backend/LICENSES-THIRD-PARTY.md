@@ -26,7 +26,7 @@
 
 ### Jackson-dataformat-YAML
 - **Package:** com.fasterxml.jackson.dataformat
-- **Version:** 2.21.2
+- **Version:** 2.21.4
 - **License:** Apache License 2.0
 - **URL:** [https://github.com/FasterXML/jackson-dataformats-text](https://github.com/FasterXML/jackson-dataformats-text)
 
@@ -50,43 +50,43 @@
 
 ### spring-boot-starter
 - **Package:** org.springframework.boot
-- **Version:** 4.0.6
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-log4j2
 - **Package:** org.springframework.boot
-- **Version:** 4.0.6
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-test
 - **Package:** org.springframework.boot
-- **Version:** 4.0.6
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-thymeleaf
 - **Package:** org.springframework.boot
-- **Version:** 4.0.6
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webflux
 - **Package:** org.springframework.boot
-- **Version:** 4.0.6
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-boot-starter-webmvc
 - **Package:** org.springframework.boot
-- **Version:** 4.0.6
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-boot](https://spring.io/projects/spring-boot)
 
 ### spring-session-core
 - **Package:** org.springframework.session
-- **Version:** 4.0.3
+- **Version:** 4.1.0
 - **License:** Apache License 2.0
 - **URL:** [https://spring.io/projects/spring-session](https://spring.io/projects/spring-session)
 

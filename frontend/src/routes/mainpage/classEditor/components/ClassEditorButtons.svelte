@@ -15,11 +15,12 @@
   -
   -->
 <script>
-    import { faFloppyDisk, faXmark } from "@fortawesome/free-solid-svg-icons";
     import {
         faDiagramProject,
+        faFloppyDisk,
         faRotateLeft,
         faTrash,
+        faXmark,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onDestroy, onMount } from "svelte";
 
@@ -45,6 +46,7 @@
         datasetOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
+        classTypeOfClassToOpenNext,
         closeClassEditor,
     } = $props();
 
@@ -120,7 +122,7 @@
                 responseText,
             );
             reactiveClass.save();
-            editorState.selectedClassUUID.trigger();
+            editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
             toastStore.success("Class saved", `"${classLabel}" was saved.`);
@@ -157,7 +159,10 @@
                 datasetOfClassToOpenNext,
             );
             editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-            editorState.selectedClassUUID.updateValue(classToOpenNext);
+            editorState.selectedClass.updateValue({
+                type: classTypeOfClassToOpenNext,
+                id: classToOpenNext,
+            });
         }
     }
 
@@ -165,7 +170,10 @@
         saveChanges();
         editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
+        editorState.selectedClass.updateValue({
+            type: classTypeOfClassToOpenNext,
+            id: classToOpenNext,
+        });
     }
 </script>
 
@@ -181,7 +189,7 @@
       - (matching the widest), while the grid stays content-sized so the row
       - is left-aligned instead of stretching to full width.
     -->
-    <div class="grid grid-flow-col auto-cols-fr gap-1">
+    <div class="grid auto-cols-fr grid-flow-col gap-1">
         <FaIconButton
             callOnClick={() => (showSHACLClassDialog = true)}
             icon={faDiagramProject}

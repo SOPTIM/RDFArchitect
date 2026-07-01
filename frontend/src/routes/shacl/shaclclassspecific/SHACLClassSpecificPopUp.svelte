@@ -19,7 +19,7 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassReferencedVia from "./ClassReferencedVia.svelte";
     import SHACLShapeTtlRenderer from "./SHACLShapeTtlRenderer.svelte";
@@ -92,7 +92,10 @@
     function goToClass(classUUID) {
         editorState.selectedClassDataset.updateValue(datasetName);
         editorState.selectedClassGraph.updateValue(graphUri);
-        editorState.selectedClassUUID.updateValue(classUUID);
+        editorState.selectedClass.updateValue({
+            type: ClassType.SINGLE_CLASS,
+            id: classUUID,
+        });
         showDialog = false;
     }
 </script>
@@ -157,7 +160,7 @@
             <!-- sidebar -->
             <div class="w-1/4">
                 <ClassReferencedVia
-                    classUUID={editorState.selectedClassUUID.getValue()}
+                    classUUID={editorState.selectedClass.getProperty("id")}
                     onClickOnClass={goToClass}
                 />
             </div>
