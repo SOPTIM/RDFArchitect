@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services.schemamigration.scriptgeneration;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
 /** Interface for generating the migration actions when migrating between two schemas. */
 public interface GenerateMigrationScriptUseCase {
