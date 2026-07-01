@@ -83,6 +83,7 @@
     let datasetOfClassToOpenNext = $state(null);
     let graphOfClassToOpenNext = $state(null);
     let classToOpenNext = $state(null);
+    let classTypeOfClassToOpenNext = $state(null);
 
     let pendingAction = $state(null);
 
@@ -91,7 +92,7 @@
     );
 
     $effect(() => {
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         forceReloadTrigger.subscribe();
 
         const cancellation = { cancelled: false };
@@ -163,10 +164,16 @@
     }
 
     export function closeClassEditor(
-        { datasetName = null, graphUri = null, classUuid = null } = {
+        {
+            datasetName = null,
+            graphUri = null,
+            classUuid = null,
+            classType = null,
+        } = {
             datasetName: null,
             graphUri: null,
             classUuid: null,
+            classType: null,
         },
     ) {
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
@@ -174,11 +181,15 @@
             datasetOfClassToOpenNext = datasetName;
             graphOfClassToOpenNext = graphUri;
             classToOpenNext = classUuid;
+            classTypeOfClassToOpenNext = classType;
             return;
         }
         editorState.selectedClassDataset.updateValue(datasetName);
         editorState.selectedClassGraph.updateValue(graphUri);
-        editorState.selectedClassUUID.updateValue(classUuid);
+        editorState.selectedClass.updateValue({
+            type: classType,
+            id: classUuid,
+        });
     }
 
     async function loadContext() {
@@ -333,6 +344,7 @@
                         {datasetOfClassToOpenNext}
                         {graphOfClassToOpenNext}
                         {classToOpenNext}
+                        {classTypeOfClassToOpenNext}
                         {closeClassEditor}
                     />
                     <div

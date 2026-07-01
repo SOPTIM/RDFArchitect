@@ -19,6 +19,7 @@ import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import {
+    ClassType,
     copyState,
     DiagramType,
     editorState,
@@ -64,7 +65,10 @@ export async function saveCopyClass(
                 type: DiagramType.PACKAGE,
                 id: packageDTO?.uuid ?? "default",
             });
-            editorState.selectedClassUUID.updateValue(uuid);
+            editorState.selectedClass.updateValue({
+                type: ClassType.SINGLE_CLASS,
+                id: uuid,
+            });
             toastStore.success("Class pasted", `"${name}" was pasted.`);
         } else {
             const errorText = await res.text();

@@ -130,7 +130,7 @@
                     type: DiagramType.PACKAGE,
                     id: "default",
                 });
-                editorState.selectedClassUUID.updateValue(null);
+                editorState.selectedClass.updateValue({ type: null, id: null });
                 toastStore.success(
                     "Schema created",
                     `"${graphURILocal}" was added to "${datasetNameLocal}".`,

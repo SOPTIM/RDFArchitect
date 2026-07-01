@@ -25,6 +25,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
@@ -221,14 +222,15 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
      * @param cimClass The CIM class
      * @return List of enum entry labels
      */
-    private List<String> getClassEnumEntries(RenderContext renderContext, CIMClass cimClass) {
-        List<String> enumEntries = new ArrayList<>();
+    private List<EnumEntryDTO> getClassEnumEntries(RenderContext renderContext, CIMClass cimClass) {
+        List<EnumEntryDTO> enumEntries = new ArrayList<>();
 
         for (var cimEnumEntry : renderContext.cimCollection.getEnumEntries()) {
             if (!cimEnumEntry.getType().getUri().equals(cimClass.getUri())) {
                 continue;
             }
-            enumEntries.add(cimEnumEntry.getLabel().getValue());
+            enumEntries.add(
+                    EnumEntryDTO.builder().label(cimEnumEntry.getLabel().getValue()).build());
         }
 
         return enumEntries;

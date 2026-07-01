@@ -38,11 +38,13 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
+import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateDiagramObjectNameUseCase;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
@@ -57,6 +59,7 @@ public class UpdateClassService
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+    private final CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase;
     private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
 
     public UpdateClassService(
@@ -67,6 +70,7 @@ public class UpdateClassService
             UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase,
             DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
+            CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase,
             RemoveFromDiagramUseCase removeFromDiagramUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
@@ -75,11 +79,19 @@ public class UpdateClassService
         this.updateDiagramObjectNameUseCase = updateDiagramObjectNameUseCase;
         this.deleteClassLayoutDataUseCase = deleteClassLayoutDataUseCase;
         this.newValuesAsBlankNode = newValuesAsBlankNode;
+        this.crossProfileDiagramLayoutUseCase = crossProfileDiagramLayoutUseCase;
         this.removeFromDiagramUseCase = removeFromDiagramUseCase;
     }
 
     @Override
     public void replaceClass(GraphIdentifier graphIdentifier, ClassUMLAdaptedDTO newClass) {
+        String oldClassUri;
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var resource =
+                    CIMResourceUtils.findResourceForUuid(ctx.getRdfGraph(), newClass.getUuid());
+            oldClassUri = resource.getURI();
+        }
+
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var graph = ctx.getRdfGraph();
             var cimClass = classMapper.toCIMObject(newClass);
@@ -95,6 +107,16 @@ public class UpdateClassService
 
         updateDiagramObjectNameUseCase.updateDiagramObjectName(
                 graphIdentifier, newClass.getUuid(), newClass.getLabel());
+
+        String newClassUri = newClass.getPrefix() + newClass.getLabel();
+        if (!oldClassUri.equals(newClassUri)) {
+            var oldMergedUuid =
+                    UUID.nameUUIDFromBytes(oldClassUri.getBytes(StandardCharsets.UTF_8));
+            var newMergedUuid =
+                    UUID.nameUUIDFromBytes(newClassUri.getBytes(StandardCharsets.UTF_8));
+            crossProfileDiagramLayoutUseCase.migrateLayoutToNewClassUri(
+                    graphIdentifier.datasetName(), oldMergedUuid, newMergedUuid, newClassUri);
+        }
     }
 
     @Override

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import org.apache.jena.datatypes.xsd.XSDDatatype;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
@@ -137,8 +138,8 @@ class RenderCIMCollectionSvelteFlowServiceTest extends RenderCIMCollectionTestBa
                 .contains("abstract");
         assertThat(nodeDTO.getData().getEnumEntries())
                 .hasSize(2)
-                .contains("enumEntry1")
-                .contains("enumEntry2");
+                .extracting(EnumEntryDTO::getLabel)
+                .contains("enumEntry1", "enumEntry2");
     }
 
     @Test

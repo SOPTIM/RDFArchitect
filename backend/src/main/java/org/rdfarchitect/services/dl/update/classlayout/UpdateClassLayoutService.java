@@ -27,6 +27,8 @@ import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
+import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.dl.queries.update.DLUpdates;
@@ -45,7 +47,8 @@ public class UpdateClassLayoutService
                 CreateClassLayoutDataUseCase,
                 DeleteClassLayoutDataUseCase,
                 UpdateDiagramObjectNameUseCase,
-                CustomDiagramLayoutUseCase {
+                CustomDiagramLayoutUseCase,
+                CrossProfileDiagramLayoutUseCase {
 
     private final DatabasePort databasePort;
     private final PackageMapper packageMapper;
@@ -294,5 +297,49 @@ public class UpdateClassLayoutService
         if (diagramObject != null) {
             DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
         }
+    }
+
+    @Override
+    public void migrateLayoutToNewClassUri(
+            String datasetName, UUID oldMergedUuid, UUID newMergedUuid, String newClassUri) {
+        var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
+        var model = diagramLayout.getDiagramLayoutModel();
+        var crossProfileDiagramUUID =
+                databasePort.getCrossProfileDiagramInfo(datasetName).getCrossProfileDiagramUUID();
+
+        if (DLObjectFetcher.fetchDiagram(model, crossProfileDiagramUUID) == null) {
+            return;
+        }
+
+        var existingNew =
+                DLObjectFetcher.fetchDiagramDOForClass(
+                        model, crossProfileDiagramUUID, newMergedUuid);
+        if (existingNew != null) {
+            return;
+        }
+
+        var oldDO =
+                DLObjectFetcher.fetchDiagramDOForClass(
+                        model, crossProfileDiagramUUID, oldMergedUuid);
+        if (oldDO == null) {
+            return;
+        }
+
+        var oldDOP = DLObjectFetcher.fetchDOPForDO(model, oldDO.getMRID());
+        var position = oldDOP.getPosition();
+
+        var newDoMRID =
+                DiagramLayoutServiceUtils.insertDiagramObject(
+                        model, crossProfileDiagramUUID, newClassUri, newMergedUuid);
+
+        var newDiagramObjectPoint =
+                DiagramObjectPoint.builder()
+                        .mRID(new MRID(UUID.randomUUID()))
+                        .position(
+                                new XYZPosition(
+                                        position.getX(), position.getY(), position.getZ() + 1))
+                        .belongsToDiagramObject(newDoMRID)
+                        .build();
+        DLUpdates.insertDiagramObjectPoint(model, newDiagramObjectPoint);
     }
 }

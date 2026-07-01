@@ -48,3 +48,9 @@ export async function getDatasetNames() {
     }
     return { modifiable: modifiableDatasets, readonly: readOnlyDatasets };
 }
+
+export async function getCrossProfileDiagram(datasetName) {
+    if (!datasetName) return null;
+    const res = await bec.getCrossProfileDiagramForDataset(datasetName);
+    return await res.json();
+}

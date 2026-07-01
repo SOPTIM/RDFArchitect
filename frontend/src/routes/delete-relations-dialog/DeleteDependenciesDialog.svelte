@@ -162,7 +162,7 @@
             forceReloadTrigger.trigger();
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
-            editorState.selectedClassUUID.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
             toastStore.success(
                 `${type ? type.charAt(0).toUpperCase() + type.slice(1) : "Resource"} deleted`,
                 label ? `"${label}" was removed.` : "Resource was removed.",

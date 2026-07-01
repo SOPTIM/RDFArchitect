@@ -109,7 +109,7 @@
     let graphHasOntology = $derived(!!ontology);
 
     let disableCopyClassButton = $derived(
-        !editorState.selectedClassUUID.getValue(),
+        !editorState.selectedClass.getProperty("id"),
     );
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
@@ -122,7 +122,7 @@
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
@@ -314,7 +314,7 @@
 
     function copyClass() {
         copyState.classUUID.updateValue(
-            editorState.selectedClassUUID.getValue(),
+            editorState.selectedClass.getProperty("id"),
         );
         copyState.graphURI.updateValue(
             editorState.selectedClassGraph.getValue(),

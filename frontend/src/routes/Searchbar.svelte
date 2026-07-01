@@ -30,6 +30,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import {
+        ClassType,
         DiagramType,
         editorState,
         forceReloadTrigger,
@@ -77,10 +78,13 @@
                 searchResult.datasetName,
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
-            editorState.selectedClassUUID.updateValue(searchResult.uuid);
+            editorState.selectedClass.updateValue({
+                type: ClassType.SINGLE_CLASS,
+                id: searchResult.uuid,
+            });
             editorState.focusedClassUUID.updateValue(searchResult.uuid);
         } else if (searchResult.type === "PACKAGE") {
-            editorState.selectedClassUUID.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
             editorState.focusedClassUUID.updateValue(null);
             editorState.selectedDiagram.updateValue({
                 type: DiagramType.PACKAGE,
@@ -91,9 +95,10 @@
                 searchResult.datasetName,
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
-            editorState.selectedClassUUID.updateValue(
-                searchResult.parentClassUUID,
-            );
+            editorState.selectedClass.updateValue({
+                type: ClassType.SINGLE_CLASS,
+                id: searchResult.parentClassUUID,
+            });
             editorState.focusedClassUUID.updateValue(
                 searchResult.parentClassUUID,
             );

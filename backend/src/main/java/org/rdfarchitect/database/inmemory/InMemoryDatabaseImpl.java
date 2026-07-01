@@ -29,8 +29,10 @@ import org.rdfarchitect.context.SessionContext;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -71,6 +73,11 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
+    public CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName) {
+        return getOrCreateSessionDataStore().getCrossProfileDiagramInfo(datasetName);
+    }
+
+    @Override
     public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         return getOrCreateSessionDataStore().getGraphWithContext(graphIdentifier);
     }
@@ -84,6 +91,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
                         .setNsPrefixes(store.getPrefixMapping(graphIdentifier.datasetName()))
                         .setNsPrefixes(newGraph.getPrefixMapping());
         store.setPrefixMapping(graphIdentifier.datasetName(), currentPrefixMapping);
+        store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
+                .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
     }
 
     @Override
@@ -92,6 +101,8 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         var datasetName = graphIdentifier.datasetName();
         var isNewDataset = !store.listDatasets().contains(datasetName);
         store.create(graphIdentifier, GraphFactory.createDefaultGraph());
+        store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
+                .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
         if (isNewDataset) {
             store.enableEditing(datasetName);
             var configNamespaces = schemaConfig.getNamespaces();
