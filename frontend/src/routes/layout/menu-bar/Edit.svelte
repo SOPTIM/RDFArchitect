@@ -385,7 +385,8 @@
                   }))
                 : [
                       {
-                          classUUID: editorState.selectedClass.getProperty("id"),
+                          classUUID:
+                              editorState.selectedClass.getProperty("id"),
                           graphURI: editorState.selectedClassGraph.getValue(),
                           datasetName:
                               editorState.selectedClassDataset.getValue(),

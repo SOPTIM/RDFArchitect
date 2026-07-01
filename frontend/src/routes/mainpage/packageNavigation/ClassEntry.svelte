@@ -142,6 +142,7 @@
             if (
                 multiSelectState.getSelected().length === 0 &&
                 anchor &&
+                isOpenPackageClass(anchor) &&
                 !(
                     anchor.datasetName === entry.datasetName &&
                     anchor.graphUri === entry.graphUri &&

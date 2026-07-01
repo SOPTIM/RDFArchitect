@@ -79,7 +79,7 @@ export class NodeOrderController {
             const zIndex = selectedIds.has(node.id)
                 ? rank + NODE_SELECTED_Z_OFFSET
                 : rank;
-            return { ...node, zIndex };
+            return node.zIndex === zIndex ? node : { ...node, zIndex };
         });
     }
 

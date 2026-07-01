@@ -24,6 +24,7 @@ import {
     editorState,
     mergeSelections,
     multiSelectState,
+    SelectionLevel,
     toggleSelections,
 } from "$lib/sharedState.svelte.js";
 
@@ -86,12 +87,9 @@ export class DiagramSelectionController {
     }
 
     handleSelectionEnd() {
-        const builtOnPrior = this.#pan.boxAdditive || this.#pan.boxToggle;
         this.#pan.clearBoxMode();
         this.reflectSelectionToNodes();
-        if (!builtOnPrior) {
-            this.#closeEditorIfClassDeselected();
-        }
+        this.#dimOpenClassWhenSelectionEmpty();
     }
 
     #applyNodeSelection(shouldSelect) {
@@ -116,22 +114,19 @@ export class DiagramSelectionController {
         this.#applyNodeSelection(node => selectedIds.has(node.id));
     }
 
-    #closeEditorIfClassDeselected() {
-        const openUuid = editorState.selectedClass.getProperty("id");
-        if (!openUuid) {
+    #dimOpenClassWhenSelectionEmpty() {
+        if (multiSelectState.getSelected().length > 0) {
             return;
         }
-        const stillSelected = multiSelectState
-            .getSelected()
-            .some(entry => entry.classUuid === openUuid);
-        if (stillSelected) {
+        if (!editorState.selectedClass.getProperty("id")) {
             return;
         }
-        eventStack.executeNewestEvent({
-            datasetName: editorState.selectedClassDataset.getValue(),
-            graphUri: editorState.selectedClassGraph.getValue(),
-            classUuid: null,
-        });
+        const isPackage =
+            editorState.selectedDiagram.getProperty("type") ===
+            DiagramType.PACKAGE;
+        editorState.activeSelectionKind.updateValue(
+            isPackage ? SelectionLevel.PACKAGE : SelectionLevel.DIAGRAM,
+        );
     }
 
     #routeClassEditor(graphUri, classUuid, classType) {
@@ -163,7 +158,7 @@ export class DiagramSelectionController {
             );
             multiSelectState.anchor = entry;
             this.reflectSelectionToNodes();
-            this.#closeEditorIfClassDeselected();
+            this.#dimOpenClassWhenSelectionEmpty();
             event.stopPropagation();
             return;
         }

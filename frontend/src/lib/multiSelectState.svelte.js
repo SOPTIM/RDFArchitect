@@ -52,8 +52,20 @@ export class MultiSelectState {
     selectedClasses = new StateValuePair([]);
     anchor = null;
 
+    #keySource = null;
+    #keySet = new Set();
+
     getSelected() {
         return this.selectedClasses.getValue() ?? [];
+    }
+
+    #selectedKeys() {
+        const list = this.getSelected();
+        if (this.#keySource !== list) {
+            this.#keySource = list;
+            this.#keySet = new Set(list.map(entryKey));
+        }
+        return this.#keySet;
     }
 
     subscribe() {
@@ -62,7 +74,7 @@ export class MultiSelectState {
 
     isSelected(datasetName, graphUri, classUuid) {
         const key = entryKey({ datasetName, graphUri, classUuid });
-        return this.getSelected().some(e => entryKey(e) === key);
+        return this.#selectedKeys().has(key);
     }
 
     /**
