@@ -255,9 +255,24 @@ public class SchemaValidationService implements SchemaValidationUseCase {
                             // For attributes: verify that the referenced datatype actually exists
                             if (CIMPropertyUtils.isAttribute(property)
                                     && (hasRange || hasDatatype)) {
-                                validateAttributeDatatype(property, issues);
+                                validateAttributes(property, issues);
                             }
                         });
+    }
+
+    private void validateAttributes(Resource attribute, List<SchemaValidationIssue> issues) {
+        var uri = attribute.getURI();
+
+        validateAttributeDatatype(attribute, issues);
+
+        if (!attribute.hasProperty(CIMS.stereotype)) {
+            issues.add(
+                    SchemaValidationIssue.builder()
+                            .severity(Severity.ERROR)
+                            .resourceUri(uri)
+                            .message("Property is missing cims:stereotype.")
+                            .build());
+        }
     }
 
     /**
