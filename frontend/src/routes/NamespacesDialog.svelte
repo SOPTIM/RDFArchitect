@@ -53,7 +53,6 @@
 
     async function loadNamespaces(datasetNameLocal) {
         const namespaceDTOs = datasetStore.getNamespaces(datasetNameLocal);
-        console.log(namespaceDTOs);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });

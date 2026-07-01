@@ -114,7 +114,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
+        isDatasetReadOnly = datasetStore.isReadOnly(datasetName);
     });
 
     onMount(() => {
@@ -156,7 +156,7 @@
     }
 
     async function loadContext() {
-        await datatypesStore.loadForGraph(graphUri);
+        await datatypesStore.loadForGraph(datasetName, graphUri);
         [
             context.classes,
             context.packages,
@@ -200,7 +200,7 @@
                 await classStore.loadClassInfo(
                     datasetName,
                     graphUri,
-                    classUuid,
+                    uuid,
                 );
                 const res = await classStore.getClassInfo(
                     datasetName,
@@ -227,7 +227,7 @@
         get graphUri() {
             return graphUri;
         },
-        get readonly() {
+        get readOnly() {
             return isDatasetReadOnly;
         },
         get namespaces() {

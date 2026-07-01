@@ -189,15 +189,15 @@
         const graphUrisLocal = files.map(entry =>
             entry.isZip
                 ? ""
-                : ensureGraphNamespaceUri(entry.graphUri, entry.file.label),
+                : ensureGraphNamespaceUri(entry.graphUri, entry.file.name),
         );
-        const { data } = await graphStore.importGraphs(
+        const { data, error } = await graphStore.importGraphs(
             datasetNameUserInputLocal,
             filesLocal,
             graphUrisLocal,
         );
 
-        if (data.importedGraphUris?.length > 0) {
+        if (!error && data.importedGraphUris?.length > 0) {
             editorState.selectedDataset.updateValue(datasetNameUserInputLocal);
             editorState.selectedGraph.updateValue(
                 data.importedGraphUris[0] || null,
@@ -332,7 +332,7 @@
                                     class="border-border bg-window-background focus:border-blue ring-none w-full rounded border-2 p-2 text-sm outline-none"
                                     type="text"
                                     value={fileEntry.isZip
-                                        ? fileEntry.file.label
+                                        ? fileEntry.file.name
                                         : fileEntry.graphUri}
                                     disabled={fileEntry.isZip}
                                     oninput={event =>

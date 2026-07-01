@@ -955,7 +955,7 @@ function createClassStore() {
             return { error };
         }
 
-        const enriched: AssociationPairDto = {
+        const updatedPair: AssociationPairDto = {
             from: { ...pair.from, uuid: data?.fromUUID ?? pair.from?.uuid },
             to: { ...pair.to, uuid: data?.toUUID ?? pair.to?.uuid },
         };
@@ -967,14 +967,15 @@ function createClassStore() {
             );
             return {
                 ...prev,
-                associationPairs: upsertAssociationPair(filtered, enriched),
+                associationPairs: upsertAssociationPair(filtered, updatedPair),
             };
         });
         console.log(
             `${LOG_PREFIX} Replaced association pair uuid="${associationUUID}"`,
         );
         toastStore.success("Association saved", "Changes were applied.");
-        return { error: null, data: data };
+
+        return { error: null, data: data ?? undefined };
     }
 
     async function deleteAssociationPair(

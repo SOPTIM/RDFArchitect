@@ -176,7 +176,7 @@
             label: packageLabel,
             comment: packageComment,
         });
-        const { data, error } = packageStore.addPackage(ds, graph, body);
+        const { data, error } = await packageStore.addPackage(ds, graph, body);
 
         if (error) return;
 

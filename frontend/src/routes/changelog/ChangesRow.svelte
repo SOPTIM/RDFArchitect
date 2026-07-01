@@ -41,11 +41,13 @@
     async function callRestoreVersion(changeId) {
         console.log("restoreVersion", changeId);
 
-        const { error } = await restoreVersion(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            changeId,
-        );
+        const { error } = await restoreVersion({
+            path: {
+                datasetName: editorState.selectedDataset.getValue(),
+                graphURI: editorState.selectedGraph.getValue(),
+            },
+            query: {changeId: changeId},
+        });
         if (!error) {
             console.log("Version restored successfully");
             forceReloadTrigger.trigger();

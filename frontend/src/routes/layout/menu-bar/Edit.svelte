@@ -30,7 +30,7 @@
         faRotateLeft,
         faRotateRight,
         faTags,
-        faTrash,
+        faTrash
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
@@ -39,7 +39,7 @@
     import {
         copyState,
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { ontologyStore } from "$lib/stores/OntologyStore.ts";
@@ -56,7 +56,10 @@
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
 
-    let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
+    let {
+        canUndo, canRedo, isDatasetReadOnly, reload = () => {
+        }
+    } = $props();
 
     const shortcutsUnregister = [];
 
@@ -83,33 +86,33 @@
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
     let hasDatasetSelected = $derived(!!selectedDataset);
     let hasGraphSelected = $derived(
-        hasDatasetSelected && !!editorState.selectedGraph.getValue(),
+        hasDatasetSelected && !!editorState.selectedGraph.getValue()
     );
     let canAccessNamespaces = $derived(hasDatasetSelected);
     let canEditCurrentPackage = $derived(
         selectedPackageDetails &&
-            !selectedPackageDetails.external &&
-            selectedPackageDetails.label !== "default" &&
-            !isDatasetReadOnly,
+        !selectedPackageDetails.external &&
+        selectedPackageDetails.label !== "default" &&
+        !isDatasetReadOnly
     );
     let canDeleteCurrentPackage = $derived(
         selectedPackageDetails &&
-            !selectedPackageDetails.external &&
-            selectedPackageDetails.label !== "default" &&
-            !isDatasetReadOnly,
+        !selectedPackageDetails.external &&
+        selectedPackageDetails.label !== "default" &&
+        !isDatasetReadOnly
     );
     let graphHasOntology = $derived(!!ontology);
 
     let disableCopyClassButton = $derived(
-        !editorState.selectedClassUUID.getValue(),
+        !editorState.selectedClassUUID.getValue()
     );
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
-            !hasGraphSelected ||
-            !editorState.selectedDiagram.getValue() ||
-            !copyState.datasetName.getValue() ||
-            !copyState.graphURI.getValue() ||
-            !copyState.classUUID.getValue(),
+        !hasGraphSelected ||
+        !editorState.selectedDiagram.getValue() ||
+        !copyState.datasetName.getValue() ||
+        !copyState.graphURI.getValue() ||
+        !copyState.classUUID.getValue()
     );
 
     $effect(async () => {
@@ -128,50 +131,50 @@
             shortcutStore.register(
                 "newClass",
                 ["shift", "n"],
-                () => (showNewClassDialog = true),
+                () => (showNewClassDialog = true)
             ),
             shortcutStore.register(
                 "newPackage",
                 ["alt", "n"],
-                () => (showNewPackageDialog = true),
+                () => (showNewPackageDialog = true)
             ),
             shortcutStore.register(
                 "namespaces",
                 ["ctrl", "shift", "a"],
-                () => (showNamespaceDialog = true),
+                () => (showNamespaceDialog = true)
             ),
             shortcutStore.register(
                 "profileHeader",
                 ["ctrl", "alt", "p"],
-                () => (showEditOntologyDialog = true),
+                () => (showEditOntologyDialog = true)
             ),
             shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
-                launchPackageEditor(),
+                launchPackageEditor()
             ),
             shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
-                toggleReadonly(),
+                toggleReadonly()
             ),
             shortcutStore.register("copyClass", ["ctrl", "c"], () =>
-                copyClassWithShortcut(),
+                copyClassWithShortcut()
             ),
             shortcutStore.register("paste", ["ctrl", "v"], () =>
-                pasteClassWithShortcut(false, true, true),
+                pasteClassWithShortcut(false, true, true)
             ),
             shortcutStore.register(
                 "pasteWithoutAttributes",
                 ["ctrl", "shift", "v"],
-                () => pasteClassWithShortcut(false, false, true),
+                () => pasteClassWithShortcut(false, false, true)
             ),
             shortcutStore.register(
                 "pasteWithoutAssociations",
                 ["ctrl", "alt", "v"],
-                () => pasteClassWithShortcut(false, true, false),
+                () => pasteClassWithShortcut(false, true, false)
             ),
             shortcutStore.register(
                 "pasteBare",
                 ["ctrl", "shift", "alt", "v"],
-                () => pasteClassWithShortcut(true, false, false),
-            ),
+                () => pasteClassWithShortcut(true, false, false)
+            )
         );
     });
 
@@ -185,11 +188,10 @@
         }
 
         await ontologyStore.loadOntology(selectedDataset, selectedGraph);
-        const { data } = await ontologyStore.getOntologyForGraph(
+        return ontologyStore.getOntologyForGraph(
             selectedDataset,
-            selectedGraph,
+            selectedGraph
         );
-        return data;
     }
 
     async function requestEnableEditing() {
@@ -199,7 +201,7 @@
 
         const { error } = await datasetStore.updateReadonly(
             selectedDataset,
-            false,
+            false
         );
         if (error) return;
 
@@ -214,7 +216,7 @@
 
         const { error } = await datasetStore.updateReadonly(
             selectedDataset,
-            false,
+            true
         );
         if (error) return;
 
@@ -251,17 +253,17 @@
         await packageStore.load(selectedDataset, selectedGraph);
         const packageData = packageStore.getPackages(
             selectedDataset,
-            selectedGraph,
+            selectedGraph
         );
         return [
             ...(packageData.internal ?? []).map(p => ({
                 ...p,
-                external: false,
+                external: false
             })),
             ...(packageData.external ?? []).map(p => ({
                 ...p,
-                external: true,
-            })),
+                external: true
+            }))
         ];
     }
 
@@ -300,34 +302,34 @@
     }
 
     async function undo() {
-        if (
-            await versionControlStore.undo(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-            )
-        )
+        const { error } = await versionControlStore.undo(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue()
+        );
+        if (!error) {
             reload();
+        }
     }
 
     async function redo() {
-        if (
-            await versionControlStore.redo(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-            )
-        )
+        const { error } = await versionControlStore.redo(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue()
+        );
+        if (!error) {
             reload();
+        }
     }
 
     function copyClass() {
         copyState.classUUID.updateValue(
-            editorState.selectedClassUUID.getValue(),
+            editorState.selectedClassUUID.getValue()
         );
         copyState.graphURI.updateValue(
-            editorState.selectedClassGraph.getValue(),
+            editorState.selectedClassGraph.getValue()
         );
         copyState.datasetName.updateValue(
-            editorState.selectedClassDataset.getValue(),
+            editorState.selectedClassDataset.getValue()
         );
     }
 
@@ -338,7 +340,7 @@
             selectedPackageDetails,
             copyAsAbstract,
             copyAttributes,
-            copyAssociations,
+            copyAssociations
         );
     }
 
@@ -351,7 +353,7 @@
     function pasteClassWithShortcut(
         copyAsAbstract,
         copyAttributes,
-        copyAssociations,
+        copyAssociations
     ) {
         if (!disablePasteButton) {
             pasteClass(copyAsAbstract, copyAttributes, copyAssociations);
@@ -361,13 +363,13 @@
     function toggleReadonly() {
         if (isDatasetReadOnly) {
             datasetStore.updateReadonly(
-                editorState.selectedDatatset.getValue(),
-                false,
+                editorState.selectedDataset.getValue(),
+                false
             );
         } else {
             datasetStore.updateReadonly(
-                editorState.selectedDatatset.getValue(),
-                true,
+                editorState.selectedDataset.getValue(),
+                true
             );
         }
     }

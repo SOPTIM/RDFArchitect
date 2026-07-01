@@ -45,7 +45,7 @@ public class AllCustomDatasetDiagramsRESTController {
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @GetMapping
-    public List<CustomDiagram> getCustomDiagramList(
+    public List<CustomDiagram> getCustomDatasetDiagramList(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

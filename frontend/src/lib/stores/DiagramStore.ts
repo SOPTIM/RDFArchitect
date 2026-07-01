@@ -19,8 +19,8 @@ import { writable, get } from "svelte/store";
 
 import { describeError } from "./StoreLogging";
 import {
-    getCustomDiagramList,
-    getCustomDiagramList1,
+    getCustomDatasetDiagramList,
+    getCustomGraphDiagramList,
     replaceDiagram,
     replaceDiagram1,
     deleteDiagram,
@@ -126,7 +126,7 @@ function createCustomDiagramStore() {
 
         const pending = (async () => {
             try {
-                const { data, error } = await getCustomDiagramList1({
+                const { data, error } = await getCustomDatasetDiagramList({
                     path: { datasetName },
                 });
 
@@ -195,7 +195,7 @@ function createCustomDiagramStore() {
 
         const pending = (async () => {
             try {
-                const { data, error } = await getCustomDiagramList({
+                const { data, error } = await getCustomGraphDiagramList({
                     path: { datasetName, graphURI },
                 });
 

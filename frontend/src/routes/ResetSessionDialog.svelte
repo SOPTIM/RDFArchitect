@@ -23,7 +23,7 @@
     let { showDialog = $bindable() } = $props();
 
     async function callResetSession() {
-        const { error } = resetSession();
+        const { error } = await resetSession();
         if (error) {
             toastStore.error("Reset failed", "Could not reset the session.");
             return;

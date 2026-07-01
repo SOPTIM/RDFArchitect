@@ -32,6 +32,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
+    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
 
     import {
         editorState,
@@ -96,7 +97,7 @@
     async function loadSnapshot() {
         const base64Param = page.url.searchParams.get("snapshot");
         if (base64Param) {
-            const { error } = await loadSnapshot({ path: { base64Param } });
+            const { error } = await loadSnapshotAPI({ path: { base64Param } });
             if (!error) {
                 await goto("/mainpage");
                 toastStore.success(

@@ -15,10 +15,11 @@
  *
  */
 
+import { PUBLIC_BACKEND_URL } from "../config/runtime"
 import { CreateClientConfig } from "./generated/client";
 
 export const createClientConfig: CreateClientConfig = config => ({
     ...config,
-    baseUrl: "http://localhost:8080/",
+    baseUrl: PUBLIC_BACKEND_URL,
     credentials: "include",
 });

@@ -19,19 +19,19 @@
     import { faBoxOpen } from "@fortawesome/free-solid-svg-icons";
     import { onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { getRenderingDataParameterized } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import ZoomAndDraggableMermaid from "$lib/mermaid/zoomAndDraggableMermaid.svelte";
     import {
         editorState,
         forceReloadTrigger,
-        graphViewState,
+        graphViewState
     } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
+
 
     /** @type {{ rightInsetPercent?: number }} */
     let { rightInsetPercent = 0 } = $props();
@@ -41,7 +41,7 @@
     let zoomAndDraggableMermaid = $state();
 
     let displayDiagram = $derived(
-        !mermaidString || mermaidString.includes("class "),
+        !mermaidString || mermaidString.includes("class ")
     );
 
     $effect(async () => {
@@ -55,25 +55,24 @@
         let graphFilter = {
             packageUUID: editorState.selectedDiagram.getProperty("id"),
             includeEnumEntries:
-                graphViewState.filter.getValue().includeEnumEntries,
+            graphViewState.filter.getValue().includeEnumEntries,
             includeAttributes:
-                graphViewState.filter.getValue().includeAttributes,
+            graphViewState.filter.getValue().includeAttributes,
             includeAssociations:
-                graphViewState.filter.getValue().includeAssociations,
+            graphViewState.filter.getValue().includeAssociations,
             includeInheritance:
-                graphViewState.filter.getValue().includeInheritance,
+            graphViewState.filter.getValue().includeInheritance,
             includeRelationsToExternalPackages:
-                graphViewState.filter.getValue()
-                    .includeRelationsToExternalPackages,
+            graphViewState.filter.getValue()
+                .includeRelationsToExternalPackages
         };
-        new BackendConnection(fetch, PUBLIC_BACKEND_URL)
-            .fetchMermaidUMLFiltered(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                graphFilter,
-            )
-            .then(res => res.text())
-            .then(newMMString => (mermaidString = newMMString));
+
+        const {data} = await getRenderingDataParameterized(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            graphFilter
+        )
+        mermaidString = data
     });
 
     onMount(() => {
@@ -87,10 +86,10 @@
             if (!editorState.selectedClassUUID.getValue()) {
                 eventStack.executeNewestEvent(nodeId);
                 editorState.selectedClassDataset.updateValue(
-                    editorState.selectedDataset.getValue(),
+                    editorState.selectedDataset.getValue()
                 );
                 editorState.selectedClassGraph.updateValue(
-                    editorState.selectedGraph.getValue(),
+                    editorState.selectedGraph.getValue()
                 );
                 editorState.selectedClassUUID.updateValue(nodeId);
                 return;
@@ -98,7 +97,7 @@
             eventStack.executeNewestEvent({
                 datasetName: editorState.selectedDataset.getValue(),
                 graphUri: editorState.selectedGraph.getValue(),
-                classUuid: nodeId,
+                classUuid: nodeId
             });
         };
     });

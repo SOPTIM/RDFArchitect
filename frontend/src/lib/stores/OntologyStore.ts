@@ -290,10 +290,6 @@ function createOntologyStore() {
         console.log(
             `${LOG_PREFIX} Generated ${entries.length} ontology entries for dataset="${datasetName}", graph="${graphURI}"`,
         );
-        toastStore.success(
-            "Ontology generated",
-            `Generated ${entries.length} ontology entry${entries.length === 1 ? "" : "ies"}.`,
-        );
 
         return { error: null, data: entries };
     }

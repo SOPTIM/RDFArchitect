@@ -33,9 +33,9 @@
     let disableSubmit = $derived(!selectedDiagram);
 
     async function getCustomDiagrams() {
-        const { data } =
-            await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
-        diagramList = data.filter(diagram => {
+        await customDiagramStore.loadDatasetDiagrams(lockedDatasetName);
+        const diagrams = await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
+        diagramList = diagrams.filter(diagram => {
             const classesToAddIds = new Set(classes.map(cls => cls.id));
             const diagramClassIds = new Set(
                 diagram.classes.map(cls => cls.uuid),

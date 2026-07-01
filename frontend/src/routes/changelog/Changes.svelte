@@ -15,6 +15,7 @@
   -->
 
 <script>
+    import { getChangeLog as getChangeLogAPI } from "$lib/api/generated/index.ts";
     import {
         forceReloadTrigger,
         editorState,
@@ -50,7 +51,7 @@
         if (!selectedDatasetName || !selectedGraphUri) {
             return;
         }
-        const { data, error } = await getChangelog({
+        const { data, error } = await getChangeLogAPI({
             path: {
                 datasetName: selectedDatasetName,
                 graphURI: selectedGraphUri,

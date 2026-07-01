@@ -88,7 +88,6 @@ public final class OpenApiSpecExport {
 
             System.out.println("Wrote OpenAPI spec to " + target.toAbsolutePath().normalize());
         }
-        System.exit(0);
     }
 
     private static Path resolveTargetPath(String[] args) {

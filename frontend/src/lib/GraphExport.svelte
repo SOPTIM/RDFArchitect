@@ -72,18 +72,18 @@
     $effect(async () => {
         if (selectedDatasetName && graphURI) {
             await ontologyStore.loadOntology(selectedDatasetName, graphURI);
-            const { data, error } = await ontologyStore.getOntologyForGraph(
+            const result = await ontologyStore.getOntologyForGraph(
                 selectedDatasetName,
                 graphURI,
             );
-            if (error) {
+            if (result == null) {
                 ontology = null;
                 return;
             }
             ontology = new ReactiveOntology(
-                data.uuid,
-                data.namespace,
-                data.entries,
+                result.uuid,
+                result.namespace,
+                result.entries,
                 namespaces,
             );
         }

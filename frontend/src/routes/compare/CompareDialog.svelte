@@ -201,7 +201,7 @@
                 break;
             case CompareMode.STORED_TO_FILE:
                 response = await compareSchemas({
-                    path: { datasetA, graphA },
+                    path: { datasetName: datasetA, graphURI: graphA },
                     body: fileB,
                 });
                 invert = true;
