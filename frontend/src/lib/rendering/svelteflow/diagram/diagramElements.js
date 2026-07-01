@@ -27,18 +27,50 @@ export function hasDefaultNodeLayout(diagramNodes) {
     );
 }
 
-export function decorateEdges(edges, { selectedNodeIds } = {}) {
-    const selected = selectedNodeIds ?? new Set();
-    return edges.map(edge => decorateEdge(edge, edges, selected));
+const offsetEdgeIdCache = new WeakMap();
+
+function offsetEdgeIds(edges) {
+    let ids = offsetEdgeIdCache.get(edges);
+    if (!ids) {
+        ids = new Set();
+        for (const edge of edges) {
+            if (shouldOffsetInheritanceEdge(edge, edges)) {
+                ids.add(edge.id);
+            }
+        }
+        offsetEdgeIdCache.set(edges, ids);
+    }
+    return ids;
 }
 
-function decorateEdge(edge, edges, selectedNodeIds) {
+export function decorateEdges(edges, { selectedNodeIds, previous } = {}) {
+    const selected = selectedNodeIds ?? new Set();
+    const offsetIds = offsetEdgeIds(edges);
+    const prevById = previous
+        ? new Map(previous.map(edge => [edge.id, edge]))
+        : null;
+    return edges.map(edge =>
+        decorateEdge(edge, offsetIds, selected, prevById?.get(edge.id)),
+    );
+}
+
+function decorateEdge(edge, offsetIds, selectedNodeIds, previous) {
     const elevated =
         selectedNodeIds.has(edge.source) || selectedNodeIds.has(edge.target);
     const zIndex = elevated ? EDGE_SELECTED_Z : EDGE_Z_INDEX;
+    const needsOffset = offsetIds.has(edge.id);
+
+    if (
+        previous &&
+        previous.zIndex === zIndex &&
+        (previous.data?.offsetEdge === true) === needsOffset
+    ) {
+        return previous;
+    }
+
     const decorated = { ...edge, zIndex };
 
-    if (!shouldOffsetInheritanceEdge(edge, edges)) {
+    if (!needsOffset) {
         return decorated;
     }
 

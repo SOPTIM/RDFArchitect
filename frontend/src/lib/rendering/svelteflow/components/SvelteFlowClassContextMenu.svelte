@@ -209,9 +209,7 @@
                 faIcon={faCopy}
                 altText="Ctrl+C"
             >
-                {multiActive
-                    ? `Copy ${selectionUuids.length} classes`
-                    : "Copy"}
+                {multiActive ? `Copy ${selectionUuids.length} classes` : "Copy"}
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={openExtendClassDialog}

@@ -145,7 +145,7 @@
 
     $effect(() => {
         multiSelectState.subscribe();
-        untrack(applySelectionZIndices);
+        untrack(scheduleSelectionZIndices);
     });
 
     $effect(() => {
@@ -173,6 +173,9 @@
 
     onDestroy(() => {
         eventStack.removeEvent(selection.escapeClearSelection);
+        if (selectionZFrame !== null) {
+            cancelAnimationFrame(selectionZFrame);
+        }
     });
 
     function onContainerPointerDown(event) {
@@ -217,6 +220,19 @@
         multiSelectState.clear();
     }
 
+    let selectionZFrame = null;
+    let boxSelecting = false;
+
+    function scheduleSelectionZIndices() {
+        if (boxSelecting || selectionZFrame !== null) {
+            return;
+        }
+        selectionZFrame = requestAnimationFrame(() => {
+            selectionZFrame = null;
+            applySelectionZIndices();
+        });
+    }
+
     function applySelectionZIndices() {
         const selectedNodeIds = selectedNodeIdSet();
         const key = selectionContentKey(selectedNodeIds);
@@ -224,7 +240,7 @@
             return;
         }
         selectionZKey = key;
-        edges = decorateEdges(inputEdges, { selectedNodeIds });
+        edges = decorateEdges(inputEdges, { selectedNodeIds, previous: edges });
         nodes = nodeOrderCtrl.applyZIndices(nodes);
     }
 
@@ -378,7 +394,14 @@
         onpanecontextmenu={e => contextMenus.handlePaneContextMenu(e)}
         onedgecontextmenu={e => contextMenus.handleEdgeContextMenu(e)}
         onselectionchange={e => selection.handleSelectionChange(e)}
-        onselectionend={() => selection.handleSelectionEnd()}
+        onselectionstart={() => {
+            boxSelecting = true;
+        }}
+        onselectionend={() => {
+            boxSelecting = false;
+            selection.handleSelectionEnd();
+            applySelectionZIndices();
+        }}
         onnodedragstart={({ node }) => {
             selection.notifyNodeDragStart();
             nodeOrderCtrl.bringToFrontTemporarily(node?.id);
