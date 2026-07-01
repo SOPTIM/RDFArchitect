@@ -21,6 +21,7 @@ import lombok.experimental.UtilityClass;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
@@ -241,13 +242,19 @@ public class InheritanceChangeHandler {
                                 property, SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
                 propertyChange.setLabel(new URI(property.getURI()).getSuffix());
                 if (CIMPropertyUtils.isAttribute(property)) {
+                    var domain = property.getProperty(RDFS.domain).getResource().getProperty(RDFS.label).getResource().getURI();
+                    var attributeChange = new SemanticAttributeChange(propertyChange);
+                    attributeChange.setInheritedFrom(domain);
                     derivingClassChange
                             .getAttributes()
-                            .add(new SemanticAttributeChange(propertyChange));
+                            .add(attributeChange);
                 } else if (CIMPropertyUtils.isAssociation(property)) {
+                    var domain = property.getProperty(RDFS.domain).getResource().getProperty(RDFS.label).getResource().getURI();
+                    var associationChange = new SemanticAssociationChange(propertyChange);
+                    associationChange.setInheritedFrom(domain);
                     derivingClassChange
                             .getAssociations()
-                            .add(new SemanticAssociationChange(propertyChange));
+                            .add(associationChange);
                 }
             }
         }

@@ -255,4 +255,5 @@ export const migrationState = writable({
     fileB: null,
     cgmesVersionA: null,
     cgmesVersionB: null,
+    ignorePrefixes: false,
 });

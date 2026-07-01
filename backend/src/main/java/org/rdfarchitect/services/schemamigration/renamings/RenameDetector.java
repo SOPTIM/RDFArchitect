@@ -84,6 +84,9 @@ public class RenameDetector {
             T bestMatch = null;
 
             for (T newItem : unmatchedAdded) {
+                if (newItem.getLabel().equals(deletedItem.getLabel())) {
+                    
+                }
                 double score = SimilarityCalculator.calculateSimilarity(newItem, deletedItem);
                 if (score > bestScore) {
                     bestScore = score;

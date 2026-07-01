@@ -37,6 +37,7 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -207,58 +208,22 @@ public class TripleChangeAnalyser {
      * @return A map of property URIs to TriplePropertyChange objects representing the differences
      *     in properties.
      */
-    private List<TriplePropertyChange> compareResource(
-            Graph originalGraph, Graph updatedGraph, String uri) {
+    private List<TriplePropertyChange> compareResource(Graph originalGraph, Graph updatedGraph, String uri) {
         var originalTriples =
                 originalGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
         var updatedTriples =
                 updatedGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
         var propertyChanges = new ArrayList<TriplePropertyChange>();
 
-        var originalValues =
-                originalTriples.stream()
-                        .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
-                        .collect(
-                                Collectors.toMap(
-                                        Triple::getPredicate, Triple::getObject, (a, b) -> a));
+        propertyChanges.addAll(compareSimplePredicates(originalTriples, updatedTriples));
+        propertyChanges.addAll(compareStereotypes(originalTriples, updatedTriples));
 
-        var updatedValues =
-                updatedTriples.stream()
-                        .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
-                        .collect(
-                                Collectors.toMap(
-                                        Triple::getPredicate, Triple::getObject, (a, b) -> a));
+        return propertyChanges;
+    }
 
-        Set<Node> allPredicates = new HashSet<>();
-        allPredicates.addAll(originalValues.keySet());
-        allPredicates.addAll(updatedValues.keySet());
+    private List<TriplePropertyChange> compareStereotypes(List<Triple> originalTriples, List<Triple> updatedTriples) {
+        var changes = new  ArrayList<TriplePropertyChange>();
 
-        for (Node predicate : allPredicates) {
-            // ignore uuid predicates, stereotypes are handled separately
-            if (predicate.equals(RDFA.uuid.asNode())
-                    || predicate.equals(CIMS.stereotype.asNode())) {
-                continue;
-            }
-
-            var from = originalValues.get(predicate);
-            var to = updatedValues.get(predicate);
-            var valuesDiffer = !Objects.equals(from, to);
-            if (RDFS.comment.asNode().equals(predicate)) {
-                var normalizedFrom = normalizeCommentValue(from);
-                var normalizedTo = normalizeCommentValue(to);
-                valuesDiffer = !Objects.equals(normalizedFrom, normalizedTo);
-            }
-
-            if (valuesDiffer) {
-                var change = new TriplePropertyChange();
-                change.setPredicate(predicate.toString());
-                change.setFrom(from != null ? from.toString() : null);
-                change.setTo(to != null ? to.toString() : null);
-                propertyChanges.add(change);
-            }
-        }
-
-        // handle stereotypes separately
         var originalStereotypes =
                 originalTriples.stream()
                         .filter(triple -> triple.getPredicate().equals(CIMS.stereotype.asNode()))
@@ -275,7 +240,7 @@ public class TripleChangeAnalyser {
                 var change = new TriplePropertyChange();
                 change.setPredicate(CIMS.stereotype.toString());
                 change.setFrom(originalStereotype);
-                propertyChanges.add(change);
+                changes.add(change);
             } else {
                 updatedStereotypes.remove(originalStereotype);
             }
@@ -285,10 +250,68 @@ public class TripleChangeAnalyser {
             var change = new TriplePropertyChange();
             change.setPredicate(CIMS.stereotype.toString());
             change.setTo(updatedStereotype);
-            propertyChanges.add(change);
+            changes.add(change);
         }
 
-        return propertyChanges;
+        return changes;
+    }
+
+    private List<TriplePropertyChange> compareSimplePredicates(List<Triple> originalTriples, List<Triple> updatedTriples) {
+        var changes = new ArrayList<TriplePropertyChange>();
+
+        var originalValues =
+                originalTriples.stream()
+                        .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
+                        .collect(
+                                Collectors.toMap(
+                                        Triple::getPredicate, Triple::getObject, (a, _) -> a));
+
+        var updatedValues =
+                updatedTriples.stream()
+                        .filter(triple -> !triple.getPredicate().equals(CIMS.stereotype.asNode()))
+                        .collect(
+                                Collectors.toMap(
+                                        Triple::getPredicate, Triple::getObject, (a, _) -> a));
+
+        Set<Node> allPredicates = new HashSet<>();
+        allPredicates.addAll(originalValues.keySet());
+        allPredicates.addAll(updatedValues.keySet());
+
+        for (Node predicate : allPredicates) {
+            var change = comparePredicate(predicate, originalValues, updatedValues);
+            if (change != null) {
+                changes.add(change);
+            }
+        }
+
+        return changes;
+    }
+
+    private static TriplePropertyChange comparePredicate(Node predicate, Map<Node, Node> originalValues, Map<Node, Node> updatedValues) {
+        // ignore uuid predicates, stereotypes are handled separately
+        if (predicate.equals(RDFA.uuid.asNode())) {
+            return null;
+        }
+
+        var from = originalValues.get(predicate);
+        var to = updatedValues.get(predicate);
+        var valuesDiffer = !Objects.equals(from, to);
+
+        if (RDFS.comment.asNode().equals(predicate)) {
+            var normalizedFrom = normalizeCommentValue(from);
+            var normalizedTo = normalizeCommentValue(to);
+            valuesDiffer = !Objects.equals(normalizedFrom, normalizedTo);
+        }
+
+        if (valuesDiffer) {
+            var change = new TriplePropertyChange();
+            change.setPredicate(predicate.toString());
+            change.setFrom(from != null ? from.toString() : null);
+            change.setTo(to != null ? to.toString() : null);
+            return change;
+        } else {
+            return null;
+        }
     }
 
     private String normalizeCommentValue(Node value) {

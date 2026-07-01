@@ -42,6 +42,8 @@ public final class SemanticAssociationChange extends SemanticResourceChange {
 
     private boolean associationUsed;
 
+    private String inheritedFrom;
+
     public SemanticAssociationChange(TripleResourceChange tripleChange) {
         super(tripleChange);
     }
