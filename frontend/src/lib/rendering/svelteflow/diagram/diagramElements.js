@@ -16,7 +16,8 @@
  */
 
 export const EDGE_Z_INDEX = -1;
-export const EDGE_SELECTED_Z = 500_000;
+
+const offsetEdgeIdCache = new WeakMap();
 
 export function hasDefaultNodeLayout(diagramNodes) {
     return (
@@ -26,8 +27,6 @@ export function hasDefaultNodeLayout(diagramNodes) {
         )
     );
 }
-
-const offsetEdgeIdCache = new WeakMap();
 
 function offsetEdgeIds(edges) {
     let ids = offsetEdgeIdCache.get(edges);
@@ -43,34 +42,15 @@ function offsetEdgeIds(edges) {
     return ids;
 }
 
-export function decorateEdges(edges, { selectedNodeIds, previous } = {}) {
-    const selected = selectedNodeIds ?? new Set();
+export function decorateEdges(edges) {
     const offsetIds = offsetEdgeIds(edges);
-    const prevById = previous
-        ? new Map(previous.map(edge => [edge.id, edge]))
-        : null;
-    return edges.map(edge =>
-        decorateEdge(edge, offsetIds, selected, prevById?.get(edge.id)),
-    );
+    return edges.map(edge => decorateEdge(edge, offsetIds));
 }
 
-function decorateEdge(edge, offsetIds, selectedNodeIds, previous) {
-    const elevated =
-        selectedNodeIds.has(edge.source) || selectedNodeIds.has(edge.target);
-    const zIndex = elevated ? EDGE_SELECTED_Z : EDGE_Z_INDEX;
-    const needsOffset = offsetIds.has(edge.id);
+function decorateEdge(edge, offsetIds) {
+    const decorated = { ...edge, zIndex: EDGE_Z_INDEX };
 
-    if (
-        previous &&
-        previous.zIndex === zIndex &&
-        (previous.data?.offsetEdge === true) === needsOffset
-    ) {
-        return previous;
-    }
-
-    const decorated = { ...edge, zIndex };
-
-    if (!needsOffset) {
+    if (!offsetIds.has(edge.id)) {
         return decorated;
     }
 

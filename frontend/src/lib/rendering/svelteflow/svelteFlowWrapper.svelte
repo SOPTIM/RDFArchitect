@@ -105,6 +105,9 @@
 
     let nodesInit = useNodesInitialized();
     let layouted = $state(false);
+
+    let selectionZFrame = null;
+    let boxSelecting = false;
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
         nodesInit.current && !layouted && hasDefaultLayout,
@@ -220,9 +223,6 @@
         multiSelectState.clear();
     }
 
-    let selectionZFrame = null;
-    let boxSelecting = false;
-
     function scheduleSelectionZIndices() {
         if (boxSelecting || selectionZFrame !== null) {
             return;
@@ -240,7 +240,6 @@
             return;
         }
         selectionZKey = key;
-        edges = decorateEdges(inputEdges, { selectedNodeIds, previous: edges });
         nodes = nodeOrderCtrl.applyZIndices(nodes);
     }
 
@@ -265,9 +264,8 @@
 
         nodeOrderCtrl.sync(nextNodes);
         nodes = nodeOrderCtrl.applyZIndices(nextNodes);
-        const selectedNodeIds = selectedNodeIdSet();
-        selectionZKey = selectionContentKey(selectedNodeIds);
-        edges = decorateEdges(inputEdges, { selectedNodeIds });
+        selectionZKey = selectionContentKey(selectedNodeIdSet());
+        edges = decorateEdges(inputEdges);
         resetDiagramSyncState(nextHasDefaultLayout);
     }
 
