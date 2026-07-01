@@ -27,6 +27,7 @@ import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCas
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -69,6 +70,38 @@ public class CustomDatasetDiagramAllClassesRESTController {
 
         customDiagramLayoutUseCase.addClassesToCustomDatasetDiagram(
                 datasetName, UUID.fromString(diagramId), classes);
+
+        logger.info(
+                "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                datasetName,
+                diagramId,
+                originURL);
+        return Response.SUCCESS;
+    }
+
+    @DeleteMapping
+    public String removeFromDiagram(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
+            @Parameter(description = "The list of class uuids to be removed from the diagram")
+                    @RequestBody
+                    List<UUID> classIds) {
+        logger.info(
+                "Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" for {} class(es) from \"{}\"",
+                datasetName,
+                diagramId,
+                classIds.size(),
+                originURL);
+
+        customDiagramLayoutUseCase.removeClassesFromCustomDatasetDiagram(
+                datasetName, UUID.fromString(diagramId), classIds);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",

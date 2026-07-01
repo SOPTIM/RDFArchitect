@@ -20,17 +20,21 @@ package org.rdfarchitect.services.delete;
 import org.rdfarchitect.api.dto.delete.relations.AffectedResource;
 import org.rdfarchitect.database.GraphIdentifier;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public interface FindDeleteDependenciesUseCase {
 
     /**
-     * Finds the resources that would be affected by deleting a specified resource.
+     * Finds the resources that would be affected by deleting the specified resources. The graph is
+     * read once and all requested resources are analysed against that single snapshot.
      *
      * @param graphIdentifier The identifier of the graph.
-     * @param uuid The resource to find dependencies for.
-     * @return An {@link AffectedResource} containing the affected resources with and their
-     *     relations.
+     * @param uuids The resources to find dependencies for.
+     * @return A map from each requested UUID (in input order) to an {@link AffectedResource}
+     *     containing the affected resources and their relations.
      */
-    AffectedResource getDeleteDependencies(GraphIdentifier graphIdentifier, UUID uuid);
+    Map<UUID, AffectedResource> getDeleteDependencies(
+            GraphIdentifier graphIdentifier, List<UUID> uuids);
 }

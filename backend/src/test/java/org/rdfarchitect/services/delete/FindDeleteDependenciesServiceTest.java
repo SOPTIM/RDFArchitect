@@ -87,11 +87,15 @@ class FindDeleteDependenciesServiceTest {
                 .thenReturn(wrappedContext);
     }
 
+    private AffectedResource getDeleteDependencies(UUID uuid) {
+        return service.getDeleteDependencies(GRAPH_IDENTIFIER, List.of(uuid)).get(uuid);
+    }
+
     // ==================== Simple resource types ====================
 
     @Test
     void getDeleteDependencies_ontology_returnsAffectedResourceWithDeleteAction() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ONTOLOGY_UUID);
+        var result = getDeleteDependencies(ONTOLOGY_UUID);
 
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(ONTOLOGY_UUID);
         assertThat(result.getType()).isEqualTo(CimResourceType.ONTOLOGY);
@@ -101,7 +105,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_datatypeClass_returnsClassWithAttributesDependingOnIt() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, DATATYPE_CLASS_UUID);
+        var result = getDeleteDependencies(DATATYPE_CLASS_UUID);
 
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(DATATYPE_CLASS_UUID);
         assertThat(result.getType()).isEqualTo(CimResourceType.CLASS);
@@ -112,7 +116,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_classWithDirectChild_returnsChildAsAffectedResource() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PARENT_CLASS_UUID);
+        var result = getDeleteDependencies(PARENT_CLASS_UUID);
 
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(PARENT_CLASS_UUID);
         assertThat(result.getType()).isEqualTo(CimResourceType.CLASS);
@@ -133,7 +137,7 @@ class FindDeleteDependenciesServiceTest {
     @Test
     void getDeleteDependencies_classWithTransitiveChildren_returnsNestedHierarchy() {
         // AssociatedClass -> ParentClass -> ChildClass (-> AssociatedClass = cycle)
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
+        var result = getDeleteDependencies(ASSOCIATED_CLASS_UUID);
 
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(ASSOCIATED_CLASS_UUID);
 
@@ -165,7 +169,7 @@ class FindDeleteDependenciesServiceTest {
     @Test
     void getDeleteDependencies_cyclicInheritance_doesNotCauseInfiniteLoop() {
         // AssociatedClass -> ChildClass -> ParentClass -> AssociatedClass = cycle
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
+        var result = getDeleteDependencies(ASSOCIATED_CLASS_UUID);
 
         assertThat(result).isNotNull();
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(ASSOCIATED_CLASS_UUID);
@@ -179,7 +183,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_childClassActions_containDeleteKeepAndRemoveSubclassReference() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
+        var result = getDeleteDependencies(ASSOCIATED_CLASS_UUID);
 
         var childClasses =
                 result.getChildren().stream()
@@ -201,7 +205,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_classWithAssociations_returnsAssociationsAsAffectedResources() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
+        var result = getDeleteDependencies(ASSOCIATED_CLASS_UUID);
 
         var associations =
                 result.getChildren().stream()
@@ -220,7 +224,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_associationWithTarget_returnsAffectedAssociationWithTarget() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, ASSOCIATED_CLASS_UUID);
+        var result = getDeleteDependencies(ASSOCIATED_CLASS_UUID);
 
         var affectedAssociations =
                 result.getChildren().stream()
@@ -239,7 +243,7 @@ class FindDeleteDependenciesServiceTest {
     void getDeleteDependencies_childClassWithAssociations_childHasAssociationsAsChildren() {
         // When ParentClass is deleted, ChildClass should appear as a child
         // and ChildClass should have its own associations as children
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PARENT_CLASS_UUID);
+        var result = getDeleteDependencies(PARENT_CLASS_UUID);
 
         var childClassAffected =
                 result.getChildren().stream()
@@ -264,7 +268,7 @@ class FindDeleteDependenciesServiceTest {
     @Test
     void getDeleteDependencies_classUsedAsDatatype_returnsAttributeAsAffectedResource() {
         // DatatypeClass is used as datatype in ParentClass.attr1
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, DATATYPE_CLASS_UUID);
+        var result = getDeleteDependencies(DATATYPE_CLASS_UUID);
 
         var attributes =
                 result.getChildren().stream()
@@ -285,7 +289,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_package_returnsAllClassesInPackageAsChildren() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PACKAGE_UUID);
+        var result = getDeleteDependencies(PACKAGE_UUID);
 
         assertThat(result.getResourceIdentifier().getUuid()).isEqualTo(PACKAGE_UUID);
         assertThat(result.getType()).isEqualTo(CimResourceType.PACKAGE);
@@ -308,7 +312,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_package_classesHaveCorrectReasonAndActions() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PACKAGE_UUID);
+        var result = getDeleteDependencies(PACKAGE_UUID);
 
         var childClasses =
                 result.getChildren().stream()
@@ -331,7 +335,7 @@ class FindDeleteDependenciesServiceTest {
 
     @Test
     void getDeleteDependencies_package_classesInPackageHaveTheirOwnDependencies() {
-        var result = service.getDeleteDependencies(GRAPH_IDENTIFIER, PACKAGE_UUID);
+        var result = getDeleteDependencies(PACKAGE_UUID);
 
         var associatedClassAffected =
                 result.getChildren().stream()

@@ -35,6 +35,7 @@
         copyState,
         DiagramType,
         editorState,
+        multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
     import {
@@ -70,7 +71,26 @@
     let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
 
+    let dialogClassIds = $state([]);
+    let dialogClassLabels = $state([]);
+
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    const multiActive = $derived(multiSelectState.isMultiSelect);
+    const selectionUuids = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classUuid)
+            : contextMenuClass
+              ? [contextMenuClass.uuid]
+              : [],
+    );
+    const selectionLabels = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classLabel)
+            : contextMenuClass
+              ? [contextMenuClass.label]
+              : [],
+    );
 
     let classZIndex = $derived(
         contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
@@ -102,6 +122,7 @@
             return;
         }
         dialogClass = contextMenuClass;
+        dialogClassIds = selectionUuids;
         showDeleteDependenciesDialog = true;
         onClose();
     }
@@ -110,6 +131,9 @@
         if (!contextMenuClass) {
             return;
         }
+        dialogClass = contextMenuClass;
+        dialogClassIds = selectionUuids;
+        dialogClassLabels = selectionLabels;
         showRemoveFromDiagramDialog = true;
         onClose();
     }
@@ -158,11 +182,16 @@
     }
 
     function copyClass() {
-        copyState.classUUID.updateValue(contextMenuClass.uuid);
-        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
-        copyState.datasetName.updateValue(
-            editorState.selectedDataset.getValue(),
-        );
+        const entries = multiActive
+            ? multiSelectState.toCopyEntries()
+            : [
+                  {
+                      classUUID: contextMenuClass.uuid,
+                      graphURI: editorState.selectedGraph.getValue(),
+                      datasetName: editorState.selectedDataset.getValue(),
+                  },
+              ];
+        copyState.set(entries);
     }
 </script>
 
@@ -180,11 +209,12 @@
                 faIcon={faCopy}
                 altText="Ctrl+C"
             >
-                Copy
+                {multiActive ? `Copy ${selectionUuids.length} classes` : "Copy"}
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={openExtendClassDialog}
                 faIcon={faFileExport}
+                disabled={multiActive}
             >
                 Extend Class
             </ContextMenu.Item.Button>
@@ -194,6 +224,7 @@
                     showSHACLDialog = true;
                 }}
                 faIcon={faDiagramProject}
+                disabled={multiActive}
             >
                 Constraints
             </ContextMenu.Item.Button>
@@ -201,7 +232,7 @@
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger
                 faIcon={faLayerGroup}
-                disabled={classActionsDisabled}
+                disabled={classActionsDisabled || multiActive}
             >
                 Move
             </ContextMenu.SubMenu.Trigger>
@@ -266,7 +297,9 @@
                     faIcon={faMinus}
                     variant="danger"
                 >
-                    Remove from Diagram
+                    {multiActive
+                        ? `Remove ${selectionUuids.length} from Diagram`
+                        : "Remove from Diagram"}
                 </ContextMenu.Item.Button>
             {/if}
             <ContextMenu.Item.Button
@@ -274,8 +307,11 @@
                 disabled={classActionsDisabled}
                 faIcon={faTrash}
                 variant="danger"
+                altText="Del"
             >
-                Delete class
+                {multiActive
+                    ? `Delete ${selectionUuids.length} classes`
+                    : "Delete class"}
             </ContextMenu.Item.Button>
         {/if}
     </ContextMenu.Content>
@@ -285,7 +321,7 @@
     bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
     {graphUri}
-    resourceUuid={dialogClass?.uuid}
+    resourceUuids={dialogClassIds}
 />
 <ExtendClassDialog
     {datasetName}
@@ -306,6 +342,6 @@
     lockedDatasetName={datasetName}
     {graphUri}
     diagramId={editorState.selectedDiagram.getProperty("id")}
-    classId={contextMenuClass.uuid}
-    classLabel={contextMenuClass.label}
+    classIds={dialogClassIds}
+    classLabels={dialogClassLabels}
 />

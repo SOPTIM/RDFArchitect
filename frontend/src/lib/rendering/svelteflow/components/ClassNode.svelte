@@ -19,14 +19,37 @@
     import { Handle, Position } from "@xyflow/svelte";
 
     import { URI } from "$lib/models/dto/index.ts";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        editorState,
+        multiSelectState,
+        SelectionLevel,
+    } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
 
-    const highlighted = $derived(
-        editorState.selectedClass.getProperty("id") === id,
+    const isInSelection = $derived(
+        multiSelectState.isSelected(
+            editorState.selectedDataset.getValue(),
+            data.graphUri,
+            id,
+        ),
+    );
+    const isOpenClass = $derived(
+        editorState.selectedClass.getProperty("id") === id &&
+            editorState.selectedClassGraph.getValue() === data.graphUri,
+    );
+    const isActiveLevel = $derived(
+        editorState.activeSelectionKind.getValue() === SelectionLevel.CLASS,
+    );
+    const highlightState = $derived(
+        isInSelection || (isOpenClass && isActiveLevel)
+            ? "active"
+            : isOpenClass
+              ? "secondary"
+              : null,
     );
 
     const label = $derived(data.label);
@@ -72,7 +95,11 @@
 
 <div
     class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
-        highlighted ? "class-node-highlighted" : ""
+        highlightState === "active"
+            ? "class-node-highlighted"
+            : highlightState === "secondary"
+              ? "class-node-highlighted-secondary"
+              : ""
     }`}
     role="button"
     tabindex="0"
@@ -192,6 +219,11 @@
 
     .class-node-highlighted::after {
         box-shadow: inset 0 0 0 3px var(--color-class-node-highlighted);
+    }
+
+    .class-node-highlighted-secondary::after {
+        box-shadow: inset 0 0 0 3px
+            var(--color-class-node-highlighted-secondary);
     }
 
     .class-node-divider {
