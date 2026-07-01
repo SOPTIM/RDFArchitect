@@ -29,6 +29,8 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
+    import { Checkbox } from "$lib/components/bitsui/checkbox/index.js";
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
 
     let { disableNext = $bindable() } = $props();
 
@@ -40,6 +42,7 @@
     });
 
     let compareMode = $state(CompareMode.FILE_TO_STORED);
+    let ignorePrefixes = $state(false);
     let cgmesVersionA = $state(CGMESVersion.V3_0);
     let cgmesVersionB = $state(CGMESVersion.V3_0);
 
@@ -184,6 +187,7 @@
                     graphB,
                     fileA,
                     fileB,
+                    ignorePrefixes,
                 });
             } else {
                 toastStore.error(
@@ -213,7 +217,7 @@
     </InfoBox>
 
     <div class="flex h-full flex-col space-y-4">
-        <div class="border-border bg-background-subtle rounded border p-3">
+        <div class="flex-col space-y-3 border-border bg-background-subtle rounded border p-3">
             <label for="compareMode" class="mb-1 block text-sm">
                 Comparison type
             </label>
@@ -225,6 +229,15 @@
                 getOptionLabel={o => o.label}
                 onchange={onCompareModeChange}
             />
+            <div class="flex space-x-2">
+                <label for="ignorePrefixes" class="mb-1 block text-sm">
+                    Ignore prefixes
+                </label>
+                <CheckBoxEditControl
+                    id="ignorePrefixes"
+                    bind:value={ignorePrefixes}
+                />
+            </div>
         </div>
 
         {#if compareMode === CompareMode.STORED_TO_STORED}

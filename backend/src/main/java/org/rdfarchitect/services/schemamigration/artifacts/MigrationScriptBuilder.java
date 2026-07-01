@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.services.schemamigration.scriptgeneration;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 
