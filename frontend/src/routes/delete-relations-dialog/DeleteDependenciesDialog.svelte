@@ -163,9 +163,22 @@
         return result;
     }
 
+    function dedupePayload(entries) {
+        const byUuid = new Map();
+        for (const entry of entries) {
+            const existing = byUuid.get(entry.uuid);
+            if (!existing || existing.action !== "DELETE") {
+                byUuid.set(entry.uuid, entry);
+            }
+        }
+        return [...byUuid.values()];
+    }
+
     async function submitDeleteRequest() {
         if (!roots.length) return;
-        const payload = roots.flatMap(root => buildPayload(root));
+        const payload = dedupePayload(
+            roots.flatMap(root => buildPayload(root)),
+        );
         pruneCopyState(payload);
         console.log("Submit delete with selections:", payload);
         const isSingle = roots.length === 1;
@@ -199,7 +212,7 @@
         if (copyState.isEmpty) return;
         for (const entry of payload) {
             if (entry.action === "DELETE") {
-                copyState.removeByUuid(entry.uuid);
+                copyState.remove(datasetName, graphUri, entry.uuid);
             }
         }
     }

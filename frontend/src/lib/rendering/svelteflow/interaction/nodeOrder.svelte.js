@@ -158,11 +158,19 @@ export class NodeOrderController {
             };
         });
 
-        this.#bec.updateClassPositions(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            editorState.selectedDiagram.getProperty("id"),
-            classPositionDTOList,
-        );
+        if (editorState.selectedGraph.getValue()) {
+            this.#bec.updateClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedGraph.getValue(),
+                editorState.selectedDiagram.getProperty("id"),
+                classPositionDTOList,
+            );
+        } else {
+            this.#bec.updateGlobalClassPositions(
+                editorState.selectedDataset.getValue(),
+                editorState.selectedDiagram.getProperty("id"),
+                classPositionDTOList,
+            );
+        }
     }
 }

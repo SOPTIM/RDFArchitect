@@ -219,9 +219,14 @@ export const copyState = {
         this.entries.updateValue([...entries]);
     },
 
-    removeByUuid(classUUID) {
+    remove(datasetName, graphURI, classUUID) {
         this.entries.updateValue(
-            this.getEntries().filter(e => e.classUUID !== classUUID),
+            this.getEntries().filter(
+                e =>
+                    e.classUUID !== classUUID ||
+                    e.graphURI !== graphURI ||
+                    e.datasetName !== datasetName,
+            ),
         );
     },
 

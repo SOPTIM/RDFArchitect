@@ -28,24 +28,12 @@ public interface CustomDiagramLayoutUseCase {
     void addClassesToCustomDiagram(
             GraphIdentifier graphIdentifier, UUID diagramUUID, List<ClassInDiagram> classes);
 
-    void removeClassFromCustomDiagram(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, UUID classUUID);
-
-    default void removeClassesFromCustomDiagram(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, List<UUID> classUUIDs) {
-        classUUIDs.forEach(
-                classUUID -> removeClassFromCustomDiagram(graphIdentifier, diagramUUID, classUUID));
-    }
+    void removeClassesFromCustomDiagram(
+            GraphIdentifier graphIdentifier, UUID diagramUUID, List<UUID> classUUIDs);
 
     void addClassesToCustomDatasetDiagram(
             String datasetName, UUID diagramUUID, List<ClassInDiagram> classes);
 
-    void removeClassFromCustomDatasetDiagram(String datasetName, UUID diagramUUID, UUID classUUID);
-
-    default void removeClassesFromCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<UUID> classUUIDs) {
-        classUUIDs.forEach(
-                classUUID ->
-                        removeClassFromCustomDatasetDiagram(datasetName, diagramUUID, classUUID));
-    }
+    void removeClassesFromCustomDatasetDiagram(
+            String datasetName, UUID diagramUUID, List<UUID> classUUIDs);
 }

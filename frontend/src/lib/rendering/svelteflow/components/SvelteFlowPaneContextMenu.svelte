@@ -90,8 +90,8 @@
         );
         const packagesJSON = await res.json();
         let packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
+            ...(packagesJSON.internalPackageList ?? []),
+            ...(packagesJSON.externalPackageList ?? []),
         ];
         const selectedPackageUUID =
             editorState.selectedDiagram.getProperty("id") === "default"

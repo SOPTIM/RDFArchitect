@@ -63,7 +63,7 @@ public class CustomDatasetDiagramAllClassesRESTController {
                     @RequestBody
                     List<ClassInDiagram> classes) {
         logger.info(
-                "Received DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                "Received POST request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 datasetName,
                 diagramId,
                 originURL);
@@ -72,7 +72,7 @@ public class CustomDatasetDiagramAllClassesRESTController {
                 datasetName, UUID.fromString(diagramId), classes);
 
         logger.info(
-                "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
+                "Sending response to POST request: \"/api/datasets/{{}}/diagrams/{{}}/classes\" from \"{}\"",
                 datasetName,
                 diagramId,
                 originURL);

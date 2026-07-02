@@ -175,7 +175,7 @@
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
             !hasGraphSelected ||
-            !editorState.selectedDiagram.getValue() ||
+            !editorState.selectedDiagram.getProperty("id") ||
             copyState.isEmpty,
     );
 

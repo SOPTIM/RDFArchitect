@@ -208,6 +208,61 @@ class CopyClassServiceTest {
     }
 
     @Test
+    void copyClasses_multipleSourcesWithDuplicate_singleCallGetsUniqueLabels() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var request = new PasteClassesRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(false);
+        request.setCopyAttributes(true);
+        request.setCopyAssociations(false);
+
+        var source = new PasteSourceClassDTO();
+        source.setSourceDatasetName(graphIdentifier.datasetName());
+        source.setSourceGraphURI(graphIdentifier.graphUri());
+        source.setClassUUID(CLASS_UUID);
+        var duplicateSource = new PasteSourceClassDTO();
+        duplicateSource.setSourceDatasetName(graphIdentifier.datasetName());
+        duplicateSource.setSourceGraphURI(graphIdentifier.graphUri());
+        duplicateSource.setClassUUID(CLASS_UUID);
+        request.setSources(List.of(source, duplicateSource));
+
+        var responses = copyClassService.copyClasses(request, graphIdentifier);
+
+        assertThat(responses).hasSize(2);
+        assertThat(responses.get(0).getName()).isEqualTo("oldLabel-Copy");
+        assertThat(responses.get(1).getName()).isEqualTo("oldLabel-Copy(1)");
+        assertThat(responses.get(0).getUuid()).isNotEqualTo(responses.get(1).getUuid());
+
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
+                                            RDFS.label.asNode(),
+                                            new RDFSLabel("oldLabel-Copy", "en")
+                                                    .asLangLiteral()
+                                                    .asNode()))
+                    .isTrue();
+
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "oldLabel-Copy(1)"),
+                                            RDFS.label.asNode(),
+                                            new RDFSLabel("oldLabel-Copy(1)", "en")
+                                                    .asLangLiteral()
+                                                    .asNode()))
+                    .isTrue();
+        }
+    }
+
+    @Test
     void copyClass_copyTwice_secondCopyGetsCounter() {
         var targetPackageDTO =
                 PackageDTO.builder()

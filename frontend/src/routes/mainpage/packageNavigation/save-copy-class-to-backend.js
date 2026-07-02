@@ -79,10 +79,12 @@ export async function saveCopyClass(
                     `${pasted.length} classes were pasted.`,
                 );
             }
+            return true;
         } else {
             const errorText = await res.text();
             console.error("Could not paste classes:", errorText);
             toastStore.error("Paste failed", `Could not paste classes.`);
+            return false;
         }
     } finally {
         forceReloadTrigger.trigger();

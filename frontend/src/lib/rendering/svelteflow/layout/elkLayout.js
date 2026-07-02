@@ -59,11 +59,12 @@ const LAYOUT_OPTIONS = {
     "elk.spacing.nodeNode": "60",
 };
 
+//WEB WORKER: layouting is executed in a separate thread, preventing the frontend from blocking.
+const elk = new ELK({
+    workerFactory: () => new Worker(ElkWorkerURL, { type: "classic" }),
+});
+
 export async function getLayoutedNodes(nodes, edges) {
-    const elk = new ELK({
-        //WEB WORKER: layouting is executed in a separate thread, preventing the frontend from blocking
-        workerFactory: () => new Worker(ElkWorkerURL, { type: "classic" }),
-    });
     const graph = {
         id: "root",
         children: nodes.map(node => ({
