@@ -292,8 +292,9 @@
                     showValidationDialog = true;
                 }}
                 faIcon={faCircleCheck}
+                altText="Ctrl+Shift+D"
             >
-                Validate...
+                Validate Schema
             </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>

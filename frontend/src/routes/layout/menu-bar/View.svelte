@@ -76,6 +76,11 @@
                     if (hasGraphSelected) showSHACLFullViewDialog = true;
                 },
             ),
+            shortcutStore.register(
+                "validation",
+                ["ctrl", "shift", "d"],
+                () => (showValidationDialog = true),
+            ),
         );
     });
 
@@ -111,6 +116,7 @@
         <Menubar.Item.Button
             onSelect={() => (showValidationDialog = true)}
             faIcon={faCircleCheck}
+            altText="Ctrl+Shift+D"
         >
             Validate Schema
         </Menubar.Item.Button>
