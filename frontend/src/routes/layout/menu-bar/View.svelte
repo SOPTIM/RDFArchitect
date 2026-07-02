@@ -82,6 +82,7 @@
                 "validation",
                 ["ctrl", "shift", "d"],
                 () => (showValidationDialog = true),
+                true,
             ),
         );
     });
