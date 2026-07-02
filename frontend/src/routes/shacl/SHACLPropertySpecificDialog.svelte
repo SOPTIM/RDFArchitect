@@ -48,11 +48,11 @@
     );
 
     function onOpen() {
-        if (!editorState.selectedClassUUID.getValue() || !property) {
+        if (!editorState.selectedClass.getProperty("id") || !property) {
             return;
         }
         fetchShacl(
-            editorState.selectedClassUUID.getValue(),
+            editorState.selectedClass.getProperty("id"),
             property.uuid.value,
         );
     }
@@ -170,7 +170,7 @@
                 buildBaseUrl() +
                     "/classes/" +
                     encodeURIComponent(
-                        editorState.selectedClassUUID.getValue(),
+                        editorState.selectedClass.getProperty("id"),
                     ) +
                     "/" +
                     type +
@@ -204,7 +204,7 @@
             );
         } finally {
             await fetchShacl(
-                editorState.selectedClassUUID.getValue(),
+                editorState.selectedClass.getProperty("id"),
                 property.uuid.value,
             );
         }

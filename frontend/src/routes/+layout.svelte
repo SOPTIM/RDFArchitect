@@ -41,6 +41,7 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     import {
+        DiagramType,
         editorState,
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
@@ -70,7 +71,7 @@
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
@@ -94,7 +95,7 @@
             return;
         }
         forceReloadTrigger.trigger();
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
         isDatasetReadOnly = false;
     }
@@ -132,7 +133,7 @@
         await fetchUndoRedo();
         editorState.selectedDataset.trigger();
         editorState.selectedGraph.trigger();
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
         forceReloadTrigger.trigger();
     }
 
@@ -183,6 +184,16 @@
             if (key === "z" || key === "y") {
                 if (inputFocused) return;
                 if (isDialogOpen()) {
+                    return;
+                }
+                if (
+                    editorState.selectedDiagram.getProperty("type") ===
+                    DiagramType.CROSS_PROFILE
+                ) {
+                    toastStore.info(
+                        "Undo/Redo not possible",
+                        "Undo/Redo is not available in the Merged View.",
+                    );
                     return;
                 }
                 event.preventDefault();

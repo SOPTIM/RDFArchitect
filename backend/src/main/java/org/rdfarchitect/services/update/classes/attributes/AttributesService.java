@@ -18,14 +18,17 @@
 package org.rdfarchitect.services.update.classes.attributes;
 
 import org.apache.jena.graph.Graph;
+import org.apache.jena.graph.Node;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.update.UpdateExecutionFactory;
 import org.apache.jena.update.UpdateRequest;
+import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,6 +63,7 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
         var graphUri = graphIdentifier.graphUri();
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var graph = ctx.getRdfGraph();
+            assertAttributeUriIsFree(graph, cimAttribute.getUri().toNode());
             var update =
                     new UpdateRequest()
                             .add(
@@ -136,5 +140,22 @@ public class AttributesService implements CreateAttributeUseCase, UpdateAttribut
     private String findClassLabel(Graph graph, String domainUri) {
         var classResource = CIMResourceUtils.findResourceForUri(graph, domainUri);
         return CIMResourceUtils.findLabelForResource(classResource);
+    }
+
+    /**
+     * Guards against creating an attribute whose IRI is already taken by another property. An
+     * attribute's IRI is derived from its class and label ({@code <classIRI>.<label>}), so a second
+     * attribute with the same label on the same class would reuse that IRI. Without this guard the
+     * INSERT would stack a fresh {@code rdfa:uuid} (and any other diverging value) onto the
+     * existing property node, turning it into an ambiguous resource that the class editor then
+     * renders once per value combination.
+     */
+    private void assertAttributeUriIsFree(Graph graph, Node attributeUri) {
+        if (graph.contains(attributeUri, RDF.type.asNode(), RDF.Property.asNode())) {
+            throw new ResourceConflictException(
+                    "Cannot create attribute "
+                            + attributeUri.getURI()
+                            + " because a property with the same IRI already exists.");
+        }
     }
 }

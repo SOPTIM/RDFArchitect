@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.models.cim.data.dto.CIMPackage;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMPackageToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMPackageToMermaidBuilder;
 
 import java.util.List;
 

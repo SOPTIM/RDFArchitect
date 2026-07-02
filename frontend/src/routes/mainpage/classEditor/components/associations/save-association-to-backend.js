@@ -48,7 +48,7 @@ export function saveApiAssociationToBackend(
             return { ok: false, errorText };
         })
         .finally(() => {
-            editorState.selectedClassUUID.trigger();
+            editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
         });
 }

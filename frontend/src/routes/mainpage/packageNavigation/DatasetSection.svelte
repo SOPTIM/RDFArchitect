@@ -27,18 +27,23 @@
         faDiagramProject,
         faPlus,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     import {
         enableEditing,
         disableEditing,
     } from "$lib/actions/editingActions.js";
     import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
+    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
+    import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
     import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
@@ -51,6 +56,8 @@
 
     let { datasetNavEntry } = $props();
 
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showNewDiagramDialog = $state(false);
@@ -59,11 +66,19 @@
     let showNamespacesDialog = $state(false);
     let readonly = $state(false);
     let namespaces = $state([]);
+    let crossProfileID = $state();
 
     let wasDatasetSelected = false;
 
     const isDatasetSelected = $derived(
         isSelectedDataset(datasetNavEntry.label),
+    );
+
+    const packagesWithClassesCount = $derived(
+        (datasetNavEntry.children ?? [])
+            .flatMap(graphNavEntry => graphNavEntry.children ?? [])
+            .filter(packageNavEntry => packageNavEntry.children?.length > 0)
+            .length,
     );
 
     $effect(async () => {
@@ -76,6 +91,11 @@
             datasetNavEntry.parent?.open();
         }
         wasDatasetSelected = isDatasetSelected;
+    });
+
+    onMount(async () => {
+        let res = await bec.getCrossProfileID(datasetNavEntry.label);
+        crossProfileID = await res.text();
     });
 
     async function fetchNamespaces() {
@@ -237,6 +257,13 @@
                     {readonly}
                 />
             {/each}
+
+            {#if packagesWithClassesCount > 1}
+                <CrossProfileDiagramsSection
+                    {datasetNavEntry}
+                    {crossProfileID}
+                />
+            {/if}
 
             <CustomDiagramsSection
                 {datasetNavEntry}

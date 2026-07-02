@@ -241,7 +241,7 @@
         editorState.selectedDiagram.updateValue({ type: null, id: null });
         editorState.selectedClassDataset.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClassUUID.updateValue(null);
+        editorState.selectedClass.updateValue({ type: null, id: null });
 
         const importedCount = importedGraphUris.length;
         const summary = `${importedCount} graph${importedCount === 1 ? "" : "s"} imported into "${datasetName}".`;

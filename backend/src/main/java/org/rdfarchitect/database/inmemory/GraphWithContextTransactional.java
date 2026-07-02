@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -161,11 +162,21 @@ public class GraphWithContextTransactional implements GraphContext {
         if (txnContext.isInTransaction()) {
             throw new GraphTransactionException("A transaction is already active on this thread.");
         }
-        txnContext.begin(mode);
-        switch (mode) {
-            case READ -> rwLock.readLock().lock();
-            case WRITE -> rwLock.writeLock().lock();
+
+        var lock = mode == ReadWrite.READ ? rwLock.readLock() : rwLock.writeLock();
+        try {
+            var timeoutLength = GraphCompressionConfig.getLockTimeoutSeconds();
+            if (!lock.tryLock(timeoutLength, TimeUnit.SECONDS)) {
+                throw new GraphTransactionException(
+                        "Timeout: could not acquire lock within %s second."
+                                .formatted(timeoutLength));
+            }
+        } catch (InterruptedException _) {
+            Thread.currentThread().interrupt();
+            throw new GraphTransactionException("Interrupted while waiting for lock.");
         }
+
+        txnContext.begin(mode);
         if (mode == ReadWrite.WRITE) {
             customDiagrams.values().forEach(CustomDiagram::beginTransaction);
         }
