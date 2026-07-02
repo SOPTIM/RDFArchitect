@@ -26,7 +26,6 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
-     
     let { disableNext = $bindable() } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);

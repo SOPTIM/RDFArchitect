@@ -43,12 +43,15 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SchemaValidationService implements SchemaValidationUseCase {
+public class SchemaValidationService
+        implements SchemaValidationUseCase, SchemaValidationReportToMarkdownUseCase {
 
-    // Required fields in the profile header
+    private static final String NEW_LINE = "\n";
+
     private static final Set<OntologyField> REQUIRED_ONTOLOGY_FIELDS =
             Set.of(KnownOntologyFields.OWL_VERSION_IRI, KnownOntologyFields.DCAT_KEYWORD);
 
@@ -75,6 +78,7 @@ public class SchemaValidationService implements SchemaValidationUseCase {
         var issues = new ArrayList<SchemaValidationIssue>();
 
         validateProfileHeader(model, issues);
+        validatePackages(model, issues);
         validateClasses(model, issues);
         validateProperties(model, issues);
 
@@ -116,7 +120,6 @@ public class SchemaValidationService implements SchemaValidationUseCase {
             }
         }
 
-        // Warnings for optional known fields
         var allKnownIris =
                 KnownOntologyFields.getAllFields().stream()
                         .map(OntologyField::getIri)
@@ -136,6 +139,37 @@ public class SchemaValidationService implements SchemaValidationUseCase {
                                 .build());
             }
         }
+    }
+
+    // ─── Packages ──────────────────────────────────────────────────────────────
+
+    private void validatePackages(Model model, List<SchemaValidationIssue> issues) {
+        model.listSubjectsWithProperty(RDF.type, CIMS.classCategory)
+                .forEach(
+                        packageResource -> {
+                            var uri = packageResource.getURI();
+
+                            // rdfs:label required
+                            if (!packageResource.hasProperty(RDFS.label)) {
+                                issues.add(
+                                        SchemaValidationIssue.builder()
+                                                .severity(Severity.ERROR)
+                                                .resourceUri(uri)
+                                                .message("Package is missing rdfs:label.")
+                                                .build());
+                            }
+
+                            // namespace required
+                            if (packageResource.getNameSpace() == null
+                                    || packageResource.getNameSpace().isEmpty()) {
+                                issues.add(
+                                        SchemaValidationIssue.builder()
+                                                .severity(Severity.ERROR)
+                                                .resourceUri(uri)
+                                                .message("Package is missing a namespace.")
+                                                .build());
+                            }
+                        });
     }
 
     // ─── Classes ──────────────────────────────────────────────────────────────
@@ -167,24 +201,14 @@ public class SchemaValidationService implements SchemaValidationUseCase {
                                                 .build());
                             }
 
-                            // cims:belongsToCategory recommended
+                            // cims:belongsToCategory required
                             if (!classResource.hasProperty(CIMS.belongsToCategory)) {
                                 issues.add(
                                         SchemaValidationIssue.builder()
-                                                .severity(Severity.WARNING)
+                                                .severity(Severity.ERROR)
                                                 .resourceUri(uri)
                                                 .message(
                                                         "Class is not assigned to a package (cims:belongsToCategory is missing).")
-                                                .build());
-                            }
-
-                            // rdfs:comment recommended
-                            if (!classResource.hasProperty(RDFS.comment)) {
-                                issues.add(
-                                        SchemaValidationIssue.builder()
-                                                .severity(Severity.INFO)
-                                                .resourceUri(uri)
-                                                .message("Class is missing rdfs:comment.")
                                                 .build());
                             }
                         });
@@ -239,40 +263,41 @@ public class SchemaValidationService implements SchemaValidationUseCase {
                                                 .build());
                             }
 
-                            // rdfs:range or cims:dataType required
-                            boolean hasRange = property.hasProperty(RDFS.range);
-                            boolean hasDatatype = property.hasProperty(CIMS.datatype);
-                            if (!hasRange && !hasDatatype) {
-                                issues.add(
-                                        SchemaValidationIssue.builder()
-                                                .severity(Severity.ERROR)
-                                                .resourceUri(uri)
-                                                .message(
-                                                        "Property has neither rdfs:range nor cims:dataType.")
-                                                .build());
+                            if (CIMPropertyUtils.isAttribute(property)) {
+                                validateAttribute(property, issues);
                             }
 
-                            // For attributes: verify that the referenced datatype actually exists
-                            if (CIMPropertyUtils.isAttribute(property)
-                                    && (hasRange || hasDatatype)) {
-                                validateAttributes(property, issues);
+                            // For associations: verify rdfs:range, cims:associationUsed and
+                            // cims:inverseRoleName
+                            if (CIMPropertyUtils.isAssociation(property)) {
+                                validateAssociation(property, issues);
+                            }
+
+                            if (!CIMPropertyUtils.isAttribute(property)
+                                    && !CIMPropertyUtils.isAssociation(property)) {
+                                issues.add(
+                                        SchemaValidationIssue.builder()
+                                                .severity(Severity.WARNING)
+                                                .resourceUri(uri)
+                                                .message(
+                                                        "Property is neither an attribute nor an association. It may be missing required properties.")
+                                                .build());
                             }
                         });
     }
 
-    private void validateAttributes(Resource attribute, List<SchemaValidationIssue> issues) {
+    private void validateAttribute(Resource attribute, List<SchemaValidationIssue> issues) {
         var uri = attribute.getURI();
-
-        validateAttributeDatatype(attribute, issues);
-
-        if (!attribute.hasProperty(CIMS.stereotype)) {
+        if (!attribute.hasProperty(CIMS.datatype) && !attribute.hasProperty(RDFS.range)) {
             issues.add(
                     SchemaValidationIssue.builder()
                             .severity(Severity.ERROR)
                             .resourceUri(uri)
-                            .message("Property is missing cims:stereotype.")
+                            .message("Attribute is missing cims:dataType or rdfs:range.")
                             .build());
+            return;
         }
+        validateAttributeDatatype(attribute, issues);
     }
 
     /**
@@ -296,7 +321,7 @@ public class SchemaValidationService implements SchemaValidationUseCase {
                             .resourceUri(uri)
                             .message(
                                     "Attribute references a datatype that does not exist or is not a"
-                                            + " known XSD/primitive/CIM/enumeration datatype"
+                                            + " known XSD datatype"
                                             + (referencedDatatype != null
                                                     ? ": <" + referencedDatatype + ">"
                                                     : "."))
@@ -335,5 +360,135 @@ public class SchemaValidationService implements SchemaValidationUseCase {
             return attribute.getProperty(RDFS.range).getResource().getURI();
         }
         return null;
+    }
+
+    /**
+     * Verifies that an association defines the required fields {@code rdfs:range} (the target
+     * class), {@code cims:associationUsed} and {@code cims:inverseRoleName}, and that the
+     * referenced target class actually exists in the graph.
+     */
+    private void validateAssociation(Resource association, List<SchemaValidationIssue> issues) {
+        var uri = association.getURI();
+
+        // rdfs:range required (target class of the association)
+        if (!association.hasProperty(RDFS.range)) {
+            issues.add(
+                    SchemaValidationIssue.builder()
+                            .severity(Severity.ERROR)
+                            .resourceUri(uri)
+                            .message("Association is missing rdfs:range (target class).")
+                            .build());
+        } else {
+            validateAssociationTargetExists(association, issues);
+        }
+    }
+
+    /**
+     * Verifies that the target class referenced by an association via {@code rdfs:range} exists in
+     * the graph, i.e. it is a resource that is typed as {@code rdfs:Class}.
+     */
+    private void validateAssociationTargetExists(
+            Resource association, List<SchemaValidationIssue> issues) {
+        var uri = association.getURI();
+        var rangeObject = association.getProperty(RDFS.range).getObject();
+
+        if (!rangeObject.isResource()) {
+            issues.add(
+                    SchemaValidationIssue.builder()
+                            .severity(Severity.ERROR)
+                            .resourceUri(uri)
+                            .message("Association target (rdfs:range) is not a resource.")
+                            .build());
+            return;
+        }
+
+        var targetClass = rangeObject.asResource();
+        if (!targetClass.hasProperty(RDF.type, RDFS.Class)) {
+            issues.add(
+                    SchemaValidationIssue.builder()
+                            .severity(Severity.ERROR)
+                            .resourceUri(uri)
+                            .message(
+                                    "Association target class does not exist: <"
+                                            + targetClass.getURI()
+                                            + ">")
+                            .build());
+        }
+    }
+
+    @Override
+    public String convertToMarkdown(SchemaValidationReport report) {
+        var markdown = new StringBuilder();
+
+        markdown.append("# Schema Validation Report").append(NEW_LINE).append(NEW_LINE);
+
+        var status = report.isValid() ? "Valid" : "Invalid";
+        markdown.append("**Status:** ").append(status).append(NEW_LINE).append(NEW_LINE);
+
+        var issues = report.getIssues();
+        if (issues == null || issues.isEmpty()) {
+            markdown.append("No issues found.").append(NEW_LINE);
+            return markdown.toString();
+        }
+
+        // Only ERROR and WARNING issues are reported; INFO is omitted.
+        var relevantIssues =
+                issues.stream()
+                        .filter(
+                                issue ->
+                                        issue.getSeverity() == Severity.ERROR
+                                                || issue.getSeverity() == Severity.WARNING)
+                        .collect(Collectors.groupingBy(SchemaValidationIssue::getSeverity));
+
+        var errors = relevantIssues.getOrDefault(Severity.ERROR, List.of());
+        var warnings = relevantIssues.getOrDefault(Severity.WARNING, List.of());
+
+        if (errors.isEmpty() && warnings.isEmpty()) {
+            markdown.append("No errors or warnings found.").append(NEW_LINE);
+            return markdown.toString();
+        }
+
+        markdown.append("**Errors:** ")
+                .append(errors.size())
+                .append(" | **Warnings:** ")
+                .append(warnings.size())
+                .append(NEW_LINE)
+                .append(NEW_LINE);
+
+        appendSection(markdown, "Errors", errors);
+        appendSection(markdown, "Warnings", warnings);
+
+        return markdown.toString();
+    }
+
+    private void appendSection(
+            StringBuilder markdown, String title, List<SchemaValidationIssue> issues) {
+        if (issues.isEmpty()) {
+            return;
+        }
+
+        markdown.append("## ").append(title).append(NEW_LINE).append(NEW_LINE);
+        markdown.append("| Resource | Message |").append(NEW_LINE);
+        markdown.append("| --- | --- |").append(NEW_LINE);
+
+        for (var issue : issues) {
+            var resource = issue.getResourceUri() == null ? "—" : issue.getResourceUri();
+            markdown.append("| ")
+                    .append(escapeCell(resource))
+                    .append(" | ")
+                    .append(escapeCell(issue.getMessage()))
+                    .append(" |")
+                    .append(NEW_LINE);
+        }
+
+        markdown.append(NEW_LINE);
+    }
+
+    /** Escapes the pipe character so it does not break the Markdown table layout. */
+    private String escapeCell(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("|", "\\|");
     }
 }
