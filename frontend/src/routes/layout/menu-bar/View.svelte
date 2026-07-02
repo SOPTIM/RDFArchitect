@@ -65,6 +65,7 @@
                 "compare",
                 ["ctrl", "shift", "c"],
                 () => (showCompareDialog = true),
+                true,
             ),
             shortcutStore.register("migrate", ["ctrl", "shift", "m"], () =>
                 goto("/migrate"),
@@ -75,6 +76,7 @@
                 () => {
                     if (hasGraphSelected) showSHACLFullViewDialog = true;
                 },
+                hasGraphSelected,
             ),
             shortcutStore.register(
                 "validation",

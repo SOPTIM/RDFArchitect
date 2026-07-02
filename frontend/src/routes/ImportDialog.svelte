@@ -309,6 +309,7 @@
     onPrimary={importGraphs}
     disablePrimary={!enableSubmit}
     title="Import Schemas"
+    size="w-1/3"
 >
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
         {#if !datasetSelectionLocked}

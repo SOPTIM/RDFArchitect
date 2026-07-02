@@ -69,31 +69,37 @@
                 "import",
                 ["ctrl", "i"],
                 () => (showImportDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "export",
                 ["ctrl", "e"],
                 () => (showExportDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "shaclImport",
                 ["ctrl", "shift", "i"],
                 () => (showSHACLUploadDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "shaclExport",
                 ["ctrl", "shift", "e"],
                 () => (showSHACLExportDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "snapshot",
                 ["ctrl", "shift", "s"],
                 () => (showSnapshotDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "settings",
                 ["ctrl", "alt", "s"],
                 () => (showUserSettingDialog = true),
+                true,
             ),
         );
     });
