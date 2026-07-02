@@ -22,6 +22,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState, validationState } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
@@ -100,10 +101,18 @@
         }
 
         const result = await response.json();
-        console.log(result);
-        validationState.result.updateValue(result);
 
         showDialog = false;
+
+        if (!result.ok) {
+            console.log(result);
+            toastStore.error(
+                "Something went wrong while validating the schema.",
+            );
+            return;
+        }
+
+        validationState.result.updateValue(result);
         await goto("/validate");
     }
 </script>

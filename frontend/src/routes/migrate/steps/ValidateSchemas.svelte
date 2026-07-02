@@ -24,6 +24,7 @@
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ValidationReport from "$lib/components/ValidationReport.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     let { disableNext = $bindable() } = $props();
@@ -77,6 +78,7 @@
             ]);
         } catch (e) {
             console.log("Failed to validate schemas:", e);
+            toastStore.error("Failed to validate schemas");
         } finally {
             isLoading = false;
         }
