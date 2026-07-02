@@ -31,7 +31,7 @@
     "@docusaurus/types": "3.10.1"
   },
   "overrides": {
-    "webpack": "5.107.2"
+    "webpack": "5.108.0"
   },
   "browserslist": {
     "production": [
