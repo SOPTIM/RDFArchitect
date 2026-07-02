@@ -133,6 +133,14 @@ export const copyState = {
     },
 };
 
+/**
+ * Stores validation results to display on /validate.
+ * @type {{ result: StateValuePair<any | null> }}
+ */
+export const validationState = {
+    result: new StateValuePair(null),
+};
+
 export const migrationState = writable({
     compareMode: null,
     datasetA: null,

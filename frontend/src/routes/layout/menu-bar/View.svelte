@@ -21,6 +21,7 @@
         faCodeBranch,
         faRightLeft,
         faEye,
+        faCircleCheck,
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
@@ -33,6 +34,7 @@
 
     import CompareDialog from "../../compare/CompareDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
+    import ValidationDialog from "../../validate/ValidationDialog.svelte";
 
     import { goto } from "$app/navigation";
 
@@ -40,6 +42,7 @@
 
     let showSHACLFullViewDialog = $state(false);
     let showCompareDialog = $state(false);
+    let showValidationDialog = $state(false);
 
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
@@ -75,6 +78,12 @@
                 },
                 hasGraphSelected,
             ),
+            shortcutStore.register(
+                "validation",
+                ["ctrl", "shift", "d"],
+                () => (showValidationDialog = true),
+                true,
+            ),
         );
     });
 
@@ -108,6 +117,13 @@
             Migrate Schema
         </Menubar.Item.Button>
         <Menubar.Item.Button
+            onSelect={() => (showValidationDialog = true)}
+            faIcon={faCircleCheck}
+            altText="Ctrl+Shift+D"
+        >
+            Validate Schema
+        </Menubar.Item.Button>
+        <Menubar.Item.Button
             onSelect={() => (showSHACLFullViewDialog = true)}
             disabled={!hasGraphSelected}
             faIcon={faEye}
@@ -119,3 +135,4 @@
 </Menubar.Menu>
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <CompareDialog bind:showDialog={showCompareDialog} />
+<ValidationDialog bind:showDialog={showValidationDialog} />

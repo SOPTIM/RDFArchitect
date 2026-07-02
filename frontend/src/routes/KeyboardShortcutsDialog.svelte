@@ -86,6 +86,10 @@
                 { description: "Changelog", keys: ["Ctrl", "Shift", "H"] },
                 { description: "Migrate Schema", keys: ["Ctrl", "Shift", "M"] },
                 {
+                    description: "Validate Schema",
+                    keys: ["Ctrl", "Shift", "D"],
+                },
+                {
                     description: "Constraints Full View (SHACL)",
                     keys: ["Ctrl", "Shift", "L"],
                 },
