@@ -313,16 +313,13 @@
     }
 
     function copyClass() {
-        const entries = multiActive
-            ? multiSelectState.toCopyEntries()
-            : [
-                  {
-                      classUUID: classNavEntry.id,
-                      graphURI: graphNavEntry.id,
-                      datasetName: datasetNavEntry.id,
-                  },
-              ];
-        copyState.set(entries);
+        copyState.set(
+            multiSelectState.copyEntriesOr({
+                classUUID: classNavEntry.id,
+                graphURI: graphNavEntry.id,
+                datasetName: datasetNavEntry.id,
+            }),
+        );
     }
 </script>
 

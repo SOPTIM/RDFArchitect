@@ -73,6 +73,7 @@
 
     let dialogClassIds = $state([]);
     let dialogClassLabels = $state([]);
+    let dialogGraphUri = $state(null);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -90,6 +91,10 @@
             : contextMenuClass
               ? [contextMenuClass.label]
               : [],
+    );
+
+    const crossGraphDisabled = $derived(
+        multiActive && !multiSelectState.isSingleGraph,
     );
 
     let classZIndex = $derived(
@@ -118,11 +123,14 @@
     }
 
     function openDeleteClassDialog() {
-        if (classActionsDisabled || !contextMenuClass) {
+        if (classActionsDisabled || crossGraphDisabled || !contextMenuClass) {
             return;
         }
         dialogClass = contextMenuClass;
         dialogClassIds = selectionUuids;
+        dialogGraphUri = multiActive
+            ? (multiSelectState.getSelected()[0]?.graphUri ?? graphUri)
+            : (contextMenuClass.graphUri ?? graphUri);
         showDeleteDependenciesDialog = true;
         onClose();
     }
@@ -182,16 +190,15 @@
     }
 
     function copyClass() {
-        const entries = multiActive
-            ? multiSelectState.toCopyEntries()
-            : [
-                  {
-                      classUUID: contextMenuClass.uuid,
-                      graphURI: editorState.selectedGraph.getValue(),
-                      datasetName: editorState.selectedDataset.getValue(),
-                  },
-              ];
-        copyState.set(entries);
+        copyState.set(
+            multiSelectState.copyEntriesOr({
+                classUUID: contextMenuClass.uuid,
+                graphURI:
+                    contextMenuClass.graphUri ??
+                    editorState.selectedGraph.getValue(),
+                datasetName: editorState.selectedDataset.getValue(),
+            }),
+        );
     }
 </script>
 
@@ -304,7 +311,7 @@
             {/if}
             <ContextMenu.Item.Button
                 onSelect={openDeleteClassDialog}
-                disabled={classActionsDisabled}
+                disabled={classActionsDisabled || crossGraphDisabled}
                 faIcon={faTrash}
                 variant="danger"
                 altText="Del"
@@ -320,7 +327,7 @@
 <DeleteDependenciesDialog
     bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
-    {graphUri}
+    graphUri={dialogGraphUri ?? graphUri}
     resourceUuids={dialogClassIds}
 />
 <ExtendClassDialog

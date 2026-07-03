@@ -147,9 +147,9 @@ export class NodeOrderController {
     }
 
     #persistNodeOrder(order, changedIds) {
-        const nodes = this.#getNodes();
+        const nodesById = new Map(this.#getNodes().map(n => [n.id, n]));
         const classPositionDTOList = changedIds.map(id => {
-            const node = nodes.find(n => n.id === id);
+            const node = nodesById.get(id);
             return {
                 classUUID: id,
                 xPosition: node?.position.x ?? 0,

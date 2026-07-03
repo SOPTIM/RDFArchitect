@@ -107,6 +107,7 @@ export class ContextMenuController {
         this.#contextMenuClass = {
             uuid: node.id,
             label: node.data?.label ?? node.id,
+            graphUri: node.data?.graphUri ?? null,
         };
         this.#classRequest = {
             x: event.clientX,

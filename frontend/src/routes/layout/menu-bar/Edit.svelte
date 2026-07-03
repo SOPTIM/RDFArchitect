@@ -385,24 +385,13 @@
     }
 
     function copyClass() {
-        const selected = multiSelectState.getSelected();
-        const entries =
-            selected.length > 0
-                ? selected.map(e => ({
-                      classUUID: e.classUuid,
-                      graphURI: e.graphUri,
-                      datasetName: e.datasetName,
-                  }))
-                : [
-                      {
-                          classUUID:
-                              editorState.selectedClass.getProperty("id"),
-                          graphURI: editorState.selectedClassGraph.getValue(),
-                          datasetName:
-                              editorState.selectedClassDataset.getValue(),
-                      },
-                  ];
-        copyState.set(entries);
+        copyState.set(
+            multiSelectState.copyEntriesOr({
+                classUUID: editorState.selectedClass.getProperty("id"),
+                graphURI: editorState.selectedClassGraph.getValue(),
+                datasetName: editorState.selectedClassDataset.getValue(),
+            }),
+        );
     }
 
     function pasteClass(copyAsAbstract, copyAttributes, copyAssociations) {

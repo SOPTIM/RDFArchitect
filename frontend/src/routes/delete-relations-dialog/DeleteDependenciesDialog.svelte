@@ -199,8 +199,11 @@
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClass.updateValue({ type: null, id: null });
             multiSelectState.clear();
+            const noun = isSingle
+                ? (type ?? "resource")
+                : pluralize(type ?? "resource");
             toastStore.success(
-                `${type ? type.charAt(0).toUpperCase() + type.slice(1) : "Resource"}${isSingle ? "" : "s"} deleted`,
+                `${noun.charAt(0).toUpperCase() + noun.slice(1)} deleted`,
                 label
                     ? `"${label}" was removed.`
                     : `${roots.length} resources were removed.`,
@@ -239,12 +242,16 @@
         selectedActions = new Map(selectedActions);
     }
 
+    function pluralize(word) {
+        return word.endsWith("s") ? `${word}es` : `${word}s`;
+    }
+
     function getDialogTitle() {
         if (roots.length === 1) {
             return `Delete ${type} "${roots[0].resourceIdentifier.label}"?`;
         }
         if (roots.length > 1) {
-            return `Delete ${roots.length} ${type ?? "resource"}s?`;
+            return `Delete ${roots.length} ${pluralize(type ?? "resource")}?`;
         }
         return "Delete resource?";
     }
@@ -267,7 +274,7 @@
             Select how affected resources should be handled when deleting {roots.length >
             1
                 ? "the selected resources"
-                : `this ${type}`}.
+                : `this ${type ?? "resource"}`}.
         </p>
 
         {#if roots.length}

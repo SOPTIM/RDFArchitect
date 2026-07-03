@@ -85,7 +85,7 @@ export class MultiSelectState {
         if (current.length !== entries.length) {
             return false;
         }
-        const keys = new Set(current.map(entryKey));
+        const keys = this.#selectedKeys();
         return entries.every(e => keys.has(entryKey(e)));
     }
 
@@ -122,6 +122,10 @@ export class MultiSelectState {
             graphURI: e.graphUri,
             datasetName: e.datasetName,
         }));
+    }
+
+    copyEntriesOr(fallbackEntry) {
+        return this.count > 0 ? this.toCopyEntries() : [fallbackEntry];
     }
 
     /**

@@ -32,8 +32,18 @@ function offsetEdgeIds(edges) {
     let ids = offsetEdgeIdCache.get(edges);
     if (!ids) {
         ids = new Set();
+        const associationPairs = new Set();
         for (const edge of edges) {
-            if (shouldOffsetInheritanceEdge(edge, edges)) {
+            if (edge.type === "association") {
+                associationPairs.add(`${edge.source}|${edge.target}`);
+                associationPairs.add(`${edge.target}|${edge.source}`);
+            }
+        }
+        for (const edge of edges) {
+            if (
+                edge.type === "inheritance" &&
+                associationPairs.has(`${edge.source}|${edge.target}`)
+            ) {
                 ids.add(edge.id);
             }
         }
@@ -61,26 +71,4 @@ function decorateEdge(edge, offsetIds) {
             offsetEdge: true,
         },
     };
-}
-
-function shouldOffsetInheritanceEdge(edge, edges) {
-    return (
-        edge.type === "inheritance" &&
-        edges.some(otherEdge =>
-            isAssociationEdgeBetweenSameNodes(edge, otherEdge),
-        )
-    );
-}
-
-function isAssociationEdgeBetweenSameNodes(edge, otherEdge) {
-    if (otherEdge.type !== "association") {
-        return false;
-    }
-
-    const sameDirection =
-        otherEdge.source === edge.source && otherEdge.target === edge.target;
-    const reverseDirection =
-        otherEdge.source === edge.target && otherEdge.target === edge.source;
-
-    return sameDirection || reverseDirection;
 }
