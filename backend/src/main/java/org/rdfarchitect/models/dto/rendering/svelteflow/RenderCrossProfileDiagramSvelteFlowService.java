@@ -287,13 +287,14 @@ public class RenderCrossProfileDiagramSvelteFlowService
                 }
 
                 var sourceUUID = mergedClass.getUuid();
+                var targetRange = from.getRange();
                 var targetUUID =
-                        to.getRange() != null
+                        targetRange != null
                                 ? classUriToUUIDMap.entrySet().stream()
                                         .filter(
                                                 e -> {
                                                     String uri = e.getKey();
-                                                    String rangeLabel = to.getRange().getLabel();
+                                                    String rangeLabel = targetRange.getLabel();
                                                     return rangeLabel != null
                                                             && (uri.endsWith("#" + rangeLabel)
                                                                     || uri.endsWith(
@@ -319,10 +320,10 @@ public class RenderCrossProfileDiagramSvelteFlowService
 
                 var edgeDataDTO =
                         EdgeDataDTO.builder()
-                                .toMultiplicity(to.getMultiplicity())
-                                .fromMultiplicity(from.getMultiplicity())
-                                .useToAssociation(to.isAssociationUsed())
-                                .useFromAssociation(from.isAssociationUsed())
+                                .toMultiplicity(extractMultiplicityString(to.getMultiplicity()))
+                                .fromMultiplicity(extractMultiplicityString(from.getMultiplicity()))
+                                .useToAssociation(from.isAssociationUsed())
+                                .useFromAssociation(to.isAssociationUsed())
                                 .graphUri(graphSourced.getGraphUri())
                                 .color(graphSourced.getGraphColor())
                                 .build();
@@ -338,5 +339,9 @@ public class RenderCrossProfileDiagramSvelteFlowService
             }
         }
         return associationEdges;
+    }
+
+    private String extractMultiplicityString(String multiplicity) {
+        return multiplicity != null ? multiplicity.replace("M:", "") : null;
     }
 }
