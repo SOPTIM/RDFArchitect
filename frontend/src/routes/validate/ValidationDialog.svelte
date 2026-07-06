@@ -104,7 +104,7 @@
 
         showDialog = false;
 
-        if (!result.ok) {
+        if (!response.ok) {
             console.log(result);
             toastStore.error(
                 "Something went wrong while validating the schema.",
