@@ -30,16 +30,24 @@
 
     let { id, data, dragging } = $props();
 
+    const isCrossProfileDiagram = $derived(
+        editorState.selectedDiagram.getProperty("type") ===
+            DiagramType.CROSS_PROFILE,
+    );
+    const selectionGraphUri = $derived(
+        isCrossProfileDiagram ? null : data.graphUri,
+    );
+
     const isInSelection = $derived(
         multiSelectState.isSelected(
             editorState.selectedDataset.getValue(),
-            data.graphUri,
+            selectionGraphUri,
             id,
         ),
     );
     const isOpenClass = $derived(
         editorState.selectedClass.getProperty("id") === id &&
-            editorState.selectedClassGraph.getValue() === data.graphUri,
+            editorState.selectedClassGraph.getValue() === selectionGraphUri,
     );
     const isActiveLevel = $derived(
         editorState.activeSelectionKind.getValue() === SelectionLevel.CLASS,
@@ -58,11 +66,6 @@
     const enumEntries = $derived(data.enumEntries);
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
-
-    const isCrossProfileDiagram = $derived(
-        editorState.selectedDiagram.getProperty("type") ===
-            DiagramType.CROSS_PROFILE,
-    );
 
     function groupByGraphURI(properties) {
         const groups = [];

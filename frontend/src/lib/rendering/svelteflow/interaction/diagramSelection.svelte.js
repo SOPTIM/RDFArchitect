@@ -60,10 +60,17 @@ export class DiagramSelectionController {
         this.#suppressClickOpen = false;
     }
 
+    #selectionGraphUri(node) {
+        return editorState.selectedDiagram.getProperty("type") ===
+            DiagramType.CROSS_PROFILE
+            ? null
+            : node.data?.graphUri;
+    }
+
     buildEntry(node) {
         return {
             datasetName: editorState.selectedDataset.getValue(),
-            graphUri: node.data?.graphUri,
+            graphUri: this.#selectionGraphUri(node),
             classUuid: node.id,
             classLabel: node.data?.label ?? node.id,
             packageId: editorState.selectedDiagram.getProperty("id"),
@@ -149,7 +156,7 @@ export class DiagramSelectionController {
         }
         const id = nodeClickEvent.node.id;
         const event = nodeClickEvent.event;
-        const graphUri = nodeClickEvent.node.data.graphUri;
+        const graphUri = this.#selectionGraphUri(nodeClickEvent.node);
 
         if (event?.ctrlKey || event?.metaKey) {
             const entry = this.buildEntry(nodeClickEvent.node);

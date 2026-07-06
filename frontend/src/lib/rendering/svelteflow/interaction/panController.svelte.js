@@ -88,7 +88,10 @@ export class PanController {
     handleContainerPointerDown(event) {
         this.#suppressClick = false;
         this.#suppressContextMenu = false;
-        if (event.button === 2) {
+        if (event.button === 2 || event.button === 1) {
+            if (event.button === 1) {
+                event.preventDefault();
+            }
             this.#startManualPan(event);
             return;
         }
@@ -157,9 +160,11 @@ export class PanController {
             Math.hypot(dx, dy) > RIGHT_DRAG_THRESHOLD_PX
         ) {
             this.#manualPan.moved = true;
-            if (this.#manualPan.button === 2) {
+            if (this.#manualPan.button === 2 || this.#manualPan.button === 1) {
                 this.#panningActive = true;
-                this.#suppressContextMenu = true;
+                if (this.#manualPan.button === 2) {
+                    this.#suppressContextMenu = true;
+                }
                 const container = this.#getContainer();
                 if (container) {
                     container.style.cursor = "grabbing";

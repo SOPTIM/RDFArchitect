@@ -404,7 +404,7 @@
                     onSelect={() => {
                         showRemoveFromDiagramDialog = true;
                     }}
-                    disabled={crossGraphDisabled}
+                    disabled={!!diagramGraphUri && crossGraphDisabled}
                     faIcon={faMinus}
                     variant="danger"
                 >
