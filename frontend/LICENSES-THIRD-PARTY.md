@@ -92,7 +92,7 @@
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 3.0.4
+- **Version:** 4.0.0
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
