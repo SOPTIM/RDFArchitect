@@ -16,14 +16,26 @@
   -->
 
 <script>
-    import AsciidoctorModule from "asciidoctor";
+    import { convert } from "asciidoctor";
 
     const { comment } = $props();
-    const createAsciidoctor = AsciidoctorModule.default ?? AsciidoctorModule;
-    const asciidoctor = createAsciidoctor();
-    let convertedClassComment = $derived(
-        comment ? asciidoctor.convert(comment, { safe: "secure" }) : "",
-    );
+    let convertedClassComment = $state("");
+
+    $effect(() => {
+        if (!comment) {
+            convertedClassComment = "";
+            return;
+        }
+        let cancelled = false;
+        convert(comment, { safe: "secure" }).then(result => {
+            if (!cancelled) {
+                convertedClassComment = result;
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    });
 </script>
 
 <div id="comment">
