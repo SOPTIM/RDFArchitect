@@ -168,6 +168,18 @@ public class SchemaValidationService
                                                 .resourceUri(uri)
                                                 .message("Package is missing a namespace.")
                                                 .build());
+                            } else {
+                                if (!hasNamespacePrefix(model, packageResource.getNameSpace())) {
+                                    issues.add(
+                                            SchemaValidationIssue.builder()
+                                                    .severity(Severity.WARNING)
+                                                    .resourceUri(uri)
+                                                    .message(
+                                                            "Package namespace is not defined in the schema's prefix mapping: <"
+                                                                    + packageResource.getNameSpace()
+                                                                    + ">")
+                                                    .build());
+                                }
                             }
                         });
     }
@@ -199,6 +211,18 @@ public class SchemaValidationService
                                                 .resourceUri(uri)
                                                 .message("Class is missing a namespace.")
                                                 .build());
+                            } else {
+                                if (!hasNamespacePrefix(model, classResource.getNameSpace())) {
+                                    issues.add(
+                                            SchemaValidationIssue.builder()
+                                                    .severity(Severity.WARNING)
+                                                    .resourceUri(uri)
+                                                    .message(
+                                                            "Class namespace is not defined in the schema's prefix mapping: <"
+                                                                    + classResource.getNameSpace()
+                                                                    + ">")
+                                                    .build());
+                                }
                             }
 
                             // cims:belongsToCategory required
@@ -241,6 +265,18 @@ public class SchemaValidationService
                                                 .resourceUri(uri)
                                                 .message("Property is missing a namespace.")
                                                 .build());
+                            } else {
+                                if (!hasNamespacePrefix(model, property.getNameSpace())) {
+                                    issues.add(
+                                            SchemaValidationIssue.builder()
+                                                    .severity(Severity.WARNING)
+                                                    .resourceUri(uri)
+                                                    .message(
+                                                            "Property namespace is not defined in the schema's prefix mapping: <"
+                                                                    + property.getNameSpace()
+                                                                    + ">")
+                                                    .build());
+                                }
                             }
 
                             // rdfs:domain required
@@ -414,6 +450,10 @@ public class SchemaValidationService
                                             + ">")
                             .build());
         }
+    }
+
+    private boolean hasNamespacePrefix(Model model, String namespace) {
+        return model.getNsPrefixMap().containsValue(namespace);
     }
 
     @Override
