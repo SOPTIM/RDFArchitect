@@ -120,6 +120,7 @@ class SchemaValidationServiceTest {
         var classB = addClass(model, "ClassB", pkg);
         addAttribute(model, "ClassA.name", classA);
         addAssociation(model, "ClassA.classB", classA, classB);
+        model.setNsPrefix("NS", NS);
         return model;
     }
 
