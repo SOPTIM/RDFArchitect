@@ -36,27 +36,23 @@ export async function saveCopyClass(
     copyAttributes,
     copyAssociations,
 ) {
-    if (!copyState.classUUID || !copyState.graphURI || !copyState.datasetName)
-        return false;
+    const entries = copyState.getEntries();
+    if (entries.length === 0) return false;
     const payload = {
-        targetDatasetName: datasetName,
-        targetGraphURI: graphURI,
         targetPackage: packageDTO?.uuid === "default" ? null : packageDTO,
         copyAsAbstract: copyAbstract,
         copyAttributes: copyAttributes,
         copyAssociations: copyAssociations,
+        sources: entries.map(e => ({
+            sourceDatasetName: e.datasetName,
+            sourceGraphURI: e.graphURI,
+            classUUID: e.classUUID,
+        })),
     };
     try {
-        const res = await bec.postCopyClass(
-            copyState.datasetName.getValue(),
-            copyState.graphURI.getValue(),
-            copyState.classUUID.getValue(),
-            payload,
-        );
+        const res = await bec.postPasteClasses(datasetName, graphURI, payload);
         if (res.ok) {
-            const json = await res.json();
-            const uuid = json.uuid;
-            const name = json.name;
+            const pasted = await res.json();
             editorState.selectedDataset.updateValue(datasetName);
             editorState.selectedClassDataset.updateValue(datasetName);
             editorState.selectedGraph.updateValue(graphURI);
@@ -65,15 +61,30 @@ export async function saveCopyClass(
                 type: DiagramType.PACKAGE,
                 id: packageDTO?.uuid ?? "default",
             });
-            editorState.selectedClass.updateValue({
-                type: ClassType.SINGLE_CLASS,
-                id: uuid,
-            });
-            toastStore.success("Class pasted", `"${name}" was pasted.`);
+            const last = pasted[pasted.length - 1];
+            if (last) {
+                editorState.selectedClass.updateValue({
+                    type: ClassType.SINGLE_CLASS,
+                    id: last.uuid,
+                });
+            }
+            if (pasted.length === 1) {
+                toastStore.success(
+                    "Class pasted",
+                    `"${pasted[0].name}" was pasted.`,
+                );
+            } else {
+                toastStore.success(
+                    "Classes pasted",
+                    `${pasted.length} classes were pasted.`,
+                );
+            }
+            return true;
         } else {
             const errorText = await res.text();
-            console.error("Could not copy class:", errorText);
-            toastStore.error("Paste failed", `Could not paste class.`);
+            console.error("Could not paste classes:", errorText);
+            toastStore.error("Paste failed", `Could not paste classes.`);
+            return false;
         }
     } finally {
         forceReloadTrigger.trigger();

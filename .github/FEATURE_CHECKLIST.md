@@ -46,6 +46,7 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Schema context menu: New package, New Profile Diagram, Undo/Redo, Create/Edit/Delete profile header, Changelog, Compare, Migrate schema, Constraints import/export/full view, Export schema, Delete schema
 - Package context menu: Create class, Add to Profile/Dataset Diagram, Paste class, View/Edit package, Copy URL, Delete package
 - Class context menu: Show in diagram, Copy class, Constraints, Add to Profile/Dataset Diagram, Delete class
+- Multi-select classes: Ctrl/Cmd+click toggles a class, Shift+click selects a range
 - Diagram context menu: Edit diagram, Delete diagram
 
 ## Editor – Package View
@@ -57,7 +58,8 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Drag and zoom
 - Reset View, Filter View, Reset Layout buttons
 - Click on class opens class editor
-- Class context menu: Copy class, Delete class, Move between layers
+- Multi-select: Ctrl/Cmd+click toggles a class, Shift+click adds a class, Ctrl/Cmd+drag toggles a selection box, Shift+drag adds, plain drag on the pane replaces the selection
+- Right-drag pans the diagram, right-click opens the context menu without selecting the class
 - Pane context menu: Add class, Paste class
 
 ## Editor – Class Editor
@@ -72,6 +74,7 @@ Reference document for manual testing. Verify the areas relevant to your change 
 ## Editor – Delete Dialog
 
 - Package, Classes, Attributes and Associations listed correctly
+- Deleting a multi-selection lists all selected classes with their dependencies
 - Delete, Keep, Move to default actions
 - Set all
 
@@ -84,6 +87,7 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Drag and zoom
 - Reset View, Filter View, Reset Layout buttons
 - Click on class opens class editor
+- Multi-select: works the same as in the package view
 - Class context menu: Delete class, Remove from diagram, Move between layers
 - Pane context menu: Add class
 

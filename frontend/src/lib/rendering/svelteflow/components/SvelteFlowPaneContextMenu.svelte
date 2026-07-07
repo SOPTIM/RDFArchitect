@@ -53,11 +53,7 @@
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
-    let disablePasteButton = $derived(
-        !copyState.classUUID.getValue() ||
-            !copyState.graphURI.getValue() ||
-            !copyState.datasetName.getValue(),
-    );
+    let disablePasteButton = $derived(copyState.isEmpty);
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -94,8 +90,8 @@
         );
         const packagesJSON = await res.json();
         let packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
+            ...(packagesJSON.internalPackageList ?? []),
+            ...(packagesJSON.externalPackageList ?? []),
         ];
         const selectedPackageUUID =
             editorState.selectedDiagram.getProperty("id") === "default"

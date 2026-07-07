@@ -227,21 +227,28 @@ public class UpdateClassLayoutService
     }
 
     @Override
-    public void removeClassFromCustomDiagram(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, UUID classUUID) {
+    public void removeClassesFromCustomDiagram(
+            GraphIdentifier graphIdentifier, UUID diagramUUID, List<UUID> classUUIDs) {
+        if (classUUIDs.isEmpty()) {
+            return;
+        }
+
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(diagramUUID);
             if (diagram != null) {
                 var updated = diagram.getClasses();
-                updated.removeIf(c -> c.getUuid().equals(classUUID));
+                updated.removeIf(c -> classUUIDs.contains(c.getUuid()));
                 diagram.setClasses(updated);
             }
             var diagramLayoutModel = ctx.getDiagramLayout().getDiagramLayoutModel();
-            var diagramObject =
-                    DLObjectFetcher.fetchDiagramDOForClass(
-                            diagramLayoutModel, diagramUUID, classUUID);
-            if (diagramObject != null) {
-                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+            for (var classUUID : classUUIDs) {
+                var diagramObject =
+                        DLObjectFetcher.fetchDiagramDOForClass(
+                                diagramLayoutModel, diagramUUID, classUUID);
+                if (diagramObject != null) {
+                    DLUpdates.deleteDiagramObjectCascade(
+                            diagramLayoutModel, diagramObject.getMRID());
+                }
             }
             ctx.commit();
         }
@@ -282,20 +289,27 @@ public class UpdateClassLayoutService
     }
 
     @Override
-    public void removeClassFromCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, UUID classUUID) {
+    public void removeClassesFromCustomDatasetDiagram(
+            String datasetName, UUID diagramUUID, List<UUID> classUUIDs) {
+        if (classUUIDs.isEmpty()) {
+            return;
+        }
+
         var diagram = databasePort.getDatasetDiagrams(datasetName).get(diagramUUID);
         if (diagram != null) {
             var updated = diagram.getClasses();
-            updated.removeIf(c -> c.getUuid().equals(classUUID));
+            updated.removeIf(c -> classUUIDs.contains(c.getUuid()));
             diagram.setClasses(updated);
         }
         var diagramLayoutModel =
                 databasePort.getDatasetDiagramLayout(datasetName).getDiagramLayoutModel();
-        var diagramObject =
-                DLObjectFetcher.fetchDiagramDOForClass(diagramLayoutModel, diagramUUID, classUUID);
-        if (diagramObject != null) {
-            DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+        for (var classUUID : classUUIDs) {
+            var diagramObject =
+                    DLObjectFetcher.fetchDiagramDOForClass(
+                            diagramLayoutModel, diagramUUID, classUUID);
+            if (diagramObject != null) {
+                DLUpdates.deleteDiagramObjectCascade(diagramLayoutModel, diagramObject.getMRID());
+            }
         }
     }
 
