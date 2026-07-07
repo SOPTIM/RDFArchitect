@@ -169,7 +169,7 @@ public class SchemaValidationService
                                                 .message("Package is missing a namespace.")
                                                 .build());
                             } else {
-                                if (!hasNamespacePrefix(model, packageResource.getNameSpace())) {
+                                if (hasNoNamespacePrefix(model, packageResource.getNameSpace())) {
                                     issues.add(
                                             SchemaValidationIssue.builder()
                                                     .severity(Severity.WARNING)
@@ -212,7 +212,7 @@ public class SchemaValidationService
                                                 .message("Class is missing a namespace.")
                                                 .build());
                             } else {
-                                if (!hasNamespacePrefix(model, classResource.getNameSpace())) {
+                                if (hasNoNamespacePrefix(model, classResource.getNameSpace())) {
                                     issues.add(
                                             SchemaValidationIssue.builder()
                                                     .severity(Severity.WARNING)
@@ -266,7 +266,7 @@ public class SchemaValidationService
                                                 .message("Property is missing a namespace.")
                                                 .build());
                             } else {
-                                if (!hasNamespacePrefix(model, property.getNameSpace())) {
+                                if (hasNoNamespacePrefix(model, property.getNameSpace())) {
                                     issues.add(
                                             SchemaValidationIssue.builder()
                                                     .severity(Severity.WARNING)
@@ -452,8 +452,8 @@ public class SchemaValidationService
         }
     }
 
-    private boolean hasNamespacePrefix(Model model, String namespace) {
-        return model.getNsPrefixMap().containsValue(namespace);
+    private boolean hasNoNamespacePrefix(Model model, String namespace) {
+        return !model.getNsPrefixMap().containsValue(namespace);
     }
 
     @Override
