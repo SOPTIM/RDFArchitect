@@ -32,7 +32,6 @@ import org.rdfarchitect.api.dto.validation.SchemaValidationIssue;
 import org.rdfarchitect.api.dto.validation.SchemaValidationIssue.Severity;
 import org.rdfarchitect.api.dto.validation.SchemaValidationReport;
 import org.rdfarchitect.config.SchemaConfig;
-import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
@@ -49,31 +48,30 @@ class SchemaValidationServiceTest {
     private static final String XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
 
     private SchemaValidationService service;
-    private DatabasePort databasePort;
 
     @BeforeEach
     void setUp() {
-        databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        var databasePort =
+                new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         service = new SchemaValidationService(databasePort);
     }
 
     // ─── Helper builders ──────────────────────────────────────────────────────
 
     /** Adds a minimal, valid owl:Ontology header (with both required fields) to the model. */
-    private Resource addValidOntologyHeader(Model model) {
+    private void addValidOntologyHeader(Model model) {
         var ontology = model.createResource(NS + "Ontology");
         ontology.addProperty(RDF.type, OWL2.Ontology);
         ontology.addProperty(
                 model.createProperty(OWL2.versionIRI.getURI()), model.createResource(NS + "v1"));
         ontology.addProperty(
                 model.createProperty(KnownOntologyFields.DCAT_KEYWORD.getIri()), "cim");
-        return ontology;
     }
 
-    private Resource addPackage(Model model, String localName) {
-        var pkg = model.createResource(NS + localName);
+    private Resource addPackage(Model model) {
+        var pkg = model.createResource(NS + "package");
         pkg.addProperty(RDF.type, CIMS.classCategory);
-        pkg.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        pkg.addProperty(RDFS.label, model.createLiteral("package", "en"));
         return pkg;
     }
 
@@ -86,7 +84,7 @@ class SchemaValidationServiceTest {
     }
 
     /** Creates a valid XSD-typed attribute belonging to {@code domain}. */
-    private Resource addAttribute(Model model, String localName, Resource domain) {
+    private void addAttribute(Model model, String localName, Resource domain) {
         var attribute = model.createResource(NS + localName);
         attribute.addProperty(RDF.type, RDF.Property);
         attribute.addProperty(RDFS.label, model.createLiteral(localName, "en"));
@@ -94,11 +92,9 @@ class SchemaValidationServiceTest {
         attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS_NS + "M:0..1"));
         attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
         attribute.addProperty(CIMS.datatype, model.createResource(XSD_STRING));
-        return attribute;
     }
 
-    private Resource addAssociation(
-            Model model, String localName, Resource domain, Resource target) {
+    private void addAssociation(Model model, String localName, Resource domain, Resource target) {
         var association = model.createResource(NS + localName);
         association.addProperty(RDF.type, RDF.Property);
         association.addProperty(RDFS.label, model.createLiteral(localName, "en"));
@@ -108,14 +104,13 @@ class SchemaValidationServiceTest {
         association.addProperty(CIMS.associationUsed, "Yes");
         association.addProperty(
                 CIMS.inverseRoleName, model.createResource(NS + localName + ".inverse"));
-        return association;
     }
 
     /** A fully valid schema: header + package + class + attribute + association. */
     private Model validSchema() {
         var model = ModelFactory.createDefaultModel();
         addValidOntologyHeader(model);
-        var pkg = addPackage(model, "package");
+        var pkg = addPackage(model);
         var classA = addClass(model, "ClassA", pkg);
         var classB = addClass(model, "ClassB", pkg);
         addAttribute(model, "ClassA.name", classA);
@@ -173,7 +168,7 @@ class SchemaValidationServiceTest {
         @Test
         void validateSchema_missingOntologyHeader_reportsError() {
             var model = ModelFactory.createDefaultModel();
-            addPackage(model, "package");
+            addPackage(model);
 
             var report = service.validateSchema(model.getGraph());
 
@@ -275,7 +270,7 @@ class SchemaValidationServiceTest {
         void validateSchema_classWithoutLabel_reportsError() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
-            var pkg = addPackage(model, "package");
+            var pkg = addPackage(model);
             var clazz = model.createResource(NS + "ClassA");
             clazz.addProperty(RDF.type, RDFS.Class);
             clazz.addProperty(CIMS.belongsToCategory, pkg);
@@ -320,7 +315,7 @@ class SchemaValidationServiceTest {
         void validateSchema_propertyMissingDomainAndMultiplicity_reportsErrors() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
-            var pkg = addPackage(model, "package");
+            var pkg = addPackage(model);
             addClass(model, "ClassA", pkg);
             var property = model.createResource(NS + "ClassA.attr");
             property.addProperty(RDF.type, RDF.Property);
@@ -346,7 +341,7 @@ class SchemaValidationServiceTest {
         void validateSchema_propertyWithoutLabel_reportsError() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
-            var pkg = addPackage(model, "package");
+            var pkg = addPackage(model);
             var classA = addClass(model, "ClassA", pkg);
             var property = model.createResource(NS + "ClassA.attr");
             property.addProperty(RDF.type, RDF.Property);
@@ -370,7 +365,7 @@ class SchemaValidationServiceTest {
         void validateSchema_propertyNeitherAttributeNorAssociation_reportsWarning() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
-            var pkg = addPackage(model, "package");
+            var pkg = addPackage(model);
             var classA = addClass(model, "ClassA", pkg);
             var property = model.createResource(NS + "ClassA.orphan");
             property.addProperty(RDF.type, RDF.Property);
@@ -399,7 +394,7 @@ class SchemaValidationServiceTest {
         private Model modelWithClass() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
-            var pkg = addPackage(model, "package");
+            var pkg = addPackage(model);
             addClass(model, "ClassA", pkg);
             return model;
         }
@@ -552,7 +547,7 @@ class SchemaValidationServiceTest {
         private Model modelWithTwoClasses() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
-            var pkg = addPackage(model, "package");
+            var pkg = addPackage(model);
             addClass(model, "ClassA", pkg);
             addClass(model, "ClassB", pkg);
             return model;
