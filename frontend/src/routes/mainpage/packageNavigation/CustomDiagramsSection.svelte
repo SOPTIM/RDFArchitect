@@ -34,7 +34,7 @@
         isSelectedGraph,
     } from "./packageNavigationUtils.svelte.js";
 
-    let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readOnly } =
+    let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readonly } =
         $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -169,12 +169,12 @@
         const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
             : DiagramType.CUSTOM_DATASET_DIAGRAM;
-        editorState.selectedDataset.updateValue(datasetNavEntry.id);
-        editorState.selectedGraph.updateValue(graphNavEntry?.id);
-        editorState.selectedDiagram.updateValue({
-            type: diagramType,
-            id: null,
-        });
+        editorState.selectCustomDiagram(
+            datasetNavEntry.id,
+            graphNavEntry?.id,
+            null,
+            diagramType,
+        );
     }
 
     async function getGraphDiagrams(datasetName, graphURI) {
@@ -218,7 +218,7 @@
                 {allGraphNavEntries}
                 bind:diagram={diagrams[index]}
                 classes={classesByDiagram[diagram.diagramId]}
-                {readOnly}
+                {readonly}
                 level={graphNavEntry ? 4 : 3}
                 onToggle={() => ensureClassesLoaded(diagram)}
             />

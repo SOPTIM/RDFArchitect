@@ -23,7 +23,10 @@
     import { setContext, untrack } from "svelte";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
     import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
 
     import { getNavEntryList } from "./build-nav-object.js";
@@ -46,6 +49,13 @@
         );
         initialDatasetsLoaded = true;
         localReloadTrigger.trigger();
+    });
+
+    $effect(() => {
+        editorState.selectedClass.subscribe();
+        if (editorState.selectedClass.getProperty("id")) {
+            untrack(() => editorState.markClassActive());
+        }
     });
 
     setContext("packageNavigation", {

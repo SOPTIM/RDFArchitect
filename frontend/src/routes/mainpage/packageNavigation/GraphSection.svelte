@@ -49,12 +49,16 @@
     import {
         editorState,
         forceReloadTrigger,
+        SelectionLevel,
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import PackageButton from "./PackageButton.svelte";
-    import { isSelectedGraph } from "./packageNavigationUtils.svelte.js";
+    import {
+        graphHighlight,
+        isSelectedGraph,
+    } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
@@ -100,6 +104,9 @@
     const isGraphSelected = $derived(
         isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
     );
+    const graphSelectionState = $derived(
+        graphHighlight(datasetNavEntry.id, graphNavEntry.id),
+    );
     $effect(() => {
         if (isGraphSelected && !wasGraphSelected) {
             graphNavEntry.parent?.open();
@@ -130,19 +137,27 @@
         return JSON.parse(content);
     }
 
-    function focusGraphContext() {
-        const nextDataset = datasetNavEntry.label;
-        const nextGraph = graphNavEntry.id;
-        const previousDataset = editorState.selectedDataset.getValue();
-        const previousGraph = editorState.selectedGraph.getValue();
-        const graphChanged =
-            previousDataset !== nextDataset || previousGraph !== nextGraph;
-
-        editorState.selectedDataset.updateValue(nextDataset);
-        editorState.selectedGraph.updateValue(nextGraph);
-        if (graphChanged) {
-            editorState.selectedDiagram.updateValue({ type: null, id: null });
+    function handleToggleGraph() {
+        const wasOpen = graphNavEntry.isOpen;
+        graphNavEntry.toggle();
+        if (!wasOpen) {
+            return;
         }
+        // When collapsing, dissolve an active package/diagram selected inside
+        // this graph; the graph itself becomes the selection. A class as the
+        // active selection is left untouched (tracked separately).
+        const kind = editorState.activeSelectionKind.getValue();
+        if (
+            (kind === SelectionLevel.PACKAGE ||
+                kind === SelectionLevel.DIAGRAM) &&
+            isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)
+        ) {
+            editorState.dissolveToGraph();
+        }
+    }
+
+    function focusGraphContext() {
+        editorState.selectGraph(datasetNavEntry.label, graphNavEntry.id);
     }
 </script>
 
@@ -155,11 +170,12 @@
                 icon={faDiagramProject}
                 hasChildren={graphNavEntry.children.length > 0}
                 expanded={graphNavEntry.isOpen}
-                isSelected={isGraphSelected}
+                isSelected={graphSelectionState === "active"}
+                ancestorSelected={graphSelectionState === "ancestor"}
                 title={graphNavEntry.tooltip}
                 highlightLabel={graphHighlightLabel}
                 onclick={focusGraphContext}
-                onToggle={() => graphNavEntry.toggle()}
+                onToggle={handleToggleGraph}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>

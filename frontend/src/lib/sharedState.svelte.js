@@ -24,11 +24,17 @@ import { writable } from "svelte/store";
  * The trigger can also be toggled manually.
  */
 
+import { MultiSelectState } from "./multiSelectState.svelte.js";
 import {
     SimpleTrigger,
     StateObjectPair,
     StateValuePair,
 } from "./statePrimitives.svelte.js";
+
+export {
+    mergeSelections,
+    toggleSelections,
+} from "./multiSelectState.svelte.js";
 
 /**
  * Defines the possible values that the type property of selectedDiagam can have.
@@ -44,6 +50,19 @@ export const DiagramType = {
 export const ClassType = {
     SINGLE_CLASS: "singleClass",
     MERGED_CLASS: "mergedClass",
+};
+
+/**
+ * Navigation levels, least to most specific. `activeSelectionKind` holds one to
+ * mark the last-picked level (recency the nested fields can't express alone).
+ */
+export const SelectionLevel = {
+    DATASET: "dataset",
+    GRAPH: "graph",
+    PACKAGE: "package",
+    DIAGRAM: "diagram",
+    CLASS: "class",
+    NONE: "none",
 };
 
 /**
@@ -70,6 +89,8 @@ export const editorState = {
     selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
+    // The level the user selected last; drives the nav highlight (see SelectionLevel).
+    activeSelectionKind: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -80,6 +101,66 @@ export const editorState = {
         this.selectedClass.updateValue({ type: null, id: null });
         this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);
+        this.activeSelectionKind.updateValue(null);
+        multiSelectState.clear();
+    },
+
+    selectDataset(datasetName) {
+        multiSelectState.clear();
+        this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
+        if (this.selectedDataset.getValue() === datasetName) {
+            return;
+        }
+        this.selectedGraph.updateValue(null);
+        this.selectedDiagram.updateValue({ type: null, id: null });
+        this.selectedDataset.updateValue(datasetName);
+    },
+
+    selectGraph(datasetName, graphUri) {
+        multiSelectState.clear();
+        this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
+        const graphChanged =
+            this.selectedDataset.getValue() !== datasetName ||
+            this.selectedGraph.getValue() !== graphUri;
+        this.selectedDataset.updateValue(datasetName);
+        this.selectedGraph.updateValue(graphUri);
+        if (graphChanged) {
+            this.selectedDiagram.updateValue({ type: null, id: null });
+        }
+    },
+
+    selectPackage(datasetName, graphUri, packageId) {
+        multiSelectState.clear();
+        this.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
+        this.selectedDataset.updateValue(datasetName);
+        this.selectedGraph.updateValue(graphUri);
+        this.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: packageId,
+        });
+    },
+
+    selectCustomDiagram(datasetName, graphUri, diagramId, diagramType) {
+        multiSelectState.clear();
+        this.activeSelectionKind.updateValue(SelectionLevel.DIAGRAM);
+        this.selectedDataset.updateValue(datasetName);
+        this.selectedGraph.updateValue(graphUri ?? null);
+        this.selectedDiagram.updateValue({ type: diagramType, id: diagramId });
+    },
+
+    markClassActive() {
+        this.activeSelectionKind.updateValue(SelectionLevel.CLASS);
+    },
+
+    dissolveToDataset() {
+        this.selectedGraph.updateValue(null);
+        this.selectedDiagram.updateValue({ type: null, id: null });
+        this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
+    },
+
+    dissolveToGraph() {
+        this.selectedDiagram.updateValue({ type: null, id: null });
+        this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
     },
 };
 
@@ -118,20 +199,43 @@ export const compareState = {
 };
 
 /**
- * Stores the state for copying a class, which is used on paste.
- * @type {{classUUID: StateValuePair<string | null>, graphURI: StateValuePair<string | null>, datasetName: StateValuePair<string | null>}}
+ * Stores the classes that were copied and are available for paste.
+ * Each entry is `{ classUUID, graphURI, datasetName }`. Supports copying multiple
+ * classes at once (multiselect).
+ * @type {{ entries: StateValuePair<Array<{classUUID: string, graphURI: string, datasetName: string}>> }}
  */
 export const copyState = {
-    classUUID: new StateValuePair(),
-    graphURI: new StateValuePair(),
-    datasetName: new StateValuePair(),
+    entries: new StateValuePair([]),
+
+    getEntries() {
+        return this.entries.getValue() ?? [];
+    },
+
+    get isEmpty() {
+        return this.getEntries().length === 0;
+    },
+
+    set(entries) {
+        this.entries.updateValue([...entries]);
+    },
+
+    remove(datasetName, graphURI, classUUID) {
+        this.entries.updateValue(
+            this.getEntries().filter(
+                e =>
+                    e.classUUID !== classUUID ||
+                    e.graphURI !== graphURI ||
+                    e.datasetName !== datasetName,
+            ),
+        );
+    },
 
     reset() {
-        this.classUUID.updateValue(null);
-        this.graphURI.updateValue(null);
-        this.datasetName.updateValue(null);
+        this.entries.updateValue([]);
     },
 };
+
+export const multiSelectState = new MultiSelectState();
 
 export const migrationState = writable({
     compareMode: null,
