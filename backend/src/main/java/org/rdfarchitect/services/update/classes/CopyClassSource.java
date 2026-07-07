@@ -15,25 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.dl.update.classlayout;
+package org.rdfarchitect.services.update.classes;
 
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 
-import java.util.List;
 import java.util.UUID;
 
-public interface CustomDiagramLayoutUseCase {
-
-    void addClassesToCustomDiagram(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, List<ClassInDiagram> classes);
-
-    void removeClassesFromCustomDiagram(
-            GraphIdentifier graphIdentifier, UUID diagramUUID, List<UUID> classUUIDs);
-
-    void addClassesToCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<ClassInDiagram> classes);
-
-    void removeClassesFromCustomDatasetDiagram(
-            String datasetName, UUID diagramUUID, List<UUID> classUUIDs);
-}
+/**
+ * Identifies a single class to be copied, including the graph it originates from.
+ *
+ * @param graphIdentifier The graph URI and dataset name of the graph the class is copied from.
+ * @param classUUID The UUID of the class that will be copied.
+ */
+public record CopyClassSource(GraphIdentifier graphIdentifier, UUID classUUID) {}

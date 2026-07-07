@@ -232,7 +232,7 @@ async function getPackages(datasetName, graphURI) {
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
-    console.log(
+    console.debug(
         "Populating package",
         packageNavObject.id,
         "with classes:",
@@ -279,7 +279,7 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
 async function getClasses(datasetName, graphURI) {
     try {
         const res = await bec.getClasses(datasetName, graphURI);
-        console.warn(
+        console.debug(
             "Fetched classes for dataset " +
                 datasetName +
                 " and graph " +

@@ -21,13 +21,18 @@ import lombok.Data;
 
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 
-@Data
-public class CopyClassRequestDTO {
+import java.util.List;
 
-    String targetDatasetName;
-    String targetGraphURI;
+/**
+ * Request to paste one or more previously copied classes into the target graph (taken from the
+ * request path). All sources share the same target package and copy options.
+ */
+@Data
+public class PasteClassesRequestDTO {
+
     PackageDTO targetPackage;
     boolean copyAsAbstract;
     boolean copyAttributes;
     boolean copyAssociations;
+    List<PasteSourceClassDTO> sources;
 }

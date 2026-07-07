@@ -32,7 +32,6 @@ import org.rdfarchitect.services.delete.FindDeleteDependenciesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -41,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -57,11 +57,11 @@ public class DeleteRESTController {
     @Operation(
             summary = "Get deletion impact",
             description =
-                    "Returns a tree of affected resources for deleting the resource with the given UUID.",
+                    "Returns, per requested UUID, a tree of affected resources for deleting that resource.",
             tags = {"graph"},
             responses = {@ApiResponse(responseCode = "200")})
-    @GetMapping("/uuid/{uuid}/deletion-impact")
-    public AffectedResource getDeletionImpact(
+    @PostMapping("/deletion-impact")
+    public Map<UUID, AffectedResource> getDeletionImpact(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -75,29 +75,26 @@ public class DeleteRESTController {
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphURI,
-            @Parameter(description = "The url encoded iri identifier of the cim resource.")
-                    @PathVariable
-                    String uuid) {
+            @Parameter(description = "The uuids of the cim resources to analyse.") @RequestBody
+                    List<UUID> uuids) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".",
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" for {} resource(s) from \"{}\".",
                 datasetName,
                 graphURI,
-                uuid,
+                uuids.size(),
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
+        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var resultObj =
-                findDeleteDependenciesUseCase.getDeleteDependencies(
-                        new GraphIdentifier(datasetName, extendedGraphURI), UUID.fromString(uuid));
+        var result = findDeleteDependenciesUseCase.getDeleteDependencies(graphIdentifier, uuids);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/uuid/{{}/deletion-impact\" from \"{}\".",
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/deletion-impact\" from \"{}\".",
                 datasetName,
                 graphURI,
-                uuid,
                 originURL);
-        return resultObj;
+        return result;
     }
 
     @Operation(

@@ -28,7 +28,9 @@ import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.CopyClassRequestDTO;
+import org.rdfarchitect.api.dto.CopyClassResponseDTO;
+import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
+import org.rdfarchitect.api.dto.PasteSourceClassDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.config.SchemaConfig;
@@ -39,10 +41,12 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
+import org.rdfarchitect.services.ExpandURIService;
 import org.rdfarchitect.services.update.classes.CopyClassService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.List;
 import java.util.UUID;
 
 @SpringBootTest
@@ -62,7 +66,9 @@ class CopyClassServiceTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        copyClassService = new CopyClassService(databasePort, packageMapper, false);
+        copyClassService =
+                new CopyClassService(
+                        databasePort, packageMapper, new ExpandURIService(databasePort), false);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =
                 new GraphFileSourceBuilderImpl()
@@ -70,6 +76,16 @@ class CopyClassServiceTest {
                         .setGraphName(graphIdentifier.graphUri())
                         .build();
         databasePort.createGraph(graphIdentifier, graphSource.graph());
+    }
+
+    private CopyClassResponseDTO copyClass(PasteClassesRequestDTO pasteRequest) {
+        var source = new PasteSourceClassDTO();
+        source.setSourceDatasetName(graphIdentifier.datasetName());
+        source.setSourceGraphURI(graphIdentifier.graphUri());
+        source.setClassUUID(CLASS_UUID);
+        pasteRequest.setSources(List.of(source));
+
+        return copyClassService.copyClasses(pasteRequest, graphIdentifier).get(0);
     }
 
     @Test
@@ -81,14 +97,13 @@ class CopyClassServiceTest {
                         .label("newPackage")
                         .build();
 
-        var request = new CopyClassRequestDTO();
+        var request = new PasteClassesRequestDTO();
         request.setTargetPackage(targetPackageDTO);
         request.setCopyAsAbstract(false);
         request.setCopyAttributes(true);
         request.setCopyAssociations(false);
 
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+        copyClass(request);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             assertThat(
@@ -120,14 +135,13 @@ class CopyClassServiceTest {
                         .label("newPackage")
                         .build();
 
-        var request = new CopyClassRequestDTO();
+        var request = new PasteClassesRequestDTO();
         request.setTargetPackage(targetPackageDTO);
         request.setCopyAsAbstract(true);
         request.setCopyAttributes(false);
         request.setCopyAssociations(false);
 
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+        copyClass(request);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             assertThat(
@@ -157,14 +171,13 @@ class CopyClassServiceTest {
                         .label("newPackage")
                         .build();
 
-        var request = new CopyClassRequestDTO();
+        var request = new PasteClassesRequestDTO();
         request.setTargetPackage(targetPackageDTO);
         request.setCopyAsAbstract(true);
         request.setCopyAttributes(false);
         request.setCopyAssociations(false);
 
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+        copyClass(request);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var copyUri = NodeFactory.createURI(PREFIX + "oldLabel-Copy");
@@ -182,18 +195,71 @@ class CopyClassServiceTest {
                         .label("newPackage")
                         .build();
 
-        var request = new CopyClassRequestDTO();
+        var request = new PasteClassesRequestDTO();
         request.setTargetPackage(targetPackageDTO);
         request.setCopyAsAbstract(false);
         request.setCopyAttributes(false);
         request.setCopyAssociations(false);
 
-        var response =
-                copyClassService.copyClass(
-                        graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+        var response = copyClass(request);
 
         assertThat(response).isNotNull();
         assertThat(response.getUuid()).isNotEqualTo(CLASS_UUID);
+    }
+
+    @Test
+    void copyClasses_multipleSourcesWithDuplicate_singleCallGetsUniqueLabels() {
+        var targetPackageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a"))
+                        .prefix(PREFIX)
+                        .label("newPackage")
+                        .build();
+
+        var request = new PasteClassesRequestDTO();
+        request.setTargetPackage(targetPackageDTO);
+        request.setCopyAsAbstract(false);
+        request.setCopyAttributes(true);
+        request.setCopyAssociations(false);
+
+        var source = new PasteSourceClassDTO();
+        source.setSourceDatasetName(graphIdentifier.datasetName());
+        source.setSourceGraphURI(graphIdentifier.graphUri());
+        source.setClassUUID(CLASS_UUID);
+        var duplicateSource = new PasteSourceClassDTO();
+        duplicateSource.setSourceDatasetName(graphIdentifier.datasetName());
+        duplicateSource.setSourceGraphURI(graphIdentifier.graphUri());
+        duplicateSource.setClassUUID(CLASS_UUID);
+        request.setSources(List.of(source, duplicateSource));
+
+        var responses = copyClassService.copyClasses(request, graphIdentifier);
+
+        assertThat(responses).hasSize(2);
+        assertThat(responses.get(0).getName()).isEqualTo("oldLabel-Copy");
+        assertThat(responses.get(1).getName()).isEqualTo("oldLabel-Copy(1)");
+        assertThat(responses.get(0).getUuid()).isNotEqualTo(responses.get(1).getUuid());
+
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "oldLabel-Copy"),
+                                            RDFS.label.asNode(),
+                                            new RDFSLabel("oldLabel-Copy", "en")
+                                                    .asLangLiteral()
+                                                    .asNode()))
+                    .isTrue();
+
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "oldLabel-Copy(1)"),
+                                            RDFS.label.asNode(),
+                                            new RDFSLabel("oldLabel-Copy(1)", "en")
+                                                    .asLangLiteral()
+                                                    .asNode()))
+                    .isTrue();
+        }
     }
 
     @Test
@@ -205,16 +271,14 @@ class CopyClassServiceTest {
                         .label("newPackage")
                         .build();
 
-        var request = new CopyClassRequestDTO();
+        var request = new PasteClassesRequestDTO();
         request.setTargetPackage(targetPackageDTO);
         request.setCopyAsAbstract(false);
         request.setCopyAttributes(false);
         request.setCopyAssociations(false);
 
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+        copyClass(request);
+        copyClass(request);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             assertThat(
@@ -248,18 +312,15 @@ class CopyClassServiceTest {
                         .label("newPackage")
                         .build();
 
-        var request = new CopyClassRequestDTO();
+        var request = new PasteClassesRequestDTO();
         request.setTargetPackage(targetPackageDTO);
         request.setCopyAsAbstract(false);
         request.setCopyAttributes(false);
         request.setCopyAssociations(false);
 
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
-        copyClassService.copyClass(
-                graphIdentifier, UUID.fromString(CLASS_UUID), graphIdentifier, request);
+        copyClass(request);
+        copyClass(request);
+        copyClass(request);
 
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             assertThat(
