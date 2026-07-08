@@ -65,8 +65,12 @@
         const deletedAndRenamed = properties.deletedAndRenamed ?? [];
         const added = properties.added ?? [];
 
-        const hidden = deletedAndRenamed.filter(r => isPrefixOnlyRename(r));
-        const visible = deletedAndRenamed.filter(r => !isPrefixOnlyRename(r));
+        const hidden = deletedAndRenamed.filter(r =>
+            isPrefixOnlyRename(r.oldResource.iri, r.newResource?.iri),
+        );
+        const visible = deletedAndRenamed.filter(
+            r => !isPrefixOnlyRename(r.oldResource.iri, r.newResource?.iri),
+        );
         const hiddenTargetIRIs = hidden
             .map(r => r.newResource?.iri)
             .filter(iri => iri != null);
@@ -106,9 +110,6 @@
     }
 
     function buildPropertyRenameList() {
-        // NOTE: reads from `classes` (raw), NOT `visibleClasses`.
-        // Prefix-only renames must still be POSTed so the backend treats
-        // them as renames instead of delete + add.
         return classes
             .map(cls => {
                 const attributeRenames = (

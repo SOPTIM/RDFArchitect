@@ -15,17 +15,24 @@
  *
  */
 
-package org.rdfarchitect.services.schemamigration.artifacts;
+package org.rdfarchitect.services.schemamigration;
 
-import org.apache.jena.graph.Graph;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 
 import java.util.List;
 
-public interface MigrationReportBuilder {
-    String generateDetailedMigrationReport(
-            List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes);
+public interface MigrationChangesUseCase {
+    /**
+     * lists all final changes of the migration to be displayed for review
+     *
+     * @return list of changes
+     */
+    List<SemanticClassChange> getMigrationChanges();
 
-    String generateSummaryMigrationReport(
-            List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes);
+    /**
+     * updates list of final changes, including any potentially submitted comments
+     *
+     * @param changes the updated list of changes
+     */
+    void confirmMigrationChanges(List<SemanticClassChange> changes);
 }

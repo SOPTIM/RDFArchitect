@@ -60,7 +60,7 @@ public sealed class SemanticResourceChange
 
     protected String label;
 
-    protected String comment;
+    protected String comment = "";
 
     // only set in case of a rename
     protected String oldIRI;
