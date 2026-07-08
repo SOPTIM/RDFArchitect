@@ -39,7 +39,9 @@ function validateUuid(uuid) {
 }
 
 export function isInvalidLabel(label) {
-    return isNotEmptyValidation(label);
+    const violations = hasNoSpaces(label);
+    violations.push(...isNotEmptyValidation(label));
+    return violations;
 }
 
 export function isInvalidClassLabel(
@@ -48,7 +50,7 @@ export function isInvalidClassLabel(
     compareClasses,
     ReactiveStereotypes,
 ) {
-    const violations = [];
+    const violations = hasNoSpaces(label);
     const namespace = reactiveNamespace?.getPlainObject();
     if (!label || label.trim() === "") {
         violations.push("must not be empty");
@@ -74,7 +76,7 @@ export function isInvalidClassLabel(
 }
 
 export function isValidDiagramName(diagramName, compareDiagrams) {
-    const violations = [];
+    const violations = hasNoSpaces(diagramName);
     if (diagramName?.trim() === "") {
         violations.push("must not be empty");
     }
@@ -88,6 +90,7 @@ export function isValidDiagramName(diagramName, compareDiagrams) {
 
 export function isInvalidAssociationLabel(association, associations) {
     const violations = isNotEmptyValidation(association?.label?.value);
+    violations.push(...hasNoSpaces(association?.label?.value));
     const assocList = Array.isArray(associations)
         ? associations
         : (associations?.values ?? []);
@@ -121,6 +124,7 @@ export function isInvalidAssociationLabel(association, associations) {
 
 export function isInvalidInverseAssociationLabel(association, getClassByUuid) {
     const violations = isNotEmptyValidation(association?.inverse?.label?.value);
+    violations.push(...hasNoSpaces(association?.inverse?.label?.value));
     const targetClassDto = getClassByUuid(association.target?.value);
     const assocList = targetClassDto?.associationPairs?.map(pair => pair) ?? [];
     if (violations.length === 0) {
@@ -159,7 +163,7 @@ export function isInvalidNamespace(
 ) {
     const violations = isNotEmptyValidation(namespace);
     if (violations.length > 0) return violations;
-
+    violations.push(...hasNoSpaces(namespace));
     const isKnownPrefix = compareNamespaces.some(n => n.prefix === namespace);
     const hasIriViolation = validateIri(
         namespace,
@@ -219,7 +223,7 @@ export function isInvalidMultiplicityUpperBound(upperBound, lowerBound) {
 
 export function isInvalidDatatypeUri(uri, compareDatatypes) {
     const violations = isNotEmptyValidation(uri);
-
+    violations.push(...hasNoSpaces(uri));
     if (
         violations.length === 0 &&
         !compareDatatypes.some(
@@ -248,7 +252,7 @@ export function isInvalidStereotype(
     reactiveNamespace,
     reactiveLabel,
 ) {
-    const violations = [];
+    const violations = hasNoSpaces(stereotype);
     if (!stereotype || stereotype.trim() === "") {
         violations.push("must not be empty");
     }
@@ -325,7 +329,7 @@ export function hasUniqueIRI(label, namespace, compareArray) {
 }
 
 export function isInvalidNamespaceIri(iri) {
-    const violations = [];
+    const violations = hasNoSpaces(iri);
     if (!iri || iri.trim() === "") {
         violations.push("must not be empty");
     }
@@ -343,6 +347,7 @@ export function isInvalidNamespaceIri(iri) {
 
 export function isInvalidIri(iri) {
     const violations = isNotEmptyValidation(iri);
+    violations.push(...hasNoSpaces(iri));
     if (validateIri(iri, IriValidationStrategy.Pragmatic)) {
         violations.push("must be a valid IRI");
     }
@@ -407,4 +412,12 @@ export function isInvalidPackage(pack) {
 
 export function isInvalidSuperClass(superClass) {
     return isInvalidUuid(superClass);
+}
+
+export function hasNoSpaces(text) {
+    const violations = [];
+    if (text && text.includes(" ")) {
+        violations.push("must have no spaces");
+    }
+    return violations;
 }
