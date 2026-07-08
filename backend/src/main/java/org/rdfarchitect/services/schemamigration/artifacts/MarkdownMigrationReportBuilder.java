@@ -89,7 +89,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     @Override
     public String generateSummaryMigrationReport(
-            List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes) {
+            List<SemanticClassChange> classChanges, boolean ignorePrefixes) {
         var visibleChanges = ignorePrefixes ? applyPrefixRenameFilter(classChanges) : classChanges;
 
         var sb = new StringBuilder();

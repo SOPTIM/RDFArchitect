@@ -27,5 +27,5 @@ public interface MigrationReportBuilder {
             List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes);
 
     String generateSummaryMigrationReport(
-            List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes);
+            List<SemanticClassChange> classChanges, boolean ignorePrefixes);
 }
