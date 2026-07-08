@@ -19,10 +19,10 @@
     import { onMount } from "svelte";
     import { get } from "svelte/store";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { BackendConnection, CGMESVersion } from "$lib/api/backend.js";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import ValidationReport from "$lib/components/ValidationReport.svelte";
+    import ValidationSection from "$lib/components/ValidationSection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
@@ -38,13 +38,24 @@
         STORED_TO_FILE: 3,
     });
 
+    const CGMES_VERSION_LABELS = {
+        [CGMESVersion.V3_0]: "3.0",
+        [CGMESVersion.V2_4_15]: "2.4.15",
+    };
+
     let isLoading = $state(true);
 
     let resultA = $state(null);
     let resultB = $state(null);
+    let cgmesVersionLabelA = $state(CGMES_VERSION_LABELS[CGMESVersion.V3_0]);
+    let cgmesVersionLabelB = $state(CGMES_VERSION_LABELS[CGMESVersion.V3_0]);
 
     onMount(async () => {
         const s = get(migrationState);
+        const cgmesVersionA = s.cgmesVersionA ?? CGMESVersion.V3_0;
+        const cgmesVersionB = s.cgmesVersionB ?? CGMESVersion.V3_0;
+        cgmesVersionLabelA = CGMES_VERSION_LABELS[cgmesVersionA];
+        cgmesVersionLabelB = CGMES_VERSION_LABELS[cgmesVersionB];
 
         // Resolve which side is a file and which is stored, per compare mode.
         let sideA;
@@ -73,8 +84,12 @@
 
         try {
             [resultA, resultB] = await Promise.all([
-                sideA ? validateSide(sideA) : Promise.resolve(null),
-                sideB ? validateSide(sideB) : Promise.resolve(null),
+                sideA
+                    ? validateSide(sideA, cgmesVersionA)
+                    : Promise.resolve(null),
+                sideB
+                    ? validateSide(sideB, cgmesVersionB)
+                    : Promise.resolve(null),
             ]);
         } catch (e) {
             console.log("Failed to validate schemas:", e);
@@ -88,12 +103,12 @@
      * Validates one side of the migration based on whether it is a stored
      * schema (dataset + graph) or an uploaded file.
      */
-    async function validateSide({ dataset, graph, file }) {
+    async function validateSide({ dataset, graph, file }, cgmesVersion) {
         let response;
         if (file) {
-            response = await bec.validateFile(file);
+            response = await bec.validateFile(file, cgmesVersion);
         } else if (dataset && graph) {
-            response = await bec.validateSchema(dataset, graph);
+            response = await bec.validateSchema(dataset, graph, cgmesVersion);
         } else {
             return null;
         }
@@ -119,33 +134,19 @@
     {:else}
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <div class="flex flex-col gap-2">
-                <span
-                    class="text-text-subtle px-1 text-xs font-medium uppercase"
-                >
-                    Before
-                </span>
-                {#if resultA}
-                    <ValidationReport result={resultA} />
-                {:else}
-                    <div class="text-default-text/70 text-sm">
-                        No validation result available.
-                    </div>
-                {/if}
+                <ValidationSection
+                    title={`Before (CGMES ${cgmesVersionLabelA})`}
+                    result={resultA}
+                    errorMessage="No validation result available."
+                />
             </div>
 
             <div class="flex flex-col gap-2">
-                <span
-                    class="text-text-subtle px-1 text-xs font-medium uppercase"
-                >
-                    After
-                </span>
-                {#if resultB}
-                    <ValidationReport result={resultB} />
-                {:else}
-                    <div class="text-default-text/70 text-sm">
-                        No validation result available.
-                    </div>
-                {/if}
+                <ValidationSection
+                    title={`After (CGMES ${cgmesVersionLabelB})`}
+                    result={resultB}
+                    errorMessage="No validation result available."
+                />
             </div>
         </div>
     {/if}

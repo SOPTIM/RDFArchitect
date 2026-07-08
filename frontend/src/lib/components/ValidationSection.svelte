@@ -16,21 +16,18 @@
   -->
 
 <script>
-    import ValidationSection from "$lib/components/ValidationSection.svelte";
-    import { validationState } from "$lib/sharedState.svelte.js";
+    import ValidationReport from "$lib/components/ValidationReport.svelte";
 
-    let result = $state(null);
-
-    $effect(() => {
-        validationState.result.subscribe();
-        result = validationState.result.getValue();
-    });
+    let { title, result, errorMessage } = $props();
 </script>
 
-<div class="bg-window-background flex h-full flex-col overflow-y-auto p-6">
-    <ValidationSection
-        title="Validation Result"
-        {result}
-        errorMessage="Use the menu to start a new validation."
-    />
-</div>
+<span class="text-text-subtle px-1 text-xs font-medium uppercase">
+    {title}
+</span>
+{#if result}
+    <ValidationReport {result} />
+{:else}
+    <div class="text-default-text text-sm">
+        {errorMessage}
+    </div>
+{/if}

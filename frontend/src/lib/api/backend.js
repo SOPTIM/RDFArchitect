@@ -17,6 +17,12 @@
 
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 
+/** * Mirrors the backend's `CGMESVersion` enum. Jackson serializes/deserializes * enums by default via their constant name, hence the values here match * `CGMESVersion.V2_4_15` / `CGMESVersion.V3_0` from the backend exactly. */
+export const CGMESVersion = Object.freeze({
+    V2_4_15: "V2_4_15",
+    V3_0: "V3_0",
+});
+
 export class BackendConnection {
     fetch;
     url;
@@ -290,8 +296,12 @@ export class BackendConnection {
         });
     }
 
-    async validateSchema(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/validate`;
+    async validateSchema(
+        datasetName,
+        graphURI,
+        cgmesVersion = CGMESVersion.V3_0,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/validate/${encodeURIComponent(cgmesVersion)}`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -299,8 +309,8 @@ export class BackendConnection {
         });
     }
 
-    async validateFile(file) {
-        const url = `${PUBLIC_BACKEND_URL}/validate`;
+    async validateFile(file, cgmesVersion = CGMESVersion.V3_0) {
+        const url = `${PUBLIC_BACKEND_URL}/validate/${encodeURIComponent(cgmesVersion)}`;
 
         const formData = new FormData();
         formData.append("file", file);

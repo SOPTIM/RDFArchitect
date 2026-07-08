@@ -90,6 +90,8 @@
             graphB: null,
             fileA: null,
             fileB: null,
+            cgmesVersionA: null,
+            cgmesVersionB: null,
         });
 
         fetch(PUBLIC_BACKEND_URL + "/migrations/context", {

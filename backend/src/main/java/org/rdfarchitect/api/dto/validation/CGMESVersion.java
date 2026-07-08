@@ -15,18 +15,18 @@
  *
  */
 
-package org.rdfarchitect.services.validation;
+package org.rdfarchitect.api.dto.validation;
 
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import lombok.Getter;
 
-public interface SchemaValidationReportToMarkdownUseCase {
+@Getter
+public enum CGMESVersion {
+    V2_4_15("2.4.15"),
+    V3_0("3.0");
 
-    /**
-     * Converts a schema validation report into a Markdown representation. Only issues with severity
-     * {@code ERROR} and {@code WARNING} are included; {@code INFO} issues are omitted.
-     *
-     * @param report the schema validation report to convert
-     * @return the Markdown representation of the report
-     */
-    String convertToMarkdown(SchemaValidationReportDTO report);
+    private final String version;
+
+    CGMESVersion(String version) {
+        this.version = version;
+    }
 }

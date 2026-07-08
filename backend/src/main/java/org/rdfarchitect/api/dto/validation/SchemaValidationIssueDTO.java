@@ -22,7 +22,7 @@ import lombok.Data;
 
 @Data
 @Builder
-public class SchemaValidationIssue {
+public class SchemaValidationIssueDTO {
 
     public enum Severity {
         ERROR,

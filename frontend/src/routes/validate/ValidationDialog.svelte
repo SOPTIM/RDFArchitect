@@ -16,7 +16,7 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { BackendConnection, CGMESVersion } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -45,6 +45,7 @@
     let dataset = $state(null);
     let graph = $state(null);
     let file = $state(null);
+    let cgmesVersion = $state(CGMESVersion.V3_0);
 
     const validationModeOptions = $derived([
         {
@@ -58,6 +59,15 @@
             disabled: !!lockedDatasetName || !!lockedGraphUri,
         },
     ]);
+
+    const cgmesVersionOptions = $derived([
+        { value: CGMESVersion.V3_0, label: "3.0" },
+        { value: CGMESVersion.V2_4_15, label: "2.4.15" },
+    ]);
+
+    const cgmesVersionLabel = $derived(
+        cgmesVersionOptions.find(o => o.value === cgmesVersion)?.label ?? "",
+    );
 
     const disableSubmit = $derived.by(() => {
         if (validationMode === ValidationMode.FILE) {
@@ -73,6 +83,7 @@
         dataset = lockedDatasetName ?? editorState.selectedDataset.getValue();
         graph = lockedGraphUri ?? editorState.selectedGraph.getValue();
         file = null;
+        cgmesVersion = CGMESVersion.V3_0;
     }
 
     function onClose() {
@@ -80,6 +91,7 @@
         dataset = null;
         graph = null;
         file = null;
+        cgmesVersion = CGMESVersion.V3_0;
     }
 
     function onValidationModeChange(mode) {
@@ -91,10 +103,14 @@
         let response;
         switch (validationMode) {
             case ValidationMode.FILE:
-                response = await bec.validateFile(file);
+                response = await bec.validateFile(file, cgmesVersion);
                 break;
             case ValidationMode.STORED:
-                response = await bec.validateSchema(dataset, graph);
+                response = await bec.validateSchema(
+                    dataset,
+                    graph,
+                    cgmesVersion,
+                );
                 break;
             default:
                 throw new Error(`Unknown validationMode: ${validationMode}`);
@@ -124,7 +140,7 @@
     primaryLabel="Validate"
     onPrimary={runValidation}
     disablePrimary={disableSubmit}
-    title="Validate Schema"
+    title={`Validate Schema (CGMES ${cgmesVersionLabel})`}
 >
     <div class="mx-2 flex h-full flex-col font-[350]">
         <div class="mb-3">
@@ -134,6 +150,19 @@
         </div>
 
         <div class="mx-2 flex h-full flex-col space-y-4">
+            <div class="border-border bg-background-subtle rounded border p-3">
+                <label for="cgmesVersion" class="mb-1 block text-sm">
+                    CGMES Version
+                </label>
+                <SelectEditControl
+                    id="cgmesVersion"
+                    options={cgmesVersionOptions}
+                    bind:value={cgmesVersion}
+                    getOptionValue={o => o.value}
+                    getOptionLabel={o => o.label}
+                />
+            </div>
+
             <div class="border-border bg-background-subtle rounded border p-3">
                 <label for="validationMode" class="mb-1 block text-sm">
                     Schema source

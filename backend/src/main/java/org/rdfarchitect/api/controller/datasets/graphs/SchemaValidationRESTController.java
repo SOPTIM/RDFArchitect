@@ -25,7 +25,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.validation.SchemaValidationReport;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
+import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
@@ -39,7 +40,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/validate")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}")
 @RequiredArgsConstructor
 public class SchemaValidationRESTController {
 
@@ -63,10 +64,10 @@ public class SchemaValidationRESTController {
                                         schema =
                                                 @Schema(
                                                         implementation =
-                                                                SchemaValidationReport.class)))
+                                                                SchemaValidationReportDTO.class)))
             })
     @GetMapping
-    public SchemaValidationReport validateSchema(
+    public SchemaValidationReportDTO validateSchema(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -79,7 +80,8 @@ public class SchemaValidationRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphURI,
+            @PathVariable CGMESVersion cgmesVersion) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" from \"{}\".",
                 datasetName,
@@ -89,7 +91,7 @@ public class SchemaValidationRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var report =
                 schemaValidationUseCase.validateSchema(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphURI), cgmesVersion);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/validation\" to \"{}\".",

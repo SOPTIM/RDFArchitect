@@ -25,12 +25,14 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.validation.SchemaValidationReport;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
+import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.validation.SchemaValidationUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,7 +42,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("api/validate")
+@RequestMapping("api/validate/{cgmesVersion}")
 public class SchemaValidationFromFileRESTController {
 
     private static final String GRAPH_URI = "http://example.org/graph";
@@ -63,10 +65,10 @@ public class SchemaValidationFromFileRESTController {
                                         schema =
                                                 @Schema(
                                                         implementation =
-                                                                SchemaValidationReport.class)))
+                                                                SchemaValidationReportDTO.class)))
             })
     @PostMapping
-    public SchemaValidationReport validateSchema(
+    public SchemaValidationReportDTO validateSchema(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -74,7 +76,8 @@ public class SchemaValidationFromFileRESTController {
                             defaultValue = "unknown")
                     String originURL,
             @Parameter(description = "The graph file to validate.") @RequestParam("file")
-                    MultipartFile file) {
+                    MultipartFile file,
+            @PathVariable CGMESVersion cgmesVersion) {
         logger.info("Received POST request: \"/api/validation\" from \"{}\".", originURL);
 
         var graph =
@@ -84,7 +87,7 @@ public class SchemaValidationFromFileRESTController {
                         .build()
                         .graph();
 
-        var report = schemaValidationUseCase.validateSchema(graph);
+        var report = schemaValidationUseCase.validateSchema(graph, cgmesVersion);
 
         logger.info(
                 "Sending response to POST request: \"/api/validation\" from \"{}\".", originURL);

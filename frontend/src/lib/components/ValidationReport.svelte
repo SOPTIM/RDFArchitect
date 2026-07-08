@@ -51,15 +51,14 @@
             text: "text-blue",
             iconClass: "text-blue",
         },
-    };
-
-    const UNKNOWN_SEVERITY = {
-        label: "Unknown",
-        order: 3,
-        icon: faCircleInfo,
-        card: "bg-background-subtle border-border",
-        text: "text-default-text",
-        iconClass: "text-default-text",
+        UNKNOWN_SEVERITY: {
+            label: "Unknown",
+            order: 3,
+            icon: faCircleInfo,
+            card: "bg-background-subtle border-border",
+            text: "text-default-text",
+            iconClass: "text-default-text",
+        },
     };
 
     const issues = $derived(result?.issues ?? []);
@@ -82,7 +81,7 @@
     });
 
     function severityMeta(severity) {
-        return SEVERITY[severity] ?? UNKNOWN_SEVERITY;
+        return SEVERITY[severity] ?? SEVERITY.UNKNOWN_SEVERITY;
     }
 </script>
 

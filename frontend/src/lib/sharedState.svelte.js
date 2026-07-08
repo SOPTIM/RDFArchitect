@@ -253,4 +253,6 @@ export const migrationState = writable({
     datasetB: null,
     fileA: null,
     fileB: null,
+    cgmesVersionA: null,
+    cgmesVersionB: null,
 });

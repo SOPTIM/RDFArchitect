@@ -15,18 +15,19 @@
  *
  */
 
-package org.rdfarchitect.api.dto.validation;
+package org.rdfarchitect.services.validation.rule;
 
-import lombok.Builder;
-import lombok.Data;
+import org.apache.jena.rdf.model.Model;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
+import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
 
 import java.util.List;
 
-@Data
-@Builder
-public class SchemaValidationReport {
+public interface ValidationRule {
 
-    private boolean valid;
+    void validate(Model model, List<SchemaValidationIssueDTO> issues, CGMESVersion cgmesVersion);
 
-    private List<SchemaValidationIssue> issues;
+    default boolean hasNoNamespacePrefix(Model model, String namespace) {
+        return !model.getNsPrefixMap().containsValue(namespace);
+    }
 }

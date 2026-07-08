@@ -15,18 +15,18 @@
  *
  */
 
-package org.rdfarchitect.services.validation;
+package org.rdfarchitect.api.dto.validation;
 
-import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import lombok.Builder;
+import lombok.Data;
 
-public interface SchemaValidationReportToMarkdownUseCase {
+import java.util.List;
 
-    /**
-     * Converts a schema validation report into a Markdown representation. Only issues with severity
-     * {@code ERROR} and {@code WARNING} are included; {@code INFO} issues are omitted.
-     *
-     * @param report the schema validation report to convert
-     * @return the Markdown representation of the report
-     */
-    String convertToMarkdown(SchemaValidationReportDTO report);
+@Data
+@Builder
+public class SchemaValidationReportDTO {
+
+    private boolean valid;
+
+    private List<SchemaValidationIssueDTO> issues;
 }

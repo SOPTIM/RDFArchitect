@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.validation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -28,15 +29,18 @@ import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssue;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssue.Severity;
-import org.rdfarchitect.api.dto.validation.SchemaValidationReport;
-import org.rdfarchitect.config.SchemaConfig;
-import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
-import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
+import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
+import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO.Severity;
+import org.rdfarchitect.api.dto.validation.SchemaValidationReportDTO;
+import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.models.cim.ontology.KnownOntologyFields;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.services.validation.rule.ClassValidationRule;
+import org.rdfarchitect.services.validation.rule.PackageValidationRule;
+import org.rdfarchitect.services.validation.rule.ProfileHeaderValidationRule;
+import org.rdfarchitect.services.validation.rule.PropertyValidationRule;
 
 import java.util.List;
 import java.util.Objects;
@@ -47,13 +51,20 @@ class SchemaValidationServiceTest {
     private static final String CIMS_NS = "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#";
     private static final String XSD_STRING = "http://www.w3.org/2001/XMLSchema#string";
 
-    private SchemaValidationService service;
+    private SchemaValidationUseCase service;
+    private SchemaValidationReportToMarkdownUseCase markdownService;
 
     @BeforeEach
     void setUp() {
-        var databasePort =
-                new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        service = new SchemaValidationService(databasePort);
+        service =
+                new SchemaValidationService(
+                        mock(DatabasePort.class),
+                        List.of(
+                                new ProfileHeaderValidationRule(),
+                                new PackageValidationRule(),
+                                new ClassValidationRule(),
+                                new PropertyValidationRule()));
+        markdownService = new SchemaValidationReportToMarkdownService();
     }
 
     // ─── Helper builders ──────────────────────────────────────────────────────
@@ -119,12 +130,12 @@ class SchemaValidationServiceTest {
         return model;
     }
 
-    private List<SchemaValidationIssue> errorsOf(SchemaValidationReport report) {
+    private List<SchemaValidationIssueDTO> errorsOf(SchemaValidationReportDTO report) {
         return report.getIssues().stream().filter(i -> i.getSeverity() == Severity.ERROR).toList();
     }
 
     private boolean hasIssue(
-            SchemaValidationReport report, Severity severity, String uri, String messagePart) {
+            SchemaValidationReportDTO report, Severity severity, String uri, String messagePart) {
         return report.getIssues().stream()
                 .anyMatch(
                         i ->
@@ -140,7 +151,7 @@ class SchemaValidationServiceTest {
 
         @Test
         void validateSchema_fullyValidSchema_reportsValidWithoutErrors() {
-            var report = service.validateSchema(validSchema().getGraph());
+            var report = service.validateSchema(validSchema().getGraph(), CGMESVersion.V3_0);
 
             assertThat(report.isValid()).isTrue();
             assertThat(errorsOf(report)).isEmpty();
@@ -148,7 +159,7 @@ class SchemaValidationServiceTest {
 
         @Test
         void validateSchema_fullyValidSchema_onlyEmitsInfoForMissingOptionalFields() {
-            var report = service.validateSchema(validSchema().getGraph());
+            var report = service.validateSchema(validSchema().getGraph(), CGMESVersion.V3_0);
 
             // Everything that is not an ERROR here must be an INFO about optional header fields.
             assertThat(report.getIssues())
@@ -166,19 +177,19 @@ class SchemaValidationServiceTest {
     class ProfileHeaderTests {
 
         @Test
-        void validateSchema_missingOntologyHeader_reportsError() {
+        void validateSchema_missingOntologyHeader_reportsWarning() {
             var model = ModelFactory.createDefaultModel();
             addPackage(model);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
-            assertThat(report.isValid()).isFalse();
-            assertThat(hasIssue(report, Severity.ERROR, null, "Profile header is missing"))
+            assertThat(report.isValid()).isTrue();
+            assertThat(hasIssue(report, Severity.WARNING, null, "Profile header is missing"))
                     .isTrue();
         }
 
         @Test
-        void validateSchema_missingRequiredVersionIri_reportsError() {
+        void validateSchema_missingRequiredVersionIri_reportsWarning() {
             var model = ModelFactory.createDefaultModel();
             var ontology = model.createResource(NS + "Ontology");
             ontology.addProperty(RDF.type, OWL2.Ontology);
@@ -186,20 +197,20 @@ class SchemaValidationServiceTest {
             ontology.addProperty(
                     model.createProperty(KnownOntologyFields.DCAT_KEYWORD.getIri()), "cim");
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
-            assertThat(report.isValid()).isFalse();
+            assertThat(report.isValid()).isTrue();
             assertThat(
                             hasIssue(
                                     report,
-                                    Severity.ERROR,
+                                    Severity.WARNING,
                                     NS + "Ontology",
                                     KnownOntologyFields.OWL_VERSION_IRI.getIri()))
                     .isTrue();
         }
 
         @Test
-        void validateSchema_missingRequiredKeyword_reportsError() {
+        void validateSchema_missingRequiredKeyword_reportsWarning() {
             var model = ModelFactory.createDefaultModel();
             var ontology = model.createResource(NS + "Ontology");
             ontology.addProperty(RDF.type, OWL2.Ontology);
@@ -207,12 +218,12 @@ class SchemaValidationServiceTest {
                     model.createProperty(OWL2.versionIRI.getURI()),
                     model.createResource(NS + "v1"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
                                     report,
-                                    Severity.ERROR,
+                                    Severity.WARNING,
                                     NS + "Ontology",
                                     KnownOntologyFields.DCAT_KEYWORD.getIri()))
                     .isTrue();
@@ -223,7 +234,7 @@ class SchemaValidationServiceTest {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             // No required-field errors from the header itself.
             assertThat(
@@ -254,7 +265,7 @@ class SchemaValidationServiceTest {
             var pkg = model.createResource(NS + "package");
             pkg.addProperty(RDF.type, CIMS.classCategory);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(hasIssue(report, Severity.ERROR, NS + "package", "missing rdfs:label"))
                     .isTrue();
@@ -275,7 +286,7 @@ class SchemaValidationServiceTest {
             clazz.addProperty(RDF.type, RDFS.Class);
             clazz.addProperty(CIMS.belongsToCategory, pkg);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -287,19 +298,19 @@ class SchemaValidationServiceTest {
         }
 
         @Test
-        void validateSchema_classWithoutBelongsToCategory_reportsError() {
+        void validateSchema_classWithoutBelongsToCategory_reportsWarning() {
             var model = ModelFactory.createDefaultModel();
             addValidOntologyHeader(model);
             var clazz = model.createResource(NS + "ClassA");
             clazz.addProperty(RDF.type, RDFS.Class);
             clazz.addProperty(RDFS.label, model.createLiteral("ClassA", "en"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
                                     report,
-                                    Severity.ERROR,
+                                    Severity.WARNING,
                                     NS + "ClassA",
                                     "cims:belongsToCategory is missing"))
                     .isTrue();
@@ -324,7 +335,7 @@ class SchemaValidationServiceTest {
             property.addProperty(CIMS.datatype, model.createResource(XSD_STRING));
             // deliberately no domain, no multiplicity
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(hasIssue(report, Severity.ERROR, NS + "ClassA.attr", "missing rdfs:domain"))
                     .isTrue();
@@ -350,7 +361,7 @@ class SchemaValidationServiceTest {
             property.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
             property.addProperty(CIMS.datatype, model.createResource(XSD_STRING));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -374,7 +385,7 @@ class SchemaValidationServiceTest {
             property.addProperty(CIMS.multiplicity, model.createResource(CIMS_NS + "M:0..1"));
             // no attribute stereotype, no association fields
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -414,7 +425,7 @@ class SchemaValidationServiceTest {
             var model = modelWithClass();
             baseAttribute(model).addProperty(CIMS.datatype, model.createResource(XSD_STRING));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             report.getIssues().stream()
@@ -428,7 +439,7 @@ class SchemaValidationServiceTest {
             var model = modelWithClass();
             baseAttribute(model); // neither cims:dataType nor rdfs:range
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -445,7 +456,7 @@ class SchemaValidationServiceTest {
             baseAttribute(model)
                     .addProperty(CIMS.datatype, model.createResource(NS + "NotAKnownDatatype"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -471,7 +482,7 @@ class SchemaValidationServiceTest {
                     CIMS.stereotype, model.createLiteral(CIMStereotypes.primitiveString));
             baseAttribute(model).addProperty(CIMS.datatype, primitive);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             report.getIssues().stream()
@@ -489,7 +500,7 @@ class SchemaValidationServiceTest {
                     CIMS.stereotype, model.createLiteral(CIMStereotypes.cimDatatypeString));
             baseAttribute(model).addProperty(CIMS.datatype, cimDatatype);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             report.getIssues().stream()
@@ -506,7 +517,7 @@ class SchemaValidationServiceTest {
             enumeration.addProperty(CIMS.stereotype, CIMStereotypes.enumeration);
             baseAttribute(model).addProperty(RDFS.range, enumeration);
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             report.getIssues().stream()
@@ -526,7 +537,7 @@ class SchemaValidationServiceTest {
                     .addProperty(CIMS.datatype, model.createResource(NS + "NotAKnownDatatype"));
 
             // Must complete without throwing and still flag the unknown datatype.
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(report).isNotNull();
             assertThat(
@@ -562,7 +573,7 @@ class SchemaValidationServiceTest {
                     model.getResource(NS + "ClassA"),
                     model.getResource(NS + "ClassB"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             report.getIssues().stream()
@@ -580,7 +591,7 @@ class SchemaValidationServiceTest {
                     model.getResource(NS + "ClassA"),
                     model.createResource(NS + "ClassC"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -604,7 +615,7 @@ class SchemaValidationServiceTest {
             association.addProperty(
                     CIMS.inverseRoleName, model.createResource(NS + "ClassA.broken.inverse"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -628,7 +639,7 @@ class SchemaValidationServiceTest {
             association.addProperty(
                     CIMS.inverseRoleName, model.createResource(NS + "ClassA.noRange.inverse"));
 
-            var report = service.validateSchema(model.getGraph());
+            var report = service.validateSchema(model.getGraph(), CGMESVersion.V3_0);
 
             assertThat(
                             hasIssue(
@@ -647,9 +658,9 @@ class SchemaValidationServiceTest {
 
         @Test
         void convertToMarkdown_emptyIssues_reportsNoIssues() {
-            var report = SchemaValidationReport.builder().valid(true).issues(List.of()).build();
+            var report = SchemaValidationReportDTO.builder().valid(true).issues(List.of()).build();
 
-            var markdown = service.convertToMarkdown(report);
+            var markdown = markdownService.convertToMarkdown(report);
 
             assertThat(markdown).contains("# Schema Validation Report");
             assertThat(markdown).contains("**Status:** Valid");
@@ -659,11 +670,11 @@ class SchemaValidationServiceTest {
         @Test
         void convertToMarkdown_onlyInfoIssues_omitsThemAndReportsNoErrorsOrWarnings() {
             var report =
-                    SchemaValidationReport.builder()
+                    SchemaValidationReportDTO.builder()
                             .valid(true)
                             .issues(
                                     List.of(
-                                            SchemaValidationIssue.builder()
+                                            SchemaValidationIssueDTO.builder()
                                                     .severity(Severity.INFO)
                                                     .resourceUri(NS + "Ontology")
                                                     .message(
@@ -671,7 +682,7 @@ class SchemaValidationServiceTest {
                                                     .build()))
                             .build();
 
-            var markdown = service.convertToMarkdown(report);
+            var markdown = markdownService.convertToMarkdown(report);
 
             assertThat(markdown).contains("No errors or warnings found.");
             assertThat(markdown).doesNotContain("Optional profile header field is not set");
@@ -680,21 +691,21 @@ class SchemaValidationServiceTest {
         @Test
         void convertToMarkdown_errorAndWarning_rendersBothSections() {
             var report =
-                    SchemaValidationReport.builder()
+                    SchemaValidationReportDTO.builder()
                             .valid(false)
                             .issues(
                                     List.of(
-                                            SchemaValidationIssue.builder()
+                                            SchemaValidationIssueDTO.builder()
                                                     .severity(Severity.ERROR)
                                                     .resourceUri(NS + "ClassA")
                                                     .message("Class is missing rdfs:label.")
                                                     .build(),
-                                            SchemaValidationIssue.builder()
+                                            SchemaValidationIssueDTO.builder()
                                                     .severity(Severity.WARNING)
                                                     .resourceUri(NS + "ClassB")
                                                     .message("Class is missing rdfs:comment.")
                                                     .build(),
-                                            SchemaValidationIssue.builder()
+                                            SchemaValidationIssueDTO.builder()
                                                     .severity(Severity.INFO)
                                                     .resourceUri(NS + "Ontology")
                                                     .message(
@@ -702,7 +713,7 @@ class SchemaValidationServiceTest {
                                                     .build()))
                             .build();
 
-            var markdown = service.convertToMarkdown(report);
+            var markdown = markdownService.convertToMarkdown(report);
 
             assertThat(markdown).contains("**Status:** Invalid");
             assertThat(markdown).contains("**Errors:** 1 | **Warnings:** 1");
@@ -715,22 +726,23 @@ class SchemaValidationServiceTest {
         }
 
         @Test
-        void convertToMarkdown_pipeInMessage_isEscaped() {
+        void convertToMarkdown_pipeInMessage_isKeptAsIs() {
             var report =
-                    SchemaValidationReport.builder()
+                    SchemaValidationReportDTO.builder()
                             .valid(false)
                             .issues(
                                     List.of(
-                                            SchemaValidationIssue.builder()
+                                            SchemaValidationIssueDTO.builder()
                                                     .severity(Severity.ERROR)
                                                     .resourceUri(NS + "ClassA")
                                                     .message("value a | value b")
                                                     .build()))
                             .build();
 
-            var markdown = service.convertToMarkdown(report);
+            var markdown = markdownService.convertToMarkdown(report);
 
-            assertThat(markdown).contains("value a \\| value b");
+            // No table is used anymore, so pipes no longer need escaping.
+            assertThat(markdown).contains("value a | value b");
         }
     }
 }
