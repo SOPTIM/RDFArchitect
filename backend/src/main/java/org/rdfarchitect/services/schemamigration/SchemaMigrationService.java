@@ -392,7 +392,6 @@ public class SchemaMigrationService
 
     @Override
     public String generateSummaryMigrationReport() {
-        var graph = migrationSessionStore.getContext().getOriginalSchema();
         var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
         boolean ignorePrefixes = migrationSessionStore.getContext().isIgnorePrefixes();
 
@@ -401,8 +400,7 @@ public class SchemaMigrationService
             newChangeList.add(new SemanticClassChange(change));
         }
 
-        return migrationReportBuilder.generateSummaryMigrationReport(
-                newChangeList, graph, ignorePrefixes);
+        return migrationReportBuilder.generateSummaryMigrationReport(newChangeList, ignorePrefixes);
     }
 
     @Override
