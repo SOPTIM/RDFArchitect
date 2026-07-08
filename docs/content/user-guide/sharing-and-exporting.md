@@ -32,3 +32,22 @@ Three things to be aware of:
 - The snapshot link is *the* access control. Anyone with the link can view.
 - Snapshot links load read-only datasets by default. The loaded dataset can be made editable, but the stored snapshot is not modified.
 - In the current version, snapshots cannot be deleted via the UI.
+
+## Deep links
+
+The editor page accepts URL parameters that select a model on load, so external tools (for
+example the [CIMNotebook](https://opencgmes.soptim.de/cimnotebook/overview) IDE extensions) can
+link straight to a diagram or class:
+
+```
+https://<host>/mainpage?dataset=<name>&graph=<uri>&package=<uuid|iri|default>&class=<iri|uuid>
+```
+
+- `dataset`, `graph`, `package` — open the given package diagram. `package` accepts a package
+  UUID, a package IRI, or `default` for the default package.
+- `class` — select a class (by IRI or UUID) and open the package diagram containing it. When
+  `dataset`/`graph` are omitted, every schema in the session is searched for the class.
+
+All parameters refer to the browser session's own datasets. They can be combined with a
+snapshot link — `/?snapshot=<token>&class=<iri>` first loads the snapshot, then navigates to
+the class.
