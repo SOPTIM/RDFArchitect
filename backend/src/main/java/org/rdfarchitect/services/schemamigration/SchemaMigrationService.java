@@ -71,7 +71,8 @@ public class SchemaMigrationService
                 ClearMigrationContextUseCase,
                 GetDefaultValueViewsUseCase,
                 SubmitDefaultValuesUseCase,
-                GenerateMigrationReportUseCase {
+                GenerateMigrationReportUseCase,
+                MigrationChangesUseCase {
 
     private final MigrationSessionStore migrationSessionStore;
     private final DatabasePort databasePort;
@@ -359,6 +360,16 @@ public class SchemaMigrationService
     }
 
     @Override
+    public List<SemanticClassChange> getMigrationChanges() {
+        return migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
+    }
+
+    @Override
+    public void confirmMigrationChanges(List<SemanticClassChange> changes) {
+        migrationSessionStore.getContext().setDiffAfterDefaultValueConfirm(changes);
+    }
+
+    @Override
     public String generateMigrationScript() {
         var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
         return migrationScriptBuilder.generateMigrationScript(changes);
@@ -368,14 +379,30 @@ public class SchemaMigrationService
     public String generateDetailedMigrationReport() {
         var graph = migrationSessionStore.getContext().getOriginalSchema();
         var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
-        return migrationReportBuilder.generateDetailedMigrationReport(changes, graph);
+        var ignorePrefixes = migrationSessionStore.getContext().isIgnorePrefixes();
+
+        var newChangeList = new ArrayList<SemanticClassChange>();
+        for (var change : changes) {
+            newChangeList.add(new SemanticClassChange(change));
+        }
+
+        return migrationReportBuilder.generateDetailedMigrationReport(
+                newChangeList, graph, ignorePrefixes);
     }
 
     @Override
     public String generateSummaryMigrationReport() {
         var graph = migrationSessionStore.getContext().getOriginalSchema();
         var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
-        return migrationReportBuilder.generateSummaryMigrationReport(changes, graph);
+        boolean ignorePrefixes = migrationSessionStore.getContext().isIgnorePrefixes();
+
+        var newChangeList = new ArrayList<SemanticClassChange>();
+        for (var change : changes) {
+            newChangeList.add(new SemanticClassChange(change));
+        }
+
+        return migrationReportBuilder.generateSummaryMigrationReport(
+                newChangeList, graph, ignorePrefixes);
     }
 
     @Override

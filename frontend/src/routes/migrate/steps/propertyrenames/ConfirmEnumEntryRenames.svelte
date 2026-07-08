@@ -90,7 +90,6 @@
         return (
             cls.enumEntries &&
             cls.enumEntries.added.length +
-                cls.enumEntries.modified.length +
                 cls.enumEntries.deletedAndRenamed.length >
                 0
         );
@@ -177,21 +176,6 @@
                                             </div>
                                         {/each}
                                     </div>
-                                </div>
-                            {/if}
-
-                            {#if cls.enumEntries.modified.length > 0}
-                                <div>
-                                    <h3 class="mb-3 font-semibold">
-                                        Modified Enum Entries
-                                    </h3>
-                                    <ul
-                                        class="list-inside list-disc space-y-1 text-sm"
-                                    >
-                                        {#each cls.enumEntries.modified as modifiedEnumEntry}
-                                            <li>{modifiedEnumEntry.label}</li>
-                                        {/each}
-                                    </ul>
                                 </div>
                             {/if}
                         </div>

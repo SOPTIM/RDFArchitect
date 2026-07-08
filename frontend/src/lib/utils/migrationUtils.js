@@ -17,11 +17,11 @@
 
 import { URI } from "$lib/models/dto/index.ts";
 
-export function isPrefixOnlyRename(rename) {
-    if (!rename.newResource) {
+export function isPrefixOnlyRename(oldIRI, newIRI) {
+    if (!newIRI || !oldIRI) {
         return false;
     }
-    const oldName = new URI(rename.oldResource.iri).suffix;
-    const newName = new URI(rename.newResource.iri).suffix;
+    const oldName = new URI(oldIRI).suffix;
+    const newName = new URI(newIRI).suffix;
     return oldName === newName;
 }

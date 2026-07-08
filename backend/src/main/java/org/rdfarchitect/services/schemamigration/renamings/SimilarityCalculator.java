@@ -195,9 +195,13 @@ public class SimilarityCalculator {
                         .map(SemanticFieldChange::getTo)
                         .orElse(null);
 
-        if (changeType == SemanticFieldChangeType.MULTIPLICITY_CHANGE && deletedValue != null && addedValue != null) {
-            var oldMultiplicity = CIMPropertyUtils.resolveMultiplicity(new URI(deletedValue).getSuffix());
-            var newMultiplicity =  CIMPropertyUtils.resolveMultiplicity(new URI(addedValue).getSuffix());
+        if (changeType == SemanticFieldChangeType.MULTIPLICITY_CHANGE
+                && deletedValue != null
+                && addedValue != null) {
+            var oldMultiplicity =
+                    CIMPropertyUtils.resolveMultiplicity(new URI(deletedValue).getSuffix());
+            var newMultiplicity =
+                    CIMPropertyUtils.resolveMultiplicity(new URI(addedValue).getSuffix());
             return Objects.equals(oldMultiplicity, newMultiplicity) ? 1.0 : 0.0;
         } else {
             return Objects.equals(deletedValue, addedValue) ? 1.0 : 0.0;

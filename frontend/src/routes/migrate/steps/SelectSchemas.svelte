@@ -219,7 +219,9 @@
     </InfoBox>
 
     <div class="flex h-full flex-col space-y-4">
-        <div class="flex-col space-y-3 border-border bg-background-subtle rounded border p-3">
+        <div
+            class="flex-col space-y-3 border-border bg-background-subtle rounded border p-3"
+        >
             <label for="compareMode" class="mb-1 block text-sm">
                 Comparison type
             </label>

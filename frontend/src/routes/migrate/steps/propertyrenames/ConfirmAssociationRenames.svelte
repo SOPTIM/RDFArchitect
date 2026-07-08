@@ -90,7 +90,6 @@
         return (
             cls.associations &&
             cls.associations.added.length +
-                cls.associations.modified.length +
                 cls.associations.deletedAndRenamed.length >
                 0
         );
@@ -177,21 +176,6 @@
                                             </div>
                                         {/each}
                                     </div>
-                                </div>
-                            {/if}
-
-                            {#if cls.associations.modified.length > 0}
-                                <div>
-                                    <h3 class="mb-3 font-semibold">
-                                        Modified Associations
-                                    </h3>
-                                    <ul
-                                        class="list-inside list-disc space-y-1 text-sm"
-                                    >
-                                        {#each cls.associations.modified as modifiedAssociation}
-                                            <li>{modifiedAssociation.label}</li>
-                                        {/each}
-                                    </ul>
                                 </div>
                             {/if}
                         </div>

@@ -64,20 +64,23 @@
     }
 
     async function fetchReport() {
-        const params = new URLSearchParams({ reportType: reportType })
+        const params = new URLSearchParams({ reportType: reportType });
         return fetch(PUBLIC_BACKEND_URL + `/migrations/report?${params}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-        })
+        });
     }
 </script>
 
 <div class="text-default-text flex h-full flex-col space-y-6 p-2">
     <InfoBox>
-        In this step you can choose which artifacts you want to generate for the migration. You can generate a migration
-        package containing the SPARQL updates for automatically migrating your data as well as SHACL shapes for validating your data against the new schema.
-        You can also generate a markdown file based on the semantic changes configured during this migration process.
+        In this step you can choose which artifacts you want to generate for the
+        migration. You can generate a migration package containing the SPARQL
+        updates for automatically migrating your data as well as SHACL shapes
+        for validating your data against the new schema. You can also generate a
+        markdown file based on the semantic changes configured during this
+        migration process.
     </InfoBox>
     <InfoBox type="warn">
         Please note that the script generation might not be able to handle all
@@ -95,12 +98,8 @@
                 class="border-border bg-input-default-background text-default-text focus:ring-border-select rounded-md border px-2 py-1 text-sm focus:ring-2 focus:outline-none w-64"
                 bind:value={reportType}
             >
-                <option value="SUMMARY">
-                    Summary report
-                </option>
-                <option value="DETAILED">
-                    Detailed report
-                </option>
+                <option value="SUMMARY">Summary report</option>
+                <option value="DETAILED">Detailed report</option>
             </select>
 
             <div class="w-64">
