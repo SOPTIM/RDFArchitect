@@ -18,7 +18,6 @@
 package org.rdfarchitect.api.dto.packages;
 
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 import org.rdfarchitect.api.dto.BelongsToCategoryDTO;
 import org.rdfarchitect.api.dto.MappingUtils;
@@ -36,24 +35,26 @@ public interface PackageMapper {
 
     PackageMapper INSTANCE = Mappers.getMapper(PackageMapper.class);
 
-    default CIMPackage toCIMObject(PackageDTO dto){
-        if ( isDefaultPackage(dto) ) {
+    default CIMPackage toCIMObject(PackageDTO dto) {
+        if (isDefaultPackage(dto)) {
             return null;
         }
 
         CIMPackage.CIMPackageBuilder cIMPackage = CIMPackage.builder();
 
-            cIMPackage.uri( buildURI( dto ) );
-            cIMPackage.uuid( dto.getUuid() );
-            cIMPackage.label( MappingUtils.buildLabel( dto.getLabel() ) );
-            cIMPackage.comment( MappingUtils.buildComment( dto.getComment() ) );
-            cIMPackage.belongsToCategory( buildBelongsToCategory( dto.getBelongsToCategory() ) );
+        cIMPackage.uri(buildURI(dto));
+        cIMPackage.uuid(dto.getUuid());
+        cIMPackage.label(MappingUtils.buildLabel(dto.getLabel()));
+        cIMPackage.comment(MappingUtils.buildComment(dto.getComment()));
+        cIMPackage.belongsToCategory(buildBelongsToCategory(dto.getBelongsToCategory()));
 
-            return cIMPackage.build();
+        return cIMPackage.build();
     }
 
     private boolean isDefaultPackage(PackageDTO dto) {
-        return dto == null || (dto.getPrefix() == null && (dto.getLabel() == null || "default".equals(dto.getLabel())));
+        return dto == null
+                || (dto.getPrefix() == null
+                        && (dto.getLabel() == null || "default".equals(dto.getLabel())));
     }
 
     List<CIMPackage> toCIMObjectList(List<PackageDTO> dtoList);
@@ -94,7 +95,8 @@ public interface PackageMapper {
     }
 
     default URI buildURI(PackageDTO dto) {
-        if(dto.getPrefix() == null && (dto.getLabel() == null || "default".equals(dto.getLabel()))) {
+        if (dto.getPrefix() == null
+                && (dto.getLabel() == null || "default".equals(dto.getLabel()))) {
             return null;
         }
         return new URI(dto.getPrefix() + dto.getLabel());
