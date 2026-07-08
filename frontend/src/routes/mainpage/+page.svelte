@@ -20,11 +20,17 @@
     import { Pane, Splitpanes } from "svelte-splitpanes";
     import { validate } from "uuid";
 
+    import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import { resolveClassTarget } from "$lib/utils/deep-link.js";
+    import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import PackageNavigation from "./packageNavigation/packageNavigation.svelte";
     import PackageWindow from "./packageWindow.svelte";
+
+    const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     onMount(() => {
         parseModelSelectionUrlParameters();
@@ -36,11 +42,20 @@
         const dataset = queryParams.get("dataset") || null;
         const graph = queryParams.get("graph") || null;
         let pack = queryParams.get("package") || null;
+        const classRef = queryParams.get("class") || null;
+
+        // A class deep link (IRI or uuid) selects the class and its package diagram; dataset and
+        // graph merely narrow the lookup. Falls through to the plain selection when not found.
+        if (classRef && (await openClassFromUrl(dataset, graph, classRef))) {
+            return;
+        }
+
         editorState.selectedDataset.updateValue(dataset);
         editorState.selectedGraph.updateValue(graph);
         if (!dataset || !graph || !pack) return;
         if (pack !== "default" && !validate(pack)) {
             pack = await resolveIRI(dataset, graph, pack);
+            if (!pack) return;
         }
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
@@ -48,20 +63,26 @@
         });
     }
 
+    async function openClassFromUrl(dataset, graph, classRef) {
+        const target = await resolveClassTarget(backend, {
+            dataset,
+            graph,
+            classRef,
+        });
+        if (!target) {
+            toastStore.error(
+                "Class not found",
+                `No schema in this session contains "${classRef}".`,
+            );
+            return false;
+        }
+        navigateToClass(target);
+        return true;
+    }
+
     async function resolveIRI(dataset, graph, iri) {
-        return await fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(dataset) +
-                "/graphs/" +
-                encodeURIComponent(graph) +
-                "/resolve/iri/" +
-                encodeURIComponent(iri),
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        ).then(res => res.text());
+        const res = await backend.resolveIri(dataset, graph, iri);
+        return res.ok ? await res.text() : null;
     }
 </script>
 

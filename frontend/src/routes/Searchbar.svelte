@@ -29,12 +29,11 @@
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
+    import { editorState } from "$lib/sharedState.svelte.js";
     import {
-        ClassType,
-        DiagramType,
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+        navigateToClass,
+        navigateToPackage,
+    } from "$lib/utils/model-navigation.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -66,47 +65,22 @@
     });
 
     function selectSubject(searchResult) {
-        editorState.selectedDataset.updateValue(searchResult.datasetName);
-        editorState.selectedGraph.updateValue(searchResult.graphUri);
-        editorState.selectedDiagram.updateValue({
-            type: DiagramType.PACKAGE,
-            id: searchResult.packageUUID ?? "default",
-        });
-
-        if (searchResult.type === "CLASS") {
-            editorState.selectedClassDataset.updateValue(
-                searchResult.datasetName,
-            );
-            editorState.selectedClassGraph.updateValue(searchResult.graphUri);
-            editorState.selectedClass.updateValue({
-                type: ClassType.SINGLE_CLASS,
-                id: searchResult.uuid,
-            });
-            editorState.focusedClassUUID.updateValue(searchResult.uuid);
-        } else if (searchResult.type === "PACKAGE") {
-            editorState.selectedClass.updateValue({ type: null, id: null });
-            editorState.focusedClassUUID.updateValue(null);
-            editorState.selectedDiagram.updateValue({
-                type: DiagramType.PACKAGE,
-                id: searchResult.uuid,
-            });
+        const target = {
+            datasetName: searchResult.datasetName,
+            graphUri: searchResult.graphUri,
+            packageUUID: searchResult.packageUUID,
+        };
+        if (searchResult.type === "PACKAGE") {
+            navigateToPackage({ ...target, packageUUID: searchResult.uuid });
+        } else if (searchResult.type === "CLASS") {
+            navigateToClass({ ...target, classUUID: searchResult.uuid });
         } else {
-            editorState.selectedClassDataset.updateValue(
-                searchResult.datasetName,
-            );
-            editorState.selectedClassGraph.updateValue(searchResult.graphUri);
-            editorState.selectedClass.updateValue({
-                type: ClassType.SINGLE_CLASS,
-                id: searchResult.parentClassUUID,
+            // Attributes, associations, enum entries: select their owning class.
+            navigateToClass({
+                ...target,
+                classUUID: searchResult.parentClassUUID,
             });
-            editorState.focusedClassUUID.updateValue(
-                searchResult.parentClassUUID,
-            );
         }
-        editorState.selectedDataset.trigger();
-        editorState.selectedGraph.trigger();
-        editorState.selectedDiagram.trigger();
-        forceReloadTrigger.trigger();
     }
 
     function submitQuery(event) {

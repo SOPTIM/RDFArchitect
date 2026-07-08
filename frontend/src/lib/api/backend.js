@@ -84,6 +84,16 @@ export class BackendConnection {
         });
     }
 
+    async resolveIri(datasetName, graphURI, iri) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/resolve/iri/${encodeURIComponent(iri)}`;
+        return fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async replaceClass(datasetName, graphURI, classUUID, newClass) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return fetch(url, {
