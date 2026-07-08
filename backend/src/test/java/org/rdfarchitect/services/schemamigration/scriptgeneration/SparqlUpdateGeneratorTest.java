@@ -36,6 +36,7 @@ import org.rdfarchitect.context.SchemaMigrationContext;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.services.schemamigration.artifacts.SparqlUpdateGenerator;
 
 @ExtendWith(MockitoExtension.class)
 class SparqlUpdateGeneratorTest {
@@ -70,8 +71,9 @@ class SparqlUpdateGeneratorTest {
                 generator.generateAddAttributeUpdate(attributeChange, PREFIX + "DiagramObject");
 
         // The declaring class itself must be migrated, not only its deriving subclass.
-        assertThat(script).contains(PREFIX + "DiagramObject>");
-        assertThat(script).contains(PREFIX + "TextDiagramObject>");
+        assertThat(script)
+                .contains(PREFIX + "DiagramObject>")
+                .contains(PREFIX + "TextDiagramObject>");
     }
 
     @Test
@@ -86,8 +88,7 @@ class SparqlUpdateGeneratorTest {
         var script =
                 generator.generateAddAttributeUpdate(attributeChange, PREFIX + "TextDiagramObject");
 
-        assertThat(script).isNotBlank();
-        assertThat(script).contains(PREFIX + "TextDiagramObject>");
+        assertThat(script).isNotBlank().contains(PREFIX + "TextDiagramObject>");
     }
 
     @Test
@@ -103,8 +104,9 @@ class SparqlUpdateGeneratorTest {
         var script =
                 generator.generateAddAttributeUpdate(attributeChange, PREFIX + "DiagramObject");
 
-        assertThat(script).contains(PREFIX + "TextDiagramObject>");
-        assertThat(script).doesNotContain(PREFIX + "DiagramObject>");
+        assertThat(script)
+                .contains(PREFIX + "TextDiagramObject>")
+                .doesNotContain(PREFIX + "DiagramObject>");
     }
 
     @Test
