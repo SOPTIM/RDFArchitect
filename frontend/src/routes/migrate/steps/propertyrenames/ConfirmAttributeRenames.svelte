@@ -89,7 +89,6 @@
         return (
             cls.attributes &&
             cls.attributes.added.length +
-                cls.attributes.modified.length +
                 cls.attributes.deletedAndRenamed.length >
                 0
         );
@@ -178,21 +177,6 @@
                                             </div>
                                         {/each}
                                     </div>
-                                </div>
-                            {/if}
-
-                            {#if cls.attributes.modified.length > 0}
-                                <div>
-                                    <h3 class="mb-3 font-semibold">
-                                        Modified Attributes
-                                    </h3>
-                                    <ul
-                                        class="list-inside list-disc space-y-1 text-sm"
-                                    >
-                                        {#each cls.attributes.modified as modifiedAttribute}
-                                            <li>{modifiedAttribute.label}</li>
-                                        {/each}
-                                    </ul>
                                 </div>
                             {/if}
                         </div>

@@ -124,9 +124,8 @@ public class MigrationArtifactsRESTController {
             @Parameter(
                             description =
                                     "Type of the migration report to generate. Can be either SUMMARY or DETAILED.")
-                    @RequestParam(value = "type", defaultValue = "SUMMARY")
-                    MigrationReportType reportType)
-    {
+                    @RequestParam(value = "reportType", defaultValue = "SUMMARY")
+                    MigrationReportType reportType) {
         logger.info("Received GET request: \"/api/migrations/report\" from \"{}\".", originURL);
 
         var report =

@@ -34,7 +34,6 @@
     let hiddenRenames = $state([]);
     let visibleRenames = $state([]);
     let visibleAdded = $state([]);
-    let modified = $state([]);
     let isLoading = $state(true);
     let ignorePrefixes = $state(true);
 
@@ -51,21 +50,37 @@
             .then(res => (res.error ? Promise.reject("Failed") : res.data))
             .then(data => {
                 const deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
-                    a.oldResource.label.localeCompare(b.oldResource.label)
+                    a.oldResource.label.localeCompare(b.oldResource.label),
                 );
-                hiddenRenames = ignorePrefixes ? deletedAndRenamed.filter(r => isPrefixOnlyRename(r)) : [];
-                visibleRenames = ignorePrefixes ? deletedAndRenamed.filter(r => !isPrefixOnlyRename(r)) : deletedAndRenamed;
-                const hiddenTargetIRIs = hiddenRenames.map(r => r.newResource?.iri).filter(iri => iri != null);
+                hiddenRenames = ignorePrefixes
+                    ? deletedAndRenamed.filter(r =>
+                          isPrefixOnlyRename(
+                              r.oldResource.iri,
+                              r.newResource?.iri,
+                          ),
+                      )
+                    : [];
+                visibleRenames = ignorePrefixes
+                    ? deletedAndRenamed.filter(
+                          r =>
+                              !isPrefixOnlyRename(
+                                  r.oldResource.iri,
+                                  r.newResource?.iri,
+                              ),
+                      )
+                    : deletedAndRenamed;
+                const hiddenTargetIRIs = hiddenRenames
+                    .map(r => r.newResource?.iri)
+                    .filter(iri => iri != null);
                 visibleAdded = data.added.filter(
-                    addedClass => !hiddenTargetIRIs.includes(addedClass.iri)
+                    addedClass => !hiddenTargetIRIs.includes(addedClass.iri),
                 );
-                modified = data.modified;
 
                 for (let rename of deletedAndRenamed) {
                     if (rename.newResource) {
                         renamedFrom.set(
                             rename.newResource.label,
-                            rename.oldResource.label
+                            rename.oldResource.label,
                         );
                     }
                 }
@@ -90,10 +105,9 @@
     }
 
     export async function onNext() {
-        let body = [
-            ...hiddenRenames,
-            ...visibleRenames
-        ].filter(r => r.newResource != null);
+        let body = [...hiddenRenames, ...visibleRenames].filter(
+            r => r.newResource != null,
+        );
         try {
             const { error } = await confirmRenamedClasses({
                 body: body,
@@ -102,14 +116,14 @@
             if (error) {
                 toastStore.error(
                     "Save failed",
-                    "Could not save class renames for the migration."
+                    "Could not save class renames for the migration.",
                 );
             }
         } catch (e) {
             console.log("Failed to save class renames:", e);
             toastStore.error(
                 "Save failed",
-                "Could not save class renames for the migration."
+                "Could not save class renames for the migration.",
             );
         }
     }
@@ -125,7 +139,7 @@
         </p>
     </InfoBox>
 
-    {#if !isLoading && visibleRenames.length === 0 && visibleAdded.length === 0 && modified.length === 0}
+    {#if !isLoading && visibleRenames.length === 0 && visibleAdded.length === 0}
         <EmptyStateCard
             title="No Class Changes"
             description="There are no class changes to review in this migration."
@@ -157,24 +171,13 @@
                                     class="text-soptim-dunkelgrau text-xs italic"
                                 >
                                     renamed from {renamedFrom.get(
-                                    addedClass.label,
-                                )}
+                                        addedClass.label,
+                                    )}
                                 </span>
                             {/if}
                         </div>
                     {/each}
                 </div>
-            </div>
-        {/if}
-
-        {#if modified.length > 0}
-            <div>
-                <h3 class="mb-3] text-lg font-semibold">Modified Classes</h3>
-                <ul class="list-inside list-disc space-y-1 text-sm">
-                    {#each modified as modifiedClass}
-                        <li>{modifiedClass.label}</li>
-                    {/each}
-                </ul>
             </div>
         {/if}
     {/if}
