@@ -59,12 +59,29 @@ const LAYOUT_OPTIONS = {
     "elk.spacing.nodeNode": "60",
 };
 
-//WEB WORKER: layouting is executed in a separate thread, preventing the frontend from blocking.
-const elk = new ELK({
-    workerFactory: () => new Worker(ElkWorkerURL, { type: "classic" }),
-});
+let elk = null;
+
+function initializeELK() {
+    if (typeof Worker === "undefined") {
+        return null;
+    }
+
+    if (!elk) {
+        elk = new ELK({
+            workerFactory: () => new Worker(ElkWorkerURL, { type: "classic" }),
+        });
+    }
+    return elk;
+}
 
 export async function getLayoutedNodes(nodes, edges) {
+    const elkInstance = initializeELK();
+
+    if (!elkInstance) {
+        console.warn("ELK layout not available in this environment");
+        return nodes;
+    }
+
     const graph = {
         id: "root",
         children: nodes.map(node => ({
@@ -80,7 +97,7 @@ export async function getLayoutedNodes(nodes, edges) {
         layoutOptions: LAYOUT_OPTIONS,
     };
 
-    const elkGraph = await elk.layout(graph);
+    const elkGraph = await elkInstance.layout(graph);
 
     return nodes.map(node => {
         const elkNode = elkGraph.children.find(n => n.id === node.id);
