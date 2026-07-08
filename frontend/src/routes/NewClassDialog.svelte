@@ -59,6 +59,12 @@
     };
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+    const DEFAULT_PACKAGE = Object.freeze({
+        uuid: null,
+        prefix: null,
+        label: "default",
+    });
+
     let datasetName = $state(null);
     let graphURI = $state(null);
 
@@ -80,41 +86,51 @@
             (className?.violations.length ?? 0) > 0,
     );
 
-    const packageSelectionLocked = $derived(!!lockedPackage);
+    const normalizedLockedPackage = $derived(normalizePackage(lockedPackage));
+    const packageSelectionLocked = $derived(!!normalizedLockedPackage);
 
     $effect(async () => {
         const ds = datasetName;
         const graph = graphURI;
 
-        await untrack(async () => {
-            namespaces = await getNamespaces(ds);
-            if (classURINamespace) classURINamespace.value = null;
-            classPackage = null;
-
-            if (!ds || !graph) {
-                packages = [];
-                compareClasses = [];
-                return;
-            }
-
-            if (!packageSelectionLocked) {
-                await getPackages(ds, graph);
-            }
-
-            compareClasses = await getClasses(ds, graph);
-
-            if (className && classURINamespace) {
-                const currentValue = className.value;
-                className = new ReactiveValueWrapper(currentValue, label =>
-                    isInvalidClassLabel(
-                        label,
-                        classURINamespace,
-                        compareClasses,
-                    ),
-                );
-            }
-        });
+        await untrack(() => onDatasetOrGraphChanged(ds, graph));
     });
+
+    async function onDatasetOrGraphChanged(ds, graph) {
+        namespaces = await getNamespaces(ds);
+        if (classURINamespace) classURINamespace.value = null;
+        classPackage = null;
+
+        if (!ds || !graph) {
+            packages = [];
+            compareClasses = [];
+            return;
+        }
+
+        if (!packageSelectionLocked) {
+            await getPackages(ds, graph);
+        }
+
+        compareClasses = await getClasses(ds, graph);
+        refreshClassNameValidation();
+    }
+
+    function refreshClassNameValidation() {
+        if (className && classURINamespace) {
+            className = new ReactiveValueWrapper(className.value, label =>
+                isInvalidClassLabel(label, classURINamespace, compareClasses),
+            );
+        }
+    }
+
+    function normalizePackage(pkg) {
+        if (!pkg) return null;
+        if (typeof pkg === "string") {
+            return pkg === "default" ? { ...DEFAULT_PACKAGE } : null;
+        }
+        if (pkg.uuid == null) return { ...DEFAULT_PACKAGE };
+        return pkg;
+    }
 
     async function onOpen() {
         datasetName =
@@ -122,7 +138,6 @@
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
         classURINamespace = new ReactiveValueWrapper(null);
-
         className = new ReactiveValueWrapper("", label =>
             isInvalidClassLabel(label, classURINamespace, compareClasses),
         );
@@ -135,27 +150,24 @@
         if (!graphURI) {
             return;
         }
-        namespaces = await getNamespaces(datasetName);
 
-        if (graphURI) {
-            await getPackages(datasetName, graphURI);
-            compareClasses = await getClasses(datasetName, graphURI);
-        } else {
-            packages = [];
-        }
-
-        if (packageSelectionLocked) {
-            classPackage = lockedPackage ?? null;
-            packages = lockedPackage ? [lockedPackage] : [];
-            return;
-        }
         await getPackages(datasetName, graphURI);
-        const selectedPackageUUID =
-            editorState.selectedDiagram.getProperty("id") === "default"
-                ? null
-                : editorState.selectedDiagram.getProperty("id");
-        classPackage =
-            packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
+        compareClasses = await getClasses(datasetName, graphURI);
+
+        classPackage = packageSelectionLocked
+            ? applyLockedPackage()
+            : findInitiallySelectedPackage();
+    }
+
+    function applyLockedPackage() {
+        packages = [normalizedLockedPackage];
+        return normalizedLockedPackage;
+    }
+
+    function findInitiallySelectedPackage() {
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        const selectedPackageUUID = diagramId === "default" ? null : diagramId;
+        return packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null;
     }
 
     function onClose() {
@@ -185,70 +197,97 @@
         ];
     }
 
-    async function newClass() {
-        const datasetNameLocal = datasetName;
-        const graphURILocal = graphURI;
-        const classNameLocal = className;
-        const classURINamespaceLocal = classURINamespace;
-        const selectedPackageUUID = classPackage?.uuid ?? "default";
-        let packageDTO = classPackage?.uuid === "default" ? null : classPackage;
+    function snapshotFormState() {
+        return {
+            datasetName,
+            graphURI,
+            className: className?.value,
+            classURIPrefix: classURINamespace?.value,
+            packageDTO: classPackage?.uuid == null ? null : classPackage,
+            packageUUID: classPackage?.uuid ?? "default",
+        };
+    }
+
+    function buildClassesUrl(datasetName, graphURI) {
+        return (
+            PUBLIC_BACKEND_URL +
+            "/datasets/" +
+            encodeURIComponent(datasetName) +
+            "/graphs/" +
+            encodeURIComponent(graphURI) +
+            "/classes"
+        );
+    }
+
+    function postNewClass(form) {
         const requestBody = {
-            packageDTO,
-            classURIPrefix: classURINamespaceLocal?.value,
-            className: classNameLocal?.value,
+            packageDTO: form.packageDTO,
+            classURIPrefix: form.classURIPrefix,
+            className: form.className,
         };
         if (classLayoutPosition) {
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
+        return fetch(buildClassesUrl(form.datasetName, form.graphURI), {
+            method: "POST",
+            headers: new Headers({
+                "Content-Type": "application/json",
+            }),
+            body: JSON.stringify(requestBody),
+            credentials: "include",
+        });
+    }
+
+    function updateEditorSelection(form, classUUID) {
+        editorState.selectedDataset.updateValue(form.datasetName);
+        editorState.selectedGraph.updateValue(form.graphURI);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: form.packageUUID,
+        });
+        editorState.selectedClassDataset.updateValue(form.datasetName);
+        editorState.selectedClassGraph.updateValue(form.graphURI);
+        editorState.selectedClass.updateValue({
+            type: ClassType.SINGLE_CLASS,
+            id: classUUID,
+        });
+    }
+
+    function handleClassCreated(form, classUUID) {
+        console.log("successfully added class");
+        onClassCreated({
+            classUUID,
+            datasetName: form.datasetName,
+            graphURI: form.graphURI,
+            packageUUID: form.packageUUID,
+            className: form.className,
+        });
+        updateEditorSelection(form, classUUID);
+        toastStore.success("Class created", `"${form.className}" was added.`);
+    }
+
+    function triggerEditorRefresh() {
+        forceReloadTrigger.trigger();
+        editorState.selectedDataset.trigger();
+        editorState.selectedGraph.trigger();
+        editorState.selectedDiagram.trigger();
+        editorState.selectedClass.trigger();
+    }
+
+    async function newClass() {
+        const form = snapshotFormState();
+
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(datasetNameLocal) +
-                    "/graphs/" +
-                    encodeURIComponent(graphURILocal) +
-                    "/classes",
-                {
-                    method: "POST",
-                    headers: new Headers({
-                        "Content-Type": "application/json",
-                    }),
-                    body: JSON.stringify(requestBody),
-                    credentials: "include",
-                },
-            );
+            const res = await postNewClass(form);
             if (res.ok) {
-                const uuid = await res.text();
-                console.log("successfully added class");
-                onClassCreated({
-                    classUUID: uuid,
-                    datasetName: datasetNameLocal,
-                    graphURI: graphURILocal,
-                    packageUUID: selectedPackageUUID,
-                    className: classNameLocal.value,
-                });
-                editorState.selectedDataset.updateValue(datasetNameLocal);
-                editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: selectedPackageUUID,
-                });
-                editorState.selectedClassDataset.updateValue(datasetNameLocal);
-                editorState.selectedClassGraph.updateValue(graphURILocal);
-                editorState.selectedClass.updateValue({
-                    type: ClassType.SINGLE_CLASS,
-                    id: uuid,
-                });
-                toastStore.success(
-                    "Class created",
-                    `"${classNameLocal.value}" was added.`,
-                );
+                const classUUID = await res.text();
+                handleClassCreated(form, classUUID);
             } else {
                 console.log("failed to insert data");
                 toastStore.error(
                     "Create failed",
-                    `Could not create class "${classNameLocal.value}".`,
+                    `Could not create class "${form.className}".`,
                 );
             }
         } catch (e) {
@@ -258,11 +297,7 @@
                 "An unexpected error occurred while creating the class.",
             );
         } finally {
-            forceReloadTrigger.trigger();
-            editorState.selectedDataset.trigger();
-            editorState.selectedGraph.trigger();
-            editorState.selectedDiagram.trigger();
-            editorState.selectedClass.trigger();
+            triggerEditorRefresh();
         }
     }
 </script>
@@ -311,7 +346,7 @@
                 placeholder={datasetName
                     ? "Select namespace"
                     : "Select a dataset first"}
-                getOptionValue={namespace => namespace.substitutedPrefix}
+                getOptionValue={namespace => namespace.prefix}
                 getOptionLabel={namespace =>
                     `${namespace.substitutedPrefix} (${namespace.prefix})`}
             />

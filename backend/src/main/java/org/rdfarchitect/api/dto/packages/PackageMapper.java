@@ -36,8 +36,25 @@ public interface PackageMapper {
 
     PackageMapper INSTANCE = Mappers.getMapper(PackageMapper.class);
 
-    @Mapping(target = "uri", source = ".")
-    CIMPackage toCIMObject(PackageDTO dto);
+    default CIMPackage toCIMObject(PackageDTO dto){
+        if ( isDefaultPackage(dto) ) {
+            return null;
+        }
+
+        CIMPackage.CIMPackageBuilder cIMPackage = CIMPackage.builder();
+
+            cIMPackage.uri( buildURI( dto ) );
+            cIMPackage.uuid( dto.getUuid() );
+            cIMPackage.label( MappingUtils.buildLabel( dto.getLabel() ) );
+            cIMPackage.comment( MappingUtils.buildComment( dto.getComment() ) );
+            cIMPackage.belongsToCategory( buildBelongsToCategory( dto.getBelongsToCategory() ) );
+
+            return cIMPackage.build();
+    }
+
+    private boolean isDefaultPackage(PackageDTO dto) {
+        return dto == null || (dto.getPrefix() == null && (dto.getLabel() == null || "default".equals(dto.getLabel())));
+    }
 
     List<CIMPackage> toCIMObjectList(List<PackageDTO> dtoList);
 
@@ -77,12 +94,8 @@ public interface PackageMapper {
     }
 
     default URI buildURI(PackageDTO dto) {
-        if (dto.getPrefix() == null
-                || dto.getPrefix().isEmpty()
-                || dto.getLabel() == null
-                || dto.getLabel().isEmpty()) {
-            System.out.println(dto.getLabel());
-            System.out.println(dto.getPrefix());
+        if(dto.getPrefix() == null && (dto.getLabel() == null || "default".equals(dto.getLabel()))) {
+            return null;
         }
         return new URI(dto.getPrefix() + dto.getLabel());
     }
