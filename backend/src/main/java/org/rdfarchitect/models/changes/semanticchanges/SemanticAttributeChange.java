@@ -51,8 +51,6 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
 
     private boolean forceDefaultValue = false;
 
-    private String inheritedFrom;
-
     @Builder.Default private List<String> allowedValues = new ArrayList<>();
 
     public SemanticAttributeChange(TripleResourceChange tripleChange) {
@@ -68,7 +66,6 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
         optional = other.isOptional();
         forceDefaultValue = other.isForceDefaultValue();
         allowedValues = new ArrayList<>(other.getAllowedValues());
-        inheritedFrom = other.getInheritedFrom();
     }
 
     public SemanticAttributeChange(SemanticResourceChange resourceChange) {

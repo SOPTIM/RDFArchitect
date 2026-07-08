@@ -344,8 +344,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..1",
-                                                    "0..1")))
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1")))
                             .build();
 
             var added =
@@ -356,8 +356,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..1",
-                                                    "0..1")))
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..1")))
                             .build();
 
             var similarity = SimilarityCalculator.calculateSimilarity(added, deleted);
@@ -410,12 +410,12 @@ class SimilarityCalculatorTest {
                                                     "Float"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "1..1",
-                                                    "1..1"),
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.DEFAULT_VALUE_CHANGE,
-                                                    "0.0",
-                                                    "0.0")))
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0.0",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0.0")))
                             .build();
 
             var added =
@@ -430,12 +430,12 @@ class SimilarityCalculatorTest {
                                                     "Float"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "1..1",
-                                                    "1..1"),
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:1..1"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.DEFAULT_VALUE_CHANGE,
-                                                    "0.0",
-                                                    "0.0")))
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0.0",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0.0")))
                             .build();
 
             var similarity = SimilarityCalculator.calculateSimilarity(added, deleted);
@@ -519,8 +519,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*")))
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*")))
                             .build();
 
             var added =
@@ -531,8 +531,8 @@ class SimilarityCalculatorTest {
                                     List.of(
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*")))
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*")))
                             .build();
 
             var similarity = SimilarityCalculator.calculateSimilarity(added, deleted);
@@ -554,8 +554,8 @@ class SimilarityCalculatorTest {
                                                     "Equipment"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*"),
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.ASSOCIATION_USED_CHANGE,
                                                     "true",
@@ -574,8 +574,8 @@ class SimilarityCalculatorTest {
                                                     "Equipment"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.MULTIPLICITY_CHANGE,
-                                                    "0..*",
-                                                    "0..*"),
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*",
+                                                    "http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#M:0..*"),
                                             ChangeObjectTestBuilder.fieldChange(
                                                     SemanticFieldChangeType.ASSOCIATION_USED_CHANGE,
                                                     "true",
