@@ -148,6 +148,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 case ADD -> added++;
                 case DELETE -> deleted++;
                 case CHANGE, RENAME -> changed++;
+                default -> {
+                    // changes from inheritance should not be included in the stat summary
+                }
             }
         }
 
@@ -192,7 +195,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     private void appendFieldChangesAsSentences(
             StringBuilder sb, List<SemanticFieldChange> changes) {
-        if (changes == null || changes.isEmpty()) return;
+        if (changes == null || changes.isEmpty()) {
+            return;
+        }
+
         for (var change : changes) {
             sb.append("- ").append(fieldChangeToSentence(change)).append("\n");
         }
@@ -241,7 +247,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     private <T extends SemanticResourceChange> void appendPropertySection(
             StringBuilder sb, String title, List<T> properties) {
-        if (properties == null || properties.isEmpty()) return;
+        if (properties == null || properties.isEmpty()) {
+            return;
+        }
+
         sb.append("### ").append(title).append("\n\n");
 
         for (var prop : properties) {
@@ -271,7 +280,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     private <T extends SemanticResourceChange> void appendDirectProperties(
             StringBuilder sb, String title, List<T> properties) {
-        if (properties == null) return;
+        if (properties == null) {
+            return;
+        }
+
         var direct =
                 properties.stream()
                         .filter(
@@ -283,17 +295,24 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                         != SemanticResourceChangeType
                                                                 .DELETED_FROM_INHERITANCE)
                         .toList();
-        if (direct.isEmpty()) return;
+        if (direct.isEmpty()) {
+            return;
+        }
         appendPropertySection(sb, title, direct);
     }
 
     private boolean hasDirectChange(SemanticClassChange c) {
-        if (!c.getChanges().isEmpty()) return true;
+        if (!c.getChanges().isEmpty()) {
+            return true;
+        }
         var allProperties = new ArrayList<SemanticResourceChange>(c.getAssociations());
         allProperties.addAll(c.getAttributes());
         allProperties.addAll(c.getEnumEntries());
 
-        if (allProperties.isEmpty()) return false;
+        if (allProperties.isEmpty()) {
+            return false;
+        }
+
         return allProperties.stream()
                 .anyMatch(
                         p ->
@@ -324,7 +343,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     private <T extends SemanticResourceChange> void addDirectLabels(
             Set<String> labels, List<T> properties) {
-        if (properties == null) return;
+        if (properties == null) {
+            return;
+        }
+
         properties.stream()
                 .filter(
                         p ->
@@ -345,7 +367,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     private <T extends SemanticResourceChange> boolean matchesAny(
             List<T> properties, Set<String> labels) {
-        if (properties == null) return false;
+        if (properties == null) {
+            return false;
+        }
+
         return properties.stream()
                 .filter(
                         p ->
@@ -369,7 +394,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     }
 
     private String shorten(String value) {
-        if (value == null) return null;
+        if (value == null) {
+            return null;
+        }
 
         var shortened = defaultPrefixes.shortForm(value);
         if (shortened.equals(value)) {
@@ -403,7 +430,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     }
 
     private <T extends SemanticResourceChange> List<T> filterProperties(List<T> properties) {
-        if (properties == null) return Collections.emptyList();
+        if (properties == null) {
+            return Collections.emptyList();
+        }
 
         return properties.stream()
                 .map(
