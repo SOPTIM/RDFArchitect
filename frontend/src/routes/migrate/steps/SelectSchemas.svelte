@@ -21,6 +21,7 @@
     import { get } from "svelte/store";
     import { Fa } from "svelte-fa";
 
+    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
@@ -29,8 +30,6 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
-    import { Checkbox } from "$lib/components/bitsui/checkbox/index.js";
-    import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
 
     let { disableNext = $bindable() } = $props();
 
@@ -113,6 +112,7 @@
         graphB = storedState.graphB;
         fileA = storedState.fileA;
         fileB = storedState.fileB;
+        ignorePrefixes = storedState.ignorePrefixes ?? false;
     });
 
     function onCompareModeChange() {
@@ -167,6 +167,8 @@
             body.append("fileA", fileA);
             body.append("fileB", fileB);
         }
+
+        body.append("ignorePrefixes", ignorePrefixes);
 
         let url = `${PUBLIC_BACKEND_URL}/migrations/context`;
         try {

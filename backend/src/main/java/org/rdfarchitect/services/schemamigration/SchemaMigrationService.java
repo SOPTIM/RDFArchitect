@@ -39,7 +39,9 @@ import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.compare.TripleChangeAnalyser;
 import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationReportUseCase;
+import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScriptUseCase;
 import org.rdfarchitect.services.schemamigration.artifacts.MigrationReportBuilder;
+import org.rdfarchitect.services.schemamigration.artifacts.MigrationScriptBuilder;
 import org.rdfarchitect.services.schemamigration.defaults.DefaultValueAssigner;
 import org.rdfarchitect.services.schemamigration.defaults.GetDefaultValueViewsUseCase;
 import org.rdfarchitect.services.schemamigration.defaults.InheritanceChangeHandler;
@@ -50,8 +52,6 @@ import org.rdfarchitect.services.schemamigration.renamings.GetClassRenamingsUseC
 import org.rdfarchitect.services.schemamigration.renamings.GetPropertyRenamingsUseCase;
 import org.rdfarchitect.services.schemamigration.renamings.RenameDetector;
 import org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder;
-import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScriptUseCase;
-import org.rdfarchitect.services.schemamigration.artifacts.MigrationScriptBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -65,13 +65,13 @@ public class SchemaMigrationService
         implements SetMigrationContextUseCase,
                 GetClassRenamingsUseCase,
                 GetPropertyRenamingsUseCase,
-        GenerateMigrationScriptUseCase,
+                GenerateMigrationScriptUseCase,
                 ClassRenamingsUseCase,
                 ConfirmPropertyRenamingsUseCase,
                 ClearMigrationContextUseCase,
                 GetDefaultValueViewsUseCase,
                 SubmitDefaultValuesUseCase,
-        GenerateMigrationReportUseCase {
+                GenerateMigrationReportUseCase {
 
     private final MigrationSessionStore migrationSessionStore;
     private final DatabasePort databasePort;
@@ -81,7 +81,8 @@ public class SchemaMigrationService
     private static final String GRAPH_URI = "http://example.org/graph";
 
     @Override
-    public void setMigrationContext(MultipartFile originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
+    public void setMigrationContext(
+            MultipartFile originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         var originalGraph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(originalSchema)
@@ -99,7 +100,8 @@ public class SchemaMigrationService
     }
 
     @Override
-    public void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
+    public void setMigrationContext(
+            GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var originalCtx =
                 databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
@@ -116,7 +118,8 @@ public class SchemaMigrationService
     }
 
     @Override
-    public void setMigrationContext(GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
+    public void setMigrationContext(
+            GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         Graph originalGraph;
         try (var originalCtx =
                 databasePort.getGraphWithContext(originalSchema).begin(ReadWrite.READ)) {
@@ -134,7 +137,8 @@ public class SchemaMigrationService
     }
 
     @Override
-    public void setMigrationContext(MultipartFile originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
+    public void setMigrationContext(
+            MultipartFile originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes) {
         var originalGraph =
                 new GraphFileSourceBuilderImpl()
                         .setFile(originalSchema)
@@ -227,15 +231,15 @@ public class SchemaMigrationService
                 new ArrayList<>(migrationSessionStore.getContext().getDiffAfterClassConfirm());
         var result = new ArrayList<PropertyOverview>();
         for (var cls : classes) {
-            if (cls.getAttributeRenameCandidates() == null) {
+            if (cls.getAttributeRenameCandidates().isEmpty()) {
                 cls.setAttributeRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getAttributes()));
             }
-            if (cls.getAssociationRenameCandidates() == null) {
+            if (cls.getAssociationRenameCandidates().isEmpty()) {
                 cls.setAssociationRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getAssociations()));
             }
-            if (cls.getEnumEntryRenameCandidates() == null) {
+            if (cls.getEnumEntryRenameCandidates().isEmpty()) {
                 cls.setEnumEntryRenameCandidates(
                         RenameDetector.detectPropertyRenames(cls.getEnumEntries()));
             }

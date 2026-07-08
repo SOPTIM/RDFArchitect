@@ -27,6 +27,8 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -192,7 +194,14 @@ public class SimilarityCalculator {
                 getValueForChangeType(added, changeType)
                         .map(SemanticFieldChange::getTo)
                         .orElse(null);
-        return Objects.equals(deletedValue, addedValue) ? 1.0 : 0.0;
+
+        if (changeType == SemanticFieldChangeType.MULTIPLICITY_CHANGE && deletedValue != null && addedValue != null) {
+            var oldMultiplicity = CIMPropertyUtils.resolveMultiplicity(new URI(deletedValue).getSuffix());
+            var newMultiplicity =  CIMPropertyUtils.resolveMultiplicity(new URI(addedValue).getSuffix());
+            return Objects.equals(oldMultiplicity, newMultiplicity) ? 1.0 : 0.0;
+        } else {
+            return Objects.equals(deletedValue, addedValue) ? 1.0 : 0.0;
+        }
     }
 
     private <T extends SemanticResourceChange> Optional<SemanticFieldChange> getValueForChangeType(

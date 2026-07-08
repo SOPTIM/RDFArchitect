@@ -19,12 +19,12 @@ package org.rdfarchitect.services.schemamigration.artifacts;
 
 import lombok.RequiredArgsConstructor;
 
-import org.apache.jena.update.UpdateRequest;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAssociationChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticAttributeChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticEnumEntryChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.springframework.stereotype.Service;
 
@@ -38,15 +38,20 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
 
     @Override
     public String generateMigrationScript(List<SemanticClassChange> classChanges) {
-        var script = new UpdateRequest();
+        var sb = new StringBuilder();
         for (var classChange : classChanges) {
-            script.add(generateUpdateForClass(classChange));
+            var classBlock = generateUpdateForClass(classChange);
+            if (!classBlock.isBlank()) {
+                sb.append(classBlock);
+            }
         }
-        return script.toString();
+        return sb.toString();
     }
 
     private String generateUpdateForClass(SemanticClassChange classChange) {
-        var result = new UpdateRequest();
+        var sb = new StringBuilder();
+
+        appendComment(sb, classChange);
 
         String update =
                 switch (classChange.getSemanticResourceChangeType()) {
@@ -55,47 +60,57 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     default -> null;
                 };
 
-        if (update != null) {
-            result.add(update);
+        if (update != null && !update.isBlank()) {
+            sb.append(update).append("\n");
         }
 
         if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE
                 && classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.ADD) {
-            processClassChanges(classChange, result);
+            processClassChanges(classChange, sb);
         }
 
-        processPropertyChanges(classChange, result);
+        processPropertyChanges(classChange, sb);
 
-        return result.toString();
+        return sb.toString();
     }
 
-    private void processClassChanges(SemanticClassChange classChange, UpdateRequest result) {
+    private void processClassChanges(SemanticClassChange classChange, StringBuilder sb) {
         for (var change : classChange.getChanges()) {
             if (change.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_ABSTRACT) {
-                result.add(updateGenerator.generateDeleteClassUpdate(classChange));
+                sb.append(updateGenerator.generateDeleteClassUpdate(classChange)).append("\n");
             }
         }
     }
 
-    private void processPropertyChanges(SemanticClassChange classChange, UpdateRequest result) {
+    private void processPropertyChanges(SemanticClassChange classChange, StringBuilder sb) {
         for (var attribute : classChange.getAttributes()) {
-            result.add(generateUpdateForAttribute(attribute, classChange.getIri()));
+            var block = generateUpdateForAttribute(attribute, classChange.getIri());
+            if (!block.isBlank()) {
+                sb.append(block);
+            }
         }
 
         for (var association : classChange.getAssociations()) {
-            result.add(generateUpdateForAssociation(association));
+            var block = generateUpdateForAssociation(association);
+            if (!block.isBlank()) {
+                sb.append(block);
+            }
         }
 
         if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
             for (var enumEntry : classChange.getEnumEntries()) {
-                result.add(generateUpdateForEnumEntry(enumEntry));
+                var block = generateUpdateForEnumEntry(enumEntry);
+                if (!block.isBlank()) {
+                    sb.append(block);
+                }
             }
         }
     }
 
     private String generateUpdateForAttribute(
             SemanticAttributeChange attributeChange, String classIri) {
-        var result = new UpdateRequest();
+        var sb = new StringBuilder();
+        appendComment(sb, attributeChange);
 
         var update =
                 switch (attributeChange.getSemanticResourceChangeType()) {
@@ -112,21 +127,21 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     default -> null;
                 };
 
-        if (update != null) {
-            result.add(update);
+        if (update != null && !update.isBlank()) {
+            sb.append(update).append("\n");
         }
 
         var type = attributeChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
                 || type == SemanticResourceChangeType.RENAME) {
-            processAttributeFieldChanges(attributeChange, classIri, result);
+            processAttributeFieldChanges(attributeChange, classIri, sb);
         }
 
-        return result.toString();
+        return sb.toString();
     }
 
     private void processAttributeFieldChanges(
-            SemanticAttributeChange attributeChange, String classIri, UpdateRequest result) {
+            SemanticAttributeChange attributeChange, String classIri, StringBuilder sb) {
         for (var change : attributeChange.getChanges()) {
             var update =
                     switch (change.getSemanticFieldChangeType()) {
@@ -142,14 +157,15 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                         default -> null;
                     };
 
-            if (update != null) {
-                result.add(update);
+            if (update != null && !update.isBlank()) {
+                sb.append(update).append("\n");
             }
         }
     }
 
     private String generateUpdateForEnumEntry(SemanticEnumEntryChange enumEntryChange) {
-        var result = new UpdateRequest();
+        var sb = new StringBuilder();
+        appendComment(sb, enumEntryChange);
 
         var update =
                 switch (enumEntryChange.getSemanticResourceChangeType()) {
@@ -158,15 +174,16 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     default -> null;
                 };
 
-        if (update != null) {
-            result.add(update);
+        if (update != null && !update.isBlank()) {
+            sb.append(update).append("\n");
         }
 
-        return result.toString();
+        return sb.toString();
     }
 
     private String generateUpdateForAssociation(SemanticAssociationChange associationChange) {
-        var result = new UpdateRequest();
+        var sb = new StringBuilder();
+        appendComment(sb, associationChange);
 
         var update =
                 switch (associationChange.getSemanticResourceChangeType()) {
@@ -180,21 +197,21 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                     default -> null;
                 };
 
-        if (update != null) {
-            result.add(update);
+        if (update != null && !update.isBlank()) {
+            sb.append(update).append("\n");
         }
 
         var type = associationChange.getSemanticResourceChangeType();
         if (type == SemanticResourceChangeType.CHANGE
                 || type == SemanticResourceChangeType.RENAME) {
-            processAssociationFieldChanges(associationChange, result);
+            processAssociationFieldChanges(associationChange, sb);
         }
 
-        return result.toString();
+        return sb.toString();
     }
 
     private void processAssociationFieldChanges(
-            SemanticAssociationChange associationChange, UpdateRequest result) {
+            SemanticAssociationChange associationChange, StringBuilder sb) {
         for (var change : associationChange.getChanges()) {
             var update =
                     switch (change.getSemanticFieldChangeType()) {
@@ -208,8 +225,16 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
                         default -> null;
                     };
 
-            if (update != null) {
-                result.add(update);
+            if (update != null && !update.isBlank()) {
+                sb.append(update).append("\n");
+            }
+        }
+    }
+
+    private void appendComment(StringBuilder sb, SemanticResourceChange resourceChange) {
+        if (resourceChange.getComment() != null && !resourceChange.getComment().isBlank()) {
+            for (var line : resourceChange.getComment().split("\\R")) {
+                sb.append("# ").append(line).append("\n");
             }
         }
     }

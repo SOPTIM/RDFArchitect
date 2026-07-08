@@ -17,44 +17,56 @@
 
 <script>
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { migrationState } from "$lib/sharedState.svelte.js";
+    import { isPrefixOnlyRename } from "$lib/utils/migrationUtils.js";
 
     import RenameTable from "./RenameTable.svelte";
 
-    let deletedAndRenamed = $state([]);
-    let added = $state([]);
+    let hiddenRenames = $state([]);
+    let visibleRenames = $state([]);
+    let visibleAdded = $state([]);
     let modified = $state([]);
     let isLoading = $state(true);
+    let ignorePrefixes = $state(true);
 
     let renamedFrom = $state(new Map());
     let unlinkedAdded = $derived.by(() => {
         const linked = new Set(renamedFrom.keys());
-        return added.filter(c => !linked.has(c.label));
+        return visibleAdded.filter(c => !linked.has(c.label));
     });
 
     onMount(() => {
+        const storedState = get(migrationState);
+        ignorePrefixes = storedState.ignorePrefixes;
         fetch(PUBLIC_BACKEND_URL + "/migrations/class-renamings", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
+            credentials: "include"
         })
             .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
             .then(data => {
-                deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
-                    a.oldResource.label.localeCompare(b.oldResource.label),
+                const deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
+                    a.oldResource.label.localeCompare(b.oldResource.label)
                 );
-                added = data.added;
+                hiddenRenames = ignorePrefixes ? deletedAndRenamed.filter(r => isPrefixOnlyRename(r)) : [];
+                visibleRenames = ignorePrefixes ? deletedAndRenamed.filter(r => !isPrefixOnlyRename(r)) : deletedAndRenamed;
+                const hiddenTargetIRIs = hiddenRenames.map(r => r.newResource?.iri).filter(iri => iri != null);
+                visibleAdded = data.added.filter(
+                    addedClass => !hiddenTargetIRIs.includes(addedClass.iri)
+                );
                 modified = data.modified;
 
                 for (let rename of deletedAndRenamed) {
                     if (rename.newResource) {
                         renamedFrom.set(
                             rename.newResource.label,
-                            rename.oldResource.label,
+                            rename.oldResource.label
                         );
                     }
                 }
@@ -79,7 +91,10 @@
     }
 
     export async function onNext() {
-        let body = deletedAndRenamed.filter(r => r.newResource != null);
+        let body = [
+            ...hiddenRenames,
+            ...visibleRenames
+        ].filter(r => r.newResource != null);
         try {
             const res = await fetch(
                 PUBLIC_BACKEND_URL + "/migrations/class-renamings",
@@ -87,20 +102,20 @@
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
-                    body: JSON.stringify(body),
-                },
+                    body: JSON.stringify(body)
+                }
             );
             if (!res.ok) {
                 toastStore.error(
                     "Save failed",
-                    "Could not save class renames for the migration.",
+                    "Could not save class renames for the migration."
                 );
             }
         } catch (e) {
             console.log("Failed to save class renames:", e);
             toastStore.error(
                 "Save failed",
-                "Could not save class renames for the migration.",
+                "Could not save class renames for the migration."
             );
         }
     }
@@ -116,17 +131,17 @@
         </p>
     </InfoBox>
 
-    {#if !isLoading && deletedAndRenamed.length === 0 && added.length === 0 && modified.length === 0}
+    {#if !isLoading && visibleRenames.length === 0 && visibleAdded.length === 0 && modified.length === 0}
         <EmptyStateCard
             title="No Class Changes"
             description="There are no class changes to review in this migration."
         />
     {:else}
-        {#if deletedAndRenamed.length > 0}
+        {#if visibleRenames.length > 0}
             <RenameTable
-                renameCandidates={deletedAndRenamed}
+                renameCandidates={visibleRenames}
                 unlinkedNewItems={unlinkedAdded}
-                allAddedItems={added}
+                allAddedItems={visibleAdded}
                 onAddMapping={(rename, newItem) =>
                     addRenameMapping(rename, newItem)}
                 onDissolveMapping={rename => dissolveRenameMapping(rename)}
@@ -134,11 +149,11 @@
             />
         {/if}
 
-        {#if added.length > 0}
+        {#if visibleAdded.length > 0}
             <div>
                 <h3 class="mb-3 text-lg font-semibold">Added Classes</h3>
                 <div class="space-y-1">
-                    {#each added as addedClass}
+                    {#each visibleAdded as addedClass}
                         <div
                             class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                         >
@@ -148,8 +163,8 @@
                                     class="text-soptim-dunkelgrau text-xs italic"
                                 >
                                     renamed from {renamedFrom.get(
-                                        addedClass.label,
-                                    )}
+                                    addedClass.label,
+                                )}
                                 </span>
                             {/if}
                         </div>

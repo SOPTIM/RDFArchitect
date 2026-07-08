@@ -84,7 +84,7 @@ public class SemanticFieldChangeTypeMapper {
                                 new URI(propertyChange.getTo()).getSuffix());
                 // only syntactic change in multiplicity
                 if (propertyChange.getFrom() != null
-                        && CIMPropertyUtils.resolveMultiplicity(propertyChange.getFrom())
+                        && CIMPropertyUtils.resolveMultiplicity(new URI(propertyChange.getFrom()).getSuffix())
                                 .equals(newMultiplicity)) {
                     return null;
                 }

@@ -242,19 +242,25 @@ public class InheritanceChangeHandler {
                                 property, SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
                 propertyChange.setLabel(new URI(property.getURI()).getSuffix());
                 if (CIMPropertyUtils.isAttribute(property)) {
-                    var domain = property.getProperty(RDFS.domain).getResource().getProperty(RDFS.label).getResource().getURI();
+                    var domain =
+                            property.getProperty(RDFS.domain)
+                                    .getResource()
+                                    .getProperty(RDFS.label)
+                                    .getResource()
+                                    .getURI();
                     var attributeChange = new SemanticAttributeChange(propertyChange);
                     attributeChange.setInheritedFrom(domain);
-                    derivingClassChange
-                            .getAttributes()
-                            .add(attributeChange);
+                    derivingClassChange.getAttributes().add(attributeChange);
                 } else if (CIMPropertyUtils.isAssociation(property)) {
-                    var domain = property.getProperty(RDFS.domain).getResource().getProperty(RDFS.label).getResource().getURI();
+                    var domain =
+                            property.getProperty(RDFS.domain)
+                                    .getResource()
+                                    .getProperty(RDFS.label)
+                                    .getResource()
+                                    .getURI();
                     var associationChange = new SemanticAssociationChange(propertyChange);
                     associationChange.setInheritedFrom(domain);
-                    derivingClassChange
-                            .getAssociations()
-                            .add(associationChange);
+                    derivingClassChange.getAssociations().add(associationChange);
                 }
             }
         }

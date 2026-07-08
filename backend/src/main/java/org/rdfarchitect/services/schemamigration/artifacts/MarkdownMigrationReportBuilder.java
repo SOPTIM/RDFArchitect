@@ -20,15 +20,18 @@ package org.rdfarchitect.services.schemamigration.artifacts;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
@@ -38,25 +41,32 @@ import java.util.Set;
 @Service
 public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
+    private PrefixMapping prefixMapping;
+
     @Override
-    public String generateDetailedMigrationReport(List<SemanticClassChange> classChanges, Graph originalGraph) {
+    public String generateDetailedMigrationReport(
+            List<SemanticClassChange> classChanges, Graph originalGraph) {
+        prefixMapping = originalGraph.getPrefixMapping();
+
         var sb = new StringBuilder();
         sb.append("# Migration Report — Detailed View\n\n");
         sb.append("All affected concrete classes are listed alphabetically. ");
         sb.append("Inherited changes are shown under each affected subclass.\n\n");
 
         var model = ModelFactory.createModelForGraph(originalGraph);
-        var concreteClassIRIs = model.listResourcesWithProperty(RDF.type, RDFS.Class)
-                .filterKeep(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.concrete))
-                .filterDrop(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration))
-                .filterDrop(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.cimDataType))
-                .mapWith(Resource::getURI)
-                .toList();
+        var concreteClassIRIs =
+                model.listResourcesWithProperty(RDF.type, RDFS.Class)
+                        .filterKeep(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.concrete))
+                        .filterDrop(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration))
+                        .filterDrop(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.cimDataType))
+                        .mapWith(Resource::getURI)
+                        .toList();
 
-        var concreteChanges = classChanges.stream()
-                .filter(c -> concreteClassIRIs.contains(c.getIri()))
-                .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
-                .toList();
+        var concreteChanges =
+                classChanges.stream()
+                        .filter(c -> concreteClassIRIs.contains(c.getIri()))
+                        .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
+                        .toList();
 
         for (var classChange : concreteChanges) {
             appendClassSection(sb, classChange);
@@ -66,15 +76,26 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     }
 
     private void appendClassSection(StringBuilder sb, SemanticClassChange classChange) {
-        sb.append("## ").append(formatChangeType(classChange.getSemanticResourceChangeType()))
-                .append(" `").append(classChange.getLabel()).append("`\n\n");
-        sb.append("**IRI:** `").append(classChange.getIri()).append("`\n\n");
-
-        if (classChange.getOldIRI() != null) {
-            sb.append("**Previous IRI:** `").append(classChange.getOldIRI()).append("`\n\n");
+        if (classChange.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME) {
+            var oldLabel = new URI(classChange.getOldIRI()).getSuffix();
+            sb.append("## Renamed from ").append(oldLabel).append(" to ").append(classChange.getLabel())
+                    .append("\n\n");
+            sb.append("**Old IRI:** ").append(shorten(classChange.getOldIRI())).append("\n\n");
+            sb.append("**IRI:** ").append(shorten(classChange.getIri())).append("\n\n");
+        } else {
+            sb.append("## ")
+                    .append(formatChangeType(classChange.getSemanticResourceChangeType()))
+                    .append(" ")
+                    .append(classChange.getLabel())
+                    .append("\n\n");
+            sb.append("**IRI:** ").append(shorten(classChange.getIri())).append("\n\n");
         }
 
-        appendFieldChangesTable(sb, classChange.getChanges());
+        if (classChange.getComment() != null && !classChange.getComment().isBlank()) {
+            sb.append("> ").append(classChange.getComment()).append("\n\n");
+        }
+
+        appendFieldChangesAsSentences(sb, classChange.getChanges());
         appendPropertySection(sb, "Attributes", classChange.getAttributes());
         appendPropertySection(sb, "Associations", classChange.getAssociations());
         appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries());
@@ -82,36 +103,41 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     }
 
     @Override
-    public String generateSummaryMigrationReport(List<SemanticClassChange> classChanges, Graph originalGraph) {
+    public String generateSummaryMigrationReport(
+            List<SemanticClassChange> classChanges, Graph originalGraph) {
         var sb = new StringBuilder();
         sb.append("# Migration Report — Summary View\n\n");
-        sb.append("Classes with direct changes. For parent classes, affected concrete subclasses are listed.\n\n");
+        sb.append(
+                "Classes with direct changes. For parent classes, affected concrete subclasses are listed.\n\n");
 
-        // Classes that have at least one direct (non-inherited) change
-        var directlyChanged = classChanges.stream()
-                .filter(this::hasDirectChange)
-                .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
-                .toList();
+        var directlyChanged =
+                classChanges.stream()
+                        .filter(this::hasDirectChange)
+                        .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
+                        .toList();
 
         for (var classChange : directlyChanged) {
-            sb.append("## ").append(formatChangeType(classChange.getSemanticResourceChangeType()))
-                    .append(" `").append(classChange.getLabel()).append("`\n\n");
-            sb.append("**IRI:** `").append(classChange.getIri()).append("`\n\n");
+            sb.append("## ")
+                    .append(formatChangeType(classChange.getSemanticResourceChangeType()))
+                    .append(" ")
+                    .append(classChange.getLabel())
+                    .append("\n\n");
+            sb.append("**IRI:** ").append(shorten(classChange.getIri())).append("\n\n");
 
-            // Show only direct changes
-            var directFieldChanges = classChange.getChanges(); // class-level are always direct
-            appendFieldChangesTable(sb, directFieldChanges);
+            if (classChange.getComment() != null && !classChange.getComment().isBlank()) {
+                sb.append("> ").append(classChange.getComment()).append("\n\n");
+            }
 
+            appendFieldChangesAsSentences(sb, classChange.getChanges());
             appendDirectProperties(sb, "Attributes", classChange.getAttributes());
             appendDirectProperties(sb, "Associations", classChange.getAssociations());
             appendDirectProperties(sb, "Enum Entries", classChange.getEnumEntries());
 
-            // List affected concrete subclasses
             var affectedSubclasses = findAffectedSubclasses(classChange, classChanges);
             if (!affectedSubclasses.isEmpty()) {
-                sb.append("\n**Affected concrete classes:**\n\n");
+                sb.append("**Affected concrete classes:**\n\n");
                 for (var sub : affectedSubclasses) {
-                    sb.append("- `").append(sub.getLabel()).append("`\n");
+                    sb.append("- ").append(sub.getLabel()).append("\n");
                 }
                 sb.append("\n");
             }
@@ -122,6 +148,97 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         return sb.toString();
     }
 
+    private void appendFieldChangesAsSentences(StringBuilder sb, List<SemanticFieldChange> changes) {
+        if (changes == null || changes.isEmpty()) return;
+        for (var change : changes) {
+            sb.append("- ").append(fieldChangeToSentence(change)).append("\n");
+        }
+        sb.append("\n");
+    }
+
+    private String fieldChangeToSentence(SemanticFieldChange change) {
+        var from = change.getFrom();
+        var to = change.getTo();
+
+        return switch (change.getSemanticFieldChangeType()) {
+            case LABEL_CHANGE -> formatTransition("Label changed", from, to);
+            case COMMENT_CHANGE -> "Comment was updated.";
+            case SUPERCLASS_CHANGE -> formatTransition("Superclass changed", from, to);
+            case SUPERCLASS_RENAME -> formatTransition("Superclass renamed", from, to);
+            case BELONGS_TO_CATEGORY_CHANGE -> formatTransition("Package changed", from, to);
+            case DATATYPE_CHANGE -> formatTransition("Datatype changed", from, to);
+            case DATATYPE_RENAME -> formatTransition("Datatype renamed", from, to);
+            case MADE_OPTIONAL -> "Was made optional.";
+            case MADE_REQUIRED -> "Was made required.";
+            case MULTIPLICITY_CHANGE -> formatTransition("Multiplicity changed", from, to);
+            case STEREOTYPE_ADDED -> "Stereotype added: `" + shorten(to) + "`.";
+            case STEREOTYPE_REMOVED -> "Stereotype removed: " + shorten(from) + ".";
+            case MADE_ABSTRACT -> "Was made abstract.";
+            case DOMAIN_CHANGE -> formatTransition("Domain changed", from, to);
+            case DOMAIN_RENAME -> formatTransition("Domain renamed", from, to);
+            case TARGET_CHANGE -> formatTransition("Target changed", from, to);
+            case ASSOCIATION_USED_CHANGE -> formatTransition("Association used changed", from, to);
+            case DEFAULT_VALUE_CHANGE -> formatTransition("Default value changed", from, to);
+            case FIXED_VALUE_CHANGE -> formatTransition("Fixed value changed", from, to);
+        };
+    }
+
+    private String formatTransition(String description, String from, String to) {
+        var shortFrom = shorten(from);
+        var shortTo = shorten(to);
+        if (from == null && to != null) {
+            return description + " to `" + shortTo + "`.";
+        } else if (from != null && to == null) {
+            return description + " (removed `" + shortFrom + "`).";
+        } else if (from != null) {
+            return description + " from `" + shortFrom + "` to `" + shortTo + "`.";
+        }
+        return description + ".";
+    }
+
+    private <T extends SemanticResourceChange> void appendPropertySection(
+            StringBuilder sb, String title, List<T> properties) {
+        if (properties == null || properties.isEmpty()) return;
+        sb.append("### ").append(title).append("\n\n");
+
+        for (var prop : properties) {
+            if (prop.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME
+                    && prop.getOldIRI() != null) {
+                var oldLabel = new URI(prop.getOldIRI()).getSuffix();
+                sb.append("#### Renamed from ").append(oldLabel).append(" to ")
+                        .append(prop.getLabel()).append("\n\n");
+            } else {
+                sb.append("#### ")
+                        .append(formatChangeType(prop.getSemanticResourceChangeType()))
+                        .append(" ")
+                        .append(prop.getLabel())
+                        .append("\n\n");
+            }
+
+            if (prop.getComment() != null && !prop.getComment().isBlank()) {
+                sb.append("> ").append(prop.getComment()).append("\n\n");
+            }
+
+            appendFieldChangesAsSentences(sb, prop.getChanges());
+        }
+    }
+
+    private <T extends SemanticResourceChange> void appendDirectProperties(
+            StringBuilder sb, String title, List<T> properties) {
+        if (properties == null) return;
+        var direct =
+                properties.stream()
+                        .filter(
+                                p ->
+                                        p.getSemanticResourceChangeType()
+                                                != SemanticResourceChangeType.ADDED_FROM_INHERITANCE
+                                                && p.getSemanticResourceChangeType()
+                                                != SemanticResourceChangeType.DELETED_FROM_INHERITANCE)
+                        .toList();
+        if (direct.isEmpty()) return;
+        appendPropertySection(sb, title, direct);
+    }
+
     private boolean hasDirectChange(SemanticClassChange c) {
         if (!c.getChanges().isEmpty()) return true;
         var allProperties = new ArrayList<SemanticResourceChange>(c.getAssociations());
@@ -129,16 +246,15 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         allProperties.addAll(c.getEnumEntries());
 
         if (allProperties.isEmpty()) return false;
-        return allProperties.stream().anyMatch(p ->
-                p.getSemanticResourceChangeType() != SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-                        && p.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETED_FROM_INHERITANCE);
+        return allProperties.stream()
+                .anyMatch(
+                        p -> p.getSemanticResourceChangeType() != SemanticResourceChangeType.ADDED_FROM_INHERITANCE
+                                && p.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETED_FROM_INHERITANCE);
     }
 
     private List<SemanticClassChange> findAffectedSubclasses(
-            SemanticClassChange parentChange,
-            List<SemanticClassChange> allChanges) {
+            SemanticClassChange parentChange, List<SemanticClassChange> allChanges) {
         var directPropertyLabels = collectDirectPropertyLabels(parentChange);
-
         return allChanges.stream()
                 .filter(c -> !c.getIri().equals(parentChange.getIri()))
                 .filter(c -> hasMatchingInheritedProperty(c, directPropertyLabels))
@@ -162,8 +278,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 .forEach(p -> labels.add(p.getLabel()));
     }
 
-    private boolean hasMatchingInheritedProperty(
-            SemanticClassChange classChange, Set<String> parentPropertyLabels) {
+    private boolean hasMatchingInheritedProperty(SemanticClassChange classChange, Set<String> parentPropertyLabels) {
         return matchesAny(classChange.getAttributes(), parentPropertyLabels)
                 || matchesAny(classChange.getAssociations(), parentPropertyLabels)
                 || matchesAny(classChange.getEnumEntries(), parentPropertyLabels);
@@ -177,55 +292,24 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 .anyMatch(p -> labels.contains(p.getLabel()));
     }
 
-    private void appendFieldChangesTable(StringBuilder sb, List<SemanticFieldChange> changes) {
-        if (changes == null || changes.isEmpty()) return;
-        sb.append("| Change | From | To |\n");
-        sb.append("|--------|------|----|\n");
-        for (var c : changes) {
-            sb.append("| ").append(c.getSemanticFieldChangeType())
-                    .append(" | ").append(c.getFrom() != null ? "`" + c.getFrom() + "`" : "—")
-                    .append(" | ").append(c.getTo() != null ? "`" + c.getTo() + "`" : "—")
-                    .append(" |\n");
-        }
-        sb.append("\n");
-    }
-
-    private <T extends SemanticResourceChange> void appendPropertySection(
-            StringBuilder sb, String title, List<T> properties) {
-        if (properties == null || properties.isEmpty()) return;
-        sb.append("### ").append(title).append("\n\n");
-        for (var prop : properties) {
-            sb.append("- ").append(formatChangeType(prop.getSemanticResourceChangeType()))
-                    .append(" `").append(prop.getLabel()).append("`");
-            if (!prop.getChanges().isEmpty()) {
-                sb.append("\n");
-                appendFieldChangesTable(sb, prop.getChanges());
-            } else {
-                sb.append("\n");
-            }
-        }
-        sb.append("\n");
-    }
-
-    private <T extends SemanticResourceChange> void appendDirectProperties(
-            StringBuilder sb, String title, List<T> properties) {
-        if (properties == null) return;
-        var direct = properties.stream()
-                .filter(p -> p.getSemanticResourceChangeType() != SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-                        && p.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETED_FROM_INHERITANCE)
-                .toList();
-        if (direct.isEmpty()) return;
-        appendPropertySection(sb, title, direct);
-    }
-
     private String formatChangeType(SemanticResourceChangeType type) {
         return switch (type) {
-            case ADD -> "[Added]";
-            case DELETE -> "[Deleted]";
-            case CHANGE -> "[Changed]";
-            case RENAME -> "[Renamed]";
-            case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
-            case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
+            case ADD -> "Added";
+            case DELETE -> "Deleted";
+            case CHANGE -> "Changed";
+            case RENAME -> "Renamed";
+            case ADDED_FROM_INHERITANCE -> "[Added via inheritance";
+            case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance";
         };
+    }
+
+    private String shorten(String value) {
+        if (value == null) return null;
+
+        var shortened = prefixMapping.shortForm(value);
+        if (shortened.equals(value)) {
+            return new URI(value).getSuffix();
+        }
+        return shortened;
     }
 }

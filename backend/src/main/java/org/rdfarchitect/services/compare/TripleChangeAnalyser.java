@@ -208,7 +208,8 @@ public class TripleChangeAnalyser {
      * @return A map of property URIs to TriplePropertyChange objects representing the differences
      *     in properties.
      */
-    private List<TriplePropertyChange> compareResource(Graph originalGraph, Graph updatedGraph, String uri) {
+    private List<TriplePropertyChange> compareResource(
+            Graph originalGraph, Graph updatedGraph, String uri) {
         var originalTriples =
                 originalGraph.find(NodeFactory.createURI(uri), Node.ANY, Node.ANY).toList();
         var updatedTriples =
@@ -221,8 +222,9 @@ public class TripleChangeAnalyser {
         return propertyChanges;
     }
 
-    private List<TriplePropertyChange> compareStereotypes(List<Triple> originalTriples, List<Triple> updatedTriples) {
-        var changes = new  ArrayList<TriplePropertyChange>();
+    private List<TriplePropertyChange> compareStereotypes(
+            List<Triple> originalTriples, List<Triple> updatedTriples) {
+        var changes = new ArrayList<TriplePropertyChange>();
 
         var originalStereotypes =
                 originalTriples.stream()
@@ -256,7 +258,8 @@ public class TripleChangeAnalyser {
         return changes;
     }
 
-    private List<TriplePropertyChange> compareSimplePredicates(List<Triple> originalTriples, List<Triple> updatedTriples) {
+    private List<TriplePropertyChange> compareSimplePredicates(
+            List<Triple> originalTriples, List<Triple> updatedTriples) {
         var changes = new ArrayList<TriplePropertyChange>();
 
         var originalValues =
@@ -287,7 +290,8 @@ public class TripleChangeAnalyser {
         return changes;
     }
 
-    private static TriplePropertyChange comparePredicate(Node predicate, Map<Node, Node> originalValues, Map<Node, Node> updatedValues) {
+    private static TriplePropertyChange comparePredicate(
+            Node predicate, Map<Node, Node> originalValues, Map<Node, Node> updatedValues) {
         // ignore uuid predicates, stereotypes are handled separately
         if (predicate.equals(RDFA.uuid.asNode())) {
             return null;
