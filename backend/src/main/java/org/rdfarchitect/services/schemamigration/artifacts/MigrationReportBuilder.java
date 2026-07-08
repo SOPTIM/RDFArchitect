@@ -19,10 +19,13 @@ package org.rdfarchitect.services.schemamigration.artifacts;
 
 import org.apache.jena.graph.Graph;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+
 import java.util.List;
 
 public interface MigrationReportBuilder {
-    String generateDetailedMigrationReport(List<SemanticClassChange> classChanges, Graph originalGraph);
+    String generateDetailedMigrationReport(
+            List<SemanticClassChange> classChanges, Graph originalGraph);
 
-    String generateSummaryMigrationReport(List<SemanticClassChange> classChanges, Graph originalGraph);
+    String generateSummaryMigrationReport(
+            List<SemanticClassChange> classChanges, Graph originalGraph);
 }

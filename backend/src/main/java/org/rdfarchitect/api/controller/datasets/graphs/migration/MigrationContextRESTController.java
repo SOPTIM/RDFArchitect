@@ -91,11 +91,10 @@ public class MigrationContextRESTController {
                     @RequestParam(required = false)
                     String graphB,
             @Parameter(
-                    description =
-                            "Whether to ignore prefixes in the comparison and rename detection. Defaults to false.")
+                            description =
+                                    "Whether to ignore prefixes in the comparison and rename detection. Defaults to false.")
                     @RequestParam(required = false, defaultValue = "false")
-                    boolean ignorePrefixes
-            ){
+                    boolean ignorePrefixes) {
         logger.info("Received POST request: \"/api/migrations/context\" from \"{}\".", originURL);
 
         // file to file
@@ -115,18 +114,13 @@ public class MigrationContextRESTController {
         else if (fileA != null && datasetB != null && graphB != null) {
             var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(
-                    fileA,
-                    new GraphIdentifier(datasetB, extendedGraphURIB),
-                    ignorePrefixes
-            );
+                    fileA, new GraphIdentifier(datasetB, extendedGraphURIB), ignorePrefixes);
         }
         // stored to file
         else if (datasetA != null && graphA != null && fileA != null) {
             var extendedGraphURIA = expandURIUseCase.expandUri(datasetA, graphA);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(datasetA, extendedGraphURIA),
-                    fileA,
-                    ignorePrefixes);
+                    new GraphIdentifier(datasetA, extendedGraphURIA), fileA, ignorePrefixes);
         } else {
             logger.warn(
                     "Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.",

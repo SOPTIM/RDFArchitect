@@ -163,6 +163,18 @@ public class RenameObjectBuilder {
                     .orElse(null);
         }
 
+        if (target.getSemanticFieldChangeType() == SemanticFieldChangeType.STEREOTYPE_REMOVED
+                || target.getSemanticFieldChangeType() == SemanticFieldChangeType.MADE_ABSTRACT) {
+            return changes.stream()
+                    .filter(
+                            c ->
+                                    c.getSemanticFieldChangeType()
+                                            == SemanticFieldChangeType.STEREOTYPE_ADDED)
+                    .filter(c -> Objects.equals(c.getTo(), target.getFrom()))
+                    .findFirst()
+                    .orElse(null);
+        }
+
         return changes.stream()
                 .filter(
                         change ->

@@ -69,14 +69,18 @@ public class SemanticChangeAnalyser {
 
         if (tripleClassChange.getAttributes() != null) {
             for (var attribute : tripleClassChange.getAttributes()) {
-                semanticChangeObject.getAttributes().add(getSemanticChangesForAttribute(attribute));
+                var attributeChange = getSemanticChangesForAttribute(attribute);
+                if (attributeChange != null) {
+                    semanticChangeObject.getAttributes().add(attributeChange);
+                }
             }
         }
         if (tripleClassChange.getAssociations() != null) {
             for (var association : tripleClassChange.getAssociations()) {
-                semanticChangeObject
-                        .getAssociations()
-                        .add(getSemanticChangesForAssociation(association));
+                var associationChange = getSemanticChangesForAssociation(association);
+                if (associationChange != null) {
+                    semanticChangeObject.getAssociations().add(associationChange);
+                }
             }
         }
         if (tripleClassChange.getEnumEntries() != null) {
@@ -109,7 +113,12 @@ public class SemanticChangeAnalyser {
             }
         }
 
-        return semanticChangeObject;
+        // reformatting of multiplicity can lead to change object with no semantic changes
+        if (!changes.isEmpty()) {
+            return semanticChangeObject;
+        } else {
+            return null;
+        }
     }
 
     private SemanticAssociationChange getSemanticChangesForAssociation(
@@ -120,7 +129,7 @@ public class SemanticChangeAnalyser {
         semanticChangeObject.setSemanticResourceChangeType(
                 getResourceChangeType(associationChanges));
 
-        // parse properties for individual changes
+        var changes = semanticChangeObject.getChanges();
         for (var propertyChange : associationChanges) {
             var action = new SemanticFieldChange(propertyChange);
             var mappedType =
@@ -128,11 +137,16 @@ public class SemanticChangeAnalyser {
                             "Association", propertyChange);
             if (mappedType != null) {
                 action.setSemanticFieldChangeType(mappedType);
-                semanticChangeObject.getChanges().add(action);
+                changes.add(action);
             }
         }
 
-        return semanticChangeObject;
+        // reformatting of multiplicity can lead to change object with no semantic changes
+        if (!changes.isEmpty()) {
+            return semanticChangeObject;
+        } else {
+            return null;
+        }
     }
 
     private SemanticEnumEntryChange getSemanticChangesForEnumEntry(TripleResourceChange enumEntry) {
