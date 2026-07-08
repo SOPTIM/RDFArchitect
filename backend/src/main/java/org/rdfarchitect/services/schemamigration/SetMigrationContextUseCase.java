@@ -31,7 +31,8 @@ public interface SetMigrationContextUseCase {
      * @param updatesSchema the uploaded old schema
      * @param ignorePrefixes whether to ignore prefixes in comparison and rename detection
      */
-    void setMigrationContext(MultipartFile originalSchema, GraphIdentifier updatesSchema, boolean ignorePrefixes);
+    void setMigrationContext(
+            MultipartFile originalSchema, GraphIdentifier updatesSchema, boolean ignorePrefixes);
 
     /**
      * Sets the migration context for the given graph identifier of an edited schema loaded in
@@ -41,7 +42,8 @@ public interface SetMigrationContextUseCase {
      * @param updatedSchema the graph identifier of the old schema loaded in memory
      * @param ignorePrefixes whether to ignore prefixes in comparison and rename detection
      */
-    void setMigrationContext(GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes);
+    void setMigrationContext(
+            GraphIdentifier originalSchema, GraphIdentifier updatedSchema, boolean ignorePrefixes);
 
     /**
      * Sets the migration context for a stored original schema and an uploaded updated schema.
@@ -50,7 +52,8 @@ public interface SetMigrationContextUseCase {
      * @param updatedSchema the uploaded updated schema
      * @param ignorePrefixes whether to ignore prefixes in comparison and rename detection
      */
-    void setMigrationContext(GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes);
+    void setMigrationContext(
+            GraphIdentifier originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes);
 
     /**
      * Sets the migration context for the two uploaded schema files.
@@ -59,5 +62,6 @@ public interface SetMigrationContextUseCase {
      * @param updatedSchema the graph identifier of the old schema loaded in memory
      * @param ignorePrefixes whether to ignore prefixes in comparison and rename detection
      */
-    void setMigrationContext(MultipartFile originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes);
+    void setMigrationContext(
+            MultipartFile originalSchema, MultipartFile updatedSchema, boolean ignorePrefixes);
 }

@@ -25,7 +25,6 @@ import lombok.experimental.SuperBuilder;
 
 import org.apache.jena.rdf.model.Resource;
 import org.rdfarchitect.models.changes.triplechanges.TripleResourceChange;
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,6 +68,7 @@ public final class SemanticAttributeChange extends SemanticResourceChange {
         optional = other.isOptional();
         forceDefaultValue = other.isForceDefaultValue();
         allowedValues = new ArrayList<>(other.getAllowedValues());
+        inheritedFrom = other.getInheritedFrom();
     }
 
     public SemanticAttributeChange(SemanticResourceChange resourceChange) {
