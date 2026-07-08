@@ -65,7 +65,9 @@ public class ProfileHeaderValidationRule implements ValidationRule {
         if (cgmesVersion == CGMESVersion.V3_0) {
             var ontologyDTO = OntologyFactory.createOntologyDTO(model);
 
-            if (ontologyDoesNotExists(issues, ontologyDTO)) return;
+            if (ontologyDoesNotExists(issues, ontologyDTO)) {
+                return;
+            }
 
             var presentIris =
                     ontologyDTO.getEntries().stream()

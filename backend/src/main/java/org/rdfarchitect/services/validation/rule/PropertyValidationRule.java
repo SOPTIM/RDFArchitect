@@ -135,7 +135,9 @@ public class PropertyValidationRule implements ValidationRule {
 
     private void validateAttribute(Resource attribute, List<SchemaValidationIssueDTO> issues) {
         var uri = attribute.getURI();
-        if (validateAttributeHasDatatype(attribute, issues, uri)) return;
+        if (validateAttributeHasDatatype(attribute, issues, uri)) {
+            return;
+        }
         validateAttributeDatatype(attribute, issues);
     }
 
