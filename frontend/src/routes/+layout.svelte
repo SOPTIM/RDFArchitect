@@ -24,11 +24,16 @@
         installBackendFetchInterceptor,
         probeBackendConnection,
     } from "$lib/api/backendConnectionMonitor.svelte.js";
-    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
+    import {
+        getSession,
+        loadSnapshot as loadSnapshotAPI,
+    } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
+    import { PUBLIC_EMBED_SESSION_HANDSHAKE } from "$lib/config/runtime";
+    import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -83,7 +88,18 @@
         installBackendFetchInterceptor();
         probeBackendConnection();
         loadSnapshot();
+        // Lets an embedding IDE read the datasets of this very session; opt-in per deployment.
+        return installSessionHandshake({
+            enabled: PUBLIC_EMBED_SESSION_HANDSHAKE,
+            fetchSessionId: sessionId,
+        });
     });
+
+    /** The backend session this browser is using, or null when it cannot be read. */
+    async function sessionId() {
+        const { data, error } = await getSession();
+        return error ? null : (data?.id ?? null);
+    }
 
     async function requestEnableEditing() {
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
@@ -108,7 +124,17 @@
                 path: { base64Token: base64Param },
             });
             if (!error) {
-                await goto("/mainpage");
+                // Keep any model-selection params so a snapshot link can deep-link into a
+                // dataset/graph/package or class (e.g. /?snapshot=...&class=<iri>).
+                const forwarded = new URLSearchParams();
+                for (const key of ["dataset", "graph", "package", "class"]) {
+                    const value = page.url.searchParams.get(key);
+                    if (value) {
+                        forwarded.set(key, value);
+                    }
+                }
+                const query = forwarded.toString();
+                await goto(query ? `/mainpage?${query}` : "/mainpage");
                 toastStore.success(
                     "Snapshot loaded",
                     "The shared snapshot has been loaded.",
