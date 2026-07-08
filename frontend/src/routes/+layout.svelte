@@ -105,7 +105,17 @@
         if (base64Param) {
             const res = await bec.loadSnapshot(base64Param);
             if (res.ok) {
-                await goto("/mainpage");
+                // Keep any model-selection params so a snapshot link can deep-link into a
+                // dataset/graph/package or class (e.g. /?snapshot=...&class=<iri>).
+                const forwarded = new URLSearchParams();
+                for (const key of ["dataset", "graph", "package", "class"]) {
+                    const value = page.url.searchParams.get(key);
+                    if (value) {
+                        forwarded.set(key, value);
+                    }
+                }
+                const query = forwarded.toString();
+                await goto(query ? `/mainpage?${query}` : "/mainpage");
                 toastStore.success(
                     "Snapshot loaded",
                     "The shared snapshot has been loaded.",
