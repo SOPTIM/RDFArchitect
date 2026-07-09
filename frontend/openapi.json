@@ -1960,7 +1960,7 @@
     },
     "/api/datasets/{datasetName}/diagrams/{diagramId}" : {
       "delete" : {
-        "operationId" : "deleteDiagram_1",
+        "operationId" : "deleteCustomDatasetDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -2056,7 +2056,7 @@
         ]
       },
       "put" : {
-        "operationId" : "replaceDiagram_1",
+        "operationId" : "replaceCustomDatasetDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -2116,7 +2116,7 @@
     },
     "/api/datasets/{datasetName}/diagrams/{diagramId}/classes" : {
       "post" : {
-        "operationId" : "addToDiagram_1",
+        "operationId" : "addToCustomDatasetDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -2180,7 +2180,7 @@
     },
     "/api/datasets/{datasetName}/diagrams/{diagramId}/classes/{classId}" : {
       "delete" : {
-        "operationId" : "removeFromDiagram_1",
+        "operationId" : "removeFromCustomDatasetDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -3427,7 +3427,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "The uuid of the new attribute."
           }
         },
         "summary" : "Replace/Create attribute",
@@ -3659,7 +3659,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries" : {
       "post" : {
-        "description" : "Creates a new enum entry for a specified class..",
+        "description" : "Creates a new enum entry for a specified class.",
         "operationId" : "createEnumEntry",
         "parameters" : [
           {
@@ -3721,7 +3721,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "UUID of the newly created enum entry."
           }
         },
         "summary" : "Create enum entry",
@@ -4621,7 +4621,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}" : {
       "delete" : {
-        "operationId" : "deleteDiagram",
+        "operationId" : "deleteCustomGraphDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -4735,7 +4735,7 @@
         ]
       },
       "put" : {
-        "operationId" : "replaceDiagram",
+        "operationId" : "replaceCustomGraphDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -4800,7 +4800,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes" : {
       "post" : {
-        "operationId" : "addToDiagram",
+        "operationId" : "addToCustomGraphDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -4873,7 +4873,7 @@
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes/{classId}" : {
       "delete" : {
-        "operationId" : "removeFromDiagram",
+        "operationId" : "removeFromCustomGraphDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",

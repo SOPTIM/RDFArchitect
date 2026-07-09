@@ -59,9 +59,9 @@ public class CustomDiagramsRESTController {
 
     private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
 
-    private final DeleteCustomDiagramUseCase deleteCustomDiagram;
+    private final DeleteCustomDiagramUseCase deleteCustomDiagramUseCase;
 
-    private final ReplaceCustomDiagramUseCase replaceCustomDiagram;
+    private final ReplaceCustomDiagramUseCase replaceCustomDiagramUseCase;
 
     private final ExpandURIUseCase expandURIUseCase;
 
@@ -109,7 +109,7 @@ public class CustomDiagramsRESTController {
     }
 
     @PutMapping
-    public String replaceDiagram(
+    public String replaceCustomGraphDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -134,7 +134,7 @@ public class CustomDiagramsRESTController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        replaceCustomDiagram.replaceCustomDiagram(
+        replaceCustomDiagramUseCase.replaceCustomGraphDiagram(
                 new GraphIdentifier(datasetName, extendedGraphURI), diagramId, diagram);
 
         logger.info(
@@ -147,7 +147,7 @@ public class CustomDiagramsRESTController {
     }
 
     @DeleteMapping
-    public String deleteDiagram(
+    public String deleteCustomGraphDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -170,7 +170,7 @@ public class CustomDiagramsRESTController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        deleteCustomDiagram.deleteCustomDiagram(
+        deleteCustomDiagramUseCase.deleteCustomGraphDiagram(
                 new GraphIdentifier(datasetName, extendedGraphURI), diagramId);
 
         logger.info(

@@ -24,7 +24,7 @@
     import {
         DiagramType,
         editorState,
-        forceReloadTrigger,
+        forceReloadTrigger
     } from "$lib/sharedState.svelte.js";
     import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
     import { graphStore } from "$lib/stores/GraphStore.ts";
@@ -32,7 +32,7 @@
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {
         createClassListForGraph,
-        createPackageListForGraph,
+        createPackageListForGraph
     } from "./customDiagramDialogUtils.js";
     import GraphSelectSection from "./GraphSelectSection.svelte";
 
@@ -42,7 +42,7 @@
         diagramName = "",
         diagramId,
         selectedClasses = [],
-        allDiagrams = [],
+        allDiagrams = []
     } = $props();
 
     let localDiagramName = $state();
@@ -53,7 +53,7 @@
     let packagesByGraph = $state({});
 
     let violations = $derived(
-        isValidDiagramName(localDiagramName, allDiagrams),
+        isValidDiagramName(localDiagramName, allDiagrams)
     );
     let disableSubmit = $derived(violations.length > 0);
 
@@ -74,13 +74,12 @@
 
     async function fetchGraphs() {
         await graphStore.load(lockedDatasetName);
-        graphs = graphStore
-            .getGraphs(lockedDatasetName)
-            .map(graph => {
+        const result = graphStore.getGraphs(lockedDatasetName) ?? [];
+        graphs = result.map(graph => {
                 return {
                     ...graph,
                     selected: false,
-                    expanded: false,
+                    expanded: false
                 };
             })
             .sort((a, b) => getUri(a).localeCompare(getUri(b)));
@@ -91,7 +90,7 @@
             const graphUri = getUri(graph);
             packagesByGraph[graphUri] = await createPackageListForGraph(
                 lockedDatasetName,
-                graphUri,
+                graphUri
             );
         }
     }
@@ -105,9 +104,9 @@
                 result[graphUri] = await createClassListForGraph(
                     lockedDatasetName,
                     graphUri,
-                    selectedClasses,
+                    selectedClasses
                 );
-            }),
+            })
         );
 
         classesByPackageAndGraph = result;
@@ -123,9 +122,9 @@
                 graphPackages.forEach(pack => (pack.selected = newState));
 
                 Object.values(packages).forEach(classes =>
-                    classes.forEach(cls => (cls.selected = newState)),
+                    classes.forEach(cls => (cls.selected = newState))
                 );
-            },
+            }
         );
     }
 
@@ -159,27 +158,27 @@
 
     async function submitDiagramClasses() {
         const selectedClassList = Object.entries(
-            classesByPackageAndGraph,
+            classesByPackageAndGraph
         ).flatMap(([graphUri, packages]) =>
             Object.values(packages)
                 .flat()
                 .filter(cls => cls.selected === true)
                 .map(cls => ({
                     uuid: cls.uuid,
-                    graphUri: graphUri,
-                })),
+                    graphUri: graphUri
+                }))
         );
 
         const diagramData = {
             diagramId: localDiagramId,
             name: localDiagramName,
-            classes: selectedClassList,
+            classes: selectedClassList
         };
 
         const { error } = await customDiagramStore.saveDatasetDiagram(
             lockedDatasetName,
             localDiagramId,
-            diagramData,
+            diagramData
         );
 
         if (error) return;
@@ -188,7 +187,7 @@
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.CUSTOM_DATASET_DIAGRAM,
-            id: localDiagramId,
+            id: localDiagramId
         });
         forceReloadTrigger.trigger();
     }

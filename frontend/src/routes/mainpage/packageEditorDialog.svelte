@@ -29,6 +29,7 @@
         getPackageDisplayLabel,
         restorePackageLabelPrefix,
     } from "$lib/utils/package-label.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -49,13 +50,20 @@
     }
 
     async function onOpen() {
+        await datasetStore.load();
+        namespaces = datasetStore.getNamespaces(datasetName);
+
         if (!datasetName || !graphUri) {
             packages = [];
             return;
         }
 
         await packageStore.load(datasetName, graphUri);
-        packages = packageStore.getPackages(datasetName, graphUri);
+        const result = packageStore.getPackages(datasetName, graphUri);
+        packages = [
+            ...result.internal,
+            ...result.external,
+        ]
 
         if (pack) {
             isNewPackage = false;

@@ -643,7 +643,7 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
         attribute: AttributeDto,
-    ): Promise<Result> {
+    ): Promise<Result<string>> {
         if (!attribute.uuid) {
             const err = new Error("attribute.uuid is required");
             console.error(
@@ -657,7 +657,7 @@ function createClassStore() {
             `${LOG_PREFIX} Replacing attribute uuid="${attribute.uuid}" in class classUUID="${classUUID}"`,
         );
 
-        const { error } = await replaceAttribute({
+        const { data, error } = await replaceAttribute({
             path: {
                 datasetName,
                 graphURI,
@@ -687,7 +687,7 @@ function createClassStore() {
             "Attribute saved",
             "Changes on the attribute successfully saved.",
         );
-        return { error: null };
+        return { error: null, data: data };
     }
 
     async function deleteAttribute(
@@ -739,12 +739,12 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
         enumEntry: EnumEntryDto,
-    ): Promise<Result> {
+    ): Promise<Result<string>> {
         console.log(
             `${LOG_PREFIX} Adding enum entry to class classUUID="${classUUID}"`,
         );
 
-        const { error } = await createEnumEntry({
+        const { data, error } = await createEnumEntry({
             path: { datasetName, graphURI, classUUID },
             body: enumEntry,
         });
@@ -772,7 +772,7 @@ function createClassStore() {
             "Enum entry created",
             "Enum entry was added successfully.",
         );
-        return { error: null };
+        return { error: null, data: data };
     }
 
     async function replaceExistingEnumEntry(
@@ -780,7 +780,7 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
         enumEntry: EnumEntryDto,
-    ): Promise<Result> {
+    ): Promise<Result<string>> {
         if (!enumEntry.uuid) {
             const err = new Error("enumEntry.uuid is required");
             console.error(
@@ -794,7 +794,7 @@ function createClassStore() {
             `${LOG_PREFIX} Replacing enum entry uuid="${enumEntry.uuid}"`,
         );
 
-        const { error } = await replaceEnumEntry({
+        const { data, error } = await replaceEnumEntry({
             path: {
                 datasetName,
                 graphURI,
@@ -821,7 +821,7 @@ function createClassStore() {
             `${LOG_PREFIX} Replaced enum entry uuid="${enumEntry.uuid}"`,
         );
         toastStore.success("Enum entry saved", "Changes were applied.");
-        return { error: null };
+        return { error: null, data: data };
     }
 
     async function deleteEnumEntry(

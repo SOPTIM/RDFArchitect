@@ -49,7 +49,7 @@ export async function createClassListForGraph(
     selectedClasses,
 ) {
     await classStore.load(datasetName, graphURI);
-    const classList = await classStore.getClasses(datasetName, graphURI);
+    const classList = await classStore.getClasses(datasetName, graphURI) ?? [];
 
     const grouped = {};
 

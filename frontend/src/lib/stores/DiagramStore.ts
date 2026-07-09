@@ -21,15 +21,14 @@ import { describeError } from "./StoreLogging";
 import {
     getCustomDatasetDiagramList,
     getCustomGraphDiagramList,
-    replaceDiagram,
-    replaceDiagram1,
-    deleteDiagram,
-    deleteDiagram1,
-    addToDiagram,
-    addToDiagram1,
-    removeFromDiagram,
-    removeFromDiagram1,
     type CustomDiagram,
+    replaceCustomDatasetDiagram,
+    replaceCustomGraphDiagram,
+    deleteCustomDatasetDiagram,
+    deleteCustomGraphDiagram,
+    addToCustomDatasetDiagram,
+    removeFromCustomDatasetDiagram,
+    removeFromCustomGraphDiagram,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -253,7 +252,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         diagram: unknown,
     ): Promise<Result> {
-        const { error } = await replaceDiagram1({
+        const { error } = await replaceCustomDatasetDiagram({
             path: { datasetName, diagramId },
             body: diagram as never,
         });
@@ -278,7 +277,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         diagram: unknown,
     ): Promise<Result> {
-        const { error } = await replaceDiagram({
+        const { error } = await replaceCustomGraphDiagram({
             path: { datasetName, graphURI, diagramId },
             body: diagram as never,
         });
@@ -301,7 +300,7 @@ function createCustomDiagramStore() {
         datasetName: string,
         diagramId: string,
     ): Promise<Result> {
-        const { error } = await deleteDiagram1({
+        const { error } = await deleteCustomDatasetDiagram({
             path: { datasetName, diagramId },
         });
 
@@ -327,7 +326,7 @@ function createCustomDiagramStore() {
         graphURI: string,
         diagramId: string,
     ): Promise<Result> {
-        const { error } = await deleteDiagram({
+        const { error } = await deleteCustomGraphDiagram({
             path: { datasetName, graphURI, diagramId },
         });
 
@@ -353,7 +352,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         classes: string[],
     ): Promise<Result> {
-        const { error } = await addToDiagram1({
+        const { error } = await addToCustomDatasetDiagram({
             path: { datasetName, diagramId },
             body: classes as never,
         });
@@ -380,7 +379,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         classes: string[],
     ): Promise<Result> {
-        const { error } = await addToDiagram({
+        const { error } = await addToCustomDatasetDiagram({
             path: { datasetName, graphURI, diagramId },
             body: classes as never,
         });
@@ -406,7 +405,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         classId: string,
     ): Promise<Result> {
-        const { error } = await removeFromDiagram1({
+        const { error } = await removeFromCustomDatasetDiagram({
             path: { datasetName, diagramId, classId },
         });
 
@@ -432,7 +431,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         classId: string,
     ): Promise<Result> {
-        const { error } = await removeFromDiagram({
+        const { error } = await removeFromCustomGraphDiagram({
             path: { datasetName, graphURI, diagramId, classId },
         });
 

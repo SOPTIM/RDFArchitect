@@ -23,7 +23,7 @@
     import {
         getCustomDatasetViewRenderingData,
         getCustomProfileViewRenderingData,
-        getRenderingDataParameterized,
+        getRenderingDataParameterized
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
@@ -34,7 +34,7 @@
         editorState,
         graphViewState,
         forceReloadTrigger,
-        DiagramType,
+        DiagramType
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
@@ -58,7 +58,7 @@
     let diagramRequestKey = null;
     let showSvelteFlowEmptyState = $derived(
         renderingFormat === SVELTEFLOW_FORMAT &&
-            (response?.nodes?.length ?? 0) === 0,
+        (response?.nodes?.length ?? 0) === 0
     );
 
     $effect(async () => {
@@ -84,7 +84,7 @@
             datasetName,
             graphUri,
             diagramId,
-            filter,
+            filter
         );
         const hasCurrentResponse = untrack(() => !!response);
         const showBlockingLoading =
@@ -105,7 +105,7 @@
                     datasetName,
                     graphUri,
                     diagramId,
-                    filter,
+                    filter
                 );
             }
         } else {
@@ -120,7 +120,7 @@
         datasetName,
         graphUri,
         packageUUID,
-        filter,
+        filter
     ) {
         let graphFilter = {
             packageUUID,
@@ -129,24 +129,35 @@
             includeAssociations: filter.includeAssociations,
             includeInheritance: filter.includeInheritance,
             includeRelationsToExternalPackages:
-                filter.includeRelationsToExternalPackages,
+            filter.includeRelationsToExternalPackages
         };
 
-        const { data, error } = await getRenderingDataParameterized({
-            path: { datasetName: datasetName, graphURI: graphUri },
-            body: graphFilter,
-        });
+        try {
 
-        if (error) {
+            const { data, error } = await getRenderingDataParameterized({
+                path: { datasetName: datasetName, graphURI: graphUri },
+                body: graphFilter
+            });
+
+            if (error) {
+                response = null;
+                renderingFormat = null;
+                displayDiagram = false;
+                isLoading = false;
+            } else {
+                response = data;
+                renderingFormat = data.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching package rendering data:", error);
             response = null;
             renderingFormat = null;
             displayDiagram = false;
+        } finally {
             isLoading = false;
-        } else {
-            response = data;
-            renderingFormat = data.format;
-            displayDiagram = true;
         }
+
     }
 
     async function fetchDatasetDiagramRenderingData(diagramId) {
@@ -154,8 +165,8 @@
             const { data, error } = await getCustomDatasetViewRenderingData({
                 path: {
                     datasetName: editorState.selectedDataset.getValue(),
-                    diagramId: diagramId,
-                },
+                    diagramId: diagramId
+                }
             });
 
             if (error) {
@@ -180,8 +191,8 @@
                 path: {
                     datasetName: editorState.selectedDataset.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
-                    diagramId: diagramId,
-                },
+                    diagramId: diagramId
+                }
             });
 
             if (error) {
@@ -205,7 +216,7 @@
             datasetName,
             graphUri,
             packageUUID,
-            filter,
+            filter
         });
     }
 

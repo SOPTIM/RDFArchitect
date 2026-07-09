@@ -80,9 +80,9 @@
         await datasetStore.load();
         for (const dataset of $datasetStore.data) {
             if (dataset.readOnly) {
-                readOnlyDatasets.push(dataset);
+                readOnlyDatasets.push(dataset.label);
             } else {
-                modifiableDatasets.push(dataset);
+                modifiableDatasets.push(dataset.label);
             }
         }
         await refreshGraphNames();

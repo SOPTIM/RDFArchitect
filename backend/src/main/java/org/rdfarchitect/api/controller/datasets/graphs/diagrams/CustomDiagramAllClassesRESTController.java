@@ -52,7 +52,7 @@ public class CustomDiagramAllClassesRESTController {
     private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @PostMapping
-    public String addToDiagram(
+    public String addToCustomGraphDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

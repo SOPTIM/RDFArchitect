@@ -129,7 +129,11 @@
         }
 
         await packageStore.load(datasetName, graphURI);
-        return packageStore.getPackages(datasetName, graphURI);
+        const result = await packageStore.getPackages(datasetName, graphURI);
+        packages = [
+            ...result.internal,
+            ...result.external,
+        ]
     }
 
     async function getClasses(datasetName, graphURI) {
@@ -137,7 +141,8 @@
             classes = [];
             return;
         }
-        return classStore.getClasses(datasetName, graphURI);
+        await classStore.load(datasetName, graphURI);
+        classes = classStore.getClasses(datasetName, graphURI);
     }
 
     function getExpandedNamespace(namespace) {

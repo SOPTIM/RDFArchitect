@@ -31,11 +31,11 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class CustomDiagramService
+public class CustomCustomDiagramService
         implements GetCustomDiagramsUseCase,
                 ReplaceCustomDiagramUseCase,
                 DeleteCustomDiagramUseCase,
-                RemoveFromDiagramUseCase {
+        RemoveFromCustomDiagramUseCase {
 
     private final DatabasePort databasePort;
 
@@ -52,13 +52,13 @@ public class CustomDiagramService
     }
 
     @Override
-    public void deleteCustomDiagram(String datasetName, String diagramId) {
+    public void deleteCustomDatasetDiagram(String datasetName, String diagramId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.remove(UUID.fromString(diagramId));
     }
 
     @Override
-    public void replaceCustomDiagram(String datasetName, String diagramId, CustomDiagram diagram) {
+    public void replaceCustomDatasetDiagram(String datasetName, String diagramId, CustomDiagram diagram) {
         if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
             throw new IllegalArgumentException(
                     "Diagram ID mismatch: URL parameter '"
@@ -72,7 +72,7 @@ public class CustomDiagramService
     }
 
     @Override
-    public void removeFromDiagram(String datasetName, String diagramId, UUID classId) {
+    public void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId) {
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         var diagram = diagrams.get(UUID.fromString(diagramId));
         if (diagram != null) {
@@ -83,7 +83,7 @@ public class CustomDiagramService
     }
 
     @Override
-    public void deleteCustomDiagram(GraphIdentifier graphIdentifier, String diagramId) {
+    public void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             ctx.getCustomDiagrams().remove(UUID.fromString(diagramId));
             ctx.commit("deleted diagram %s".formatted(diagramId));
@@ -91,7 +91,7 @@ public class CustomDiagramService
     }
 
     @Override
-    public void replaceCustomDiagram(
+    public void replaceCustomGraphDiagram(
             GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram) {
         if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
             throw new IllegalArgumentException(
@@ -108,7 +108,7 @@ public class CustomDiagramService
     }
 
     @Override
-    public void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
+    public void removeFromCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             if (diagram != null) {

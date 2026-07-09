@@ -32,6 +32,7 @@ import {
     isSelectedPackage,
     isSelectedClass,
 } from "./packageNavigationUtils.svelte.js";
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
 /**
  * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.
@@ -72,7 +73,18 @@ export async function getNavEntryList(existingDatasetNavList) {
     syncList(result, freshEntries, null);
 
     for (const datasetNavEntry of result) {
-        await populateDataset(datasetNavEntry);
+        try {
+            await populateDataset(datasetNavEntry);
+        } catch (err) {
+            console.error(
+                "Error populating dataset " + datasetNavEntry.id,
+                err,
+            );
+            toastStore.error(
+                "Failed to load dataset",
+                `Could not load graphs for dataset "${datasetNavEntry.id}". Other datasets are still available.`,
+            );
+        }
     }
     return result;
 }
@@ -195,6 +207,7 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
 function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     const existingClassList = packageNavObject.children;
 
+    allClasses = allClasses ?? [];
     const freshEntries = allClasses
         .filter(cls => packageNavObject.id === (cls.package?.uuid ?? "default"))
         .sort((a, b) => a.label.localeCompare(b.label))

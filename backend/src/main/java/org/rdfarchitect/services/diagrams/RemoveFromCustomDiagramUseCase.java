@@ -21,7 +21,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 
 import java.util.UUID;
 
-public interface RemoveFromDiagramUseCase {
+public interface RemoveFromCustomDiagramUseCase {
 
     /**
      * Removes a class from a specified custom diagram.
@@ -30,7 +30,7 @@ public interface RemoveFromDiagramUseCase {
      * @param diagramId the id of the custom diagram
      * @param classId the uuid of the class to remove from the custom diagram
      */
-    void removeFromDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId);
+    void removeFromCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId);
 
     /**
      * Removes a class from a specified custom diagram.
@@ -39,7 +39,7 @@ public interface RemoveFromDiagramUseCase {
      * @param diagramId the id of the custom diagram
      * @param classId the uuid of the class to remove from the custom diagram
      */
-    void removeFromDiagram(String datasetName, String diagramId, UUID classId);
+    void removeFromCustomDatasetDiagram(String datasetName, String diagramId, UUID classId);
 
     /**
      * Removes a class from all diagrams

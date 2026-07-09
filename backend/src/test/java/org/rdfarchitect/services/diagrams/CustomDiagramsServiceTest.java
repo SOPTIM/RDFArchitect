@@ -18,7 +18,6 @@
 package org.rdfarchitect.services.diagrams;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 import org.apache.jena.query.ReadWrite;
@@ -39,14 +38,14 @@ import java.util.concurrent.ConcurrentHashMap;
 class CustomDiagramsServiceTest {
 
     private DatabasePort databasePort;
-    private CustomDiagramService service;
+    private CustomCustomDiagramService service;
 
     private GraphIdentifier graphIdentifier;
 
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
-        service = new CustomDiagramService(databasePort);
+        service = new CustomCustomDiagramService(databasePort);
 
         graphIdentifier = mock(GraphIdentifier.class);
         when(graphIdentifier.graphUri()).thenReturn("http://example.org#graph");
@@ -90,7 +89,7 @@ class CustomDiagramsServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        service.deleteCustomDiagram("dataset", diagramId.toString());
+        service.deleteCustomDatasetDiagram("dataset", diagramId.toString());
 
         assertThat(map).doesNotContainKey(diagramId);
     }
@@ -104,7 +103,7 @@ class CustomDiagramsServiceTest {
         var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
-        service.deleteCustomDiagram(graphIdentifier, diagramId.toString());
+        service.deleteCustomGraphDiagram(graphIdentifier, diagramId.toString());
 
         assertThat(map).doesNotContainKey(diagramId);
     }
@@ -117,7 +116,7 @@ class CustomDiagramsServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        service.replaceCustomDiagram("dataset", diagramId.toString(), newDiagram);
+        service.replaceCustomDatasetDiagram("dataset", diagramId.toString(), newDiagram);
 
         assertThat(map).containsEntry(diagramId, newDiagram);
     }
@@ -131,7 +130,7 @@ class CustomDiagramsServiceTest {
         var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
-        service.replaceCustomDiagram(graphIdentifier, diagramId.toString(), newDiagram);
+        service.replaceCustomGraphDiagram(graphIdentifier, diagramId.toString(), newDiagram);
 
         assertThat(map).containsEntry(diagramId, newDiagram);
     }
@@ -148,7 +147,7 @@ class CustomDiagramsServiceTest {
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
-        service.removeFromDiagram("dataset", diagramId.toString(), classId);
+        service.removeFromCustomDatasetDiagram("dataset", diagramId.toString(), classId);
 
         assertThat(diagram.getClasses()).isEmpty();
     }
@@ -166,7 +165,7 @@ class CustomDiagramsServiceTest {
         var graph = mockGraph(map);
         when(databasePort.getGraphWithContext(graphIdentifier)).thenReturn(graph);
 
-        service.removeFromDiagram(graphIdentifier, diagramId.toString(), classId);
+        service.removeFromCustomGraphDiagram(graphIdentifier, diagramId.toString(), classId);
 
         assertThat(diagram.getClasses()).isEmpty();
     }

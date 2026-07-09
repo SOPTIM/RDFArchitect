@@ -111,6 +111,7 @@
             graphNavEntry.id,
         );
         ontology = data;
+
         canUndo = versionControlStore.canUndo(
             datasetNavEntry.id,
             graphNavEntry.id,
@@ -119,6 +120,22 @@
             datasetNavEntry.id,
             graphNavEntry.id,
         );
+    }
+
+    function undo() {
+        const { error } = versionControlStore.undo(datasetNavEntry.id, graphNavEntry.id);
+
+        if (!error)  {
+            forceReloadTrigger.trigger();
+        }
+    }
+
+    function redo() {
+        const { error } = versionControlStore.redo(datasetNavEntry.id, graphNavEntry.id);
+
+        if (!error)  {
+           forceReloadTrigger.trigger();
+        }
     }
 
     function focusGraphContext() {
@@ -177,11 +194,7 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    versionControlStore
-                        .undo(datasetNavEntry.id, graphNavEntry.id)
-                        .then(success => {
-                            if (success) forceReloadTrigger.trigger();
-                        });
+                    undo();
                 }}
                 disabled={readonly || !canUndo}
                 faIcon={faRotateLeft}
@@ -192,11 +205,7 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    versionControlStore
-                        .redo(datasetNavEntry.id, graphNavEntry.id)
-                        .then(success => {
-                            if (success) forceReloadTrigger.trigger();
-                        });
+                    redo()
                 }}
                 disabled={readonly || !canRedo}
                 faIcon={faRotateRight}

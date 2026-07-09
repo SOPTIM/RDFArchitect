@@ -48,7 +48,7 @@ public class CustomDatasetDiagramAllClassesRESTController {
     private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @PostMapping
-    public String addToDiagram(
+    public String addToCustomDatasetDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

@@ -50,7 +50,7 @@ public class CustomDiagramClassRESTController {
     private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
 
     @DeleteMapping
-    public String removeFromDiagram(
+    public String removeFromCustomGraphDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

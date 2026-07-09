@@ -29,7 +29,7 @@ public interface ReplaceCustomDiagramUseCase {
      * @param diagramId the id of the diagram to be replaced
      * @param diagram the new diagram to replace the old one with
      */
-    void replaceCustomDiagram(
+    void replaceCustomGraphDiagram(
             GraphIdentifier graphIdentifier, String diagramId, CustomDiagram diagram);
 
     /**
@@ -39,5 +39,5 @@ public interface ReplaceCustomDiagramUseCase {
      * @param diagramId the id of the diagram to be replaced
      * @param diagram the new diagram to replace the old one with
      */
-    void replaceCustomDiagram(String datasetName, String diagramId, CustomDiagram diagram);
+    void replaceCustomDatasetDiagram(String datasetName, String diagramId, CustomDiagram diagram);
 }

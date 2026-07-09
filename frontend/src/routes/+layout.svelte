@@ -23,6 +23,7 @@
         installBackendFetchInterceptor,
         probeBackendConnection,
     } from "$lib/api/backendConnectionMonitor.svelte.js";
+    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
@@ -32,7 +33,6 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
-    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
 
     import {
         editorState,
@@ -114,6 +114,7 @@
     }
 
     async function fetchUndoRedo() {
+        await versionControlStore.refresh();
         canUndo = versionControlStore.canUndo();
         canRedo = versionControlStore.canRedo();
     }
