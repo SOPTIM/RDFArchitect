@@ -25,7 +25,7 @@ See [SHACL — Exporting](./shacl#exporting-shacl). TTL by default.
 
 ![Share snapshot](/img/screenshots/share-snapshot.png)
 
-This is the feature to use when you want reviewers to look at a profile without sending RDF files around. Snapshots are stored in Fuseki and persist until the snapshot dataset is deleted from Fuseki.
+This is the feature to use when you want reviewers to look at a profile without sending RDF files around. Snapshots are stored in Fuseki and persist until the snapshot dataset is deleted from Fuseki. When no Fuseki server is reachable, snapshots fall back to the backend's memory: the links still work across sessions, but they do not survive a backend restart.
 
 Three things to be aware of:
 
