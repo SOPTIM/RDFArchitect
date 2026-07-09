@@ -29,8 +29,8 @@
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import {
         copyState,
         DiagramType,
@@ -43,10 +43,10 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
-    import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
-    import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import DeleteDependenciesDialog from "../../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import RemoveFromDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendClassDialog from "../../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
+    import SHACLClassSpecificPopUp from "../../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
         request = null,

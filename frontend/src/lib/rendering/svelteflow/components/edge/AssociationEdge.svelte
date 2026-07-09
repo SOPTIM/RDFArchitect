@@ -20,18 +20,22 @@
         BaseEdge,
         EdgeLabel,
         getStraightPath,
+        useEdges,
         useInternalNode,
     } from "@xyflow/svelte";
 
     import { userSettings } from "$lib/userSettings.svelte.js";
 
-    import { getEdgeParams } from "./edgeUtils.ts";
+    import EdgeBendPoints from "./EdgeBendPoints.svelte";
+    import { getEdgeParams, getPolylinePath } from "./edgeUtils.ts";
+    let { id, source, target, data, selected } = $props();
+    const edges = useEdges();
 
-    let { id, source, target, data } = $props();
     let markerEnd = data.useToAssociation ? "url(#associationTo)" : "";
     let markerStart = data.useFromAssociation ? "url(#associationFrom)" : "";
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
+    let bendPoints = $derived(data.bendPoints ?? []);
 
     let style = $derived(
         userSettings.get("useColoredPropertiesInMergedView") && data.color
@@ -41,20 +45,35 @@
 
     let edgeParams = $derived.by(() => {
         if (sourceNode.current && targetNode.current) {
-            return getEdgeParams(sourceNode.current, targetNode.current);
+            return getEdgeParams(
+                sourceNode.current,
+                targetNode.current,
+                0,
+                bendPoints,
+            );
         }
     });
 
+    //TODO hier später am besten in ne getPath methode auslagern
     let path = $derived.by(() => {
         if (!edgeParams) return "";
-        return target === source && sourceNode.current
-            ? getSelfConnectingPath()
-            : getStraightPath({
-                  sourceX: edgeParams.sx,
-                  sourceY: edgeParams.sy,
-                  targetX: edgeParams.tx,
-                  targetY: edgeParams.ty,
-              })[0];
+        if (target === source && sourceNode.current)
+            return getSelfConnectingPath();
+
+        if (bendPoints.length > 0) {
+            return getPolylinePath([
+                { x: edgeParams.sx, y: edgeParams.sy },
+                ...bendPoints,
+                { x: edgeParams.tx, y: edgeParams.ty },
+            ]);
+        }
+
+        return getStraightPath({
+            sourceX: edgeParams.sx,
+            sourceY: edgeParams.sy,
+            targetX: edgeParams.tx,
+            targetY: edgeParams.ty,
+        })[0];
     });
 
     function getSelfConnectingPath() {
@@ -63,18 +82,40 @@
             y: 0,
         };
         const w = sourceNode.current.measured.width ?? 100;
-
         const x1 = pos.x + w * 0.25;
         const y1 = pos.y;
         const x2 = pos.x + w * 0.75;
         const y2 = pos.y;
-
         const loopHeight = 70;
         return `M ${x1} ${y1} C ${x1} ${y1 - loopHeight}, ${x2} ${y2 - loopHeight}, ${x2} ${y2}`;
+    }
+
+    function handleBendPointsChange(nextPoints) {
+        edges.update(current =>
+            current.map(edge =>
+                edge.id === id
+                    ? {
+                          ...edge,
+                          data: { ...edge.data, bendPoints: nextPoints },
+                      }
+                    : edge,
+            ),
+        );
     }
 </script>
 
 <BaseEdge {id} {path} {markerStart} {markerEnd} {style} />
+
+{#if selected && edgeParams && target !== source}
+    <EdgeBendPoints
+        edgeId={id}
+        sourcePoint={{ x: edgeParams.sx, y: edgeParams.sy }}
+        targetPoint={{ x: edgeParams.tx, y: edgeParams.ty }}
+        {bendPoints}
+        onPointsChange={handleBendPointsChange}
+    />
+{/if}
+
 <EdgeLabel>
     {#if data.toMultiplicity}
         {#if target === source && sourceNode.current}
@@ -85,14 +126,14 @@
             {@const w = sourceNode.current.measured.width ?? 100}
             <div
                 style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.25 - 12}px, ${pos.y - 30}px)`}
-                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
             >
                 {data.toMultiplicity}
             </div>
         {:else}
             <div
                 style:transform={`translate(-50%, -50%) translate(${edgeParams.sx + edgeParams.startX}px, ${edgeParams.sy + edgeParams.startY}px)`}
-                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
             >
                 {data.toMultiplicity}
             </div>
@@ -107,14 +148,14 @@
             {@const w = targetNode.current.measured.width ?? 100}
             <div
                 style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.75 + 12}px, ${pos.y - 30}px)`}
-                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
             >
                 {data.fromMultiplicity}
             </div>
         {:else}
             <div
                 style:transform={`translate(-50%, -50%) translate(${edgeParams.tx + edgeParams.endX}px, ${edgeParams.ty + edgeParams.endY}px)`}
-                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-[#303030] shadow-sm"
+                class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
             >
                 {data.fromMultiplicity}
             </div>
