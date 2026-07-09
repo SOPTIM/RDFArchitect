@@ -60,6 +60,7 @@
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import { classStore } from "$lib/stores/ClassStore.ts";
 
     let {
         canUndo, canRedo, isDatasetReadOnly, reload = () => {
@@ -404,7 +405,7 @@
     }
 
     function pasteClass(copyAsAbstract, copyAttributes, copyAssociations) {
-        saveCopyClass(
+        classStore.saveCopyClass(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
             selectedPackageDetails,

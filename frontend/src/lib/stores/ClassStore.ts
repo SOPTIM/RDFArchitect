@@ -27,7 +27,7 @@ import {
     replaceClass,
     deleteClass,
     extendClass,
-    copyClass,
+    pasteClasses,
     // attribute mutations
     createAttribute,
     replaceAttribute,
@@ -37,19 +37,16 @@ import {
     // enum entry mutations
     createEnumEntry,
     replaceEnumEntry,
-    // generic resource deletion
-    deleteResources,
     // types
     AddNewClassRequest,
     AssociationPairDto,
     AttributeDto,
     ClassDto,
     ClassUmlAdaptedDto,
-    CopyClassRequestDto,
-    CopyClassResponseDto,
     EnumEntryDto,
-    ResourceDeleteRequest,
     AssociationUuids,
+    PasteClassesRequestDto,
+    PasteClassesResponses,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -408,37 +405,6 @@ function createClassStore() {
         return hasDetails(c) ? c : null;
     }
 
-    function getAttributes(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ): AttributeDto[] | null {
-        return (
-            getClassInfo(datasetName, graphURI, classUUID)?.attributes ?? null
-        );
-    }
-
-    function getEnumEntries(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ): EnumEntryDto[] | null {
-        return (
-            getClassInfo(datasetName, graphURI, classUUID)?.enumEntries ?? null
-        );
-    }
-
-    function getAssociationPairs(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ): AssociationPairDto[] | null {
-        return (
-            getClassInfo(datasetName, graphURI, classUUID)?.associationPairs ??
-            null
-        );
-    }
-
     // =========================================================================
     // CLASS-LEVEL OPERATIONS
     // =========================================================================
@@ -558,18 +524,17 @@ function createClassStore() {
         return { error: null, data: data ?? undefined };
     }
 
-    async function copyExistingClass(
+    async function pasteCopiedClasses(
         datasetName: string,
         graphURI: string,
-        classUUID: string,
-        request: CopyClassRequestDto,
-    ): Promise<Result<CopyClassResponseDto>> {
+        request: PasteClassesRequestDto,
+    ): Promise<Result<PasteClassesResponses>> {
         console.log(
             `${LOG_PREFIX} Copying class classUUID="${classUUID}" from dataset="${datasetName}", graph="${graphURI}"`,
         );
 
-        const { data, error } = await copyClass({
-            path: { datasetName, graphURI, classUUID },
+        const { data, error } = await pasteClasses({
+            path: { targetDatasetName: datasetName, targetGraphURI: graphURI },
             body: request,
         });
         if (error) {
@@ -690,46 +655,6 @@ function createClassStore() {
         return { error: null, data: data };
     }
 
-    async function deleteAttribute(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-        attributeUUID: string,
-        action: ResourceDeleteRequest["action"] = "DELETE",
-    ): Promise<Result> {
-        console.log(`${LOG_PREFIX} Deleting attribute uuid="${attributeUUID}"`);
-
-        const { error } = await deleteResources({
-            path: { datasetName, graphURI },
-            body: [{ uuid: attributeUUID, action }],
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not delete attribute uuid="${attributeUUID}"`,
-                await describeError(error),
-            );
-            toastStore.error(
-                "Delete failed",
-                "Attribute could not be deleted.",
-            );
-            return { error };
-        }
-
-        const key = makeKey(datasetName, graphURI);
-        mutateClassInPlace(key, classUUID, prev => ({
-            ...prev,
-            attributes: (prev.attributes ?? []).filter(
-                a => a.uuid !== attributeUUID,
-            ),
-        }));
-        console.log(`${LOG_PREFIX} Deleted attribute uuid="${attributeUUID}"`);
-        toastStore.success(
-            "Attribute deleted",
-            "Attribute was removed successfully.",
-        );
-        return { error: null };
-    }
-
     // =========================================================================
     // ENUM ENTRY OPERATIONS
     // =========================================================================
@@ -822,48 +747,6 @@ function createClassStore() {
         );
         toastStore.success("Enum entry saved", "Changes were applied.");
         return { error: null, data: data };
-    }
-
-    async function deleteEnumEntry(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-        enumEntryUUID: string,
-        action: ResourceDeleteRequest["action"] = "DELETE",
-    ): Promise<Result> {
-        console.log(
-            `${LOG_PREFIX} Deleting enum entry uuid="${enumEntryUUID}"`,
-        );
-
-        const { error } = await deleteResources({
-            path: { datasetName, graphURI },
-            body: [{ uuid: enumEntryUUID, action }],
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not delete enum entry uuid="${enumEntryUUID}"`,
-                await describeError(error),
-            );
-            toastStore.error(
-                "Delete failed",
-                "Enum entry could not be deleted.",
-            );
-            return { error };
-        }
-
-        const key = makeKey(datasetName, graphURI);
-        mutateClassInPlace(key, classUUID, prev => ({
-            ...prev,
-            enumEntries: (prev.enumEntries ?? []).filter(
-                e => e.uuid !== enumEntryUUID,
-            ),
-        }));
-        console.log(`${LOG_PREFIX} Deleted enum entry uuid="${enumEntryUUID}"`);
-        toastStore.success(
-            "Enum entry deleted",
-            "Enum entry was successfully deleted.",
-        );
-        return { error: null };
     }
 
     // =========================================================================
@@ -978,50 +861,6 @@ function createClassStore() {
         return { error: null, data: data ?? undefined };
     }
 
-    async function deleteAssociationPair(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-        associationUUID: string,
-        action: ResourceDeleteRequest["action"] = "DELETE",
-    ): Promise<Result> {
-        console.log(
-            `${LOG_PREFIX} Deleting association pair uuid="${associationUUID}"`,
-        );
-
-        const { error } = await deleteResources({
-            path: { datasetName, graphURI },
-            body: [{ uuid: associationUUID, action }],
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not delete association pair uuid="${associationUUID}"`,
-                await describeError(error),
-            );
-            toastStore.error(
-                "Delete failed",
-                "Association could not be deleted.",
-            );
-            return { error };
-        }
-
-        const key = makeKey(datasetName, graphURI);
-        mutateClassInPlace(key, classUUID, prev => ({
-            ...prev,
-            associationPairs: (prev.associationPairs ?? []).filter(
-                p => p.from?.uuid !== associationUUID,
-            ),
-        }));
-        console.log(
-            `${LOG_PREFIX} Deleted association pair uuid="${associationUUID}"`,
-        );
-        toastStore.success(
-            "Association deleted",
-            "Association successfully deleted.",
-        );
-        return { error: null };
-    }
-
     // =========================================================================
     // LOCAL-ONLY HELPERS & INVALIDATION
     // =========================================================================
@@ -1094,31 +933,25 @@ function createClassStore() {
         // getters
         getClasses,
         getClassInfo,
-        getAttributes,
-        getEnumEntries,
-        getAssociationPairs,
 
         // class-level mutations
         addClass: addNewClass,
         replaceClass: replaceExistingClass,
         deleteClass: deleteExistingClass,
         extendClass: extendExistingClass,
-        copyClass: copyExistingClass,
+        saveCopyClass: pasteClasses,
 
         // attribute mutations
         addAttribute,
         replaceAttribute: replaceExistingAttribute,
-        deleteAttribute,
 
         // enum entry mutations
         addEnumEntry,
         replaceEnumEntry: replaceExistingEnumEntry,
-        deleteEnumEntry,
 
         // association mutations
         addAssociationPair,
         replaceAssociationPair: replaceAssociationPair,
-        deleteAssociationPair,
 
         // invalidation
         invalidateGraph,

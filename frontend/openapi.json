@@ -489,6 +489,18 @@
         },
         "type" : "object"
       },
+      "ClassSourceDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ClassUMLAdaptedDTO" : {
         "properties" : {
           "associationPairs" : {
@@ -563,35 +575,38 @@
         },
         "type" : "object"
       },
-      "CopyClassRequestDTO" : {
-        "properties" : {
-          "copyAsAbstract" : {
-            "type" : "boolean"
-          },
-          "copyAssociations" : {
-            "type" : "boolean"
-          },
-          "copyAttributes" : {
-            "type" : "boolean"
-          },
-          "targetDatasetName" : {
-            "type" : "string"
-          },
-          "targetGraphURI" : {
-            "type" : "string"
-          },
-          "targetPackage" : {
-            "$ref" : "#/components/schemas/PackageDTO"
-          }
-        },
-        "type" : "object"
-      },
       "CopyClassResponseDTO" : {
         "properties" : {
           "name" : {
             "type" : "string"
           },
           "uuid" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "CrossProfileDiagramColorDataDTO" : {
+        "properties" : {
+          "graphColors" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "CrossProfileDiagramDTO" : {
+        "properties" : {
+          "classes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/MergedClassDTO"
+            },
+            "type" : "array"
+          },
+          "diagramId" : {
+            "format" : "uuid",
             "type" : "string"
           }
         },
@@ -769,6 +784,62 @@
         },
         "type" : "object"
       },
+      "GraphSourceDTOAssociationPairDTO" : {
+        "properties" : {
+          "graphColor" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "value" : {
+            "$ref" : "#/components/schemas/AssociationPairDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "GraphSourceDTOAttributeDTO" : {
+        "properties" : {
+          "graphColor" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "value" : {
+            "$ref" : "#/components/schemas/AttributeDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "GraphSourceDTOEnumEntryDTO" : {
+        "properties" : {
+          "graphColor" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "value" : {
+            "$ref" : "#/components/schemas/EnumEntryDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "GraphSourceDTOSuperClassDTO" : {
+        "properties" : {
+          "graphColor" : {
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "value" : {
+            "$ref" : "#/components/schemas/SuperClassDTO"
+          }
+        },
+        "type" : "object"
+      },
       "ImportWarning" : {
         "properties" : {
           "fileName" : {
@@ -796,6 +867,57 @@
               "$ref" : "#/components/schemas/PackageDTO"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "MergedClassDTO" : {
+        "properties" : {
+          "associationPairs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GraphSourceDTOAssociationPairDTO"
+            },
+            "type" : "array"
+          },
+          "attributes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GraphSourceDTOAttributeDTO"
+            },
+            "type" : "array"
+          },
+          "classUri" : {
+            "type" : "string"
+          },
+          "enumEntries" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GraphSourceDTOEnumEntryDTO"
+            },
+            "type" : "array"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassSourceDTO"
+            },
+            "type" : "array"
+          },
+          "stereotypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "superClasses" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GraphSourceDTOSuperClassDTO"
+            },
+            "type" : "array"
+          },
+          "uuid" : {
+            "format" : "uuid",
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -878,6 +1000,43 @@
           },
           "uuid" : {
             "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PasteClassesRequestDTO" : {
+        "properties" : {
+          "copyAsAbstract" : {
+            "type" : "boolean"
+          },
+          "copyAssociations" : {
+            "type" : "boolean"
+          },
+          "copyAttributes" : {
+            "type" : "boolean"
+          },
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PasteSourceClassDTO"
+            },
+            "type" : "array"
+          },
+          "targetPackage" : {
+            "$ref" : "#/components/schemas/PackageDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "PasteSourceClassDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "type" : "string"
+          },
+          "sourceDatasetName" : {
+            "type" : "string"
+          },
+          "sourceGraphURI" : {
             "type" : "string"
           }
         },
@@ -1923,8 +2082,215 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/crossprofilediagram" : {
+      "get" : {
+        "operationId" : "getCrossProfileRenderingData",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CrossProfileDiagramDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "cross-profile-diagram-rest-controller"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/crossprofilediagramColors" : {
+      "get" : {
+        "operationId" : "getCrossProfileColors",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CrossProfileDiagramColorDataDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "cross-profile-diagram-color-rest-controller"
+        ]
+      },
+      "put" : {
+        "operationId" : "updateCrossProfileColors",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CrossProfileDiagramColorDataDTO"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "cross-profile-diagram-color-rest-controller"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/crossprofilediagramID" : {
+      "get" : {
+        "operationId" : "getCrossProfileRenderingData_2",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "cross-profile-diagram-idrest-controller"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/crossprofilediagramRendering" : {
+      "get" : {
+        "operationId" : "getCrossProfileRenderingData_1",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RenderingDataDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "cross-profile-diagram-rendering-rest-controller"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/diagrams" : {
       "get" : {
+        "description" : "Returns a list of all custom diagrams for the specified dataset. Each diagram includes its ID, name, and other relevant information.",
         "operationId" : "getCustomDatasetDiagramList",
         "parameters" : [
           {
@@ -1949,12 +2315,22 @@
         ],
         "responses" : {
           "200" : {
-            "content" : { },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
             "description" : "OK"
           }
         },
+        "summary" : "list custom diagrams for dataset",
         "tags" : [
-          "all-custom-dataset-diagrams-rest-controller"
+          "diagram"
         ]
       }
     },
@@ -2115,6 +2491,69 @@
       }
     },
     "/api/datasets/{datasetName}/diagrams/{diagramId}/classes" : {
+      "delete" : {
+        "operationId" : "removeFromCustomDatasetDiagram",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The uuid of the diagram.",
+            "in" : "path",
+            "name" : "diagramId",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "The list of class uuids to be removed from the diagram",
+                "items" : {
+                  "format" : "uuid",
+                  "type" : "string"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "custom-dataset-diagram-all-classes-rest-controller"
+        ]
+      },
       "post" : {
         "operationId" : "addToCustomDatasetDiagram",
         "parameters" : [
@@ -2175,66 +2614,6 @@
         },
         "tags" : [
           "custom-dataset-diagram-all-classes-rest-controller"
-        ]
-      }
-    },
-    "/api/datasets/{datasetName}/diagrams/{diagramId}/classes/{classId}" : {
-      "delete" : {
-        "operationId" : "removeFromCustomDatasetDiagram",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the diagram.",
-            "in" : "path",
-            "name" : "diagramId",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the class to be removed from the diagram.",
-            "in" : "path",
-            "name" : "classId",
-            "required" : true,
-            "schema" : {
-              "format" : "uuid",
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "tags" : [
-          "custom-dataset-diagram-class-rest-controller"
         ]
       }
     },
@@ -3585,78 +3964,6 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/copy" : {
-      "post" : {
-        "description" : "Create a copy of a class in the specified graph",
-        "operationId" : "copyClass",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the class.",
-            "in" : "path",
-            "name" : "classUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/CopyClassRequestDTO"
-              }
-            }
-          },
-          "description" : "Contains the information of the target where the class should be copied to. Also includes if the class should be copied only abstract or fully.",
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/CopyClassResponseDTO"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "copy a class",
-        "tags" : [
-          "copy-class-rest-controller"
-        ]
-      }
-    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/enumentries" : {
       "post" : {
         "description" : "Creates a new enum entry for a specified class.",
@@ -4575,8 +4882,79 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/deletion-impact" : {
+      "post" : {
+        "description" : "Returns, per requested UUID, a tree of affected resources for deleting that resource.",
+        "operationId" : "getDeletionImpact",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "The uuids of the cim resources to analyse.",
+                "items" : {
+                  "format" : "uuid",
+                  "type" : "string"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "$ref" : "#/components/schemas/AffectedResource"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Get deletion impact",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams" : {
       "get" : {
+        "description" : "Returns a list of all custom diagrams for the specified graph. Each diagram includes its ID, name, and other relevant information.",
         "operationId" : "getCustomGraphDiagramList",
         "parameters" : [
           {
@@ -4610,12 +4988,22 @@
         ],
         "responses" : {
           "200" : {
-            "content" : { },
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "type" : "string"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
             "description" : "OK"
           }
         },
+        "summary" : "list custom diagrams for graph",
         "tags" : [
-          "all-custom-diagrams-rest-controller"
+          "diagram"
         ]
       }
     },
@@ -4799,6 +5187,78 @@
       }
     },
     "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes" : {
+      "delete" : {
+        "operationId" : "removeFromDiagram",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The uuid of the diagram.",
+            "in" : "path",
+            "name" : "diagramId",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "description" : "The list of class uuids to be removed from the diagram",
+                "items" : {
+                  "format" : "uuid",
+                  "type" : "string"
+                },
+                "type" : "array"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "tags" : [
+          "custom-diagram-all-classes-rest-controller"
+        ]
+      },
       "post" : {
         "operationId" : "addToCustomGraphDiagram",
         "parameters" : [
@@ -6616,67 +7076,6 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/uuid/{uuid}/deletion-impact" : {
-      "get" : {
-        "description" : "Returns a tree of affected resources for deleting the resource with the given UUID.",
-        "operationId" : "getDeletionImpact",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded iri identifier of the cim resource.",
-            "in" : "path",
-            "name" : "uuid",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AffectedResource"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "Get deletion impact",
-        "tags" : [
-          "graph"
-        ]
-      }
-    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/writeToDatabase" : {
       "post" : {
         "description" : "Write a graph to a database to persist it.",
@@ -7075,6 +7474,72 @@
         "tags" : [
           "dataset",
           "read-only"
+        ]
+      }
+    },
+    "/api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste" : {
+      "post" : {
+        "description" : "Create copies of one or more previously copied classes in the target graph.",
+        "operationId" : "pasteClasses",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the target dataset.",
+            "in" : "path",
+            "name" : "targetDatasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the target graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "targetGraphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PasteClassesRequestDTO"
+              }
+            }
+          },
+          "description" : "The target package, copy options and the list of source classes to paste.",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CopyClassResponseDTO"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "paste classes",
+        "tags" : [
+          "paste-rest-controller"
         ]
       }
     },

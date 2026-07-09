@@ -29,6 +29,7 @@ import {
     addToCustomDatasetDiagram,
     removeFromCustomDatasetDiagram,
     removeFromCustomGraphDiagram,
+    addToCustomGraphDiagram,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -379,7 +380,7 @@ function createCustomDiagramStore() {
         diagramId: string,
         classes: string[],
     ): Promise<Result> {
-        const { error } = await addToCustomDatasetDiagram({
+        const { error } = await addToCustomGraphDiagram({
             path: { datasetName, graphURI, diagramId },
             body: classes as never,
         });
@@ -403,10 +404,11 @@ function createCustomDiagramStore() {
     async function removeClassFromDatasetDiagram(
         datasetName: string,
         diagramId: string,
-        classId: string,
+        classIDs: string[],
     ): Promise<Result> {
         const { error } = await removeFromCustomDatasetDiagram({
-            path: { datasetName, diagramId, classId },
+            path: { datasetName, diagramId },
+            body: classIDs
         });
 
         if (error) {

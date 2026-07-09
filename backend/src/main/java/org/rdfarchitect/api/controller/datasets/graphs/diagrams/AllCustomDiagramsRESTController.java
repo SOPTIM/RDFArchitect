@@ -17,8 +17,13 @@
 
 package org.rdfarchitect.api.controller.datasets.graphs.diagrams;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.database.GraphIdentifier;
@@ -47,6 +52,22 @@ public class AllCustomDiagramsRESTController {
     private final ExpandURIUseCase expandURIUseCase;
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
+    @Operation(
+            summary = "list custom diagrams for graph",
+            description =
+                    "Returns a list of all custom diagrams for the specified graph. Each diagram includes its ID, name, and other relevant information.",
+            tags = {"diagram"},
+            responses = @ApiResponse(
+                    responseCode = "200",
+                    content = @Content(
+                            mediaType = "application/json",
+                            array = @ArraySchema(
+                                    schema = @Schema(
+                                            implementation = CustomDiagram.class
+                                    )
+                            )
+                    )
+            ))
     @GetMapping
     public List<CustomDiagram> getCustomGraphDiagramList(
             @Parameter(description = "The name/url of the inquirer.")

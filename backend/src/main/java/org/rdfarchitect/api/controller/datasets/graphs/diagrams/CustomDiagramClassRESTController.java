@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CustomDiagramLayoutUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,8 @@ public class CustomDiagramClassRESTController {
     private final ExpandURIUseCase expandURIUseCase;
 
     private final CustomDiagramLayoutUseCase customDiagramLayoutUseCase;
+
+    private final RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase;
 
     @DeleteMapping
     public String removeFromCustomGraphDiagram(
@@ -77,9 +80,9 @@ public class CustomDiagramClassRESTController {
                 originURL);
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        customDiagramLayoutUseCase.removeClassFromCustomDiagram(
+        removeFromCustomDiagramUseCase.removeFromCustomGraphDiagram(
                 new GraphIdentifier(datasetName, extendedGraphURI),
-                UUID.fromString(diagramId),
+                diagramId,
                 classId);
 
         logger.info(

@@ -80,7 +80,7 @@ public class CustomDatasetDiagramAllClassesRESTController {
     }
 
     @DeleteMapping
-    public String removeFromDiagram(
+    public String removeFromCustomDatasetDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
