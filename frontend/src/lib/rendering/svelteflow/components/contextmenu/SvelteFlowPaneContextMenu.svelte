@@ -23,7 +23,7 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import { BackendConnection } from "$lib/api/backend.js";
-    import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         copyState,
