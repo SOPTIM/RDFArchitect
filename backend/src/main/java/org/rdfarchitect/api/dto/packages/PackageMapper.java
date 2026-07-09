@@ -40,7 +40,7 @@ public interface PackageMapper {
             return null;
         }
 
-        CIMPackage.CIMPackageBuilder cIMPackage = CIMPackage.builder();
+        var cIMPackage = CIMPackage.builder();
 
         cIMPackage.uri(buildURI(dto));
         cIMPackage.uuid(dto.getUuid());

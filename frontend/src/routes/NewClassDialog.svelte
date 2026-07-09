@@ -19,7 +19,6 @@
     import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -97,7 +96,7 @@
     });
 
     async function onDatasetOrGraphChanged(ds, graph) {
-        namespaces = await getNamespaces(ds);
+        namespaces = await fetchNamespaces(ds);
         if (classURINamespace) classURINamespace.value = null;
         classPackage = null;
 
@@ -145,7 +144,7 @@
         if (!datasetName) {
             return;
         }
-        namespaces = await getNamespaces(datasetName);
+        namespaces = await fetchNamespaces(datasetName);
 
         if (!graphURI) {
             return;
@@ -184,6 +183,14 @@
         classPackage = null;
     }
 
+    async function fetchNamespaces(datasetName) {
+        if (!datasetName) {
+            return [];
+        }
+        const res = await bec.getNamespaces(datasetName);
+        return await res.json();
+    }
+
     async function getPackages(datasetName, graphURI) {
         if (!datasetName || !graphURI) {
             packages = [];
@@ -208,17 +215,6 @@
         };
     }
 
-    function buildClassesUrl(datasetName, graphURI) {
-        return (
-            PUBLIC_BACKEND_URL +
-            "/datasets/" +
-            encodeURIComponent(datasetName) +
-            "/graphs/" +
-            encodeURIComponent(graphURI) +
-            "/classes"
-        );
-    }
-
     function postNewClass(form) {
         const requestBody = {
             packageDTO: form.packageDTO,
@@ -229,14 +225,7 @@
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
-        return fetch(buildClassesUrl(form.datasetName, form.graphURI), {
-            method: "POST",
-            headers: new Headers({
-                "Content-Type": "application/json",
-            }),
-            body: JSON.stringify(requestBody),
-            credentials: "include",
-        });
+        return bec.postClass(form.datasetName, form.graphURI, requestBody);
     }
 
     function updateEditorSelection(form, classUUID) {
@@ -269,10 +258,6 @@
 
     function triggerEditorRefresh() {
         forceReloadTrigger.trigger();
-        editorState.selectedDataset.trigger();
-        editorState.selectedGraph.trigger();
-        editorState.selectedDiagram.trigger();
-        editorState.selectedClass.trigger();
     }
 
     async function newClass() {
