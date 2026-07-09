@@ -48,6 +48,9 @@ public class URI {
         if (uri.isEmpty()) {
             throw new IllegalArgumentException("URI must not be empty");
         }
+        if (uri.contains(" ")) {
+            throw new IllegalArgumentException("URI must not contain spaces: " + uri);
+        }
         try {
             IRIx iri = IRIx.create(StrUtils.encodeHex(uri, '%', new char[] {'%', ' '}));
             if (iri.scheme() == null) {
