@@ -18,6 +18,9 @@
 package org.rdfarchitect.services.validation.rule;
 
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
 
@@ -29,5 +32,41 @@ public interface ValidationRule {
 
     default boolean hasNoNamespacePrefix(Model model, String namespace) {
         return !model.getNsPrefixMap().containsValue(namespace);
+    }
+
+    default void validateRDFSLabel(
+            Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
+        if (!property.hasProperty(RDFS.label)) {
+            issues.add(
+                    SchemaValidationIssueDTO.builder()
+                            .severity(SchemaValidationIssueDTO.Severity.ERROR)
+                            .resourceUri(uri)
+                            .message(
+                                    property.getProperty(RDF.type)
+                                                    .getObject()
+                                                    .asResource()
+                                                    .getLocalName()
+                                            + " is missing rdfs:label.")
+                            .build());
+        }
+    }
+
+    default void validateNamespace(
+            Model model, Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
+        if (hasNoNamespacePrefix(model, property.getNameSpace())) {
+            issues.add(
+                    SchemaValidationIssueDTO.builder()
+                            .severity(SchemaValidationIssueDTO.Severity.INFO)
+                            .resourceUri(uri)
+                            .message(
+                                    property.getProperty(RDF.type)
+                                                    .getObject()
+                                                    .asResource()
+                                                    .getLocalName()
+                                            + "Class namespace is not defined in the schema's prefix mapping: <"
+                                            + property.getNameSpace()
+                                            + ">")
+                            .build());
+        }
     }
 }

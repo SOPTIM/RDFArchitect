@@ -50,36 +50,6 @@ public class ClassValidationRule implements ValidationRule {
         validateCIMSBelongsToCategory(classResource, issues, uri);
     }
 
-    private void validateRDFSLabel(
-            Resource classResource, List<SchemaValidationIssueDTO> issues, String uri) {
-        if (!classResource.hasProperty(RDFS.label)) {
-            issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
-                            .resourceUri(uri)
-                            .message("Class is missing rdfs:label.")
-                            .build());
-        }
-    }
-
-    private void validateNamespace(
-            Model model,
-            Resource classResource,
-            List<SchemaValidationIssueDTO> issues,
-            String uri) {
-        if (hasNoNamespacePrefix(model, classResource.getNameSpace())) {
-            issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
-                            .resourceUri(uri)
-                            .message(
-                                    "Class namespace is not defined in the schema's prefix mapping: <"
-                                            + classResource.getNameSpace()
-                                            + ">")
-                            .build());
-        }
-    }
-
     private void validateCIMSBelongsToCategory(
             Resource classResource, List<SchemaValidationIssueDTO> issues, String uri) {
         if (!classResource.hasProperty(CIMS.belongsToCategory)) {

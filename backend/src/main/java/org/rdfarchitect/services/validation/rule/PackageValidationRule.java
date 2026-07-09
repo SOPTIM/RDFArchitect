@@ -20,10 +20,8 @@ package org.rdfarchitect.services.validation.rule;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO;
-import org.rdfarchitect.api.dto.validation.SchemaValidationIssueDTO.Severity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.springframework.stereotype.Component;
 
@@ -46,35 +44,5 @@ public class PackageValidationRule implements ValidationRule {
         validateRDFSLabel(packageResource, issues, uri);
 
         validateNamespace(model, packageResource, issues, uri);
-    }
-
-    private void validateRDFSLabel(
-            Resource packageResource, List<SchemaValidationIssueDTO> issues, String uri) {
-        if (!packageResource.hasProperty(RDFS.label)) {
-            issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
-                            .resourceUri(uri)
-                            .message("Package is missing rdfs:label.")
-                            .build());
-        }
-    }
-
-    private void validateNamespace(
-            Model model,
-            Resource packageResource,
-            List<SchemaValidationIssueDTO> issues,
-            String uri) {
-        if (hasNoNamespacePrefix(model, packageResource.getNameSpace())) {
-            issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
-                            .resourceUri(uri)
-                            .message(
-                                    "Package namespace is not defined in the schema's prefix mapping: <"
-                                            + packageResource.getNameSpace()
-                                            + ">")
-                            .build());
-        }
     }
 }

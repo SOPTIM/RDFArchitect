@@ -65,33 +65,6 @@ public class PropertyValidationRule implements ValidationRule {
         validateIsAttributeOrAssociation(issues, isAttribute, isAssociation, uri);
     }
 
-    private void validateRDFSLabel(
-            Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
-        if (!property.hasProperty(RDFS.label)) {
-            issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.ERROR)
-                            .resourceUri(uri)
-                            .message("Property is missing rdfs:label.")
-                            .build());
-        }
-    }
-
-    private void validateNamespace(
-            Model model, Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
-        if (hasNoNamespacePrefix(model, property.getNameSpace())) {
-            issues.add(
-                    SchemaValidationIssueDTO.builder()
-                            .severity(Severity.WARNING)
-                            .resourceUri(uri)
-                            .message(
-                                    "Property namespace is not defined in the schema's prefix mapping: <"
-                                            + property.getNameSpace()
-                                            + ">")
-                            .build());
-        }
-    }
-
     private void validateRDFSDomain(
             Resource property, List<SchemaValidationIssueDTO> issues, String uri) {
         if (!property.hasProperty(RDFS.domain)) {

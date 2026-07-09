@@ -16,12 +16,7 @@
  */
 
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-
-/** * Mirrors the backend's `CGMESVersion` enum. Jackson serializes/deserializes * enums by default via their constant name, hence the values here match * `CGMESVersion.V2_4_15` / `CGMESVersion.V3_0` from the backend exactly. */
-export const CGMESVersion = Object.freeze({
-    V2_4_15: "V2_4_15",
-    V3_0: "V3_0",
-});
+import { CGMESVersion } from "$lib/models/cgmes-constants.js";
 
 export class BackendConnection {
     fetch;
