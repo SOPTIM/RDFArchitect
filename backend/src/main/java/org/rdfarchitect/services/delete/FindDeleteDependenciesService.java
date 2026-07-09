@@ -47,6 +47,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -60,8 +61,18 @@ public class FindDeleteDependenciesService implements FindDeleteDependenciesUseC
     private final DatabasePort databasePort;
 
     @Override
-    public AffectedResource getDeleteDependencies(GraphIdentifier graphIdentifier, UUID uuid) {
+    public Map<UUID, AffectedResource> getDeleteDependencies(
+            GraphIdentifier graphIdentifier, List<UUID> uuids) {
         var model = ModelFactory.createModelForGraph(getCopyOfDatabaseGraph(graphIdentifier));
+
+        var result = new LinkedHashMap<UUID, AffectedResource>();
+        for (var uuid : uuids) {
+            result.put(uuid, getDeleteDependencies(model, uuid));
+        }
+        return result;
+    }
+
+    private AffectedResource getDeleteDependencies(Model model, UUID uuid) {
         var resourceType = CIMResourceTypeIdentifyingUtils.getType(model, uuid);
         var defaultActions = List.of(DeleteAction.DELETE);
         var reason = AffectedResourceReason.DELETION_REQUESTED_BY_USER;

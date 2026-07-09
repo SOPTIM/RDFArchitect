@@ -18,13 +18,46 @@
 <script>
     import { Handle, Position } from "@xyflow/svelte";
 
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
+    import {
+        DiagramType,
+        editorState,
+        multiSelectState,
+        SelectionLevel,
+    } from "$lib/sharedState.svelte.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
 
-    const highlighted = $derived(
-        editorState.selectedClassUUID.getValue() === id,
+    const isCrossProfileDiagram = $derived(
+        editorState.selectedDiagram.getProperty("type") ===
+            DiagramType.CROSS_PROFILE,
+    );
+    const selectionGraphUri = $derived(
+        isCrossProfileDiagram ? null : data.graphUri,
+    );
+
+    const isInSelection = $derived(
+        multiSelectState.isSelected(
+            editorState.selectedDataset.getValue(),
+            selectionGraphUri,
+            id,
+        ),
+    );
+    const isOpenClass = $derived(
+        editorState.selectedClass.getProperty("id") === id &&
+            editorState.selectedClassGraph.getValue() === selectionGraphUri,
+    );
+    const isActiveLevel = $derived(
+        editorState.activeSelectionKind.getValue() === SelectionLevel.CLASS,
+    );
+    const highlightState = $derived(
+        isInSelection || (isOpenClass && isActiveLevel)
+            ? "active"
+            : isOpenClass
+              ? "secondary"
+              : null,
     );
 
     const label = $derived(data.label);
@@ -33,11 +66,43 @@
     const enumEntries = $derived(data.enumEntries);
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
+
+    function groupByGraphURI(properties) {
+        const groups = [];
+        for (const attr of properties) {
+            const uri = attr.graphUri ?? "";
+            if (
+                groups.length === 0 ||
+                groups[groups.length - 1].graphUri !== uri
+            ) {
+                groups.push({
+                    graphUri: uri,
+                    graphName: getGraphLabel(uri),
+                    props: [attr],
+                });
+            } else {
+                groups[groups.length - 1].props.push(attr);
+            }
+        }
+        return groups;
+    }
+
+    function getGraphLabel(graphURI) {
+        try {
+            return new URI(graphURI).suffix;
+        } catch {
+            return graphURI;
+        }
+    }
 </script>
 
 <div
     class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
-        highlighted ? "class-node-highlighted" : ""
+        highlightState === "active"
+            ? "class-node-highlighted"
+            : highlightState === "secondary"
+              ? "class-node-highlighted-secondary"
+              : ""
     }`}
     role="button"
     tabindex="0"
@@ -75,17 +140,71 @@
         class="class-node-divider bg-class-node-lower-background p-2 text-center"
     >
         {#if attributes && attributes.length > 0}
-            {#each attributes as attr}
-                <div class="text-default-text leading-6">
-                    {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
-                </div>
-            {/each}
+            {#if isCrossProfileDiagram}
+                {#each groupByGraphURI(attributes) as group}
+                    <div class="text-default-text text-xs italic opacity-70">
+                        {group.graphName}
+                    </div>
+                    {#each group.props as attr}
+                        <div
+                            class="text-default-text leading-6"
+                            style={userSettings.get(
+                                "useColoredPropertiesInMergedView",
+                            ) && attr.color
+                                ? `color: ${attr.color};`
+                                : ""}
+                        >
+                            {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                        </div>
+                    {/each}
+                {/each}
+            {:else}
+                {#each attributes as attr}
+                    <div
+                        class="text-default-text leading-6"
+                        style={userSettings.get(
+                            "useColoredPropertiesInMergedView",
+                        ) && attr.color
+                            ? `color: ${attr.color};`
+                            : ""}
+                    >
+                        {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                    </div>
+                {/each}
+            {/if}
         {:else if enumEntries && enumEntries.length > 0}
-            {#each enumEntries as enumEntry}
-                <div class="text-default-text leading-6">
-                    {enumEntry}
-                </div>
-            {/each}
+            {#if isCrossProfileDiagram}
+                {#each groupByGraphURI(enumEntries) as group}
+                    <div class="text-default-text text-xs italic opacity-70">
+                        {group.graphName}
+                    </div>
+                    {#each group.props as enumEntry}
+                        <div
+                            class="text-default-text leading-6"
+                            style={userSettings.get(
+                                "useColoredPropertiesInMergedView",
+                            ) && enumEntry.color
+                                ? `color: ${enumEntry.color};`
+                                : ""}
+                        >
+                            {enumEntry.label ?? enumEntry}
+                        </div>
+                    {/each}
+                {/each}
+            {:else}
+                {#each enumEntries as enumEntry}
+                    <div
+                        class="text-default-text leading-6"
+                        style={userSettings.get(
+                            "useColoredPropertiesInMergedView",
+                        ) && enumEntry.color
+                            ? `color: ${enumEntry.color};`
+                            : ""}
+                    >
+                        {enumEntry.label ?? enumEntry}
+                    </div>
+                {/each}
+            {/if}
         {/if}
     </div>
 </div>
@@ -103,6 +222,11 @@
 
     .class-node-highlighted::after {
         box-shadow: inset 0 0 0 3px var(--color-class-node-highlighted);
+    }
+
+    .class-node-highlighted-secondary::after {
+        box-shadow: inset 0 0 0 3px
+            var(--color-class-node-highlighted-secondary);
     }
 
     .class-node-divider {

@@ -86,7 +86,9 @@
                 "/graphs/" +
                 encodeURIComponent(classGraphUri) +
                 "/classes/" +
-                encodeURIComponent(editorState.selectedClassUUID.getValue()) +
+                encodeURIComponent(
+                    editorState.selectedClass.getProperty("id"),
+                ) +
                 "/shacl/custom",
             {
                 method: "PUT",
@@ -116,7 +118,7 @@
                 );
             })
             .finally(() => {
-                editorState.selectedClassUUID.trigger();
+                editorState.selectedClass.trigger();
             });
     }
 

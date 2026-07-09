@@ -30,14 +30,11 @@ import java.util.UUID;
 public class DiagramLayout {
 
     @Getter private final Model diagramLayoutModel;
-
     @Getter private final MRID defaultPackageMRID;
 
     public DiagramLayout() {
         defaultPackageMRID = new MRID(UUID.randomUUID());
-
         diagramLayoutModel = ModelFactory.createDefaultModel();
-
         diagramLayoutModel.setNsPrefix(CIM.PREFIX, CIM.NAMESPACE);
         diagramLayoutModel.setNsPrefix("rdf", RDF.uri);
     }

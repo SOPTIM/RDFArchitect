@@ -205,7 +205,7 @@
             editorState.selectedDiagram.updateValue({ type: null, id: null });
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
-            editorState.selectedClassUUID.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
             datasetStore.invalidate();
             forceReloadTrigger.trigger();
         }
@@ -220,6 +220,7 @@
     onPrimary={importGraphs}
     disablePrimary={!enableSubmit}
     title="Import Schemas"
+    size="w-1/3"
 >
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
         {#if !datasetSelectionLocked}

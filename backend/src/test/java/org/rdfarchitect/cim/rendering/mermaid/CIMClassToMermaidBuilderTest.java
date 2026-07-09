@@ -28,7 +28,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMClassToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMClassToMermaidBuilder;
 
 import java.util.ArrayList;
 import java.util.List;

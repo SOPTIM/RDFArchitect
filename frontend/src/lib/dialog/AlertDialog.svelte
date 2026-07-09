@@ -33,11 +33,11 @@
 <BitsUiAlertDialog.Root bind:open={showDialog}>
     <BitsUiAlertDialog.Portal>
         <BitsUiAlertDialog.Overlay
-            class="bg-dialog-backlight fixed inset-0 z-40"
+            class="bg-dialog-backlight fixed inset-0 z-50"
         />
         <BitsUiAlertDialog.Content
             {...restProps}
-            class="border-border bg-window-background fixed top-1/2 left-1/2 z-40 -translate-x-1/2 -translate-y-1/2 rounded border border-solid p-2 shadow outline-none {size}"
+            class="border-border bg-window-background fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded border border-solid p-2 shadow outline-none {size}"
             {onkeydown}
         >
             <div class="flex items-start gap-3 p-2">

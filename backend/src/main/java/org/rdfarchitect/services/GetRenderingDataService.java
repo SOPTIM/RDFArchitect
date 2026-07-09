@@ -27,9 +27,9 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.RenderCIMCollectionUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;

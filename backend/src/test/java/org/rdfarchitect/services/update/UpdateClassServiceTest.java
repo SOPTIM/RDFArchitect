@@ -84,6 +84,7 @@ class UpdateClassServiceTest {
                         mockUpdateClassLayoutService,
                         mockUpdateClassLayoutService,
                         false,
+                        mockUpdateClassLayoutService,
                         mockCustomDiagramService);
         var file = readMultipartFileFromFile(PATH, "class.ttl");
         var graphSource =

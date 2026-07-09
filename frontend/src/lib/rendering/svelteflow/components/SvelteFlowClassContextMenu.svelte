@@ -35,6 +35,7 @@
         copyState,
         DiagramType,
         editorState,
+        multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
     import {
@@ -70,7 +71,31 @@
     let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
 
+    let dialogClassIds = $state([]);
+    let dialogClassLabels = $state([]);
+    let dialogGraphUri = $state(null);
+
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
+
+    const multiActive = $derived(multiSelectState.isMultiSelect);
+    const selectionUuids = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classUuid)
+            : contextMenuClass
+              ? [contextMenuClass.uuid]
+              : [],
+    );
+    const selectionLabels = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(e => e.classLabel)
+            : contextMenuClass
+              ? [contextMenuClass.label]
+              : [],
+    );
+
+    const crossGraphDisabled = $derived(
+        multiActive && !multiSelectState.isSingleGraph,
+    );
 
     let classZIndex = $derived(
         contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
@@ -98,10 +123,14 @@
     }
 
     function openDeleteClassDialog() {
-        if (classActionsDisabled || !contextMenuClass) {
+        if (classActionsDisabled || crossGraphDisabled || !contextMenuClass) {
             return;
         }
         dialogClass = contextMenuClass;
+        dialogClassIds = selectionUuids;
+        dialogGraphUri = multiActive
+            ? (multiSelectState.getSelected()[0]?.graphUri ?? graphUri)
+            : (contextMenuClass.graphUri ?? graphUri);
         showDeleteDependenciesDialog = true;
         onClose();
     }
@@ -110,6 +139,9 @@
         if (!contextMenuClass) {
             return;
         }
+        dialogClass = contextMenuClass;
+        dialogClassIds = selectionUuids;
+        dialogClassLabels = selectionLabels;
         showRemoveFromDiagramDialog = true;
         onClose();
     }
@@ -158,10 +190,14 @@
     }
 
     function copyClass() {
-        copyState.classUUID.updateValue(contextMenuClass.uuid);
-        copyState.graphURI.updateValue(editorState.selectedGraph.getValue());
-        copyState.datasetName.updateValue(
-            editorState.selectedDataset.getValue(),
+        copyState.set(
+            multiSelectState.copyEntriesOr({
+                classUUID: contextMenuClass.uuid,
+                graphURI:
+                    contextMenuClass.graphUri ??
+                    editorState.selectedGraph.getValue(),
+                datasetName: editorState.selectedDataset.getValue(),
+            }),
         );
     }
 </script>
@@ -174,32 +210,36 @@
         {disabled}
     />
     <ContextMenu.Content>
-        <ContextMenu.Item.Button
-            onSelect={copyClass}
-            faIcon={faCopy}
-            altText="Ctrl+C"
-        >
-            Copy
-        </ContextMenu.Item.Button>
-        <ContextMenu.Item.Button
-            onSelect={openExtendClassDialog}
-            faIcon={faFileExport}
-        >
-            Extend Class
-        </ContextMenu.Item.Button>
-        <ContextMenu.Separator />
-        <ContextMenu.Item.Button
-            onSelect={() => {
-                showSHACLDialog = true;
-            }}
-            faIcon={faDiagramProject}
-        >
-            Constraints
-        </ContextMenu.Item.Button>
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+            <ContextMenu.Item.Button
+                onSelect={copyClass}
+                faIcon={faCopy}
+                altText="Ctrl+C"
+            >
+                {multiActive ? `Copy ${selectionUuids.length} classes` : "Copy"}
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={openExtendClassDialog}
+                faIcon={faFileExport}
+                disabled={multiActive}
+            >
+                Extend Class
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showSHACLDialog = true;
+                }}
+                faIcon={faDiagramProject}
+                disabled={multiActive}
+            >
+                Constraints
+            </ContextMenu.Item.Button>
+        {/if}
         <ContextMenu.SubMenu.Root>
             <ContextMenu.SubMenu.Trigger
                 faIcon={faLayerGroup}
-                disabled={classActionsDisabled}
+                disabled={classActionsDisabled || multiActive}
             >
                 Move
             </ContextMenu.SubMenu.Trigger>
@@ -256,32 +296,39 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
-        <ContextMenuSeparator />
-        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+            <ContextMenuSeparator />
+            {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
+                <ContextMenu.Item.Button
+                    onSelect={openRemoveFromDiagramDialog}
+                    faIcon={faMinus}
+                    variant="danger"
+                >
+                    {multiActive
+                        ? `Remove ${selectionUuids.length} from Diagram`
+                        : "Remove from Diagram"}
+                </ContextMenu.Item.Button>
+            {/if}
             <ContextMenu.Item.Button
-                onSelect={openRemoveFromDiagramDialog}
-                faIcon={faMinus}
+                onSelect={openDeleteClassDialog}
+                disabled={classActionsDisabled || crossGraphDisabled}
+                faIcon={faTrash}
                 variant="danger"
+                altText="Del"
             >
-                Remove from Diagram
+                {multiActive
+                    ? `Delete ${selectionUuids.length} classes`
+                    : "Delete class"}
             </ContextMenu.Item.Button>
         {/if}
-        <ContextMenu.Item.Button
-            onSelect={openDeleteClassDialog}
-            disabled={classActionsDisabled}
-            faIcon={faTrash}
-            variant="danger"
-        >
-            Delete class
-        </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
 
 <DeleteDependenciesDialog
     bind:showDialog={showDeleteDependenciesDialog}
     {datasetName}
-    {graphUri}
-    resourceUuid={dialogClass?.uuid}
+    graphUri={dialogGraphUri ?? graphUri}
+    resourceUuids={dialogClassIds}
 />
 <ExtendClassDialog
     {datasetName}
@@ -302,6 +349,6 @@
     lockedDatasetName={datasetName}
     {graphUri}
     diagramId={editorState.selectedDiagram.getProperty("id")}
-    classId={contextMenuClass.uuid}
-    classLabel={contextMenuClass.label}
+    classIds={dialogClassIds}
+    classLabels={dialogClassLabels}
 />

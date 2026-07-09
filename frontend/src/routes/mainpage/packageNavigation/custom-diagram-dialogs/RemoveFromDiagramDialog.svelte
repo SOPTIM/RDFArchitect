@@ -19,7 +19,11 @@
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import {
+        forceReloadTrigger,
+        multiSelectState,
+    } from "$lib/sharedState.svelte.js";
     import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     let {
@@ -27,9 +31,16 @@
         lockedDatasetName,
         graphUri,
         diagramId,
-        classId,
-        classLabel,
+        classIds = [],
+        classLabels = [],
     } = $props();
+
+    const isSingle = $derived(classIds.length === 1);
+    const subject = $derived(
+        isSingle
+            ? `class "${classLabels[0] ?? ""}"`
+            : `${classIds.length} classes`,
+    );
 
     async function removeFromDiagram() {
         const { error } = graphUri
@@ -37,12 +48,12 @@
                   lockedDatasetName,
                   graphUri,
                   diagramId,
-                  classId,
+                  classIds,
               )
             : await customDiagramStore.removeClassFromDatasetDiagram(
                   lockedDatasetName,
                   diagramId,
-                  classId,
+                  classIds,
               );
         if (!error) {
             forceReloadTrigger.trigger();
@@ -53,17 +64,20 @@
 <ActionDialog
     bind:showDialog
     size="w-full max-w-lg"
-    primaryLabel="Remove Class from Diagram"
+    primaryLabel={isSingle
+        ? "Remove Class from Diagram"
+        : "Remove Classes from Diagram"}
     onPrimary={removeFromDiagram}
     primaryVariant="danger"
-    title={classLabel ? `Remove class "${classLabel}"?` : "Remove class?"}
+    title={`Remove ${subject}?`}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-2/3 text-sm leading-relaxed">
-            This removes the class from this custom diagram. It will still be
-            accessible from its package.
+            This removes the {isSingle ? "class" : "classes"} from this custom diagram.
+            {isSingle ? "It" : "They"} will still be accessible from
+            {isSingle ? "its" : "their"} package.
         </p>
     </div>
 </ActionDialog>

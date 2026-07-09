@@ -45,6 +45,7 @@
         datasetOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
+        classTypeOfClassToOpenNext,
         closeClassEditor,
     } = $props();
 
@@ -112,7 +113,7 @@
         );
         if (!error) {
             reactiveClass.save();
-            editorState.selectedClassUUID.trigger();
+            editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
         }
@@ -138,7 +139,10 @@
                 datasetOfClassToOpenNext,
             );
             editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-            editorState.selectedClassUUID.updateValue(classToOpenNext);
+            editorState.selectedClass.updateValue({
+                type: classTypeOfClassToOpenNext,
+                id: classToOpenNext,
+            });
         }
     }
 
@@ -146,7 +150,10 @@
         saveChanges();
         editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
-        editorState.selectedClassUUID.updateValue(classToOpenNext);
+        editorState.selectedClass.updateValue({
+            type: classTypeOfClassToOpenNext,
+            id: classToOpenNext,
+        });
     }
 </script>
 

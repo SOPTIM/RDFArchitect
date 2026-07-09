@@ -29,6 +29,7 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -62,6 +63,10 @@ public class GraphWithContextCollection {
 
     @Getter private final DiagramLayout diagramLayout = new DiagramLayout();
 
+    @Getter
+    private final CrossProfileDiagramInfo crossProfileDiagramInfo = new CrossProfileDiagramInfo();
+
+    // universal prefix map for all graphs
     private final PrefixMapping prefixes = new PrefixMappingImpl();
 
     @SuppressWarnings("java:S2093")

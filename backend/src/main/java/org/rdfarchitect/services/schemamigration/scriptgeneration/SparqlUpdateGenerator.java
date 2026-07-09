@@ -196,8 +196,12 @@ public class SparqlUpdateGenerator {
         var graph = migrationSessionStore.getContext().getUpdatedSchema();
         var model = ModelFactory.createModelForGraph(graph);
         var classResource = model.getResource(classIri);
-        var subclasses = CIMClassUtils.findDerivingClasses(classResource);
 
-        return subclasses.stream().map(Resource::getURI).toList();
+        var classHierarchy = CIMClassUtils.findDerivingClasses(classResource);
+        if (CIMClassUtils.isInstantiableClass(classResource)) {
+            classHierarchy.add(classResource);
+        }
+
+        return classHierarchy.stream().map(Resource::getURI).toList();
     }
 }

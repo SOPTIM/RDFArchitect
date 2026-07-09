@@ -16,6 +16,7 @@
  */
 
 import {
+    ClassType,
     copyState,
     DiagramType,
     editorState,
@@ -31,34 +32,57 @@ export async function saveCopyClass(
     copyAttributes,
     copyAssociations,
 ) {
-    if (!copyState.classUUID || !copyState.graphURI || !copyState.datasetName)
-        return false;
+    const entries = copyState.getEntries();
+    if (entries.length === 0) return false;
     const payload = {
-        targetDatasetName: datasetName,
-        targetGraphURI: graphURI,
         targetPackage: packageDTO?.uuid === "default" ? null : packageDTO,
         copyAsAbstract: copyAbstract,
         copyAttributes: copyAttributes,
         copyAssociations: copyAssociations,
+        sources: entries.map(e => ({
+            sourceDatasetName: e.datasetName,
+            sourceGraphURI: e.graphURI,
+            classUUID: e.classUUID,
+        })),
     };
-
-    const { data } = await classStore.copyClass(
-        copyState.datasetName.getValue(),
-        copyState.graphURI.getValue(),
-        copyState.classUUID.getValue(),
-        payload,
-    );
-    if (data) {
-        const uuid = data.uuid;
-        editorState.selectedDataset.updateValue(datasetName);
-        editorState.selectedClassDataset.updateValue(datasetName);
-        editorState.selectedGraph.updateValue(graphURI);
-        editorState.selectedClassGraph.updateValue(graphURI);
-        editorState.selectedDiagram.updateValue({
-            type: DiagramType.PACKAGE,
-            id: packageDTO?.uuid ?? "default",
-        });
-        editorState.selectedClassUUID.updateValue(uuid);
+    try {
+        const res = await bec.postPasteClasses(datasetName, graphURI, payload);
+        if (res.ok) {
+            const pasted = await res.json();
+            editorState.selectedDataset.updateValue(datasetName);
+            editorState.selectedClassDataset.updateValue(datasetName);
+            editorState.selectedGraph.updateValue(graphURI);
+            editorState.selectedClassGraph.updateValue(graphURI);
+            editorState.selectedDiagram.updateValue({
+                type: DiagramType.PACKAGE,
+                id: packageDTO?.uuid ?? "default",
+            });
+            const last = pasted[pasted.length - 1];
+            if (last) {
+                editorState.selectedClass.updateValue({
+                    type: ClassType.SINGLE_CLASS,
+                    id: last.uuid,
+                });
+            }
+            if (pasted.length === 1) {
+                toastStore.success(
+                    "Class pasted",
+                    `"${pasted[0].name}" was pasted.`,
+                );
+            } else {
+                toastStore.success(
+                    "Classes pasted",
+                    `${pasted.length} classes were pasted.`,
+                );
+            }
+            return true;
+        } else {
+            const errorText = await res.text();
+            console.error("Could not paste classes:", errorText);
+            toastStore.error("Paste failed", `Could not paste classes.`);
+            return false;
+        }
+    } finally {
         forceReloadTrigger.trigger();
     }
 }

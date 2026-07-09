@@ -18,13 +18,15 @@
 <script>
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEditor from "./classEditor/classEditor.svelte";
+    import MergedClassEditor from "./classEditor/mergedClassEditor.svelte";
     import RenderingWrapper from "./renderingWrapper.svelte";
 
     let classEditorPaneWidth = $state(27);
     let paneSizeByPackage = $state({});
+
     let classDatasetName = $derived(
         editorState.selectedClassDataset.getValue() ??
             editorState.selectedDataset.getValue(),
@@ -36,16 +38,21 @@
 
     const selectionTrigger = $derived([
         editorState.selectedDiagram.subscribe(),
-        editorState.selectedClassUUID.subscribe(),
+        editorState.selectedClass.subscribe(),
     ]);
     const isClassSelected = $derived(
-        selectionTrigger && !!editorState.selectedClassUUID.getValue(),
+        selectionTrigger && !!editorState.selectedClass.getProperty("id"),
     );
     const classEditorKey = $derived(
-        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClassUUID.getValue() ?? ""}::${editorState.selectedClassUUID.subscribe()}`,
+        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClass.getProperty("id") ?? ""}::${editorState.selectedClass.subscribe()}`,
     );
     const renderingKey = $derived(
         `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
+    );
+
+    const isMergedClass = $derived(
+        editorState.selectedClass.getProperty("type") ===
+            ClassType.MERGED_CLASS,
     );
 
     $effect(() => {
@@ -72,10 +79,9 @@
 
     function handleSplitPaneResize(event) {
         if (event.detail && event.detail.length > 1) {
-            if (!editorState.selectedClassUUID.getValue()) {
+            if (!editorState.selectedClass.getProperty("id")) {
                 return;
             }
-            // event.detail[1] holds the size of the class editor pane.
             classEditorPaneWidth = event.detail[1].size;
             const packageKey = getPackageKey();
             if (packageKey) {
@@ -105,20 +111,31 @@
             {/key}
         </Pane>
 
-        {#if isClassSelected}
-            <Pane
-                size={classEditorPaneWidth}
-                minSize={25}
-                class="h-full overflow-auto"
-            >
+        <Pane
+            size={isClassSelected ? classEditorPaneWidth : 0}
+            minSize={isClassSelected ? 25 : 0}
+            class="h-full overflow-auto"
+        >
+            {#if isClassSelected}
                 {#key classEditorKey}
-                    <ClassEditor
-                        datasetName={classDatasetName}
-                        graphUri={classGraphUri}
-                        classUuid={editorState.selectedClassUUID.getValue()}
-                    />
+                    {#if isMergedClass}
+                        <MergedClassEditor
+                            datasetName={classDatasetName}
+                            classUuid={editorState.selectedClass.getProperty(
+                                "id",
+                            )}
+                        />
+                    {:else}
+                        <ClassEditor
+                            datasetName={classDatasetName}
+                            graphUri={classGraphUri}
+                            classUuid={editorState.selectedClass.getProperty(
+                                "id",
+                            )}
+                        />
+                    {/if}
                 {/key}
-            </Pane>
-        {/if}
+            {/if}
+        </Pane>
     </Splitpanes>
 </div>

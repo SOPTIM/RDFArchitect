@@ -1,3 +1,4 @@
 graph:
   maxVersions: 256
   compressCount: 1
+  lockTimeoutSeconds: 30

@@ -38,7 +38,7 @@
         allGraphNavEntries,
         diagram = $bindable(),
         classes,
-        readOnly,
+        readonly,
         level = 4,
         onToggle,
     } = $props();
@@ -69,6 +69,13 @@
     let packageIcon = $derived(diagram.showContents ? faFolderOpen : faFolder);
     const hasClasses = $derived(diagram.classes?.length > 0);
 
+    const rangeSiblings = $derived(
+        classes?.map(cls => ({
+            classNavEntry: cls,
+            graphNavEntry: getGraphNavEntryForClass(cls.id),
+        })) ?? [],
+    );
+
     async function toggleDiagramContentsVisibility() {
         await onToggle();
         const next = !diagram.showContents;
@@ -88,17 +95,15 @@
     }
 
     function selectDiagram() {
-        editorState.selectedDataset.updateValue(datasetNavEntry.label);
-        editorState.selectedGraph.updateValue(
-            graphNavEntry ? graphNavEntry.id : null,
-        );
-        let diagramType = graphNavEntry
+        const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
             : DiagramType.CUSTOM_DATASET_DIAGRAM;
-        editorState.selectedDiagram.updateValue({
-            type: diagramType,
-            id: diagram.diagramId,
-        });
+        editorState.selectCustomDiagram(
+            datasetNavEntry.label,
+            graphNavEntry ? graphNavEntry.id : null,
+            diagram.diagramId,
+            diagramType,
+        );
     }
 </script>
 
@@ -152,7 +157,8 @@
                     classNavEntry={cls}
                     diagramId={diagram.diagramId}
                     diagramGraphUri={graphNavEntry?.id}
-                    {readOnly}
+                    {rangeSiblings}
+                    {readonly}
                 />
             {/each}
         </div>

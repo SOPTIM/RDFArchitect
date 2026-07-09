@@ -100,6 +100,8 @@
                 await fetchGraphDiagramRenderingData(diagramId);
             } else if (diagramType === DiagramType.CUSTOM_DATASET_DIAGRAM) {
                 await fetchDatasetDiagramRenderingData(diagramId);
+            } else if (diagramType === DiagramType.CROSS_PROFILE) {
+                await fetchCrossProfileRenderingData();
             } else {
                 await fetchPackageRenderingData(
                     datasetName,
@@ -204,6 +206,29 @@
             }
         } catch (error) {
             console.error("Error fetching custom diagram data:", error);
+            response = null;
+            renderingFormat = null;
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    async function fetchCrossProfileRenderingData() {
+        try {
+            const res = await bec.getCrossProfileDiagramRenderingDataForDataset(
+                editorState.selectedDataset.getValue(),
+            );
+
+            const responseText = await res.text();
+            if (!responseText) {
+                displayDiagram = false;
+            } else {
+                response = JSON.parse(responseText);
+                renderingFormat = response.format;
+                displayDiagram = true;
+            }
+        } catch (error) {
+            console.error("Error fetching cross profile diagram data:", error);
             response = null;
             renderingFormat = null;
         } finally {

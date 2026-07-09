@@ -23,6 +23,7 @@
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveAttributeToAttributeDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
@@ -87,6 +88,12 @@
             isNewAttribute,
         );
         if (!result.ok) {
+            toastStore.error(
+                "Could not save attribute",
+                isNewAttribute
+                    ? `An attribute "${attribute.label.value}" may already exist on this class.`
+                    : "The attribute could not be saved.",
+            );
             return;
         }
 

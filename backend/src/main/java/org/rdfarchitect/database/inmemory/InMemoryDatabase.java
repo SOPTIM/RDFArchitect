@@ -23,6 +23,7 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.DatabaseConnection;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -71,6 +72,14 @@ public interface InMemoryDatabase {
      * @return diagram layout for the dataset
      */
     DiagramLayout getDatasetDiagramLayout(String datasetName);
+
+    /**
+     * Returns the information of the CrossProfileDiagram of the given dataset.
+     *
+     * @param datasetName literal dataset name
+     * @return {@link CrossProfileDiagramInfo} of the CrossProfileDiagram for the dataset
+     */
+    CrossProfileDiagramInfo getCrossProfileDiagramInfo(String datasetName);
 
     /**
      * Creates a new named graph in a specified dataset. If the dataset does not exist yet, it will

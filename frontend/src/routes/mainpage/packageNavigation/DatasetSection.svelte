@@ -27,17 +27,26 @@
         faDiagramProject,
         faPlus,
     } from "@fortawesome/free-solid-svg-icons";
-    import { getContext } from "svelte";
+    import { getContext, onMount } from "svelte";
 
+    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import {
+        editorState,
+        forceReloadTrigger,
+        SelectionLevel,
+    } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
+    import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
     import GraphSection from "./GraphSection.svelte";
-    import { isSelectedDataset } from "./packageNavigationUtils.svelte.js";
+    import {
+        datasetHighlight,
+        isSelectedDataset,
+    } from "./packageNavigationUtils.svelte.js";
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
@@ -47,6 +56,8 @@
 
     let { datasetNavEntry } = $props();
 
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showNewDiagramDialog = $state(false);
@@ -55,11 +66,22 @@
     let showNamespacesDialog = $state(false);
     let readonly = $state(false);
     let namespaces = $state([]);
+    let crossProfileID = $state();
 
     let wasDatasetSelected = false;
 
     const isDatasetSelected = $derived(
         isSelectedDataset(datasetNavEntry.label),
+    );
+    const datasetSelectionState = $derived(
+        datasetHighlight(datasetNavEntry.label),
+    );
+
+    const packagesWithClassesCount = $derived(
+        (datasetNavEntry.children ?? [])
+            .flatMap(graphNavEntry => graphNavEntry.children ?? [])
+            .filter(packageNavEntry => packageNavEntry.children?.length > 0)
+            .length,
     );
 
     $effect(async () => {
@@ -72,6 +94,11 @@
             datasetNavEntry.parent?.open();
         }
         wasDatasetSelected = isDatasetSelected;
+    });
+
+    onMount(async () => {
+        let res = await bec.getCrossProfileID(datasetNavEntry.label);
+        crossProfileID = await res.text();
     });
 
     async function fetchNamespaces() {
@@ -87,13 +114,25 @@
         }
     }
 
-    function selectDataset() {
-        if (editorState.selectedDataset.getValue() === datasetNavEntry.label) {
+    function handleToggleDataset() {
+        const wasOpen = datasetNavEntry.isOpen;
+        datasetNavEntry.toggle();
+        if (!wasOpen) {
             return;
         }
-        editorState.selectedGraph.updateValue(null);
-        editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedDataset.updateValue(datasetNavEntry.label);
+        const kind = editorState.activeSelectionKind.getValue();
+        if (
+            (kind === SelectionLevel.GRAPH ||
+                kind === SelectionLevel.PACKAGE ||
+                kind === SelectionLevel.DIAGRAM) &&
+            isSelectedDataset(datasetNavEntry.label)
+        ) {
+            editorState.dissolveToDataset();
+        }
+    }
+
+    function selectDataset() {
+        editorState.selectDataset(datasetNavEntry.label);
     }
 
     async function requestEnableEditing() {
@@ -136,12 +175,13 @@
                 icon={faDatabase}
                 hasChildren={datasetNavEntry.children?.length > 0}
                 expanded={datasetNavEntry.isOpen}
-                isSelected={isDatasetSelected}
                 title={datasetNavEntry.tooltip}
                 badgeText={readonly ? "Read-only" : ""}
                 badgeVariant="readonly"
+                isSelected={datasetSelectionState === "active"}
+                ancestorSelected={datasetSelectionState === "ancestor"}
                 onclick={selectDataset}
-                onToggle={() => datasetNavEntry.toggle()}
+                onToggle={handleToggleDataset}
             />
         </ContextMenu.TriggerArea>
         <ContextMenu.Content>
@@ -241,6 +281,13 @@
                     {readonly}
                 />
             {/each}
+
+            {#if packagesWithClassesCount > 1}
+                <CrossProfileDiagramsSection
+                    {datasetNavEntry}
+                    {crossProfileID}
+                />
+            {/if}
 
             <CustomDiagramsSection
                 {datasetNavEntry}

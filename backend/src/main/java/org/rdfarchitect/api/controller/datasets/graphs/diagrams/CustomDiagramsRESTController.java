@@ -25,12 +25,10 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
-import org.rdfarchitect.models.cim.rendering.RenderCIMCollectionUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
-import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
-import org.rdfarchitect.services.rendering.DiagramToCIMCollectionConverterUseCase;
+import org.rdfarchitect.services.rendering.RenderGraphDiagramUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -53,11 +51,7 @@ public class CustomDiagramsRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(CustomDiagramsRESTController.class);
 
-    private final DiagramToCIMCollectionConverterUseCase converter;
-
-    private final RenderCIMCollectionUseCase renderer;
-
-    private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
+    private final RenderGraphDiagramUseCase renderGraphDiagramUseCase;
 
     private final DeleteCustomDiagramUseCase deleteCustomDiagramUseCase;
 
@@ -90,14 +84,10 @@ public class CustomDiagramsRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
-        var cimCollection =
-                converter.convert(new GraphIdentifier(datasetName, extendedGraphURI), diagramId);
-
-        var layoutData =
-                fetchRenderingLayoutDataUseCase.fetchRenderingLayoutData(
+        var result =
+                renderGraphDiagramUseCase.renderGraphDiagram(
                         new GraphIdentifier(datasetName, extendedGraphURI),
                         UUID.fromString(diagramId));
-        var result = renderer.renderUML(cimCollection, layoutData);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",

@@ -28,4 +28,6 @@ public class AttributeDTO {
     private String label;
     private String type;
     private String multiplicity;
+    private String graphUri;
+    private String color;
 }

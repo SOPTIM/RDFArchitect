@@ -32,6 +32,7 @@
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
+        ClassType,
         DiagramType,
         editorState,
         forceReloadTrigger,
@@ -216,13 +217,16 @@
         });
         editorState.selectedClassDataset.updateValue(datasetNameLocal);
         editorState.selectedClassGraph.updateValue(graphURILocal);
-        editorState.selectedClassUUID.updateValue(data);
+        editorState.selectedClass.updateValue({
+            type: ClassType.SINGLE_CLASS,
+            id: uuid,
+        });
 
         forceReloadTrigger.trigger();
         editorState.selectedDataset.trigger();
         editorState.selectedGraph.trigger();
         editorState.selectedDiagram.trigger();
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
     }
 </script>
 

@@ -20,7 +20,10 @@
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import {
+        eventStack,
+        EventType,
+    } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
@@ -80,6 +83,7 @@
     let datasetOfClassToOpenNext = $state(null);
     let graphOfClassToOpenNext = $state(null);
     let classToOpenNext = $state(null);
+    let classTypeOfClassToOpenNext = $state(null);
 
     let pendingAction = $state(null);
 
@@ -88,7 +92,7 @@
     );
 
     $effect(() => {
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         forceReloadTrigger.subscribe();
 
         const cancellation = { cancelled: false };
@@ -118,7 +122,7 @@
     });
 
     onMount(() => {
-        eventStack.addEvent(closeClassEditor);
+        eventStack.addEvent(closeClassEditor, EventType.CLASS_EDITOR);
         eventStack.registerActionGuard(withUnsavedChangesCheck);
     });
 
@@ -137,10 +141,16 @@
     }
 
     export function closeClassEditor(
-        { datasetName = null, graphUri = null, classUuid = null } = {
+        {
+            datasetName = null,
+            graphUri = null,
+            classUuid = null,
+            classType = null,
+        } = {
             datasetName: null,
             graphUri: null,
             classUuid: null,
+            classType: null,
         },
     ) {
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
@@ -148,11 +158,15 @@
             datasetOfClassToOpenNext = datasetName;
             graphOfClassToOpenNext = graphUri;
             classToOpenNext = classUuid;
+            classTypeOfClassToOpenNext = classType;
             return;
         }
         editorState.selectedClassDataset.updateValue(datasetName);
         editorState.selectedClassGraph.updateValue(graphUri);
-        editorState.selectedClassUUID.updateValue(classUuid);
+        editorState.selectedClass.updateValue({
+            type: classType,
+            id: classUuid,
+        });
     }
 
     async function loadContext() {
@@ -312,6 +326,7 @@
                         {datasetOfClassToOpenNext}
                         {graphOfClassToOpenNext}
                         {classToOpenNext}
+                        {classTypeOfClassToOpenNext}
                         {closeClassEditor}
                     />
                     <div

@@ -83,7 +83,7 @@
 		 */
         window.getClassInformation = nodeId => {
             console.log("selecting class: ", nodeId);
-            if (!editorState.selectedClassUUID.getValue()) {
+            if (!editorState.selectedClass.getProperty("id")) {
                 eventStack.executeNewestEvent(nodeId);
                 editorState.selectedClassDataset.updateValue(
                     editorState.selectedDataset.getValue()
@@ -91,7 +91,7 @@
                 editorState.selectedClassGraph.updateValue(
                     editorState.selectedGraph.getValue()
                 );
-                editorState.selectedClassUUID.updateValue(nodeId);
+                editorState.selectedClass.updateValue(nodeId);
                 return;
             }
             eventStack.executeNewestEvent({

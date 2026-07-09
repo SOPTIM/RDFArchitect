@@ -41,7 +41,7 @@
             markerHeight="10"
             orient="auto"
         >
-            <polygon points="0,10 5,5 0,0 11,5" fill="#000" />
+            <polygon points="0,10 5,5 0,0 11,5" fill="context-stroke" />
         </marker>
         <marker
             id="associationFrom"
@@ -52,7 +52,7 @@
             markerHeight="10"
             orient="auto"
         >
-            <polygon points="10,0 5,5 10,10 -1,5" fill="#000" />
+            <polygon points="10,0 5,5 10,10 -1,5" fill="context-stroke" />
         </marker>
     </defs>
 </svg>

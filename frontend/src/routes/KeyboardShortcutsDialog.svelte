@@ -49,6 +49,7 @@
                 { description: "New Package", keys: ["Alt", "N"] },
                 { description: "Edit Package", keys: ["Ctrl", "Shift", "K"] },
                 { description: "Copy Class", keys: ["Ctrl", "C"] },
+                { description: "Delete Class", keys: ["Del"] },
                 { description: "Paste", keys: ["Ctrl", "V"] },
                 {
                     description: "Paste without Attributes/Enum Entries",
@@ -109,10 +110,10 @@
     title="Keyboard Shortcuts"
     titleIcon={faKeyboard}
     readonly
-    size="w-full max-w-3xl"
+    size="w-full max-w-3xl h-2/3"
 >
     <div
-        class="mx-2 flex max-h-96 flex-col gap-6 overflow-y-auto py-2 sm:flex-row sm:gap-x-6"
+        class="mx-2 flex flex-col gap-6 overflow-y-auto py-2 h-full sm:flex-row sm:gap-x-6"
     >
         <div class="flex flex-1 flex-col gap-6">
             {#each sections.slice(0, 2) as section}

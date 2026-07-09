@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-07
+
+### Added
+
+- RDFA-546: Class multi select ([73357954](https://github.com/SOPTIM/RDFArchitect/commit/73357954), [#189](https://github.com/SOPTIM/RDFArchitect/pull/189))
+- RDFA-344: Added Merge View ([324795ae](https://github.com/SOPTIM/RDFArchitect/commit/324795ae), [#176](https://github.com/SOPTIM/RDFArchitect/pull/176))
+- RDFA-365: Added Keyboard Shortcuts ([087998a9](https://github.com/SOPTIM/RDFArchitect/commit/087998a9), [#181](https://github.com/SOPTIM/RDFArchitect/pull/181))
+- GH-152: Add Before/After labels and swap button to compare dialog ([174914f0](https://github.com/SOPTIM/RDFArchitect/commit/174914f0), [#161](https://github.com/SOPTIM/RDFArchitect/pull/161))
+- RDFA-355: Single transaction for each backend operation ([6c122fd3](https://github.com/SOPTIM/RDFArchitect/commit/6c122fd3), [#119](https://github.com/SOPTIM/RDFArchitect/pull/119))
+
+### Changed
+
+- RDFA-520: Updated pull request template and feature list ([7c39cbc5](https://github.com/SOPTIM/RDFArchitect/commit/7c39cbc5), [#123](https://github.com/SOPTIM/RDFArchitect/pull/123))
+
+### Fixed
+
+- RDFA-637: Fixed association not displayed correctly in merged view ([ad43bd1a](https://github.com/SOPTIM/RDFArchitect/commit/ad43bd1a), [#195](https://github.com/SOPTIM/RDFArchitect/pull/195))
+- Fixed opening a dialog via shortcut while having a dialog open ([0c91f224](https://github.com/SOPTIM/RDFArchitect/commit/0c91f224), [#184](https://github.com/SOPTIM/RDFArchitect/pull/184))
+- GH-146: Reject creating an attribute whose IRI already exists ([8d303108](https://github.com/SOPTIM/RDFArchitect/commit/8d303108), [#193](https://github.com/SOPTIM/RDFArchitect/pull/193))
+- GH-157: Migration scripts now respect inheritance hierarchy ([dbc5154f](https://github.com/SOPTIM/RDFArchitect/commit/dbc5154f), [#191](https://github.com/SOPTIM/RDFArchitect/pull/191))
+- RDFA-557: Custom diagrams in single transaction ([ace4cf19](https://github.com/SOPTIM/RDFArchitect/commit/ace4cf19), [#186](https://github.com/SOPTIM/RDFArchitect/pull/186))
+- RDFA-514: Prefixes are not stored for custom shacl ([6c2126cc](https://github.com/SOPTIM/RDFArchitect/commit/6c2126cc), [#179](https://github.com/SOPTIM/RDFArchitect/pull/179))
+- Stop rewriting all primitive attribute datatypes to xsd ([6a9714a2](https://github.com/SOPTIM/RDFArchitect/commit/6a9714a2), [#183](https://github.com/SOPTIM/RDFArchitect/pull/183))
+- Fixed a bug when selecting a target for an association ([9aa40aea](https://github.com/SOPTIM/RDFArchitect/commit/9aa40aea), [#182](https://github.com/SOPTIM/RDFArchitect/pull/182))
+- GH-138: Collapse button labels to icons on narrow panel ([aca99ccc](https://github.com/SOPTIM/RDFArchitect/commit/aca99ccc), [#166](https://github.com/SOPTIM/RDFArchitect/pull/166))
+- RDFA-508: Naming a class rdfs:Class caused unexpected behaviour ([ecad8136](https://github.com/SOPTIM/RDFArchitect/commit/ecad8136), [#148](https://github.com/SOPTIM/RDFArchitect/pull/148))
+- RDFA-510: Namespace ending in slash ([c12d2dca](https://github.com/SOPTIM/RDFArchitect/commit/c12d2dca), [#147](https://github.com/SOPTIM/RDFArchitect/pull/147))
+- RDFA-499: Undo redo opens invalid class editor ([62853059](https://github.com/SOPTIM/RDFArchitect/commit/62853059), [#133](https://github.com/SOPTIM/RDFArchitect/pull/133))
+- GH-144: Use consistent title case for menu labels and dialog titles ([eb4ce716](https://github.com/SOPTIM/RDFArchitect/commit/eb4ce716), [#175](https://github.com/SOPTIM/RDFArchitect/pull/175))
+- GH-171: Restore comment Edit/Preview toggle button and fix asciidoc renderer ([71c794f4](https://github.com/SOPTIM/RDFArchitect/commit/71c794f4), [#178](https://github.com/SOPTIM/RDFArchitect/pull/178))
+- GH-142: Show parent diagram when selecting a class with none open ([2d67ab70](https://github.com/SOPTIM/RDFArchitect/commit/2d67ab70), [#172](https://github.com/SOPTIM/RDFArchitect/pull/172))
+- GH-140: Use blue focus border on inputs instead of orange ([44c39792](https://github.com/SOPTIM/RDFArchitect/commit/44c39792), [#170](https://github.com/SOPTIM/RDFArchitect/pull/170))
+- GH-141: Notify when imported properties cannot be displayed ([e8ea78b6](https://github.com/SOPTIM/RDFArchitect/commit/e8ea78b6), [#169](https://github.com/SOPTIM/RDFArchitect/pull/169))
+- GH-167: Make read-only toggle in Edit menu work ([4368dfb7](https://github.com/SOPTIM/RDFArchitect/commit/4368dfb7), [#168](https://github.com/SOPTIM/RDFArchitect/pull/168))
+- GH-136: Give feedback when entering the concrete stereotype ([04104293](https://github.com/SOPTIM/RDFArchitect/commit/04104293), [#164](https://github.com/SOPTIM/RDFArchitect/pull/164))
+- GH-162: Use lowercase xsd:string datatype for comment literals ([2537399b](https://github.com/SOPTIM/RDFArchitect/commit/2537399b), [#163](https://github.com/SOPTIM/RDFArchitect/pull/163))
+- GH-137: Use neutral color for dialog close buttons ([3fb9ef89](https://github.com/SOPTIM/RDFArchitect/commit/3fb9ef89), [#165](https://github.com/SOPTIM/RDFArchitect/pull/165))
+- GH-151: Support dataset names with spaces and special characters ([04392f43](https://github.com/SOPTIM/RDFArchitect/commit/04392f43), [#158](https://github.com/SOPTIM/RDFArchitect/pull/158))
+- GH-159: Point Help menu and README badge to rdfarchitect.soptim.de ([26ff7932](https://github.com/SOPTIM/RDFArchitect/commit/26ff7932), [#160](https://github.com/SOPTIM/RDFArchitect/pull/160))
+- GH-155: Dispatch keyboard shortcuts on event.key instead of event.code ([0ff0b22b](https://github.com/SOPTIM/RDFArchitect/commit/0ff0b22b), [#156](https://github.com/SOPTIM/RDFArchitect/pull/156))
+- Don't flag user settings as unsaved after toggling a checkbox twice ([b6c2400c](https://github.com/SOPTIM/RDFArchitect/commit/b6c2400c), [#149](https://github.com/SOPTIM/RDFArchitect/pull/149))
+- RDFA-543: J.*-namespace, when exporting with undefined namespace and creating class with max z index ([32d6ce9c](https://github.com/SOPTIM/RDFArchitect/commit/32d6ce9c), [#130](https://github.com/SOPTIM/RDFArchitect/pull/130))
+
 ## [1.1.0] - 2026-06-02
 
 ### Added

@@ -24,7 +24,11 @@
     } from "$lib/api/generated/index.ts";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { copyState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import {
+        copyState,
+        forceReloadTrigger,
+        multiSelectState,
+    } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
@@ -37,24 +41,39 @@
         datasetName,
         graphUri,
         resourceUuid,
+        resourceUuids,
     } = $props();
 
-    let deleteDependencies = $state(null);
+    /** @type {Array<object>} One affected-resource tree per requested resource. */
+    let roots = $state([]);
 
     /** @type {Map<string, string>} "uuid::reason" -> selected action */
     let selectedActions = $state(new Map());
 
-    let type = $derived(deleteDependencies?.type.toLowerCase());
+    /** The resources to delete; supports a single uuid or a list (multiselect). */
+    const targetUuids = $derived(
+        resourceUuids && resourceUuids.length
+            ? resourceUuids
+            : resourceUuid
+              ? [resourceUuid]
+              : [],
+    );
 
-    /** Ordered list of actions that exist anywhere in the tree */
+    let type = $derived(roots[0]?.type?.toLowerCase());
+
+    /** Ordered list of actions that exist anywhere across all trees */
     let availableActions = $derived(
-        deleteDependencies
+        roots.length
             ? [
                   "DELETE",
                   "KEEP",
                   "REMOVE_PACKAGE_REFERENCE",
                   "REMOVE_SUBCLASS_REFERENCE",
-              ].filter(a => collectActions(deleteDependencies).has(a))
+              ].filter(a => {
+                  const all = new Set();
+                  roots.forEach(root => collectActions(root, all));
+                  return all.has(a);
+              })
             : [],
     );
 
@@ -97,30 +116,32 @@
     }
 
     async function fetchDeleteDependencies() {
-        if (!datasetName || !graphUri || !resourceUuid) {
+        if (!datasetName || !graphUri || targetUuids.length === 0) {
             console.error(
                 "Missing required properties to delete resource:",
                 datasetName,
                 graphUri,
-                resourceUuid,
+                targetUuids,
             );
             showDialog = false;
+            return;
         }
         let { data } = await getDeletionImpact({
             path: {
                 datasetName: datasetName,
                 graphURI: graphUri,
-                uuid: resourceUuid,
+                uuid: targetUuids,
             },
         });
-        deleteDependencies = data;
+        const impactByUuid = data
+        roots = Object.values(impactByUuid);
 
         selectedActions = new Map();
-        initSelectedActions(deleteDependencies);
+        roots.forEach(root => initSelectedActions(root));
 
         console.warn(
             "Delete dependencies - check for warnings before confirming deletion:",
-            deleteDependencies,
+            roots,
         );
     }
 
@@ -144,12 +165,26 @@
         return result;
     }
 
+    function dedupePayload(entries) {
+        const byUuid = new Map();
+        for (const entry of entries) {
+            const existing = byUuid.get(entry.uuid);
+            if (!existing || existing.action !== "DELETE") {
+                byUuid.set(entry.uuid, entry);
+            }
+        }
+        return [...byUuid.values()];
+    }
+
     async function submitDeleteRequest() {
-        if (!deleteDependencies) return;
-        const payload = buildPayload(deleteDependencies);
-        checkSelectedCopyClass(payload);
+        if (!roots.length) return;
+        const payload = dedupePayload(
+            roots.flatMap(root => buildPayload(root)),
+        );
+        pruneCopyState(payload);
         console.log("Submit delete with selections:", payload);
-        const label = deleteDependencies.resourceIdentifier.label;
+        const isSingle = roots.length === 1;
+        const label = isSingle ? roots[0].resourceIdentifier.label : null;
 
         let { error } = await deleteResources({
             path: { datasetName: datasetName, graphURI: graphUri },
@@ -168,23 +203,25 @@
             forceReloadTrigger.trigger();
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
-            editorState.selectedClassUUID.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
+            multiSelectState.clear();
+            const noun = isSingle
+                ? (type ?? "resource")
+                : pluralize(type ?? "resource");
             toastStore.success(
-                `${type ? type.charAt(0).toUpperCase() + type.slice(1) : "Resource"} deleted`,
-                label ? `"${label}" was removed.` : "Resource was removed.",
+                `${noun.charAt(0).toUpperCase() + noun.slice(1)} deleted`,
+                label
+                    ? `"${label}" was removed.`
+                    : `${roots.length} resources were removed.`,
             );
         }
     }
 
-    function checkSelectedCopyClass(payload) {
-        if (!copyState.classUUID.getValue()) return;
+    function pruneCopyState(payload) {
+        if (copyState.isEmpty) return;
         for (const entry of payload) {
-            if (
-                entry.action === "DELETE" &&
-                entry.uuid === copyState.classUUID.getValue()
-            ) {
-                copyState.reset();
-                return;
+            if (entry.action === "DELETE") {
+                copyState.remove(datasetName, graphUri, entry.uuid);
             }
         }
     }
@@ -211,11 +248,18 @@
         selectedActions = new Map(selectedActions);
     }
 
+    function pluralize(word) {
+        return word.endsWith("s") ? `${word}es` : `${word}s`;
+    }
+
     function getDialogTitle() {
-        if (deleteDependencies) {
-            return `Delete ${type} "${deleteDependencies.resourceIdentifier.label}"?`;
+        if (roots.length === 1) {
+            return `Delete ${type} "${roots[0].resourceIdentifier.label}"?`;
         }
-        return `Delete resource "${resourceUuid}"?`;
+        if (roots.length > 1) {
+            return `Delete ${roots.length} ${pluralize(type ?? "resource")}?`;
+        }
+        return "Delete resource?";
     }
 </script>
 
@@ -233,24 +277,32 @@
 >
     <div class="px-3 py-3">
         <p class="text-default-text mb-3 w-3/4 text-sm leading-relaxed">
-            Select how affected resources should be handled when deleting this
-            {type}.
+            Select how affected resources should be handled when deleting {roots.length >
+            1
+                ? "the selected resources"
+                : `this ${type ?? "resource"}`}.
         </p>
 
-        {#if deleteDependencies}
+        {#if roots.length}
             <div
                 class="border-border overflow-y-auto rounded-md border"
                 style="max-height: calc(75vh - 10rem);"
             >
-                <DeleteDependencyNode
-                    node={deleteDependencies}
-                    {selectedActions}
-                    {onSelectAction}
-                    {onBulkApplyToChildren}
-                    {availableActions}
-                    depth={0}
-                    isRoot={true}
-                />
+                {#each roots as root, i (root.resourceIdentifier.uuid)}
+                    {#if i > 0}
+                        <div class="bg-border h-px" role="presentation"></div>
+                    {/if}
+                    <DeleteDependencyNode
+                        node={root}
+                        {selectedActions}
+                        {onSelectAction}
+                        {onBulkApplyToChildren}
+                        {availableActions}
+                        depth={0}
+                        isRoot={true}
+                        expandedByDefault={roots.length === 1}
+                    />
+                {/each}
             </div>
         {:else}
             <div

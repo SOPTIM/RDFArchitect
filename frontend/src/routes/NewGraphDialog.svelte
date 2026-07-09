@@ -125,7 +125,7 @@
             type: DiagramType.PACKAGE,
             id: "default",
         });
-        editorState.selectedClassUUID.updateValue(null);
+        editorState.selectedClass.updateValue({ type: null, id: null });
 
         graphStore.invalidateDataset(datasetNameLocal);
         forceReloadTrigger.trigger();

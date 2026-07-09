@@ -44,7 +44,7 @@ export async function saveApiAttributeToBackend(
         console.error("Could not save attribute:", res.error);
         return { ok: false, error: res.error };
     } finally {
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
     }
 }

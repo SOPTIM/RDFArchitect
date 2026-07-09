@@ -30,7 +30,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.rendering.mermaid.builder.CIMAssociationToMermaidBuilder;
+import org.rdfarchitect.services.rendering.mermaid.builder.CIMAssociationToMermaidBuilder;
 
 import java.util.Map;
 import java.util.UUID;

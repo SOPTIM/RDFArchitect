@@ -39,17 +39,22 @@
     import {
         copyState,
         editorState,
-        forceReloadTrigger
+        forceReloadTrigger,
+        multiSelectState,
+        SelectionLevel,
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
     import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
+    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import FilterViewDialog from "../../FilterViewDialog.svelte";
+    import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
+    import { inferSelectionLevel } from "../../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
     import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
@@ -69,6 +74,9 @@
     let showFilterViewDialog = $state(false);
     let ShowPackageDeleteDependenciesDialog = $state(false);
     let showOntologyDeleteDependenciesDialog = $state(false);
+    let showClassDeleteDependenciesDialog = $state(false);
+    let showGraphDeleteDialog = $state(false);
+    let showDatasetDeleteDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -104,20 +112,71 @@
     let graphHasOntology = $derived(!!ontology);
 
     let disableCopyClassButton = $derived(
-        !editorState.selectedClassUUID.getValue()
+        !editorState.selectedClass.getProperty("id") &&
+            multiSelectState.getSelected().length === 0,
     );
+
+    /*
+      The class(es) targeted by the delete shortcut: the multi-selection if
+        present (and within a single graph), otherwise the single selected class.
+    */
+    let deleteClassSelection = $derived.by(() => {
+        const selected = multiSelectState.getSelected();
+        if (selected.length > 0) {
+            return {
+                datasetName: selected[0].datasetName,
+                graphUri: selected[0].graphUri,
+                uuids: selected.map(e => e.classUuid),
+                singleGraph: multiSelectState.isSingleGraph,
+            };
+        }
+        const uuid = editorState.selectedClass.getProperty("id");
+        if (uuid) {
+            return {
+                datasetName: editorState.selectedClassDataset.getValue(),
+                graphUri: editorState.selectedClassGraph.getValue(),
+                uuids: [uuid],
+                singleGraph: true,
+            };
+        }
+        return null;
+    });
+    let disableDeleteClassButton = $derived(
+        isDatasetReadOnly ||
+            !deleteClassSelection ||
+            !deleteClassSelection.singleGraph,
+    );
+
+    // A custom diagram isn't deletable here, so it resolves to its graph/dataset.
+    let deleteShortcutTarget = $derived.by(() => {
+        if (deleteClassSelection) {
+            return SelectionLevel.CLASS;
+        }
+        switch (inferSelectionLevel()) {
+            case SelectionLevel.PACKAGE:
+                return SelectionLevel.PACKAGE;
+            case SelectionLevel.DIAGRAM:
+            case SelectionLevel.GRAPH:
+                return hasGraphSelected
+                    ? SelectionLevel.GRAPH
+                    : SelectionLevel.DATASET;
+            case SelectionLevel.DATASET:
+                return SelectionLevel.DATASET;
+            default:
+                return null;
+        }
+    });
+
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
-        !hasGraphSelected ||
-        !editorState.selectedDiagram.getValue() ||
-        !copyState.datasetName.getValue() ||
-        !copyState.graphURI.getValue() ||
-        !copyState.classUUID.getValue()
+            !hasGraphSelected ||
+            !editorState.selectedDiagram.getProperty("id") ||
+            copyState.isEmpty,
     );
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
-        editorState.selectedClassUUID.subscribe();
+        editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
@@ -131,50 +190,63 @@
             shortcutStore.register(
                 "newClass",
                 ["shift", "n"],
-                () => (showNewClassDialog = true)
+                () => (showNewClassDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "newPackage",
                 ["alt", "n"],
-                () => (showNewPackageDialog = true)
+                () => (showNewPackageDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "namespaces",
                 ["ctrl", "shift", "a"],
-                () => (showNamespaceDialog = true)
+                () => (showNamespaceDialog = true),
+                true,
             ),
             shortcutStore.register(
                 "profileHeader",
                 ["ctrl", "alt", "p"],
-                () => (showEditOntologyDialog = true)
+                () => (showEditOntologyDialog = true),
+                true,
             ),
-            shortcutStore.register("editPackage", ["ctrl", "shift", "k"], () =>
-                launchPackageEditor()
+            shortcutStore.register(
+                "editPackage",
+                ["ctrl", "shift", "k"],
+                () => launchPackageEditor(),
+                true,
             ),
-            shortcutStore.register("toggleEdit", ["ctrl", "alt", "r"], () =>
-                toggleReadonly()
+            shortcutStore.register(
+                "toggleEdit",
+                ["ctrl", "alt", "r"],
+                () => toggleReadonly(),
+                true,
             ),
             shortcutStore.register("copyClass", ["ctrl", "c"], () =>
-                copyClassWithShortcut()
+                copyClassWithShortcut(),
+            ),
+            shortcutStore.register("deleteSelection", ["delete"], () =>
+                deleteSelectionWithShortcut(),
             ),
             shortcutStore.register("paste", ["ctrl", "v"], () =>
-                pasteClassWithShortcut(false, true, true)
+                pasteClassWithShortcut(false, true, true),
             ),
             shortcutStore.register(
                 "pasteWithoutAttributes",
                 ["ctrl", "shift", "v"],
-                () => pasteClassWithShortcut(false, false, true)
+                () => pasteClassWithShortcut(false, false, true),
             ),
             shortcutStore.register(
                 "pasteWithoutAssociations",
                 ["ctrl", "alt", "v"],
-                () => pasteClassWithShortcut(false, true, false)
+                () => pasteClassWithShortcut(false, true, false),
             ),
             shortcutStore.register(
                 "pasteBare",
                 ["ctrl", "shift", "alt", "v"],
-                () => pasteClassWithShortcut(true, false, false)
-            )
+                () => pasteClassWithShortcut(true, false, false),
+            ),
         );
     });
 
@@ -322,14 +394,12 @@
     }
 
     function copyClass() {
-        copyState.classUUID.updateValue(
-            editorState.selectedClassUUID.getValue()
-        );
-        copyState.graphURI.updateValue(
-            editorState.selectedClassGraph.getValue()
-        );
-        copyState.datasetName.updateValue(
-            editorState.selectedClassDataset.getValue()
+        copyState.set(
+            multiSelectState.copyEntriesOr({
+                classUUID: editorState.selectedClass.getProperty("id"),
+                graphURI: editorState.selectedClassGraph.getValue(),
+                datasetName: editorState.selectedClassDataset.getValue(),
+            }),
         );
     }
 
@@ -350,10 +420,31 @@
         }
     }
 
+    function deleteSelectionWithShortcut() {
+        switch (deleteShortcutTarget) {
+            case SelectionLevel.CLASS:
+                if (!disableDeleteClassButton) {
+                    showClassDeleteDependenciesDialog = true;
+                }
+                break;
+            case SelectionLevel.PACKAGE:
+                launchPackageDeleteDialog();
+                break;
+            case SelectionLevel.GRAPH:
+                if (!isDatasetReadOnly) {
+                    showGraphDeleteDialog = true;
+                }
+                break;
+            case SelectionLevel.DATASET:
+                showDatasetDeleteDialog = true;
+                break;
+        }
+    }
+
     function pasteClassWithShortcut(
         copyAsAbstract,
         copyAttributes,
-        copyAssociations
+        copyAssociations,
     ) {
         if (!disablePasteButton) {
             pasteClass(copyAsAbstract, copyAttributes, copyAssociations);
@@ -579,6 +670,19 @@
         resourceUuid={packageDialogTarget.uuid}
     />
 {/if}
+{#if showClassDeleteDependenciesDialog && deleteClassSelection}
+    <DeleteDependenciesDialog
+        bind:showDialog={showClassDeleteDependenciesDialog}
+        datasetName={deleteClassSelection.datasetName}
+        graphUri={deleteClassSelection.graphUri}
+        resourceUuids={deleteClassSelection.uuids}
+    />
+{/if}
+<GraphDeleteDialog bind:showDialog={showGraphDeleteDialog} />
+<DatasetDeleteDialog
+    bind:showDialog={showDatasetDeleteDialog}
+    datasetName={selectedDataset}
+/>
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 <FilterViewDialog bind:showDialog={showFilterViewDialog} />
 {#if ontology}

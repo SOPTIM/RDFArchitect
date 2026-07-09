@@ -54,7 +54,7 @@ export async function saveApiAssociationToBackend(
         console.error("Could not save association:", errorText);
         return { ok: false, errorText };
     } finally {
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
     }
 }
