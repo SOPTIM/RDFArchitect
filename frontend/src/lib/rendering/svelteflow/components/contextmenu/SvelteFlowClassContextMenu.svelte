@@ -31,8 +31,8 @@
         faGear,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import {
         copyState,
         editorState,
