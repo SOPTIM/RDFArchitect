@@ -16,13 +16,14 @@
   -->
 
 <script>
-    import { BackendConnection, CGMESVersion } from "$lib/api/backend.js";
+    import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { editorState, validationState } from "$lib/sharedState.svelte.js";
 
     import { goto } from "$app/navigation";
