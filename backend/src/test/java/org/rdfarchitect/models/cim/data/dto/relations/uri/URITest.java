@@ -60,16 +60,7 @@ class URITest {
                         "M:1..1"),
                 // trailing slash / empty fragment -> suffix is empty, that's ok
                 Arguments.of("http://example.org/ontology/", "http://example.org/ontology/", ""),
-                Arguments.of("http://example.org/ontology#", "http://example.org/ontology#", ""),
-                // spaces get encoded
-                Arguments.of(
-                        "http://example.org/ontology#My Class",
-                        "http://example.org/ontology#",
-                        "My Class"),
-                Arguments.of(
-                        "http://example.org/ontology/My Class",
-                        "http://example.org/ontology/",
-                        "My Class"));
+                Arguments.of("http://example.org/ontology#", "http://example.org/ontology#", ""));
     }
 
     @ParameterizedTest(name = "[{index}] {0}")
@@ -133,7 +124,8 @@ class URITest {
     @ValueSource(
             strings = {
                 "MyClass", // relative IRI, no scheme
-                "//example.org/foo" // no scheme
+                "//example.org/foo", // no scheme
+                "http://example.org/ontology#My Class" // spaces
             })
     void invalidUri_throwsIllegalArgumentException(String raw) {
         assertThatThrownBy(() -> new URI(raw)).isInstanceOf(IllegalArgumentException.class);

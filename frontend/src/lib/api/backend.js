@@ -96,6 +96,16 @@ export class BackendConnection {
         });
     }
 
+    async postClass(datasetName, graphURI, newClass) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
+        return fetch(url, {
+            method: "POST",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(newClass),
+            credentials: "include",
+        });
+    }
+
     async getPackages(datasetName, graphURI) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages`;
         return fetch(url, {

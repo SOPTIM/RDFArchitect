@@ -62,7 +62,7 @@
         </option>
     {/if}
 
-    {#each options as option (getOptionValue(option))}
+    {#each options as option}
         <option
             class="bg-window-background text-default-text disabled:text-text-subtle"
             disabled={getOptionIsDisabled(option)}
