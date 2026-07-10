@@ -16,6 +16,7 @@
  */
 
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+import { CGMESVersion } from "$lib/models/cgmes-constants.js";
 
 export class BackendConnection {
     fetch;
@@ -296,6 +297,33 @@ export class BackendConnection {
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(body),
+            credentials: "include",
+        });
+    }
+
+    async validateSchema(
+        datasetName,
+        graphURI,
+        cgmesVersion = CGMESVersion.V3_0,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/validate/${encodeURIComponent(cgmesVersion)}`;
+        return await fetch(url, {
+            method: "GET",
+            mode: "cors",
+            credentials: "include",
+        });
+    }
+
+    async validateFile(file, cgmesVersion = CGMESVersion.V3_0) {
+        const url = `${PUBLIC_BACKEND_URL}/validate/${encodeURIComponent(cgmesVersion)}`;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        return fetch(url, {
+            method: "POST",
+            mode: "cors",
+            body: formData,
             credentials: "include",
         });
     }

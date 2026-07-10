@@ -235,6 +235,14 @@ export const copyState = {
     },
 };
 
+/**
+ * Stores validation results to display on /validate.
+ * @type {{ result: StateValuePair<any | null> }}
+ */
+export const validationState = {
+    result: new StateValuePair(null),
+};
+
 export const multiSelectState = new MultiSelectState();
 
 export const migrationState = writable({
@@ -245,4 +253,6 @@ export const migrationState = writable({
     datasetB: null,
     fileA: null,
     fileB: null,
+    cgmesVersionA: null,
+    cgmesVersionB: null,
 });

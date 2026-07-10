@@ -27,6 +27,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     let { disableNext = $bindable() } = $props();
@@ -39,6 +40,8 @@
     });
 
     let compareMode = $state(CompareMode.FILE_TO_STORED);
+    let cgmesVersionA = $state(CGMESVersion.V3_0);
+    let cgmesVersionB = $state(CGMESVersion.V3_0);
 
     let datasetA = $state(null);
     let graphA = $state(null);
@@ -72,6 +75,11 @@
         },
     ]);
 
+    const cgmesVersionOptions = $derived([
+        { value: CGMESVersion.V3_0, label: "3.0" },
+        { value: CGMESVersion.V2_4_15, label: "2.4.15" },
+    ]);
+
     $effect(() => {
         if (compareMode === CompareMode.FILE_TO_FILE) {
             disableNext = !fileA || !fileB;
@@ -94,6 +102,8 @@
         let storedState = get(migrationState);
 
         compareMode = storedState.compareMode ?? CompareMode.FILE_TO_STORED;
+        cgmesVersionA = storedState.cgmesVersionA ?? CGMESVersion.V3_0;
+        cgmesVersionB = storedState.cgmesVersionB ?? CGMESVersion.V3_0;
         datasetA = storedState.datasetA;
         graphA = storedState.graphA;
         datasetB = storedState.datasetB;
@@ -129,6 +139,9 @@
             graphA = null;
             compareMode = CompareMode.FILE_TO_STORED;
         }
+
+        // The version stays tied to its schema, so it swaps along with it.
+        [cgmesVersionA, cgmesVersionB] = [cgmesVersionB, cgmesVersionA];
     }
 
     export async function onNext() {
@@ -163,6 +176,8 @@
                 console.log("established migration context in backend");
                 migrationState.set({
                     compareMode,
+                    cgmesVersionA,
+                    cgmesVersionB,
                     datasetA,
                     graphA,
                     datasetB,
@@ -221,6 +236,20 @@
                     bind:dataset={datasetA}
                     bind:graph={graphA}
                 />
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionA" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionA"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionA}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
+                </div>
             </div>
 
             <div class="flex items-center gap-3">
@@ -244,6 +273,20 @@
                     bind:dataset={datasetB}
                     bind:graph={graphB}
                 />
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionB" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionB"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionB}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
+                </div>
             </div>
         {/if}
 
@@ -257,6 +300,20 @@
                 >
                     <FileSelectButton bind:file={fileA} />
                 </div>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionA" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionA"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionA}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
+                </div>
             </div>
 
             <div class="flex items-center gap-3">
@@ -280,6 +337,20 @@
                     bind:dataset={datasetB}
                     bind:graph={graphB}
                 />
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionB" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionB"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionB}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
+                </div>
             </div>
         {/if}
 
@@ -292,6 +363,20 @@
                     bind:dataset={datasetA}
                     bind:graph={graphA}
                 />
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionA" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionA"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionA}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
+                </div>
             </div>
 
             <div class="flex items-center gap-3">
@@ -316,6 +401,20 @@
                 >
                     <FileSelectButton bind:file={fileA} />
                 </div>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionB" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionB"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionB}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
+                </div>
             </div>
         {/if}
 
@@ -328,6 +427,20 @@
                     class="border-border bg-background-subtle rounded border p-3"
                 >
                     <FileSelectButton bind:file={fileA} />
+                </div>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionA" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionA"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionA}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
+                    />
                 </div>
             </div>
 
@@ -354,6 +467,20 @@
                     <FileSelectButton
                         bind:file={fileB}
                         label="Select second file"
+                    />
+                </div>
+                <div
+                    class="border-border bg-background-subtle rounded border p-3"
+                >
+                    <label for="cgmesVersionB" class="mb-1 block text-sm">
+                        CGMES Version
+                    </label>
+                    <SelectEditControl
+                        id="cgmesVersionB"
+                        options={cgmesVersionOptions}
+                        bind:value={cgmesVersionB}
+                        getOptionValue={o => o.value}
+                        getOptionLabel={o => o.label}
                     />
                 </div>
             </div>

@@ -58,4 +58,8 @@ public class CIMStereotypes {
     public final String rdfString = "rdf";
 
     public final Literal rdf = ResourceFactory.createPlainLiteral(rdfString);
+
+    public final String entsoeString = "Entsoe";
+
+    public final Literal entsoe = ResourceFactory.createPlainLiteral(entsoeString);
 }
