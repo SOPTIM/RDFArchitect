@@ -20,8 +20,7 @@
 
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
-    import ClassEditor from "./classEditor/classEditor.svelte";
-    import MergedClassEditor from "./classEditor/mergedClassEditor.svelte";
+    import ClassEditorHost from "./classEditor/classEditorHost.svelte";
     import RenderingWrapper from "./renderingWrapper.svelte";
 
     let classEditorPaneWidth = $state(27);
@@ -42,9 +41,6 @@
     ]);
     const isClassSelected = $derived(
         selectionTrigger && !!editorState.selectedClass.getProperty("id"),
-    );
-    const classEditorKey = $derived(
-        `${classDatasetName ?? ""}::${classGraphUri ?? ""}::${editorState.selectedClass.getProperty("id") ?? ""}::${editorState.selectedClass.subscribe()}`,
     );
     const renderingKey = $derived(
         `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
@@ -117,24 +113,12 @@
             class="h-full overflow-auto"
         >
             {#if isClassSelected}
-                {#key classEditorKey}
-                    {#if isMergedClass}
-                        <MergedClassEditor
-                            datasetName={classDatasetName}
-                            classUuid={editorState.selectedClass.getProperty(
-                                "id",
-                            )}
-                        />
-                    {:else}
-                        <ClassEditor
-                            datasetName={classDatasetName}
-                            graphUri={classGraphUri}
-                            classUuid={editorState.selectedClass.getProperty(
-                                "id",
-                            )}
-                        />
-                    {/if}
-                {/key}
+                <ClassEditorHost
+                    datasetName={classDatasetName}
+                    graphUri={classGraphUri}
+                    classUuid={editorState.selectedClass.getProperty("id")}
+                    isMerged={isMergedClass}
+                />
             {/if}
         </Pane>
     </Splitpanes>

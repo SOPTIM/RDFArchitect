@@ -24,7 +24,10 @@
     import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import {
+        eventStack,
+        EventType,
+    } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import {
         ClassType,
@@ -32,21 +35,28 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
-    import ClassEditor from "../../mainpage/classEditor/classEditor.svelte";
+    import ClassEditor from "./classEditor.svelte";
 
-    let { datasetName, classUuid } = $props();
+    let { datasetName, graphUri, classUuid, isMerged } = $props();
 
     let mergedClass = $state(null);
-    let loading = $state(true);
+    let resolving = $state(false);
 
     let activeSourceUuid = $state(null);
+    let resolvedGraphUri = $state(null);
+    let resolvedClassUuid = $state(null);
+
     let activeSource = $derived(
         mergedClass?.sources?.find(s => s.classUUID === activeSourceUuid) ??
             null,
     );
 
+    let hasSources = $derived(
+        !!mergedClass && (mergedClass.sources?.length ?? 0) > 0,
+    );
+
     $effect(() => {
-        if (activeSource?.classUUID) {
+        if (isMerged && activeSource?.classUUID) {
             persisted = {
                 classUuid: classUuid,
                 sourceUuid: activeSource.classUUID,
@@ -55,15 +65,32 @@
     });
 
     $effect(() => {
+        if (isMerged && activeSource) {
+            resolvedGraphUri = activeSource.graphUri;
+            resolvedClassUuid = activeSource.classUUID;
+        }
+    });
+
+    $effect(() => {
         if (!datasetName || !classUuid) return;
         forceReloadTrigger.subscribe();
+
+        if (!isMerged) {
+            mergedClass = null;
+            activeSourceUuid = null;
+            resolvedGraphUri = graphUri;
+            resolvedClassUuid = classUuid;
+            return;
+        }
 
         const savedSourceUuid =
             persisted.classUuid === classUuid ? persisted.sourceUuid : null;
 
-        loading = true;
+        const cancellation = { cancelled: false };
+        resolving = true;
         getCrossProfileDiagram(datasetName)
             .then(diagram => {
+                if (cancellation.cancelled) return;
                 const classes = diagram?.classes ?? [];
 
                 let found = savedSourceUuid
@@ -94,11 +121,19 @@
                     });
                 }
             })
-            .finally(() => (loading = false));
+            .finally(() => {
+                if (!cancellation.cancelled) resolving = false;
+            });
+
+        return () => {
+            cancellation.cancelled = true;
+        };
     });
 
-    onMount(() => eventStack.addEvent(closeMergedClassEditor));
-    onDestroy(() => eventStack.removeEvent(closeMergedClassEditor));
+    onMount(() =>
+        eventStack.addEvent(closeClassEditorHost, EventType.CLASS_EDITOR),
+    );
+    onDestroy(() => eventStack.removeEvent(closeClassEditorHost));
 
     function extractGraphLabel(graphUri) {
         try {
@@ -108,47 +143,48 @@
         }
     }
 
-    function closeMergedClassEditor() {
+    function closeClassEditorHost() {
         editorState.selectedClassDataset.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
         editorState.selectedClass.updateValue({ type: null, id: null });
     }
 </script>
 
-{#if loading}
-    <div class="relative h-full w-full">
+<div class="relative h-full w-full">
+    <div class="flex h-full flex-col">
+        {#if isMerged && hasSources}
+            <div class="border-border border-b px-2 py-1 shrink-0">
+                <SelectEditControl
+                    bind:value={activeSourceUuid}
+                    options={mergedClass.sources}
+                    getOptionValue={source => source.classUUID}
+                    getOptionLabel={source =>
+                        extractGraphLabel(source.graphUri)}
+                    height={8}
+                />
+            </div>
+        {/if}
+
+        {#if isMerged && !resolving && !hasSources}
+            <p class="text-default-text p-4 text-sm italic">
+                No sources available for this class.
+            </p>
+        {:else if resolvedGraphUri && resolvedClassUuid}
+            <div class="h-full overflow-auto">
+                <ClassEditor
+                    {datasetName}
+                    graphUri={resolvedGraphUri}
+                    classUuid={resolvedClassUuid}
+                />
+            </div>
+        {/if}
+    </div>
+
+    {#if resolving}
         <div
-            class="absolute inset-0 flex items-center justify-center bg-white/50"
+            class="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
         >
             <LoadingSpinner />
         </div>
-    </div>
-{:else if mergedClass && mergedClass.sources?.length > 0}
-    <div class="flex h-full flex-col">
-        <div class="border-border border-b px-2 py-1 shrink-0">
-            <SelectEditControl
-                bind:value={activeSourceUuid}
-                options={mergedClass.sources}
-                getOptionValue={source => source.classUUID}
-                getOptionLabel={source => extractGraphLabel(source.graphUri)}
-                height={8}
-            />
-        </div>
-
-        {#if activeSource}
-            {#key activeSource.classUUID + activeSource.graphUri}
-                <div class="h-full overflow-auto">
-                    <ClassEditor
-                        {datasetName}
-                        graphUri={activeSource.graphUri}
-                        classUuid={activeSource.classUUID}
-                    />
-                </div>
-            {/key}
-        {/if}
-    </div>
-{:else}
-    <p class="text-default-text p-4 text-sm italic">
-        No sources available for this class.
-    </p>
-{/if}
+    {/if}
+</div>
