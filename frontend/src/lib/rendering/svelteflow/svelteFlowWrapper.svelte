@@ -35,6 +35,7 @@
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
     import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         editorState,
@@ -43,13 +44,17 @@
     } from "$lib/sharedState.svelte.js";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
-    import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
+    import SvelteFlowClassContextMenu from "./components/contextmenu/SvelteFlowClassContextMenu.svelte";
+    import SvelteFlowPaneContextMenu from "./components/contextmenu/SvelteFlowPaneContextMenu.svelte";
     import DiagramLabelNode from "./components/DiagramLabelNode.svelte";
-    import EdgeMarkers from "./components/EdgeMarkers.svelte";
+    import AssociationEdge from "./components/edge/AssociationEdge.svelte";
+    import EdgeMarkers from "./components/edge/EdgeMarkers.svelte";
+    import {
+        getEdgeParams,
+        getClosestSegmentInsertionIndex,
+    } from "./components/edge/edgeUtils.ts";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
-    import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
-    import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
     import SvelteFlowPropertyContextMenu from "./components/SvelteFlowPropertyContextMenu.svelte";
     import {
         decorateEdges,
@@ -64,6 +69,12 @@
         labelNodeId,
         labelNodesChanged,
     } from "./diagram/labelNodes.js";
+    import {
+        createBendPoint,
+        insertBendPointAt,
+        removeBendPoint,
+        MAX_BEND_POINTS_PER_EDGE,
+    } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import {
         DIAGRAM_SELECTION_CONTEXT,
@@ -108,6 +119,8 @@
     const contextMenus = new ContextMenuController({
         getSvelteFlow: () => svelteFlowAPI?.svelteFlow,
         getIsReadOnly: () => isWorkspaceReadOnly,
+        getEdges: () => edges,
+        selectEdge: edgeId => selectOnlyEdge(edgeId),
     });
 
     const pan = new PanController({
@@ -236,6 +249,24 @@
 
     function onContainerContextMenu(event) {
         pan.handleContainerContextMenuCapture(event);
+        if (event.defaultPrevented) {
+            return;
+        }
+        routeBendPointContextMenu(event);
+    }
+
+    function routeBendPointContextMenu(event) {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const bendPointCircle = target.closest("[data-edge-id]");
+        if (!bendPointCircle) return;
+
+        const edgeId = bendPointCircle.getAttribute("data-edge-id");
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+
+        contextMenus.handleEdgeContextMenu({ event, edge });
     }
 
     function applyAutoLayoutIfNeeded() {
@@ -595,6 +626,75 @@
             });
         }
     }
+    function selectOnlyEdge(edgeId) {
+        edges = edges.map(edge => ({
+            ...edge,
+            selected: edge.id === edgeId,
+        }));
+    }
+
+    function updateEdgeBendPoints(edgeId, newBendPoints) {
+        edges = edges.map(edge =>
+            edge.id === edgeId
+                ? {
+                      ...edge,
+                      data: { ...edge.data, bendPoints: newBendPoints },
+                  }
+                : edge,
+        );
+    }
+
+    function edgeEndpoints(edge, bendPoints) {
+        const svelteFlow = svelteFlowAPI?.svelteFlow;
+        if (!svelteFlow?.getInternalNode) return null;
+        const sourceNode = svelteFlow.getInternalNode(edge.source);
+        const targetNode = svelteFlow.getInternalNode(edge.target);
+        if (!sourceNode || !targetNode) return null;
+        const params = getEdgeParams(sourceNode, targetNode, 0, bendPoints);
+        return {
+            source: { x: params.sx, y: params.sy },
+            target: { x: params.tx, y: params.ty },
+        };
+    }
+
+    function handleEdgeAddBendPoint({ edgeId, flowPosition }) {
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const bendPoints = edge.data?.bendPoints ?? [];
+        if (bendPoints.length >= MAX_BEND_POINTS_PER_EDGE) return;
+
+        const endpoints = edgeEndpoints(edge, bendPoints);
+        let insertionIndex = bendPoints.length;
+        if (endpoints) {
+            const orderedPoints = [
+                endpoints.source,
+                ...bendPoints,
+                endpoints.target,
+            ];
+            insertionIndex = getClosestSegmentInsertionIndex(
+                orderedPoints,
+                flowPosition,
+            );
+        }
+
+        const newBendPoints = insertBendPointAt(
+            bendPoints,
+            insertionIndex,
+            createBendPoint(flowPosition.x, flowPosition.y),
+        );
+        updateEdgeBendPoints(edgeId, newBendPoints);
+    }
+
+    function handleEdgeDeleteBendPoint({ edgeId, bendPointId }) {
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const next = removeBendPoint(edge.data?.bendPoints ?? [], bendPointId);
+        updateEdgeBendPoints(edgeId, next);
+    }
+
+    function handleEdgeClearBendPoints({ edgeId }) {
+        updateEdgeBendPoints(edgeId, []);
+    }
 
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
@@ -703,7 +803,7 @@
         selectionKey={"Shift"}
         connectionMode={"loose"}
         multiSelectionKey={"Shift"}
-        deleteKeyCode={null}
+        deleteKey={null}
         zoomOnDoubleClick={false}
         minZoom={0.1}
         maxZoom={5}
@@ -743,6 +843,14 @@
         request={propertyContextMenu.request}
         readOnly={isWorkspaceReadOnly}
         onClose={() => propertyContextMenu.close()}
+    />
+    <SvelteFlowEdgeContextMenu
+        request={contextMenus.edgeRequest}
+        disabled={isWorkspaceReadOnly || !contextMenus.edgeRequest}
+        onClose={() => contextMenus.close()}
+        onAddBendPoint={handleEdgeAddBendPoint}
+        onDeleteBendPoint={handleEdgeDeleteBendPoint}
+        onClearBendPoints={handleEdgeClearBendPoints}
     />
 </div>
 
