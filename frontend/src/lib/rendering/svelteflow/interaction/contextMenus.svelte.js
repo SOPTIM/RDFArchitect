@@ -17,17 +17,30 @@
 
 import { editorState, multiSelectState } from "$lib/sharedState.svelte.js";
 
+import {
+    findBendPointAtPosition,
+    getBendPoints,
+} from "./bendPointOperations.js";
+
+/** Base hit radius (in screen pixels) for detecting a bend point under the cursor. */
+const BEND_POINT_HIT_RADIUS_PX = 10;
+
 export class ContextMenuController {
     #paneRequest = $state(null);
     #classRequest = $state(null);
+    #edgeRequest = $state(null);
     #contextMenuClass = $state(null);
 
     #getSvelteFlow;
     #getIsReadOnly;
+    #getEdges;
+    #selectEdge;
 
-    constructor({ getSvelteFlow, getIsReadOnly }) {
+    constructor({ getSvelteFlow, getIsReadOnly, getEdges, selectEdge }) {
         this.#getSvelteFlow = getSvelteFlow;
         this.#getIsReadOnly = getIsReadOnly;
+        this.#getEdges = getEdges ?? (() => []);
+        this.#selectEdge = selectEdge ?? (() => {});
     }
 
     get paneRequest() {
@@ -38,6 +51,10 @@ export class ContextMenuController {
         return this.#classRequest;
     }
 
+    get edgeRequest() {
+        return this.#edgeRequest;
+    }
+
     get contextMenuClass() {
         return this.#contextMenuClass;
     }
@@ -45,6 +62,7 @@ export class ContextMenuController {
     close() {
         this.#paneRequest = null;
         this.#classRequest = null;
+        this.#edgeRequest = null;
     }
 
     #consumeEvent(event) {
@@ -90,8 +108,46 @@ export class ContextMenuController {
         };
     }
 
-    handleEdgeContextMenu({ event }) {
+    handleEdgeContextMenu({ event, edge }) {
         this.#consumeEvent(event);
+        if (this.#getIsReadOnly()) {
+            return;
+        }
+
+        const edgeId = edge?.id;
+        if (!edgeId) {
+            return;
+        }
+
+        this.#selectEdge(edgeId);
+
+        const svelteFlow = this.#getSvelteFlow();
+        const flowPosition = svelteFlow
+            ? svelteFlow.screenToFlowPosition(
+                  { x: event.clientX, y: event.clientY },
+                  { snapToGrid: false },
+              )
+            : { x: 0, y: 0 };
+
+        const currentEdge = this.#getEdges().find(e => e.id === edgeId) ?? edge;
+        const bendPoints = getBendPoints(currentEdge);
+
+        const zoom = svelteFlow?.getViewport?.().zoom ?? 1;
+        const hitRadius = BEND_POINT_HIT_RADIUS_PX / (zoom || 1);
+        const hitBendPoint = findBendPointAtPosition(
+            bendPoints,
+            flowPosition,
+            hitRadius,
+        );
+
+        this.#edgeRequest = {
+            x: event.clientX,
+            y: event.clientY,
+            edgeId,
+            flowPosition,
+            hitBendPointId: hitBendPoint?.id ?? null,
+            bendPointCount: bendPoints.length,
+        };
     }
 
     handleNodeContextMenu({ event, node }) {
