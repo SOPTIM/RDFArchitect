@@ -147,7 +147,118 @@
                 isLoading = false;
             } else {
                 const parsedResponse = JSON.parse(responseText);
-                response = parsedResponse;
+                //TODO TESTDATEN FÜR PROTOTYPING, ENTFERNE SPÄTER
+                //response = parsedResponse;
+                response = {
+                    edges: [
+                        {
+                            data: {
+                                color: null,
+                                fromMultiplicity: "1",
+                                graphUri: null,
+                                toMultiplicity: "1",
+                                useFromAssociation: true,
+                                useToAssociation: true,
+                                bendPoints: [
+                                    {
+                                        id: "e104239a-681f-4663-8c34-718957fe8120",
+                                        x: 200,
+                                        y: 200,
+                                    },
+                                ],
+                            },
+                            id: "26aa92ce-8946-4321-a406-fa95b27ebf68",
+                            source: "867c72bc-3abf-4f96-b816-4a528d1cd99e",
+                            target: "88ca000e-28c2-4f68-8ecc-f7bf34d77f75",
+                            type: "association",
+                            zIndex: -1,
+                        },
+                        {
+                            data: {
+                                color: null,
+                                fromMultiplicity: "2",
+                                graphUri: null,
+                                toMultiplicity: "2",
+                                useFromAssociation: true,
+                                useToAssociation: true,
+                                bendPoints: [
+                                    {
+                                        id: "e104239a-681f-4663-8c34-718957fe8120",
+                                        x: -250,
+                                        y: 400,
+                                    },
+                                    {
+                                        id: "4d86da93-3306-481b-a75e-a0dd4ac7aadc",
+                                        x: -300,
+                                        y: 300,
+                                    },
+                                ],
+                            },
+                            id: "0034d8f0-ae20-47ca-8ebe-9da6272859ec",
+                            source: "867c72bc-3abf-4f96-b816-4a528d1cd99e",
+                            target: "9e864145-9510-4ab3-8576-b2f154e66fe0",
+                            type: "association",
+                            zIndex: -1,
+                        },
+                    ],
+                    format: "SVELTEFLOW",
+                    nodes: [
+                        {
+                            data: {
+                                attributes: [],
+                                belongsToCategory: "DiagramLayout",
+                                enumEntries: [],
+                                graphUri:
+                                    "http://graph#DiagramLayoutProfileRDFSAugmented_v2_4_15_4Sep2020",
+                                label: "A",
+                                stereotypes: [],
+                            },
+                            id: "867c72bc-3abf-4f96-b816-4a528d1cd99e",
+                            position: {
+                                x: 12,
+                                y: 467,
+                                z: 1,
+                            },
+                            type: "class",
+                        },
+                        {
+                            data: {
+                                attributes: [],
+                                belongsToCategory: "DiagramLayout",
+                                enumEntries: [],
+                                graphUri:
+                                    "http://graph#DiagramLayoutProfileRDFSAugmented_v2_4_15_4Sep2020",
+                                label: "B",
+                                stereotypes: [],
+                            },
+                            id: "88ca000e-28c2-4f68-8ecc-f7bf34d77f75",
+                            position: {
+                                x: 355.5,
+                                y: 100,
+                                z: 1,
+                            },
+                            type: "class",
+                        },
+                        {
+                            data: {
+                                attributes: [],
+                                belongsToCategory: "DiagramLayout",
+                                enumEntries: [],
+                                graphUri:
+                                    "http://graph#DiagramLayoutProfileRDFSAugmented_v2_4_15_4Sep2020",
+                                label: "C",
+                                stereotypes: [],
+                            },
+                            id: "9e864145-9510-4ab3-8576-b2f154e66fe0",
+                            position: {
+                                x: -355.5,
+                                y: 100,
+                                z: 1,
+                            },
+                            type: "class",
+                        },
+                    ],
+                };
                 renderingFormat = parsedResponse.format;
                 displayDiagram = true;
             }
