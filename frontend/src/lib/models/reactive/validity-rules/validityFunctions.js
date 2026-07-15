@@ -434,3 +434,29 @@ export function hasNoSpaces(text) {
     }
     return violations;
 }
+
+/**
+ * Validates the edge smoothing strength (tension) entered as free text.
+ * Two kinds of violations are possible:
+ *  - the input is not a number at all (invalid format)
+ *  - the number lies outside the allowed [0, 1] range (out of boundaries)
+ * @param {string|number} value - the raw input value
+ * @returns {string[]} the violations
+ */
+export function isInvalidEdgeSmoothingStrength(value) {
+    const violations = [];
+    const raw = typeof value === "number" ? String(value) : (value ?? "");
+    if (raw.trim() === "") {
+        violations.push("must not be empty");
+        return violations;
+    }
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) {
+        violations.push("must be a number");
+        return violations;
+    }
+    if (parsed < 0 || parsed > 1) {
+        violations.push("must be between 0 and 1");
+    }
+    return violations;
+}

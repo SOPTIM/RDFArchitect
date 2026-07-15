@@ -18,7 +18,10 @@
 <script>
     import { UserSettingsComponents as USC } from "$lib/components/bitsui/usersettings/index.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
+    import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { isInvalidEdgeSmoothingStrength } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
@@ -31,6 +34,8 @@
         showPackagePrefix: false,
         useColoredPropertiesInMergedView: true,
         normalizeComments: true,
+        useRoundedEdges: false,
+        edgeTension: 0.5,
     };
 
     let localSettings = $state({});
@@ -38,6 +43,14 @@
     let isModified = $derived(
         JSON.stringify(localSettings) !== JSON.stringify(savedSettings),
     );
+
+    let tensionViolations = $derived(
+        localSettings["useRoundedEdges"]
+            ? isInvalidEdgeSmoothingStrength(localSettings["edgeTension"])
+            : [],
+    );
+
+    let hasInvalidInput = $derived(tensionViolations.length > 0);
 
     function onOpen() {
         localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all };
@@ -63,7 +76,7 @@
     saveChanges={save}
     discardChanges={() =>
         (localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all })}
-    hasChanges={isModified}
+    hasChanges={isModified && !hasInvalidInput}
     size="w-1/3"
     title="Settings"
 >
@@ -94,6 +107,26 @@
                 bind:value={localSettings["useColoredPropertiesInMergedView"]}
                 labelFirst={false}
             />
+            <CheckBoxEditControl
+                label="Smoothed edges"
+                bind:value={localSettings["useRoundedEdges"]}
+                labelFirst={false}
+            />
+            <div class="flex flex-col gap-1">
+                <!--TODO hier später am besten durch nen slider ersetzen-->
+                <TextEditControl
+                    label="Edge smoothing strength"
+                    bind:value={localSettings["edgeTension"]}
+                    placeholder="0.5"
+                    disabled={!localSettings["useRoundedEdges"]}
+                    warn={hasInvalidInput}
+                    title={"Controls how round smoothed edges are drawn. " +
+                        "Only values between 0 and 1 are allowed: " +
+                        "0 = maximally rounded curves, 1 = almost straight lines. " +
+                        "Values in between blend smoothly between both."}
+                />
+                <ViolationMessages violations={tensionViolations} />
+            </div>
         </USC.Section>
         <USC.Section title="Normalization">
             <CheckBoxEditControl

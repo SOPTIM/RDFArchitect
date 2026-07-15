@@ -22,6 +22,7 @@
         createBendPoint,
         insertBendPointAt,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
 
     import { getInactiveBendPoints } from "./edgeUtils.ts";
 
@@ -37,8 +38,13 @@
 
     let draggingId = $state(null);
 
+    let useRoundedEdges = $derived(userSettings.get("useRoundedEdges", false));
+    let edgeTension = $derived(userSettings.get("edgeTension", 0.5));
+
     let fullPoints = $derived([sourcePoint, ...bendPoints, targetPoint]);
-    let inactiveBendPoints = $derived(getInactiveBendPoints(fullPoints));
+    let inactiveBendPoints = $derived(
+        getInactiveBendPoints(fullPoints, useRoundedEdges, edgeTension),
+    );
 
     function beginDrag(pointId, event) {
         if (event.button === 2) return;
@@ -89,7 +95,6 @@
         );
         onPointsChange(newBendPoints);
     }
-
 </script>
 
 <g>

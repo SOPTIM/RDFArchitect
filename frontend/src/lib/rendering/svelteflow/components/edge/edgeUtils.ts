@@ -17,6 +17,9 @@
 
 import { type InternalNode } from "@xyflow/svelte";
 
+//TODO WICHTIG: AM ENDE HIER AUFRÄUMEN! einmal über alle funktionen gehen, zusammenfassen, aufräumen
+
+//TODO UNBENUTZT! vllt entf?
 export interface BendPoint {
     id: string;
     x: number;
@@ -138,6 +141,11 @@ function makePointNode(point: { x: number; y: number }): InternalNode {
     } as unknown as InternalNode;
 }
 
+/*TODO WICHTIG: DIESE FUNKTION IST EIGENTLICH ÜBERFLÜßIG GEWORDEN
+ *  ganz einfach, eine smooth edge der getSmoothEdge methode mit tension=1 verhält sich gleich zu ner PolyLine
+ *  also wir könnten für später komplett auf die getSmoothEdge methode umstellen
+ *  nur halt dass wenn man keine smoothEdges will, dass in diesem fall tension=1 gesetzt wird
+ *  ABER ich behalte den code fürs erste mal, vielleicht sind die smooth edges ja inperformant*/
 /**
  * Builds a direct (diagonal) polyline SVG path through the given ordered points.
  * The points array must already include the source endpoint first and the
@@ -151,22 +159,86 @@ export function getPolylinePath(points: { x: number; y: number }[]): string {
 }
 
 /**
- * Computes the midpoint of every segment in the given ordered point list.
- * These are the inactive bend points shown as insertion hints on a selected edge.
+ * Computes the inactive bend points shown as insertion hints on a selected edge.
+ * For straight (polyline) edges the point sits on the linear midpoint of each
+ * segment. For smooth edges the point is sampled on the actual Catmull-Rom curve
+ * at the segment's midpoint parameter, so the hint stays visually on the line.
  * `points` must include source first and target last.
  */
 export function getInactiveBendPoints(
     points: { x: number; y: number }[],
+    smooth: boolean = false,
+    tension: number = 0.5,
 ): InactiveBendPoint[] {
     const inactiveBendPoints: InactiveBendPoint[] = [];
     for (let i = 0; i < points.length - 1; i++) {
+        const position =
+            smooth && points.length > 2
+                ? sampleCurveMidpoint(points, i, tension)
+                : {
+                      x: (points[i].x + points[i + 1].x) / 2,
+                      y: (points[i].y + points[i + 1].y) / 2,
+                  };
         inactiveBendPoints.push({
-            x: (points[i].x + points[i + 1].x) / 2,
-            y: (points[i].y + points[i + 1].y) / 2,
+            x: position.x,
+            y: position.y,
             insertionIndex: i,
         });
     }
     return inactiveBendPoints;
+}
+
+/**
+ * Samples the point at parameter t = 0.5 on the Catmull-Rom curve segment
+ * between points[segmentIndex] and points[segmentIndex + 1]. Uses the same
+ * control-point math as getSmoothPath, so the sampled point lies exactly on
+ * the rendered curve.
+ */
+function sampleCurveMidpoint(
+    points: { x: number; y: number }[],
+    segmentIndex: number,
+    tension: number,
+): { x: number; y: number } {
+    const factor = (1 - tension) / 6;
+
+    const p0 = points[segmentIndex - 1] ?? points[segmentIndex];
+    const p1 = points[segmentIndex];
+    const p2 = points[segmentIndex + 1];
+    const p3 = points[segmentIndex + 2] ?? points[segmentIndex + 1];
+
+    const cp1x = p1.x + (p2.x - p0.x) * factor;
+    const cp1y = p1.y + (p2.y - p0.y) * factor;
+    const cp2x = p2.x - (p3.x - p1.x) * factor;
+    const cp2y = p2.y - (p3.y - p1.y) * factor;
+
+    return cubicBezierAt(
+        p1,
+        { x: cp1x, y: cp1y },
+        { x: cp2x, y: cp2y },
+        p2,
+        0.5,
+    );
+}
+
+/**
+ * Evaluates a cubic Bézier curve at parameter t.
+ */
+function cubicBezierAt(
+    p0: { x: number; y: number },
+    cp1: { x: number; y: number },
+    cp2: { x: number; y: number },
+    p1: { x: number; y: number },
+    t: number,
+): { x: number; y: number } {
+    const mt = 1 - t;
+    const a = mt * mt * mt;
+    const b = 3 * mt * mt * t;
+    const c = 3 * mt * t * t;
+    const d = t * t * t;
+    return {
+        x: a * p0.x + b * cp1.x + c * cp2.x + d * p1.x,
+        y: a * p0.y + b * cp1.y + c * cp2.y + d * p1.y,
+    };
 }
 
 /**
@@ -264,4 +336,40 @@ function getSingleLabelOffset(
         x: alongX + perpX,
         y: alongY + perpY,
     };
+}
+
+/**
+ * Builds a smooth (rounded) SVG path through the given ordered points using a
+ * Catmull-Rom spline converted to cubic Bézier segments. The curve passes
+ * through every point, so bend points stay visually on the line.
+ * `points` must include the source endpoint first and the target endpoint last.
+ * `tension` controls roundness (0 = very round, 1 = almost straight).
+ */
+export function getSmoothPath(
+    points: { x: number; y: number }[],
+    tension: number = 0.5,
+): string {
+    if (points.length < 2) return "";
+    if (points.length === 2) {
+        return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+    }
+
+    const factor = (1 - tension) / 6;
+    let path = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i - 1] ?? points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2] ?? points[i + 1];
+
+        const cp1x = p1.x + (p2.x - p0.x) * factor;
+        const cp1y = p1.y + (p2.y - p0.y) * factor;
+        const cp2x = p2.x - (p3.x - p1.x) * factor;
+        const cp2y = p2.y - (p3.y - p1.y) * factor;
+
+        path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+    }
+
+    return path;
 }
