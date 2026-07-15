@@ -23,7 +23,6 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import ZoomAndDraggableMermaid from "$lib/mermaid/zoomAndDraggableMermaid.svelte";
     import {
         editorState,
         forceReloadTrigger,

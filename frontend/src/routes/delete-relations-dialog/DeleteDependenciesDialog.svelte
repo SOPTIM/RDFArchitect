@@ -18,18 +18,10 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import {
-        deleteResources,
-        getDeletionImpact,
-    } from "$lib/api/generated/index.ts";
+    import { deleteResources, getDeletionImpact } from "$lib/api/generated/index.ts";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import {
-        copyState,
-        forceReloadTrigger,
-        multiSelectState,
-    } from "$lib/sharedState.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { copyState, editorState, forceReloadTrigger, multiSelectState } from "$lib/sharedState.svelte.js";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
@@ -133,8 +125,7 @@
                 uuid: targetUuids,
             },
         });
-        const impactByUuid = data;
-        roots = Object.values(impactByUuid);
+        roots = Object.values(data);
 
         selectedActions = new Map();
         roots.forEach(root => initSelectedActions(root));

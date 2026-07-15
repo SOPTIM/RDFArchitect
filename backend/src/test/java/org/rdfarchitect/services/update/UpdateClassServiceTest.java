@@ -47,7 +47,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
-import org.rdfarchitect.services.diagrams.CustomCustomDiagramService;
+import org.rdfarchitect.services.diagrams.CustomDiagramService;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
 import org.rdfarchitect.services.update.classes.UpdateClassService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,7 +74,7 @@ class UpdateClassServiceTest {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
         var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
-        var mockCustomDiagramService = mock(CustomCustomDiagramService.class);
+        var mockCustomDiagramService = mock(CustomDiagramService.class);
         updateClassService =
                 new UpdateClassService(
                         databasePort,
