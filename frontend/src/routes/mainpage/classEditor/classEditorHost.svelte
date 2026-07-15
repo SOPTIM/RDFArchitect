@@ -56,7 +56,11 @@
     );
 
     $effect(() => {
-        if (isMerged && activeSource?.classUUID) {
+        if (
+            isMerged &&
+            activeSource?.classUUID &&
+            mergedClass?.uuid === classUuid
+        ) {
             persisted = {
                 classUuid: classUuid,
                 sourceUuid: activeSource.classUUID,
@@ -143,10 +147,25 @@
         }
     }
 
-    function closeClassEditorHost() {
-        editorState.selectedClassDataset.updateValue(null);
-        editorState.selectedClassGraph.updateValue(null);
-        editorState.selectedClass.updateValue({ type: null, id: null });
+    function closeClassEditorHost(
+        {
+            datasetName = null,
+            graphUri = null,
+            classUuid = null,
+            classType = null,
+        } = {
+            datasetName: null,
+            graphUri: null,
+            classUuid: null,
+            classType: null,
+        },
+    ) {
+        editorState.selectedClassDataset.updateValue(datasetName);
+        editorState.selectedClassGraph.updateValue(graphUri);
+        editorState.selectedClass.updateValue({
+            type: classType,
+            id: classUuid,
+        });
     }
 </script>
 
