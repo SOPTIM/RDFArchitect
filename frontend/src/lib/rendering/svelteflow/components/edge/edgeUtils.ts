@@ -17,6 +17,9 @@
 
 import { type InternalNode } from "@xyflow/svelte";
 
+//TODO WICHTIG: AM ENDE HIER AUFRÄUMEN! einmal über alle funktionen gehen, zusammenfassen, aufräumen
+
+//TODO UNBENUTZT! vllt entf?
 export interface BendPoint {
     id: string;
     x: number;
@@ -29,6 +32,13 @@ export interface InactiveBendPoint {
     /** Index in the bendPoints array where this point would be inserted when activated. */
     insertionIndex: number;
 }
+
+/**
+ * The corner rounding factor is exposed to the user as a percentage (0..100).
+ * Even a small geometric factor already produces a strong visual rounding, so
+ * 100 % maps to this maximum effective factor rather than to 1.
+ */
+const MAX_EFFECTIVE_ROUNDING_FACTOR = 0.3;
 
 /**
  * Calculates the intersection point between a line (from the target to the node center)
@@ -153,7 +163,8 @@ export function getPolylinePath(points: { x: number; y: number }[]): string {
 /**
  * Computes the midpoint of every segment in the given ordered point list.
  * These are the inactive bend points shown as insertion hints on a selected edge.
- * `points` must include source first and target last.
+ * `points` must include source first and target last. Since corner rounding keeps
+ * the segments straight, the plain segment midpoint always lies on the drawn line.
  */
 export function getInactiveBendPoints(
     points: { x: number; y: number }[],
@@ -263,5 +274,84 @@ function getSingleLabelOffset(
     return {
         x: alongX + perpX,
         y: alongY + perpY,
+    };
+}
+
+/**
+ * Builds a polyline whose corners at the bend points are rounded off.
+ * The segments themselves stay straight, only each interior corner is replaced
+ * by a quadratic Bézier arc. `points` must include the source endpoint first and
+ * the target endpoint last.
+ *
+ * `roundingPercent` is a value in [0, 100] that controls how far the rounding
+ * reaches into the two adjacent segments: 0 keeps the corner sharp, 100 applies
+ * the maximum rounding. The percentage is mapped onto a small geometric factor
+ * because even minor factors already produce a strong visual rounding.
+ */
+export function getRoundedCornerPolylinePath(
+    points: { x: number; y: number }[],
+    roundingPercent: number = 50,
+): string {
+    if (points.length < 2) return "";
+    if (points.length === 2) {
+        return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+    }
+
+    const clampedPercent = Math.max(0, Math.min(100, roundingPercent));
+    const clampedFactor =
+        (clampedPercent / 100) * MAX_EFFECTIVE_ROUNDING_FACTOR;
+    let path = `M ${points[0].x} ${points[0].y}`;
+
+    for (let i = 1; i < points.length - 1; i++) {
+        const previous = points[i - 1];
+        const corner = points[i];
+        const next = points[i + 1];
+
+        const reachBefore = cornerReach(previous, corner, clampedFactor);
+        const reachAfter = cornerReach(next, corner, clampedFactor);
+
+        const entry = pointTowards(corner, previous, reachBefore);
+        const exit = pointTowards(corner, next, reachAfter);
+
+        path += ` L ${entry.x} ${entry.y}`;
+        path += ` Q ${corner.x} ${corner.y}, ${exit.x} ${exit.y}`;
+    }
+
+    const last = points[points.length - 1];
+    path += ` L ${last.x} ${last.y}`;
+    return path;
+}
+
+/**
+ * Returns how far the rounding may reach from `corner` towards `neighbour`:
+ * half of the segment length scaled by the rounding factor.
+ */
+function cornerReach(
+    neighbour: { x: number; y: number },
+    corner: { x: number; y: number },
+    roundingFactor: number,
+): number {
+    const segmentLength = Math.hypot(
+        neighbour.x - corner.x,
+        neighbour.y - corner.y,
+    );
+    return (segmentLength / 2) * roundingFactor;
+}
+
+/**
+ * Returns the point that lies `distance` pixels away from `from` in the
+ * direction of `to`.
+ */
+function pointTowards(
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+    distance: number,
+): { x: number; y: number } {
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const length = Math.hypot(dx, dy) || 1;
+    return {
+        x: from.x + (dx / length) * distance,
+        y: from.y + (dy / length) * distance,
     };
 }
