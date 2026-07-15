@@ -20,6 +20,7 @@
     import {
         Background,
         SvelteFlow,
+        useEdges,
         useNodes,
         useNodesInitialized,
         useSvelteFlow,
@@ -117,14 +118,16 @@
 
     let selectionZKey = "";
 
-    let nodesInit = useNodesInitialized();
+    let nodesInitialized = useNodesInitialized();
     let layouted = $state(false);
 
     let selectionZFrame = null;
     let boxSelecting = false;
+
+    let hasFittedInitially = false;
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
-        nodesInit.current && !layouted && hasDefaultLayout,
+        nodesInitialized.current && !layouted && hasDefaultLayout,
     );
 
     $effect(() => {
@@ -175,6 +178,8 @@
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
             nodes: useNodes(),
+            edges: useEdges(),
+            useNodesInitialized: useNodesInitialized(),
         };
 
         const el = containerEl;
@@ -194,6 +199,10 @@
             cancelAnimationFrame(selectionZFrame);
         }
     });
+
+    /*TODO SEHR WICHTIG: AM ENDE AUFRÄUMEN
+        bend point code vllt auslagern, andere sachen, etc
+        es muss ja nicht alles hier im svelteFlowWrapper liegen*/
 
     function onContainerPointerDown(event) {
         selection.notifyPointerDown();
@@ -225,13 +234,21 @@
 
         contextMenus.handleEdgeContextMenu({ event, edge });
     }
-
     function applyAutoLayoutIfNeeded() {
         if (applyLayout) {
             applyELKLayout();
         } else if (!hasDefaultLayout) {
             isLoading = false;
+            fitInitiallyIfNeeded();
         }
+    }
+
+    function fitInitiallyIfNeeded() {
+        if (hasFittedInitially || !nodesInitialized.current) {
+            return;
+        }
+        hasFittedInitially = true;
+        untrack(() => fitViewIncludingBendPoints({ duration: 0 }));
     }
 
     async function refreshReadOnlyState() {
@@ -315,6 +332,7 @@
 
     function resetDiagramSyncState(hasDefaultLayoutAfterSync) {
         layouted = false;
+        hasFittedInitially = false;
 
         // Keep the loading state active until persisted positions or ELK layout
         if (!hasDefaultLayoutAfterSync) {
@@ -324,7 +342,7 @@
 
     function focusRequestedClassInDiagram() {
         const focusClassUUID = editorState.focusedClassUUID.getValue();
-        if (!focusClassUUID || !nodesInit.current) {
+        if (!focusClassUUID || !nodesInitialized.current) {
             return;
         }
 
@@ -463,8 +481,67 @@
         const layoutedNodes = await getLayoutedNodes(nodes, edges);
         nodes = [...layoutedNodes];
         updateNodePositions(nodes);
-        await svelteFlowAPI.svelteFlow.fitView();
+        await fitViewIncludingBendPoints();
         isLoading = false;
+    }
+
+    export async function fitViewIncludingBendPoints({ duration = 400 } = {}) {
+        const bounds = getDiagramBounds();
+
+        if (!bounds) {
+            await svelteFlowAPI.svelteFlow.fitView({ duration });
+            return;
+        }
+
+        return svelteFlowAPI.svelteFlow.fitBounds(bounds, {
+            padding: 0.1, //matches the same padding of SvelteFlows fitView
+            duration,
+        });
+    }
+
+    function getDiagramBounds() {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        for (const node of nodes) {
+            const internalNode = svelteFlowAPI.svelteFlow.getInternalNode(
+                node.id,
+            );
+            const position =
+                internalNode?.internals?.positionAbsolute ?? node.position;
+            const width = internalNode?.measured?.width ?? 0;
+            const height = internalNode?.measured?.height ?? 0;
+            minX = Math.min(minX, position.x);
+            minY = Math.min(minY, position.y);
+            maxX = Math.max(maxX, position.x + width);
+            maxY = Math.max(maxY, position.y + height);
+        }
+
+        for (const edge of edges) {
+            for (const bendPoint of edge.data?.bendPoints ?? []) {
+                minX = Math.min(minX, bendPoint.x);
+                minY = Math.min(minY, bendPoint.y);
+                maxX = Math.max(maxX, bendPoint.x);
+                maxY = Math.max(maxY, bendPoint.y);
+            }
+        }
+        if (
+            !Number.isFinite(minX) ||
+            !Number.isFinite(minY) ||
+            !Number.isFinite(maxX) ||
+            !Number.isFinite(maxY)
+        ) {
+            return null;
+        }
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+        };
     }
 </script>
 
@@ -484,7 +561,6 @@
         {nodeTypes}
         {edgeTypes}
         nodesDraggable={!isWorkspaceReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
-        fitView
         elementsSelectable={true}
         nodesFocusable={false}
         zIndexMode={"manual"}
