@@ -748,7 +748,7 @@ export class BackendConnection {
             method: "GET",
             credentials: "include",
             headers: new Headers({ "Content-Type": "application/json" }),
-        })
+        });
     }
 
     async confirmChanges(classes) {
@@ -757,8 +757,8 @@ export class BackendConnection {
             method: "POST",
             credentials: "include",
             headers: new Headers({ "Content-Type": "application/json" }),
-            body: JSON.stringify(classes)
-        })
+            body: JSON.stringify(classes),
+        });
     }
 
     async fetchReport(reportType) {

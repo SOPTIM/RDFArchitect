@@ -27,7 +27,6 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
-import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.schemamigration.ChangeObjectTestBuilder;
 
 import java.util.List;

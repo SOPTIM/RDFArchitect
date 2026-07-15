@@ -95,9 +95,7 @@ public class MigrationChangesRESTController {
                     String originURL,
             @Parameter(description = "The updated class renamings") @RequestBody
                     List<SemanticClassChange> changes) {
-        logger.info(
-                "Received POST request: \"/api/migrations/changes\" from \"{}\".",
-                originURL);
+        logger.info("Received POST request: \"/api/migrations/changes\" from \"{}\".", originURL);
 
         migrationChangesUseCase.confirmMigrationChanges(changes);
 
