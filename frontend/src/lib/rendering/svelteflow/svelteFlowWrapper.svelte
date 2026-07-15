@@ -55,6 +55,8 @@
         createBendPoint,
         insertBendPointAt,
         removeBendPoint,
+        getBendPoints,
+        getEndPoints,
         MAX_BEND_POINTS_PER_EDGE,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
@@ -122,6 +124,9 @@
 
     let selectionZFrame = null;
     let boxSelecting = false;
+    // Tracks the last seen position per dragged node id, to compute the delta
+    // for moving attached end points live during a class drag.
+    let lastDragPositions = new Map();
 
     let hasFittedInitially = false;
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
@@ -369,6 +374,90 @@
         return await res.json();
     }
 
+    function handleNodeDragStart({ nodes: draggedNodes }) {
+        lastDragPositions.clear();
+        for (const node of draggedNodes) {
+            lastDragPositions.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+            });
+        }
+    }
+
+    function handleNodeDrag({ nodes: draggedNodes }) {
+        let anyEndPointMoved = false;
+        const updatedEdges = edges.map(edge => {
+            const endPoints = edge.data?.endPoints;
+            if (!endPoints || (!endPoints.source && !endPoints.target)) {
+                return edge;
+            }
+
+            let nextEndPoints = endPoints;
+            for (const node of draggedNodes) {
+                const previous = lastDragPositions.get(node.id);
+                if (!previous) continue;
+                const dx = node.position.x - previous.x;
+                const dy = node.position.y - previous.y;
+                if (dx === 0 && dy === 0) continue;
+
+                nextEndPoints = shiftEndPointsForNode(
+                    nextEndPoints,
+                    edge,
+                    node.id,
+                    dx,
+                    dy,
+                );
+            }
+
+            if (nextEndPoints === endPoints) {
+                return edge;
+            }
+            anyEndPointMoved = true;
+            return {
+                ...edge,
+                data: { ...edge.data, endPoints: nextEndPoints },
+            };
+        });
+
+        if (anyEndPointMoved) {
+            edges = updatedEdges;
+        }
+
+        for (const node of draggedNodes) {
+            lastDragPositions.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+            });
+        }
+    }
+
+    // Shifts the source and/or target end point of an edge by (dx, dy) if that
+    // side is attached to the given moved node.
+    function shiftEndPointsForNode(endPoints, edge, movedNodeId, dx, dy) {
+        let result = endPoints;
+        if (edge.source === movedNodeId && result.source) {
+            result = {
+                ...result,
+                source: {
+                    ...result.source,
+                    x: result.source.x + dx,
+                    y: result.source.y + dy,
+                },
+            };
+        }
+        if (edge.target === movedNodeId && result.target) {
+            result = {
+                ...result,
+                target: {
+                    ...result.target,
+                    x: result.target.x + dx,
+                    y: result.target.y + dy,
+                },
+            };
+        }
+        return result;
+    }
+
     function handleNodeMove(nodeMoveEvent) {
         updateNodePositions(nodeMoveEvent.nodes);
     }
@@ -411,14 +500,7 @@
     }
 
     function updateEdgeBendPoints(edgeId, newBendPoints) {
-        edges = edges.map(edge =>
-            edge.id === edgeId
-                ? {
-                      ...edge,
-                      data: { ...edge.data, bendPoints: newBendPoints },
-                  }
-                : edge,
-        );
+        patchEdgeData(edgeId, { bendPoints: newBendPoints });
     }
 
     function edgeEndpoints(edge, bendPoints) {
@@ -437,7 +519,7 @@
     function handleEdgeAddBendPoint({ edgeId, flowPosition }) {
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
-        const bendPoints = edge.data?.bendPoints ?? [];
+        const bendPoints = getBendPoints(edge);
         if (bendPoints.length >= MAX_BEND_POINTS_PER_EDGE) return;
 
         const endpoints = edgeEndpoints(edge, bendPoints);
@@ -465,12 +547,32 @@
     function handleEdgeDeleteBendPoint({ edgeId, bendPointId }) {
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
-        const next = removeBendPoint(edge.data?.bendPoints ?? [], bendPointId);
+        const next = removeBendPoint(getBendPoints(edge), bendPointId);
         updateEdgeBendPoints(edgeId, next);
     }
 
     function handleEdgeClearBendPoints({ edgeId }) {
-        updateEdgeBendPoints(edgeId, []);
+        patchEdgeData(edgeId, { bendPoints: [], endPoints: {} });
+    }
+
+    function handleEdgeDeleteEndPoint({ edgeId, side }) {
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const currentEndPoints = getEndPoints(edge);
+        const nextEndPoints = { ...currentEndPoints, [side]: null };
+        updateEdgeEndPoints(edgeId, nextEndPoints);
+    }
+
+    function updateEdgeEndPoints(edgeId, newEndPoints) {
+        patchEdgeData(edgeId, { endPoints: newEndPoints });
+    }
+
+    function patchEdgeData(edgeId, dataPatch) {
+        edges = edges.map(edge =>
+            edge.id === edgeId
+                ? { ...edge, data: { ...edge.data, ...dataPatch } }
+                : edge,
+        );
     }
 
     export async function applyELKLayout() {
@@ -576,10 +678,12 @@
             selection.handleSelectionEnd();
             applySelectionZIndices();
         }}
-        onnodedragstart={({ node }) => {
+        onnodedragstart={e => {
             selection.notifyNodeDragStart();
-            nodeOrderCtrl.bringToFrontTemporarily(node?.id);
+            nodeOrderCtrl.bringToFrontTemporarily(e.node?.id);
+            handleNodeDragStart(e);
         }}
+        onnodedrag={e => handleNodeDrag(e)}
         onnodedragstop={e => {
             selection.notifyNodeDragStop();
             handleNodeMove(e);
@@ -626,6 +730,7 @@
         onClose={() => contextMenus.close()}
         onAddBendPoint={handleEdgeAddBendPoint}
         onDeleteBendPoint={handleEdgeDeleteBendPoint}
+        onDeleteEndPoint={handleEdgeDeleteEndPoint}
         onClearBendPoints={handleEdgeClearBendPoints}
     />
 </div>

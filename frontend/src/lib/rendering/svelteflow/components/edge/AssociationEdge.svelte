@@ -40,6 +40,8 @@
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
     let bendPoints = $derived(data.bendPoints ?? []);
+    let endPoints = $derived(data.endPoints ?? {});
+
     let useRoundedCorners = $derived(
         userSettings.get("useRoundedEdges", false),
     );
@@ -60,6 +62,10 @@
                 targetNode.current,
                 0,
                 bendPoints,
+                {
+                    source: endPoints.source ?? null,
+                    target: endPoints.target ?? null,
+                },
             );
         }
     });
@@ -106,17 +112,22 @@
         return `M ${x1} ${y1} C ${x1} ${y1 - loopHeight}, ${x2} ${y2 - loopHeight}, ${x2} ${y2}`;
     }
 
-    function handleBendPointsChange(nextPoints) {
+    function patchEdgeData(dataPatch) {
         edges.update(current =>
             current.map(edge =>
                 edge.id === id
-                    ? {
-                          ...edge,
-                          data: { ...edge.data, bendPoints: nextPoints },
-                      }
+                    ? { ...edge, data: { ...edge.data, ...dataPatch } }
                     : edge,
             ),
         );
+    }
+
+    function handleBendPointsChange(nextPoints) {
+        patchEdgeData({ bendPoints: nextPoints });
+    }
+
+    function handleEndPointsChange(nextEndPoints) {
+        patchEdgeData({ endPoints: nextEndPoints });
     }
 </script>
 
@@ -127,8 +138,14 @@
         edgeId={id}
         sourcePoint={{ x: edgeParams.sx, y: edgeParams.sy }}
         targetPoint={{ x: edgeParams.tx, y: edgeParams.ty }}
+        sourceBorderPoint={{ x: edgeParams.borderSx, y: edgeParams.borderSy }}
+        targetBorderPoint={{ x: edgeParams.borderTx, y: edgeParams.borderTy }}
         {bendPoints}
+        {endPoints}
+        sourceNodeId={source}
+        targetNodeId={target}
         onPointsChange={handleBendPointsChange}
+        onEndPointsChange={handleEndPointsChange}
     />
 {/if}
 
