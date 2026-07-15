@@ -741,4 +741,32 @@ export class BackendConnection {
             credentials: "include",
         });
     }
+
+    async getChanges() {
+        const url = `${PUBLIC_BACKEND_URL}/migrations/changes`;
+        return await fetch(url, {
+            method: "GET",
+            credentials: "include",
+            headers: new Headers({ "Content-Type": "application/json" }),
+        })
+    }
+
+    async confirmChanges(classes) {
+        const url = `${PUBLIC_BACKEND_URL}/migrations/changes`;
+        return await fetch(url, {
+            method: "POST",
+            credentials: "include",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(classes)
+        })
+    }
+
+    async fetchReport(reportType) {
+        const params = new URLSearchParams({ reportType: reportType });
+        return fetch(PUBLIC_BACKEND_URL + `/migrations/report?${params}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+        });
+    }
 }
