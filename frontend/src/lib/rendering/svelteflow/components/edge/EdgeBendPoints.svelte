@@ -89,7 +89,6 @@
         );
         onPointsChange(newBendPoints);
     }
-
 </script>
 
 <g>

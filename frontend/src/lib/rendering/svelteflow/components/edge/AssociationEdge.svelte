@@ -27,7 +27,11 @@
     import { userSettings } from "$lib/userSettings.svelte.js";
 
     import EdgeBendPoints from "./EdgeBendPoints.svelte";
-    import { getEdgeParams, getPolylinePath } from "./edgeUtils.ts";
+    import {
+        getEdgeParams,
+        getPolylinePath,
+        getRoundedCornerPolylinePath,
+    } from "./edgeUtils.ts";
     let { id, source, target, data, selected } = $props();
     const edges = useEdges();
 
@@ -36,6 +40,12 @@
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
     let bendPoints = $derived(data.bendPoints ?? []);
+    let useRoundedCorners = $derived(
+        userSettings.get("useRoundedEdges", false),
+    );
+    let cornerRoundingFactor = $derived(
+        userSettings.get("cornerRoundingFactor", 50),
+    );
 
     let style = $derived(
         userSettings.get("useColoredPropertiesInMergedView") && data.color
@@ -61,11 +71,17 @@
             return getSelfConnectingPath();
 
         if (bendPoints.length > 0) {
-            return getPolylinePath([
+            const orderedPoints = [
                 { x: edgeParams.sx, y: edgeParams.sy },
                 ...bendPoints,
                 { x: edgeParams.tx, y: edgeParams.ty },
-            ]);
+            ];
+            return useRoundedCorners
+                ? getRoundedCornerPolylinePath(
+                      orderedPoints,
+                      cornerRoundingFactor,
+                  )
+                : getPolylinePath(orderedPoints);
         }
 
         return getStraightPath({
