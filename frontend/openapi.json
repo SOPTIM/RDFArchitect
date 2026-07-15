@@ -2084,7 +2084,7 @@
     },
     "/api/datasets/{datasetName}/crossprofilediagram" : {
       "get" : {
-        "operationId" : "getCrossProfileRenderingData",
+        "operationId" : "getCrossProfileDiagram",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -2208,7 +2208,7 @@
     },
     "/api/datasets/{datasetName}/crossprofilediagramID" : {
       "get" : {
-        "operationId" : "getCrossProfileRenderingData_2",
+        "operationId" : "getCrossProfileDiagramId",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -2249,7 +2249,7 @@
     },
     "/api/datasets/{datasetName}/crossprofilediagramRendering" : {
       "get" : {
-        "operationId" : "getCrossProfileRenderingData_1",
+        "operationId" : "getCrossProfileRenderingData",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",

@@ -23,7 +23,7 @@
     import {
         getCustomDatasetViewRenderingData,
         getCustomProfileViewRenderingData,
-        getRenderingDataParameterized
+        getRenderingDataParameterized,
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
@@ -34,8 +34,9 @@
         editorState,
         graphViewState,
         forceReloadTrigger,
-        DiagramType
+        DiagramType,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
@@ -58,7 +59,7 @@
     let diagramRequestKey = null;
     let showSvelteFlowEmptyState = $derived(
         renderingFormat === SVELTEFLOW_FORMAT &&
-        (response?.nodes?.length ?? 0) === 0
+            (response?.nodes?.length ?? 0) === 0,
     );
 
     $effect(async () => {
@@ -84,7 +85,7 @@
             datasetName,
             graphUri,
             diagramId,
-            filter
+            filter,
         );
         const hasCurrentResponse = untrack(() => !!response);
         const showBlockingLoading =
@@ -107,7 +108,7 @@
                     datasetName,
                     graphUri,
                     diagramId,
-                    filter
+                    filter,
                 );
             }
         } else {
@@ -122,7 +123,7 @@
         datasetName,
         graphUri,
         packageUUID,
-        filter
+        filter,
     ) {
         let graphFilter = {
             packageUUID,
@@ -131,14 +132,13 @@
             includeAssociations: filter.includeAssociations,
             includeInheritance: filter.includeInheritance,
             includeRelationsToExternalPackages:
-            filter.includeRelationsToExternalPackages
+                filter.includeRelationsToExternalPackages,
         };
 
         try {
-
             const { data, error } = await getRenderingDataParameterized({
                 path: { datasetName: datasetName, graphURI: graphUri },
-                body: graphFilter
+                body: graphFilter,
             });
 
             if (error) {
@@ -159,7 +159,6 @@
         } finally {
             isLoading = false;
         }
-
     }
 
     async function fetchDatasetDiagramRenderingData(diagramId) {
@@ -167,8 +166,8 @@
             const { data, error } = await getCustomDatasetViewRenderingData({
                 path: {
                     datasetName: editorState.selectedDataset.getValue(),
-                    diagramId: diagramId
-                }
+                    diagramId: diagramId,
+                },
             });
 
             if (error) {
@@ -193,8 +192,8 @@
                 path: {
                     datasetName: editorState.selectedDataset.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
-                    diagramId: diagramId
-                }
+                    diagramId: diagramId,
+                },
             });
 
             if (error) {
@@ -214,26 +213,20 @@
     }
 
     async function fetchCrossProfileRenderingData() {
-        try {
-            const res = await bec.getCrossProfileDiagramRenderingDataForDataset(
-                editorState.selectedDataset.getValue(),
-            );
+        const { error, data } = await crossProfileStore.fetchRenderingData(
+            editorState.selectedDataset.getValue(),
+        );
 
-            const responseText = await res.text();
-            if (!responseText) {
-                displayDiagram = false;
-            } else {
-                response = JSON.parse(responseText);
-                renderingFormat = response.format;
-                displayDiagram = true;
-            }
-        } catch (error) {
-            console.error("Error fetching cross profile diagram data:", error);
+        if (error || !data) {
+            displayDiagram = false;
             response = null;
             renderingFormat = null;
-        } finally {
-            isLoading = false;
+        } else {
+            renderingFormat = response.format;
+            displayDiagram = true;
         }
+
+        isLoading = false;
     }
 
     function getDiagramRequestKey(datasetName, graphUri, packageUUID, filter) {
@@ -241,7 +234,7 @@
             datasetName,
             graphUri,
             packageUUID,
-            filter
+            filter,
         });
     }
 

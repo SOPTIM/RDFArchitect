@@ -34,7 +34,8 @@
 
     async function getCustomDiagrams() {
         await customDiagramStore.loadDatasetDiagrams(lockedDatasetName);
-        const diagrams = await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
+        const diagrams =
+            await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
         diagramList = diagrams.filter(diagram => {
             const classesToAddIds = new Set(classes.map(cls => cls.id));
             const diagramClassIds = new Set(

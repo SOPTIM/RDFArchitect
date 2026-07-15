@@ -34,7 +34,7 @@ export function getNCNameViolations(str) {
     if (str.length === 0) return [];
 
     let index = 0;
-    for (let i = 0; i < str.length;) {
+    for (let i = 0; i < str.length; ) {
         const cp = str.codePointAt(i);
         const ch = String.fromCodePoint(cp);
         i += cp > 0xffff ? 2 : 1;

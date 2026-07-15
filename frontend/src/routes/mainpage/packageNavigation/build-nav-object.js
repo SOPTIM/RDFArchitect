@@ -17,6 +17,7 @@
 
 import { get } from "svelte/store";
 
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
@@ -32,7 +33,6 @@ import {
     isSelectedPackage,
     isSelectedClass,
 } from "./packageNavigationUtils.svelte.js";
-import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
 /**
  * @description Reuses an existing NavEntry by id or creates a new one. Preserves isOpen.

@@ -85,10 +85,7 @@
         const graph = editorState.selectedGraph.getValue();
         await packageStore.load(dataset, graph);
         const res = await packageStore.getPackages(dataset, graph);
-        let packages = [
-            ...(res.internal ?? []),
-            ...(res.external ?? []),
-        ];
+        let packages = [...(res.internal ?? []), ...(res.external ?? [])];
 
         const selectedPackageUUID =
             editorState.selectedDiagram.getProperty("id") === "default"

@@ -42,7 +42,7 @@ public class CrossProfileDiagramIDRESTController {
     private final DatabasePort databasePort;
 
     @GetMapping
-    public String getCrossProfileRenderingData(
+    public String getCrossProfileDiagramId(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

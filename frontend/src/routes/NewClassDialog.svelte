@@ -173,10 +173,7 @@
 
         await packageStore.load(datasetName, graphURI);
         const result = await packageStore.getPackages(datasetName, graphURI);
-        packages = [
-            ...result.internal,
-            ...result.external,
-        ]
+        packages = [...result.internal, ...result.external];
     }
 
     async function newClass() {

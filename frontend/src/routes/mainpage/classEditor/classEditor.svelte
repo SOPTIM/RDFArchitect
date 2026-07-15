@@ -211,11 +211,7 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                await classStore.loadClassInfo(
-                    datasetName,
-                    graphUri,
-                    uuid,
-                );
+                await classStore.loadClassInfo(datasetName, graphUri, uuid);
                 const res = await classStore.getClassInfo(
                     datasetName,
                     graphUri,

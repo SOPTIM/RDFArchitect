@@ -46,7 +46,7 @@ class CrossProfileDiagramRestControllerTest {
         when(getCustomDiagramsUseCase.getCrossProfileDiagram("my-dataset", false, false))
                 .thenReturn(expectedDTO);
 
-        var result = controller.getCrossProfileRenderingData(HttpHeaders.ORIGIN, "my-dataset");
+        var result = controller.getCrossProfileDiagram(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(expectedDTO);
         verify(getCustomDiagramsUseCase).getCrossProfileDiagram("my-dataset", false, false);

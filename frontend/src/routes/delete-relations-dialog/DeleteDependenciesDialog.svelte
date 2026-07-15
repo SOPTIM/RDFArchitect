@@ -133,7 +133,7 @@
                 uuid: targetUuids,
             },
         });
-        const impactByUuid = data
+        const impactByUuid = data;
         roots = Object.values(impactByUuid);
 
         selectedActions = new Map();

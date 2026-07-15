@@ -21,8 +21,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
@@ -57,12 +57,11 @@ public class ClassAttributesRESTController {
             summary = "Replace/Create attribute",
             description = "Replaces an attribute of a specified class.",
             tags = {"class"},
-            responses = @ApiResponse(
-                    responseCode = "200",
-                    description = "The uuid of the new attribute.",
-                    content =
-                            @Content(
-                                    schema = @Schema(implementation = UUID.class))))
+            responses =
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "The uuid of the new attribute.",
+                            content = @Content(schema = @Schema(implementation = UUID.class))))
     @PutMapping
     public UUID replaceAttribute(
             @Parameter(description = "The name/url of the inquirer.")

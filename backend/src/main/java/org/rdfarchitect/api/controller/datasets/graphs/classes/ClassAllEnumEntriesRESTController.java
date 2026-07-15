@@ -56,7 +56,8 @@ public class ClassAllEnumEntriesRESTController {
             summary = "Create enum entry",
             description = "Creates a new enum entry for a specified class.",
             tags = {"enum"},
-            responses = @ApiResponse(
+            responses =
+                    @ApiResponse(
                             responseCode = "200",
                             description = "UUID of the newly created enum entry.",
                             content = @Content(schema = @Schema(implementation = UUID.class))))

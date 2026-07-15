@@ -73,7 +73,6 @@
         getNodes: () => nodes,
         setNodes: value => (nodes = value),
         getSelectedIds: () => selectedNodeIdSet(),
-        bec,
     });
 
     const contextMenus = new ContextMenuController({
@@ -206,7 +205,9 @@
 
     async function refreshReadOnlyState() {
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await datasetStore.isReadOnly(dataset) : false;
+        isDatasetReadOnly = dataset
+            ? await datasetStore.isReadOnly(dataset)
+            : false;
     }
 
     function resetTempFrontWhenNoClassOpen() {

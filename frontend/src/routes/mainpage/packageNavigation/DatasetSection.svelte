@@ -29,15 +29,14 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         editorState,
         forceReloadTrigger,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
@@ -55,8 +54,6 @@
     import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
@@ -97,8 +94,8 @@
     });
 
     onMount(async () => {
-        let res = await bec.getCrossProfileID(datasetNavEntry.label);
-        crossProfileID = await res.text();
+        await crossProfileStore.loadId();
+        crossProfileID = crossProfileStore.getId(datasetNavEntry.label);
     });
 
     async function fetchNamespaces() {

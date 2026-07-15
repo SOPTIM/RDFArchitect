@@ -58,8 +58,8 @@ public class CustomDiagramService
         implements GetCustomDiagramsUseCase,
                 ReplaceCustomDiagramUseCase,
                 DeleteCustomDiagramUseCase,
-        RemoveFromCustomDiagramUseCase,
-         CrossProfileColorUseCase{
+                RemoveFromCustomDiagramUseCase,
+                CrossProfileColorUseCase {
 
     private final DatabasePort databasePort;
     private final GetClassListUseCase getClassListUseCase;
@@ -232,7 +232,8 @@ public class CustomDiagramService
     }
 
     @Override
-    public void replaceCustomDatasetDiagram(String datasetName, String diagramId, CustomDiagram diagram) {
+    public void replaceCustomDatasetDiagram(
+            String datasetName, String diagramId, CustomDiagram diagram) {
         if (!Objects.equals(diagramId, diagram.getDiagramId().toString())) {
             throw new IllegalArgumentException(
                     "Diagram ID mismatch: URL parameter '"
@@ -282,7 +283,8 @@ public class CustomDiagramService
     }
 
     @Override
-    public void removeFromCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
+    public void removeFromCustomGraphDiagram(
+            GraphIdentifier graphIdentifier, String diagramId, UUID classId) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var diagram = ctx.getCustomDiagrams().get(UUID.fromString(diagramId));
             if (diagram != null) {

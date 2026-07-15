@@ -46,7 +46,7 @@
                 datasetName: editorState.selectedDataset.getValue(),
                 graphURI: editorState.selectedGraph.getValue(),
             },
-            query: {changeId: changeId},
+            query: { changeId: changeId },
         });
         if (!error) {
             console.log("Version restored successfully");

@@ -81,9 +81,7 @@ public class CustomDiagramClassRESTController {
 
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         removeFromCustomDiagramUseCase.removeFromCustomGraphDiagram(
-                new GraphIdentifier(datasetName, extendedGraphURI),
-                diagramId,
-                classId);
+                new GraphIdentifier(datasetName, extendedGraphURI), diagramId, classId);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}/classes/{{}}\" from \"{}\"",

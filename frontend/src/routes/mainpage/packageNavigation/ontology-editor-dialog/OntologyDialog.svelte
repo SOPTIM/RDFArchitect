@@ -162,10 +162,7 @@
             return null;
         }
         await ontologyStore.loadOntology(dataset, graphUri);
-        return ontologyStore.getOntologyForGraph(
-            dataset,
-            graphUri,
-        );
+        return ontologyStore.getOntologyForGraph(dataset, graphUri);
     }
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {

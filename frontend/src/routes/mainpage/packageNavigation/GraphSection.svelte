@@ -130,18 +130,24 @@
     }
 
     function undo() {
-        const { error } = versionControlStore.undo(datasetNavEntry.id, graphNavEntry.id);
+        const { error } = versionControlStore.undo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
 
-        if (!error)  {
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }
 
     function redo() {
-        const { error } = versionControlStore.redo(datasetNavEntry.id, graphNavEntry.id);
+        const { error } = versionControlStore.redo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
 
-        if (!error)  {
-           forceReloadTrigger.trigger();
+        if (!error) {
+            forceReloadTrigger.trigger();
         }
     }
 
@@ -221,7 +227,7 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    redo()
+                    redo();
                 }}
                 disabled={readonly || !canRedo}
                 faIcon={faRotateRight}

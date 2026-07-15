@@ -19,7 +19,6 @@
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         multiSelectState,
@@ -55,6 +54,7 @@
                   diagramId,
                   classIds,
               );
+        multiSelectState.clear();
         if (!error) {
             forceReloadTrigger.trigger();
         }

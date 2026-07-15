@@ -27,11 +27,10 @@
     import {
         editorState,
         forceReloadTrigger,
-        graphViewState
+        graphViewState,
     } from "$lib/sharedState.svelte.js";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
-
 
     /** @type {{ rightInsetPercent?: number }} */
     let { rightInsetPercent = 0 } = $props();
@@ -41,7 +40,7 @@
     let zoomAndDraggableMermaid = $state();
 
     let displayDiagram = $derived(
-        !mermaidString || mermaidString.includes("class ")
+        !mermaidString || mermaidString.includes("class "),
     );
 
     $effect(async () => {
@@ -55,24 +54,24 @@
         let graphFilter = {
             packageUUID: editorState.selectedDiagram.getProperty("id"),
             includeEnumEntries:
-            graphViewState.filter.getValue().includeEnumEntries,
+                graphViewState.filter.getValue().includeEnumEntries,
             includeAttributes:
-            graphViewState.filter.getValue().includeAttributes,
+                graphViewState.filter.getValue().includeAttributes,
             includeAssociations:
-            graphViewState.filter.getValue().includeAssociations,
+                graphViewState.filter.getValue().includeAssociations,
             includeInheritance:
-            graphViewState.filter.getValue().includeInheritance,
+                graphViewState.filter.getValue().includeInheritance,
             includeRelationsToExternalPackages:
-            graphViewState.filter.getValue()
-                .includeRelationsToExternalPackages
+                graphViewState.filter.getValue()
+                    .includeRelationsToExternalPackages,
         };
 
-        const {data} = await getRenderingDataParameterized(
+        const { data } = await getRenderingDataParameterized(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
-            graphFilter
-        )
-        mermaidString = data
+            graphFilter,
+        );
+        mermaidString = data;
     });
 
     onMount(() => {
@@ -86,10 +85,10 @@
             if (!editorState.selectedClass.getProperty("id")) {
                 eventStack.executeNewestEvent(nodeId);
                 editorState.selectedClassDataset.updateValue(
-                    editorState.selectedDataset.getValue()
+                    editorState.selectedDataset.getValue(),
                 );
                 editorState.selectedClassGraph.updateValue(
-                    editorState.selectedGraph.getValue()
+                    editorState.selectedGraph.getValue(),
                 );
                 editorState.selectedClass.updateValue(nodeId);
                 return;
@@ -97,7 +96,7 @@
             eventStack.executeNewestEvent({
                 datasetName: editorState.selectedDataset.getValue(),
                 graphUri: editorState.selectedGraph.getValue(),
-                classUuid: nodeId
+                classUuid: nodeId,
             });
         };
     });

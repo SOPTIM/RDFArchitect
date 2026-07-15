@@ -30,7 +30,7 @@
         faRotateLeft,
         faRotateRight,
         faTags,
-        faTrash
+        faTrash,
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
@@ -43,6 +43,7 @@
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
@@ -55,17 +56,12 @@
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
     import { inferSelectionLevel } from "../../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
-    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import { classStore } from "$lib/stores/ClassStore.ts";
 
-    let {
-        canUndo, canRedo, isDatasetReadOnly, reload = () => {
-        }
-    } = $props();
+    let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
 
     const shortcutsUnregister = [];
 
@@ -95,20 +91,20 @@
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
     let hasDatasetSelected = $derived(!!selectedDataset);
     let hasGraphSelected = $derived(
-        hasDatasetSelected && !!editorState.selectedGraph.getValue()
+        hasDatasetSelected && !!editorState.selectedGraph.getValue(),
     );
     let canAccessNamespaces = $derived(hasDatasetSelected);
     let canEditCurrentPackage = $derived(
         selectedPackageDetails &&
-        !selectedPackageDetails.external &&
-        selectedPackageDetails.label !== "default" &&
-        !isDatasetReadOnly
+            !selectedPackageDetails.external &&
+            selectedPackageDetails.label !== "default" &&
+            !isDatasetReadOnly,
     );
     let canDeleteCurrentPackage = $derived(
         selectedPackageDetails &&
-        !selectedPackageDetails.external &&
-        selectedPackageDetails.label !== "default" &&
-        !isDatasetReadOnly
+            !selectedPackageDetails.external &&
+            selectedPackageDetails.label !== "default" &&
+            !isDatasetReadOnly,
     );
     let graphHasOntology = $derived(!!ontology);
 
@@ -263,7 +259,7 @@
         await ontologyStore.loadOntology(selectedDataset, selectedGraph);
         return ontologyStore.getOntologyForGraph(
             selectedDataset,
-            selectedGraph
+            selectedGraph,
         );
     }
 
@@ -274,7 +270,7 @@
 
         const { error } = await datasetStore.updateReadonly(
             selectedDataset,
-            false
+            false,
         );
         if (error) return;
 
@@ -289,7 +285,7 @@
 
         const { error } = await datasetStore.updateReadonly(
             selectedDataset,
-            true
+            true,
         );
         if (error) return;
 
@@ -326,17 +322,17 @@
         await packageStore.load(selectedDataset, selectedGraph);
         const packageData = packageStore.getPackages(
             selectedDataset,
-            selectedGraph
+            selectedGraph,
         );
         return [
             ...(packageData.internal ?? []).map(p => ({
                 ...p,
-                external: false
+                external: false,
             })),
             ...(packageData.external ?? []).map(p => ({
                 ...p,
-                external: true
-            }))
+                external: true,
+            })),
         ];
     }
 
@@ -377,7 +373,7 @@
     async function undo() {
         const { error } = await versionControlStore.undo(
             editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue()
+            editorState.selectedGraph.getValue(),
         );
         if (!error) {
             reload();
@@ -387,7 +383,7 @@
     async function redo() {
         const { error } = await versionControlStore.redo(
             editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue()
+            editorState.selectedGraph.getValue(),
         );
         if (!error) {
             reload();
@@ -411,7 +407,7 @@
             selectedPackageDetails,
             copyAsAbstract,
             copyAttributes,
-            copyAssociations
+            copyAssociations,
         );
     }
 
@@ -456,12 +452,12 @@
         if (isDatasetReadOnly) {
             datasetStore.updateReadonly(
                 editorState.selectedDataset.getValue(),
-                false
+                false,
             );
         } else {
             datasetStore.updateReadonly(
                 editorState.selectedDataset.getValue(),
-                true
+                true,
             );
         }
     }

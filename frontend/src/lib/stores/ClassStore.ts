@@ -46,7 +46,7 @@ import {
     EnumEntryDto,
     AssociationUuids,
     PasteClassesRequestDto,
-    PasteClassesResponses,
+    CopyClassResponseDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -524,36 +524,6 @@ function createClassStore() {
         return { error: null, data: data ?? undefined };
     }
 
-    async function pasteCopiedClasses(
-        datasetName: string,
-        graphURI: string,
-        request: PasteClassesRequestDto,
-    ): Promise<Result<PasteClassesResponses>> {
-        console.log(
-            `${LOG_PREFIX} Copying class classUUID="${classUUID}" from dataset="${datasetName}", graph="${graphURI}"`,
-        );
-
-        const { data, error } = await pasteClasses({
-            path: { targetDatasetName: datasetName, targetGraphURI: graphURI },
-            body: request,
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not copy class classUUID="${classUUID}"`,
-                await describeError(error),
-            );
-            toastStore.error("Copy failed", "Class could not be copied.");
-            return { error };
-        }
-
-        if (request.targetDatasetName && request.targetGraphURI) {
-            invalidateGraph(request.targetDatasetName, request.targetGraphURI);
-        }
-        console.log(`${LOG_PREFIX} Copied class classUUID="${classUUID}"`);
-        toastStore.success("Class copied", "Class was successfully copied.");
-        return { error: null, data: data ?? undefined };
-    }
-
     // =========================================================================
     // ATTRIBUTE OPERATIONS
     // =========================================================================
@@ -939,7 +909,7 @@ function createClassStore() {
         replaceClass: replaceExistingClass,
         deleteClass: deleteExistingClass,
         extendClass: extendExistingClass,
-        saveCopyClass: pasteClasses,
+        saveCopyClass: pasteCopiedClasses,
 
         // attribute mutations
         addAttribute,
@@ -957,5 +927,62 @@ function createClassStore() {
         invalidateGraph,
         invalidateDataset,
         invalidateAll,
+    };
+}
+
+async function pasteCopiedClasses(
+    datasetName: string,
+    graphURI: string,
+    request: PasteClassesRequestDto,
+): Promise<Result<CopyClassResponseDto[]>> {
+    const sources = request.sources ?? [];
+    const sourceCount = sources.length;
+
+    if (sourceCount === 0) {
+        console.warn(`${LOG_PREFIX} pasteCopiedClasses called with no sources`);
+        return { error: null };
+    } else if (sourceCount === 1) {
+        const { classUUID } = sources[0];
+        console.log(
+            `${LOG_PREFIX} Pasting class classUUID="${classUUID}" into dataset="${datasetName}", graph="${graphURI}"`,
+        );
+    } else {
+        console.log(
+            `${LOG_PREFIX} Pasting ${sourceCount} classes into dataset="${datasetName}", graph="${graphURI}"`,
+        );
+    }
+
+    const { data, error } = await pasteClasses({
+        path: {
+            targetDatasetName: datasetName,
+            targetGraphURI: graphURI,
+        },
+        body: request,
+    });
+
+    if (error) {
+        console.error(
+            sourceCount === 1
+                ? `${LOG_PREFIX} Could not paste class classUUID="${sources[0].classUUID}"`
+                : `${LOG_PREFIX} Could not paste ${sourceCount} classes`,
+            await describeError(error),
+        );
+
+        return { error };
+    }
+
+    if (sourceCount === 1) {
+        console.log(
+            `${LOG_PREFIX} Successfully pasted class classUUID="${sources[0].classUUID}"`,
+        );
+    } else {
+        console.log(
+            `${LOG_PREFIX} Successfully pasted ${data?.length ?? sourceCount} classes`,
+        );
+    }
+
+    return {
+        error: null,
+        data: data ?? [],
     };
 }

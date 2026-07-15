@@ -408,7 +408,7 @@ function createCustomDiagramStore() {
     ): Promise<Result> {
         const { error } = await removeFromCustomDatasetDiagram({
             path: { datasetName, diagramId },
-            body: classIDs
+            body: classIDs,
         });
 
         if (error) {
