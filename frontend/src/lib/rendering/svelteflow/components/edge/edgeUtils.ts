@@ -91,6 +91,10 @@ export function getEdgeParams(
     target: InternalNode,
     offsetY: number = 0,
     bendPoints: { x: number; y: number }[] = [],
+    activeEndPoints: {
+        source?: { x: number; y: number } | null;
+        target?: { x: number; y: number } | null;
+    } = {},
 ) {
     const sourceAim =
         bendPoints.length > 0 ? makePointNode(bendPoints[0]) : target;
@@ -102,33 +106,41 @@ export function getEdgeParams(
     const sourceIntersection = getNodeIntersection(source, sourceAim);
     const targetIntersection = getNodeIntersection(target, targetAim, offsetY);
 
+    // Active end points override the automatic border intersection for that side.
+    const sourcePoint = activeEndPoints.source ?? sourceIntersection;
+    const targetPoint = activeEndPoints.target ?? targetIntersection;
+
     const startAim =
         bendPoints.length > 0
             ? bendPoints[0]
-            : { x: targetIntersection.x, y: targetIntersection.y };
+            : { x: targetPoint.x, y: targetPoint.y };
     const endAim =
         bendPoints.length > 0
             ? bendPoints[bendPoints.length - 1]
-            : { x: sourceIntersection.x, y: sourceIntersection.y };
+            : { x: sourcePoint.x, y: sourcePoint.y };
 
     const startOffset = getSingleLabelOffset(
-        sourceIntersection.x,
-        sourceIntersection.y,
+        sourcePoint.x,
+        sourcePoint.y,
         startAim.x,
         startAim.y,
     );
     const endOffset = getSingleLabelOffset(
-        targetIntersection.x,
-        targetIntersection.y,
+        targetPoint.x,
+        targetPoint.y,
         endAim.x,
         endAim.y,
     );
 
     return {
-        sx: sourceIntersection.x,
-        sy: sourceIntersection.y,
-        tx: targetIntersection.x,
-        ty: targetIntersection.y,
+        sx: sourcePoint.x,
+        sy: sourcePoint.y,
+        tx: targetPoint.x,
+        ty: targetPoint.y,
+        borderSx: sourceIntersection.x,
+        borderSy: sourceIntersection.y,
+        borderTx: targetIntersection.x,
+        borderTy: targetIntersection.y,
         startX: startOffset.x,
         startY: startOffset.y,
         endX: endOffset.x,
@@ -253,7 +265,7 @@ function getSingleLabelOffset(
 
     const dx = towardX - fromX;
     const dy = towardY - fromY;
-    const length = Math.sqrt(dx * dx + dy * dy) || 1;
+    const length = Math.hypot(dx, dy) || 1;
 
     const normDx = dx / length;
     const normDy = dy / length;
@@ -354,4 +366,37 @@ function pointTowards(
         x: from.x + (dx / length) * distance,
         y: from.y + (dy / length) * distance,
     };
+}
+
+/**
+ * Projects an arbitrary point onto the border of a node's rectangle. Used to keep
+ * end points sticky on the class border while they are dragged. Returns the point
+ * on the rectangle outline closest to the given position.
+ */
+export function projectPointOntoNodeBorder(
+    node: InternalNode,
+    point: { x: number; y: number },
+): { x: number; y: number } {
+    const pos = node.internals.positionAbsolute ?? { x: 0, y: 0 };
+    const width = node.measured.width ?? 0;
+    const height = node.measured.height ?? 0;
+
+    const left = pos.x;
+    const right = pos.x + width;
+    const top = pos.y;
+    const bottom = pos.y + height;
+
+    const clampedX = Math.max(left, Math.min(right, point.x));
+    const clampedY = Math.max(top, Math.min(bottom, point.y));
+
+    const distLeft = Math.abs(clampedX - left);
+    const distRight = Math.abs(clampedX - right);
+    const distTop = Math.abs(clampedY - top);
+    const distBottom = Math.abs(clampedY - bottom);
+    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+    if (minDist === distLeft) return { x: left, y: clampedY };
+    if (minDist === distRight) return { x: right, y: clampedY };
+    if (minDist === distTop) return { x: clampedX, y: top };
+    return { x: clampedX, y: bottom };
 }
