@@ -217,8 +217,10 @@
             you want to migrate.
         </p>
         <p>
-            You can toggle the flag "ignore prefixes" which cause the rename detection to only consider labels and not the full IRI.
-            Renames due to a prefix change will therefore be shown as a simple change in the UI.
+            You can toggle the flag "ignore prefixes" which cause the rename
+            detection to only consider labels and not the full IRI. Renames due
+            to a prefix change will therefore be shown as a simple change in the
+            UI.
         </p>
     </InfoBox>
 
