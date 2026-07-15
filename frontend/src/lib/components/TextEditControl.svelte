@@ -29,11 +29,12 @@
         highlight = false,
         warn = false,
         buttons = [],
+        title = undefined,
     } = $props();
 </script>
 
 <div class="text-default-text flex h-full w-full flex-col">
-    <label for={id}>
+    <label for={id} {title}>
         {#if label}
             {label}
         {/if}
@@ -47,6 +48,7 @@
         {readonly}
         {highlight}
         {warn}
+        {title}
         type="text"
         {buttons}
     />
