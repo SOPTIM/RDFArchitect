@@ -52,7 +52,7 @@
 
     export async function onNext() {
         try {
-            const res = await bec.confirmChanges(classes)
+            const res = await bec.confirmChanges(classes);
             if (!res.ok) {
                 toastStore.error(
                     "Save failed",
@@ -71,8 +71,10 @@
 
 <div class="flex h-full flex-col space-y-6 p-2">
     <InfoBox>
-        This step lets you get an overview over all changes made in the schema update and lets you assign comments to those changes.
-        These comments will be inserted in the migration script and the migration report you can download in the next step.
+        This step lets you get an overview over all changes made in the schema
+        update and lets you assign comments to those changes. These comments
+        will be inserted in the migration script and the migration report you
+        can download in the next step.
     </InfoBox>
 
     {#if isLoading}
