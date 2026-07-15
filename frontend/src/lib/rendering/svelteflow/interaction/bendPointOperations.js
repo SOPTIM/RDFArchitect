@@ -62,3 +62,36 @@ export function findBendPointAtPosition(bendPoints, position, hitRadius) {
     }
     return null;
 }
+
+/**
+ * Returns the active end points of an edge, defaulting to an empty object.
+ * Shape: { source?: {id,x,y}|null, target?: {id,x,y}|null }.
+ */
+export function getEndPoints(edge) {
+    return edge?.data?.endPoints ?? {};
+}
+
+/**
+ * Creates a fresh end point object at the given position.
+ */
+export function createEndPoint(x, y) {
+    return { id: crypto.randomUUID(), x, y };
+}
+
+/**
+ * Finds an active end point ("source"/"target") within the given hit radius of a
+ * position. Returns the side or null. Mirrors findBendPointAtPosition, but for the
+ * end points held in edge.data.endPoints.
+ */
+export function findEndPointSideAtPosition(endPoints, position, hitRadius) {
+    for (const side of ["source", "target"]) {
+        const endPoint = endPoints?.[side];
+        if (!endPoint) continue;
+        const dx = endPoint.x - position.x;
+        const dy = endPoint.y - position.y;
+        if (Math.hypot(dx, dy) <= hitRadius) {
+            return side;
+        }
+    }
+    return null;
+}
