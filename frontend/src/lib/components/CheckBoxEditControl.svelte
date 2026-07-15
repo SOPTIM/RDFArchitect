@@ -25,6 +25,7 @@
         indeterminate = false,
         labelFirst = true,
         readonly = false,
+        title = undefined,
     } = $props();
 
     let uuid = crypto.randomUUID();
@@ -32,13 +33,14 @@
 
 <div>
     {#if labelFirst && label}
-        <label for={uuid} class=" text-default-text">
+        <label for={uuid} class=" text-default-text" {title}>
             {label}
         </label>
     {/if}
     <input
         type="checkbox"
         id={uuid}
+        {title}
         class="text-button-default-text bg-default-background checked:bg-button-default-background h-4 w-4
            rounded
            border-none disabled:cursor-not-allowed"
@@ -54,7 +56,7 @@
         disabled={disabled || readonly}
     />
     {#if !labelFirst && label}
-        <label for={uuid} class="">
+        <label for={uuid} class="" {title}>
             {label}
         </label>
     {/if}
