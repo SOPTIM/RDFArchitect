@@ -78,7 +78,7 @@ public class MigrationChangesRESTController {
         var classes = migrationChangesUseCase.getMigrationChanges();
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/migrations/changes\" from \"{}\".",
+                "Sending response to GET request: \"/api/migrations/changes\" from \"{}\".",
                 originURL);
 
         return classes;
@@ -96,13 +96,13 @@ public class MigrationChangesRESTController {
             @Parameter(description = "The updated class renamings") @RequestBody
                     List<SemanticClassChange> changes) {
         logger.info(
-                "Received POST request: \"/api/migrations/class-renamings\" from \"{}\".",
+                "Received POST request: \"/api/migrations/changes\" from \"{}\".",
                 originURL);
 
         migrationChangesUseCase.confirmMigrationChanges(changes);
 
         logger.info(
-                "Sending response to POST request: \"/api/migrations/class-renamings\" from \"{}\".",
+                "Sending response to POST request: \"/api/migrations/changes\" from \"{}\".",
                 originURL);
     }
 }

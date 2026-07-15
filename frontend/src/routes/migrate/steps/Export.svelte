@@ -16,12 +16,15 @@
   -->
 
 <script>
+    import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
+
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let reportType = $state("SUMMARY");
 
@@ -44,7 +47,7 @@
 
     async function generateMigrationReport() {
         try {
-            const response = await fetchReport();
+            const response = await bec.fetchReport();
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
@@ -57,15 +60,6 @@
 
     async function fetchScript() {
         return fetch(PUBLIC_BACKEND_URL + "/migrations/export", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
-    }
-
-    async function fetchReport() {
-        const params = new URLSearchParams({ reportType: reportType });
-        return fetch(PUBLIC_BACKEND_URL + `/migrations/report?${params}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",

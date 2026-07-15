@@ -18,12 +18,16 @@
     import { onMount } from "svelte";
     import { get } from "svelte/store";
 
+    import { BackendConnection } from "$lib/api/backend.js";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
+    import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     import ResourceChangeCard from "./ResourceChangeCard.svelte";
+
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let classes = $state([]);
     let isLoading = $state(true);
@@ -33,11 +37,7 @@
         let storedState = get(migrationState);
         ignorePrefixes = storedState.ignorePrefixes;
 
-        fetch(PUBLIC_BACKEND_URL + "/migrations/changes", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        })
+        bec.getChanges()
             .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
             .then(data => {
                 classes = data.sort((a, b) => {
@@ -52,15 +52,7 @@
 
     export async function onNext() {
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL + "/migrations/changes",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(classes),
-                },
-            );
+            const res = await bec.confirmChanges(classes)
             if (!res.ok) {
                 toastStore.error(
                     "Save failed",
@@ -78,6 +70,11 @@
 </script>
 
 <div class="flex h-full flex-col space-y-6 p-2">
+    <InfoBox>
+        This step lets you get an overview over all changes made in the schema update and lets you assign comments to those changes.
+        These comments will be inserted in the migration script and the migration report you can download in the next step.
+    </InfoBox>
+
     {#if isLoading}
         <p class="text-text-subtle text-sm">Loading changes…</p>
     {:else if classes.length === 0}
