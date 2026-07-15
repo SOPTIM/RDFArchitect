@@ -14,42 +14,63 @@
   -    limitations under the License.
   -
   -->
-
 <script>
     import { useSvelteFlow } from "@xyflow/svelte";
 
     import {
         createBendPoint,
         insertBendPointAt,
+        createEndPoint,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
 
-    import { getInactiveBendPoints } from "./edgeUtils.ts";
+    import {
+        getInactiveBendPoints,
+        projectPointOntoNodeBorder,
+    } from "./edgeUtils.ts";
 
     let {
         edgeId,
         sourcePoint,
         targetPoint,
+        sourceBorderPoint,
+        targetBorderPoint,
         bendPoints = [],
+        endPoints = {},
+        sourceNodeId,
+        targetNodeId,
         onPointsChange,
+        onEndPointsChange,
     } = $props();
 
-    const { screenToFlowPosition } = useSvelteFlow();
+    const { screenToFlowPosition, getInternalNode } = useSvelteFlow();
 
-    let draggingId = $state(null);
+    let drag = $state(null);
 
     let fullPoints = $derived([sourcePoint, ...bendPoints, targetPoint]);
     let inactiveBendPoints = $derived(getInactiveBendPoints(fullPoints));
 
-    function beginDrag(pointId, event) {
+    let inactiveEndPoints = $derived(
+        [
+            endPoints.source ? null : { side: "source", ...sourceBorderPoint },
+            endPoints.target ? null : { side: "target", ...targetBorderPoint },
+        ].filter(Boolean),
+    );
+
+    function beginBendDrag(pointId, event) {
         if (event.button === 2) return;
         event.stopPropagation();
-        draggingId = pointId;
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", endDrag, { once: true });
-        window.addEventListener("contextmenu", endDrag, { once: true });
+        drag = { kind: "bend", id: pointId };
+        addDragListeners();
     }
 
-    function activateInactivePoint(insertionIndex, event) {
+    function beginEndDrag(side, event) {
+        if (event.button === 2) return;
+        event.stopPropagation();
+        drag = { kind: "end", side, id: endPoints[side]?.id ?? null };
+        addDragListeners();
+    }
+
+    function activateInactiveBendPoint(insertionIndex, event) {
         if (event.button === 2) return;
         event.stopPropagation();
         const flowPosition = screenToFlowPosition({
@@ -63,31 +84,72 @@
             newBendPoint,
         );
         onPointsChange(newBendPoints);
-        draggingId = newBendPoint.id;
+        drag = { kind: "bend", id: newBendPoint.id };
+        addDragListeners();
+    }
+
+    function activateInactiveEndPoint(side, event) {
+        if (event.button === 2) return;
+        event.stopPropagation();
+        const flowPosition = screenToFlowPosition({
+            x: event.clientX,
+            y: event.clientY,
+        });
+        const projected = projectOntoSide(side, flowPosition);
+        const newEndPoint = createEndPoint(projected.x, projected.y);
+        onEndPointsChange({ ...endPoints, [side]: newEndPoint });
+        drag = { kind: "end", side, id: newEndPoint.id };
+        addDragListeners();
+    }
+
+    function addDragListeners() {
         window.addEventListener("pointermove", onMove);
         window.addEventListener("pointerup", endDrag, { once: true });
         window.addEventListener("contextmenu", endDrag, { once: true });
     }
 
     function endDrag() {
-        draggingId = null;
+        drag = null;
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", endDrag);
         window.removeEventListener("contextmenu", endDrag);
     }
 
     function onMove(event) {
-        if (!draggingId) return;
+        if (!drag) return;
         const flowPosition = screenToFlowPosition({
             x: event.clientX,
             y: event.clientY,
         });
+
+        if (drag.kind === "end") {
+            const projected = projectOntoSide(drag.side, flowPosition);
+            onEndPointsChange({
+                ...endPoints,
+                [drag.side]: {
+                    ...endPoints[drag.side],
+                    id: drag.id,
+                    x: projected.x,
+                    y: projected.y,
+                },
+            });
+            return;
+        }
+
         const newBendPoints = bendPoints.map(bendPoint =>
-            bendPoint.id === draggingId
+            bendPoint.id === drag.id
                 ? { ...bendPoint, x: flowPosition.x, y: flowPosition.y }
                 : bendPoint,
         );
         onPointsChange(newBendPoints);
+    }
+
+    function projectOntoSide(side, flowPosition) {
+        const nodeId = side === "source" ? sourceNodeId : targetNodeId;
+        const node = getInternalNode(nodeId);
+        return node
+            ? projectPointOntoNodeBorder(node, flowPosition)
+            : flowPosition;
     }
 </script>
 
@@ -104,7 +166,22 @@
             r="7"
             style="pointer-events: all;"
             onpointerdown={e =>
-                activateInactivePoint(inactivePoint.insertionIndex, e)}
+                activateInactiveBendPoint(inactivePoint.insertionIndex, e)}
+        />
+    {/each}
+
+    {#each inactiveEndPoints as inactiveEnd (inactiveEnd.side)}
+        <circle
+            class="bend-point-handle nodrag nopan cursor-pointer fill-green opacity-50"
+            role="button"
+            aria-label="Activate end point"
+            tabindex="-1"
+            data-edge-id={edgeId}
+            cx={inactiveEnd.x}
+            cy={inactiveEnd.y}
+            r="7"
+            style="pointer-events: all;"
+            onpointerdown={e => activateInactiveEndPoint(inactiveEnd.side, e)}
         />
     {/each}
 
@@ -119,9 +196,39 @@
             cy={bendPoint.y}
             r="8"
             style="pointer-events: all;"
-            onpointerdown={e => beginDrag(bendPoint.id, e)}
+            onpointerdown={e => beginBendDrag(bendPoint.id, e)}
         />
     {/each}
+
+    {#if endPoints.source}
+        <circle
+            class="bend-point-handle nodrag nopan cursor-grab fill-green stroke-white stroke-[1.5]"
+            role="button"
+            aria-label="Move source end point"
+            tabindex="-1"
+            data-edge-id={edgeId}
+            cx={endPoints.source.x}
+            cy={endPoints.source.y}
+            r="8"
+            style="pointer-events: all;"
+            onpointerdown={e => beginEndDrag("source", e)}
+        />
+    {/if}
+
+    {#if endPoints.target}
+        <circle
+            class="bend-point-handle nodrag nopan cursor-grab fill-green stroke-white stroke-[1.5]"
+            role="button"
+            aria-label="Move target end point"
+            tabindex="-1"
+            data-edge-id={edgeId}
+            cx={endPoints.target.x}
+            cy={endPoints.target.y}
+            r="8"
+            style="pointer-events: all;"
+            onpointerdown={e => beginEndDrag("target", e)}
+        />
+    {/if}
 </g>
 
 <style>
