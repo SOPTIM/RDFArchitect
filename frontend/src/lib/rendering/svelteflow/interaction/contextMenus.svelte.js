@@ -19,7 +19,9 @@ import { editorState, multiSelectState } from "$lib/sharedState.svelte.js";
 
 import {
     findBendPointAtPosition,
+    findEndPointSideAtPosition,
     getBendPoints,
+    getEndPoints,
 } from "./bendPointOperations.js";
 import { propertyContextMenu } from "./propertyInteraction.svelte.js";
 
@@ -142,12 +144,18 @@ export class ContextMenuController {
             hitRadius,
         );
 
+        const endPoints = getEndPoints(currentEdge);
+        const hitEndPointSide = hitBendPoint
+            ? null
+            : findEndPointSideAtPosition(endPoints, flowPosition, hitRadius);
+
         this.#edgeRequest = {
             x: event.clientX,
             y: event.clientY,
             edgeId,
             flowPosition,
             hitBendPointId: hitBendPoint?.id ?? null,
+            hitEndPointSide,
             bendPointCount: bendPoints.length,
         };
     }
