@@ -37,6 +37,7 @@
         onClose = () => {},
         onAddBendPoint = () => {},
         onDeleteBendPoint = () => {},
+        onDeleteEndPoint = () => {},
         onClearBendPoints = () => {},
     } = $props();
 
@@ -46,6 +47,7 @@
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
     let onBendPoint = $derived(!!request?.hitBendPointId);
+    let onEndPoint = $derived(!!request?.hitEndPointSide);
     let atLimit = $derived(
         (request?.bendPointCount ?? 0) >= MAX_BEND_POINTS_PER_EDGE,
     );
@@ -81,6 +83,15 @@
         onClose();
     }
 
+    function deleteEndPoint() {
+        if (!request?.hitEndPointSide) return;
+        onDeleteEndPoint({
+            edgeId: request.edgeId,
+            side: request.hitEndPointSide,
+        });
+        onClose();
+    }
+
     function clearBendPoints() {
         if (!request) return;
         onClearBendPoints({ edgeId: request.edgeId });
@@ -96,7 +107,15 @@
         {disabled}
     />
     <ContextMenu.Content>
-        {#if onBendPoint}
+        {#if onEndPoint}
+            <ContextMenu.Item.Button
+                onSelect={deleteEndPoint}
+                faIcon={faTrash}
+                variant="danger"
+            >
+                Delete end point
+            </ContextMenu.Item.Button>
+        {:else if onBendPoint}
             <ContextMenu.Item.Button
                 onSelect={deleteBendPoint}
                 faIcon={faTrash}
