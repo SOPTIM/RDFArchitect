@@ -33,6 +33,7 @@
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -60,7 +61,6 @@
         removeBendPoint,
         getBendPoints,
         getEndPoints,
-        MAX_BEND_POINTS_PER_EDGE,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
@@ -522,7 +522,8 @@
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
         const bendPoints = getBendPoints(edge);
-        if (bendPoints.length >= MAX_BEND_POINTS_PER_EDGE) return;
+        if (bendPoints.length >= EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge)
+            return;
 
         const endpoints = edgeEndpoints(edge, bendPoints);
         let insertionIndex = bendPoints.length;
