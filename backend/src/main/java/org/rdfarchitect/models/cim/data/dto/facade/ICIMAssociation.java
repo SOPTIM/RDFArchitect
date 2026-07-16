@@ -15,23 +15,18 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+package org.rdfarchitect.models.cim.data.dto.facade;
 
-import lombok.Builder;
-import lombok.Data;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 
-import java.util.List;
+public interface ICIMAssociation extends ICIMResource{
 
-/** DTO representing the specific data object in a SvelteFlow node. */
-@Data
-@Builder
-public class NodeDataDTO {
+    CIMSMultiplicity getMultiplicity();
 
-    private String label;
-    private String graphUri;
-    private String belongsToCategory;
-    private List<String> stereotypes;
-    private List<AttributeDTO> attributes;
-    private List<EnumEntryDTO> enumEntries;
-    private List<SuperClassDTO> superClasses;
+    ICIMClass getDomain();
+
+    ICIMAssociation getInverseAssociation();
+
+    CIMSAssociationUsed getAssociationUsed();
 }

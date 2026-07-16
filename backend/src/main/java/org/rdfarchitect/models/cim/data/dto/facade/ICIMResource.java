@@ -15,23 +15,22 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+package org.rdfarchitect.models.cim.data.dto.facade;
 
-import lombok.Builder;
-import lombok.Data;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import java.util.UUID;
 
-import java.util.List;
+public interface ICIMResource {
 
-/** DTO representing the specific data object in a SvelteFlow node. */
-@Data
-@Builder
-public class NodeDataDTO {
+    UUID getUuid();
 
-    private String label;
-    private String graphUri;
-    private String belongsToCategory;
-    private List<String> stereotypes;
-    private List<AttributeDTO> attributes;
-    private List<EnumEntryDTO> enumEntries;
-    private List<SuperClassDTO> superClasses;
+    String getGraphUri();
+
+    URI getUri();
+
+    RDFSLabel getLabel();
+
+    RDFSComment getComment();
 }
