@@ -18,9 +18,8 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     import {
         editorState,
@@ -45,54 +44,20 @@
     }
 
     async function deleteGraph() {
-        let promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetName) +
-                "/graphs/" +
-                encodeURIComponent(graphURI) +
-                "/content",
-            {
-                method: "DELETE",
-                credentials: "include",
-            },
-        ).then(res => {
-            if (res.ok) {
-                console.log("successfully deleted data");
-                const deletedGraph = graphURI;
-                editorState.selectedDataset.updateValue(null);
-                editorState.selectedGraph.updateValue(null);
-                editorState.selectedDiagram.updateValue({
-                    type: null,
-                    id: null,
-                });
-                editorState.selectedClassDataset.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClass.updateValue({ type: null, id: null });
-                toastStore.success(
-                    "Schema deleted",
-                    `"${deletedGraph}" was removed.`,
-                );
-            } else {
-                console.log("failed to insert data");
-                toastStore.error(
-                    "Delete failed",
-                    `Could not delete schema "${graphURI}".`,
-                );
-            }
+        const { error } = await graphStore.remove(datasetName, graphURI);
+        if (error) return;
+
+        editorState.selectedDataset.updateValue(null);
+        editorState.selectedGraph.updateValue(null);
+        editorState.selectedDiagram.updateValue({
+            type: null,
+            id: null,
         });
-        promise
-            .catch(e => {
-                console.log("failed to delete graph:");
-                console.log(e);
-                toastStore.error(
-                    "Delete failed",
-                    "An unexpected error occurred while deleting the schema.",
-                );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+        editorState.selectedClassDataset.updateValue(null);
+        editorState.selectedClassGraph.updateValue(null);
+        editorState.selectedClass.updateValue({ type: null, id: null });
+
+        forceReloadTrigger.trigger();
     }
 </script>
 

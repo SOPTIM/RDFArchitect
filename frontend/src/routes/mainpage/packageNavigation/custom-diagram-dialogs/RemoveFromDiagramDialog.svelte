@@ -18,14 +18,12 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -36,8 +34,6 @@
         classLabels = [],
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     const isSingle = $derived(classIds.length === 1);
     const subject = $derived(
         isSingle
@@ -46,32 +42,20 @@
     );
 
     async function removeFromDiagram() {
-        try {
-            const res = graphUri
-                ? await bec.removeFromCustomGraphDiagram(
-                      lockedDatasetName,
-                      graphUri,
-                      diagramId,
-                      classIds,
-                  )
-                : await bec.removeFromCustomDatasetDiagram(
-                      lockedDatasetName,
-                      diagramId,
-                      classIds,
-                  );
-            if (res && res.ok === false) {
-                toastStore.error(
-                    "Remove failed",
-                    `Could not remove ${subject} from the diagram.`,
-                );
-                return;
-            }
-            multiSelectState.clear();
-            toastStore.success(
-                isSingle ? "Class removed" : "Classes removed",
-                `${isSingle ? `"${classLabels[0] ?? ""}"` : `${classIds.length} classes`} ${isSingle ? "was" : "were"} removed from the diagram.`,
-            );
-        } finally {
+        const { error } = graphUri
+            ? await customDiagramStore.removeClassFromGraphDiagram(
+                  lockedDatasetName,
+                  graphUri,
+                  diagramId,
+                  classIds,
+              )
+            : await customDiagramStore.removeClassFromDatasetDiagram(
+                  lockedDatasetName,
+                  diagramId,
+                  classIds,
+              );
+        multiSelectState.clear();
+        if (!error) {
             forceReloadTrigger.trigger();
         }
     }

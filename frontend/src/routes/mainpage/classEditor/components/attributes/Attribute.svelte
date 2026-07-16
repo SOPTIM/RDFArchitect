@@ -38,14 +38,14 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
-    onMount(() => (readonly = classEditorContext.readonly));
+    onMount(() => (readonly = classEditorContext.readOnly));
 
     function getDatatypeLabelByUri(uri) {
         const datatype = classEditorContext.getDatatypeByUri(uri);
@@ -108,7 +108,7 @@
             title={readonly ? "View" : "Edit" + " attribute"}
         />
     </td>
-    {#if !classEditorContext.readonly}
+    {#if !classEditorContext.readOnly}
         <td>
             <FaIconButton
                 callOnClick={() => attributes.remove(attribute, true)}

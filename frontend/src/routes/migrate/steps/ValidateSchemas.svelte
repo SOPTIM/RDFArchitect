@@ -19,18 +19,15 @@
     import { onMount } from "svelte";
     import { get } from "svelte/store";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { validateFile, validateSchema } from "$lib/api/generated/index.ts";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import ValidationSection from "$lib/components/ValidationSection.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     let { disableNext = $bindable() } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const CompareMode = Object.freeze({
         STORED_TO_STORED: 0,
@@ -107,9 +104,14 @@
     async function validateSide({ dataset, graph, file }, cgmesVersion) {
         let response;
         if (file) {
-            response = await bec.validateFile(file, cgmesVersion);
+            response = await validateFile({
+                path: { cgmesVersion: cgmesVersion },
+                body: file,
+            });
         } else if (dataset && graph) {
-            response = await bec.validateSchema(dataset, graph, cgmesVersion);
+            response = await validateSchema({
+                path: { datasetName: dataset, graphUri: graph, cgmesVersion: cgmesVersion },
+            })
         } else {
             return null;
         }

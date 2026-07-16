@@ -18,55 +18,35 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { showDialog = $bindable(), datasetName, graphUri, pack } = $props();
 
     async function deletePackage() {
-        const packageLabel = pack?.label
-            ? getPackageDisplayLabel(pack.label)
-            : null;
-        try {
-            const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/packages/${encodeURIComponent(pack.uuid)}`;
-            const res = await fetch(url, {
-                method: "DELETE",
-                credentials: "include",
+        const { error } = await packageStore.deletePackage(
+            datasetName,
+            graphUri,
+            pack.uuid,
+        );
+
+        if (error) return;
+
+        if (editorState.selectedDiagram.getProperty("id") === pack.uuid) {
+            editorState.selectedDiagram.updateValue({
+                type: null,
+                id: null,
             });
-            if (!res.ok) {
-                console.error("Failed to delete package");
-                toastStore.error(
-                    "Delete failed",
-                    packageLabel
-                        ? `Could not delete package "${packageLabel}".`
-                        : "Could not delete package.",
-                );
-                return;
-            }
-            if (editorState.selectedDiagram.getProperty("id") === pack.uuid) {
-                editorState.selectedDiagram.updateValue({
-                    type: null,
-                    id: null,
-                });
-                editorState.selectedClassDataset.updateValue(null);
-                editorState.selectedClassGraph.updateValue(null);
-                editorState.selectedClass.updateValue({ type: null, id: null });
-            }
-            toastStore.success(
-                "Package deleted",
-                packageLabel
-                    ? `"${packageLabel}" was removed.`
-                    : "Package was removed.",
-            );
-        } finally {
-            forceReloadTrigger.trigger();
+            editorState.selectedClassDataset.updateValue(null);
+            editorState.selectedClassGraph.updateValue(null);
+            editorState.selectedClass.updateValue({ type: null, id: null });
         }
+        forceReloadTrigger.trigger();
     }
 </script>
 

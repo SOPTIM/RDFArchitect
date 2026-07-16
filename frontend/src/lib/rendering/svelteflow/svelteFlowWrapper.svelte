@@ -26,14 +26,17 @@
     } from "@xyflow/svelte";
     import { onDestroy, onMount, tick, untrack } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import {
+        updateClassPositions,
+        updateDatasetClassPositions,
+    } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
@@ -58,7 +61,6 @@
         isLoading = $bindable(false),
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const nodeTypes = {
         class: ClassNode,
     };
@@ -71,7 +73,6 @@
         getNodes: () => nodes,
         setNodes: value => (nodes = value),
         getSelectedIds: () => selectedNodeIdSet(),
-        bec,
     });
 
     const contextMenus = new ContextMenuController({
@@ -204,7 +205,9 @@
 
     async function refreshReadOnlyState() {
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+        isDatasetReadOnly = dataset
+            ? await datasetStore.isReadOnly(dataset)
+            : false;
     }
 
     function resetTempFrontWhenNoClassOpen() {
@@ -315,11 +318,6 @@
         });
     }
 
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
-    }
-
     function handleNodeMove(nodeMoveEvent) {
         updateNodePositions(nodeMoveEvent.nodes);
     }
@@ -340,18 +338,22 @@
         if (!diagramUUID) return;
 
         if (editorState.selectedGraph.getValue()) {
-            bec.updateClassPositions(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                diagramUUID,
-                classPositionDTOList,
-            );
+            updateClassPositions({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: classPositionDTOList,
+            });
         } else {
-            bec.updateGlobalClassPositions(
-                editorState.selectedDataset.getValue(),
-                diagramUUID,
-                classPositionDTOList,
-            );
+            updateDatasetClassPositions({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    diagramUUID: diagramUUID,
+                },
+                body: classPositionDTOList,
+            });
         }
     }
 

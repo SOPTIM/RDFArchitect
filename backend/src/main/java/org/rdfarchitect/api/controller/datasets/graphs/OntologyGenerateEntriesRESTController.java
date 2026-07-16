@@ -71,7 +71,7 @@ public class OntologyGenerateEntriesRESTController {
                                                                                         .class))))
             })
     @GetMapping
-    public List<OntologyEntry> getOntology(
+    public List<OntologyEntry> getOntologyEntries(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

@@ -21,7 +21,6 @@
 <script>
     import { onMount, onDestroy } from "svelte";
 
-    import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
@@ -31,6 +30,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
 
     import ClassEditor from "../../mainpage/classEditor/classEditor.svelte";
 
@@ -62,39 +62,43 @@
             persisted.classUuid === classUuid ? persisted.sourceUuid : null;
 
         loading = true;
-        getCrossProfileDiagram(datasetName)
-            .then(diagram => {
-                const classes = diagram?.classes ?? [];
 
-                let found = savedSourceUuid
-                    ? classes.find(c =>
-                          c.sources?.some(s => s.classUUID === savedSourceUuid),
-                      )
-                    : null;
+        (async () => {
+            await crossProfileStore.loadDiagram(datasetName);
+            const diagram = crossProfileStore.getDiagram(datasetName);
 
-                if (!found) {
-                    found = classes.find(c => c.uuid === classUuid) ?? null;
-                }
+            const classes = diagram?.classes ?? [];
 
-                mergedClass = found;
+            let found = savedSourceUuid
+                ? classes.find(c =>
+                      c.sources?.some(s => s.classUUID === savedSourceUuid),
+                  )
+                : null;
 
-                if (found) {
-                    const hasSaved = found.sources?.some(
-                        s => s.classUUID === savedSourceUuid,
-                    );
-                    activeSourceUuid = hasSaved
-                        ? savedSourceUuid
-                        : (found.sources?.[0]?.classUUID ?? null);
-                }
+            if (!found) {
+                found = classes.find(c => c.uuid === classUuid) ?? null;
+            }
 
-                if (found && found.uuid !== classUuid) {
-                    editorState.selectedClass.updateValue({
-                        type: ClassType.MERGED_CLASS,
-                        id: found.uuid,
-                    });
-                }
-            })
-            .finally(() => (loading = false));
+            mergedClass = found;
+
+            if (found) {
+                const hasSaved = found.sources?.some(
+                    s => s.classUUID === savedSourceUuid,
+                );
+                activeSourceUuid = hasSaved
+                    ? savedSourceUuid
+                    : (found.sources?.[0]?.classUUID ?? null);
+            }
+
+            if (found && found.uuid !== classUuid) {
+                editorState.selectedClass.updateValue({
+                    type: ClassType.MERGED_CLASS,
+                    id: found.uuid,
+                });
+            }
+
+            loading = false;
+        })();
     });
 
     onMount(() => eventStack.addEvent(closeMergedClassEditor));

@@ -44,18 +44,18 @@
     let container;
     let w = $state(MIN_W);
     let resizeObserver;
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     onMount(() => {
         updateWidth();
         resizeObserver = new ResizeObserver(updateWidth);
         resizeObserver.observe(container);
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     onDestroy(() => {

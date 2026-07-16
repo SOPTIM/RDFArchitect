@@ -27,17 +27,17 @@
     const classEditorContext = getContext("classEditor");
     const id = uuidv4();
 
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     let isAbstract = $derived(!classStereotypes.contains(CONCRETE_STEREOTYPE));
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 </script>
 

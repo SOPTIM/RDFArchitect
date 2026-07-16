@@ -1,1 +1,7 @@
 LICENSES-THIRD-PARTY.md
+
+# Generated from the backend OpenAPI spec (see openapi-ts.config.ts)
+src/lib/api/generated
+
+# Committed API contract, formatted by the backend exporter (OpenApiSpecExportTest)
+openapi.json

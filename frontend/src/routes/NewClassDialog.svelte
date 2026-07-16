@@ -19,16 +19,16 @@
     import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
@@ -56,7 +56,6 @@
         classURINamespace: "classURINamespaceNewClass" + uuid,
         className: "classNameNewClass" + uuid,
     };
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const DEFAULT_PACKAGE = Object.freeze({
         uuid: null,
@@ -96,7 +95,7 @@
     });
 
     async function onDatasetOrGraphChanged(ds, graph) {
-        namespaces = await fetchNamespaces(ds);
+        namespaces = await datasetStore.getNamespaces(ds);
         if (classURINamespace) classURINamespace.value = null;
         classPackage = null;
 
@@ -141,14 +140,10 @@
             isInvalidClassLabel(label, classURINamespace, compareClasses),
         );
 
-        if (!datasetName) {
+        if (!datasetName || !graphURI) {
             return;
         }
-        namespaces = await fetchNamespaces(datasetName);
-
-        if (!graphURI) {
-            return;
-        }
+        namespaces = datasetStore.getNamespaces(datasetName);
 
         await getPackages(datasetName, graphURI);
         compareClasses = await getClasses(datasetName, graphURI);
@@ -183,25 +178,15 @@
         classPackage = null;
     }
 
-    async function fetchNamespaces(datasetName) {
-        if (!datasetName) {
-            return [];
-        }
-        const res = await bec.getNamespaces(datasetName);
-        return await res.json();
-    }
-
     async function getPackages(datasetName, graphURI) {
         if (!datasetName || !graphURI) {
             packages = [];
             return;
         }
-        const res = await bec.getPackages(datasetName, graphURI);
-        const packagesJSON = await res.json();
-        packages = [
-            ...packagesJSON.internalPackageList,
-            ...packagesJSON.externalPackageList,
-        ];
+
+        await packageStore.load(datasetName, graphURI);
+        const result = await packageStore.getPackages(datasetName, graphURI);
+        packages = [...result.internal, ...result.external];
     }
 
     function snapshotFormState() {
@@ -225,7 +210,11 @@
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
-        return bec.postClass(form.datasetName, form.graphURI, requestBody);
+        return classStore.addClass(
+            form.datasetName,
+            form.graphURI,
+            requestBody,
+        );
     }
 
     function updateEditorSelection(form, classUUID) {
@@ -244,7 +233,6 @@
     }
 
     function handleClassCreated(form, classUUID) {
-        console.log("successfully added class");
         onClassCreated({
             classUUID,
             datasetName: form.datasetName,
@@ -253,37 +241,17 @@
             className: form.className,
         });
         updateEditorSelection(form, classUUID);
-        toastStore.success("Class created", `"${form.className}" was added.`);
-    }
-
-    function triggerEditorRefresh() {
-        forceReloadTrigger.trigger();
     }
 
     async function newClass() {
         const form = snapshotFormState();
 
-        try {
-            const res = await postNewClass(form);
-            if (res.ok) {
-                const classUUID = await res.text();
-                handleClassCreated(form, classUUID);
-            } else {
-                console.log("failed to insert data");
-                toastStore.error(
-                    "Create failed",
-                    `Could not create class "${form.className}".`,
-                );
-            }
-        } catch (e) {
-            console.log("failed to add class:", e);
-            toastStore.error(
-                "Create failed",
-                "An unexpected error occurred while creating the class.",
-            );
-        } finally {
-            triggerEditorRefresh();
+        const { data, error } = await postNewClass(form);
+        if (!error) {
+            const classUUID = data;
+            handleClassCreated(form, classUUID);
         }
+        forceReloadTrigger.trigger();
     }
 </script>
 

@@ -15,6 +15,10 @@
  *
  */
 
+import {
+    updateClassPositions,
+    updateDatasetClassPositions,
+} from "$lib/api/generated/index.ts";
 import { editorState } from "$lib/sharedState.svelte.js";
 
 const NODE_SELECTED_Z_OFFSET = 1_000_000;
@@ -26,13 +30,11 @@ export class NodeOrderController {
     #getNodes;
     #setNodes;
     #getSelectedIds;
-    #bec;
 
-    constructor({ getNodes, setNodes, getSelectedIds, bec }) {
+    constructor({ getNodes, setNodes, getSelectedIds }) {
         this.#getNodes = getNodes;
         this.#setNodes = setNodes;
         this.#getSelectedIds = getSelectedIds;
-        this.#bec = bec;
     }
 
     get nodeOrder() {
@@ -159,18 +161,22 @@ export class NodeOrderController {
         });
 
         if (editorState.selectedGraph.getValue()) {
-            this.#bec.updateClassPositions(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                editorState.selectedDiagram.getProperty("id"),
-                classPositionDTOList,
-            );
+            updateClassPositions({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramUUID: editorState.selectedDiagram.getProperty("id"),
+                },
+                body: { classPositionDTOList },
+            });
         } else {
-            this.#bec.updateGlobalClassPositions(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedDiagram.getProperty("id"),
-                classPositionDTOList,
-            );
+            updateDatasetClassPositions({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                },
+                body: { classPositionDTOList },
+            });
         }
     }
 }

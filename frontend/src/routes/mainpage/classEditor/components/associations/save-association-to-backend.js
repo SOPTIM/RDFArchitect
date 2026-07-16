@@ -15,40 +15,46 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { editorState } from "$lib/sharedState.svelte.js";
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/ClassStore.ts";
 
-export function saveApiAssociationToBackend(
+export async function saveApiAssociationToBackend(
     dataset,
     graph,
     classUUID,
     associationDTO,
     isNewAssociation,
 ) {
-    const saveAssociationPairCall = isNewAssociation
-        ? bec.postAssociationPair(dataset, graph, classUUID, associationDTO)
-        : bec.putAssociationPair(dataset, graph, classUUID, associationDTO);
+    const res = isNewAssociation
+        ? await classStore.addAssociationPair(
+              dataset,
+              graph,
+              classUUID,
+              associationDTO,
+          )
+        : await classStore.replaceAssociationPair(
+              dataset,
+              graph,
+              classUUID,
+              associationDTO,
+          );
 
-    return saveAssociationPairCall
-        .then(async res => {
-            if (res.ok) {
-                const associationUUIDs = await res.json();
-                console.log(
-                    "Successfully saved association:",
-                    associationUUIDs.fromUUID,
-                    associationUUIDs.toUUID,
-                );
-                return { ok: true, associationUUIDs };
-            }
+    try {
+        if (!res.error) {
+            const associationUUIDs = res.data;
+            console.log(
+                "Successfully saved association:",
+                associationUUIDs.fromUUID,
+                associationUUIDs.toUUID,
+            );
+            return { ok: true, associationUUIDs };
+        }
 
-            const errorText = await res.text();
-            console.error("Could not save association:", errorText);
-            return { ok: false, errorText };
-        })
-        .finally(() => {
-            editorState.selectedClass.trigger();
-            editorState.selectedDiagram.trigger();
-        });
+        const errorText = await res.error;
+        console.error("Could not save association:", errorText);
+        return { ok: false, errorText };
+    } finally {
+        editorState.selectedClass.trigger();
+        editorState.selectedDiagram.trigger();
+    }
 }

@@ -66,5 +66,8 @@ public class CIMClassUMLAdapted extends CIMClass {
         if (associationPairs.isEmpty()) {
             associationPairs = null;
         }
+        if (enumEntries.isEmpty()) {
+            enumEntries = null;
+        }
     }
 }

@@ -40,18 +40,18 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     let lowerButtons = $derived(getButtons(association.multiplicityLowerBound));
     let upperButtons = $derived(getButtons(association.multiplicityUpperBound));
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     function getButtons(multiplicityObject) {

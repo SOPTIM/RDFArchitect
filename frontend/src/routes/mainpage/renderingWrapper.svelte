@@ -20,11 +20,14 @@
     import { SvelteFlowProvider } from "@xyflow/svelte";
     import { untrack } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import {
+        getCustomDatasetViewRenderingData,
+        getCustomProfileViewRenderingData,
+        getRenderingDataParameterized,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
     import SvelteFlowWrapper from "$lib/rendering/svelteflow/svelteFlowWrapper.svelte";
     import {
@@ -33,10 +36,10 @@
         forceReloadTrigger,
         DiagramType,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import FilterViewDialog from "../FilterViewDialog.svelte";
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const MERMAID_FORMAT = "MERMAID";
     const SVELTEFLOW_FORMAT = "SVELTEFLOW";
@@ -63,7 +66,7 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+        isDatasetReadOnly = datasetStore.isReadOnly(dataset);
     });
 
     $effect(async () => {
@@ -133,45 +136,44 @@
         };
 
         try {
-            const res = await bec.fetchFilteredRenderingData(
-                datasetName,
-                graphUri,
-                graphFilter,
-            );
+            const { data, error } = await getRenderingDataParameterized({
+                path: { datasetName: datasetName, graphURI: graphUri },
+                body: graphFilter,
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 response = null;
                 renderingFormat = null;
                 displayDiagram = false;
                 isLoading = false;
             } else {
-                const parsedResponse = JSON.parse(responseText);
-                response = parsedResponse;
-                renderingFormat = parsedResponse.format;
+                response = data;
+                renderingFormat = data.format;
                 displayDiagram = true;
             }
         } catch (error) {
-            console.error("Error fetching diagram data:", error);
+            console.error("Error fetching package rendering data:", error);
             response = null;
             renderingFormat = null;
             displayDiagram = false;
+        } finally {
             isLoading = false;
         }
     }
 
     async function fetchDatasetDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomDatasetDiagramRenderingData(
-                editorState.selectedDataset.getValue(),
-                diagramId,
-            );
+            const { data, error } = await getCustomDatasetViewRenderingData({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    diagramId: diagramId,
+                },
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 displayDiagram = false;
             } else {
-                response = JSON.parse(responseText);
+                response = data;
                 renderingFormat = response.format;
                 displayDiagram = true;
             }
@@ -186,17 +188,18 @@
 
     async function fetchGraphDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomGraphDiagramRenderingData(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                diagramId,
-            );
+            const { data, error } = await getCustomProfileViewRenderingData({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
+                    diagramId: diagramId,
+                },
+            });
 
-            const responseText = await res.text();
-            if (!responseText) {
+            if (error) {
                 displayDiagram = false;
             } else {
-                response = JSON.parse(responseText);
+                response = data;
                 renderingFormat = response.format;
                 displayDiagram = true;
             }
@@ -210,26 +213,20 @@
     }
 
     async function fetchCrossProfileRenderingData() {
-        try {
-            const res = await bec.getCrossProfileDiagramRenderingDataForDataset(
-                editorState.selectedDataset.getValue(),
-            );
+        const { error, data } = await crossProfileStore.fetchRenderingData(
+            editorState.selectedDataset.getValue(),
+        );
 
-            const responseText = await res.text();
-            if (!responseText) {
-                displayDiagram = false;
-            } else {
-                response = JSON.parse(responseText);
-                renderingFormat = response.format;
-                displayDiagram = true;
-            }
-        } catch (error) {
-            console.error("Error fetching cross profile diagram data:", error);
+        if (error || !data) {
+            displayDiagram = false;
             response = null;
             renderingFormat = null;
-        } finally {
-            isLoading = false;
+        } else {
+            renderingFormat = response.format;
+            displayDiagram = true;
         }
+
+        isLoading = false;
     }
 
     function getDiagramRequestKey(datasetName, graphUri, packageUUID, filter) {
@@ -239,11 +236,6 @@
             packageUUID,
             filter,
         });
-    }
-
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
     }
 
     function handleResetView() {

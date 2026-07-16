@@ -18,12 +18,10 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
 
     import {
         DiagramType,
@@ -33,7 +31,6 @@
 
     let { showDialog = $bindable(), lockedDatasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const uniqueId = uuidv4();
     const defaultGraphUriPrefix = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
@@ -63,6 +60,7 @@
             datasetIsReadOnly ||
             graphExists,
     );
+
     function resolveGraphUri(graphInput) {
         const trimmedInput = graphInput.trim();
         if (!trimmedInput) {
@@ -79,10 +77,14 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue() ?? "";
         graphUriUserInput = "";
 
-        const datasetNames = await getDatasetNames();
-        modifiableDatasets = datasetNames.modifiable;
-        readOnlyDatasets = datasetNames.readonly;
-
+        await datasetStore.load();
+        for (const dataset of $datasetStore.data) {
+            if (dataset.readOnly) {
+                readOnlyDatasets.push(dataset.label);
+            } else {
+                modifiableDatasets.push(dataset.label);
+            }
+        }
         await refreshGraphNames();
     }
 
@@ -103,59 +105,30 @@
             return;
         }
 
-        const res = await bec.getGraphNames(datasetNameUserInput);
-        graphNames = await res.json();
+        await graphStore.load(datasetNameUserInput);
+        graphNames = graphStore.getGraphs(datasetNameUserInput);
     }
 
     async function addGraph() {
         const datasetNameLocal = datasetNameUserInput;
         const graphURILocal = resolvedGraphUri;
 
-        const promise = fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(datasetNameLocal) +
-                "/graphs/" +
-                encodeURIComponent(graphURILocal) +
-                "/content",
-            {
-                method: "PUT",
-                credentials: "include",
-            },
-        ).then(res => {
-            if (res.ok) {
-                editorState.selectedDataset.updateValue(datasetNameLocal);
-                editorState.selectedGraph.updateValue(graphURILocal);
-                editorState.selectedDiagram.updateValue({
-                    type: DiagramType.PACKAGE,
-                    id: "default",
-                });
-                editorState.selectedClass.updateValue({ type: null, id: null });
-                toastStore.success(
-                    "Schema created",
-                    `"${graphURILocal}" was added to "${datasetNameLocal}".`,
-                );
-            } else {
-                console.log("failed to create graph");
-                toastStore.error(
-                    "Create failed",
-                    `Could not create schema "${graphURILocal}".`,
-                );
-            }
-        });
+        const { error } = await graphStore.addEmptyGraph(
+            datasetNameLocal,
+            graphURILocal,
+        );
+        if (error) return;
 
-        promise
-            .catch(e => {
-                console.log("failed to create graph:");
-                console.log(e);
-                toastStore.error(
-                    "Create failed",
-                    "An unexpected error occurred while creating the schema.",
-                );
-            })
-            .finally(() => {
-                forceReloadTrigger.trigger();
-            });
+        editorState.selectedDataset.updateValue(datasetNameLocal);
+        editorState.selectedGraph.updateValue(graphURILocal);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.PACKAGE,
+            id: "default",
+        });
+        editorState.selectedClass.updateValue({ type: null, id: null });
+
+        graphStore.invalidateDataset(datasetNameLocal);
+        forceReloadTrigger.trigger();
     }
 </script>
 

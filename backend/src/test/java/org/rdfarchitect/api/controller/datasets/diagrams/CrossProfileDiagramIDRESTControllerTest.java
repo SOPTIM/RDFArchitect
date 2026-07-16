@@ -40,14 +40,14 @@ class CrossProfileDiagramIDRESTControllerTest {
     }
 
     @Test
-    void getCrossProfileRenderingData_validDataset_returnsUUIDString() {
+    void getCrossProfileDiagramId_validDataset_returnsUUIDString() {
         var uuid = UUID.randomUUID();
         var crossProfileDiagramInfo = mock(CrossProfileDiagramInfo.class);
         when(crossProfileDiagramInfo.getCrossProfileDiagramUUID()).thenReturn(uuid);
         when(databasePort.getCrossProfileDiagramInfo("my-dataset"))
                 .thenReturn(crossProfileDiagramInfo);
 
-        var result = controller.getCrossProfileRenderingData(HttpHeaders.ORIGIN, "my-dataset");
+        var result = controller.getCrossProfileDiagramId(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(uuid.toString());
         verify(databasePort).getCrossProfileDiagramInfo("my-dataset");

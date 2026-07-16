@@ -15,22 +15,16 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+import { classStore } from "$lib/stores/ClassStore.ts";
+import { packageStore } from "$lib/stores/PackageStore.ts";
 
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
 
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
-async function getPackages(datasetName, graphURI) {
-    const res = await bec.getPackages(datasetName, graphURI);
-    return await res.json();
-}
-
 export async function createPackageListForGraph(datasetName, graphURI) {
-    const res = await getPackages(datasetName, graphURI);
+    await packageStore.load(datasetName, graphURI);
+    const packageData = packageStore.getPackages(datasetName, graphURI);
 
-    return [...res.internalPackageList, ...res.externalPackageList]
+    return [...packageData.internal, ...packageData.external]
         .map(pack => {
             const packageId = getPackageId(pack);
 
@@ -49,47 +43,40 @@ export async function createPackageListForGraph(datasetName, graphURI) {
         });
 }
 
-async function getClasses(datasetName, graphURI) {
-    const res = await bec.getClasses(datasetName, graphURI);
-    return await res.json();
-}
-
 export async function createClassListForGraph(
     datasetName,
     graphURI,
     selectedClasses,
 ) {
-    try {
-        const classList = (await getClasses(datasetName, graphURI)) ?? [];
+    await classStore.load(datasetName, graphURI);
+    const classList =
+        (await classStore.getClasses(datasetName, graphURI)) ?? [];
 
-        const grouped = {};
+    const grouped = {};
 
-        for (const cls of classList) {
-            const packageId = getPackageId(cls.package);
-            if (!grouped[packageId]) {
-                grouped[packageId] = [];
-            }
-
-            cls.selected = !!selectedClasses.some(
-                selected => selected.uuid === cls.uuid,
-            );
-
-            grouped[packageId].push({
-                ...cls,
-                packageUUID: packageId,
-            });
+    for (const cls of classList) {
+        const packageId = getPackageId(cls.package);
+        if (!grouped[packageId]) {
+            grouped[packageId] = [];
         }
 
-        for (const key of Object.keys(grouped)) {
-            grouped[key].sort((a, b) =>
-                (a.label ?? "").localeCompare(b.label ?? "", undefined, {
-                    sensitivity: "base",
-                }),
-            );
-        }
+        cls.selected = !!selectedClasses.some(
+            selected => selected.uuid === cls.uuid,
+        );
 
-        return grouped;
-    } catch (err) {
-        console.error("Failed to load classes:", err);
+        grouped[packageId].push({
+            ...cls,
+            packageUUID: packageId,
+        });
     }
+
+    for (const key of Object.keys(grouped)) {
+        grouped[key].sort((a, b) =>
+            (a.label ?? "").localeCompare(b.label ?? "", undefined, {
+                sensitivity: "base",
+            }),
+        );
+    }
+
+    return grouped;
 }

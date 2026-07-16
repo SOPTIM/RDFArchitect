@@ -21,11 +21,11 @@
     import { get } from "svelte/store";
     import { Fa } from "svelte-fa";
 
+    import { computeMigrationContext } from "$lib/api/generated/index.ts";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
@@ -165,14 +165,9 @@
             body.append("fileB", fileB);
         }
 
-        let url = `${PUBLIC_BACKEND_URL}/migrations/context`;
         try {
-            let res = await fetch(url, {
-                method: "POST",
-                body: body,
-                credentials: "include",
-            });
-            if (res.ok) {
+            let { error } = await computeMigrationContext({ body });
+            if (!error) {
                 console.log("established migration context in backend");
                 migrationState.set({
                     compareMode,

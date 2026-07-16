@@ -29,20 +29,15 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onMount } from "svelte";
 
-    import {
-        enableEditing,
-        disableEditing,
-    } from "$lib/actions/editingActions.js";
-    import { getNamespaces, isReadOnly } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         editorState,
         forceReloadTrigger,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
 
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
@@ -59,8 +54,6 @@
     import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
 
     let { datasetNavEntry } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let showImportDialog = $state(false);
     let showNewGraphDialog = $state(false);
@@ -90,7 +83,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readonly = await isReadOnly(datasetNavEntry.label);
+        readonly = datasetStore.isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {
@@ -101,8 +94,8 @@
     });
 
     onMount(async () => {
-        let res = await bec.getCrossProfileID(datasetNavEntry.label);
-        crossProfileID = await res.text();
+        await crossProfileStore.loadId();
+        crossProfileID = crossProfileStore.getId(datasetNavEntry.label);
     });
 
     async function fetchNamespaces() {
@@ -111,7 +104,7 @@
             return;
         }
         try {
-            namespaces = await getNamespaces(datasetNavEntry.label);
+            namespaces = datasetStore.getNamespaces(datasetNavEntry.label);
         } catch (err) {
             console.error("Failed to load namespaces:", err);
             namespaces = [];
@@ -143,9 +136,13 @@
         if (!datasetNavEntry?.id || !readonly) {
             return;
         }
-        if (!(await enableEditing(datasetNavEntry.id))) {
-            return;
-        }
+
+        const { error } = await datasetStore.updateReadonly(
+            datasetNavEntry.id,
+            false,
+        );
+        if (error) return;
+
         readonly = false;
         forceReloadTrigger.trigger();
     }
@@ -154,7 +151,11 @@
         if (!datasetNavEntry?.id || readonly) {
             return;
         }
-        if (!(await disableEditing(datasetNavEntry.id))) {
+        const { error } = await datasetStore.updateReadonly(
+            datasetNavEntry.id,
+            true,
+        );
+        if (error) {
             return;
         }
         readonly = true;

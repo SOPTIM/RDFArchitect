@@ -36,7 +36,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
-import org.rdfarchitect.services.diagrams.RemoveFromDiagramUseCase;
+import org.rdfarchitect.services.diagrams.RemoveFromCustomDiagramUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CreateClassLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.CrossProfileDiagramLayoutUseCase;
 import org.rdfarchitect.services.dl.update.classlayout.DeleteClassLayoutDataUseCase;
@@ -59,8 +59,8 @@ public class UpdateClassService
     private final CreateClassLayoutDataUseCase createClassLayoutDataUseCase;
     private final UpdateDiagramObjectNameUseCase updateDiagramObjectNameUseCase;
     private final DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase;
+    private final RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase;
     private final CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase;
-    private final RemoveFromDiagramUseCase removeFromDiagramUseCase;
 
     public UpdateClassService(
             DatabasePort databasePort,
@@ -71,7 +71,7 @@ public class UpdateClassService
             DeleteClassLayoutDataUseCase deleteClassLayoutDataUseCase,
             @Value("${attributes.newValuesBlankNode:false}") boolean newValuesAsBlankNode,
             CrossProfileDiagramLayoutUseCase crossProfileDiagramLayoutUseCase,
-            RemoveFromDiagramUseCase removeFromDiagramUseCase) {
+            RemoveFromCustomDiagramUseCase removeFromCustomDiagramUseCase) {
         this.databasePort = databasePort;
         this.classMapper = classMapper;
         this.packageMapper = packageMapper;
@@ -80,7 +80,7 @@ public class UpdateClassService
         this.deleteClassLayoutDataUseCase = deleteClassLayoutDataUseCase;
         this.newValuesAsBlankNode = newValuesAsBlankNode;
         this.crossProfileDiagramLayoutUseCase = crossProfileDiagramLayoutUseCase;
-        this.removeFromDiagramUseCase = removeFromDiagramUseCase;
+        this.removeFromCustomDiagramUseCase = removeFromCustomDiagramUseCase;
     }
 
     @Override
@@ -185,6 +185,6 @@ public class UpdateClassService
         }
 
         deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, classUUID);
-        removeFromDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
+        removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, classUUID);
     }
 }

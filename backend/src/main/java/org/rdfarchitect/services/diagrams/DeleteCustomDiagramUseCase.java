@@ -27,7 +27,7 @@ public interface DeleteCustomDiagramUseCase {
      * @param graphIdentifier The graph containing the diagram
      * @param diagramId The ID of the diagram to be deleted.
      */
-    void deleteCustomDiagram(GraphIdentifier graphIdentifier, String diagramId);
+    void deleteCustomGraphDiagram(GraphIdentifier graphIdentifier, String diagramId);
 
     /**
      * Deletes a custom diagram defined in a dataset.
@@ -35,5 +35,5 @@ public interface DeleteCustomDiagramUseCase {
      * @param datasetName The dataset containing the diagram
      * @param diagramId The ID of the diagram to be deleted
      */
-    void deleteCustomDiagram(String datasetName, String diagramId);
+    void deleteCustomDatasetDiagram(String datasetName, String diagramId);
 }

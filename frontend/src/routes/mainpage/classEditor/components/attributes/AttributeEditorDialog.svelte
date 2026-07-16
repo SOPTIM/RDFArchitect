@@ -41,7 +41,7 @@
     let classEditorContext = $state();
 
     let isNewAttribute = $state(true);
-    let readonly = $derived(classEditorContext?.readonly);
+    let readonly = $derived(classEditorContext?.readOnly);
     let datatypes = $derived(classEditorContext?.datatypes);
 
     function onOpen() {

@@ -16,11 +16,10 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { validateFile, validateSchema } from "$lib/api/generated/index.ts";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
@@ -33,9 +32,7 @@
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
+    
     const ValidationMode = Object.freeze({
         STORED: 0,
         FILE: 1,
@@ -104,14 +101,15 @@
         let response;
         switch (validationMode) {
             case ValidationMode.FILE:
-                response = await bec.validateFile(file, cgmesVersion);
+                response = await validateFile({
+                    path: { cgmesVersion: cgmesVersion },
+                    body: file,
+                });
                 break;
             case ValidationMode.STORED:
-                response = await bec.validateSchema(
-                    dataset,
-                    graph,
-                    cgmesVersion,
-                );
+                response = await validateSchema({
+                    path: { datasetName: dataset, graphUri: graph, cgmesVersion: cgmesVersion },
+                })
                 break;
             default:
                 throw new Error(`Unknown validationMode: ${validationMode}`);

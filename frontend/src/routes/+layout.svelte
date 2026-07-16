@@ -19,26 +19,20 @@
     import "../app.css";
     import { onMount } from "svelte";
 
-    import { enableEditing } from "$lib/actions/editingActions.js";
-    import {
-        fetchCanRedo,
-        fetchCanUndo,
-        redo,
-        undo,
-    } from "$lib/actions/versionControlActions.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import {
         installBackendFetchInterceptor,
         probeBackendConnection,
     } from "$lib/api/backendConnectionMonitor.svelte.js";
+    import { loadSnapshot as loadSnapshotAPI } from "$lib/api/generated/index.ts";
     import { Menubar } from "$lib/components/bitsui/menubar";
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
 
     import {
         DiagramType,
@@ -56,8 +50,6 @@
 
     /** @type {{children?: import("svelte").Snippet}} */
     let { children } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let canUndo = $state(false);
     let canRedo = $state(false);
@@ -77,7 +69,7 @@
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
-            ? await isReadOnly(selectedDataset)
+            ? datasetStore.isReadOnly(selectedDataset)
             : false;
     });
 
@@ -91,9 +83,12 @@
         if (!selectedDataset || !isDatasetReadOnly) {
             return;
         }
-        if (!(await enableEditing(selectedDataset))) {
-            return;
-        }
+        const { error } = await datasetStore.updateReadonly(
+            selectedDataset,
+            false,
+        );
+        if (error) return;
+
         forceReloadTrigger.trigger();
         editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
@@ -103,8 +98,8 @@
     async function loadSnapshot() {
         const base64Param = page.url.searchParams.get("snapshot");
         if (base64Param) {
-            const res = await bec.loadSnapshot(base64Param);
-            if (res.ok) {
+            const { error } = await loadSnapshotAPI({ path: { base64Param } });
+            if (!error) {
                 await goto("/mainpage");
                 toastStore.success(
                     "Snapshot loaded",
@@ -120,13 +115,9 @@
     }
 
     async function fetchUndoRedo() {
-        canUndo = await fetchCanUndo();
-        canRedo = await fetchCanRedo();
-    }
-
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
-        return await res.json();
+        await versionControlStore.refresh();
+        canUndo = versionControlStore.canUndo();
+        canRedo = versionControlStore.canRedo();
     }
 
     async function reload() {
@@ -159,11 +150,18 @@
     }
 
     async function handleUndoRedo(isRedo) {
-        if (isRedo) {
-            if (canRedo && (await redo())) await reload();
-        } else {
-            if (canUndo && (await undo())) await reload();
-        }
+        if (isRedo && !canRedo) return;
+        if (!isRedo && !canUndo) return;
+
+        await eventStack.guardAction(async () => {
+            const { error } = isRedo
+                ? await versionControlStore.redo()
+                : await versionControlStore.undo();
+
+            if (!error) {
+                await reload();
+            }
+        });
     }
 
     async function handleKeydown(event) {
