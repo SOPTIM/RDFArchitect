@@ -18,8 +18,8 @@
 <script>
     import { onMount } from "svelte";
 
+    import { getClassesReferencingThisClass } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { editorState } from "$lib/sharedState.svelte.js";
 
     let { classUUID, onClickOnClass } = $props();
@@ -34,25 +34,17 @@
     );
     onMount(() => fetchClassesReferencingThisClass(classUUID));
     function fetchClassesReferencingThisClass(classUUID) {
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/classes/" +
-                encodeURIComponent(classUUID) +
-                "/referencedByClasses",
-            {
-                method: "GET",
-                credentials: "include",
+        getClassesReferencingThisClass({
+            path: {
+                datasetName: classDatasetName,
+                graphURI: classGraphUri,
+                classUUID: classUUID,
             },
-        )
-            .then(res => res.text())
-            .then(res => {
-                const parsed = JSON.parse(res);
+        })
+            .then(res => res.data)
+            .then(data => {
                 classesReferencingThisClass =
-                    parsed?.classesReferencingThisClass ?? {};
+                    data?.classesReferencingThisClass ?? {};
             })
             .catch(() => {
                 classesReferencingThisClass = {};

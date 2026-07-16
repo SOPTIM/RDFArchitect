@@ -103,6 +103,7 @@
      */
     async function validateSide({ dataset, graph, file }, cgmesVersion) {
         let response;
+        console.log(graph);
         if (file) {
             response = await validateFile({
                 path: { cgmesVersion: cgmesVersion },
@@ -110,12 +111,16 @@
             });
         } else if (dataset && graph) {
             response = await validateSchema({
-                path: { datasetName: dataset, graphUri: graph, cgmesVersion: cgmesVersion },
-            })
+                path: {
+                    datasetName: dataset,
+                    graphURI: graph,
+                    cgmesVersion: cgmesVersion,
+                },
+            });
         } else {
             return null;
         }
-        return await response.json();
+        return response.data;
     }
 
     // Validation is informational only; it never blocks continuing.

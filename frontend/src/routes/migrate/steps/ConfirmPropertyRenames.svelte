@@ -18,7 +18,10 @@
 <script>
     import { onMount } from "svelte";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import {
+        confirmRenamedProperties,
+        migrationPropertiesOverview,
+    } from "$lib/api/generated/index.ts";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     let { substeps = [], currentSubstepIndex = 0 } = $props();
@@ -29,12 +32,8 @@
     let currentSubstep = $derived(substeps[currentSubstepIndex]);
 
     onMount(() => {
-        fetch(PUBLIC_BACKEND_URL + "/migrations/property-renames", {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        })
-            .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
+        migrationPropertiesOverview()
+            .then(res => (res.error ? Promise.reject("Failed") : res.data))
             .then(data => {
                 classes = data;
             })
@@ -45,16 +44,11 @@
     export async function onNext() {
         let body = buildPropertyRenameList();
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL + "/migrations/property-renames",
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(body),
-                },
-            );
-            if (!res.ok) {
+            const { error } = await confirmRenamedProperties({
+                body: body,
+            });
+
+            if (error) {
                 toastStore.error(
                     "Save failed",
                     "Could not save property renames for the migration.",

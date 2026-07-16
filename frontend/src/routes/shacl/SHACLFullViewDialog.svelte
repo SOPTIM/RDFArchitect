@@ -16,8 +16,12 @@
   -->
 
 <script>
+    import {
+        getCustomShaclasString,
+        getGeneratedShaclasString,
+        replaceGraphWithGraphString,
+    } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
@@ -53,20 +57,15 @@
 
     async function fetchGeneratedShacl() {
         try {
-            let res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(editorState.selectedDataset.getValue()) +
-                    "/graphs/" +
-                    encodeURIComponent(editorState.selectedGraph.getValue()) +
-                    "/shacl/generate/string",
-                {
-                    method: "GET",
-                    credentials: "include",
+            let { data, error } = await getGeneratedShaclasString({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
                 },
-            );
-            let text = await res.text();
-            if (!res.ok || text.trim() === "") {
+            });
+
+            let text = data;
+            if (error || text.trim() === "") {
                 text = "No Constraints (SHACL) found.";
             }
             generatedShacl = text;
@@ -81,20 +80,15 @@
      */
     async function fetchCustomShacl() {
         try {
-            let res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(editorState.selectedDataset.getValue()) +
-                    "/graphs/" +
-                    encodeURIComponent(editorState.selectedGraph.getValue()) +
-                    "/shacl/custom/string",
-                {
-                    method: "GET",
-                    credentials: "include",
+            let { data, error } = await getCustomShaclasString({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
                 },
-            );
-            let text = await res.text();
-            if (!res.ok || text.trim() === "") {
+            });
+
+            let text = data;
+            if (error || text.trim() === "") {
                 text = "No Constraints (SHACL) found.";
             }
             customSHACL = text;
@@ -108,28 +102,19 @@
 
     async function submitChanges() {
         try {
-            let res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(editorState.selectedDataset.getValue()) +
-                    "/graphs/" +
-                    encodeURIComponent(editorState.selectedGraph.getValue()) +
-                    "/shacl/custom/string",
-                {
-                    method: "PUT",
-                    body: customSHACL ? customSHACL : " ",
-                    credentials: "include",
+            let { error } = await replaceGraphWithGraphString({
+                path: {
+                    datasetName: editorState.selectedDataset.getValue(),
+                    graphURI: editorState.selectedGraph.getValue(),
                 },
-            );
-            if (res.ok) {
+                body: customSHACL ? customSHACL : " ",
+            });
+
+            if (!error) {
                 customSHACLBackup = customSHACL;
                 toastStore.success("Constraints saved");
             } else {
-                console.warn(
-                    "Failed to save custom SHACL:",
-                    res.status,
-                    res.statusText,
-                );
+                console.warn("Failed to save custom SHACL:", error);
                 toastStore.error(
                     "Save failed",
                     "Could not save custom constraints.",

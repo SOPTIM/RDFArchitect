@@ -18,8 +18,8 @@
 <script>
     import { onDestroy } from "svelte";
 
+    import { clearMigrationContext } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { migrationState } from "$lib/sharedState.svelte.js";
 
     import ConfirmClassRenames from "./steps/ConfirmClassRenames.svelte";
@@ -94,11 +94,7 @@
             cgmesVersionB: null,
         });
 
-        fetch(PUBLIC_BACKEND_URL + "/migrations/context", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-        });
+        clearMigrationContext();
     });
 
     async function handleContinueButton() {

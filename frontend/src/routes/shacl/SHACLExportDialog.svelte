@@ -41,7 +41,7 @@
                   shaclExportDialog.handleExport(
                       (datasetName, graphURI) =>
                           PUBLIC_BACKEND_URL +
-                          "/datasets/" +
+                          "/api/datasets/" +
                           encodeURIComponent(datasetName) +
                           "/graphs/" +
                           encodeURIComponent(graphURI) +

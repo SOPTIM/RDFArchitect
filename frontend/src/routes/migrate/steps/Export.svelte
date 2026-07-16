@@ -41,7 +41,7 @@
     }
 
     async function fetchScript() {
-        return fetch(PUBLIC_BACKEND_URL + "/migrations/export", {
+        return fetch(PUBLIC_BACKEND_URL + "/api/migrations/export", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
             credentials: "include",

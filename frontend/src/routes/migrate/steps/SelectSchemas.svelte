@@ -145,28 +145,16 @@
     }
 
     export async function onNext() {
-        let body = new FormData();
-
-        if (compareMode === CompareMode.STORED_TO_STORED) {
-            body.append("datasetA", datasetA);
-            body.append("graphA", graphA);
-            body.append("datasetB", datasetB);
-            body.append("graphB", graphB);
-        } else if (compareMode === CompareMode.FILE_TO_STORED) {
-            body.append("fileA", fileA);
-            body.append("datasetB", datasetB);
-            body.append("graphB", graphB);
-        } else if (compareMode === CompareMode.STORED_TO_FILE) {
-            body.append("datasetA", datasetA);
-            body.append("graphA", graphA);
-            body.append("fileA", fileA);
-        } else if (compareMode === CompareMode.FILE_TO_FILE) {
-            body.append("fileA", fileA);
-            body.append("fileB", fileB);
-        }
-
         try {
-            let { error } = await computeMigrationContext({ body });
+            let { error } = await computeMigrationContext({
+                query: {
+                    datasetA: datasetA,
+                    graphA: graphA,
+                    datasetB: datasetB,
+                    graphB: graphB,
+                },
+                body: { fileA: fileA, fileB: fileB },
+            });
             if (!error) {
                 console.log("established migration context in backend");
                 migrationState.set({

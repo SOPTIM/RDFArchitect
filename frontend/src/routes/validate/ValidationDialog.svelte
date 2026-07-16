@@ -32,7 +32,7 @@
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
-    
+
     const ValidationMode = Object.freeze({
         STORED: 0,
         FILE: 1,
@@ -108,8 +108,12 @@
                 break;
             case ValidationMode.STORED:
                 response = await validateSchema({
-                    path: { datasetName: dataset, graphUri: graph, cgmesVersion: cgmesVersion },
-                })
+                    path: {
+                        datasetName: dataset,
+                        graphUri: graph,
+                        cgmesVersion: cgmesVersion,
+                    },
+                });
                 break;
             default:
                 throw new Error(`Unknown validationMode: ${validationMode}`);
