@@ -23,7 +23,7 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { MAX_BEND_POINTS_PER_EDGE } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -49,7 +49,8 @@
     let onBendPoint = $derived(!!request?.hitBendPointId);
     let onEndPoint = $derived(!!request?.hitEndPointSide);
     let atLimit = $derived(
-        (request?.bendPointCount ?? 0) >= MAX_BEND_POINTS_PER_EDGE,
+        (request?.bendPointCount ?? 0) >=
+            EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge,
     );
 
     $effect(() => {

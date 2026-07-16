@@ -76,7 +76,6 @@
         removeBendPoint,
         getBendPoints,
         getEndPoints,
-        MAX_BEND_POINTS_PER_EDGE,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import {
@@ -763,7 +762,8 @@
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
         const bendPoints = getBendPoints(edge);
-        if (bendPoints.length >= MAX_BEND_POINTS_PER_EDGE) return;
+        if (bendPoints.length >= EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge)
+            return;
 
         const endpoints = edgeEndpoints(edge, bendPoints);
         let insertionIndex = bendPoints.length;
