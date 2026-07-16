@@ -15,14 +15,13 @@
  *
  */
 
-// Distance from the container edge (in px) within which the cursor triggers
-// auto-panning while dragging.
-const AUTO_PAN_EDGE_PX = 40;
-// Minimum and maximum pan speed (px per frame). The speed scales with how deep
-// the cursor sits inside the edge zone, so a light touch pans slowly and pushing
-// fully to (or past) the edge pans fast.
-const AUTO_PAN_MIN_SPEED_PX = 0.5;
-const AUTO_PAN_MAX_SPEED_PX = 22;
+import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
+
+const {
+    edgeZonePx: AUTO_PAN_EDGE_PX,
+    minSpeedPx: AUTO_PAN_MIN_SPEED_PX,
+    maxSpeedPx: AUTO_PAN_MAX_SPEED_PX,
+} = EDGE_INTERACTION_CONFIG.autoPan;
 
 /**
  * Drives an auto-pan loop that shifts the SvelteFlow viewport while the cursor
