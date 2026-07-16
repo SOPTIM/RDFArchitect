@@ -18,8 +18,15 @@
 package org.rdfarchitect.models.cim.data.dto.facade;
 
 import java.util.List;
+import java.util.UUID;
 
-public interface ICIMClassCategory extends ICIMResource{
+public interface ICIMModelFacade {
 
-    List<ICIMClass> getClasses();
+    String getGraphUri();
+
+    List<ICIMClass> getCIMClasses();
+
+    List<ICIMClassCategory> getCIMClassCategories();
+
+    ICIMClassCategory getCIMClassCategory(UUID uuid);
 }

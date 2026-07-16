@@ -1,0 +1,81 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.models.cim.data.dto.facade;
+
+import lombok.RequiredArgsConstructor;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@RequiredArgsConstructor
+public class CIMModelFacade implements ICIMModelFacade {
+
+    private final String graphUri;
+
+    private final Model model;
+
+    @Override
+    public String getGraphUri() {
+        return this.graphUri;
+    }
+
+    @Override
+    public List<ICIMClass> getCIMClasses() {
+        var classResources = model.listSubjectsWithProperty(RDF.type, RDFS.Class).toList();
+        var classes = new ArrayList<ICIMClass>();
+        for (var classResource : classResources) {
+            classes.add(new CIMClass(this.graphUri, this.model, classResource));
+        }
+        return classes;
+    }
+
+    @Override
+    public List<ICIMClassCategory> getCIMClassCategories() {
+        var packageResources = model.listSubjectsWithProperty(RDF.type, CIMS.classCategory).toList();
+        var packages = new ArrayList<ICIMClassCategory>();
+        for (var packageResource : packageResources) {
+            packages.add(CIMClassCategory.fromResource(this.graphUri, this.model, packageResource));
+        }
+        packages.add(new DefaultCIMClassCategory(this.graphUri, this.model));
+        return packages;
+    }
+
+    public List<ICIMAttribute> getCIMAttributes() {
+        var attributeResources = model.listSubjectsWithProperty(CIMS.stereotype, CIMStereotypes.attribute).toList();
+        var attributes = new ArrayList<ICIMAttribute>();
+        for (var attributeResource : attributeResources) {
+            attributes.add(new CIMAttribute(this.graphUri, this.model, attributeResource));
+        }
+        return attributes;
+    }
+
+    public List<ICIMAssociation> getCIMAssociations() {
+        var associationResources = model.listSubjectsWithProperty(CIMS.inverseRoleName).toList();
+        var associations = new ArrayList<ICIMAssociation>();
+        for (var associationResource : associationResources) {
+            associations.add(new CIMAssociation(this.graphUri, this.model, associationResource));
+        }
+        return associations;
+    }
+}

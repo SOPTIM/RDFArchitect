@@ -24,6 +24,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,7 +47,10 @@ public class ExternalCIMClass implements ICIMClass {
 
     @Override
     public UUID getUuid() {
-        return null;
+        if(!this.resource.hasProperty(RDFA.uuid)){
+            return null;
+        }
+        return UUID.fromString(this.resource.getProperty(RDFA.uuid).getObject().toString());
     }
 
     @Override

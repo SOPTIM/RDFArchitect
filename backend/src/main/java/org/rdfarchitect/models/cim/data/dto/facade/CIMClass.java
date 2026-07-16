@@ -63,7 +63,7 @@ public class CIMClass extends CIMResource implements ICIMClass {
         if(category == null){
             return null;
         }
-        return new CIMClassCategory(getGraphUri(), getModel(), category);
+        return CIMClassCategory.fromResource(getGraphUri(), getModel(), category);
     }
 
     @Override

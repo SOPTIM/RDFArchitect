@@ -17,8 +17,13 @@
 
 package org.rdfarchitect.models.cim.data.dto.facade;
 
+import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class CIMClassCategory extends CIMResource implements ICIMClassCategory {
@@ -29,5 +34,22 @@ public class CIMClassCategory extends CIMResource implements ICIMClassCategory {
 
     public CIMClassCategory(String graphUri, Model model, Resource resource) {
         super(graphUri, model, resource);
+    }
+
+    public static ICIMClassCategory fromResource(String graphUri, Model model, Resource resource) {
+        if(resource == null){
+            return new DefaultCIMClassCategory(graphUri, model);
+        }
+        return new CIMClassCategory(graphUri, model, resource);
+    }
+
+    @Override
+    public List<ICIMClass> getClasses() {
+        var resourcesInPackage = getModel().listSubjectsWithProperty(CIMS.belongsToCategory, this.getJenaResource()).toList();
+        var classes = new ArrayList<ICIMClass>();
+        for(var resource : resourcesInPackage){
+            classes.add(CIMClass.fromResource(getGraphUri(), getModel(), resource));
+        }
+        return classes;
     }
 }
