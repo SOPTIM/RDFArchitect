@@ -75,7 +75,7 @@
     }
 
     async function getGraphs(datasetName) {
-        const result = await bec.getGraphNames(datasetName);
+        const result = await bec.getGraphs(datasetName);
         return await result.json();
     }
 

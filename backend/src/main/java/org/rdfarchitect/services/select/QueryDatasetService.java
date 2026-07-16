@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.select;
 
+import de.soptim.opencgmes.cimxml.graph.CimProfile;
+
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.DatasetFactory;
@@ -26,6 +28,7 @@ import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.riot.Lang;
 import org.apache.jena.riot.RDFDataMgr;
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.CIMPrefixPair;
@@ -82,10 +85,26 @@ public class QueryDatasetService
     }
 
     @Override
-    public List<URI> listGraphs(String datasetName) {
-        List<String> graphUriList = databasePort.listGraphUris(datasetName);
+    public List<GraphDTO> listGraphs(String datasetName) {
+        var result = new ArrayList<GraphDTO>();
 
-        return graphUriList.stream().map(URI::new).toList();
+        var graphUriList = databasePort.listGraphUris(datasetName);
+        for (var graphUri : graphUriList) {
+            String keyword = null;
+            try (var ctx =
+                    databasePort
+                            .getGraphWithContext(new GraphIdentifier(datasetName, graphUri))
+                            .begin(ReadWrite.READ)) {
+                var graph = GraphUtils.deepCopy(ctx.getRdfGraph());
+                keyword = CimProfile.wrap(graph).getDcatKeyword();
+            } catch (Exception _) {
+                // ignore, keyword will be empty
+            }
+
+            result.add(new GraphDTO(new URI(graphUri), keyword));
+        }
+
+        return result;
     }
 
     @Override

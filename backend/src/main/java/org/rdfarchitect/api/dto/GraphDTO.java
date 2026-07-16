@@ -15,13 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.select;
+package org.rdfarchitect.api.dto;
 
-import org.rdfarchitect.api.dto.GraphDTO;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-import java.util.List;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
-public interface ListGraphsUseCase {
-
-    List<GraphDTO> listGraphs(String datasetName);
+@Data
+@AllArgsConstructor
+public class GraphDTO {
+    private URI uri;
+    private String keyword;
 }

@@ -37,11 +37,12 @@
     async function onOpen() {
         graphs = null;
         if (datasetName) {
-            const res = await bec.getGraphNames(datasetName);
+            const res = await bec.getGraphs(datasetName);
             graphs = await res.json();
         } else {
             graphs = [];
         }
+        console.log(graphs);
     }
 
     function onClose() {

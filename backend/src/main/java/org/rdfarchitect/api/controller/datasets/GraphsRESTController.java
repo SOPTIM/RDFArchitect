@@ -23,7 +23,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.api.dto.GraphDTO;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +51,7 @@ public class GraphsRESTController {
             tags = {"dataset"},
             responses = {@ApiResponse(responseCode = "200")})
     @GetMapping
-    public List<URI> listGraphs(
+    public List<GraphDTO> listGraphs(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

@@ -103,7 +103,7 @@
             return;
         }
 
-        const res = await bec.getGraphNames(datasetNameUserInput);
+        const res = await bec.getGraphs(datasetNameUserInput);
         graphNames = await res.json();
     }
 
