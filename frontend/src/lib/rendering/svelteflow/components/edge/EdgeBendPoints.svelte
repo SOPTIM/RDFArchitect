@@ -17,6 +17,7 @@
 <script>
     import { useSvelteFlow } from "@xyflow/svelte";
 
+    import { AutoPanController } from "$lib/rendering/svelteflow/interaction/autoPanController.svelte.js";
     import {
         createBendPoint,
         insertBendPointAt,
@@ -42,7 +43,16 @@
         onEndPointsChange,
     } = $props();
 
-    const { screenToFlowPosition, getInternalNode } = useSvelteFlow();
+    const { screenToFlowPosition, getInternalNode, getViewport, setViewport } =
+        useSvelteFlow();
+
+    const autoPan = new AutoPanController({
+        getViewport,
+        setViewport,
+        getContainerRect: () =>
+            document.querySelector(".svelte-flow")?.getBoundingClientRect() ??
+            null,
+    });
 
     let drag = $state(null);
 
@@ -110,12 +120,19 @@
 
     function endDrag() {
         drag = null;
+        autoPan.stop();
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", endDrag);
         window.removeEventListener("contextmenu", endDrag);
     }
 
     function onMove(event) {
+        if (!drag) return;
+        applyPointMove(event);
+        autoPan.update(event, applyPointMove);
+    }
+
+    function applyPointMove(event) {
         if (!drag) return;
         const flowPosition = screenToFlowPosition({
             x: event.clientX,
