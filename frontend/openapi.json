@@ -1476,6 +1476,39 @@
         },
         "type" : "object"
       },
+      "SchemaValidationIssueDTO" : {
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          },
+          "resourceUri" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [
+              "ERROR",
+              "WARNING",
+              "INFO"
+            ],
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "SchemaValidationReportDTO" : {
+        "properties" : {
+          "issues" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SchemaValidationIssueDTO"
+            },
+            "type" : "array"
+          },
+          "valid" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
       "SearchFilter" : {
         "description" : "The scope where the search is performed.",
         "properties" : {
@@ -7076,6 +7109,70 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/validate/{cgmesVersion}" : {
+      "get" : {
+        "description" : "Validates the RDFS schema of a graph for completeness, including the profile header.",
+        "operationId" : "validateSchema",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "cgmesVersion",
+            "required" : true,
+            "schema" : {
+              "enum" : [
+                "V2_4_15",
+                "V3_0"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate schema",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/writeToDatabase" : {
       "post" : {
         "description" : "Write a graph to a database to persist it.",
@@ -8139,6 +8236,71 @@
         "tags" : [
           "snapshot",
           "dataset"
+        ]
+      }
+    },
+    "/api/validate/{cgmesVersion}" : {
+      "post" : {
+        "description" : "Validates the RDFS schema of a given graph file for completeness, including the profile header.",
+        "operationId" : "validateFile",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "in" : "path",
+            "name" : "cgmesVersion",
+            "required" : true,
+            "schema" : {
+              "enum" : [
+                "V2_4_15",
+                "V3_0"
+              ],
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "description" : "The graph file to validate.",
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [
+                  "file"
+                ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SchemaValidationReportDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Validate schema",
+        "tags" : [
+          "schema-validation-from-file-rest-controller"
         ]
       }
     }

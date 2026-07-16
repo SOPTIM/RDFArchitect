@@ -157,8 +157,7 @@
                                                                 placeholder="SPARQL Mapping for default value"
                                                                 bind:value={
                                                                     association.mapping
-                                                                }
-                                                            ></textarea>
+                                                                }></textarea>
                                                         </td>
                                                     </tr>
                                                 {/if}

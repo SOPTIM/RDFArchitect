@@ -210,7 +210,11 @@
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
-        return classStore.addClass(form.datasetName, form.graphURI, requestBody);
+        return classStore.addClass(
+            form.datasetName,
+            form.graphURI,
+            requestBody,
+        );
     }
 
     function updateEditorSelection(form, classUUID) {
