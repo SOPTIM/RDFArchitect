@@ -15,8 +15,6 @@
  *
  */
 
-export const MAX_BEND_POINTS_PER_EDGE = 20;
-
 /**
  * Returns the bend points of an edge, or an empty array if none exist.
  */

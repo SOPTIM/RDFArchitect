@@ -23,6 +23,7 @@
         insertBendPointAt,
         createEndPoint,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
 
     import {
         getInactiveBendPoints,
@@ -180,7 +181,7 @@
             data-edge-id={edgeId}
             cx={inactivePoint.x}
             cy={inactivePoint.y}
-            r="7"
+            r={EDGE_INTERACTION_CONFIG.inactivePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={e =>
                 activateInactiveBendPoint(inactivePoint.insertionIndex, e)}
@@ -196,7 +197,7 @@
             data-edge-id={edgeId}
             cx={inactiveEnd.x}
             cy={inactiveEnd.y}
-            r="7"
+            r={EDGE_INTERACTION_CONFIG.inactivePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={e => activateInactiveEndPoint(inactiveEnd.side, e)}
         />
@@ -211,7 +212,7 @@
             data-edge-id={edgeId}
             cx={bendPoint.x}
             cy={bendPoint.y}
-            r="8"
+            r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={e => beginBendDrag(bendPoint.id, e)}
         />
@@ -226,7 +227,7 @@
             data-edge-id={edgeId}
             cx={endPoints.source.x}
             cy={endPoints.source.y}
-            r="8"
+            r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={e => beginEndDrag("source", e)}
         />
