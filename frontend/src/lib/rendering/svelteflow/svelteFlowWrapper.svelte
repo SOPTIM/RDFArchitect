@@ -429,6 +429,7 @@
         disabled={isDatasetReadOnly}
         lockedDatasetName={editorState.selectedDataset.getValue()}
         lockedGraphUri={editorState.selectedGraph.getValue()}
+        lockedPackage={editorState.selectedDiagram.getProperty("id")}
         onClose={() => contextMenus.close()}
     />
     <SvelteFlowClassContextMenu

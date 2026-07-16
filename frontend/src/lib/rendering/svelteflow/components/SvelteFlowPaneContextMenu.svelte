@@ -39,6 +39,7 @@
         disabled = false,
         lockedDatasetName = "",
         lockedGraphUri = "",
+        lockedPackage = "",
         onClassCreated = () => {},
         onClose = () => {},
     } = $props();
@@ -172,6 +173,7 @@
     bind:showDialog={showNewClassDialog}
     {lockedDatasetName}
     {lockedGraphUri}
+    {lockedPackage}
     {classLayoutPosition}
     {onClassCreated}
 />

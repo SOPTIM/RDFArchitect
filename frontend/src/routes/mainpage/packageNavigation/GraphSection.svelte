@@ -33,6 +33,7 @@
         faRotateLeft,
         faRotateRight,
         faGear,
+        faCircleCheck,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -63,6 +64,7 @@
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
+    import ValidationDialog from "../../validate/ValidationDialog.svelte";
 
     import { goto } from "$app/navigation";
 
@@ -83,6 +85,7 @@
     let showSHACLExportDialog = $state(false);
     let showSHACLFullViewDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
+    let showValidationDialog = $state(false);
     let canUndo = $state(false);
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -309,6 +312,16 @@
             >
                 Migrate...
             </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
+                    showValidationDialog = true;
+                }}
+                faIcon={faCircleCheck}
+                altText="Ctrl+Shift+D"
+            >
+                Validate Schema
+            </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>
                     Constraints
@@ -442,4 +455,9 @@
     datasetName={datasetNavEntry.id}
     graphUri={graphNavEntry.id}
     resourceUuid={ontology.uuid}
+/>
+<ValidationDialog
+    bind:showDialog={showValidationDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
 />
