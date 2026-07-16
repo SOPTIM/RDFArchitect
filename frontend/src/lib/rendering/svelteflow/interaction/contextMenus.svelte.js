@@ -23,9 +23,7 @@ import {
     getBendPoints,
     getEndPoints,
 } from "./bendPointOperations.js";
-
-/** Base hit radius (in screen pixels) for detecting a bend point under the cursor. */
-const BEND_POINT_HIT_RADIUS_PX = 10;
+import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 
 export class ContextMenuController {
     #paneRequest = $state(null);
@@ -135,7 +133,8 @@ export class ContextMenuController {
         const bendPoints = getBendPoints(currentEdge);
 
         const zoom = svelteFlow?.getViewport?.().zoom ?? 1;
-        const hitRadius = BEND_POINT_HIT_RADIUS_PX / (zoom || 1);
+        const hitRadius =
+            EDGE_INTERACTION_CONFIG.pointHitRadiusPx / (zoom || 1);
         const hitBendPoint = findBendPointAtPosition(
             bendPoints,
             flowPosition,
