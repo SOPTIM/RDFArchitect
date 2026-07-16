@@ -827,6 +827,7 @@
             updateNodePositions(nodes);
             resetLabelPositions();
             syncLabelNodes(nodes, edges);
+            await tick();
             await fitViewIncludingBendPoints();
         } catch (error) {
             // The diagram keeps the positions it has; leaving the spinner up would only look
