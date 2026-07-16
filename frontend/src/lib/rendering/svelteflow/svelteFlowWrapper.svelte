@@ -582,6 +582,7 @@
         const layoutedNodes = await getLayoutedNodes(nodes, edges);
         nodes = [...layoutedNodes];
         updateNodePositions(nodes);
+        await tick();
         await fitViewIncludingBendPoints();
         isLoading = false;
     }
