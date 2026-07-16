@@ -17,12 +17,17 @@
 
 package org.rdfarchitect.models.cim.data.dto.facade;
 
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.Resource;
+import java.util.UUID;
 
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+public class CIMClassCategory extends CIMResource implements ICIMClassCategory {
 
-public interface ICIMEnumEntry extends ICIMResource {
+    public CIMClassCategory(String graphUri, Model model, UUID uuid) {
+        super(graphUri, model, uuid);
+    }
 
-    ICIMClass getDomain();
-
-    CIMSStereotype getStereotype();
+    public CIMClassCategory(String graphUri, Model model, Resource resource) {
+        super(graphUri, model, resource);
+    }
 }

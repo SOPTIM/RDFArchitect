@@ -26,6 +26,8 @@ public interface ICIMAssociation extends ICIMResource{
 
     ICIMClass getDomain();
 
+    ICIMClass getRange();
+
     ICIMAssociation getInverseAssociation();
 
     CIMSAssociationUsed getAssociationUsed();

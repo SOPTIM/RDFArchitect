@@ -17,8 +17,6 @@
 
 package org.rdfarchitect.models.cim.data.dto.facade;
 
-import java.util.UUID;
-
 public interface ICIMClassCategory extends ICIMResource{
 
 }

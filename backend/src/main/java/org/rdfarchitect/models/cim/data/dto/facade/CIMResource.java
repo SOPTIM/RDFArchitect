@@ -19,12 +19,14 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Property;
+import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
-import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,11 +56,11 @@ abstract class CIMResource implements ICIMResource {
         if(uuidObjects.size() > 1){
             throw new IllegalStateException("Multiple uuids found for single resource.");
         }
-        var subject = uuidObjects.getFirst().asLiteral();
+        var subject = uuidObjects.getFirst();
         if(!subject.isLiteral()){
             throw new IllegalStateException("UUID for resource is not a literal.");
         }
-        this.uuid = UUID.fromString(subject.getLexicalForm());
+        this.uuid = UUID.fromString(subject.asLiteral().getLexicalForm());
     }
 
     protected Model getModel() {
@@ -82,24 +84,27 @@ abstract class CIMResource implements ICIMResource {
 
     @Override
     public RDFSLabel getLabel(){
-        var resource = getRequiredUniqueJenaProperty(RDFS.label);
-        if(!resource.isLiteral()){
+        var node = getUniqueJenaPropertyNode(RDFS.label);
+        if(node == null){
+            throw new IllegalStateException("Required property " + RDFS.label + " not found for resource with UUID " + uuid + ".");
+        }
+        if(!node.isLiteral()){
             throw new IllegalStateException("Label for resource with UUID " + uuid + " is not a literal.");
         }
-        var langLiteral = resource.asLiteral();
+        var langLiteral = node.asLiteral();
         return new RDFSLabel(langLiteral.getString(), langLiteral.getLanguage());
     }
 
     @Override
     public RDFSComment getComment(){
-        var resource = getUniqueJenaProperty(RDFS.comment);
-        if(resource == null){
+        var node = getUniqueJenaPropertyNode(RDFS.comment);
+        if(node == null){
             return null;
         }
-        if(!resource.isLiteral()){
+        if(!node.isLiteral()){
             throw new IllegalStateException("Comment for resource with UUID " + uuid + " is not a literal.");
         }
-        var langLiteral = resource.asLiteral();
+        var langLiteral = node.asLiteral();
         return new RDFSComment(langLiteral.getString(), new URI(langLiteral.getDatatype().getURI()));
     }
 
@@ -122,13 +127,39 @@ abstract class CIMResource implements ICIMResource {
     }
 
     protected List<Resource> getJenaProperties(Property property){
-        var resource = getJenaResource();
-        var properties = model.listObjectsOfProperty(resource, property).toList();
         var res = new ArrayList<Resource>();
-        for(var prop : properties){
+        for(var prop : getJenaPropertyNodes(property)){
             res.add(prop.asResource());
         }
         return res;
+    }
+
+    protected List<RDFNode> getJenaPropertyNodes(Property property){
+        var resource = getJenaResource();
+        return model.listObjectsOfProperty(resource, property).toList();
+    }
+
+    protected RDFNode getUniqueJenaPropertyNode(Property property){
+        var nodes = getJenaPropertyNodes(property);
+        if(nodes.isEmpty()){
+            return null;
+        }
+        if(nodes.size() > 1){
+            throw new IllegalStateException("Multiple " + property + " properties found for resource with UUID " + uuid + ".");
+        }
+        return nodes.getFirst();
+    }
+
+    protected List<CIMSStereotype> getStereotypeList(){
+        var stereotypes = new ArrayList<CIMSStereotype>();
+        for(var node : getJenaPropertyNodes(CIMS.stereotype)){
+            if(node.isLiteral()){
+                stereotypes.add(new CIMSStereotype(node.asLiteral().getLexicalForm()));
+            } else if(node.isURIResource()){
+                stereotypes.add(new CIMSStereotype(node.asResource().getURI()));
+            }
+        }
+        return stereotypes;
     }
 
     protected Resource getUniqueJenaProperty(Property property){
