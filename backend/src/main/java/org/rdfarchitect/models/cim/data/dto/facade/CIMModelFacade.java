@@ -19,12 +19,16 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,13 +56,38 @@ public class CIMModelFacade implements ICIMModelFacade {
 
     @Override
     public List<ICIMClassCategory> getCIMClassCategories() {
-        var packageResources = model.listSubjectsWithProperty(RDF.type, CIMS.classCategory).toList();
+        var packageResources = new LinkedHashSet<Resource>(
+                model.listSubjectsWithProperty(RDF.type, CIMS.classCategory).toList());
+        model.listObjectsOfProperty(CIMS.belongsToCategory)
+                .filterKeep(RDFNode::isURIResource)
+                .mapWith(RDFNode::asResource)
+                .filterKeep(resource -> resource.hasProperty(RDFA.uuid))
+                .forEach(packageResources::add);
         var packages = new ArrayList<ICIMClassCategory>();
         for (var packageResource : packageResources) {
             packages.add(CIMClassCategory.fromResource(this.graphUri, this.model, packageResource));
         }
         packages.add(new DefaultCIMClassCategory(this.graphUri, this.model));
         return packages;
+    }
+
+    @Override
+    public ICIMClassCategory getCIMClassCategory(UUID uuid) {
+        if (uuid == null) {
+            return new DefaultCIMClassCategory(this.graphUri, this.model);
+        }
+        var categoryResources = model.listSubjectsWithProperty(RDFA.uuid, uuid.toString())
+                .filterKeep(this::isClassCategory)
+                .toList();
+        if (categoryResources.isEmpty()) {
+            return null;
+        }
+        return new CIMClassCategory(this.graphUri, this.model, categoryResources.getFirst());
+    }
+
+    private boolean isClassCategory(Resource resource) {
+        return resource.hasProperty(RDF.type, CIMS.classCategory)
+                || model.contains(null, CIMS.belongsToCategory, resource);
     }
 
     public List<ICIMAttribute> getCIMAttributes() {

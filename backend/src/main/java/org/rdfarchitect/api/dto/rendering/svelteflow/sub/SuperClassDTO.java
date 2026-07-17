@@ -17,9 +17,15 @@
 
 package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 
+import lombok.Builder;
+import lombok.Data;
+
 import java.util.List;
 import java.util.UUID;
 
+/** DTO representing a super class of a SvelteFlow class node including its inherited members. */
+@Data
+@Builder
 public class SuperClassDTO {
 
     private UUID uuid;

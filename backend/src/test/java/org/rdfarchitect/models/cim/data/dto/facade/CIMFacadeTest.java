@@ -278,6 +278,49 @@ class CIMFacadeTest {
     }
 
     @Test
+    @DisplayName("resolves a class category by uuid and falls back to the default category")
+    void classCategoryLookup() {
+        var facade = new CIMModelFacade(GRAPH_URI, model);
+
+        var category = facade.getCIMClassCategory(CATEGORY_UUID);
+        assertThat(category.getUuid()).isEqualTo(CATEGORY_UUID);
+        assertThat(category.getLabel().getValue()).isEqualTo("Core");
+        assertThat(category.getClasses())
+                .extracting(ICIMClass::getUuid)
+                .containsExactly(BREAKER_UUID);
+
+        var defaultCategory = facade.getCIMClassCategory(null);
+        assertThat(defaultCategory).isInstanceOf(DefaultCIMClassCategory.class);
+        assertThat(defaultCategory.getClasses())
+                .extracting(ICIMClass::getUuid)
+                .containsExactlyInAnyOrder(SWITCH_UUID, TERMINAL_UUID, ENUM_UUID);
+
+        assertThat(facade.getCIMClassCategory(UUID.randomUUID())).isNull();
+    }
+
+    @Test
+    @DisplayName("resolves an external category that is only referenced via belongsToCategory")
+    void externalClassCategory() {
+        var externalUuid = UUID.fromString("00000000-0000-0000-0000-00000000000b");
+        var externalCategory = model.createResource(NS + "ExternalPackage");
+        externalCategory.addProperty(RDFA.uuid, externalUuid.toString());
+        model.getResource(NS + "Terminal").addProperty(CIMS.belongsToCategory, externalCategory);
+
+        var facade = new CIMModelFacade(GRAPH_URI, model);
+
+        var category = facade.getCIMClassCategory(externalUuid);
+        assertThat(category).isNotNull();
+        assertThat(category.getLabel().getValue()).isEqualTo("ExternalPackage");
+        assertThat(category.getClasses())
+                .extracting(ICIMClass::getUuid)
+                .containsExactly(TERMINAL_UUID);
+
+        assertThat(facade.getCIMClassCategories())
+                .extracting(ICIMClassCategory::getUuid)
+                .contains(CATEGORY_UUID, externalUuid);
+    }
+
+    @Test
     @DisplayName("returns enum entries for enumeration classes and none for regular classes")
     void enumEntries() {
         var phaseCode = new CIMClass(GRAPH_URI, model, ENUM_UUID);

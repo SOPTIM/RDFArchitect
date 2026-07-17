@@ -26,6 +26,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
 public class DefaultCIMClassCategory implements ICIMClassCategory {
 
@@ -66,7 +67,7 @@ public class DefaultCIMClassCategory implements ICIMClassCategory {
 
     @Override
     public List<ICIMClass> getClasses() {
-        var classResources = model.listSubjectsWithProperty(RDF.type, RDFS.Class).filterDrop(resource -> resource.hasProperty(RDFS.subClassOf)).toList();
+        var classResources = model.listSubjectsWithProperty(RDF.type, RDFS.Class).filterDrop(resource -> resource.hasProperty(CIMS.belongsToCategory)).toList();
         var classes = new ArrayList<ICIMClass>();
         for (var classResource : classResources){
             classes.add(new CIMClass(graphUri, model, classResource));

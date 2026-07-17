@@ -20,6 +20,8 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import java.util.ArrayList;
@@ -41,6 +43,14 @@ public class CIMClassCategory extends CIMResource implements ICIMClassCategory {
             return new DefaultCIMClassCategory(graphUri, model);
         }
         return new CIMClassCategory(graphUri, model, resource);
+    }
+
+    @Override
+    public RDFSLabel getLabel() {
+        if (getUniqueJenaPropertyNode(RDFS.label) == null) {
+            return new RDFSLabel(getUri().getSuffix());
+        }
+        return super.getLabel();
     }
 
     @Override
