@@ -242,7 +242,7 @@
             data-edge-id={edgeId}
             cx={endPoints.target.x}
             cy={endPoints.target.y}
-            r="8"
+            r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
             onpointerdown={e => beginEndDrag("target", e)}
         />
