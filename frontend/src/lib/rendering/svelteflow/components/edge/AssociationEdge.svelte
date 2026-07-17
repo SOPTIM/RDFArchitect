@@ -133,6 +133,15 @@
 
 <BaseEdge {id} {path} {markerStart} {markerEnd} {style} />
 
+{#if selected && target !== source}
+    <path
+            d={path}
+            fill="none"
+            class="pointer-events-none"
+            style="stroke: var(--color-blue); stroke-width: 1.5px; stroke-dasharray: 6 4; opacity: 0.9;"
+    />
+{/if}
+
 {#if selected && edgeParams && target !== source}
     <EdgeBendPoints
         edgeId={id}
