@@ -18,15 +18,16 @@
 package org.rdfarchitect.models.cim.data.dto.facade;
 
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.RDFNode;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -56,8 +57,9 @@ public class CIMModelFacade implements ICIMModelFacade {
 
     @Override
     public List<ICIMClassCategory> getCIMClassCategories() {
-        var packageResources = new LinkedHashSet<Resource>(
-                model.listSubjectsWithProperty(RDF.type, CIMS.classCategory).toList());
+        var packageResources =
+                new LinkedHashSet<Resource>(
+                        model.listSubjectsWithProperty(RDF.type, CIMS.classCategory).toList());
         model.listObjectsOfProperty(CIMS.belongsToCategory)
                 .filterKeep(RDFNode::isURIResource)
                 .mapWith(RDFNode::asResource)
@@ -76,9 +78,10 @@ public class CIMModelFacade implements ICIMModelFacade {
         if (uuid == null) {
             return new DefaultCIMClassCategory(this.graphUri, this.model);
         }
-        var categoryResources = model.listSubjectsWithProperty(RDFA.uuid, uuid.toString())
-                .filterKeep(this::isClassCategory)
-                .toList();
+        var categoryResources =
+                model.listSubjectsWithProperty(RDFA.uuid, uuid.toString())
+                        .filterKeep(this::isClassCategory)
+                        .toList();
         if (categoryResources.isEmpty()) {
             return null;
         }
@@ -91,7 +94,8 @@ public class CIMModelFacade implements ICIMModelFacade {
     }
 
     public List<ICIMAttribute> getCIMAttributes() {
-        var attributeResources = model.listSubjectsWithProperty(CIMS.stereotype, CIMStereotypes.attribute).toList();
+        var attributeResources =
+                model.listSubjectsWithProperty(CIMS.stereotype, CIMStereotypes.attribute).toList();
         var attributes = new ArrayList<ICIMAttribute>();
         for (var attributeResource : attributeResources) {
             attributes.add(new CIMAttribute(this.graphUri, this.model, attributeResource));

@@ -21,6 +21,7 @@ import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+
 import java.util.UUID;
 
 public class CIMEnumEntry extends CIMResource implements ICIMEnumEntry {
@@ -42,7 +43,7 @@ public class CIMEnumEntry extends CIMResource implements ICIMEnumEntry {
     @Override
     public CIMSStereotype getStereotype() {
         var stereotypes = getStereotypeList();
-        if(stereotypes.isEmpty()){
+        if (stereotypes.isEmpty()) {
             return null;
         }
         return stereotypes.getFirst();

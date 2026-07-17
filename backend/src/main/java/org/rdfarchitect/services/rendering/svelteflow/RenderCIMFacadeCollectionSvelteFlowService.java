@@ -17,15 +17,6 @@
 
 package org.rdfarchitect.services.rendering.svelteflow;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
@@ -50,6 +41,16 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 /**
  * Converts a {@link ICIMModelFacade} to a DTO Record that contains two JSON arrays with nodes and
  * edges used to render a UML diagram using the JavaScript library SvelteFlow.
@@ -59,7 +60,8 @@ import org.springframework.util.CollectionUtils;
         name = "rendering.renderer",
         havingValue = "svelteflow",
         matchIfMissing = true)
-public class RenderCIMFacadeCollectionSvelteFlowService implements RenderCIMFacadeCollectionUseCase {
+public class RenderCIMFacadeCollectionSvelteFlowService
+        implements RenderCIMFacadeCollectionUseCase {
 
     // CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
     private static final String CLASS_NODE_TYPE = "class";
@@ -224,8 +226,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService implements RenderCIMFaca
                 .build();
     }
 
-    private List<AttributeDTO> getClassAttributes(
-            RenderContext renderContext, ICIMClass cimClass) {
+    private List<AttributeDTO> getClassAttributes(RenderContext renderContext, ICIMClass cimClass) {
         if (!renderContext.filter().isIncludeAttributes()) {
             return List.of();
         }

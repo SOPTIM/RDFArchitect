@@ -25,6 +25,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -37,7 +38,7 @@ public class ExternalCIMClass implements ICIMClass {
     private final Resource resource;
 
     public ExternalCIMClass(String graphUri, Model model, Resource resource) {
-        if(!resource.isURIResource()){
+        if (!resource.isURIResource()) {
             throw new IllegalStateException("External class resource is not an URI resource.");
         }
         this.graphUri = graphUri;
@@ -47,7 +48,7 @@ public class ExternalCIMClass implements ICIMClass {
 
     @Override
     public UUID getUuid() {
-        if(!this.resource.hasProperty(RDFA.uuid)){
+        if (!this.resource.hasProperty(RDFA.uuid)) {
             return null;
         }
         return UUID.fromString(this.resource.getProperty(RDFA.uuid).getObject().toString());
@@ -66,7 +67,7 @@ public class ExternalCIMClass implements ICIMClass {
     @Override
     public RDFSLabel getLabel() {
         var statement = model.getProperty(resource, RDFS.label);
-        if(statement == null || !statement.getObject().isLiteral()){
+        if (statement == null || !statement.getObject().isLiteral()) {
             return new RDFSLabel(getUri().getSuffix());
         }
         var langLiteral = statement.getObject().asLiteral();
@@ -76,11 +77,12 @@ public class ExternalCIMClass implements ICIMClass {
     @Override
     public RDFSComment getComment() {
         var statement = model.getProperty(resource, RDFS.comment);
-        if(statement == null || !statement.getObject().isLiteral()){
+        if (statement == null || !statement.getObject().isLiteral()) {
             return null;
         }
         var langLiteral = statement.getObject().asLiteral();
-        return new RDFSComment(langLiteral.getString(), new URI(langLiteral.getDatatype().getURI()));
+        return new RDFSComment(
+                langLiteral.getString(), new URI(langLiteral.getDatatype().getURI()));
     }
 
     @Override

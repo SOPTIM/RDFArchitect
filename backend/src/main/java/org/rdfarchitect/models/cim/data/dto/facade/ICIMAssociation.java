@@ -20,7 +20,7 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 
-public interface ICIMAssociation extends ICIMResource{
+public interface ICIMAssociation extends ICIMResource {
 
     CIMSMultiplicity getMultiplicity();
 

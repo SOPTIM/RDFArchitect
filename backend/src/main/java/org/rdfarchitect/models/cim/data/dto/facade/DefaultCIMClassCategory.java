@@ -17,9 +17,6 @@
 
 package org.rdfarchitect.models.cim.data.dto.facade;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -27,6 +24,10 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 public class DefaultCIMClassCategory implements ICIMClassCategory {
 
@@ -64,12 +65,14 @@ public class DefaultCIMClassCategory implements ICIMClassCategory {
         return null;
     }
 
-
     @Override
     public List<ICIMClass> getClasses() {
-        var classResources = model.listSubjectsWithProperty(RDF.type, RDFS.Class).filterDrop(resource -> resource.hasProperty(CIMS.belongsToCategory)).toList();
+        var classResources =
+                model.listSubjectsWithProperty(RDF.type, RDFS.Class)
+                        .filterDrop(resource -> resource.hasProperty(CIMS.belongsToCategory))
+                        .toList();
         var classes = new ArrayList<ICIMClass>();
-        for (var classResource : classResources){
+        for (var classResource : classResources) {
             classes.add(new CIMClass(graphUri, model, classResource));
         }
         return classes;

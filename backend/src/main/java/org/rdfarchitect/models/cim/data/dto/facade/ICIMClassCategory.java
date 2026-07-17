@@ -19,7 +19,7 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 
 import java.util.List;
 
-public interface ICIMClassCategory extends ICIMResource{
+public interface ICIMClassCategory extends ICIMResource {
 
     List<ICIMClass> getClasses();
 }

@@ -59,8 +59,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     private static final UUID LOOSE_UUID = UUID.fromString("00000000-0000-0000-0000-000000000008");
     private static final UUID EXTERNAL_CAT_UUID =
             UUID.fromString("00000000-0000-0000-0000-000000000009");
-    private static final UUID REMOTE_UUID =
-            UUID.fromString("00000000-0000-0000-0000-00000000000a");
+    private static final UUID REMOTE_UUID = UUID.fromString("00000000-0000-0000-0000-00000000000a");
 
     private final RenderCIMFacadeCollectionSvelteFlowService renderer =
             new RenderCIMFacadeCollectionSvelteFlowService();
@@ -155,7 +154,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         attribute.addProperty(RDFS.label, model.createLiteral(label, "en"));
         attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
         attribute.addProperty(RDFS.domain, domain);
-        attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + multiplicity));
+        attribute.addProperty(
+                CIMS.multiplicity, model.createResource(CIMS.namespace + multiplicity));
         attribute.addProperty(CIMS.datatype, model.createResource(XSD.xstring.getURI()));
     }
 
@@ -181,8 +181,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .extracting(node -> node.getData().getLabel())
                 .containsExactlyInAnyOrder("Root", "Base", "Child", "PhaseCode", "Terminal");
         assertThat(nodeByLabel(result, "Child").getId()).isEqualTo(CHILD_UUID);
-        assertThat(nodeByLabel(result, "Child").getData().getBelongsToCategory())
-                .isEqualTo("Core");
+        assertThat(nodeByLabel(result, "Child").getData().getBelongsToCategory()).isEqualTo("Core");
         assertThat(nodeByLabel(result, "Terminal").getData().getBelongsToCategory())
                 .isEqualTo("Other");
     }

@@ -29,6 +29,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+
 import java.util.UUID;
 
 public class CIMAttribute extends CIMResource implements ICIMAttribute {
@@ -59,11 +60,18 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     @Override
     public ICIMClass getDataType() {
         var dataType = getUniqueJenaProperty(CIMS.datatype);
-        if(dataType == null){
+        if (dataType == null) {
             dataType = getUniqueJenaProperty(RDFS.range);
         }
-        if(dataType == null){
-            throw new IllegalStateException("No " + CIMS.datatype + " or " + RDFS.range + " found for attribute with UUID " + getUuid() + ".");
+        if (dataType == null) {
+            throw new IllegalStateException(
+                    "No "
+                            + CIMS.datatype
+                            + " or "
+                            + RDFS.range
+                            + " found for attribute with UUID "
+                            + getUuid()
+                            + ".");
         }
         return CIMClass.fromResource(getGraphUri(), getModel(), dataType);
     }
@@ -71,8 +79,13 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     @Override
     public CIMSStereotype getStereotype() {
         var stereotypes = getStereotypeList();
-        if(stereotypes.isEmpty()){
-            throw new IllegalStateException("Required property " + CIMS.stereotype + " not found for attribute with UUID " + getUuid() + ".");
+        if (stereotypes.isEmpty()) {
+            throw new IllegalStateException(
+                    "Required property "
+                            + CIMS.stereotype
+                            + " not found for attribute with UUID "
+                            + getUuid()
+                            + ".");
         }
         return stereotypes.getFirst();
     }
@@ -80,7 +93,7 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     @Override
     public CIMSIsFixed getFixed() {
         var valueNode = readValueNode(CIMS.isFixed);
-        if(valueNode == null){
+        if (valueNode == null) {
             return null;
         }
         return new CIMSIsFixed(valueNode.value(), valueNode.dataType(), valueNode.blankNode());
@@ -89,7 +102,7 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     @Override
     public CIMSIsDefault getDefault() {
         var valueNode = readValueNode(CIMS.isDefault);
-        if(valueNode == null){
+        if (valueNode == null) {
             return null;
         }
         return new CIMSIsDefault(valueNode.value(), valueNode.dataType(), valueNode.blankNode());
@@ -99,15 +112,15 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
 
     private ValueNode readValueNode(Property property) {
         var node = getUniqueJenaPropertyNode(property);
-        if(node == null){
+        if (node == null) {
             return null;
         }
-        if(node.isLiteral()){
+        if (node.isLiteral()) {
             return toValueNode(node.asLiteral(), false);
         }
-        if(node.isAnon()){
+        if (node.isAnon()) {
             var inner = node.asResource().getProperty(LITERAL_WRAPPER_PROPERTY);
-            if(inner != null && inner.getObject().isLiteral()){
+            if (inner != null && inner.getObject().isLiteral()) {
                 return toValueNode(inner.getObject().asLiteral(), true);
             }
         }

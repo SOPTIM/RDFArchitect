@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -44,13 +43,19 @@ class CIMFacadeTest {
     private static final String GRAPH_URI = "http://graph#";
     private static final String NS = "http://example.com#";
 
-    private static final UUID CATEGORY_UUID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID CATEGORY_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID SWITCH_UUID = UUID.fromString("00000000-0000-0000-0000-000000000002");
-    private static final UUID BREAKER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000003");
-    private static final UUID ATTRIBUTE_UUID = UUID.fromString("00000000-0000-0000-0000-000000000004");
-    private static final UUID TERMINAL_UUID = UUID.fromString("00000000-0000-0000-0000-000000000005");
-    private static final UUID ASSOCIATION_UUID = UUID.fromString("00000000-0000-0000-0000-000000000006");
-    private static final UUID INVERSE_UUID = UUID.fromString("00000000-0000-0000-0000-000000000007");
+    private static final UUID BREAKER_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000003");
+    private static final UUID ATTRIBUTE_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000004");
+    private static final UUID TERMINAL_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000005");
+    private static final UUID ASSOCIATION_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000006");
+    private static final UUID INVERSE_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000007");
     private static final UUID ENUM_UUID = UUID.fromString("00000000-0000-0000-0000-000000000008");
     private static final UUID ENTRY_UUID = UUID.fromString("00000000-0000-0000-0000-000000000009");
 
@@ -163,12 +168,13 @@ class CIMFacadeTest {
         assertThat(superClasses)
                 .filteredOn(ExternalCIMClass.class::isInstance)
                 .singleElement()
-                .satisfies(external -> {
-                    assertThat(external.getUuid()).isNull();
-                    assertThat(external.getUri().toString()).isEqualTo(NS + "ExternalBase");
-                    assertThat(external.getLabel().getValue()).isEqualTo("ExternalBase");
-                    assertThat(external.getComment()).isNull();
-                });
+                .satisfies(
+                        external -> {
+                            assertThat(external.getUuid()).isNull();
+                            assertThat(external.getUri().toString()).isEqualTo(NS + "ExternalBase");
+                            assertThat(external.getLabel().getValue()).isEqualTo("ExternalBase");
+                            assertThat(external.getComment()).isNull();
+                        });
     }
 
     @Test
@@ -218,7 +224,8 @@ class CIMFacadeTest {
     }
 
     @Test
-    @DisplayName("reads fixed values from direct literals and default values from blank-node wrappers")
+    @DisplayName(
+            "reads fixed values from direct literals and default values from blank-node wrappers")
     void fixedAndDefaultValues() {
         var attribute = breaker().getAttributes().getFirst();
 
@@ -275,6 +282,18 @@ class CIMFacadeTest {
         assertThatThrownBy(association::getAssociationUsed)
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(association::getMultiplicity).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("falls back to the uri suffix for classes without a label")
+    void classLabelFallback() {
+        var dataTypeResource = model.getResource(XSD.xstring.getURI());
+        dataTypeResource.addProperty(RDFA.uuid, "00000000-0000-0000-0000-00000000000c");
+
+        var dataType = breaker().getAttributes().getFirst().getDataType();
+
+        assertThat(dataType).isInstanceOf(CIMClass.class);
+        assertThat(dataType.getLabel().getValue()).isEqualTo("string");
     }
 
     @Test

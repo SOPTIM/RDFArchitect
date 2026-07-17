@@ -20,6 +20,7 @@ package org.rdfarchitect.models.cim.data.dto.facade;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+
 import java.util.UUID;
 
 public interface ICIMResource {

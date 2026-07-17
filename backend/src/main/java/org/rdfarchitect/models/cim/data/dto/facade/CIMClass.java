@@ -22,10 +22,12 @@ import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -41,17 +43,25 @@ public class CIMClass extends CIMResource implements ICIMClass {
     }
 
     public static ICIMClass fromResource(String graphUri, Model model, Resource resource) {
-        if(model.contains(resource, RDFA.uuid)){
+        if (model.contains(resource, RDFA.uuid)) {
             return new CIMClass(graphUri, model, resource);
         }
         return new ExternalCIMClass(graphUri, model, resource);
     }
 
     @Override
+    public RDFSLabel getLabel() {
+        if (getUniqueJenaPropertyNode(RDFS.label) == null) {
+            return new RDFSLabel(getUri().getSuffix());
+        }
+        return super.getLabel();
+    }
+
+    @Override
     public List<ICIMClass> getSuperClasses() {
         var resources = this.getJenaProperties(RDFS.subClassOf);
         var superClasses = new ArrayList<ICIMClass>();
-        for(var res : resources){
+        for (var res : resources) {
             superClasses.add(fromResource(this.getGraphUri(), this.getModel(), res));
         }
         return superClasses;
@@ -60,7 +70,7 @@ public class CIMClass extends CIMResource implements ICIMClass {
     @Override
     public ICIMClassCategory getBelongsToCategory() {
         var category = getUniqueJenaProperty(CIMS.belongsToCategory);
-        if(category == null){
+        if (category == null) {
             return null;
         }
         return CIMClassCategory.fromResource(getGraphUri(), getModel(), category);
@@ -74,8 +84,8 @@ public class CIMClass extends CIMResource implements ICIMClass {
     @Override
     public List<ICIMAttribute> getAttributes() {
         var attributes = new ArrayList<ICIMAttribute>();
-        for(var property : listDirectProperties()){
-            if(CIMPropertyUtils.isAttribute(property)){
+        for (var property : listDirectProperties()) {
+            if (CIMPropertyUtils.isAttribute(property)) {
                 attributes.add(new CIMAttribute(getGraphUri(), getModel(), property));
             }
         }
@@ -85,8 +95,8 @@ public class CIMClass extends CIMResource implements ICIMClass {
     @Override
     public List<ICIMAssociation> getAssociations() {
         var associations = new ArrayList<ICIMAssociation>();
-        for(var property : listDirectProperties()){
-            if(CIMPropertyUtils.isAssociation(property)){
+        for (var property : listDirectProperties()) {
+            if (CIMPropertyUtils.isAssociation(property)) {
                 associations.add(new CIMAssociation(getGraphUri(), getModel(), property));
             }
         }
@@ -96,11 +106,11 @@ public class CIMClass extends CIMResource implements ICIMClass {
     @Override
     public List<ICIMEnumEntry> getEnumEntries() {
         var jenaResource = getJenaResource();
-        if(!jenaResource.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration)){
+        if (!jenaResource.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration)) {
             return List.of();
         }
         var entries = new ArrayList<ICIMEnumEntry>();
-        for(var entry : getModel().listSubjectsWithProperty(RDF.type, jenaResource).toList()){
+        for (var entry : getModel().listSubjectsWithProperty(RDF.type, jenaResource).toList()) {
             entries.add(new CIMEnumEntry(getGraphUri(), getModel(), entry));
         }
         return entries;

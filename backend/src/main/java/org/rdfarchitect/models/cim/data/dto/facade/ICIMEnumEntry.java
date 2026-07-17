@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.models.cim.data.dto.facade;
 
-
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 
 public interface ICIMEnumEntry extends ICIMResource {

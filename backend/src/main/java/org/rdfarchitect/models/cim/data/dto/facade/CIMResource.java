@@ -28,6 +28,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -50,14 +51,14 @@ abstract class CIMResource implements ICIMResource {
         this.graphUri = graphUri;
         this.model = model;
         var uuidObjects = this.model.listObjectsOfProperty(resource, RDFA.uuid).toList();
-        if(uuidObjects.isEmpty()){
+        if (uuidObjects.isEmpty()) {
             throw new IllegalStateException("No uuid found for resource");
         }
-        if(uuidObjects.size() > 1){
+        if (uuidObjects.size() > 1) {
             throw new IllegalStateException("Multiple uuids found for single resource.");
         }
         var subject = uuidObjects.getFirst();
-        if(!subject.isLiteral()){
+        if (!subject.isLiteral()) {
             throw new IllegalStateException("UUID for resource is not a literal.");
         }
         this.uuid = UUID.fromString(subject.asLiteral().getLexicalForm());
@@ -68,7 +69,7 @@ abstract class CIMResource implements ICIMResource {
     }
 
     @Override
-    public UUID getUuid(){
+    public UUID getUuid() {
         return uuid;
     }
 
@@ -78,105 +79,128 @@ abstract class CIMResource implements ICIMResource {
     }
 
     @Override
-    public URI getUri(){
+    public URI getUri() {
         return new URI(getJenaResource().getURI());
     }
 
     @Override
-    public RDFSLabel getLabel(){
+    public RDFSLabel getLabel() {
         var node = getUniqueJenaPropertyNode(RDFS.label);
-        if(node == null){
-            throw new IllegalStateException("Required property " + RDFS.label + " not found for resource with UUID " + uuid + ".");
+        if (node == null) {
+            throw new IllegalStateException(
+                    "Required property "
+                            + RDFS.label
+                            + " not found for resource with UUID "
+                            + uuid
+                            + ".");
         }
-        if(!node.isLiteral()){
-            throw new IllegalStateException("Label for resource with UUID " + uuid + " is not a literal.");
+        if (!node.isLiteral()) {
+            throw new IllegalStateException(
+                    "Label for resource with UUID " + uuid + " is not a literal.");
         }
         var langLiteral = node.asLiteral();
         return new RDFSLabel(langLiteral.getString(), langLiteral.getLanguage());
     }
 
     @Override
-    public RDFSComment getComment(){
+    public RDFSComment getComment() {
         var node = getUniqueJenaPropertyNode(RDFS.comment);
-        if(node == null){
+        if (node == null) {
             return null;
         }
-        if(!node.isLiteral()){
-            throw new IllegalStateException("Comment for resource with UUID " + uuid + " is not a literal.");
+        if (!node.isLiteral()) {
+            throw new IllegalStateException(
+                    "Comment for resource with UUID " + uuid + " is not a literal.");
         }
         var langLiteral = node.asLiteral();
-        return new RDFSComment(langLiteral.getString(), new URI(langLiteral.getDatatype().getURI()));
+        return new RDFSComment(
+                langLiteral.getString(), new URI(langLiteral.getDatatype().getURI()));
     }
-
 
     // helper
 
-    protected Resource getJenaResource(){
+    protected Resource getJenaResource() {
         var subjectsWithUuid = model.listSubjectsWithProperty(RDFA.uuid, uuid.toString()).toList();
-        if(subjectsWithUuid.isEmpty()){
+        if (subjectsWithUuid.isEmpty()) {
             throw new IllegalStateException("Resource with UUID " + uuid + " not found.");
         }
-        if(subjectsWithUuid.size() > 1){
-            throw new IllegalStateException("Multiple uris found for " +  uuid + ".");
+        if (subjectsWithUuid.size() > 1) {
+            throw new IllegalStateException("Multiple uris found for " + uuid + ".");
         }
         var subject = subjectsWithUuid.getFirst();
-        if(!subject.isURIResource()){
-            throw new IllegalStateException("Resource with UUID " + uuid + " is not an URI resource.");
+        if (!subject.isURIResource()) {
+            throw new IllegalStateException(
+                    "Resource with UUID " + uuid + " is not an URI resource.");
         }
         return subject;
     }
 
-    protected List<Resource> getJenaProperties(Property property){
+    protected List<Resource> getJenaProperties(Property property) {
         var res = new ArrayList<Resource>();
-        for(var prop : getJenaPropertyNodes(property)){
+        for (var prop : getJenaPropertyNodes(property)) {
             res.add(prop.asResource());
         }
         return res;
     }
 
-    protected List<RDFNode> getJenaPropertyNodes(Property property){
+    protected List<RDFNode> getJenaPropertyNodes(Property property) {
         var resource = getJenaResource();
         return model.listObjectsOfProperty(resource, property).toList();
     }
 
-    protected RDFNode getUniqueJenaPropertyNode(Property property){
+    protected RDFNode getUniqueJenaPropertyNode(Property property) {
         var nodes = getJenaPropertyNodes(property);
-        if(nodes.isEmpty()){
+        if (nodes.isEmpty()) {
             return null;
         }
-        if(nodes.size() > 1){
-            throw new IllegalStateException("Multiple " + property + " properties found for resource with UUID " + uuid + ".");
+        if (nodes.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple "
+                            + property
+                            + " properties found for resource with UUID "
+                            + uuid
+                            + ".");
         }
         return nodes.getFirst();
     }
 
-    protected List<CIMSStereotype> getStereotypeList(){
+    protected List<CIMSStereotype> getStereotypeList() {
         var stereotypes = new ArrayList<CIMSStereotype>();
-        for(var node : getJenaPropertyNodes(CIMS.stereotype)){
-            if(node.isLiteral()){
+        for (var node : getJenaPropertyNodes(CIMS.stereotype)) {
+            if (node.isLiteral()) {
                 stereotypes.add(new CIMSStereotype(node.asLiteral().getLexicalForm()));
-            } else if(node.isURIResource()){
+            } else if (node.isURIResource()) {
                 stereotypes.add(new CIMSStereotype(node.asResource().getURI()));
             }
         }
         return stereotypes;
     }
 
-    protected Resource getUniqueJenaProperty(Property property){
+    protected Resource getUniqueJenaProperty(Property property) {
         var properties = getJenaProperties(property);
-        if(properties.isEmpty()){
+        if (properties.isEmpty()) {
             return null;
         }
-        if(properties.size() > 1){
-            throw new IllegalStateException("Multiple " + property + " properties found for resource with UUID " + uuid + ".");
+        if (properties.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple "
+                            + property
+                            + " properties found for resource with UUID "
+                            + uuid
+                            + ".");
         }
         return properties.getFirst();
     }
 
-    protected Resource getRequiredUniqueJenaProperty(Property property){
+    protected Resource getRequiredUniqueJenaProperty(Property property) {
         var propertyResource = getUniqueJenaProperty(property);
-        if(propertyResource == null){
-            throw new IllegalStateException("Required property " + property + " not found for resource with UUID " + uuid + ".");
+        if (propertyResource == null) {
+            throw new IllegalStateException(
+                    "Required property "
+                            + property
+                            + " not found for resource with UUID "
+                            + uuid
+                            + ".");
         }
         return propertyResource;
     }

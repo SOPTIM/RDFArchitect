@@ -23,6 +23,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+
 import java.util.UUID;
 
 public class CIMAssociation extends CIMResource implements ICIMAssociation {
@@ -62,11 +63,19 @@ public class CIMAssociation extends CIMResource implements ICIMAssociation {
     @Override
     public CIMSAssociationUsed getAssociationUsed() {
         var node = getUniqueJenaPropertyNode(CIMS.associationUsed);
-        if(node == null){
-            throw new IllegalStateException("Required property " + CIMS.associationUsed + " not found for association with UUID " + getUuid() + ".");
+        if (node == null) {
+            throw new IllegalStateException(
+                    "Required property "
+                            + CIMS.associationUsed
+                            + " not found for association with UUID "
+                            + getUuid()
+                            + ".");
         }
-        if(!node.isLiteral()){
-            throw new IllegalStateException("AssociationUsed for association with UUID " + getUuid() + " is not a literal.");
+        if (!node.isLiteral()) {
+            throw new IllegalStateException(
+                    "AssociationUsed for association with UUID "
+                            + getUuid()
+                            + " is not a literal.");
         }
         return new CIMSAssociationUsed(node.asLiteral().getLexicalForm());
     }
