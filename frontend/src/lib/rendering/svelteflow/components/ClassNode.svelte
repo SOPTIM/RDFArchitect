@@ -142,8 +142,14 @@
     >
         {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
             {#each inheritedGroups as superClass}
-                <div class="text-default-text text-xs italic opacity-70">
-                    {superClass.label}
+                <div
+                    class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center py-0.5"
+                >
+                    <span class="w-3 border-t border-current rounded"></span>
+                    <span class="leading-none relative -top-px">
+                        {superClass.label}
+                    </span>
+                    <span class="w-3 border-t border-current rounded"></span>
                 </div>
                 {#each superClass.attributes ?? [] as attr}
                     <div class="text-default-text leading-6 opacity-70">
@@ -156,7 +162,13 @@
                     </div>
                 {/each}
                 {#if (superClass.attributes?.length ?? 0) === 0 && (superClass.enumEntries?.length ?? 0) === 0}
-                    <div class="text-default-text leading-6 opacity-70">-</div>
+                    <div
+                        class="text-default-text leading-6 opacity-70 flex justify-center items-center"
+                    >
+                        <span
+                            class="w-3 border-t border-current rounded mt-1.5 mb-2"
+                        ></span>
+                    </div>
                 {/if}
             {/each}
         {/if}
