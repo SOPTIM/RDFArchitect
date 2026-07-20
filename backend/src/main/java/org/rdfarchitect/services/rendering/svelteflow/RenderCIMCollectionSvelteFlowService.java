@@ -23,6 +23,7 @@ import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.AttributeDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.BendPointDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EdgeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
@@ -86,6 +87,9 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
     }
+
+    /*TODO SEHR WICHTIG: BEND POINTS AUCH IN RENDERING VON MERGED VIEW UND CO EINBAUEN
+        merged view benutzt iwie extra rendering, muss das separat beachten*/
 
     @Override
     public RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId) {
@@ -337,6 +341,8 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var toMultiplicity = extractMultiplicityString(to.getMultiplicity());
         var useToAssociation = getAssociationUsedValue(from.getAssociationUsed());
         var useFromAssociation = getAssociationUsedValue(to.getAssociationUsed());
+        //TODO hier später anpassen iwie dass er die layoutdaten mitbekommt, und iwie für beide inheritance und assoc edges vereinheitlichen idfk
+        var bendPoints = assembleBendPointsDTOList();
 
         var edgeDataDTO =
                 EdgeDataDTO.builder()
@@ -344,6 +350,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                         .fromMultiplicity(fromMultiplicity)
                         .useToAssociation(useToAssociation)
                         .useFromAssociation(useFromAssociation)
+                        .bendPoints(bendPoints)
                         .build();
 
         return EdgeDTO.builder()
@@ -353,6 +360,30 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
                 .target(targetUUID)
                 .data(edgeDataDTO)
                 .build();
+    }
+
+    //TODO SEHR WICHTIG: später an DL bringen, dummy daten entfernen, javadoc anpassen
+    /**
+     * Builds placeholder bend points for prototyping the rendering pipeline. The first and last
+     * element are end points (isEndPoint = true), any elements in between are regular bend points.
+     * Will be replaced by real layout data from the DL later.
+     *
+     * @return List forming the full ordered point sequence of the edge
+     */
+    private List<BendPointDTO> assembleBendPointsDTOList() {
+        return List.of(
+                BendPointDTO.builder()
+                        .id(UUID.randomUUID().toString())
+                        .position(PositionDTO.builder().x(0).y(0).z(0).build())
+                        .isEndPoint(false)
+                        .build(),
+                BendPointDTO.builder().id(UUID.randomUUID().toString()).position(PositionDTO.builder().x(200).y(200).z(0).build()).build(),
+                BendPointDTO.builder().id(UUID.randomUUID().toString()).position(PositionDTO.builder().x(-250).y(400).z(0).build()).build(),
+                BendPointDTO.builder()
+                        .id(UUID.randomUUID().toString())
+                        .position(PositionDTO.builder().x(100).y(100).z(0).build())
+                        .isEndPoint(false)
+                        .build());
     }
 
     /**

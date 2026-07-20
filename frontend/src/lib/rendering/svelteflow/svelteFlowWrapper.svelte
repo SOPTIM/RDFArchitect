@@ -57,7 +57,9 @@
         insertBendPointAt,
         removeBendPoint,
         getBendPoints,
-        getEndPoints,
+        getSourceEndPoint,
+        getTargetEndPoint,
+        getInnerBendPoints,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
@@ -387,12 +389,14 @@
     function handleNodeDrag({ nodes: draggedNodes }) {
         let anyEndPointMoved = false;
         const updatedEdges = edges.map(edge => {
-            const endPoints = edge.data?.endPoints;
-            if (!endPoints || (!endPoints.source && !endPoints.target)) {
+            const points = edge.data?.bendPoints ?? [];
+            const sourceEnd = getSourceEndPoint(points);
+            const targetEnd = getTargetEndPoint(points);
+            if (!sourceEnd && !targetEnd) {
                 return edge;
             }
 
-            let nextEndPoints = endPoints;
+            let nextPoints = points;
             for (const node of draggedNodes) {
                 const previous = lastDragPositions.get(node.id);
                 if (!previous) continue;
@@ -400,8 +404,8 @@
                 const dy = node.position.y - previous.y;
                 if (dx === 0 && dy === 0) continue;
 
-                nextEndPoints = shiftEndPointsForNode(
-                    nextEndPoints,
+                nextPoints = shiftEndPointsForNode(
+                    nextPoints,
                     edge,
                     node.id,
                     dx,
@@ -409,13 +413,13 @@
                 );
             }
 
-            if (nextEndPoints === endPoints) {
+            if (nextPoints === points) {
                 return edge;
             }
             anyEndPointMoved = true;
             return {
                 ...edge,
-                data: { ...edge.data, endPoints: nextEndPoints },
+                data: { ...edge.data, bendPoints: nextPoints },
             };
         });
 
@@ -432,30 +436,24 @@
     }
 
     // Shifts the source and/or target end point of an edge by (dx, dy) if that
-    // side is attached to the given moved node.
-    function shiftEndPointsForNode(endPoints, edge, movedNodeId, dx, dy) {
-        let result = endPoints;
-        if (edge.source === movedNodeId && result.source) {
-            result = {
-                ...result,
-                source: {
-                    ...result.source,
-                    x: result.source.x + dx,
-                    y: result.source.y + dy,
-                },
-            };
-        }
-        if (edge.target === movedNodeId && result.target) {
-            result = {
-                ...result,
-                target: {
-                    ...result.target,
-                    x: result.target.x + dx,
-                    y: result.target.y + dy,
-                },
-            };
-        }
-        return result;
+    // side is attached to the given moved node. End points are the first/last
+    // element of the bend points array.
+    function shiftEndPointsForNode(points, edge, movedNodeId, dx, dy) {
+        const sourceEnd = getSourceEndPoint(points);
+        const targetEnd = getTargetEndPoint(points);
+        const shiftSource = edge.source === movedNodeId && sourceEnd;
+        const shiftTarget = edge.target === movedNodeId && targetEnd;
+        if (!shiftSource && !shiftTarget) return points;
+
+        return points.map(point => {
+            if (shiftSource && point.id === sourceEnd.id) {
+                return { ...point, x: point.x + dx, y: point.y + dy };
+            }
+            if (shiftTarget && point.id === targetEnd.id) {
+                return { ...point, x: point.x + dx, y: point.y + dy };
+            }
+            return point;
+        });
     }
 
     function handleNodeMove(nodeMoveEvent) {
@@ -519,16 +517,20 @@
     function handleEdgeAddBendPoint({ edgeId, flowPosition }) {
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
-        const bendPoints = getBendPoints(edge);
-        if (bendPoints.length >= EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge)
+        const allPoints = getBendPoints(edge);
+        const innerBendPoints = getInnerBendPoints(allPoints);
+        if (
+            innerBendPoints.length >=
+            EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge
+        )
             return;
 
-        const endpoints = edgeEndpoints(edge, bendPoints);
-        let insertionIndex = bendPoints.length;
+        const endpoints = edgeEndpoints(edge, innerBendPoints);
+        let insertionIndex = innerBendPoints.length;
         if (endpoints) {
             const orderedPoints = [
                 endpoints.source,
-                ...bendPoints,
+                ...innerBendPoints,
                 endpoints.target,
             ];
             insertionIndex = getClosestSegmentInsertionIndex(
@@ -538,7 +540,7 @@
         }
 
         const newBendPoints = insertBendPointAt(
-            bendPoints,
+            allPoints,
             insertionIndex,
             createBendPoint(flowPosition.x, flowPosition.y),
         );
@@ -553,19 +555,15 @@
     }
 
     function handleEdgeClearBendPoints({ edgeId }) {
-        patchEdgeData(edgeId, { bendPoints: [], endPoints: {} });
+        patchEdgeData(edgeId, { bendPoints: [] });
     }
 
-    function handleEdgeDeleteEndPoint({ edgeId, side }) {
+    function handleEdgeDeleteEndPoint({ edgeId, endPointId }) {
         const edge = edges.find(e => e.id === edgeId);
         if (!edge) return;
-        const currentEndPoints = getEndPoints(edge);
-        const nextEndPoints = { ...currentEndPoints, [side]: null };
-        updateEdgeEndPoints(edgeId, nextEndPoints);
-    }
-
-    function updateEdgeEndPoints(edgeId, newEndPoints) {
-        patchEdgeData(edgeId, { endPoints: newEndPoints });
+        const points = edge.data?.bendPoints ?? [];
+        const nextPoints = points.filter(point => point.id !== endPointId);
+        patchEdgeData(edgeId, { bendPoints: nextPoints });
     }
 
     function patchEdgeData(edgeId, dataPatch) {

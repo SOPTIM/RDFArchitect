@@ -24,6 +24,11 @@
         useInternalNode,
     } from "@xyflow/svelte";
 
+    import {
+        getInnerBendPoints,
+        getSourceEndPoint,
+        getTargetEndPoint,
+    } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
     import EdgeBendPoints from "./EdgeBendPoints.svelte";
@@ -32,6 +37,7 @@
         getPolylinePath,
         getRoundedCornerPolylinePath,
     } from "./edgeUtils.ts";
+
     let { id, source, target, data, selected } = $props();
     const edges = useEdges();
 
@@ -39,8 +45,10 @@
     let markerStart = data.useFromAssociation ? "url(#associationFrom)" : "";
     let sourceNode = useInternalNode(source);
     let targetNode = useInternalNode(target);
-    let bendPoints = $derived(data.bendPoints ?? []);
-    let endPoints = $derived(data.endPoints ?? {});
+    let allPoints = $derived(data.bendPoints ?? []);
+    let bendPoints = $derived(getInnerBendPoints(allPoints));
+    let sourceEndPoint = $derived(getSourceEndPoint(allPoints));
+    let targetEndPoint = $derived(getTargetEndPoint(allPoints));
 
     let useRoundedCorners = $derived(
         userSettings.get("useRoundedEdges", false),
@@ -63,8 +71,8 @@
                 0,
                 bendPoints,
                 {
-                    source: endPoints.source ?? null,
-                    target: endPoints.target ?? null,
+                    source: sourceEndPoint,
+                    target: targetEndPoint,
                 },
             );
         }
@@ -125,20 +133,16 @@
     function handleBendPointsChange(nextPoints) {
         patchEdgeData({ bendPoints: nextPoints });
     }
-
-    function handleEndPointsChange(nextEndPoints) {
-        patchEdgeData({ endPoints: nextEndPoints });
-    }
 </script>
 
 <BaseEdge {id} {path} {markerStart} {markerEnd} {style} />
 
 {#if selected && target !== source}
     <path
-            d={path}
-            fill="none"
-            class="pointer-events-none"
-            style="stroke: var(--color-blue); stroke-width: 1.5px; stroke-dasharray: 6 4; opacity: 0.9;"
+        d={path}
+        fill="none"
+        class="pointer-events-none"
+        style="stroke: var(--color-blue); stroke-width: 1.5px; stroke-dasharray: 6 4; opacity: 0.9;"
     />
 {/if}
 
@@ -149,12 +153,13 @@
         targetPoint={{ x: edgeParams.tx, y: edgeParams.ty }}
         sourceBorderPoint={{ x: edgeParams.borderSx, y: edgeParams.borderSy }}
         targetBorderPoint={{ x: edgeParams.borderTx, y: edgeParams.borderTy }}
+        {allPoints}
         {bendPoints}
-        {endPoints}
+        {sourceEndPoint}
+        {targetEndPoint}
         sourceNodeId={source}
         targetNodeId={target}
         onPointsChange={handleBendPointsChange}
-        onEndPointsChange={handleEndPointsChange}
     />
 {/if}
 
