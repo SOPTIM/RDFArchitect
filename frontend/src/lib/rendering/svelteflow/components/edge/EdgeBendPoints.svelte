@@ -103,7 +103,7 @@
             y: event.clientY,
         });
         const projected = projectOntoSide(side, flowPosition);
-        const newEndPoint = createEndPoint(projected.x, projected.y);
+        const newEndPoint = createEndPoint(projected.x, projected.y, side);
         const newPoints =
             side === "source"
                 ? [newEndPoint, ...allPoints]
