@@ -39,22 +39,31 @@ export function getInnerBendPoints(points) {
 }
 
 /**
- * Returns the source end point (first element, if it is an end point) or null.
+ * Returns the source end point or null. An end point is the source end point if it
+ * carries side "source", or (for backend data without a side) if it is the first
+ * array element and flagged as an end point.
  */
 export function getSourceEndPoint(points) {
     const first = points[0];
-    return first && isEndPoint(first) ? first : null;
+    if (first && isEndPoint(first)) {
+        return first.side === undefined || first.side === "source"
+            ? first
+            : null;
+    }
+    return null;
 }
 
 /**
- * Returns the target end point (last element, if it is an end point) or null.
- * When the array holds a single end point, it is treated as the source end point,
- * so it is only a target end point if it differs from the detected source.
+ * Returns the target end point or null. An end point is the target end point if it
+ * carries side "target", or (for backend data without a side) if it is the last
+ * array element, flagged as an end point, and distinct from the source end point.
  */
 export function getTargetEndPoint(points) {
     if (points.length === 0) return null;
     const last = points[points.length - 1];
     if (!last || !isEndPoint(last)) return null;
+    if (last.side === "target") return last;
+    if (last.side === "source") return null;
     const source = getSourceEndPoint(points);
     if (source && source.id === last.id) return null;
     return last;
@@ -86,10 +95,12 @@ export function createBendPoint(x, y) {
 }
 
 /**
- * Creates a fresh end point object at the given position.
+ * Creates a fresh end point object at the given position. The side ("source" or
+ * "target") records which class border the end point docks to, independent of its
+ * position in the points array, so a lone end point is never misclassified.
  */
-export function createEndPoint(x, y) {
-    return { id: crypto.randomUUID(), x, y, isEndPoint: true };
+export function createEndPoint(x, y, side) {
+    return { id: crypto.randomUUID(), x, y, isEndPoint: true, side };
 }
 
 /**
