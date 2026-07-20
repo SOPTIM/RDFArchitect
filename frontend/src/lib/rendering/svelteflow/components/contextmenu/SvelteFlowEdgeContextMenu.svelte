@@ -47,7 +47,7 @@
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
     let onBendPoint = $derived(!!request?.hitBendPointId);
-    let onEndPoint = $derived(!!request?.hitEndPointSide);
+    let onEndPoint = $derived(!!request?.hitEndPointId);
     let atLimit = $derived(
         (request?.bendPointCount ?? 0) >=
             EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge,
@@ -85,10 +85,10 @@
     }
 
     function deleteEndPoint() {
-        if (!request?.hitEndPointSide) return;
+        if (!request?.hitEndPointId) return;
         onDeleteEndPoint({
             edgeId: request.edgeId,
-            side: request.hitEndPointSide,
+            endPointId: request.hitEndPointId,
         });
         onClose();
     }

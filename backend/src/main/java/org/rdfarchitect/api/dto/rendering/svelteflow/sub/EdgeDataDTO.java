@@ -20,6 +20,8 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+
 /** DTO representing the specific data object in a SvelteFlow edge. */
 @Data
 @Builder
@@ -35,4 +37,5 @@ public class EdgeDataDTO {
     private String graphUri;
     private String graphKeyword;
     private String color;
+    private List<BendPointDTO> bendPoints;
 }
