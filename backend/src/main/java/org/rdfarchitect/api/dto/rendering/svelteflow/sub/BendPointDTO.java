@@ -20,18 +20,12 @@ package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
 import lombok.Builder;
 import lombok.Data;
 
-import java.util.List;
-
-/** DTO representing the specific data object in a SvelteFlow edge. */
+/** DTO representing a single bend point or end point of a SvelteFlow edge. */
 @Data
 @Builder
-public class EdgeDataDTO {
+public class BendPointDTO {
 
-    private String toMultiplicity;
-    private String fromMultiplicity;
-    private boolean useToAssociation;
-    private boolean useFromAssociation;
-    private String graphUri;
-    private String color;
-    private List<BendPointDTO> bendPoints;
+    private String id;
+    private PositionDTO position;
+    private boolean isEndPoint;
 }
