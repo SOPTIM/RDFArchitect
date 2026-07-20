@@ -19,13 +19,6 @@ import { type InternalNode } from "@xyflow/svelte";
 
 //TODO WICHTIG: AM ENDE HIER AUFRÄUMEN! einmal über alle funktionen gehen, zusammenfassen, aufräumen
 
-//TODO UNBENUTZT! vllt entf?
-export interface BendPoint {
-    id: string;
-    x: number;
-    y: number;
-}
-
 export interface InactiveBendPoint {
     x: number;
     y: number;
