@@ -14,81 +14,95 @@
  *    limitations under the License.
  *
  */
+/**
+ * Returns true if a point is an end point (docked to a class border). The flag may
+ * arrive as `isEndPoint` or, depending on Jackson serialization, as `endPoint`.
+ */
+export function isEndPoint(point) {
+    return point?.isEndPoint === true || point?.endPoint === true;
+}
 
 /**
- * Returns the bend points of an edge, or an empty array if none exist.
+ * Returns the full ordered point array of an edge (end points included), or an
+ * empty array if none exist. The first/last element may be an end point.
  */
 export function getBendPoints(edge) {
     return edge?.data?.bendPoints ?? [];
 }
 
 /**
- * Returns a new bend points array with a new point inserted at the given index.
+ * Returns only the regular (non end point) bend points, i.e. the array without a
+ * leading and/or trailing end point element.
  */
-export function insertBendPointAt(bendPoints, index, point) {
-    const newBendPoints = [...bendPoints];
-    newBendPoints.splice(index, 0, point);
-    return newBendPoints;
+export function getInnerBendPoints(points) {
+    return points.filter(point => !isEndPoint(point));
 }
 
 /**
- * Returns a new bend points array without the point with the given id.
+ * Returns the source end point (first element, if it is an end point) or null.
  */
-export function removeBendPoint(bendPoints, pointId) {
-    return bendPoints.filter(bp => bp.id !== pointId);
+export function getSourceEndPoint(points) {
+    const first = points[0];
+    return first && isEndPoint(first) ? first : null;
 }
 
 /**
- * Creates a fresh bend point object at the given position.
+ * Returns the target end point (last element, if it is an end point) or null.
+ * When the array holds a single end point, it is treated as the source end point,
+ * so it is only a target end point if it differs from the detected source.
+ */
+export function getTargetEndPoint(points) {
+    if (points.length === 0) return null;
+    const last = points[points.length - 1];
+    if (!last || !isEndPoint(last)) return null;
+    const source = getSourceEndPoint(points);
+    if (source && source.id === last.id) return null;
+    return last;
+}
+
+/**
+ * Returns a new points array with a new middle bend point inserted at the given
+ * index. The index is relative to the middle bend points (end points excluded).
+ */
+export function insertBendPointAt(points, middleIndex, point) {
+    const sourceOffset = getSourceEndPoint(points) ? 1 : 0;
+    const newPoints = [...points];
+    newPoints.splice(sourceOffset + middleIndex, 0, point);
+    return newPoints;
+}
+
+/**
+ * Returns a new points array without the point with the given id.
+ */
+export function removeBendPoint(points, pointId) {
+    return points.filter(point => point.id !== pointId);
+}
+
+/**
+ * Creates a fresh regular bend point object at the given position.
  */
 export function createBendPoint(x, y) {
     return { id: crypto.randomUUID(), x, y };
 }
 
 /**
- * Finds the first active bend point within the given hit radius of a position.
- * Returns the bend point or null. Used to decide whether a click on an edge
- * targets an existing bend point, even when the bend points are not rendered.
- */
-export function findBendPointAtPosition(bendPoints, position, hitRadius) {
-    for (const bp of bendPoints) {
-        const dx = bp.x - position.x;
-        const dy = bp.y - position.y;
-        if (Math.hypot(dx, dy) <= hitRadius) {
-            return bp;
-        }
-    }
-    return null;
-}
-
-/**
- * Returns the active end points of an edge, defaulting to an empty object.
- * Shape: { source?: {id,x,y}|null, target?: {id,x,y}|null }.
- */
-export function getEndPoints(edge) {
-    return edge?.data?.endPoints ?? {};
-}
-
-/**
  * Creates a fresh end point object at the given position.
  */
 export function createEndPoint(x, y) {
-    return { id: crypto.randomUUID(), x, y };
+    return { id: crypto.randomUUID(), x, y, isEndPoint: true };
 }
 
 /**
- * Finds an active end point ("source"/"target") within the given hit radius of a
- * position. Returns the side or null. Mirrors findBendPointAtPosition, but for the
- * end points held in edge.data.endPoints.
+ * Finds the first point within the given hit radius of a position. Returns the
+ * point (bend or end point) or null. Used to decide whether a click on an edge
+ * targets an existing point, even when the points are not rendered.
  */
-export function findEndPointSideAtPosition(endPoints, position, hitRadius) {
-    for (const side of ["source", "target"]) {
-        const endPoint = endPoints?.[side];
-        if (!endPoint) continue;
-        const dx = endPoint.x - position.x;
-        const dy = endPoint.y - position.y;
+export function findBendPointAtPosition(points, position, hitRadius) {
+    for (const point of points) {
+        const dx = point.x - position.x;
+        const dy = point.y - position.y;
         if (Math.hypot(dx, dy) <= hitRadius) {
-            return side;
+            return point;
         }
     }
     return null;
