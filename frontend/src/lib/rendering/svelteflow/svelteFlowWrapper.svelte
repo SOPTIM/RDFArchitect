@@ -501,13 +501,17 @@
         patchEdgeData(edgeId, { bendPoints: newBendPoints });
     }
 
-    function edgeEndpoints(edge, bendPoints) {
+    function edgeEndpoints(edge, innerBendPoints) {
         const svelteFlow = svelteFlowAPI?.svelteFlow;
         if (!svelteFlow?.getInternalNode) return null;
         const sourceNode = svelteFlow.getInternalNode(edge.source);
         const targetNode = svelteFlow.getInternalNode(edge.target);
         if (!sourceNode || !targetNode) return null;
-        const params = getEdgeParams(sourceNode, targetNode, 0, bendPoints);
+        const allPoints = edge.data?.bendPoints ?? [];
+        const params = getEdgeParams(sourceNode, targetNode, 0, innerBendPoints, {
+            source: getSourceEndPoint(allPoints),
+            target: getTargetEndPoint(allPoints),
+        });
         return {
             source: { x: params.sx, y: params.sy },
             target: { x: params.tx, y: params.ty },
