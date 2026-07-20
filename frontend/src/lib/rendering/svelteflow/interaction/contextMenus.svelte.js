@@ -19,9 +19,9 @@ import { editorState, multiSelectState } from "$lib/sharedState.svelte.js";
 
 import {
     findBendPointAtPosition,
-    findEndPointSideAtPosition,
     getBendPoints,
-    getEndPoints,
+    getInnerBendPoints,
+    isEndPoint,
 } from "./bendPointOperations.js";
 import { EDGE_INTERACTION_CONFIG } from "./edgeInteractionConfig.js";
 
@@ -130,30 +130,28 @@ export class ContextMenuController {
             : { x: 0, y: 0 };
 
         const currentEdge = this.#getEdges().find(e => e.id === edgeId) ?? edge;
-        const bendPoints = getBendPoints(currentEdge);
+        const allPoints = getBendPoints(currentEdge);
+        const middleBendPoints = getInnerBendPoints(allPoints);
 
         const zoom = svelteFlow?.getViewport?.().zoom ?? 1;
         const hitRadius =
             EDGE_INTERACTION_CONFIG.pointHitRadiusPx / (zoom || 1);
-        const hitBendPoint = findBendPointAtPosition(
-            bendPoints,
+        const hitPoint = findBendPointAtPosition(
+            allPoints,
             flowPosition,
             hitRadius,
         );
 
-        const endPoints = getEndPoints(currentEdge);
-        const hitEndPointSide = hitBendPoint
-            ? null
-            : findEndPointSideAtPosition(endPoints, flowPosition, hitRadius);
+        const hitIsEndPoint = hitPoint ? isEndPoint(hitPoint) : false;
 
         this.#edgeRequest = {
             x: event.clientX,
             y: event.clientY,
             edgeId,
             flowPosition,
-            hitBendPointId: hitBendPoint?.id ?? null,
-            hitEndPointSide,
-            bendPointCount: bendPoints.length,
+            hitBendPointId: hitIsEndPoint ? null : (hitPoint?.id ?? null),
+            hitEndPointId: hitIsEndPoint ? hitPoint.id : null,
+            bendPointCount: middleBendPoints.length,
         };
     }
 
