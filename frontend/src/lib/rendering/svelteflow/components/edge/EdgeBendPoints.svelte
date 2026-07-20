@@ -20,8 +20,10 @@
     import { AutoPanController } from "$lib/rendering/svelteflow/interaction/autoPanController.svelte.js";
     import {
         createBendPoint,
-        insertBendPointAt,
         createEndPoint,
+        insertBendPointAt,
+        getSourceEndPoint,
+        getTargetEndPoint,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
 
@@ -36,12 +38,13 @@
         targetPoint,
         sourceBorderPoint,
         targetBorderPoint,
+        allPoints = [],
         bendPoints = [],
-        endPoints = {},
+        sourceEndPoint = null,
+        targetEndPoint = null,
         sourceNodeId,
         targetNodeId,
         onPointsChange,
-        onEndPointsChange,
     } = $props();
 
     const { screenToFlowPosition, getInternalNode, getViewport, setViewport } =
@@ -62,22 +65,15 @@
 
     let inactiveEndPoints = $derived(
         [
-            endPoints.source ? null : { side: "source", ...sourceBorderPoint },
-            endPoints.target ? null : { side: "target", ...targetBorderPoint },
+            sourceEndPoint ? null : { side: "source", ...sourceBorderPoint },
+            targetEndPoint ? null : { side: "target", ...targetBorderPoint },
         ].filter(Boolean),
     );
 
-    function beginBendDrag(pointId, event) {
+    function beginPointDrag(pointId, event) {
         if (event.button === 2) return;
         event.stopPropagation();
-        drag = { kind: "bend", id: pointId };
-        addDragListeners();
-    }
-
-    function beginEndDrag(side, event) {
-        if (event.button === 2) return;
-        event.stopPropagation();
-        drag = { kind: "end", side, id: endPoints[side]?.id ?? null };
+        drag = { id: pointId };
         addDragListeners();
     }
 
@@ -89,13 +85,13 @@
             y: event.clientY,
         });
         const newBendPoint = createBendPoint(flowPosition.x, flowPosition.y);
-        const newBendPoints = insertBendPointAt(
-            bendPoints,
+        const newPoints = insertBendPointAt(
+            allPoints,
             insertionIndex,
             newBendPoint,
         );
-        onPointsChange(newBendPoints);
-        drag = { kind: "bend", id: newBendPoint.id };
+        onPointsChange(newPoints);
+        drag = { id: newBendPoint.id };
         addDragListeners();
     }
 
@@ -108,8 +104,12 @@
         });
         const projected = projectOntoSide(side, flowPosition);
         const newEndPoint = createEndPoint(projected.x, projected.y);
-        onEndPointsChange({ ...endPoints, [side]: newEndPoint });
-        drag = { kind: "end", side, id: newEndPoint.id };
+        const newPoints =
+            side === "source"
+                ? [newEndPoint, ...allPoints]
+                : [...allPoints, newEndPoint];
+        onPointsChange(newPoints);
+        drag = { id: newEndPoint.id };
         addDragListeners();
     }
 
@@ -140,26 +140,24 @@
             y: event.clientY,
         });
 
-        if (drag.kind === "end") {
-            const projected = projectOntoSide(drag.side, flowPosition);
-            onEndPointsChange({
-                ...endPoints,
-                [drag.side]: {
-                    ...endPoints[drag.side],
-                    id: drag.id,
-                    x: projected.x,
-                    y: projected.y,
-                },
-            });
-            return;
+        const draggedSource = getSourceEndPoint(allPoints);
+        const draggedTarget = getTargetEndPoint(allPoints);
+        const isSourceEnd = draggedSource?.id === drag.id;
+        const isTargetEnd = draggedTarget?.id === drag.id;
+
+        let position = flowPosition;
+        if (isSourceEnd) {
+            position = projectOntoSide("source", flowPosition);
+        } else if (isTargetEnd) {
+            position = projectOntoSide("target", flowPosition);
         }
 
-        const newBendPoints = bendPoints.map(bendPoint =>
-            bendPoint.id === drag.id
-                ? { ...bendPoint, x: flowPosition.x, y: flowPosition.y }
-                : bendPoint,
+        const newPoints = allPoints.map(point =>
+            point.id === drag.id
+                ? { ...point, x: position.x, y: position.y }
+                : point,
         );
-        onPointsChange(newBendPoints);
+        onPointsChange(newPoints);
     }
 
     function projectOntoSide(side, flowPosition) {
@@ -214,37 +212,37 @@
             cy={bendPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => beginBendDrag(bendPoint.id, e)}
+            onpointerdown={e => beginPointDrag(bendPoint.id, e)}
         />
     {/each}
 
-    {#if endPoints.source}
+    {#if sourceEndPoint}
         <circle
             class="bend-point-handle nodrag nopan cursor-grab fill-green stroke-white stroke-[1.5]"
             role="button"
             aria-label="Move source end point"
             tabindex="-1"
             data-edge-id={edgeId}
-            cx={endPoints.source.x}
-            cy={endPoints.source.y}
+            cx={sourceEndPoint.x}
+            cy={sourceEndPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => beginEndDrag("source", e)}
+            onpointerdown={e => beginPointDrag(sourceEndPoint.id, e)}
         />
     {/if}
 
-    {#if endPoints.target}
+    {#if targetEndPoint}
         <circle
             class="bend-point-handle nodrag nopan cursor-grab fill-green stroke-white stroke-[1.5]"
             role="button"
             aria-label="Move target end point"
             tabindex="-1"
             data-edge-id={edgeId}
-            cx={endPoints.target.x}
-            cy={endPoints.target.y}
+            cx={targetEndPoint.x}
+            cy={targetEndPoint.y}
             r={EDGE_INTERACTION_CONFIG.activePointRadiusPx}
             style="pointer-events: all;"
-            onpointerdown={e => beginEndDrag("target", e)}
+            onpointerdown={e => beginPointDrag(targetEndPoint.id, e)}
         />
     {/if}
 </g>
