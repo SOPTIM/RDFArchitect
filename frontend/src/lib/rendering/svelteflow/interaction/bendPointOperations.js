@@ -118,3 +118,20 @@ export function findBendPointAtPosition(points, position, hitRadius) {
     }
     return null;
 }
+
+/**
+ * Maps raw layout routing points (each tagged with a role "source", "bend" or
+ * "target") to the edge's ordered point objects. Source and target points become
+ * sided end points, interior points become regular bend points.
+ */
+export function toEdgePoints(routingPoints) {
+    return routingPoints.map(routingPoint => {
+        if (routingPoint.role === "source") {
+            return createEndPoint(routingPoint.x, routingPoint.y, "source");
+        }
+        if (routingPoint.role === "target") {
+            return createEndPoint(routingPoint.x, routingPoint.y, "target");
+        }
+        return createBendPoint(routingPoint.x, routingPoint.y);
+    });
+}
