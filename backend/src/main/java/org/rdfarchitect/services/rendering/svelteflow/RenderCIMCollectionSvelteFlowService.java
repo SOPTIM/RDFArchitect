@@ -283,12 +283,14 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
         var superClassUUID =
                 renderContext.uriToUUIDMap.get(cimClass.getSuperClass().getUri().toString());
 
+        var edgeDataDTO = EdgeDataDTO.builder().bendPoints(assembleBendPointsDTOList()).build();
+
         return EdgeDTO.builder()
                 .id(UUID.randomUUID().toString())
                 .type(INHERITANCE_EDGE_TYPE)
                 .source(classUUID)
                 .target(superClassUUID)
-                .data(null)
+                .data(edgeDataDTO)
                 .build();
     }
 

@@ -16,37 +16,18 @@
   -->
 
 <script>
-    import { BaseEdge, getStraightPath, useInternalNode } from "@xyflow/svelte";
+    import { BaseEdge } from "@xyflow/svelte";
 
-    import { getEdgeParams } from "./edgeUtils.ts";
+    import PolylineEdge from "./PolylineEdge.svelte";
 
-    let { id, source, target, data } = $props();
+    let { id, source, target, data, selected } = $props();
 
     const style = "stroke-width: 2px; stroke: var(--color-inheritance-edge);";
-
     const markerEnd = "url(#inheritance)";
-    let sourceNode = useInternalNode(source);
-    let targetNode = useInternalNode(target);
-    let edgeTargetOffset = $derived(data?.offsetEdge ? 100 : 0);
-
-    let edgeParams = $derived.by(() => {
-        if (sourceNode.current && targetNode.current) {
-            return getEdgeParams(
-                sourceNode.current,
-                targetNode.current,
-                edgeTargetOffset,
-            );
-        }
-    });
-
-    let path = $derived(
-        getStraightPath({
-            sourceX: edgeParams.sx,
-            sourceY: edgeParams.sy,
-            targetX: edgeParams.tx,
-            targetY: edgeParams.ty,
-        })[0],
-    );
 </script>
 
-<BaseEdge {id} {path} {markerEnd} {style} />
+<PolylineEdge {id} {source} {target} {data} {selected}>
+    {#snippet children(path)}
+        <BaseEdge {id} {path} {markerEnd} {style} />
+    {/snippet}
+</PolylineEdge>
