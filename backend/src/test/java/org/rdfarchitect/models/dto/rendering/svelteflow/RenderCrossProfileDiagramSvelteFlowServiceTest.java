@@ -223,6 +223,129 @@ class RenderCrossProfileDiagramSvelteFlowServiceTest {
     }
 
     @Test
+    void renderCrossProfileDiagramUML_superClassInDiagram_addsInheritedPropertiesToNode() {
+        var inheritedAttribute =
+                AttributeDTO.builder()
+                        .label("inheritedAttr")
+                        .dataType(new DataTypeDTO("string", "xsd"))
+                        .multiplicity("M:1..1")
+                        .build();
+
+        var superClass =
+                classBuilder("SuperClass")
+                        .attributes(List.of(graphSourced(inheritedAttribute)))
+                        .build();
+        var subClass =
+                classBuilder("SubClass")
+                        .superClasses(
+                                List.of(graphSourced(new SuperClassDTO("prefix", "SuperClass"))))
+                        .build();
+
+        when(fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(any(), any()))
+                .thenReturn(null);
+
+        var result =
+                (SvelteFlowDTO)
+                        service.renderCrossProfileDiagramUML(
+                                diagramOf(subClass, superClass), DATASET_NAME);
+
+        var subNode =
+                result.getNodes().stream()
+                        .filter(n -> n.getId().equals(subClass.getUuid()))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(subNode.getData().getSuperClasses()).hasSize(1);
+        var renderedSuper = subNode.getData().getSuperClasses().getFirst();
+        assertThat(renderedSuper.getUuid()).isEqualTo(superClass.getUuid());
+        assertThat(renderedSuper.getLabel()).isEqualTo("SuperClass");
+        assertThat(renderedSuper.getAttributes()).hasSize(1);
+        var inherited = renderedSuper.getAttributes().getFirst();
+        assertThat(inherited.getLabel()).isEqualTo("inheritedAttr");
+        assertThat(inherited.getType()).isEqualTo("string");
+        assertThat(inherited.getColor()).isEqualTo(GRAPH_COLOR);
+    }
+
+    @Test
+    void renderCrossProfileDiagramUML_transitiveSuperClasses_areCollectedInOrder() {
+        var grandParent = classBuilder("GrandParent").build();
+        var parent =
+                classBuilder("Parent")
+                        .superClasses(
+                                List.of(graphSourced(new SuperClassDTO("prefix", "GrandParent"))))
+                        .build();
+        var child =
+                classBuilder("Child")
+                        .superClasses(List.of(graphSourced(new SuperClassDTO("prefix", "Parent"))))
+                        .build();
+
+        when(fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(any(), any()))
+                .thenReturn(null);
+
+        var result =
+                (SvelteFlowDTO)
+                        service.renderCrossProfileDiagramUML(
+                                diagramOf(child, parent, grandParent), DATASET_NAME);
+
+        var childNode =
+                result.getNodes().stream()
+                        .filter(n -> n.getId().equals(child.getUuid()))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(childNode.getData().getSuperClasses())
+                .extracting("label")
+                .containsExactly("Parent", "GrandParent");
+    }
+
+    @Test
+    void renderCrossProfileDiagramUML_superClassNotInDiagram_stillRendersLabelWithoutMembers() {
+        var subClass =
+                classBuilder("SubClass")
+                        .superClasses(
+                                List.of(graphSourced(new SuperClassDTO("prefix", "ExternalBase"))))
+                        .build();
+
+        when(fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(any(), any()))
+                .thenReturn(null);
+
+        var result =
+                (SvelteFlowDTO)
+                        service.renderCrossProfileDiagramUML(diagramOf(subClass), DATASET_NAME);
+
+        var superClasses = result.getNodes().getFirst().getData().getSuperClasses();
+        assertThat(superClasses).hasSize(1);
+        assertThat(superClasses.getFirst().getLabel()).isEqualTo("ExternalBase");
+        assertThat(superClasses.getFirst().getUuid()).isNull();
+        assertThat(superClasses.getFirst().getAttributes()).isEmpty();
+    }
+
+    @Test
+    void renderCrossProfileDiagramUML_cyclicInheritance_terminatesWithoutDuplicates() {
+        var classA =
+                classBuilder("CycleA")
+                        .superClasses(List.of(graphSourced(new SuperClassDTO("prefix", "CycleB"))))
+                        .build();
+        var classB =
+                classBuilder("CycleB")
+                        .superClasses(List.of(graphSourced(new SuperClassDTO("prefix", "CycleA"))))
+                        .build();
+
+        when(fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(any(), any()))
+                .thenReturn(null);
+
+        var result =
+                (SvelteFlowDTO)
+                        service.renderCrossProfileDiagramUML(
+                                diagramOf(classA, classB), DATASET_NAME);
+
+        var nodeA =
+                result.getNodes().stream()
+                        .filter(n -> n.getId().equals(classA.getUuid()))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(nodeA.getData().getSuperClasses()).extracting("label").containsExactly("CycleB");
+    }
+
+    @Test
     void renderCrossProfileDiagramUML_association_createsAssociationEdgeWithCleanedMultiplicity() {
         var sourceClass = classBuilder("Source");
         var targetClass = classBuilder("Target").build();

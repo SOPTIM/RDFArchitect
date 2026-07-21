@@ -66,26 +66,63 @@
     const enumEntries = $derived(data.enumEntries);
     const inheritedGroups = $derived([...(data.superClasses ?? [])].reverse());
 
+    const crossProfileSections = $derived(
+        isCrossProfileDiagram ? buildCrossProfileSections() : [],
+    );
+
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
 
-    function groupByGraphURI(properties) {
-        const groups = [];
-        for (const attr of properties) {
-            const uri = attr.graphUri ?? "";
-            if (
-                groups.length === 0 ||
-                groups[groups.length - 1].graphUri !== uri
-            ) {
-                groups.push({
-                    graphUri: uri,
-                    graphName: getGraphLabel(uri),
-                    props: [attr],
-                });
-            } else {
-                groups[groups.length - 1].props.push(attr);
-            }
-        }
-        return groups;
+    function graphUriOf(prop) {
+        return prop.graphUri ?? "";
+    }
+
+    function propsForGraph(props, graphUri) {
+        return (props ?? []).filter(prop => graphUriOf(prop) === graphUri);
+    }
+
+    function collectGraphUris() {
+        const inheritedProps = inheritedGroups.flatMap(superClass => [
+            ...(superClass.attributes ?? []),
+            ...(superClass.enumEntries ?? []),
+        ]);
+        const allProps = [
+            ...(attributes ?? []),
+            ...(enumEntries ?? []),
+            ...inheritedProps,
+        ];
+        return [...new Set(allProps.map(graphUriOf))].sort();
+    }
+
+    function superGroupsForGraph(graphUri) {
+        return inheritedGroups
+            .map(superClass => ({
+                label: superClass.label,
+                attributes: propsForGraph(superClass.attributes, graphUri),
+                enumEntries: propsForGraph(superClass.enumEntries, graphUri),
+            }))
+            .filter(
+                group =>
+                    group.attributes.length > 0 || group.enumEntries.length > 0,
+            );
+    }
+
+    function buildCrossProfileSections() {
+        const showInherited = userSettings.get("showInheritedProperties", true);
+
+        return collectGraphUris()
+            .map(graphUri => ({
+                graphUri,
+                graphName: getGraphLabel(graphUri),
+                superGroups: superGroupsForGraph(graphUri),
+                ownAttributes: propsForGraph(attributes, graphUri),
+                ownEnumEntries: propsForGraph(enumEntries, graphUri),
+            }))
+            .filter(
+                section =>
+                    section.ownAttributes.length > 0 ||
+                    section.ownEnumEntries.length > 0 ||
+                    (showInherited && section.superGroups.length > 0),
+            );
     }
 
     function getGraphLabel(graphURI) {
@@ -140,59 +177,53 @@
     <div
         class="class-node-divider bg-class-node-lower-background p-2 text-center"
     >
-        {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
-            {#each inheritedGroups as superClass}
-                <div
-                    class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center py-0.5"
-                >
-                    <span class="w-3 border-t border-current rounded"></span>
-                    <span class="leading-none relative -top-px">
-                        {superClass.label}
-                    </span>
-                    <span class="w-3 border-t border-current rounded"></span>
+        {#if isCrossProfileDiagram}
+            {#each crossProfileSections as section (section.graphUri)}
+                <div class="text-default-text text-xs italic opacity-70">
+                    {section.graphName}
                 </div>
-                {#each superClass.attributes ?? [] as attr}
-                    <div class="text-default-text leading-6 opacity-70">
-                        {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
-                    </div>
-                {/each}
-                {#each superClass.enumEntries ?? [] as enumEntry}
-                    <div class="text-default-text leading-6 opacity-70">
-                        {enumEntry.label ?? enumEntry}
-                    </div>
-                {/each}
-                {#if (superClass.attributes?.length ?? 0) === 0 && (superClass.enumEntries?.length ?? 0) === 0}
-                    <div
-                        class="text-default-text leading-6 opacity-70 flex justify-center items-center"
-                    >
-                        <span
-                            class="w-3 border-t border-current rounded mt-1.5 mb-2"
-                        ></span>
-                    </div>
-                {/if}
-            {/each}
-        {/if}
-        {#if attributes && attributes.length > 0}
-            {#if isCrossProfileDiagram}
-                {#each groupByGraphURI(attributes) as group}
-                    <div class="text-default-text text-xs italic opacity-70">
-                        {group.graphName}
-                    </div>
-                    {#each group.props as attr}
+                {#if userSettings.get("showInheritedProperties", true)}
+                    {#each section.superGroups as superClass}
                         <div
-                            class="text-default-text leading-6"
-                            style={userSettings.get(
-                                "useColoredPropertiesInMergedView",
-                            ) && attr.color
-                                ? `color: ${attr.color};`
-                                : ""}
+                            class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center mt-1 py-0.5"
                         >
-                            {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                            <span
+                                class="w-3 border-t border-current rounded"
+                            ></span>
+                            <span class="leading-none relative -top-px">
+                                {superClass.label}
+                            </span>
+                            <span
+                                class="w-3 border-t border-current rounded"
+                            ></span>
                         </div>
+                        {#each superClass.attributes as attr}
+                            <div
+                                class="text-default-text leading-6 opacity-70"
+                                style={userSettings.get(
+                                    "useColoredPropertiesInMergedView",
+                                ) && attr.color
+                                    ? `color: ${attr.color};`
+                                    : ""}
+                            >
+                                {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                            </div>
+                        {/each}
+                        {#each superClass.enumEntries as enumEntry}
+                            <div
+                                class="text-default-text leading-6 opacity-70"
+                                style={userSettings.get(
+                                    "useColoredPropertiesInMergedView",
+                                ) && enumEntry.color
+                                    ? `color: ${enumEntry.color};`
+                                    : ""}
+                            >
+                                {enumEntry.label ?? enumEntry}
+                            </div>
+                        {/each}
                     {/each}
-                {/each}
-            {:else}
-                {#each attributes as attr}
+                {/if}
+                {#each section.ownAttributes as attr}
                     <div
                         class="text-default-text leading-6"
                         style={userSettings.get(
@@ -204,28 +235,7 @@
                         {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
                     </div>
                 {/each}
-            {/if}
-        {:else if enumEntries && enumEntries.length > 0}
-            {#if isCrossProfileDiagram}
-                {#each groupByGraphURI(enumEntries) as group}
-                    <div class="text-default-text text-xs italic opacity-70">
-                        {group.graphName}
-                    </div>
-                    {#each group.props as enumEntry}
-                        <div
-                            class="text-default-text leading-6"
-                            style={userSettings.get(
-                                "useColoredPropertiesInMergedView",
-                            ) && enumEntry.color
-                                ? `color: ${enumEntry.color};`
-                                : ""}
-                        >
-                            {enumEntry.label ?? enumEntry}
-                        </div>
-                    {/each}
-                {/each}
-            {:else}
-                {#each enumEntries as enumEntry}
+                {#each section.ownEnumEntries as enumEntry}
                     <div
                         class="text-default-text leading-6"
                         style={userSettings.get(
@@ -234,6 +244,56 @@
                             ? `color: ${enumEntry.color};`
                             : ""}
                     >
+                        {enumEntry.label ?? enumEntry}
+                    </div>
+                {/each}
+            {/each}
+        {:else}
+            {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
+                {#each inheritedGroups as superClass}
+                    <div
+                        class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center py-0.5"
+                    >
+                        <span
+                            class="w-3 border-t border-current rounded"
+                        ></span>
+                        <span class="leading-none relative -top-px">
+                            {superClass.label}
+                        </span>
+                        <span
+                            class="w-3 border-t border-current rounded"
+                        ></span>
+                    </div>
+                    {#each superClass.attributes ?? [] as attr}
+                        <div class="text-default-text leading-6 opacity-70">
+                            {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                        </div>
+                    {/each}
+                    {#each superClass.enumEntries ?? [] as enumEntry}
+                        <div class="text-default-text leading-6 opacity-70">
+                            {enumEntry.label ?? enumEntry}
+                        </div>
+                    {/each}
+                    {#if (superClass.attributes?.length ?? 0) === 0 && (superClass.enumEntries?.length ?? 0) === 0}
+                        <div
+                            class="text-default-text leading-6 opacity-70 flex justify-center items-center"
+                        >
+                            <span
+                                class="w-3 border-t border-current rounded mt-1.5 mb-2"
+                            ></span>
+                        </div>
+                    {/if}
+                {/each}
+            {/if}
+            {#if attributes && attributes.length > 0}
+                {#each attributes as attr}
+                    <div class="text-default-text leading-6">
+                        {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                    </div>
+                {/each}
+            {:else if enumEntries && enumEntries.length > 0}
+                {#each enumEntries as enumEntry}
+                    <div class="text-default-text leading-6">
                         {enumEntry.label ?? enumEntry}
                     </div>
                 {/each}
