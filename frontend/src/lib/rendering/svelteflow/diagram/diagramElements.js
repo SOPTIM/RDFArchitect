@@ -17,8 +17,6 @@
 
 export const EDGE_Z_INDEX = -1;
 
-const offsetEdgeIdCache = new WeakMap();
-
 export function hasDefaultNodeLayout(diagramNodes) {
     return (
         diagramNodes.length > 0 &&
@@ -28,52 +26,15 @@ export function hasDefaultNodeLayout(diagramNodes) {
     );
 }
 
-function offsetEdgeIds(edges) {
-    let ids = offsetEdgeIdCache.get(edges);
-    if (!ids) {
-        ids = new Set();
-        const associationPairs = new Set();
-        for (const edge of edges) {
-            if (edge.type === "association") {
-                associationPairs.add(`${edge.source}|${edge.target}`);
-                associationPairs.add(`${edge.target}|${edge.source}`);
-            }
-        }
-        for (const edge of edges) {
-            if (
-                edge.type === "inheritance" &&
-                associationPairs.has(`${edge.source}|${edge.target}`)
-            ) {
-                ids.add(edge.id);
-            }
-        }
-        offsetEdgeIdCache.set(edges, ids);
-    }
-    return ids;
-}
-
 export function decorateEdges(edges) {
-    const offsetIds = offsetEdgeIds(edges);
-    return edges.map(edge => decorateEdge(edge, offsetIds));
+    return edges.map(decorateEdge);
 }
 
-function decorateEdge(edge, offsetIds) {
-    const decorated = {
+function decorateEdge(edge) {
+    return {
         ...edge,
         zIndex: EDGE_Z_INDEX,
         data: normalizeEdgeData(edge.data),
-    };
-
-    if (!offsetIds.has(edge.id)) {
-        return decorated;
-    }
-
-    return {
-        ...decorated,
-        data: {
-            ...(decorated.data || {}),
-            offsetEdge: true,
-        },
     };
 }
 
