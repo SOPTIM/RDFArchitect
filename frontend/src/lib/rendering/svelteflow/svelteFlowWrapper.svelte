@@ -78,6 +78,7 @@
         getSourceEndPoint,
         getTargetEndPoint,
         getInnerBendPoints,
+        toEdgePoints,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import {
@@ -97,6 +98,7 @@
         propertySelection,
     } from "./interaction/propertyInteraction.svelte.js";
     import { getLayoutedNodes } from "./layout/elkLayout.js";
+    import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
         nodes: inputNodes,
@@ -824,8 +826,12 @@
         if (!isLoading) isLoading = true;
         layouted = true;
         try {
-            const layoutedNodes = await getLayoutedNodes(nodes, edges);
+            const { nodes: layoutedNodes, layoutedEdges } = await layoutDiagram(
+                nodes,
+                edges,
+            );
             nodes = [...layoutedNodes];
+            applyLayoutedEdges(layoutedEdges);
             updateNodePositions(nodes);
             resetLabelPositions();
             syncLabelNodes(nodes, edges);
@@ -842,6 +848,28 @@
         } finally {
             isLoading = false;
         }
+    }
+
+    // Applies ELK's computed routing to the association edges. Source/target
+    // points become sided end points, interior points become bend points.
+    // Inheritance edges are skipped until they move to the shared routing.
+    function applyLayoutedEdges(layoutedEdges) {
+        edges = edges.map(edge => {
+            if (edge.type !== "association") {
+                return edge;
+            }
+            const routingPoints = layoutedEdges.get(edge.id);
+            if (!routingPoints || routingPoints.length === 0) {
+                return edge;
+            }
+            return {
+                ...edge,
+                data: {
+                    ...edge.data,
+                    bendPoints: toEdgePoints(routingPoints),
+                },
+            };
+        });
     }
 
     export async function fitViewIncludingBendPoints({ duration = 400 } = {}) {
@@ -972,7 +1000,6 @@
                 clampDraggedLabels(e.nodes ?? []);
             }
         }}
-        onnodedrag={e => handleNodeDrag(e)}
         onnodedragstop={e => {
             const wasLabelDrag = labelDragActive;
             labelDragActive = false;
