@@ -509,10 +509,16 @@
         const targetNode = svelteFlow.getInternalNode(edge.target);
         if (!sourceNode || !targetNode) return null;
         const allPoints = edge.data?.bendPoints ?? [];
-        const params = getEdgeParams(sourceNode, targetNode, 0, innerBendPoints, {
-            source: getSourceEndPoint(allPoints),
-            target: getTargetEndPoint(allPoints),
-        });
+        const params = getEdgeParams(
+            sourceNode,
+            targetNode,
+            0,
+            innerBendPoints,
+            {
+                source: getSourceEndPoint(allPoints),
+                target: getTargetEndPoint(allPoints),
+            },
+        );
         return {
             source: { x: params.sx, y: params.sy },
             target: { x: params.tx, y: params.ty },
@@ -599,9 +605,6 @@
     // Inheritance edges are skipped until they move to the shared routing.
     function applyLayoutedEdges(layoutedEdges) {
         edges = edges.map(edge => {
-            if (edge.type !== "association") {
-                return edge;
-            }
             const routingPoints = layoutedEdges.get(edge.id);
             if (!routingPoints || routingPoints.length === 0) {
                 return edge;
