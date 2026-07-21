@@ -60,12 +60,13 @@
         getSourceEndPoint,
         getTargetEndPoint,
         getInnerBendPoints,
+        toEdgePoints,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
     import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
     import { PanController } from "./interaction/panController.svelte.js";
-    import { getLayoutedNodes } from "./layout/elkLayout.js";
+    import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
         nodes: inputNodes,
@@ -581,12 +582,38 @@
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
-        const layoutedNodes = await getLayoutedNodes(nodes, edges);
+        const { nodes: layoutedNodes, layoutedEdges } = await layoutDiagram(
+            nodes,
+            edges,
+        );
         nodes = [...layoutedNodes];
+        applyLayoutedEdges(layoutedEdges);
         updateNodePositions(nodes);
         await tick();
         await fitViewIncludingBendPoints();
         isLoading = false;
+    }
+
+    // Applies ELK's computed routing to the association edges. Source/target
+    // points become sided end points, interior points become bend points.
+    // Inheritance edges are skipped until they move to the shared routing.
+    function applyLayoutedEdges(layoutedEdges) {
+        edges = edges.map(edge => {
+            if (edge.type !== "association") {
+                return edge;
+            }
+            const routingPoints = layoutedEdges.get(edge.id);
+            if (!routingPoints || routingPoints.length === 0) {
+                return edge;
+            }
+            return {
+                ...edge,
+                data: {
+                    ...edge.data,
+                    bendPoints: toEdgePoints(routingPoints),
+                },
+            };
+        });
     }
 
     export async function fitViewIncludingBendPoints({ duration = 400 } = {}) {
