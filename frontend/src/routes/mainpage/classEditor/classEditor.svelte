@@ -27,7 +27,10 @@
         eventStack,
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
+    import {
+        mapClassDtoToReactiveClass,
+        mapInheritedAttributeGroupsToReactive,
+    } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
         editorState,
@@ -72,6 +75,8 @@
 
     let reactiveClass = $state();
 
+    let inheritedAttributes = $state([]);
+
     let loadingContext = $state(true);
 
     let loadingClass = $state(true);
@@ -79,6 +84,7 @@
     const propertyShaclRulesDialog = $state({
         showDialog: false,
         property: null,
+        classUuidOverride: null,
     });
 
     let showDiscardSaveConfirmDialog = $state(false);
@@ -224,6 +230,9 @@
             newReactiveClass,
             reactiveClass,
         );
+        inheritedAttributes = mapInheritedAttributeGroupsToReactive(
+            classDTO.inheritedAttributes,
+        );
         loadingClass = false;
 
         const targetUuids = [
@@ -247,8 +256,9 @@
         context.targetClassInfos = targetClassInfos.filter(Boolean);
     }
 
-    function openPropertySHACLRulesDialog(property) {
+    function openPropertySHACLRulesDialog(property, classUuidOverride = null) {
         propertyShaclRulesDialog.property = property;
+        propertyShaclRulesDialog.classUuidOverride = classUuidOverride;
         propertyShaclRulesDialog.showDialog = true;
     }
 
@@ -384,6 +394,7 @@
                                                 {:else}
                                                     <Attributes
                                                         attributes={reactiveClass.attributes}
+                                                        {inheritedAttributes}
                                                         {openPropertySHACLRulesDialog}
                                                     />
                                                     <Associations
@@ -410,6 +421,7 @@
             <ShaclPropertySpecificDialog
                 bind:showDialog={propertyShaclRulesDialog.showDialog}
                 property={propertyShaclRulesDialog.property}
+                classUuidOverride={propertyShaclRulesDialog.classUuidOverride}
             />
         {/if}
     </Splitpanes>

@@ -36,6 +36,7 @@
         showDialog = $bindable(),
         attribute = $bindable(),
         attributes,
+        targetClass = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -46,6 +47,10 @@
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        if (targetClass) {
+            isNewAttribute = false;
+            return;
+        }
         if (!attributes.contains(attribute)) {
             isNewAttribute = true;
             attribute = new ReactiveAttribute({
@@ -74,16 +79,22 @@
     }
 
     async function saveAttribute() {
+        const domainIri = targetClass
+            ? targetClass.prefix + targetClass.label
+            : classEditorContext.reactiveClass.namespace.backup +
+              classEditorContext.reactiveClass.label.backup;
+        const targetClassUuid = targetClass
+            ? targetClass.uuid
+            : classEditorContext.reactiveClass.uuid.value;
         const apiAttribute = mapReactiveAttributeToAttributeDto(
             attribute,
             classEditorContext.getDatatypeByUri,
-            classEditorContext.reactiveClass.namespace.backup +
-                classEditorContext.reactiveClass.label.backup,
+            domainIri,
         );
         const result = await saveApiAttributeToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
-            classEditorContext.reactiveClass.uuid.value,
+            targetClassUuid,
             apiAttribute,
             isNewAttribute,
         );

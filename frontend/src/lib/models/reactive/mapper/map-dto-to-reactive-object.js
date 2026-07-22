@@ -15,6 +15,7 @@
  *
  */
 
+import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
 import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
 
 /**
@@ -59,6 +60,18 @@ export function mapClassDtoToReactiveClass(classDto, context, getClassByUuid) {
         getClassByUuid,
         context,
     );
+}
+
+export function mapInheritedAttributeGroupsToReactive(groups = []) {
+    return groups.map(group => ({
+        sourceClassUuid: group.sourceClassUuid,
+        sourceClassPrefix: group.sourceClassPrefix,
+        sourceClassLabel: group.sourceClassLabel,
+        attributes: (group.attributes ?? []).map(
+            attr =>
+                new ReactiveAttribute(mapAttributeDtoToReactiveAttribute(attr)),
+        ),
+    }));
 }
 
 /**

@@ -15,27 +15,40 @@
   -
   -->
 <script>
-    import { faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { faCaretRight, faPlus } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onMount } from "svelte";
+    import { Fa } from "svelte-fa";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
 
     import Attribute from "./Attribute.svelte";
     import AttributeEditorDialog from "./AttributeEditorDialog.svelte";
 
-    const { attributes, openPropertySHACLRulesDialog } = $props();
+    const {
+        attributes,
+        inheritedAttributes = [],
+        openPropertySHACLRulesDialog,
+    } = $props();
 
     const classEditorContext = getContext("classEditor");
 
     const attributeEditorDialog = $state({
         showDialog: false,
         attribute: null,
+        targetClass: null,
     });
 
     let expandStereotypes = $state(true);
+    let expandInherited = $state(false);
+
     let readonly = $derived(classEditorContext.readonly);
+    let showInherited = $derived(
+        userSettings.get("showInheritedProperties", true) &&
+            inheritedAttributes.length > 0,
+    );
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -44,8 +57,9 @@
 
     onMount(() => (readonly = classEditorContext.readonly));
 
-    function openAttributeEditor(attribute) {
+    function openAttributeEditor(attribute, targetClass = null) {
         attributeEditorDialog.attribute = attribute;
+        attributeEditorDialog.targetClass = targetClass;
         attributeEditorDialog.showDialog = true;
     }
 </script>
@@ -84,6 +98,53 @@
             </tr>
         </thead>
         <tbody>
+            {#if showInherited}
+                <tr>
+                    <td colspan={readonly ? 4 : 5} class="pt-1 pb-0.5">
+                        <button
+                            type="button"
+                            class="text-blue flex w-fit cursor-pointer items-center gap-1.5 pl-1 text-sm"
+                            onclick={() => (expandInherited = !expandInherited)}
+                        >
+                            <Fa
+                                icon={faCaretRight}
+                                class={`w-2 transition-transform duration-200 ${
+                                    expandInherited ? "rotate-90" : "rotate-0"
+                                }`}
+                            />
+                            <span>Inherited attributes</span>
+                        </button>
+                    </td>
+                </tr>
+                {#if expandInherited}
+                    {#each inheritedAttributes as group}
+                        <tr>
+                            <td colspan={readonly ? 4 : 5} class="pt-1 pl-2">
+                                <span class="text-text-subtle text-xs italic">
+                                    from {group.sourceClassLabel}
+                                </span>
+                            </td>
+                        </tr>
+                        {#each group.attributes as attribute}
+                            <Attribute
+                                {attributes}
+                                {attribute}
+                                {openAttributeEditor}
+                                {openPropertySHACLRulesDialog}
+                                inherited={true}
+                                targetClass={{
+                                    uuid: group.sourceClassUuid,
+                                    prefix: group.sourceClassPrefix,
+                                    label: group.sourceClassLabel,
+                                }}
+                            />
+                        {/each}
+                    {/each}
+                {/if}
+                <tr>
+                    <td colspan={readonly ? 4 : 5} class="pt-2"></td>
+                </tr>
+            {/if}
             {#each attributes.values as attribute}
                 <Attribute
                     {attributes}
@@ -98,5 +159,6 @@
 <AttributeEditorDialog
     bind:showDialog={attributeEditorDialog.showDialog}
     bind:attribute={attributeEditorDialog.attribute}
+    targetClass={attributeEditorDialog.targetClass}
     {attributes}
 />

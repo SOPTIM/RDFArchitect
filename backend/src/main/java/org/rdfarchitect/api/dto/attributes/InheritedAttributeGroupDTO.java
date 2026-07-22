@@ -15,19 +15,12 @@
  *
  */
 
-package org.rdfarchitect.api.dto;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
+package org.rdfarchitect.api.dto.attributes;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import org.rdfarchitect.api.dto.association.AssociationPairDTO;
-import org.rdfarchitect.api.dto.attributes.AttributeDTO;
-import org.rdfarchitect.api.dto.attributes.InheritedAttributeGroupDTO;
-import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,29 +30,13 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ClassUMLAdaptedDTO {
+public class InheritedAttributeGroupDTO {
 
-    private UUID uuid;
+    private UUID sourceClassUuid;
 
-    private String prefix;
+    private String sourceClassPrefix;
 
-    private String label;
-
-    private SuperClassDTO superClass;
-
-    private String comment;
-
-    private List<String> stereotypes;
+    private String sourceClassLabel;
 
     @Builder.Default private List<AttributeDTO> attributes = new ArrayList<>();
-
-    @Builder.Default
-    private List<InheritedAttributeGroupDTO> inheritedAttributes = new ArrayList<>();
-
-    @Builder.Default private List<EnumEntryDTO> enumEntries = new ArrayList<>();
-
-    @Builder.Default private List<AssociationPairDTO> associationPairs = new ArrayList<>();
-
-    @JsonProperty("package")
-    private BelongsToCategoryDTO belongsToCategory;
 }
