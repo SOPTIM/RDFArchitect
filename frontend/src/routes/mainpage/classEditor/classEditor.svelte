@@ -29,8 +29,7 @@
     } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
         mapClassDtoToReactiveClass,
-        mapInheritedAssociationGroupsToReactive,
-        mapInheritedAttributeGroupsToReactive,
+        mapSuperClassesToInherited,
     } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
@@ -111,7 +110,12 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            let res = await bec.getClassInfo(datasetName, graphUri, classUuid);
+            let res = await bec.getClassInfo(
+                datasetName,
+                graphUri,
+                classUuid,
+                true,
+            );
             let resText = await res.text();
             if (!resText) {
                 return closeClassEditor({
@@ -233,13 +237,12 @@
             newReactiveClass,
             reactiveClass,
         );
-        inheritedAttributes = mapInheritedAttributeGroupsToReactive(
-            classDTO.inheritedAttributes,
-        );
-        inheritedAssociations = mapInheritedAssociationGroupsToReactive(
-            classDTO.inheritedAssociations,
+        const inherited = mapSuperClassesToInherited(
+            classDTO.superClasses,
             context.classes,
         );
+        inheritedAttributes = inherited.attributeGroups;
+        inheritedAssociations = inherited.associationGroups;
         loadingClass = false;
 
         const targetUuids = [

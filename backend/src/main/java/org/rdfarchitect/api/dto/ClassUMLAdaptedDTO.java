@@ -25,9 +25,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
-import org.rdfarchitect.api.dto.association.InheritedAssociationGroupDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
-import org.rdfarchitect.api.dto.attributes.InheritedAttributeGroupDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 
 import java.util.ArrayList;
@@ -54,15 +52,11 @@ public class ClassUMLAdaptedDTO {
 
     @Builder.Default private List<AttributeDTO> attributes = new ArrayList<>();
 
-    @Builder.Default
-    private List<InheritedAttributeGroupDTO> inheritedAttributes = new ArrayList<>();
-
     @Builder.Default private List<EnumEntryDTO> enumEntries = new ArrayList<>();
 
     @Builder.Default private List<AssociationPairDTO> associationPairs = new ArrayList<>();
 
-    @Builder.Default
-    private List<InheritedAssociationGroupDTO> inheritedAssociations = new ArrayList<>();
+    @Builder.Default private List<ClassUMLAdaptedDTO> superClasses = new ArrayList<>();
 
     @JsonProperty("package")
     private BelongsToCategoryDTO belongsToCategory;

@@ -47,11 +47,11 @@ public class QueryClassService
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
     private final ClassMapper mapper;
-    private final InheritedPropertiesResolver inheritedPropertiesResolver;
+    private final SuperClassResolver superClassResolver;
 
     @Override
     public ClassUMLAdaptedDTO getClassInformation(
-            GraphIdentifier graphIdentifier, String classUUID) {
+            GraphIdentifier graphIdentifier, String classUUID, boolean includeSuperClasses) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var graph = ctx.getRdfGraph();
             var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
@@ -62,11 +62,11 @@ public class QueryClassService
                 return null;
             }
             var classDTO = umlAdaptedClassMapper.toDTO(cimClass);
-            var inherited =
-                    inheritedPropertiesResolver.resolveInheritedProperties(
-                            graph, graphIdentifier.graphUri(), prefixMapping, classUUID);
-            classDTO.setInheritedAttributes(inherited.attributes());
-            classDTO.setInheritedAssociations(inherited.associations());
+            if (includeSuperClasses) {
+                classDTO.setSuperClasses(
+                        superClassResolver.resolveSuperClasses(
+                                graph, graphIdentifier.graphUri(), prefixMapping, classUUID));
+            }
             return classDTO;
         }
     }

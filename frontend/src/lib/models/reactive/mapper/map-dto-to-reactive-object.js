@@ -63,36 +63,54 @@ export function mapClassDtoToReactiveClass(classDto, context, getClassByUuid) {
     );
 }
 
-export function mapInheritedAttributeGroupsToReactive(groups = []) {
-    return groups.map(group => ({
-        sourceClassUuid: group.sourceClassUuid,
-        sourceClassPrefix: group.sourceClassPrefix,
-        sourceClassLabel: group.sourceClassLabel,
-        attributes: (group.attributes ?? []).map(
-            attr =>
-                new ReactiveAttribute(mapAttributeDtoToReactiveAttribute(attr)),
-        ),
-    }));
-}
+export function mapSuperClassesToInherited(superClasses = [], classes = []) {
+    const flat = [];
+    const visited = new Set();
+    const queue = [...(superClasses ?? [])];
+    while (queue.length > 0) {
+        const node = queue.shift();
+        if (!node || visited.has(node.uuid)) {
+            continue;
+        }
+        visited.add(node.uuid);
+        flat.push(node);
+        queue.push(...(node.superClasses ?? []));
+    }
 
-export function mapInheritedAssociationGroupsToReactive(
-    groups = [],
-    classes = [],
-) {
-    return groups.map(group => ({
-        sourceClassUuid: group.sourceClassUuid,
-        sourceClassPrefix: group.sourceClassPrefix,
-        sourceClassLabel: group.sourceClassLabel,
-        associations: (group.associations ?? []).map(
-            association =>
-                new ReactiveAssociation(
-                    mapAssociationDtoToReactiveAssociation(
-                        association,
-                        classes,
+    const toGroup = node => ({
+        sourceClassUuid: node.uuid,
+        sourceClassPrefix: node.prefix,
+        sourceClassLabel: node.label,
+    });
+
+    const attributeGroups = flat
+        .filter(node => (node.attributes ?? []).length > 0)
+        .map(node => ({
+            ...toGroup(node),
+            attributes: node.attributes.map(
+                attr =>
+                    new ReactiveAttribute(
+                        mapAttributeDtoToReactiveAttribute(attr),
                     ),
-                ),
-        ),
-    }));
+            ),
+        }));
+
+    const associationGroups = flat
+        .filter(node => (node.associationPairs ?? []).length > 0)
+        .map(node => ({
+            ...toGroup(node),
+            associations: node.associationPairs.map(
+                association =>
+                    new ReactiveAssociation(
+                        mapAssociationDtoToReactiveAssociation(
+                            association,
+                            classes,
+                        ),
+                    ),
+            ),
+        }));
+
+    return { attributeGroups, associationGroups };
 }
 
 /**
