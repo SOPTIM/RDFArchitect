@@ -15,12 +15,16 @@
  *
  */
 
-package org.rdfarchitect.services.schemamigration.scriptgeneration;
+package org.rdfarchitect.services.schemamigration.artifacts;
 
-import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+/** Interface for generating the migration actions when migrating between two schemas. */
+public interface GenerateMigrationScriptUseCase {
 
-import java.util.List;
-
-public interface MigrationScriptBuilder {
-    String generateMigrationScript(List<SemanticClassChange> changes);
+    /**
+     * Takes a List of MigrationActions and generates a SPARQL script that can be executed on
+     * instance data to migrate it to the new schema
+     *
+     * @return A file containing the migration script
+     */
+    String generateMigrationScript();
 }

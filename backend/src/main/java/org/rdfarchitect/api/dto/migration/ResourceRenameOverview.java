@@ -17,7 +17,6 @@
 
 package org.rdfarchitect.api.dto.migration;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import org.rdfarchitect.models.changes.RenameCandidate;
@@ -29,12 +28,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Data
-@AllArgsConstructor
 public class ResourceRenameOverview<T extends SemanticResourceChange> {
 
     private List<T> added;
-
-    private List<T> modified;
 
     private List<RenameCandidate<T>> deletedAndRenamed;
 
@@ -45,13 +41,6 @@ public class ResourceRenameOverview<T extends SemanticResourceChange> {
                                 change ->
                                         change.getSemanticResourceChangeType()
                                                 == SemanticResourceChangeType.ADD)
-                        .toList();
-        this.modified =
-                changes.stream()
-                        .filter(
-                                change ->
-                                        change.getSemanticResourceChangeType()
-                                                == SemanticResourceChangeType.CHANGE)
                         .toList();
         var deleted =
                 changes.stream()

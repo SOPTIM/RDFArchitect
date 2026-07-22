@@ -89,12 +89,17 @@ public class MigrationContextRESTController {
                             description =
                                     "URI of graph B. Required together with dataset_b when not uploading graph B as a file.")
                     @RequestParam(required = false)
-                    String graphB) {
+                    String graphB,
+            @Parameter(
+                            description =
+                                    "Whether to ignore prefixes in the comparison and rename detection. Defaults to false.")
+                    @RequestParam(required = false, defaultValue = "false")
+                    boolean ignorePrefixes) {
         logger.info("Received POST request: \"/api/migrations/context\" from \"{}\".", originURL);
 
         // file to file
         if (fileA != null && fileB != null) {
-            setMigrationContextUseCase.setMigrationContext(fileA, fileB);
+            setMigrationContextUseCase.setMigrationContext(fileA, fileB, ignorePrefixes);
         }
         // stored to stored
         else if (datasetA != null && datasetB != null && graphA != null && graphB != null) {
@@ -102,19 +107,20 @@ public class MigrationContextRESTController {
             var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(
                     new GraphIdentifier(datasetA, extendedGraphURIA),
-                    new GraphIdentifier(datasetB, extendedGraphURIB));
+                    new GraphIdentifier(datasetB, extendedGraphURIB),
+                    ignorePrefixes);
         }
         // file to stored
         else if (fileA != null && datasetB != null && graphB != null) {
             var extendedGraphURIB = expandURIUseCase.expandUri(datasetB, graphB);
             setMigrationContextUseCase.setMigrationContext(
-                    fileA, new GraphIdentifier(datasetB, extendedGraphURIB));
+                    fileA, new GraphIdentifier(datasetB, extendedGraphURIB), ignorePrefixes);
         }
         // stored to file
         else if (datasetA != null && graphA != null && fileA != null) {
             var extendedGraphURIA = expandURIUseCase.expandUri(datasetA, graphA);
             setMigrationContextUseCase.setMigrationContext(
-                    new GraphIdentifier(datasetA, extendedGraphURIA), fileA);
+                    new GraphIdentifier(datasetA, extendedGraphURIA), fileA, ignorePrefixes);
         } else {
             logger.warn(
                     "Invalid request to POST \"/api/migrations/context\" from \"{}\". Missing required parameters.",

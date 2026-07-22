@@ -26,7 +26,8 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
 import org.rdfarchitect.context.MigrationSessionStore;
-import org.rdfarchitect.services.schemamigration.scriptgeneration.GenerateMigrationScriptUseCase;
+import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationReportUseCase;
+import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScriptUseCase;
 import org.rdfarchitect.services.shacl.SHACLExportUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +36,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.ByteArrayOutputStream;
@@ -46,14 +48,15 @@ import java.util.zip.ZipOutputStream;
 
 @RestController
 @RequiredArgsConstructor
-public class MigrationScriptRESTController {
+public class MigrationArtifactsRESTController {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(MigrationScriptRESTController.class);
+            LoggerFactory.getLogger(MigrationArtifactsRESTController.class);
 
     private final GenerateMigrationScriptUseCase generateMigrationScriptUseCase;
     private final SHACLExportUseCase shaclExportUseCase;
     private final MigrationSessionStore migrationSessionStore;
+    private final GenerateMigrationReportUseCase generateMigrationReportUseCase;
 
     @Operation(
             summary = "generate migration script",
@@ -101,5 +104,56 @@ public class MigrationScriptRESTController {
                 originURL);
 
         return response;
+    }
+
+    @Operation(
+            summary = "generate migration script",
+            description =
+                    "Generates a migration script based on the previously computed migration actions and the shacl shapes of the new schema.",
+            tags = {"migration"},
+            responses = {
+                @ApiResponse(
+                        responseCode = "200",
+                        content = @Content(mediaType = "application/zip"))
+            })
+    @GetMapping("/api/migrations/report")
+    public ResponseEntity<byte[]> generateMigrationReport(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
+                    String originURL,
+            @Parameter(
+                            description =
+                                    "Type of the migration report to generate. Can be either SUMMARY or DETAILED.")
+                    @RequestParam(value = "reportType", defaultValue = "SUMMARY")
+                    MigrationReportType reportType) {
+        logger.info("Received GET request: \"/api/migrations/report\" from \"{}\".", originURL);
+
+        var report =
+                switch (reportType) {
+                    case SUMMARY -> generateMigrationReportUseCase.generateSummaryMigrationReport();
+                    case DETAILED ->
+                            generateMigrationReportUseCase.generateDetailedMigrationReport();
+                };
+
+        var body = report.getBytes(StandardCharsets.UTF_8);
+        var headers = new HttpHeaders();
+        headers.setAccessControlExposeHeaders(List.of("Content-disposition"));
+        var response =
+                ResponseEntity.ok()
+                        .headers(headers)
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "migration_report.md")
+                        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                        .body(body);
+
+        logger.info(
+                "Sending response to GET request: \"/api/migrations/report\" from \"{}\".",
+                originURL);
+
+        return response;
+    }
+
+    public enum MigrationReportType {
+        SUMMARY,
+        DETAILED
     }
 }

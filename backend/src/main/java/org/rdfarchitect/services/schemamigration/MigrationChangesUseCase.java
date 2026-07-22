@@ -15,27 +15,24 @@
  *
  */
 
-package org.rdfarchitect.models.changes.semanticchanges;
+package org.rdfarchitect.services.schemamigration;
 
-/** Enum representing the types of changes that can occur to CIM Resources. */
-public enum SemanticFieldChangeType {
-    LABEL_CHANGE,
-    COMMENT_CHANGE,
-    SUPERCLASS_CHANGE,
-    SUPERCLASS_RENAME,
-    BELONGS_TO_CATEGORY_CHANGE,
-    DATATYPE_CHANGE,
-    DATATYPE_RENAME,
-    MADE_OPTIONAL,
-    MADE_REQUIRED,
-    MULTIPLICITY_CHANGE,
-    STEREOTYPE_ADDED,
-    STEREOTYPE_REMOVED,
-    MADE_ABSTRACT,
-    DOMAIN_CHANGE,
-    DOMAIN_RENAME,
-    TARGET_CHANGE,
-    ASSOCIATION_USED_CHANGE,
-    DEFAULT_VALUE_CHANGE,
-    FIXED_VALUE_CHANGE,
+import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
+
+import java.util.List;
+
+public interface MigrationChangesUseCase {
+    /**
+     * lists all final changes of the migration to be displayed for review
+     *
+     * @return list of changes
+     */
+    List<SemanticClassChange> getMigrationChanges();
+
+    /**
+     * updates list of final changes, including any potentially submitted comments
+     *
+     * @param changes the updated list of changes
+     */
+    void confirmMigrationChanges(List<SemanticClassChange> changes);
 }

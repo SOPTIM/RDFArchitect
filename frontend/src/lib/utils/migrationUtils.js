@@ -15,27 +15,13 @@
  *
  */
 
-package org.rdfarchitect.models.changes.semanticchanges;
+import { URI } from "$lib/models/dto/index.ts";
 
-/** Enum representing the types of changes that can occur to CIM Resources. */
-public enum SemanticFieldChangeType {
-    LABEL_CHANGE,
-    COMMENT_CHANGE,
-    SUPERCLASS_CHANGE,
-    SUPERCLASS_RENAME,
-    BELONGS_TO_CATEGORY_CHANGE,
-    DATATYPE_CHANGE,
-    DATATYPE_RENAME,
-    MADE_OPTIONAL,
-    MADE_REQUIRED,
-    MULTIPLICITY_CHANGE,
-    STEREOTYPE_ADDED,
-    STEREOTYPE_REMOVED,
-    MADE_ABSTRACT,
-    DOMAIN_CHANGE,
-    DOMAIN_RENAME,
-    TARGET_CHANGE,
-    ASSOCIATION_USED_CHANGE,
-    DEFAULT_VALUE_CHANGE,
-    FIXED_VALUE_CHANGE,
+export function isPrefixOnlyRename(oldIRI, newIRI) {
+    if (!newIRI || !oldIRI) {
+        return false;
+    }
+    const oldName = new URI(oldIRI).suffix;
+    const newName = new URI(newIRI).suffix;
+    return oldName === newName;
 }

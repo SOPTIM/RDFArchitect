@@ -29,6 +29,9 @@ import java.util.List;
 @Data
 public class SchemaMigrationContext {
 
+    // whether the comparison ignores prefixes in comparison and rename detection
+    private boolean ignorePrefixes;
+
     // original graph of the schema
     private Graph originalSchema;
 

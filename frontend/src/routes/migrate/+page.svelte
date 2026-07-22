@@ -32,6 +32,7 @@
     import ConfirmAssociationRenames from "./steps/propertyrenames/ConfirmAssociationRenames.svelte";
     import ConfirmAttributeRenames from "./steps/propertyrenames/ConfirmAttributeRenames.svelte";
     import ConfirmEnumEntryRenames from "./steps/propertyrenames/ConfirmEnumEntryRenames.svelte";
+    import ReviewChanges from "./steps/ReviewChanges.svelte";
     import SelectSchemas from "./steps/SelectSchemas.svelte";
     import ValidateSchemas from "./steps/ValidateSchemas.svelte";
 
@@ -72,7 +73,8 @@
                 },
             ],
         },
-        { title: "Step 6: Generate Script", component: Export },
+        { title: "Step 6: Review Changes", component: ReviewChanges },
+        { title: "Step 7: Generate Artifacts", component: Export },
     ];
 
     let disableNext = $state(false);
@@ -136,7 +138,7 @@
         <div class="flex justify-center space-x-4">
             {#each steps as step, i}
                 <span
-                    class={`px-2 text-sm ${i === currentStepIndex ? "border-b-2 font-bold text-blue-700" : "text-button-disabled-background"}`}
+                    class={`text-center px-2 text-sm ${i === currentStepIndex ? "border-b-2 font-bold text-blue-700" : "text-button-disabled-background"}`}
                 >
                     {step.title}
                 </span>

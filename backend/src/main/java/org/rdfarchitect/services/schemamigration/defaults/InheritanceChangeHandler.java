@@ -241,13 +241,11 @@ public class InheritanceChangeHandler {
                                 property, SemanticResourceChangeType.ADDED_FROM_INHERITANCE);
                 propertyChange.setLabel(new URI(property.getURI()).getSuffix());
                 if (CIMPropertyUtils.isAttribute(property)) {
-                    derivingClassChange
-                            .getAttributes()
-                            .add(new SemanticAttributeChange(propertyChange));
+                    var attributeChange = new SemanticAttributeChange(propertyChange);
+                    derivingClassChange.getAttributes().add(attributeChange);
                 } else if (CIMPropertyUtils.isAssociation(property)) {
-                    derivingClassChange
-                            .getAssociations()
-                            .add(new SemanticAssociationChange(propertyChange));
+                    var associationChange = new SemanticAssociationChange(propertyChange);
+                    derivingClassChange.getAssociations().add(associationChange);
                 }
             }
         }
