@@ -88,7 +88,7 @@ public class RenderCIMCollectionSvelteFlowService implements RenderCIMCollection
     }
 
     @Override
-    public RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId) {
+    public RenderingDataDTO renderDatasetDiagram(String datasetName, UUID diagramId) {
         var cimCollection = converter.convert(datasetName, diagramId);
         var renderingLayoutData =
                 fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(

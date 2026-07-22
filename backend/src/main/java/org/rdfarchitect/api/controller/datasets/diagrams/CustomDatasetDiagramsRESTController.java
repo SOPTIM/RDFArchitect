@@ -72,7 +72,7 @@ public class CustomDatasetDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        var result = renderer.renderGlobalUML(datasetName, UUID.fromString(diagramId));
+        var result = renderer.renderDatasetDiagram(datasetName, UUID.fromString(diagramId));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
