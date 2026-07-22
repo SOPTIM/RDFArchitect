@@ -23,6 +23,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.shared.PrefixMapping;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedMapper;
+import org.rdfarchitect.api.dto.association.InheritedAssociationGroupDTO;
 import org.rdfarchitect.api.dto.attributes.InheritedAttributeGroupDTO;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
@@ -39,19 +40,24 @@ import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
-public class InheritedAttributesResolver {
+public class InheritedPropertiesResolver {
 
-    private static final Logger logger = LoggerFactory.getLogger(InheritedAttributesResolver.class);
+    private static final Logger logger = LoggerFactory.getLogger(InheritedPropertiesResolver.class);
 
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
 
-    public List<InheritedAttributeGroupDTO> resolveInheritedAttributes(
+    public record InheritedProperties(
+            List<InheritedAttributeGroupDTO> attributes,
+            List<InheritedAssociationGroupDTO> associations) {}
+
+    public InheritedProperties resolveInheritedProperties(
             Graph graph, String graphUri, PrefixMapping prefixMapping, String rootClassUUID) {
         var rootUuid = UUID.fromString(rootClassUUID);
         var model = ModelFactory.createModelForGraph(graph);
         var rootClass = new CIMClass(graphUri, model, rootUuid);
 
-        var groups = new ArrayList<InheritedAttributeGroupDTO>();
+        var attributeGroups = new ArrayList<InheritedAttributeGroupDTO>();
+        var associationGroups = new ArrayList<InheritedAssociationGroupDTO>();
         var visited = new HashSet<UUID>();
         visited.add(rootUuid);
 
@@ -62,34 +68,44 @@ public class InheritedAttributesResolver {
             if (uuid == null || !visited.add(uuid)) {
                 continue;
             }
-
-            var group = buildGroup(graph, graphUri, prefixMapping, uuid);
-            if (group != null) {
-                groups.add(group);
-            }
+            addGroups(graph, graphUri, prefixMapping, uuid, attributeGroups, associationGroups);
             queue.addAll(safeSuperClasses(superClass));
         }
-        return groups;
+        return new InheritedProperties(attributeGroups, associationGroups);
     }
 
-    private InheritedAttributeGroupDTO buildGroup(
-            Graph graph, String graphUri, PrefixMapping prefixMapping, UUID superClassUuid) {
+    private void addGroups(
+            Graph graph,
+            String graphUri,
+            PrefixMapping prefixMapping,
+            UUID superClassUuid,
+            List<InheritedAttributeGroupDTO> attributeGroups,
+            List<InheritedAssociationGroupDTO> associationGroups) {
         var superClassCim =
                 CIMUMLObjectFactory.createCIMClassUMLAdapted(
                         graph, graphUri, prefixMapping, superClassUuid.toString());
         if (superClassCim == null) {
-            return null;
+            return;
         }
-        var superClassDto = umlAdaptedClassMapper.toDTO(superClassCim);
-        if (superClassDto.getAttributes() == null || superClassDto.getAttributes().isEmpty()) {
-            return null;
+        var dto = umlAdaptedClassMapper.toDTO(superClassCim);
+        if (dto.getAttributes() != null && !dto.getAttributes().isEmpty()) {
+            attributeGroups.add(
+                    InheritedAttributeGroupDTO.builder()
+                            .sourceClassUuid(superClassUuid)
+                            .sourceClassPrefix(dto.getPrefix())
+                            .sourceClassLabel(dto.getLabel())
+                            .attributes(dto.getAttributes())
+                            .build());
         }
-        return InheritedAttributeGroupDTO.builder()
-                .sourceClassUuid(superClassUuid)
-                .sourceClassPrefix(superClassDto.getPrefix())
-                .sourceClassLabel(superClassDto.getLabel())
-                .attributes(superClassDto.getAttributes())
-                .build();
+        if (dto.getAssociationPairs() != null && !dto.getAssociationPairs().isEmpty()) {
+            associationGroups.add(
+                    InheritedAssociationGroupDTO.builder()
+                            .sourceClassUuid(superClassUuid)
+                            .sourceClassPrefix(dto.getPrefix())
+                            .sourceClassLabel(dto.getLabel())
+                            .associations(dto.getAssociationPairs())
+                            .build());
+        }
     }
 
     private List<ICIMClass> safeSuperClasses(ICIMClass cimClass) {

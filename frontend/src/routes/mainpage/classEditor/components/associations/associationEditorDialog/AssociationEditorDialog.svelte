@@ -31,6 +31,7 @@
         showDialog = $bindable(),
         associations,
         association = $bindable(),
+        targetClass = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -75,6 +76,10 @@
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        if (targetClass) {
+            isNewAssociation = false;
+            return;
+        }
         if (!associations.contains(association)) {
             isNewAssociation = true;
             association = new ReactiveAssociation({
@@ -91,15 +96,25 @@
     }
 
     async function saveAssociation() {
+        const domainCls = targetClass
+            ? {
+                  label: targetClass.label,
+                  namespace: targetClass.prefix,
+                  uuid: targetClass.uuid,
+              }
+            : classEditorContext.reactiveClass;
+        const targetClassUuid = targetClass
+            ? targetClass.uuid
+            : classEditorContext.reactiveClass.uuid.value;
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
-            classEditorContext.reactiveClass,
+            domainCls,
             classEditorContext.getClassByUuid,
         );
         const result = await saveApiAssociationToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
-            classEditorContext.reactiveClass.uuid.value,
+            targetClassUuid,
             apiAssociation,
             isNewAssociation,
         );

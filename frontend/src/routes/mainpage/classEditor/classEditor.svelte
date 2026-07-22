@@ -29,6 +29,7 @@
     } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
         mapClassDtoToReactiveClass,
+        mapInheritedAssociationGroupsToReactive,
         mapInheritedAttributeGroupsToReactive,
     } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
@@ -76,6 +77,8 @@
     let reactiveClass = $state();
 
     let inheritedAttributes = $state([]);
+
+    let inheritedAssociations = $state([]);
 
     let loadingContext = $state(true);
 
@@ -232,6 +235,10 @@
         );
         inheritedAttributes = mapInheritedAttributeGroupsToReactive(
             classDTO.inheritedAttributes,
+        );
+        inheritedAssociations = mapInheritedAssociationGroupsToReactive(
+            classDTO.inheritedAssociations,
+            context.classes,
         );
         loadingClass = false;
 
@@ -399,6 +406,7 @@
                                                     />
                                                     <Associations
                                                         associations={reactiveClass.associations}
+                                                        {inheritedAssociations}
                                                         {openPropertySHACLRulesDialog}
                                                     />
                                                 {/if}

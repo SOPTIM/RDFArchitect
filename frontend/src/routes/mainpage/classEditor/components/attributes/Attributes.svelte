@@ -100,7 +100,7 @@
         <tbody>
             {#if showInherited}
                 <tr>
-                    <td colspan={readonly ? 4 : 5} class="pt-1 pb-0.5">
+                    <td colspan={readonly ? 4 : 5} class="pt-0.5">
                         <button
                             type="button"
                             class="text-blue flex w-fit cursor-pointer items-center gap-1.5 pl-1 text-sm"
@@ -119,7 +119,7 @@
                 {#if expandInherited}
                     {#each inheritedAttributes as group}
                         <tr>
-                            <td colspan={readonly ? 4 : 5} class="pt-1 pl-2">
+                            <td colspan={readonly ? 4 : 5} class="pt-0.5 pl-2">
                                 <span class="text-text-subtle text-xs italic">
                                     from {group.sourceClassLabel}
                                 </span>
@@ -142,7 +142,7 @@
                     {/each}
                 {/if}
                 <tr>
-                    <td colspan={readonly ? 4 : 5} class="pt-2"></td>
+                    <td colspan={readonly ? 4 : 5} class="pt-1"></td>
                 </tr>
             {/if}
             {#each attributes.values as attribute}

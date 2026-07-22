@@ -47,7 +47,7 @@ public class QueryClassService
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
     private final ClassMapper mapper;
-    private final InheritedAttributesResolver inheritedAttributesResolver;
+    private final InheritedPropertiesResolver inheritedPropertiesResolver;
 
     @Override
     public ClassUMLAdaptedDTO getClassInformation(
@@ -62,9 +62,11 @@ public class QueryClassService
                 return null;
             }
             var classDTO = umlAdaptedClassMapper.toDTO(cimClass);
-            classDTO.setInheritedAttributes(
-                    inheritedAttributesResolver.resolveInheritedAttributes(
-                            graph, graphIdentifier.graphUri(), prefixMapping, classUUID));
+            var inherited =
+                    inheritedPropertiesResolver.resolveInheritedProperties(
+                            graph, graphIdentifier.graphUri(), prefixMapping, classUUID);
+            classDTO.setInheritedAttributes(inherited.attributes());
+            classDTO.setInheritedAssociations(inherited.associations());
             return classDTO;
         }
     }

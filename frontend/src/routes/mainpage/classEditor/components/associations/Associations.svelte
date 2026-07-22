@@ -16,17 +16,23 @@
   -->
 
 <script>
-    import { faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { faCaretRight, faPlus } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onDestroy, onMount } from "svelte";
+    import { Fa } from "svelte-fa";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import { userSettings } from "$lib/userSettings.svelte.js";
 
     import Association from "./Association.svelte";
     import AssociationEditorDialog from "./associationEditorDialog/AssociationEditorDialog.svelte";
 
-    const { associations, openPropertySHACLRulesDialog } = $props();
+    const {
+        associations,
+        inheritedAssociations = [],
+        openPropertySHACLRulesDialog,
+    } = $props();
 
     const MIN_W = 7;
     const MAX_W = 20;
@@ -37,14 +43,20 @@
     const associationEditorDialog = $state({
         showDialog: false,
         association: null,
+        targetClass: null,
     });
 
     let expandStereotypes = $state(true);
+    let expandInherited = $state(false);
 
     let container;
     let w = $state(MIN_W);
     let resizeObserver;
     let readonly = $derived(classEditorContext.readonly);
+    let showInherited = $derived(
+        userSettings.get("showInheritedProperties", true) &&
+            inheritedAssociations.length > 0,
+    );
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -62,8 +74,9 @@
         resizeObserver?.disconnect();
     });
 
-    function openAssociationEditor(association) {
+    function openAssociationEditor(association, targetClass = null) {
         associationEditorDialog.association = association;
+        associationEditorDialog.targetClass = targetClass;
         associationEditorDialog.showDialog = true;
     }
 
@@ -119,6 +132,62 @@
             </thead>
 
             <tbody>
+                {#if showInherited}
+                    <tr>
+                        <td colspan={readonly ? 5 : 6} class="pt-0.5">
+                            <button
+                                type="button"
+                                class="text-blue flex w-fit cursor-pointer items-center gap-1.5 pl-1 text-sm"
+                                onclick={() =>
+                                    (expandInherited = !expandInherited)}
+                            >
+                                <Fa
+                                    icon={faCaretRight}
+                                    class={`w-2 transition-transform duration-200 ${
+                                        expandInherited
+                                            ? "rotate-90"
+                                            : "rotate-0"
+                                    }`}
+                                />
+                                <span>Inherited associations</span>
+                            </button>
+                        </td>
+                    </tr>
+                    {#if expandInherited}
+                        {#each inheritedAssociations as group}
+                            <tr>
+                                <td
+                                    colspan={readonly ? 5 : 6}
+                                    class="pt-0.5 pl-2"
+                                >
+                                    <span
+                                        class="text-text-subtle text-xs italic"
+                                    >
+                                        from {group.sourceClassLabel}
+                                    </span>
+                                </td>
+                            </tr>
+                            {#each group.associations as association}
+                                <Association
+                                    {associations}
+                                    {association}
+                                    {openAssociationEditor}
+                                    {openPropertySHACLRulesDialog}
+                                    {w}
+                                    inherited={true}
+                                    targetClass={{
+                                        uuid: group.sourceClassUuid,
+                                        prefix: group.sourceClassPrefix,
+                                        label: group.sourceClassLabel,
+                                    }}
+                                />
+                            {/each}
+                        {/each}
+                    {/if}
+                    <tr>
+                        <td colspan={readonly ? 5 : 6} class="pt-1"></td>
+                    </tr>
+                {/if}
                 {#each associations.values as association}
                     <Association
                         {associations}
@@ -137,4 +206,5 @@
     bind:showDialog={associationEditorDialog.showDialog}
     {associations}
     bind:association={associationEditorDialog.association}
+    targetClass={associationEditorDialog.targetClass}
 />

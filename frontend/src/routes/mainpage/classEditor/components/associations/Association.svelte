@@ -37,6 +37,8 @@
         openAssociationEditor,
         openPropertySHACLRulesDialog,
         w,
+        inherited = false,
+        targetClass = null,
     } = $props();
 
     const classEditorContext = getContext("classEditor");
@@ -57,7 +59,7 @@
     function getButtons(multiplicityObject) {
         const buttons = getControlButtonsForReactiveObject(
             multiplicityObject,
-            readonly,
+            readonly || inherited,
         );
         if (!buttons?.length) return [];
         if (w < 13) return [];
@@ -72,7 +74,7 @@
             bind:value={association.multiplicityLowerBound.value}
             highlight={association.multiplicityLowerBound.isModified}
             warn={!association.multiplicityLowerBound.isValid}
-            {readonly}
+            readonly={readonly || inherited}
             buttons={lowerButtons}
         />
     </td>
@@ -83,7 +85,7 @@
             bind:value={association.multiplicityUpperBound.value}
             highlight={association.multiplicityUpperBound.isModified}
             warn={!association.multiplicityUpperBound.isValid}
-            {readonly}
+            readonly={readonly || inherited}
             buttons={upperButtons}
         />
     </td>
@@ -94,17 +96,21 @@
             bind:value={association.label.value}
             highlight={association.label.isModified}
             warn={!association.label.isValid}
-            {readonly}
+            readonly={readonly || inherited}
             buttons={getControlButtonsForReactiveObject(
                 association.label,
-                readonly,
+                readonly || inherited,
             )}
         />
     </td>
 
     <td>
         <FaIconButton
-            callOnClick={() => openPropertySHACLRulesDialog(association)}
+            callOnClick={() =>
+                openPropertySHACLRulesDialog(
+                    association,
+                    inherited ? targetClass?.uuid : null,
+                )}
             title={readonly ? "View" : "Edit" + " Constraints (SHACL)"}
             icon={faDiagramProject}
         />
@@ -113,18 +119,24 @@
     <td>
         <FaIconButton
             icon={readonly ? faEye : faGear}
-            callOnClick={() => openAssociationEditor(association)}
+            callOnClick={() =>
+                openAssociationEditor(
+                    association,
+                    inherited ? targetClass : null,
+                )}
             title={readonly ? "View" : "Edit" + " association"}
         />
     </td>
 
     {#if !readonly}
         <td>
-            <FaIconButton
-                icon={faMinus}
-                callOnClick={() => associations.remove(association, true)}
-                title="Remove association"
-            />
+            {#if !inherited}
+                <FaIconButton
+                    icon={faMinus}
+                    callOnClick={() => associations.remove(association, true)}
+                    title="Remove association"
+                />
+            {/if}
         </td>
     {/if}
 </tr>
