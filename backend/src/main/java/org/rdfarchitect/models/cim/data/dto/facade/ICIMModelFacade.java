@@ -15,23 +15,18 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
-
-import lombok.Builder;
-import lombok.Data;
+package org.rdfarchitect.models.cim.data.dto.facade;
 
 import java.util.List;
+import java.util.UUID;
 
-/** DTO representing the specific data object in a SvelteFlow node. */
-@Data
-@Builder
-public class NodeDataDTO {
+public interface ICIMModelFacade {
 
-    private String label;
-    private String graphUri;
-    private String belongsToCategory;
-    private List<String> stereotypes;
-    private List<AttributeDTO> attributes;
-    private List<EnumEntryDTO> enumEntries;
-    private List<SuperClassDTO> superClasses;
+    String getGraphUri();
+
+    List<ICIMClass> getCIMClasses();
+
+    List<ICIMClassCategory> getCIMClassCategories();
+
+    ICIMClassCategory getCIMClassCategory(UUID uuid);
 }

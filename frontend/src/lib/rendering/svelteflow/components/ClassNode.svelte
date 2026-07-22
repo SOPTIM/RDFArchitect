@@ -64,6 +64,7 @@
     const stereotypes = $derived(data.stereotypes);
     const attributes = $derived(data.attributes);
     const enumEntries = $derived(data.enumEntries);
+    const inheritedGroups = $derived([...(data.superClasses ?? [])].reverse());
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
 
@@ -139,6 +140,38 @@
     <div
         class="class-node-divider bg-class-node-lower-background p-2 text-center"
     >
+        {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
+            {#each inheritedGroups as superClass}
+                <div
+                    class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center py-0.5"
+                >
+                    <span class="w-3 border-t border-current rounded"></span>
+                    <span class="leading-none relative -top-px">
+                        {superClass.label}
+                    </span>
+                    <span class="w-3 border-t border-current rounded"></span>
+                </div>
+                {#each superClass.attributes ?? [] as attr}
+                    <div class="text-default-text leading-6 opacity-70">
+                        {attr.label}: {attr.type} &nbsp;[{attr.multiplicity}]
+                    </div>
+                {/each}
+                {#each superClass.enumEntries ?? [] as enumEntry}
+                    <div class="text-default-text leading-6 opacity-70">
+                        {enumEntry.label ?? enumEntry}
+                    </div>
+                {/each}
+                {#if (superClass.attributes?.length ?? 0) === 0 && (superClass.enumEntries?.length ?? 0) === 0}
+                    <div
+                        class="text-default-text leading-6 opacity-70 flex justify-center items-center"
+                    >
+                        <span
+                            class="w-3 border-t border-current rounded mt-1.5 mb-2"
+                        ></span>
+                    </div>
+                {/if}
+            {/each}
+        {/if}
         {#if attributes && attributes.length > 0}
             {#if isCrossProfileDiagram}
                 {#each groupByGraphURI(attributes) as group}
