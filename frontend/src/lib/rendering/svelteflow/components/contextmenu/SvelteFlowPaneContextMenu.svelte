@@ -19,7 +19,7 @@
     import { faPaste, faPlus } from "@fortawesome/free-solid-svg-icons";
 
     import { BackendConnection } from "$lib/api/backend.js";
-    import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { ContextMenu } from "$lib/components/bitsui/contextmenu/index.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         copyState,
@@ -32,8 +32,8 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import { saveCopyClass } from "../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
-    import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
+    import { saveCopyClass } from "../../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
+    import NewClassDialog from "../../../../../routes/NewClassDialog.svelte";
 
     let {
         request = null,

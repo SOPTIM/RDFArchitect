@@ -34,10 +34,10 @@
         </marker>
         <marker
             id="associationTo"
-            viewBox="0 0 10 10"
+            viewBox="0 0 11 10"
             refX="10"
             refY="5"
-            markerWidth="10"
+            markerWidth="11"
             markerHeight="10"
             orient="auto"
         >
@@ -45,10 +45,10 @@
         </marker>
         <marker
             id="associationFrom"
-            viewBox="0 0 10 10"
+            viewBox="-1 0 11 10"
             refX="0"
             refY="5"
-            markerWidth="10"
+            markerWidth="11"
             markerHeight="10"
             orient="auto"
         >

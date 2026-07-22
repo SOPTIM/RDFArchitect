@@ -18,7 +18,10 @@
 <script>
     import { UserSettingsComponents as USC } from "$lib/components/bitsui/usersettings/index.js";
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
+    import TextEditControl from "$lib/components/TextEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
+    import { isInvalidCornerRoundingFactor } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
@@ -31,6 +34,8 @@
         showPackagePrefix: false,
         useColoredPropertiesInMergedView: true,
         normalizeComments: true,
+        useRoundedEdges: false,
+        cornerRoundingFactor: 50,
     };
 
     let localSettings = $state({});
@@ -38,6 +43,16 @@
     let isModified = $derived(
         JSON.stringify(localSettings) !== JSON.stringify(savedSettings),
     );
+
+    let cornerRoundingFactorViolations = $derived(
+        localSettings["useRoundedEdges"]
+            ? isInvalidCornerRoundingFactor(
+                  localSettings["cornerRoundingFactor"],
+              )
+            : [],
+    );
+
+    let hasInvalidInput = $derived(cornerRoundingFactorViolations.length > 0);
 
     function onOpen() {
         localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all };
@@ -63,7 +78,7 @@
     saveChanges={save}
     discardChanges={() =>
         (localSettings = { ...DEFAULT_SETTINGS, ...userSettings.all })}
-    hasChanges={isModified}
+    hasChanges={isModified && !hasInvalidInput}
     size="w-1/3"
     title="Settings"
 >
@@ -94,6 +109,31 @@
                 bind:value={localSettings["useColoredPropertiesInMergedView"]}
                 labelFirst={false}
             />
+            <CheckBoxEditControl
+                label="Smoothed edges"
+                bind:value={localSettings["useRoundedEdges"]}
+                labelFirst={false}
+                title={"When enabled, the sharp corners of edges at their bend \n" +
+                    "points are rounded off. The edges stay polylines with \n" +
+                    "straight segments, only the corners are smoothed."}
+            />
+            <div class="flex flex-col gap-1">
+                <TextEditControl
+                    label="Corner rounding (%)"
+                    bind:value={localSettings["cornerRoundingFactor"]}
+                    placeholder="50"
+                    disabled={!localSettings["useRoundedEdges"]}
+                    warn={hasInvalidInput}
+                    title={"Controls how strongly the edge corners are \n" +
+                        "rounded, as a percentage from 0 to 100. \n" +
+                        "0 keeps the corners sharp, 100 applies the maximum \n" +
+                        "rounding. The edges always stay polylines, this only \n" +
+                        "affects how soft the corners at the bend points look."}
+                />
+                <ViolationMessages
+                    violations={cornerRoundingFactorViolations}
+                />
+            </div>
         </USC.Section>
         <USC.Section title="Normalization">
             <CheckBoxEditControl
