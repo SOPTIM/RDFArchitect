@@ -33,8 +33,10 @@
     } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
+        ClassType,
         editorState,
         forceReloadTrigger,
+        multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
     import {
@@ -344,6 +346,16 @@
         },
         addTargetClassInfo(classInfo) {
             context.targetClassInfos = [...context.targetClassInfos, classInfo];
+        },
+        openClass(classUuidToOpen) {
+            if (!classUuidToOpen) return;
+            multiSelectState.clear();
+            closeClassEditor({
+                datasetName,
+                graphUri,
+                classUuid: classUuidToOpen,
+                classType: ClassType.SINGLE_CLASS,
+            });
         },
     });
 </script>

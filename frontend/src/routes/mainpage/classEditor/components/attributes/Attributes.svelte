@@ -120,9 +120,17 @@
                     {#each inheritedAttributes as group}
                         <tr>
                             <td colspan={readonly ? 4 : 5} class="pt-0.5 pl-2">
-                                <span class="text-text-subtle text-xs italic">
+                                <button
+                                    type="button"
+                                    class="text-text-subtle hover:text-blue cursor-pointer text-xs italic hover:underline"
+                                    title="Open class"
+                                    onclick={() =>
+                                        classEditorContext.openClass(
+                                            group.sourceClassUuid,
+                                        )}
+                                >
                                     from {group.sourceClassLabel}
-                                </span>
+                                </button>
                             </td>
                         </tr>
                         {#each group.attributes as attribute}

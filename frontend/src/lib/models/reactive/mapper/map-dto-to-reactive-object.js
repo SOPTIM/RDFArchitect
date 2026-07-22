@@ -76,6 +76,7 @@ export function mapSuperClassesToInherited(superClasses = [], classes = []) {
         flat.push(node);
         queue.push(...(node.superClasses ?? []));
     }
+    flat.reverse();
 
     const toGroup = node => ({
         sourceClassUuid: node.uuid,
