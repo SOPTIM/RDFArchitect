@@ -24,9 +24,14 @@
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import Association from "./Association.svelte";
+    import InheritedSection from "../InheritedSection.svelte";
     import AssociationEditorDialog from "./associationEditorDialog/AssociationEditorDialog.svelte";
 
-    const { associations, openPropertySHACLRulesDialog } = $props();
+    const {
+        associations,
+        inheritedAssociations = [],
+        openPropertySHACLRulesDialog,
+    } = $props();
 
     const MIN_W = 7;
     const MAX_W = 20;
@@ -37,6 +42,7 @@
     const associationEditorDialog = $state({
         showDialog: false,
         association: null,
+        targetClass: null,
     });
 
     let expandStereotypes = $state(true);
@@ -62,8 +68,9 @@
         resizeObserver?.disconnect();
     });
 
-    function openAssociationEditor(association) {
+    function openAssociationEditor(association, targetClass = null) {
         associationEditorDialog.association = association;
+        associationEditorDialog.targetClass = targetClass;
         associationEditorDialog.showDialog = true;
     }
 
@@ -119,6 +126,29 @@
             </thead>
 
             <tbody>
+                <InheritedSection
+                    groups={inheritedAssociations}
+                    label="Inherited associations"
+                    colspan={readonly ? 5 : 6}
+                >
+                    {#snippet rows(group)}
+                        {#each group.associations as association}
+                            <Association
+                                {associations}
+                                {association}
+                                {openAssociationEditor}
+                                {openPropertySHACLRulesDialog}
+                                {w}
+                                inherited={true}
+                                targetClass={{
+                                    uuid: group.sourceClassUuid,
+                                    prefix: group.sourceClassPrefix,
+                                    label: group.sourceClassLabel,
+                                }}
+                            />
+                        {/each}
+                    {/snippet}
+                </InheritedSection>
                 {#each associations.values as association}
                     <Association
                         {associations}
@@ -137,4 +167,5 @@
     bind:showDialog={associationEditorDialog.showDialog}
     {associations}
     bind:association={associationEditorDialog.association}
+    targetClass={associationEditorDialog.targetClass}
 />

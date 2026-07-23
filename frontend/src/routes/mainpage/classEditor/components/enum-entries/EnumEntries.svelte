@@ -25,16 +25,19 @@
 
     import EnumEntry from "./EnumEntry.svelte";
     import EnumEntryEditorDialog from "./EnumEntryEditorDialog.svelte";
+    import InheritedSection from "../InheritedSection.svelte";
 
-    const { enumEntries } = $props();
+    const { enumEntries, inheritedEnumEntries = [] } = $props();
 
     const classEditorContext = getContext("classEditor");
     const enumEntryEditorDialog = $state({
         showDialog: false,
         enumEntry: null,
+        targetClass: null,
     });
 
     let expandStereotypes = $state(true);
+
     let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
@@ -44,8 +47,9 @@
 
     onMount(() => (readonly = classEditorContext.readonly));
 
-    function openEnumEntryEditor(enumEntry) {
+    function openEnumEntryEditor(enumEntry, targetClass = null) {
         enumEntryEditorDialog.enumEntry = enumEntry;
+        enumEntryEditorDialog.targetClass = targetClass;
         enumEntryEditorDialog.showDialog = true;
     }
 </script>
@@ -70,7 +74,35 @@
         {/if}
     {/snippet}
     {#snippet contents()}
+        <colgroup>
+            <col />
+            <col style="width: 2rem" />
+            {#if !readonly}
+                <col style="width: 2rem" />
+            {/if}
+        </colgroup>
         <tbody>
+            <InheritedSection
+                groups={inheritedEnumEntries}
+                label="Inherited enum entries"
+                colspan={readonly ? 2 : 3}
+            >
+                {#snippet rows(group)}
+                    {#each group.enumEntries as enumEntry}
+                        <EnumEntry
+                            {enumEntries}
+                            {enumEntry}
+                            {openEnumEntryEditor}
+                            inherited={true}
+                            targetClass={{
+                                uuid: group.sourceClassUuid,
+                                prefix: group.sourceClassPrefix,
+                                label: group.sourceClassLabel,
+                            }}
+                        />
+                    {/each}
+                {/snippet}
+            </InheritedSection>
             {#each enumEntries.values as enumEntry}
                 <EnumEntry {enumEntries} {enumEntry} {openEnumEntryEditor} />
             {/each}
@@ -80,5 +112,6 @@
 <EnumEntryEditorDialog
     bind:showDialog={enumEntryEditorDialog.showDialog}
     bind:enumEntry={enumEntryEditorDialog.enumEntry}
+    targetClass={enumEntryEditorDialog.targetClass}
     {enumEntries}
 />

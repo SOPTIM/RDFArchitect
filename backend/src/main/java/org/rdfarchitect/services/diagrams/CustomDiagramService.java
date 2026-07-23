@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
+import org.rdfarchitect.api.dto.SuperClassDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
@@ -149,8 +150,14 @@ public class CustomDiagramService
             mergeAssociationPairs(graphUri, dto, merged, graphColor);
         }
         if (dto.getSuperClass() != null) {
+            var superClass = dto.getSuperClass();
             merged.getSuperClasses()
-                    .add(new GraphSourceDTO<>(graphUri, graphColor, dto.getSuperClass()));
+                    .add(
+                            new GraphSourceDTO<>(
+                                    graphUri,
+                                    graphColor,
+                                    new SuperClassDTO(
+                                            superClass.getPrefix(), superClass.getLabel())));
         }
         if (dto.getStereotypes() != null) {
             mergeStereotypes(dto, merged);

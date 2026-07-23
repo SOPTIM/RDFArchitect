@@ -44,7 +44,7 @@ public class ClassUMLAdaptedDTO {
 
     private String label;
 
-    private SuperClassDTO superClass;
+    private ClassUMLAdaptedDTO superClass;
 
     private String comment;
 

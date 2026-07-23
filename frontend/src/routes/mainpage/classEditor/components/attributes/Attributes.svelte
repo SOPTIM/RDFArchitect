@@ -24,17 +24,24 @@
 
     import Attribute from "./Attribute.svelte";
     import AttributeEditorDialog from "./AttributeEditorDialog.svelte";
+    import InheritedSection from "../InheritedSection.svelte";
 
-    const { attributes, openPropertySHACLRulesDialog } = $props();
+    const {
+        attributes,
+        inheritedAttributes = [],
+        openPropertySHACLRulesDialog,
+    } = $props();
 
     const classEditorContext = getContext("classEditor");
 
     const attributeEditorDialog = $state({
         showDialog: false,
         attribute: null,
+        targetClass: null,
     });
 
     let expandStereotypes = $state(true);
+
     let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
@@ -44,8 +51,9 @@
 
     onMount(() => (readonly = classEditorContext.readonly));
 
-    function openAttributeEditor(attribute) {
+    function openAttributeEditor(attribute, targetClass = null) {
         attributeEditorDialog.attribute = attribute;
+        attributeEditorDialog.targetClass = targetClass;
         attributeEditorDialog.showDialog = true;
     }
 </script>
@@ -84,6 +92,28 @@
             </tr>
         </thead>
         <tbody>
+            <InheritedSection
+                groups={inheritedAttributes}
+                label="Inherited attributes"
+                colspan={readonly ? 4 : 5}
+            >
+                {#snippet rows(group)}
+                    {#each group.attributes as attribute}
+                        <Attribute
+                            {attributes}
+                            {attribute}
+                            {openAttributeEditor}
+                            {openPropertySHACLRulesDialog}
+                            inherited={true}
+                            targetClass={{
+                                uuid: group.sourceClassUuid,
+                                prefix: group.sourceClassPrefix,
+                                label: group.sourceClassLabel,
+                            }}
+                        />
+                    {/each}
+                {/snippet}
+            </InheritedSection>
             {#each attributes.values as attribute}
                 <Attribute
                     {attributes}
@@ -98,5 +128,6 @@
 <AttributeEditorDialog
     bind:showDialog={attributeEditorDialog.showDialog}
     bind:attribute={attributeEditorDialog.attribute}
+    targetClass={attributeEditorDialog.targetClass}
     {attributes}
 />

@@ -75,8 +75,13 @@ export class BackendConnection {
         });
     }
 
-    async getClassInfo(datasetName, graphURI, classUUID) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
+    async getClassInfo(
+        datasetName,
+        graphURI,
+        classUUID,
+        includeSuperClasses = false,
+    ) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}${includeSuperClasses ? "?includeSuperClasses=true" : ""}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",

@@ -35,6 +35,8 @@
         attribute,
         openAttributeEditor,
         openPropertySHACLRulesDialog,
+        inherited = false,
+        targetClass = null,
     } = $props();
 
     const classEditorContext = getContext("classEditor");
@@ -63,10 +65,10 @@
             bind:value={attribute.label.value}
             highlight={attribute.label.isModified}
             warn={!attribute.label.isValid}
-            {readonly}
+            readonly={readonly || inherited}
             buttons={getControlButtonsForReactiveObject(
                 attribute.label,
-                readonly,
+                readonly || inherited,
             )}
         />
     </td>
@@ -86,35 +88,42 @@
                 (attribute.datatype.value = newDatatype?.prefix
                     ? newDatatype.prefix + newDatatype.label
                     : (newDatatype ?? null))}
-            {readonly}
+            readonly={readonly || inherited}
             tooltip={attribute.datatype.value}
             buttons={getControlButtonsForReactiveObject(
                 attribute.datatype,
-                readonly,
+                readonly || inherited,
             )}
         />
     </td>
     <td>
         <FaIconButton
-            callOnClick={() => openPropertySHACLRulesDialog(attribute)}
+            callOnClick={() =>
+                openPropertySHACLRulesDialog(
+                    attribute,
+                    inherited ? targetClass?.uuid : null,
+                )}
             title={readonly ? "View" : "Edit" + " Constraints (SHACL)"}
             icon={faDiagramProject}
         />
     </td>
     <td>
         <FaIconButton
-            callOnClick={() => openAttributeEditor(attribute)}
+            callOnClick={() =>
+                openAttributeEditor(attribute, inherited ? targetClass : null)}
             icon={readonly ? faEye : faGear}
             title={readonly ? "View" : "Edit" + " attribute"}
         />
     </td>
     {#if !classEditorContext.readonly}
         <td>
-            <FaIconButton
-                callOnClick={() => attributes.remove(attribute, true)}
-                icon={faMinus}
-                title="Remove attribute"
-            />
+            {#if !inherited}
+                <FaIconButton
+                    callOnClick={() => attributes.remove(attribute, true)}
+                    icon={faMinus}
+                    title="Remove attribute"
+                />
+            {/if}
         </td>
     {/if}
 </tr>

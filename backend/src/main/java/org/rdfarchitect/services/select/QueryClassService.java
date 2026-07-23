@@ -47,22 +47,30 @@ public class QueryClassService
     private final DatabasePort databasePort;
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
     private final ClassMapper mapper;
+    private final SuperClassResolver superClassResolver;
 
     @Override
     public ClassUMLAdaptedDTO getClassInformation(
-            GraphIdentifier graphIdentifier, String classUUID) {
+            GraphIdentifier graphIdentifier, String classUUID, boolean includeSuperClasses) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             var graph = ctx.getRdfGraph();
+            var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
             var cimClass =
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
-                            graph,
-                            graphIdentifier.graphUri(),
-                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                            classUUID);
+                            graph, graphIdentifier.graphUri(), prefixMapping, classUUID);
             if (cimClass == null) {
                 return null;
             }
-            return umlAdaptedClassMapper.toDTO(cimClass);
+            var classDTO = umlAdaptedClassMapper.toDTO(cimClass);
+            if (includeSuperClasses) {
+                var expandedSuperClass =
+                        superClassResolver.resolveSuperClass(
+                                graph, graphIdentifier.graphUri(), prefixMapping, classUUID);
+                if (expandedSuperClass != null) {
+                    classDTO.setSuperClass(expandedSuperClass);
+                }
+            }
+            return classDTO;
         }
     }
 
