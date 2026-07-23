@@ -18,6 +18,7 @@
 import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
 import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
 import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
+import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
 
 /**
  * Maps a class DTO to a ReactiveClass instance
@@ -111,7 +112,19 @@ export function mapSuperClassesToInherited(superClasses = [], classes = []) {
             ),
         }));
 
-    return { attributeGroups, associationGroups };
+    const enumEntryGroups = flat
+        .filter(node => (node.enumEntries ?? []).length > 0)
+        .map(node => ({
+            ...toGroup(node),
+            enumEntries: node.enumEntries.map(
+                entry =>
+                    new ReactiveEnumEntry(
+                        mapEnumEntryDtoToReactiveEnumEntry(entry),
+                    ),
+            ),
+        }));
+
+    return { attributeGroups, associationGroups, enumEntryGroups };
 }
 
 /**

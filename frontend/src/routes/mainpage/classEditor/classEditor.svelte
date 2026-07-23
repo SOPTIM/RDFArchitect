@@ -81,6 +81,8 @@
 
     let inheritedAssociations = $state([]);
 
+    let inheritedEnumEntries = $state([]);
+
     let loadingContext = $state(true);
 
     let loadingClass = $state(true);
@@ -245,6 +247,7 @@
         );
         inheritedAttributes = inherited.attributeGroups;
         inheritedAssociations = inherited.associationGroups;
+        inheritedEnumEntries = inherited.enumEntryGroups;
         loadingClass = false;
 
         const targetUuids = [
@@ -411,6 +414,7 @@
                                                 {#if isEnum}
                                                     <EnumEntries
                                                         enumEntries={reactiveClass.enumEntries}
+                                                        {inheritedEnumEntries}
                                                         cls={reactiveClass}
                                                     />
                                                 {:else}
