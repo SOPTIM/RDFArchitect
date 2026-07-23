@@ -29,11 +29,13 @@
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiEnumEntryToBackend } from "./save-enum-entry-to-backend.js";
+    import { resolveSaveTarget } from "../resolve-save-target.js";
 
     let {
         showDialog = $bindable(),
         enumEntry = $bindable(),
         enumEntries,
+        targetClass = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -43,6 +45,10 @@
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        if (targetClass) {
+            isNewEnumEntry = false;
+            return;
+        }
         if (!enumEntries.contains(enumEntry)) {
             isNewEnumEntry = true;
             enumEntry = new ReactiveEnumEntry({
@@ -59,15 +65,18 @@
     }
 
     async function saveEnumEntry() {
+        const { classUuid, domainIri } = resolveSaveTarget(
+            targetClass,
+            classEditorContext.reactiveClass,
+        );
         const apiEnumEntry = mapReactiveEnumEntryToEnumEntryDto(
             enumEntry,
-            classEditorContext.reactiveClass.namespace.backup +
-                classEditorContext.reactiveClass.label.backup,
+            domainIri,
         );
         const result = await saveApiEnumEntryToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
-            classEditorContext.reactiveClass.uuid.value,
+            classUuid,
             apiEnumEntry,
             isNewEnumEntry,
         );

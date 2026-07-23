@@ -44,7 +44,7 @@ public class ClassUMLAdaptedDTO {
 
     private String label;
 
-    private SuperClassDTO superClass;
+    private ClassUMLAdaptedDTO superClass;
 
     private String comment;
 
@@ -55,8 +55,6 @@ public class ClassUMLAdaptedDTO {
     @Builder.Default private List<EnumEntryDTO> enumEntries = new ArrayList<>();
 
     @Builder.Default private List<AssociationPairDTO> associationPairs = new ArrayList<>();
-
-    @Builder.Default private List<ClassUMLAdaptedDTO> superClasses = new ArrayList<>();
 
     @JsonProperty("package")
     private BelongsToCategoryDTO belongsToCategory;

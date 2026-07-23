@@ -242,7 +242,7 @@
             reactiveClass,
         );
         const inherited = mapSuperClassesToInherited(
-            classDTO.superClasses,
+            classDTO.superClass,
             context.classes,
         );
         inheritedAttributes = inherited.attributeGroups;
@@ -352,7 +352,9 @@
         },
         openClass(classUuidToOpen) {
             if (!classUuidToOpen) return;
-            multiSelectState.clear();
+            if (!reactiveClass?.isModified) {
+                multiSelectState.clear();
+            }
             closeClassEditor({
                 datasetName,
                 graphUri,

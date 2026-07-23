@@ -25,7 +25,13 @@
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    const { enumEntries, enumEntry, openEnumEntryEditor } = $props();
+    const {
+        enumEntries,
+        enumEntry,
+        openEnumEntryEditor,
+        inherited = false,
+        targetClass = null,
+    } = $props();
 
     const classEditorContext = getContext("classEditor");
     let readonly = $derived(classEditorContext.readonly);
@@ -46,25 +52,28 @@
             warn={!enumEntry.label.isValid}
             buttons={getControlButtonsForReactiveObject(
                 enumEntry.label,
-                readonly,
+                readonly || inherited,
             )}
-            {readonly}
+            readonly={readonly || inherited}
         />
     </td>
     <td class="size-8">
         <FaIconButton
-            callOnClick={() => openEnumEntryEditor(enumEntry)}
+            callOnClick={() =>
+                openEnumEntryEditor(enumEntry, inherited ? targetClass : null)}
             icon={readonly ? faEye : faGear}
             title={readonly ? "View" : "Edit" + " enum entry"}
         />
     </td>
     {#if !readonly}
         <td class="size-8">
-            <FaIconButton
-                icon={faMinus}
-                callOnClick={() => enumEntries.remove(enumEntry, true)}
-                title="Remove enum entry"
-            />
+            {#if !inherited}
+                <FaIconButton
+                    icon={faMinus}
+                    callOnClick={() => enumEntries.remove(enumEntry, true)}
+                    title="Remove enum entry"
+                />
+            {/if}
         </td>
     {/if}
 </tr>

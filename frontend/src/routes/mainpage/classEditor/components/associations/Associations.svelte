@@ -16,16 +16,15 @@
   -->
 
 <script>
-    import { faCaretRight, faPlus } from "@fortawesome/free-solid-svg-icons";
+    import { faPlus } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onDestroy, onMount } from "svelte";
-    import { Fa } from "svelte-fa";
 
     import FaIconButton from "$lib/components/FaIconButton.svelte";
     import List from "$lib/components/List.svelte";
     import { editorState } from "$lib/sharedState.svelte.js";
-    import { userSettings } from "$lib/userSettings.svelte.js";
 
     import Association from "./Association.svelte";
+    import InheritedSection from "../InheritedSection.svelte";
     import AssociationEditorDialog from "./associationEditorDialog/AssociationEditorDialog.svelte";
 
     const {
@@ -47,16 +46,11 @@
     });
 
     let expandStereotypes = $state(true);
-    let expandInherited = $state(false);
 
     let container;
     let w = $state(MIN_W);
     let resizeObserver;
     let readonly = $derived(classEditorContext.readonly);
-    let showInherited = $derived(
-        userSettings.get("showInheritedProperties", true) &&
-            inheritedAssociations.length > 0,
-    );
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
@@ -132,68 +126,29 @@
             </thead>
 
             <tbody>
-                {#if showInherited}
-                    <tr>
-                        <td colspan={readonly ? 5 : 6} class="pt-0.5">
-                            <button
-                                type="button"
-                                class="text-blue flex w-fit cursor-pointer items-center gap-1.5 pl-1 text-sm"
-                                onclick={() =>
-                                    (expandInherited = !expandInherited)}
-                            >
-                                <Fa
-                                    icon={faCaretRight}
-                                    class={`w-2 transition-transform duration-200 ${
-                                        expandInherited
-                                            ? "rotate-90"
-                                            : "rotate-0"
-                                    }`}
-                                />
-                                <span>Inherited associations</span>
-                            </button>
-                        </td>
-                    </tr>
-                    {#if expandInherited}
-                        {#each inheritedAssociations as group}
-                            <tr>
-                                <td
-                                    colspan={readonly ? 5 : 6}
-                                    class="pt-0.5 pl-2"
-                                >
-                                    <button
-                                        type="button"
-                                        class="text-text-subtle hover:text-blue cursor-pointer text-xs italic hover:underline"
-                                        title="Open class"
-                                        onclick={() =>
-                                            classEditorContext.openClass(
-                                                group.sourceClassUuid,
-                                            )}
-                                    >
-                                        from {group.sourceClassLabel}
-                                    </button>
-                                </td>
-                            </tr>
-                            {#each group.associations as association}
-                                <Association
-                                    {associations}
-                                    {association}
-                                    {openAssociationEditor}
-                                    {openPropertySHACLRulesDialog}
-                                    {w}
-                                    inherited={true}
-                                    targetClass={{
-                                        uuid: group.sourceClassUuid,
-                                        prefix: group.sourceClassPrefix,
-                                        label: group.sourceClassLabel,
-                                    }}
-                                />
-                            {/each}
+                <InheritedSection
+                    groups={inheritedAssociations}
+                    label="Inherited associations"
+                    colspan={readonly ? 5 : 6}
+                >
+                    {#snippet rows(group)}
+                        {#each group.associations as association}
+                            <Association
+                                {associations}
+                                {association}
+                                {openAssociationEditor}
+                                {openPropertySHACLRulesDialog}
+                                {w}
+                                inherited={true}
+                                targetClass={{
+                                    uuid: group.sourceClassUuid,
+                                    prefix: group.sourceClassPrefix,
+                                    label: group.sourceClassLabel,
+                                }}
+                            />
                         {/each}
-                    {/if}
-                    <tr>
-                        <td colspan={readonly ? 5 : 6} class="pt-1"></td>
-                    </tr>
-                {/if}
+                    {/snippet}
+                </InheritedSection>
                 {#each associations.values as association}
                     <Association
                         {associations}

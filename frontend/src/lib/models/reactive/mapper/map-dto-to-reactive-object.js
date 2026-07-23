@@ -64,18 +64,16 @@ export function mapClassDtoToReactiveClass(classDto, context, getClassByUuid) {
     );
 }
 
-export function mapSuperClassesToInherited(superClasses = [], classes = []) {
+export function mapSuperClassesToInherited(rootSuperClass, classes = []) {
     const flat = [];
     const visited = new Set();
-    const queue = [...(superClasses ?? [])];
-    while (queue.length > 0) {
-        const node = queue.shift();
-        if (!node || visited.has(node.uuid)) {
-            continue;
+    let node = rootSuperClass;
+    while (node && !(node.uuid != null && visited.has(node.uuid))) {
+        if (node.uuid != null) {
+            visited.add(node.uuid);
         }
-        visited.add(node.uuid);
         flat.push(node);
-        queue.push(...(node.superClasses ?? []));
+        node = node.superClass;
     }
     flat.reverse();
 

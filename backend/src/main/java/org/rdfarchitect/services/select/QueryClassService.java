@@ -63,9 +63,12 @@ public class QueryClassService
             }
             var classDTO = umlAdaptedClassMapper.toDTO(cimClass);
             if (includeSuperClasses) {
-                classDTO.setSuperClasses(
-                        superClassResolver.resolveSuperClasses(
-                                graph, graphIdentifier.graphUri(), prefixMapping, classUUID));
+                var expandedSuperClass =
+                        superClassResolver.resolveSuperClass(
+                                graph, graphIdentifier.graphUri(), prefixMapping, classUUID);
+                if (expandedSuperClass != null) {
+                    classDTO.setSuperClass(expandedSuperClass);
+                }
             }
             return classDTO;
         }

@@ -31,7 +31,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -45,7 +44,7 @@ public class SuperClassResolver {
 
     private final ClassUMLAdaptedMapper umlAdaptedClassMapper;
 
-    public List<ClassUMLAdaptedDTO> resolveSuperClasses(
+    public ClassUMLAdaptedDTO resolveSuperClass(
             Graph graph, String graphUri, PrefixMapping prefixMapping, String rootClassUUID) {
         var rootUuid = UUID.fromString(rootClassUUID);
         var model = ModelFactory.createModelForGraph(graph);
@@ -53,34 +52,40 @@ public class SuperClassResolver {
 
         var visited = new HashSet<UUID>();
         visited.add(rootUuid);
-        return buildNodes(graph, graphUri, prefixMapping, safeSuperClasses(rootClass), visited);
+        return buildChain(graph, graphUri, prefixMapping, firstSuperClass(rootClass), visited);
     }
 
-    private List<ClassUMLAdaptedDTO> buildNodes(
+    private ClassUMLAdaptedDTO buildChain(
             Graph graph,
             String graphUri,
             PrefixMapping prefixMapping,
-            List<ICIMClass> superClasses,
+            ICIMClass superClass,
             Set<UUID> visited) {
-        var nodes = new ArrayList<ClassUMLAdaptedDTO>();
-        for (var superClass : superClasses) {
-            var uuid = superClass.getUuid();
-            if (uuid == null || !visited.add(uuid)) {
-                continue;
-            }
-            var superClassCim =
-                    CIMUMLObjectFactory.createCIMClassUMLAdapted(
-                            graph, graphUri, prefixMapping, uuid.toString());
-            if (superClassCim == null) {
-                continue;
-            }
-            var dto = umlAdaptedClassMapper.toDTO(superClassCim);
-            dto.setSuperClasses(
-                    buildNodes(
-                            graph, graphUri, prefixMapping, safeSuperClasses(superClass), visited));
-            nodes.add(dto);
+        if (superClass == null) {
+            return null;
         }
-        return nodes;
+        var uuid = superClass.getUuid();
+        if (uuid == null || !visited.add(uuid)) {
+            return null;
+        }
+        var superClassCim =
+                CIMUMLObjectFactory.createCIMClassUMLAdapted(
+                        graph, graphUri, prefixMapping, uuid.toString());
+        if (superClassCim == null) {
+            return null;
+        }
+        var dto = umlAdaptedClassMapper.toDTO(superClassCim);
+        var parentChain =
+                buildChain(graph, graphUri, prefixMapping, firstSuperClass(superClass), visited);
+        if (parentChain != null) {
+            dto.setSuperClass(parentChain);
+        }
+        return dto;
+    }
+
+    private ICIMClass firstSuperClass(ICIMClass cimClass) {
+        var superClasses = safeSuperClasses(cimClass);
+        return superClasses.isEmpty() ? null : superClasses.getFirst();
     }
 
     private List<ICIMClass> safeSuperClasses(ICIMClass cimClass) {

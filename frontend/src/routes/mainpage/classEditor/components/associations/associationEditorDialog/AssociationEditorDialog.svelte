@@ -26,6 +26,7 @@
     import Direct from "./Direct.svelte";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
     import Inverse from "./Inverse.svelte";
+    import { resolveSaveTarget } from "../../resolve-save-target.js";
 
     let {
         showDialog = $bindable(),
@@ -96,16 +97,10 @@
     }
 
     async function saveAssociation() {
-        const domainCls = targetClass
-            ? {
-                  label: targetClass.label,
-                  namespace: targetClass.prefix,
-                  uuid: targetClass.uuid,
-              }
-            : classEditorContext.reactiveClass;
-        const targetClassUuid = targetClass
-            ? targetClass.uuid
-            : classEditorContext.reactiveClass.uuid.value;
+        const { classUuid, domainCls } = resolveSaveTarget(
+            targetClass,
+            classEditorContext.reactiveClass,
+        );
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
             domainCls,
@@ -114,7 +109,7 @@
         const result = await saveApiAssociationToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
-            targetClassUuid,
+            classUuid,
             apiAssociation,
             isNewAssociation,
         );

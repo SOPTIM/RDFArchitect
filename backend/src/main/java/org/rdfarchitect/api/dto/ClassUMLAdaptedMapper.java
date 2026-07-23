@@ -66,18 +66,21 @@ public interface ClassUMLAdaptedMapper {
         return stereotypes.stream().map(CIMSStereotype::getStereotype).toList();
     }
 
-    default SuperClassDTO mapSuperClass(RDFSSubClassOf superClass) {
+    default ClassUMLAdaptedDTO mapSuperClass(RDFSSubClassOf superClass) {
         if (superClass == null) {
             return null;
         }
-        return new SuperClassDTO(superClass.getUri().getPrefix(), superClass.getUri().getSuffix());
+        return ClassUMLAdaptedDTO.builder()
+                .prefix(superClass.getUri().getPrefix())
+                .label(superClass.getUri().getSuffix())
+                .build();
     }
 
     default URI buildURI(ClassUMLAdaptedDTO dto) {
         return new URI(dto.getPrefix() + dto.getLabel());
     }
 
-    default RDFSSubClassOf buildSuperClass(SuperClassDTO dto) {
+    default RDFSSubClassOf buildSuperClass(ClassUMLAdaptedDTO dto) {
         if (dto == null) {
             return null;
         }
