@@ -36,6 +36,10 @@
                     description: "Export Constraints (SHACL)",
                     keys: ["Ctrl", "Shift", "E"],
                 },
+                {
+                    description: "Export HTML Documentation",
+                    keys: ["Ctrl", "Alt", "H"],
+                },
                 { description: "Share Snapshot", keys: ["Ctrl", "Shift", "S"] },
             ],
         },

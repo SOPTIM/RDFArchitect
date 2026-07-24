@@ -64,6 +64,7 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
+    import HTMLExportDialog from "../../HTMLExportDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
@@ -97,6 +98,7 @@
     let canUndo = $state(false);
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
+    let showHTMLExportDialog = $state(false);
 
     let wasGraphSelected = false;
 
@@ -360,6 +362,13 @@
             >
                 Export Schema
             </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => (showHTMLExportDialog = true)}
+                faIcon={faFileExport}
+                altText="Ctrl+Alt+H"
+            >
+                Export HTML Documentation
+            </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -448,6 +457,11 @@
 />
 <ValidationDialog
     bind:showDialog={showValidationDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+/>
+<HTMLExportDialog
+    bind:showDialog={showHTMLExportDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />

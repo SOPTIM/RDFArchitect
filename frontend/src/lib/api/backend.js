@@ -741,4 +741,14 @@ export class BackendConnection {
             credentials: "include",
         });
     }
+
+    async getHTMLExport(datasetName, graphURI) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport`;
+        return await fetch(url, {
+            method: "GET",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            mode: "cors",
+            credentials: "include",
+        });
+    }
 }
