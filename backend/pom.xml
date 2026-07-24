@@ -35,8 +35,8 @@
         <spotless-maven-plugin.version>3.8.0</spotless-maven-plugin.version>
         <google-java-format.version>1.35.0</google-java-format.version>
         <maven-checkstyle-plugin.version>3.6.0</maven-checkstyle-plugin.version>
-        <checkstyle.version>13.7.0</checkstyle.version>
-        <spotbugs-maven-plugin.version>4.10.2.0</spotbugs-maven-plugin.version>
+        <checkstyle.version>13.8.0</checkstyle.version>
+        <spotbugs-maven-plugin.version>4.10.3.0</spotbugs-maven-plugin.version>
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
         <lombok.version>1.18.46</lombok.version>
