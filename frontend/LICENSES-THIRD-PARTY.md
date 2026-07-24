@@ -159,11 +159,23 @@
 - **Version:** 17.8.0
 - **License:** MIT
 
+### html-to-image
+- **Package:** html-to-image
+- **Version:** 1.11.11
+- **License:** MIT
+- **URL:** [https://github.com/bubkoo/html-to-image#readme](https://github.com/bubkoo/html-to-image#readme)
+
 ### jsdom
 - **Package:** jsdom
 - **Version:** 30.0.1
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
+
+### jszip
+- **Package:** jszip
+- **Version:** 3.10.1
+- **License:** (MIT OR GPL-3.0-or-later)
+- **URL:** [https://github.com/Stuk/jszip](https://github.com/Stuk/jszip)
 
 ### mermaid
 - **Package:** mermaid

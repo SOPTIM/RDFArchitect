@@ -62,4 +62,16 @@ public class CIMStereotypes {
     public final String entsoeString = "Entsoe";
 
     public final Literal entsoe = ResourceFactory.createPlainLiteral(entsoeString);
+
+    public final String shortCircuitString = "ShortCircuit";
+
+    public final Literal shortCircuit = ResourceFactory.createPlainLiteral(shortCircuitString);
+
+    public final String operationString = "Operation";
+
+    public final Literal operation = ResourceFactory.createPlainLiteral(operationString);
+
+    public final String europeanString = "European";
+
+    public final Literal european = ResourceFactory.createPlainLiteral(europeanString);
 }
