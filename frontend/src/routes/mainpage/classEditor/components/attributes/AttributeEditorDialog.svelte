@@ -31,11 +31,13 @@
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { saveApiAttributeToBackend } from "./save-attribute-to-backend.js";
+    import { resolveSaveTarget } from "../resolve-save-target.js";
 
     let {
         showDialog = $bindable(),
         attribute = $bindable(),
         attributes,
+        targetClass = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -46,6 +48,10 @@
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        if (targetClass) {
+            isNewAttribute = false;
+            return;
+        }
         if (!attributes.contains(attribute)) {
             isNewAttribute = true;
             attribute = new ReactiveAttribute({
@@ -74,16 +80,19 @@
     }
 
     async function saveAttribute() {
+        const { classUuid, domainIri } = resolveSaveTarget(
+            targetClass,
+            classEditorContext.reactiveClass,
+        );
         const apiAttribute = mapReactiveAttributeToAttributeDto(
             attribute,
             classEditorContext.getDatatypeByUri,
-            classEditorContext.reactiveClass.namespace.backup +
-                classEditorContext.reactiveClass.label.backup,
+            domainIri,
         );
         const result = await saveApiAttributeToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
-            classEditorContext.reactiveClass.uuid.value,
+            classUuid,
             apiAttribute,
             isNewAttribute,
         );

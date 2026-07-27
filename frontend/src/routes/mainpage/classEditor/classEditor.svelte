@@ -27,11 +27,16 @@
         eventStack,
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
-    import { mapClassDtoToReactiveClass } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
+    import {
+        mapClassDtoToReactiveClass,
+        mapSuperClassesToInherited,
+    } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
     import { adoptUnsavedClassChanges } from "$lib/models/reactive/utils/adopt-model-changes-utils.js";
     import {
+        ClassType,
         editorState,
         forceReloadTrigger,
+        multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
     import {
@@ -72,6 +77,12 @@
 
     let reactiveClass = $state();
 
+    let inheritedAttributes = $state([]);
+
+    let inheritedAssociations = $state([]);
+
+    let inheritedEnumEntries = $state([]);
+
     let loadingContext = $state(true);
 
     let loadingClass = $state(true);
@@ -79,6 +90,7 @@
     const propertyShaclRulesDialog = $state({
         showDialog: false,
         property: null,
+        classUuidOverride: null,
     });
 
     let showDiscardSaveConfirmDialog = $state(false);
@@ -102,7 +114,12 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            let res = await bec.getClassInfo(datasetName, graphUri, classUuid);
+            let res = await bec.getClassInfo(
+                datasetName,
+                graphUri,
+                classUuid,
+                true,
+            );
             let resText = await res.text();
             if (!resText) {
                 return closeClassEditor({
@@ -224,6 +241,13 @@
             newReactiveClass,
             reactiveClass,
         );
+        const inherited = mapSuperClassesToInherited(
+            classDTO.superClass,
+            context.classes,
+        );
+        inheritedAttributes = inherited.attributeGroups;
+        inheritedAssociations = inherited.associationGroups;
+        inheritedEnumEntries = inherited.enumEntryGroups;
         loadingClass = false;
 
         const targetUuids = [
@@ -247,8 +271,9 @@
         context.targetClassInfos = targetClassInfos.filter(Boolean);
     }
 
-    function openPropertySHACLRulesDialog(property) {
+    function openPropertySHACLRulesDialog(property, classUuidOverride = null) {
         propertyShaclRulesDialog.property = property;
+        propertyShaclRulesDialog.classUuidOverride = classUuidOverride;
         propertyShaclRulesDialog.showDialog = true;
     }
 
@@ -325,6 +350,18 @@
         addTargetClassInfo(classInfo) {
             context.targetClassInfos = [...context.targetClassInfos, classInfo];
         },
+        openClass(classUuidToOpen) {
+            if (!classUuidToOpen) return;
+            if (!reactiveClass?.isModified) {
+                multiSelectState.clear();
+            }
+            closeClassEditor({
+                datasetName,
+                graphUri,
+                classUuid: classUuidToOpen,
+                classType: ClassType.SINGLE_CLASS,
+            });
+        },
     });
 </script>
 
@@ -379,15 +416,18 @@
                                                 {#if isEnum}
                                                     <EnumEntries
                                                         enumEntries={reactiveClass.enumEntries}
+                                                        {inheritedEnumEntries}
                                                         cls={reactiveClass}
                                                     />
                                                 {:else}
                                                     <Attributes
                                                         attributes={reactiveClass.attributes}
+                                                        {inheritedAttributes}
                                                         {openPropertySHACLRulesDialog}
                                                     />
                                                     <Associations
                                                         associations={reactiveClass.associations}
+                                                        {inheritedAssociations}
                                                         {openPropertySHACLRulesDialog}
                                                     />
                                                 {/if}
@@ -410,6 +450,7 @@
             <ShaclPropertySpecificDialog
                 bind:showDialog={propertyShaclRulesDialog.showDialog}
                 property={propertyShaclRulesDialog.property}
+                classUuidOverride={propertyShaclRulesDialog.classUuidOverride}
             />
         {/if}
     </Splitpanes>
