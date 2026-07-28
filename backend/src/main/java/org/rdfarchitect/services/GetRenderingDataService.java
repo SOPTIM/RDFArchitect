@@ -76,8 +76,14 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
                 filter.isIncludePropertiesFromOtherProfiles()
                         ? loadOtherProfiles(graphIdentifier)
                         : List.<CIMProfileModel>of();
+        var primaryColor =
+                filter.isIncludePropertiesFromOtherProfiles()
+                        ? databasePort
+                                .getCrossProfileDiagramInfo(graphIdentifier.datasetName())
+                                .getColor(graphIdentifier.graphUri())
+                        : null;
 
-        return renderer.renderUML(cimModel, filter, layoutData, otherProfiles);
+        return renderer.renderUML(cimModel, filter, layoutData, otherProfiles, primaryColor);
     }
 
     private List<CIMProfileModel> loadOtherProfiles(GraphIdentifier graphIdentifier) {

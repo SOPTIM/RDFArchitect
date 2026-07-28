@@ -18,11 +18,11 @@
 import { untrack } from "svelte";
 
 import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+import { renderOptions } from "$lib/renderOptions.svelte.js";
 import {
     ClassType,
     DiagramType,
     editorState,
-    graphViewState,
     mergeSelections,
     multiSelectState,
     SelectionLevel,
@@ -175,8 +175,7 @@ export class DiagramSelectionController {
         const isMergedContext =
             diagramType === DiagramType.CROSS_PROFILE ||
             (diagramType === DiagramType.PACKAGE &&
-                graphViewState.filter.getValue()
-                    .includePropertiesFromOtherProfiles);
+                renderOptions.get("includePropertiesFromOtherProfiles"));
         const classType = isMergedContext
             ? ClassType.MERGED_CLASS
             : ClassType.SINGLE_CLASS;

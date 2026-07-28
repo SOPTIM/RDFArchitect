@@ -78,7 +78,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             ICIMModelFacade cimModel,
             GraphFilter filter,
             RenderingLayoutData layoutData,
-            List<CIMProfileModel> otherProfiles) {
+            List<CIMProfileModel> otherProfiles,
+            String primaryColor) {
         var classes = selectClasses(cimModel, filter);
         if (classes.isEmpty()) {
             return createEmptyDiagram();
@@ -93,6 +94,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         filter,
                         layoutData,
                         cimModel.getGraphUri(),
+                        primaryColor,
                         buildProfileLookups(filter, otherProfiles));
 
         var nodes = assembleNodeDTOList(renderContext);
@@ -508,10 +510,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
         String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
+        String ownColor = merge ? renderContext.primaryColor() : null;
 
         List<AttributeDTO> attributeDTOs = new ArrayList<>();
         for (var cimAttribute : cimClass.getAttributes()) {
-            attributeDTOs.add(toAttributeDTO(cimAttribute, ownGraphUri, null));
+            attributeDTOs.add(toAttributeDTO(cimAttribute, ownGraphUri, ownColor));
         }
 
         if (merge) {
@@ -574,6 +577,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
         String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
+        String ownColor = merge ? renderContext.primaryColor() : null;
 
         List<EnumEntryDTO> enumEntries = new ArrayList<>();
         for (var cimEnumEntry : cimClass.getEnumEntries()) {
@@ -581,6 +585,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     EnumEntryDTO.builder()
                             .label(cimEnumEntry.getLabel().getValue())
                             .graphUri(ownGraphUri)
+                            .color(ownColor)
                             .build());
         }
 
@@ -727,6 +732,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             GraphFilter filter,
             RenderingLayoutData layoutingData,
             String primaryGraphUri,
+            String primaryColor,
             List<ProfileLookup> otherProfiles) {}
 
     private record ProfileLookup(

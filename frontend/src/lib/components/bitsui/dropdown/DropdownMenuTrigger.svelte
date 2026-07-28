@@ -21,7 +21,7 @@
 </script>
 
 <BitsUiDropdownMenu.Trigger
-    class="hover:bg-button-default-background data-[state=open]:bg-button-default-background  rounded  transition-colors hover:cursor-pointer hover:text-white data-[state=open]:text-white"
+    class="group hover:bg-button-default-background data-[state=open]:bg-button-default-background  rounded  transition-colors hover:cursor-pointer hover:text-white data-[state=open]:text-white"
 >
     {@render children?.()}
 </BitsUiDropdownMenu.Trigger>

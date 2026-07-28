@@ -496,6 +496,33 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("colorizes the rendered graph's own properties with the primary color")
+    void colorizesOwnPropertiesWithPrimaryColor() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                "#123456");
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .filteredOn(attribute -> attribute.getLabel().equals("childAttr"))
+                .singleElement()
+                .satisfies(
+                        attribute -> {
+                            assertThat(attribute.getGraphUri()).isEqualTo(GRAPH_URI);
+                            assertThat(attribute.getColor()).isEqualTo("#123456");
+                        });
+    }
+
+    @Test
     @DisplayName("leaves attributes ungrouped when other-profile merge is disabled")
     void keepsAttributesUngroupedWhenDisabled() {
         var result =
