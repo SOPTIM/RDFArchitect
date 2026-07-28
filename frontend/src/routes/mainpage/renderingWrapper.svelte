@@ -130,6 +130,8 @@
             includeInheritance: filter.includeInheritance,
             includeRelationsToExternalPackages:
                 filter.includeRelationsToExternalPackages,
+            includePropertiesFromOtherProfiles:
+                filter.includePropertiesFromOtherProfiles,
         };
 
         try {

@@ -70,6 +70,25 @@
         isCrossProfileDiagram ? buildCrossProfileSections() : [],
     );
 
+    const hasOtherProfileProps = $derived(
+        !isCrossProfileDiagram &&
+            collectGraphUris().some(
+                graphUri => graphUri && graphUri !== data.graphUri,
+            ),
+    );
+
+    const packageProfileSections = $derived(
+        hasOtherProfileProps ? buildPackageProfileSections() : [],
+    );
+
+    const profileSections = $derived(
+        isCrossProfileDiagram ? crossProfileSections : packageProfileSections,
+    );
+
+    const useProfileSections = $derived(
+        isCrossProfileDiagram || hasOtherProfileProps,
+    );
+
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
 
     function graphUriOf(prop) {
@@ -110,6 +129,31 @@
         const showInherited = userSettings.get("showInheritedProperties", true);
 
         return collectGraphUris()
+            .map(graphUri => ({
+                graphUri,
+                graphName: getGraphLabel(graphUri),
+                superGroups: superGroupsForGraph(graphUri),
+                ownAttributes: propsForGraph(attributes, graphUri),
+                ownEnumEntries: propsForGraph(enumEntries, graphUri),
+            }))
+            .filter(
+                section =>
+                    section.ownAttributes.length > 0 ||
+                    section.ownEnumEntries.length > 0 ||
+                    (showInherited && section.superGroups.length > 0),
+            );
+    }
+
+    function buildPackageProfileSections() {
+        const showInherited = userSettings.get("showInheritedProperties", true);
+        const current = data.graphUri;
+        const graphUris = collectGraphUris();
+        const ordered = [
+            ...(graphUris.includes(current) ? [current] : []),
+            ...graphUris.filter(graphUri => graphUri !== current),
+        ];
+
+        return ordered
             .map(graphUri => ({
                 graphUri,
                 graphName: getGraphLabel(graphUri),
@@ -177,8 +221,8 @@
     <div
         class="class-node-divider bg-class-node-lower-background p-2 text-center"
     >
-        {#if isCrossProfileDiagram}
-            {#each crossProfileSections as section (section.graphUri)}
+        {#if useProfileSections}
+            {#each profileSections as section (section.graphUri)}
                 <div class="text-default-text text-xs italic opacity-70">
                     {section.graphName}
                 </div>
