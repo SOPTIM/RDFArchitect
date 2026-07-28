@@ -169,32 +169,6 @@ export const editorState = {
     },
 };
 
-/**
- * The graphViewState contains the states of variables relating to the view of a graph.
- * @type {{
- *  showGraphFilter: StateValuePair<boolean>,
- *  filter: StateValuePair<{
- *      includeEnumEntries: boolean,
- *      includeAttributes: boolean,
- *      includeAssociations: boolean,
- *      includeInheritance: boolean,
- *      includeRelationsToExternalPackages: boolean,
- *      includePropertiesFromOtherProfiles: boolean
- *  }>
- * }}
- */
-export const graphViewState = {
-    showGraphFilter: new StateValuePair(false),
-    filter: new StateValuePair({
-        includeEnumEntries: true,
-        includeAttributes: true,
-        includeAssociations: true,
-        includeInheritance: true,
-        includeRelationsToExternalPackages: true,
-        includePropertiesFromOtherProfiles: false,
-    }),
-};
-
 export const forceReloadTrigger = new SimpleTrigger();
 
 /**

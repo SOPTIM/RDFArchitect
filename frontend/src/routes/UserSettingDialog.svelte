@@ -30,8 +30,14 @@
         defaultExportFormat: supportedRDFMediaTypes[0].mimeType,
         showPackagePrefix: false,
         useColoredPropertiesInMergedView: true,
-        showInheritedProperties: true,
+        showInheritedProperties: false,
         normalizeComments: true,
+        includeEnumEntries: true,
+        includeAttributes: true,
+        includeAssociations: true,
+        includeInheritance: true,
+        includeRelationsToExternalPackages: true,
+        includePropertiesFromOtherProfiles: false,
     };
 
     let localSettings = $state({});
@@ -98,6 +104,36 @@
             <CheckBoxEditControl
                 label="Show inherited properties"
                 bind:value={localSettings["showInheritedProperties"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Include enum entries"
+                bind:value={localSettings["includeEnumEntries"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Include attributes"
+                bind:value={localSettings["includeAttributes"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Include associations"
+                bind:value={localSettings["includeAssociations"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Include inheritance"
+                bind:value={localSettings["includeInheritance"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Include relations to external packages"
+                bind:value={localSettings["includeRelationsToExternalPackages"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Include properties from other profiles"
+                bind:value={localSettings["includePropertiesFromOtherProfiles"]}
                 labelFirst={false}
             />
         </USC.Section>

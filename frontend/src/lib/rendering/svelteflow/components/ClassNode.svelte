@@ -19,13 +19,13 @@
     import { Handle, Position } from "@xyflow/svelte";
 
     import { URI } from "$lib/models/dto/index.ts";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         DiagramType,
         editorState,
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
@@ -126,7 +126,7 @@
     }
 
     function buildCrossProfileSections() {
-        const showInherited = userSettings.get("showInheritedProperties", true);
+        const showInherited = renderOptions.get("showInheritedProperties");
 
         return collectGraphUris()
             .map(graphUri => ({
@@ -145,7 +145,7 @@
     }
 
     function buildPackageProfileSections() {
-        const showInherited = userSettings.get("showInheritedProperties", true);
+        const showInherited = renderOptions.get("showInheritedProperties");
         const current = data.graphUri;
         const graphUris = collectGraphUris();
         const ordered = [
@@ -226,7 +226,7 @@
                 <div class="text-default-text text-xs italic opacity-70">
                     {section.graphName}
                 </div>
-                {#if userSettings.get("showInheritedProperties", true)}
+                {#if renderOptions.get("showInheritedProperties")}
                     {#each section.superGroups as superClass}
                         <div
                             class="text-default-text mt-1 flex flex-nowrap items-center justify-center gap-3 py-0.5 text-xs italic opacity-70"
@@ -244,7 +244,7 @@
                         {#each superClass.attributes as attr}
                             <div
                                 class="text-default-text leading-6 opacity-70"
-                                style={userSettings.get(
+                                style={renderOptions.get(
                                     "useColoredPropertiesInMergedView",
                                 ) && attr.color
                                     ? `color: ${attr.color};`
@@ -256,7 +256,7 @@
                         {#each superClass.enumEntries as enumEntry}
                             <div
                                 class="text-default-text leading-6 opacity-70"
-                                style={userSettings.get(
+                                style={renderOptions.get(
                                     "useColoredPropertiesInMergedView",
                                 ) && enumEntry.color
                                     ? `color: ${enumEntry.color};`
@@ -270,7 +270,7 @@
                 {#each section.ownAttributes as attr}
                     <div
                         class="text-default-text leading-6"
-                        style={userSettings.get(
+                        style={renderOptions.get(
                             "useColoredPropertiesInMergedView",
                         ) && attr.color
                             ? `color: ${attr.color};`
@@ -282,7 +282,7 @@
                 {#each section.ownEnumEntries as enumEntry}
                     <div
                         class="text-default-text leading-6"
-                        style={userSettings.get(
+                        style={renderOptions.get(
                             "useColoredPropertiesInMergedView",
                         ) && enumEntry.color
                             ? `color: ${enumEntry.color};`
@@ -293,7 +293,7 @@
                 {/each}
             {/each}
         {:else}
-            {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
+            {#if renderOptions.get("showInheritedProperties") && inheritedGroups.length > 0}
                 {#each inheritedGroups as superClass}
                     <div
                         class="text-default-text flex flex-nowrap items-center justify-center gap-3 py-0.5 text-xs italic opacity-70"

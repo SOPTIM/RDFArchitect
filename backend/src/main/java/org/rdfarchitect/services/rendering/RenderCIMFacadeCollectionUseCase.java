@@ -39,7 +39,15 @@ public interface RenderCIMFacadeCollectionUseCase {
      */
     default RenderingDataDTO renderUML(
             ICIMModelFacade cimModel, GraphFilter filter, RenderingLayoutData layoutData) {
-        return renderUML(cimModel, filter, layoutData, List.of());
+        return renderUML(cimModel, filter, layoutData, List.of(), null);
+    }
+
+    default RenderingDataDTO renderUML(
+            ICIMModelFacade cimModel,
+            GraphFilter filter,
+            RenderingLayoutData layoutData,
+            List<CIMProfileModel> otherProfiles) {
+        return renderUML(cimModel, filter, layoutData, otherProfiles, null);
     }
 
     /**
@@ -51,13 +59,16 @@ public interface RenderCIMFacadeCollectionUseCase {
      * @param layoutData pre-fetched diagram layout data (may be null)
      * @param otherProfiles the other profiles whose matching classes contribute properties when
      *     {@link GraphFilter#isIncludePropertiesFromOtherProfiles()} is set
+     * @param primaryColor the cross-profile color of the rendered graph, used to colorize its own
+     *     properties when other-profile properties are merged in (may be null)
      * @return a dto that contains all data required to render a UML diagram for the given model
      */
     RenderingDataDTO renderUML(
             ICIMModelFacade cimModel,
             GraphFilter filter,
             RenderingLayoutData layoutData,
-            List<CIMProfileModel> otherProfiles);
+            List<CIMProfileModel> otherProfiles,
+            String primaryColor);
 
     /**
      * Generates the rendering data for a cross-profile (merged) diagram: all classes across the
