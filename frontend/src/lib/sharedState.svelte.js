@@ -76,6 +76,7 @@ export const SelectionLevel = {
  *  selectedClass: StateObjectPair<Object | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
  *  selectedContext: StateValuePair<string | null>,
+ *  mergedViewOriginGraph: StateValuePair<string | null>,
  *  reset: () => void
  * }}
  */
@@ -91,6 +92,9 @@ export const editorState = {
     selectedContext: new StateValuePair(),
     // The level the user selected last; drives the nav highlight (see SelectionLevel).
     activeSelectionKind: new StateValuePair(),
+    // The graph the user came from when entering the merged view; preselects the
+    // matching source in the merged class editor.
+    mergedViewOriginGraph: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -102,6 +106,7 @@ export const editorState = {
         this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);
         this.activeSelectionKind.updateValue(null);
+        this.mergedViewOriginGraph.updateValue(null);
         multiSelectState.clear();
     },
 
@@ -173,7 +178,8 @@ export const editorState = {
  *      includeAttributes: boolean,
  *      includeAssociations: boolean,
  *      includeInheritance: boolean,
- *      includeRelationsToExternalPackages: boolean
+ *      includeRelationsToExternalPackages: boolean,
+ *      includePropertiesFromOtherProfiles: boolean
  *  }>
  * }}
  */
@@ -185,6 +191,7 @@ export const graphViewState = {
         includeAssociations: true,
         includeInheritance: true,
         includeRelationsToExternalPackages: true,
+        includePropertiesFromOtherProfiles: false,
     }),
 };
 

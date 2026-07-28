@@ -55,6 +55,10 @@
     });
 
     function selectMergedView() {
+        const originGraph = editorState.selectedGraph.getValue();
+        if (originGraph) {
+            editorState.mergedViewOriginGraph.updateValue(originGraph);
+        }
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({

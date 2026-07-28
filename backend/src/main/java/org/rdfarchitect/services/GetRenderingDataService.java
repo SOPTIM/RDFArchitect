@@ -30,9 +30,13 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
+import org.rdfarchitect.services.rendering.CIMProfileModel;
+import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -67,6 +71,26 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         var cimModel =
                 new CIMModelFacade(
                         graphIdentifier.graphUri(), ModelFactory.createModelForGraph(rdfGraphCopy));
-        return renderer.renderUML(cimModel, filter, layoutData);
+
+        var otherProfiles =
+                filter.isIncludePropertiesFromOtherProfiles()
+                        ? loadOtherProfiles(graphIdentifier)
+                        : List.<CIMProfileModel>of();
+
+        return renderer.renderUML(cimModel, filter, layoutData, otherProfiles);
+    }
+
+    private List<CIMProfileModel> loadOtherProfiles(GraphIdentifier graphIdentifier) {
+        var datasetName = graphIdentifier.datasetName();
+        var otherProfiles = new ArrayList<CIMProfileModel>();
+
+        for (var graphUri : databasePort.listGraphUris(datasetName)) {
+            if (graphUri.equals(graphIdentifier.graphUri())) {
+                continue;
+            }
+            otherProfiles.add(CIMProfileModels.load(databasePort, datasetName, graphUri));
+        }
+
+        return otherProfiles;
     }
 }

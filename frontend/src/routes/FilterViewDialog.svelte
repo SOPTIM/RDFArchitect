@@ -44,6 +44,11 @@
             value: graphViewState.filter.getValue()
                 .includeRelationsToExternalPackages,
         },
+        {
+            label: "include properties from other profiles",
+            value: graphViewState.filter.getValue()
+                .includePropertiesFromOtherProfiles,
+        },
     ]);
 
     function submit() {
@@ -53,6 +58,7 @@
             includeAssociations: options[2].value,
             includeInheritance: options[3].value,
             includeRelationsToExternalPackages: options[4].value,
+            includePropertiesFromOtherProfiles: options[5].value,
         });
         showDialog = false;
     }

@@ -22,6 +22,7 @@ import {
     ClassType,
     DiagramType,
     editorState,
+    graphViewState,
     mergeSelections,
     multiSelectState,
     SelectionLevel,
@@ -170,11 +171,15 @@ export class DiagramSelectionController {
             return;
         }
 
-        const classType =
-            editorState.selectedDiagram.getProperty("type") ===
-            DiagramType.CROSS_PROFILE
-                ? ClassType.MERGED_CLASS
-                : ClassType.SINGLE_CLASS;
+        const diagramType = editorState.selectedDiagram.getProperty("type");
+        const isMergedContext =
+            diagramType === DiagramType.CROSS_PROFILE ||
+            (diagramType === DiagramType.PACKAGE &&
+                graphViewState.filter.getValue()
+                    .includePropertiesFromOtherProfiles);
+        const classType = isMergedContext
+            ? ClassType.MERGED_CLASS
+            : ClassType.SINGLE_CLASS;
 
         if (event?.shiftKey) {
             const entry = this.buildEntry(nodeClickEvent.node);

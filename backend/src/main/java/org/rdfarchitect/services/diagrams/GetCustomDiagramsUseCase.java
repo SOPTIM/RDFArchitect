@@ -47,6 +47,5 @@ public interface GetCustomDiagramsUseCase {
      * @param datasetName The name of the dataset.
      * @return The cross profile diagram for the dataset.
      */
-    CrossProfileDiagramDTO getCrossProfileDiagram(
-            String datasetName, boolean includeProperties, boolean doLayout);
+    CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout);
 }
