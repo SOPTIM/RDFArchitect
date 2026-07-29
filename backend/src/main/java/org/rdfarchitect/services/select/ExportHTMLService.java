@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.BelongsToCategoryDTO;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
-import org.rdfarchitect.api.dto.SuperClassDTO;
 import org.rdfarchitect.api.dto.association.AssociationDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
@@ -588,7 +587,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         var ancestors = new java.util.ArrayList<ClassUMLAdaptedDTO>();
         var visited = new java.util.HashSet<String>();
 
-        SuperClassDTO currentSuperClass = classUMLAdaptedDTO.getSuperClass();
+        var currentSuperClass = classUMLAdaptedDTO.getSuperClass();
         while (currentSuperClass != null) {
             var key = currentSuperClass.getPrefix() + "#" + currentSuperClass.getLabel();
             if (!visited.add(key)) {
@@ -608,7 +607,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     }
 
     private ClassUMLAdaptedDTO findClassByLabel(
-            SuperClassDTO superClass, List<ClassUMLAdaptedDTO> classList) {
+            ClassUMLAdaptedDTO superClass, List<ClassUMLAdaptedDTO> classList) {
         return classList.stream()
                 .filter(c -> c.getLabel() != null && c.getLabel().equals(superClass.getLabel()))
                 .filter(
