@@ -42,6 +42,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -86,7 +87,13 @@ public class ClassRESTController {
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphURI,
-            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
+            @Parameter(
+                            description =
+                                    "Whether to recursively expand the superclass hierarchy"
+                                            + " (with their attributes and associations).")
+                    @RequestParam(defaultValue = "false")
+                    boolean includeSuperClasses) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" from \"{}\".",
                 datasetName,
@@ -98,7 +105,8 @@ public class ClassRESTController {
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
         var classObject =
-                getClassInformationUseCase.getClassInformation(graphIdentifier, classUUID);
+                getClassInformationUseCase.getClassInformation(
+                        graphIdentifier, classUUID, includeSuperClasses);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}\" to \"{}\".",

@@ -15,7 +15,10 @@
  *
  */
 
+import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
+import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
 import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
+import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
 
 /**
  * Maps a class DTO to a ReactiveClass instance
@@ -59,6 +62,67 @@ export function mapClassDtoToReactiveClass(classDto, context, getClassByUuid) {
         getClassByUuid,
         context,
     );
+}
+
+export function mapSuperClassesToInherited(rootSuperClass, classes = []) {
+    const flat = [];
+    const visited = new Set();
+    let node = rootSuperClass;
+    while (node && !(node.uuid != null && visited.has(node.uuid))) {
+        if (node.uuid != null) {
+            visited.add(node.uuid);
+        }
+        flat.push(node);
+        node = node.superClass;
+    }
+    flat.reverse();
+
+    const toGroup = node => ({
+        sourceClassUuid: node.uuid,
+        sourceClassPrefix: node.prefix,
+        sourceClassLabel: node.label,
+    });
+
+    const attributeGroups = flat
+        .filter(node => (node.attributes ?? []).length > 0)
+        .map(node => ({
+            ...toGroup(node),
+            attributes: node.attributes.map(
+                attr =>
+                    new ReactiveAttribute(
+                        mapAttributeDtoToReactiveAttribute(attr),
+                    ),
+            ),
+        }));
+
+    const associationGroups = flat
+        .filter(node => (node.associationPairs ?? []).length > 0)
+        .map(node => ({
+            ...toGroup(node),
+            associations: node.associationPairs.map(
+                association =>
+                    new ReactiveAssociation(
+                        mapAssociationDtoToReactiveAssociation(
+                            association,
+                            classes,
+                        ),
+                    ),
+            ),
+        }));
+
+    const enumEntryGroups = flat
+        .filter(node => (node.enumEntries ?? []).length > 0)
+        .map(node => ({
+            ...toGroup(node),
+            enumEntries: node.enumEntries.map(
+                entry =>
+                    new ReactiveEnumEntry(
+                        mapEnumEntryDtoToReactiveEnumEntry(entry),
+                    ),
+            ),
+        }));
+
+    return { attributeGroups, associationGroups, enumEntryGroups };
 }
 
 /**

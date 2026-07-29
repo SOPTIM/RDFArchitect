@@ -15,13 +15,21 @@
  *
  */
 
-package org.rdfarchitect.services.select;
-
-import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
-import org.rdfarchitect.database.GraphIdentifier;
-
-public interface GetClassInformationUseCase {
-
-    ClassUMLAdaptedDTO getClassInformation(
-            GraphIdentifier graphIdentifier, String classUUID, boolean includeSuperClasses);
+export function resolveSaveTarget(targetClass, reactiveClass) {
+    if (targetClass) {
+        return {
+            classUuid: targetClass.uuid,
+            domainIri: targetClass.prefix + targetClass.label,
+            domainCls: {
+                label: targetClass.label,
+                namespace: targetClass.prefix,
+                uuid: targetClass.uuid,
+            },
+        };
+    }
+    return {
+        classUuid: reactiveClass.uuid.value,
+        domainIri: reactiveClass.namespace.backup + reactiveClass.label.backup,
+        domainCls: reactiveClass,
+    };
 }
