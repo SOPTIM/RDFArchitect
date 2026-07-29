@@ -29,8 +29,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.springframework.stereotype.Service;
 
-import tools.jackson.databind.json.JsonMapper;
-
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
@@ -39,7 +37,6 @@ import java.util.List;
 public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
     private final GetClassListUseCase getClassListUseCase;
-    private final JsonMapper.Builder builder;
 
     @Override
     public byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier) {
