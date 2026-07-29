@@ -62,7 +62,7 @@ async function renderPackageToPng(nodes, edges) {
     clipper.setAttribute("aria-hidden", "true");
 
     const container = document.createElement("div");
-    container.style.display = "inline-block"; // schrumpft/wächst automatisch mit dem Inhalt
+    container.style.display = "inline-block";
     container.style.background = "#ffffff";
 
     clipper.appendChild(container);
