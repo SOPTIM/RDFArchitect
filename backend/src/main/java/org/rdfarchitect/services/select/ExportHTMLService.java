@@ -440,13 +440,11 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         if (category == null) {
             return "";
         }
-        String builder =
-                "<p class=\"package\"><a href=\"images\\"
-                        + category.getLabel()
-                        + ".png\" target=\"_blanc\">"
-                        + category.getLabel()
-                        + " </a></p>\n";
-        return builder;
+        return "<p class=\"package\"><a href=\"images\\"
+                + category.getLabel()
+                + ".png\" target=\"_blanc\">"
+                + category.getLabel()
+                + " </a></p>\n";
     }
 
     private String buildNativeMembers(String stereotype, ClassUMLAdaptedDTO classUMLAdaptedDTO) {
@@ -482,34 +480,20 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     }
 
     private String buildAttributeRow(AttributeDTO attribute) {
-        var builder = new StringBuilder();
-        builder.append("<tr>\n");
-        builder.append("<th>\n");
-        builder.append("<p class=\"attribut\" id=\"")
-                .append(attribute.getDomain())
-                .append(".")
-                .append(attribute.getLabel())
-                .append("\">")
-                .append(attribute.getLabel())
-                .append(" </p>\n");
-        builder.append("</th>\n");
-        builder.append("<td>\n<p class=\"cardinality\">")
-                .append(nullToEmpty(attribute.getMultiplicity()))
-                .append("</p>\n</td>\n");
-        builder.append("<td class=\"type\">\n<p class=\"type\">\n");
-        if (attribute.getDataType() != null) {
-            builder.append("<a href=\"#")
-                    .append(attribute.getDataType().getLabel())
-                    .append("\">")
-                    .append(attribute.getDataType().getLabel())
-                    .append("</a>\n");
-        }
-        builder.append("</p>\n</td>\n");
-        builder.append("<td>\n<p class=\"comment\">")
-                .append(nullToEmpty(attribute.getComment()))
-                .append("</p>\n</td>\n");
-        builder.append("</tr>\n");
-        return builder.toString();
+        return "<tr>\n"
+                + "<th>\n"
+                + "<p class=\"attribut\" id=\""
+                + attribute.getDomain()
+                + "."
+                + attribute.getLabel()
+                + "\">"
+                + attribute.getLabel()
+                + " </p>\n"
+                + buildAttributeData(attribute)
+                + "<td>\n<p class=\"comment\">"
+                + nullToEmpty(attribute.getComment())
+                + "</p>\n</td>\n"
+                + "</tr>\n";
     }
 
     private String buildAssociationRow(AssociationPairDTO pair) {
@@ -619,12 +603,23 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     }
 
     private String buildInheritedAttributeRow(AttributeDTO attribute, ClassUMLAdaptedDTO ancestor) {
+        return "<tr>\n"
+                + "<th>\n"
+                + "<p class=\"inheritattribut\">"
+                + attribute.getLabel()
+                + " </p>\n"
+                + buildAttributeData(attribute)
+                + "<td>\n</td>\n"
+                + "<td>\n<p>see <a class=\"superclass\" href=\"#"
+                + ancestor.getLabel()
+                + "\">"
+                + ancestor.getLabel()
+                + "</a>\n</p>\n</td>\n"
+                + "</tr>\n";
+    }
+
+    private String buildAttributeData(AttributeDTO attribute) {
         var builder = new StringBuilder();
-        builder.append("<tr>\n");
-        builder.append("<th>\n");
-        builder.append("<p class=\"inheritattribut\">")
-                .append(attribute.getLabel())
-                .append(" </p>\n");
         builder.append("</th>\n");
         builder.append("<td>\n<p class=\"cardinality\">")
                 .append(nullToEmpty(attribute.getMultiplicity()))
@@ -638,13 +633,6 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                     .append("</a>\n");
         }
         builder.append("</p>\n</td>\n");
-        builder.append("<td>\n</td>\n");
-        builder.append("<td>\n<p>see <a class=\"superclass\" href=\"#")
-                .append(ancestor.getLabel())
-                .append("\">")
-                .append(ancestor.getLabel())
-                .append("</a>\n</p>\n</td>\n");
-        builder.append("</tr>\n");
         return builder.toString();
     }
 
