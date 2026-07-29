@@ -588,7 +588,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         var ancestors = new java.util.ArrayList<ClassUMLAdaptedDTO>();
         var visited = new java.util.HashSet<String>();
 
-        var currentSuperClass = classUMLAdaptedDTO.getSuperClass();
+        SuperClassDTO currentSuperClass = classUMLAdaptedDTO.getSuperClass();
         while (currentSuperClass != null) {
             var key = currentSuperClass.getPrefix() + "#" + currentSuperClass.getLabel();
             if (!visited.add(key)) {
