@@ -17,8 +17,10 @@
 
 package org.rdfarchitect.services.schemamigration.artifacts;
 
+import static org.apache.jena.rdf.model.ModelFactory.createModelForGraph;
+
 import org.apache.jena.graph.Graph;
-import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
@@ -32,14 +34,16 @@ import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeTyp
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.relations.model.CIMClassUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
@@ -54,7 +58,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     @Override
     public String generateDetailedMigrationReport(
-            List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes) {
+            List<SemanticClassChange> classChanges,
+            Graph originalGraph,
+            Graph updatedGraph,
+            boolean ignorePrefixes) {
         var visibleChanges = ignorePrefixes ? applyPrefixRenameFilter(classChanges) : classChanges;
 
         var sb = new StringBuilder();
@@ -65,14 +72,18 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         sb.append("All affected concrete classes are listed alphabetically. ");
         sb.append("Inherited changes are shown under each affected subclass.\n\n");
 
-        var model = ModelFactory.createModelForGraph(originalGraph);
+        var model = createModelForGraph(updatedGraph);
         var concreteClassIRIs =
                 model.listResourcesWithProperty(RDF.type, RDFS.Class)
                         .filterKeep(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.concrete))
-                        .filterDrop(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.enumeration))
-                        .filterDrop(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.cimDataType))
                         .mapWith(Resource::getURI)
-                        .toList();
+                        .toSet();
+        var updatedConcreteClassIRIs =
+                model.listResourcesWithProperty(RDF.type, RDFS.Class)
+                        .filterKeep(r -> r.hasProperty(CIMS.stereotype))
+                        .mapWith(Resource::getURI)
+                        .toSet();
+        concreteClassIRIs.addAll(updatedConcreteClassIRIs);
 
         var concreteChanges =
                 visibleChanges.stream()
@@ -80,8 +91,12 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                         .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
                         .toList();
 
+        var classChangesMap =
+                visibleChanges.stream()
+                        .collect(Collectors.toMap(SemanticClassChange::getIri, c -> c));
+
         for (var classChange : concreteChanges) {
-            appendClassSection(sb, classChange);
+            appendDetailedClassSection(sb, classChange, model, classChangesMap);
         }
 
         return sb.toString();
@@ -89,7 +104,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
 
     @Override
     public String generateSummaryMigrationReport(
-            List<SemanticClassChange> classChanges, boolean ignorePrefixes) {
+            List<SemanticClassChange> classChanges, Graph updatedGraph, boolean ignorePrefixes) {
         var visibleChanges = ignorePrefixes ? applyPrefixRenameFilter(classChanges) : classChanges;
 
         var sb = new StringBuilder();
@@ -123,11 +138,12 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             appendDirectProperties(sb, "Associations", classChange.getAssociations());
             appendDirectProperties(sb, "Enum Entries", classChange.getEnumEntries());
 
-            var affectedSubclasses = findAffectedSubclasses(classChange, classChanges);
+            var model = createModelForGraph(updatedGraph);
+            var affectedSubclasses = findAffectedSubclasses(classChange, model);
             if (!affectedSubclasses.isEmpty()) {
                 sb.append("**Affected concrete classes:**\n\n");
                 for (var sub : affectedSubclasses) {
-                    sb.append("- ").append(sub.getLabel()).append("\n");
+                    sb.append("- ").append(sub).append("\n");
                 }
                 sb.append("\n");
             }
@@ -163,7 +179,12 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         sb.append("\n---\n\n");
     }
 
-    private void appendClassSection(StringBuilder sb, SemanticClassChange classChange) {
+    private void appendDetailedClassSection(
+            StringBuilder sb,
+            SemanticClassChange classChange,
+            Model model,
+            Map<String, SemanticClassChange> classChangesMap) {
+
         if (classChange.getSemanticResourceChangeType() == SemanticResourceChangeType.RENAME) {
             var oldLabel = new URI(classChange.getOldIRI()).getSuffix();
             sb.append("## Renamed from ")
@@ -190,6 +211,54 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         appendPropertySection(sb, "Attributes", classChange.getAttributes());
         appendPropertySection(sb, "Associations", classChange.getAssociations());
         appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries());
+
+        // Collect changed (not added/deleted) properties from ancestor classes
+        var classResource = model.getResource(classChange.getIri());
+        var ancestorChangedAttributes = new ArrayList<SemanticResourceChange>();
+        var ancestorChangedAssociations = new ArrayList<SemanticResourceChange>();
+        var ancestorChangedEnumEntries = new ArrayList<SemanticResourceChange>();
+
+        CIMClassUtils.listSuperClasses(classResource).stream()
+                .map(r -> classChangesMap.get(r.getURI()))
+                .filter(Objects::nonNull)
+                .forEach(
+                        superclass -> {
+                            superclass.getAttributes().stream()
+                                    .filter(
+                                            p ->
+                                                    p.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .CHANGE
+                                                            || p.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .RENAME)
+                                    .forEach(ancestorChangedAttributes::add);
+                            superclass.getAssociations().stream()
+                                    .filter(
+                                            p ->
+                                                    p.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .CHANGE
+                                                            || p.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .RENAME)
+                                    .forEach(ancestorChangedAssociations::add);
+                            superclass.getEnumEntries().stream()
+                                    .filter(
+                                            p ->
+                                                    p.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .CHANGE
+                                                            || p.getSemanticResourceChangeType()
+                                                                    == SemanticResourceChangeType
+                                                                            .RENAME)
+                                    .forEach(ancestorChangedEnumEntries::add);
+                        });
+
+        appendPropertySection(sb, "Inherited Attribute Changes", ancestorChangedAttributes);
+        appendPropertySection(sb, "Inherited Association Changes", ancestorChangedAssociations);
+        appendPropertySection(sb, "Inherited Enum Entry Changes", ancestorChangedEnumEntries);
+
         sb.append("\n---\n\n");
     }
 
@@ -323,63 +392,13 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                                         .DELETED_FROM_INHERITANCE);
     }
 
-    private List<SemanticClassChange> findAffectedSubclasses(
-            SemanticClassChange parentChange, List<SemanticClassChange> allChanges) {
-        var directPropertyLabels = collectDirectPropertyLabels(parentChange);
-        return allChanges.stream()
-                .filter(c -> !c.getIri().equals(parentChange.getIri()))
-                .filter(c -> hasMatchingInheritedProperty(c, directPropertyLabels))
-                .sorted(Comparator.comparing(SemanticResourceChange::getLabel))
+    private List<URI> findAffectedSubclasses(SemanticClassChange parentChange, Model model) {
+        var parentClass = model.getResource(parentChange.getIri());
+        var subclasses = CIMClassUtils.findDerivingClasses(parentClass);
+        return subclasses.stream()
+                .filter(cls -> cls.hasProperty(CIMS.stereotype, CIMStereotypes.concrete))
+                .map(cls -> new URI(cls.getURI()))
                 .toList();
-    }
-
-    private Set<String> collectDirectPropertyLabels(SemanticClassChange classChange) {
-        var labels = new HashSet<String>();
-        addDirectLabels(labels, classChange.getAttributes());
-        addDirectLabels(labels, classChange.getAssociations());
-        addDirectLabels(labels, classChange.getEnumEntries());
-        return labels;
-    }
-
-    private <T extends SemanticResourceChange> void addDirectLabels(
-            Set<String> labels, List<T> properties) {
-        if (properties == null) {
-            return;
-        }
-
-        properties.stream()
-                .filter(
-                        p ->
-                                p.getSemanticResourceChangeType()
-                                                != SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-                                        && p.getSemanticResourceChangeType()
-                                                != SemanticResourceChangeType
-                                                        .DELETED_FROM_INHERITANCE)
-                .forEach(p -> labels.add(p.getLabel()));
-    }
-
-    private boolean hasMatchingInheritedProperty(
-            SemanticClassChange classChange, Set<String> parentPropertyLabels) {
-        return matchesAny(classChange.getAttributes(), parentPropertyLabels)
-                || matchesAny(classChange.getAssociations(), parentPropertyLabels)
-                || matchesAny(classChange.getEnumEntries(), parentPropertyLabels);
-    }
-
-    private <T extends SemanticResourceChange> boolean matchesAny(
-            List<T> properties, Set<String> labels) {
-        if (properties == null) {
-            return false;
-        }
-
-        return properties.stream()
-                .filter(
-                        p ->
-                                p.getSemanticResourceChangeType()
-                                                == SemanticResourceChangeType.ADDED_FROM_INHERITANCE
-                                        || p.getSemanticResourceChangeType()
-                                                == SemanticResourceChangeType
-                                                        .DELETED_FROM_INHERITANCE)
-                .anyMatch(p -> labels.contains(p.getLabel()));
     }
 
     private String formatChangeType(SemanticResourceChangeType type) {
@@ -388,8 +407,8 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             case DELETE -> "[Deleted]";
             case CHANGE -> "[Changed]";
             case RENAME -> "[Renamed]";
-            case ADDED_FROM_INHERITANCE -> "[Added via inheritance";
-            case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance";
+            case ADDED_FROM_INHERITANCE -> "[Added via inheritance]";
+            case DELETED_FROM_INHERITANCE -> "[Deleted via inheritance]";
         };
     }
 

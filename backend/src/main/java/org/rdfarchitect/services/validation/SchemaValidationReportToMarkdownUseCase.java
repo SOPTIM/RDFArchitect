@@ -26,7 +26,8 @@ public interface SchemaValidationReportToMarkdownUseCase {
      * {@code ERROR} and {@code WARNING} are included; {@code INFO} issues are omitted.
      *
      * @param report the schema validation report to convert
+     * @param title the title to use in the Markdown report
      * @return the Markdown representation of the report
      */
-    String convertToMarkdown(SchemaValidationReportDTO report);
+    String convertToMarkdown(SchemaValidationReportDTO report, String title);
 }

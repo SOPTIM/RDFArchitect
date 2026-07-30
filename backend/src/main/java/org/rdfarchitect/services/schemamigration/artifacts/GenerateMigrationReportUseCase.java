@@ -17,8 +17,12 @@
 
 package org.rdfarchitect.services.schemamigration.artifacts;
 
-public interface GenerateMigrationReportUseCase {
-    String generateDetailedMigrationReport();
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
 
-    String generateSummaryMigrationReport();
+public interface GenerateMigrationReportUseCase {
+    String generateDetailedMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion);
+
+    String generateSummaryMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion);
 }

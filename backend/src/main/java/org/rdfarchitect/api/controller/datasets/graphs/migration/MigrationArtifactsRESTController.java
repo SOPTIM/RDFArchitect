@@ -25,6 +25,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.riot.RDFFormat;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationReportUseCase;
 import org.rdfarchitect.services.schemamigration.artifacts.GenerateMigrationScriptUseCase;
@@ -125,14 +126,23 @@ public class MigrationArtifactsRESTController {
                             description =
                                     "Type of the migration report to generate. Can be either SUMMARY or DETAILED.")
                     @RequestParam(value = "reportType", defaultValue = "SUMMARY")
-                    MigrationReportType reportType) {
+                    MigrationReportType reportType,
+            @Parameter(description = "The CGMES version of the original schema")
+                    @RequestParam(value = "originalCGMESVersion", defaultValue = "V3_0")
+                    CGMESVersion originalCGMESVersion,
+            @Parameter(description = "The CGMES version of the updated schema")
+                    @RequestParam(value = "updatedCGMESVersion", defaultValue = "V3_0")
+                    CGMESVersion updatedCGMESVersion) {
         logger.info("Received GET request: \"/api/migrations/report\" from \"{}\".", originURL);
 
         var report =
                 switch (reportType) {
-                    case SUMMARY -> generateMigrationReportUseCase.generateSummaryMigrationReport();
+                    case SUMMARY ->
+                            generateMigrationReportUseCase.generateSummaryMigrationReport(
+                                    originalCGMESVersion, updatedCGMESVersion);
                     case DETAILED ->
-                            generateMigrationReportUseCase.generateDetailedMigrationReport();
+                            generateMigrationReportUseCase.generateDetailedMigrationReport(
+                                    originalCGMESVersion, updatedCGMESVersion);
                 };
 
         var body = report.getBytes(StandardCharsets.UTF_8);

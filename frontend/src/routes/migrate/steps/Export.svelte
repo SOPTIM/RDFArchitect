@@ -16,10 +16,13 @@
   -->
 
 <script>
+    import { get } from "svelte/store";
+
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { migrationState } from "$lib/sharedState.svelte.js";
     import { saveFile, sparqlMediaType } from "$lib/utils/fileUtils.js";
 
     import { goto } from "$app/navigation";
@@ -46,8 +49,13 @@
     }
 
     async function generateMigrationReport() {
+        const state = get(migrationState);
         try {
-            const response = await bec.fetchReport();
+            const response = await bec.fetchReport(
+                reportType,
+                state.cgmesVersionA,
+                state.cgmesVersionB,
+            );
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
