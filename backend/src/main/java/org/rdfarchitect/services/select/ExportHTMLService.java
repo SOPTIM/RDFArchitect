@@ -24,6 +24,7 @@ import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
 import org.rdfarchitect.api.dto.association.AssociationDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.springframework.stereotype.Service;
@@ -425,8 +426,12 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                     .append("</p>\n");
         }
 
-        builder.append(buildNativeMembers(stereotype, classUMLAdaptedDTO));
-        builder.append(buildInheritedMembers(classUMLAdaptedDTO, fullClassList));
+        if (isEnumeration(classUMLAdaptedDTO)) {
+            builder.append(buildEnumEntries(classUMLAdaptedDTO));
+        } else {
+            builder.append(buildNativeMembers(stereotype, classUMLAdaptedDTO));
+            builder.append(buildInheritedMembers(classUMLAdaptedDTO, fullClassList));
+        }
 
         builder.append("</div>\n");
 
@@ -677,6 +682,43 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                 .append("</a>\n</p>\n</td>\n");
         builder.append("</tr>\n");
         return builder.toString();
+    }
+
+    private boolean isEnumeration(ClassUMLAdaptedDTO classUMLAdaptedDTO) {
+        return classUMLAdaptedDTO.getStereotypes() != null
+                && classUMLAdaptedDTO.getStereotypes().contains(CIMStereotypes.enumerationString);
+    }
+
+    private String buildEnumEntries(ClassUMLAdaptedDTO classUMLAdaptedDTO) {
+        var entries = classUMLAdaptedDTO.getEnumEntries();
+        if (entries == null || entries.isEmpty()) {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        builder.append("<h3>Enumeration Values</h3>\n<table>\n");
+        for (var entry : entries) {
+            builder.append(buildEnumEntryRow(entry));
+        }
+        builder.append("</table>\n");
+        return builder.toString();
+    }
+
+    private String buildEnumEntryRow(EnumEntryDTO entry) {
+        return "<tr>\n"
+                + "<th>\n"
+                + "<p class=\"attribut\" id=\""
+                + nullToEmpty(entry.getPrefix())
+                + "."
+                + nullToEmpty(entry.getLabel())
+                + "\">"
+                + nullToEmpty(entry.getLabel())
+                + " </p>\n"
+                + "</th>\n"
+                + "<td>\n<p class=\"comment\">"
+                + nullToEmpty(entry.getComment())
+                + "</p>\n</td>\n"
+                + "</tr>\n";
     }
 
     private String nullToEmpty(String value) {
