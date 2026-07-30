@@ -130,8 +130,8 @@
             path: {
                 datasetName: datasetName,
                 graphURI: graphUri,
-                uuid: targetUuids,
             },
+            body: targetUuids,
         });
         roots = Object.values(data);
 

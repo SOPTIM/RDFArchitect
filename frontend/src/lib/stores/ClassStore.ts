@@ -49,18 +49,14 @@ import {
     CopyClassResponseDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
+import { AsyncSlot } from "./storeTypes";
 
 // Two cache slots per graph: the list endpoint may be called with or without
 // external classes; keep both so toggling the flag does not invalidate the
 // other one.
 type Variant = "all" | "internalOnly";
 
-type VariantState = {
-    data: ClassUmlAdaptedDto[] | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
+type VariantState = AsyncSlot<ClassUmlAdaptedDto[]>;
 
 type GraphClassState = {
     all: VariantState;
@@ -311,8 +307,8 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
         force = false,
-    ): Promise<Result<ClassUmlAdaptedDto>> {
-        if (!datasetName || !graphURI || !classUUID) return { error: null };
+    ): Promise<void> {
+        if (!datasetName || !graphURI || !classUUID) return;
 
         const key = makeKey(datasetName, graphURI);
 
@@ -321,7 +317,7 @@ function createClassStore() {
             const existing =
                 findInVariant(current.all.data, classUUID) ??
                 findInVariant(current.internalOnly.data, classUUID);
-            if (hasDetails(existing)) return { error: null, data: existing };
+            if (hasDetails(existing)) return;
         }
 
         console.log(
@@ -343,7 +339,7 @@ function createClassStore() {
                     `${LOG_PREFIX} Class details response was empty for classUUID="${classUUID}"`,
                 );
             }
-            return { error };
+            return;
         }
 
         update(s => {
@@ -366,8 +362,6 @@ function createClassStore() {
         console.log(
             `${LOG_PREFIX} Loaded class details for classUUID="${classUUID}"`,
         );
-
-        return { error: null, data };
     }
 
     // ----- Getters -----
@@ -728,7 +722,7 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
         pair: AssociationPairDto,
-    ): Promise<Result<AssociationPairDto>> {
+    ): Promise<Result<AssociationUuids>> {
         console.log(
             `${LOG_PREFIX} Adding association pair to class classUUID="${classUUID}"`,
         );
@@ -769,7 +763,7 @@ function createClassStore() {
             "Association added",
             "Association was added successfully.",
         );
-        return { error: null, data: enriched };
+        return { error: null, data: data ?? undefined };
     }
 
     async function replaceAssociationPair(

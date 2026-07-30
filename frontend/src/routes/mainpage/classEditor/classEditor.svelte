@@ -105,7 +105,13 @@
                 graphUri,
                 classUuid,
             );
-            isDatasetReadOnly = datasetStore.isReadOnly(datasetName);
+            if (classDto == null) {
+                return closeClassEditor({
+                    datasetName: datasetName,
+                    graphUri: graphUri,
+                    classUuid: null,
+                });
+            }
             await loadContext();
             await loadReactiveClass(cancellation, classDto);
         })();

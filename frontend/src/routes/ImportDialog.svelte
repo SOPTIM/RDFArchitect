@@ -84,6 +84,8 @@
         dragActive = false;
         fileInputValue = "";
         rejectedFiles = [];
+        modifiableDatasets = [];
+        readOnlyDatasets = [];
     }
 
     function isDatasetReadOnly(datasetName) {

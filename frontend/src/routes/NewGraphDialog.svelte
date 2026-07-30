@@ -78,6 +78,8 @@
         graphUriUserInput = "";
 
         await datasetStore.load();
+        readOnlyDatasets = [];
+        modifiableDatasets = [];
         for (const dataset of $datasetStore.data) {
             if (dataset.readOnly) {
                 readOnlyDatasets.push(dataset.label);

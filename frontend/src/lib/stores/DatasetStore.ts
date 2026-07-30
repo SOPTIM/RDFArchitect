@@ -18,6 +18,7 @@
 import { writable, get } from "svelte/store";
 
 import { describeError } from "./StoreLogging";
+import { AsyncSlot, Result, createEmptySlot } from "./storeTypes";
 import {
     listDatasets,
     deleteDataset,
@@ -34,27 +35,14 @@ export type DatasetInfo = {
     prefixes: CimPrefixPair[];
 };
 
-type DatasetsState = {
-    data: DatasetInfo[] | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
-// Generic envelope used by all mutating store methods.
-type Result<T = void> = { error: unknown; data?: T };
+type DatasetsState = AsyncSlot<DatasetInfo[]>;
 
 const LOG_PREFIX = "[datasetStore]";
 
 export const datasetStore = createDatasetStore();
 
 function createDatasetStore() {
-    const store = writable<DatasetsState>({
-        data: null,
-        fetchedAt: null,
-        pending: null,
-        error: null,
-    });
+    const store = writable<DatasetsState>(createEmptySlot<DatasetInfo[]>());
 
     const { subscribe: baseSubscribe, update } = store;
 

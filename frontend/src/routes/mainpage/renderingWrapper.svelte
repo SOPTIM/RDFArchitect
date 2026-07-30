@@ -222,6 +222,7 @@
             response = null;
             renderingFormat = null;
         } else {
+            response = data;
             renderingFormat = response.format;
             displayDiagram = true;
         }

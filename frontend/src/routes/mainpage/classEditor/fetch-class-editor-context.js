@@ -23,6 +23,7 @@ import {
     getXSDPrimitives,
     loadXsdPrimitives,
 } from "$lib/stores/XSDDatatypesStore.ts";
+import { load } from "asciidoctor";
 
 export async function getPackages(datasetName, graphUri) {
     // fetch packages
@@ -49,8 +50,10 @@ export async function getPackages(datasetName, graphUri) {
 }
 
 export async function getDataTypes(datasetName, graphUri) {
-    await loadXsdPrimitives();
-    await datatypesStore.loadForGraph(datasetName, graphUri);
+    await Promise.all([
+        loadXsdPrimitives(),
+        datatypesStore.loadForGraph(datasetName, graphUri),
+    ]);
     const xsd = await getXSDPrimitives();
     const primitivesDto = await datatypesStore.getPrimitives(
         datasetName,

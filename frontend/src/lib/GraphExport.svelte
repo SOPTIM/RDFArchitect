@@ -91,12 +91,14 @@
 
     $effect(async () => {
         if (selectedDatasetName && graphURI && hasOntology) {
-            const { data } = await ontologyStore.generateOntologyEntries(
+            const { error, data } = await ontologyStore.generateOntologyEntries(
                 selectedDatasetName,
                 graphURI,
             );
-            generatedOntologyEntries = data;
-            generatedOntologyEntries.forEach(entry => (entry.generate = true));
+            if (!error) {
+                generatedOntologyEntries = data;
+                generatedOntologyEntries.forEach(entry => (entry.generate = true));
+            }
             return;
         }
         generatedOntologyEntries = [];

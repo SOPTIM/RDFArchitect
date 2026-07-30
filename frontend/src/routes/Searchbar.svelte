@@ -137,7 +137,7 @@
     async function fetchSearchResults(query, body) {
         const tempSearchResults = [];
         const { data, error } = await search({
-            query: query,
+            query: { query: query },
             body: body,
         });
         if (!error) {
