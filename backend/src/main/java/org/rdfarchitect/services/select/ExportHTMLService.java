@@ -29,6 +29,8 @@ import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 @Service
@@ -568,8 +570,9 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
     private List<ClassUMLAdaptedDTO> resolveAncestorChain(
             ClassUMLAdaptedDTO classUMLAdaptedDTO, List<ClassUMLAdaptedDTO> classList) {
-        var ancestors = new java.util.ArrayList<ClassUMLAdaptedDTO>();
-        var visited = new java.util.HashSet<String>();
+        var ancestors = new ArrayList<ClassUMLAdaptedDTO>();
+        var visited = new HashSet<String>();
+        visited.add(classUMLAdaptedDTO.getPrefix() + "#" + classUMLAdaptedDTO.getLabel());
 
         var currentSuperClass = classUMLAdaptedDTO.getSuperClass();
         while (currentSuperClass != null) {
