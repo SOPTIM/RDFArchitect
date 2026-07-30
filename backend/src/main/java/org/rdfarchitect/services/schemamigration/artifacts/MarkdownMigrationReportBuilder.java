@@ -72,12 +72,13 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         sb.append("All affected concrete classes are listed alphabetically. ");
         sb.append("Inherited changes are shown under each affected subclass.\n\n");
 
-        var model = createModelForGraph(updatedGraph);
+        var model = createModelForGraph(originalGraph);
         var concreteClassIRIs =
                 model.listResourcesWithProperty(RDF.type, RDFS.Class)
                         .filterKeep(r -> r.hasProperty(CIMS.stereotype, CIMStereotypes.concrete))
                         .mapWith(Resource::getURI)
                         .toSet();
+        model = createModelForGraph(updatedGraph);
         var updatedConcreteClassIRIs =
                 model.listResourcesWithProperty(RDF.type, RDFS.Class)
                         .filterKeep(r -> r.hasProperty(CIMS.stereotype))
