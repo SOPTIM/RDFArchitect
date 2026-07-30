@@ -24,8 +24,11 @@ import java.util.List;
 
 public interface MigrationReportBuilder {
     String generateDetailedMigrationReport(
-            List<SemanticClassChange> classChanges, Graph originalGraph, boolean ignorePrefixes);
+            List<SemanticClassChange> classChanges,
+            Graph originalGraph,
+            Graph updatedGraph,
+            boolean ignorePrefixes);
 
     String generateSummaryMigrationReport(
-            List<SemanticClassChange> classChanges, boolean ignorePrefixes);
+            List<SemanticClassChange> classChanges, Graph updatedGraph, boolean ignorePrefixes);
 }

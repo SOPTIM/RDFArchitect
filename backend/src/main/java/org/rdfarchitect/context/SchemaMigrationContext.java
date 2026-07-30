@@ -20,6 +20,7 @@ package org.rdfarchitect.context;
 import lombok.Data;
 
 import org.apache.jena.graph.Graph;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.models.changes.RenameCandidate;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.triplechanges.TripleClassChange;
@@ -37,6 +38,10 @@ public class SchemaMigrationContext {
 
     // graph of the updated schema
     private Graph updatedSchema;
+
+    private CGMESVersion originalCGMESVersion;
+
+    private CGMESVersion updatedCGMESVersion;
 
     // original diff as triples
     private List<TripleClassChange> tripleDiff;
@@ -60,6 +65,8 @@ public class SchemaMigrationContext {
     public void clear() {
         this.originalSchema = null;
         this.updatedSchema = null;
+        this.originalCGMESVersion = null;
+        this.updatedCGMESVersion = null;
         this.tripleDiff = null;
         this.semanticDiff = null;
         this.renameCandidates = null;

@@ -766,8 +766,12 @@ export class BackendConnection {
         });
     }
 
-    async fetchReport(reportType) {
-        const params = new URLSearchParams({ reportType: reportType });
+    async fetchReport(reportType, originalCGMESVersion, updatedCGMESVersion) {
+        const params = new URLSearchParams({
+            reportType: reportType,
+            originalCGMESVersion: originalCGMESVersion,
+            updatedCGMESVersion: updatedCGMESVersion,
+        });
         return fetch(PUBLIC_BACKEND_URL + `/migrations/report?${params}`, {
             method: "GET",
             headers: { "Content-Type": "application/json" },

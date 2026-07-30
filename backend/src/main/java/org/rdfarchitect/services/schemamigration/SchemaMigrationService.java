@@ -26,6 +26,7 @@ import org.rdfarchitect.api.dto.migration.DefaultValueView;
 import org.rdfarchitect.api.dto.migration.PropertyOverview;
 import org.rdfarchitect.api.dto.migration.PropertyRenamings;
 import org.rdfarchitect.api.dto.migration.ResourceRenameOverview;
+import org.rdfarchitect.api.dto.validation.CGMESVersion;
 import org.rdfarchitect.context.MigrationSessionStore;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -52,6 +53,8 @@ import org.rdfarchitect.services.schemamigration.renamings.GetClassRenamingsUseC
 import org.rdfarchitect.services.schemamigration.renamings.GetPropertyRenamingsUseCase;
 import org.rdfarchitect.services.schemamigration.renamings.RenameDetector;
 import org.rdfarchitect.services.schemamigration.renamings.RenameObjectBuilder;
+import org.rdfarchitect.services.validation.SchemaValidationReportToMarkdownService;
+import org.rdfarchitect.services.validation.SchemaValidationService;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -78,8 +81,10 @@ public class SchemaMigrationService
     private final DatabasePort databasePort;
     private final MigrationScriptBuilder migrationScriptBuilder;
     private final MigrationReportBuilder migrationReportBuilder;
+    private final SchemaValidationService validationService;
 
     private static final String GRAPH_URI = "http://example.org/graph";
+    private final SchemaValidationReportToMarkdownService schemaValidationReportToMarkdownService;
 
     @Override
     public void setMigrationContext(
@@ -376,31 +381,71 @@ public class SchemaMigrationService
     }
 
     @Override
-    public String generateDetailedMigrationReport() {
-        var graph = migrationSessionStore.getContext().getOriginalSchema();
-        var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
-        var ignorePrefixes = migrationSessionStore.getContext().isIgnorePrefixes();
+    public String generateDetailedMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion) {
+        var context = migrationSessionStore.getContext();
+        var updatedGraph = context.getUpdatedSchema();
+        var originalGraph = context.getOriginalSchema();
+        var changes = context.getDiffAfterDefaultValueConfirm();
+        var ignorePrefixes = context.isIgnorePrefixes();
 
         var newChangeList = new ArrayList<SemanticClassChange>();
         for (var change : changes) {
             newChangeList.add(new SemanticClassChange(change));
         }
 
-        return migrationReportBuilder.generateDetailedMigrationReport(
-                newChangeList, graph, ignorePrefixes);
+        var sb = new StringBuilder();
+
+        var originalValidationReport =
+                validationService.validateSchema(context.getOriginalSchema(), originalCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        originalValidationReport, "Validation Report Original Schema"));
+
+        var updatedValidationReport =
+                validationService.validateSchema(context.getUpdatedSchema(), updatedCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        updatedValidationReport, "Validation Report Updated Schema"));
+
+        sb.append(
+                migrationReportBuilder.generateDetailedMigrationReport(
+                        newChangeList, originalGraph, updatedGraph, ignorePrefixes));
+
+        return sb.toString();
     }
 
     @Override
-    public String generateSummaryMigrationReport() {
-        var changes = migrationSessionStore.getContext().getDiffAfterDefaultValueConfirm();
-        boolean ignorePrefixes = migrationSessionStore.getContext().isIgnorePrefixes();
+    public String generateSummaryMigrationReport(
+            CGMESVersion originalCGMESVersion, CGMESVersion updatedCGMESVersion) {
+        var context = migrationSessionStore.getContext();
+        var changes = context.getDiffAfterDefaultValueConfirm();
+        var ignorePrefixes = context.isIgnorePrefixes();
+        var updatedGraph = context.getUpdatedSchema();
 
         var newChangeList = new ArrayList<SemanticClassChange>();
         for (var change : changes) {
             newChangeList.add(new SemanticClassChange(change));
         }
 
-        return migrationReportBuilder.generateSummaryMigrationReport(newChangeList, ignorePrefixes);
+        var sb = new StringBuilder();
+
+        var originalValidationReport =
+                validationService.validateSchema(context.getOriginalSchema(), originalCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        originalValidationReport, "Validation Report Original Schema"));
+
+        var updatedValidationReport =
+                validationService.validateSchema(context.getUpdatedSchema(), updatedCGMESVersion);
+        sb.append(
+                schemaValidationReportToMarkdownService.convertToMarkdown(
+                        updatedValidationReport, "Validation Report Updated Schema"));
+
+        sb.append(
+                migrationReportBuilder.generateSummaryMigrationReport(
+                        newChangeList, updatedGraph, ignorePrefixes));
+        return sb.toString();
     }
 
     @Override
