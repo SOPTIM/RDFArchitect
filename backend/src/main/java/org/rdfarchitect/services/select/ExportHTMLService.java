@@ -194,13 +194,9 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                 font-size: 1.25rem;
             }
 
-            h2.concrete {
-                color: var(--color-soptim-dunkelblau);
-            }
-
+            h2.concrete,
             h2.abstract {
-                color: var(--color-purple);
-                font-style: italic;
+                color: var(--color-soptim-dunkelblau);
             }
 
             h2.concrete::before {
@@ -299,7 +295,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
             a.superclass {
                 font-style: italic;
-                color: var(--color-blue);
+                color: var(--color-orange);
                 text-decoration: none;
             }
 
@@ -504,36 +500,36 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     }
 
     private String buildAssociationRow(AssociationPairDTO pair) {
-        AssociationDTO to = pair.getTo();
-        if (to == null) {
+        AssociationDTO from = pair.getFrom();
+        if (from == null) {
             return "";
         }
 
         var builder = new StringBuilder();
         builder.append("<tr>\n");
-        builder.append("<td class=\"type\">\n<p class=\"type\">\n");
+        builder.append("<td class=\"type\">\n");
         builder.append("<p class=\"role\" id=\"")
-                .append(to.getDomain())
+                .append(from.getDomain())
                 .append(".")
-                .append(to.getLabel())
+                .append(from.getLabel())
                 .append("\">")
-                .append(to.getLabel())
+                .append(from.getLabel())
                 .append(" </p>\n");
-        builder.append("</p>\n</td>\n");
-        builder.append("<td>\n<p class=\"cardinality\">[")
-                .append(nullToEmpty(to.getMultiplicity()))
-                .append("]</p>\n</td>\n");
-        builder.append("<td>\n<p>");
-        if (to.getRange() != null) {
+        builder.append("</td>\n");
+        builder.append("<td>\n<p class=\"cardinality\">")
+                .append(nullToEmpty(from.getMultiplicity()))
+                .append("</p>\n</td>\n");
+        builder.append("<td>\n<p class=\"type\">\n");
+        if (from.getRange() != null) {
             builder.append("<a href=\"#")
-                    .append(to.getRange().getLabel())
+                    .append(from.getRange().getLabel())
                     .append("\">")
-                    .append(to.getRange().getLabel())
+                    .append(from.getRange().getLabel())
                     .append("</a>");
         }
         builder.append("</p>\n</td>\n");
         builder.append("<td>\n<p class=\"comment\">")
-                .append(nullToEmpty(to.getComment()))
+                .append(nullToEmpty(from.getComment()))
                 .append("</p>\n</td>\n");
         builder.append("</tr>\n");
         return builder.toString();
@@ -646,8 +642,8 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
     private String buildInheritedAssociationRow(
             AssociationPairDTO pair, ClassUMLAdaptedDTO ancestor) {
-        AssociationDTO to = pair.getTo();
-        if (to == null) {
+        AssociationDTO from = pair.getFrom();
+        if (from == null) {
             return "";
         }
 
@@ -657,23 +653,24 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("<p class=\"inheritrole\" id=\"")
                 .append(ancestor.getLabel())
                 .append(".")
-                .append(to.getLabel())
+                .append(from.getLabel())
                 .append("\">")
-                .append(to.getLabel())
+                .append(from.getLabel())
                 .append(" </p>\n");
         builder.append("</th>\n");
         builder.append("<td>\n<p class=\"cardinality\">")
-                .append(nullToEmpty(to.getMultiplicity()))
+                .append(nullToEmpty(from.getMultiplicity()))
                 .append("</p>\n</td>\n");
-        builder.append("<td class=\"type\">\n<p class=\"type\">\n");
-        if (to.getRange() != null) {
+        builder.append("<td class=\"type\">\n");
+        builder.append("<p class=\"type\">\n");
+        if (from.getRange() != null) {
             builder.append("<a href=\"#")
-                    .append(to.getRange().getLabel())
+                    .append(from.getRange().getLabel())
                     .append("\">")
-                    .append(to.getRange().getLabel())
+                    .append(from.getRange().getLabel())
                     .append("</a>\n");
         }
-        builder.append("</p>\n</td>\n");
+        builder.append("</p>\n");
         builder.append("<td>\n</td>\n");
         builder.append("<td>\n<p>see <a class=\"superclass\" href=\"#")
                 .append(ancestor.getLabel())
