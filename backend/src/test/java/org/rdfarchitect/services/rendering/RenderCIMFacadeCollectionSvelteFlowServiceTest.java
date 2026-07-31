@@ -637,6 +637,47 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(externalSuperClass.getAttributes()).isEmpty();
     }
 
+    private void addAssociationWithoutRange(String localName, Resource domain) {
+        var association = model.createResource(NS + localName);
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        association.addProperty(RDFS.domain, domain);
+        association.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
+        association.addProperty(CIMS.associationUsed, "Yes");
+        association.addProperty(
+                CIMS.inverseRoleName, model.createResource(NS + localName + ".inv"));
+    }
+
+    @Test
+    @DisplayName("skips associations without a range instead of failing the package diagram")
+    void skipsAssociationWithoutRangeInPackageDiagram() {
+        addAssociationWithoutRange("Child.Broken", model.getResource(NS + "Child"));
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getNodes()).isNotEmpty();
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("skips associations without a range instead of failing the merged diagram")
+    void skipsAssociationWithoutRangeInMergedDiagram() {
+        addAssociationWithoutRange("Child.Broken", model.getResource(NS + "Child"));
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+
+        assertThat(result.getNodes()).isNotEmpty();
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
     @Test
     @DisplayName("merged diagram is empty when there are no profiles")
     void mergedDiagramEmptyForNoProfiles() {
@@ -647,8 +688,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
-    @DisplayName("merged node uuid uses namespace + rdfs:label, not the uri local name")
-    void mergedUuidUsesLabelNotUriLocalName() {
+    @DisplayName("merged node uuid uses the full class uri, not the rdfs:label")
+    void mergedUuidUsesFullUriNotLabel() {
         var labelModel = ModelFactory.createDefaultModel();
         var cimClass = labelModel.createResource(NS + "ACLS");
         cimClass.addProperty(RDF.type, RDFS.Class);
@@ -666,8 +707,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 .satisfies(
                         node -> {
                             assertThat(node.getData().getLabel()).isEqualTo("ACLineSegment");
-                            assertThat(node.getId()).isEqualTo(mergedUuid("ACLineSegment"));
-                            assertThat(node.getId()).isNotEqualTo(mergedUuid("ACLS"));
+                            assertThat(node.getId()).isEqualTo(mergedUuid("ACLS"));
+                            assertThat(node.getId()).isNotEqualTo(mergedUuid("ACLineSegment"));
                         });
     }
 }

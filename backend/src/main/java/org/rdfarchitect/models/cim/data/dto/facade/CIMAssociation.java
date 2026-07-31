@@ -61,6 +61,12 @@ public class CIMAssociation extends CIMResource implements ICIMAssociation {
     }
 
     @Override
+    public boolean isRenderable() {
+        return getUniqueJenaProperty(RDFS.range) != null
+                && getUniqueJenaProperty(CIMS.inverseRoleName) != null;
+    }
+
+    @Override
     public CIMSAssociationUsed getAssociationUsed() {
         var node = getUniqueJenaPropertyNode(CIMS.associationUsed);
         if (node == null) {

@@ -53,11 +53,12 @@ public class RenderCrossProfileDiagramSvelteFlowService
 
     @Override
     public RenderingDataDTO renderCrossProfileDiagram(String datasetName) {
-        var diagram = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, true);
+        var profiles = buildProfiles(datasetName);
+        var diagram = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, true, profiles);
         var layoutData =
                 fetchRenderingLayoutDataUseCase.fetchGlobalRenderingLayoutData(
                         datasetName, diagram.getDiagramId());
-        return renderer.renderMergedUML(buildProfiles(datasetName), layoutData);
+        return renderer.renderMergedUML(profiles, layoutData);
     }
 
     private List<CIMProfileModel> buildProfiles(String datasetName) {
