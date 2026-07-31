@@ -20,6 +20,7 @@ package org.rdfarchitect.services.diagrams;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.services.rendering.CIMProfileModel;
 
 import java.util.List;
 
@@ -48,4 +49,16 @@ public interface GetCustomDiagramsUseCase {
      * @return The cross profile diagram for the dataset.
      */
     CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout);
+
+    /**
+     * Returns the cross profile diagram for the dataset, reusing already loaded profile models
+     * instead of reading every graph again.
+     *
+     * @param datasetName The name of the dataset.
+     * @param doLayout Whether the diagram layout should be created/updated.
+     * @param profiles The profile models of the dataset.
+     * @return The cross profile diagram for the dataset.
+     */
+    CrossProfileDiagramDTO getCrossProfileDiagram(
+            String datasetName, boolean doLayout, List<CIMProfileModel> profiles);
 }

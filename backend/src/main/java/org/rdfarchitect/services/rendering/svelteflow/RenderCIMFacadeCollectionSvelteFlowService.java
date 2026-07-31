@@ -143,7 +143,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
         for (var profile : profiles) {
             for (var cimClass : profile.model().getCIMClasses()) {
-                var key = classKey(cimClass);
+                var key = cimClass.getUri().toString();
                 var entry =
                         merged.computeIfAbsent(
                                 key,
@@ -159,15 +159,6 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             }
         }
         return merged;
-    }
-
-    /**
-     * The identity a class is merged on across profiles: namespace + {@code rdfs:label}. Must match
-     * the cross-profile diagram's {@code prefix + label} so merged node UUIDs line up with the
-     * selection/layout endpoint.
-     */
-    private static String classKey(ICIMClass cimClass) {
-        return cimClass.getUri().getPrefix() + cimClass.getLabel().getValue();
     }
 
     private NodeDTO assembleMergedNode(
@@ -282,8 +273,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         for (var source : merged.sources()) {
             for (var superClass : source.cimClass().getSuperClasses()) {
                 refs.putIfAbsent(
-                        classKey(superClass),
-                        new SuperClassRef(classKey(superClass), superClass.getLabel().getValue()));
+                        superClass.getUri().toString(),
+                        new SuperClassRef(
+                                superClass.getUri().toString(), superClass.getLabel().getValue()));
             }
         }
         return new ArrayList<>(refs.values());
@@ -325,11 +317,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         for (var merged : mergedClasses.values()) {
             for (var source : merged.sources()) {
                 for (var association : source.cimClass().getAssociations()) {
-                    var range = association.getRange();
-                    if (range == null || range.getUri() == null) {
+                    if (!association.isRenderable()) {
                         continue;
                     }
-                    var target = mergedClasses.get(classKey(range));
+                    var range = association.getRange();
+                    var target = mergedClasses.get(range.getUri().toString());
                     if (target == null) {
                         continue;
                     }
@@ -419,7 +411,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         if (filter.isIncludeAssociations()) {
             for (var cimClass : classesInPackage) {
                 for (var association : cimClass.getAssociations()) {
-                    addExternallyRelatedClass(classes, association.getRange());
+                    if (association.isRenderable()) {
+                        addExternallyRelatedClass(classes, association.getRange());
+                    }
                 }
             }
         }
@@ -674,7 +668,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         var handledAssociationUris = new HashSet<String>();
         for (var cimClass : renderContext.classes()) {
             for (var from : cimClass.getAssociations()) {
-                if (handledAssociationUris.contains(from.getUri().toString())) {
+                if (handledAssociationUris.contains(from.getUri().toString())
+                        || !from.isRenderable()) {
                     continue;
                 }
                 var rangeUUID = from.getRange().getUuid();

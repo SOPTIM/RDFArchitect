@@ -30,5 +30,11 @@ public interface ICIMAssociation extends ICIMResource {
 
     ICIMAssociation getInverseAssociation();
 
+    /**
+     * Whether the association carries the properties required to render it, i.e. whether {@link
+     * #getRange()} and {@link #getInverseAssociation()} resolve instead of throwing.
+     */
+    boolean isRenderable();
+
     CIMSAssociationUsed getAssociationUsed();
 }

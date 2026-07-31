@@ -32,7 +32,8 @@ import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
-import org.rdfarchitect.services.select.GetClassListUseCase;
+import org.rdfarchitect.services.rendering.CIMProfileModel;
+import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -55,7 +56,6 @@ public class CustomDiagramService
                 CrossProfileColorUseCase {
 
     private final DatabasePort databasePort;
-    private final GetClassListUseCase getClassListUseCase;
 
     @Override
     public List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
@@ -71,19 +71,34 @@ public class CustomDiagramService
 
     @Override
     public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout) {
-        var graphUris = databasePort.listGraphUris(datasetName);
+        return getCrossProfileDiagram(datasetName, doLayout, loadProfiles(datasetName));
+    }
+
+    private List<CIMProfileModel> loadProfiles(String datasetName) {
+        var profiles = new ArrayList<CIMProfileModel>();
+        for (var graphUri : databasePort.listGraphUris(datasetName)) {
+            profiles.add(CIMProfileModels.load(databasePort, datasetName, graphUri));
+        }
+        return profiles;
+    }
+
+    @Override
+    public CrossProfileDiagramDTO getCrossProfileDiagram(
+            String datasetName, boolean doLayout, List<CIMProfileModel> profiles) {
         var crossProfileDiagramInfo = databasePort.getCrossProfileDiagramInfo(datasetName);
         var crossProfileDiagramUUID = crossProfileDiagramInfo.getCrossProfileDiagramUUID();
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
 
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
 
-        for (var graphUri : graphUris) {
-            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            var classList = getClassListUseCase.getClassList(graphIdentifier, false);
+        for (var profile : profiles) {
+            var graphUri = profile.graphUri();
 
-            for (var dto : classList) {
-                var classUri = dto.getPrefix() + dto.getLabel();
+            for (var cimClass : profile.model().getCIMClasses()) {
+                if (cimClass.getUuid() == null) {
+                    continue;
+                }
+                var classUri = cimClass.getUri().toString();
                 var mergedUuid = UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
 
                 var merged =
@@ -93,10 +108,10 @@ public class CustomDiagramService
                                         MergedClassDTO.builder()
                                                 .uuid(mergedUuid)
                                                 .classUri(uri)
-                                                .label(dto.getLabel())
+                                                .label(cimClass.getLabel().getValue())
                                                 .build());
 
-                merged.getSources().add(new ClassSourceDTO(dto.getUuid(), graphUri));
+                merged.getSources().add(new ClassSourceDTO(cimClass.getUuid(), graphUri));
             }
         }
         if (doLayout) {
