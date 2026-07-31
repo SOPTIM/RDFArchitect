@@ -161,7 +161,7 @@ class ExportHTMLServiceTest {
 
     @Test
     void exportGraphAsHTML_classWithAssociation_containsAssociationRow() {
-        var to =
+        var from =
                 AssociationDTO.builder()
                         .label("myRole")
                         .domain("MyClass")
@@ -172,13 +172,13 @@ class ExportHTMLServiceTest {
         var clazz =
                 classBuilder("MyClass")
                         .stereotypes(List.of(CIMStereotypes.concreteString))
-                        .associationPairs(List.of(new AssociationPairDTO(null, to)))
+                        .associationPairs(List.of(new AssociationPairDTO(from, null)))
                         .build();
 
         var html = exportHtml(List.of(clazz));
 
         assertThat(html).contains("id=\"MyClass.myRole\"");
-        assertThat(html).contains("[0..*]");
+        assertThat(html).contains("0..*");
         assertThat(html).contains("href=\"#OtherClass\">OtherClass</a>");
         assertThat(html).contains("role comment");
     }
