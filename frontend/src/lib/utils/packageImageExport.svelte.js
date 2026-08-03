@@ -20,6 +20,7 @@ import { mount, unmount, tick } from "svelte";
 
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import PackageSnapshotRenderer from "$lib/rendering/svelteflow/PackageSnapshotRenderer.svelte";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -72,8 +73,15 @@ async function renderPackageToPng(nodes, edges) {
     const app = mount(PackageSnapshotRenderer, { target: container, props });
 
     try {
-        for (let i = 0; i < 200 && !props.ready; i++) {
+        for (let i = 0; i < 400 && !props.ready; i++) {
             await new Promise(r => setTimeout(r, 25));
+        }
+        if (!props.ready) {
+            toastStore.error(
+                "Rendering Issue during Export",
+                "Rendering the package diagram took too long. The image may be incomplete.",
+                { duration: 10000 },
+            );
         }
         await tick();
         await document.fonts.ready;
@@ -119,7 +127,7 @@ export async function generatePackageImages(datasetName, graphURI) {
             );
             if (blob) {
                 images.push({
-                    filename: `${sanitizeFilename(label)}.png`,
+                    filename: `${sanitizeFilename(packageUUID)}.png`,
                     blob,
                 });
             }

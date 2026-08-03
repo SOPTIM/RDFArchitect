@@ -24,6 +24,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
     import { editorState } from "$lib/sharedState.svelte.js";
     import { saveFile } from "$lib/utils/fileUtils.ts";
     import { generatePackageImages } from "$lib/utils/packageImageExport.svelte.js";
@@ -88,7 +89,11 @@
             }
 
             const zipBlob = await zip.generateAsync({ type: "blob" });
-            saveFile(zipBlob, "html-export.zip", zipMediaType);
+            saveFile(
+                zipBlob,
+                `${getGraphLabel(graphURI)}-html-export.zip`,
+                zipMediaType,
+            );
 
             toastStore.success(
                 "Export ready",
@@ -109,6 +114,14 @@
     function getHtmlFilename(contentDisposition) {
         const match = contentDisposition?.match(/filename="?([^"]+)"?/);
         return match?.[1] ?? "export.html";
+    }
+
+    function getGraphLabel(graphURI) {
+        try {
+            return new URI(graphURI).suffix;
+        } catch {
+            return graphURI;
+        }
     }
 </script>
 

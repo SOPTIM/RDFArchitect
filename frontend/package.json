@@ -55,7 +55,7 @@
         "codemirror": "^6.0.2",
         "codemirror-lang-turtle": "^0.0.2",
         "elkjs": "^0.11.0",
-        "html-to-image": "1.11.11",
+        "html-to-image": "^1.11.13",
         "jszip": "^3.10.1",
         "mermaid": "^11.2.1",
         "svelte-collapsible": "^0.3.1",
