@@ -20,6 +20,32 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 | Diagram renderer                   | `rendering.renderer`                    | `svelteflow` (or `mermaid`)  |
 | Session cookie name                | `server.servlet.session.cookie.name`    | `RDFA_SESSION_ID`            |
 | Session cookie `secure` flag       | `server.servlet.session.cookie.secure`  | `false` (set to `true` in production) |
+| Session cookie `SameSite` policy   | `server.servlet.session.cookie.same-site` | `lax`                      |
+
+## Embedding RDFArchitect in another application
+
+Datasets are scoped to the backend session, which the browser tracks with the
+`RDFA_SESSION_ID` cookie. With the default `same-site: lax`, a browser will **not** send that
+cookie when RDFArchitect runs inside a cross-site `<iframe>` — every API call then lands in a
+fresh session and the app reports that no schemas have been imported. This affects host
+applications that embed the UI in a third-party browsing context, such as the CIMNotebook VS
+Code extension's RDFArchitect panel.
+
+To support embedding, relax the policy on the instance being embedded:
+
+```yaml
+server:
+    servlet:
+        session:
+            cookie:
+                same-site: none
+                secure: true
+```
+
+`same-site: none` requires `secure: true`, but that does not force you onto HTTPS for local
+use — browsers treat `http://localhost` as a trustworthy origin and accept `Secure` cookies
+from it. Only widen this where you need embedding: `none` removes the SameSite restriction
+that limits cross-site request forgery.
 
 ## Frontend runtime config
 
