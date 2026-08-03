@@ -95,7 +95,7 @@
     }
 
     function selectSuggestion(option) {
-        if (getOptionIsDisabled(option)) {
+        if (option === undefined || getOptionIsDisabled(option)) {
             return;
         }
         value = option;

@@ -89,7 +89,9 @@
 
     function isDiagramNameFull(name) {
         return !existingDiagrams
-            .filter(diagram => diagram.name === name)
+            .filter(
+                diagram => diagram.name.toLowerCase() === name.toLowerCase(),
+            )
             .some(takesAnyClass);
     }
 
@@ -197,6 +199,7 @@
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">
             Diagram
         </label>
+        <ViolationMessages {violations} />
         <ComboBoxEditControl
             id="diagram-select"
             bind:value={diagramNameInput}
@@ -205,6 +208,5 @@
             placeholder="Select a diagram or enter a new name"
             warn={violations.length > 0}
         />
-        <ViolationMessages {violations} />
     </div>
 </ActionDialog>
