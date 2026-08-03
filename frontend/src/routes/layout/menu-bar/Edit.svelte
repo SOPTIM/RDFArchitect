@@ -552,7 +552,7 @@
                     faIcon={faPaste}
                     altText="Ctrl+Shift+Alt+V"
                 >
-                    Paste bare
+                    Paste Bare
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>

@@ -167,7 +167,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Shift+Alt+V"
                     >
-                        Paste bare
+                        Paste Bare
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>

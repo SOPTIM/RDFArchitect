@@ -163,7 +163,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Create"
+    primaryLabel="Create Schema"
     onPrimary={addGraph}
     title="New Schema"
     disablePrimary={disableSubmit}

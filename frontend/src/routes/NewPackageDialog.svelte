@@ -240,7 +240,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Create"
+    primaryLabel="Create Package"
     onPrimary={() =>
         newPackage(
             selectedDatasetName,

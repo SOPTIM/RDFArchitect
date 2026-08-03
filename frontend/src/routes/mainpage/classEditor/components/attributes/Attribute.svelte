@@ -103,7 +103,7 @@
                     attribute,
                     inherited ? targetClass?.uuid : null,
                 )}
-            title={readonly ? "View" : "Edit" + " Constraints (SHACL)"}
+            title={(readonly ? "View" : "Edit") + " Constraints (SHACL)"}
             icon={faDiagramProject}
         />
     </td>

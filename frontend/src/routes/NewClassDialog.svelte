@@ -291,7 +291,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Create"
+    primaryLabel="Create Class"
     onPrimary={newClass}
     disablePrimary={disableSubmit}
     title="New Class"

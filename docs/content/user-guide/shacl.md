@@ -20,7 +20,7 @@ When you view SHACL for a graph, both sets are shown and clearly labelled.
 
 ## Viewing SHACL at graph level
 
-**View → Constraints (SHACL)** opens the full-view dialog. Two tabs: **Generated** (read-only TTL output) and **Custom** (editable TTL). The custom tab has inline TTL syntax highlighting and can be saved after editing.
+**View → View Constraints (SHACL)** opens the full-view dialog. Two tabs: **Generated** (read-only TTL output) and **Custom** (editable TTL). The custom tab has inline TTL syntax highlighting and can be saved after editing.
 
 ## Viewing SHACL at class level
 

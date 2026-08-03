@@ -230,7 +230,7 @@
                 "Import failed",
                 failedImports.length > 0
                     ? `${failedImports.length} file(s) could not be imported.`
-                    : "No graphs were imported.",
+                    : "No schemas were imported.",
             );
             return;
         }

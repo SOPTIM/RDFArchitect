@@ -60,7 +60,7 @@
                     keys: ["Ctrl", "Alt", "V"],
                 },
                 {
-                    description: "Paste bare",
+                    description: "Paste Bare",
                     keys: ["Ctrl", "Shift", "Alt", "V"],
                 },
                 {

@@ -155,7 +155,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Schema Diagram"
+    title={diagramId
+        ? `Edit Schema Diagram "${diagramName}"`
+        : "New Schema Diagram"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}
