@@ -17,11 +17,17 @@
 
 <script>
     import { BackendConnection } from "$lib/api/backend.js";
-    import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
+    import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { hasNoSpaces } from "$lib/models/reactive/validity-rules/validityFunctions.js";
+    import {
+        DiagramType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
 
     let {
         showDialog = $bindable(),
@@ -32,24 +38,56 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let selectedDiagram = $state(null);
-    let diagramList = $state([]);
-    let disableSubmit = $derived(!selectedDiagram);
+    let diagramNameInput = $state("");
+    let existingDiagrams = $state([]);
+    let diagramsLoaded = $state(false);
+
+    let diagramNames = $derived([
+        ...new Set(existingDiagrams.map(diagram => diagram.name)),
+    ]);
+    let trimmedName = $derived(diagramNameInput.trim());
+    let matchingDiagrams = $derived(
+        existingDiagrams.filter(
+            diagram => diagram.name.toLowerCase() === trimmedName.toLowerCase(),
+        ),
+    );
+    let matchingDiagram = $derived(
+        matchingDiagrams.find(takesAnyClass) ?? matchingDiagrams[0] ?? null,
+    );
+    let createsNewDiagram = $derived(!!trimmedName && !matchingDiagram);
+    let alreadyContained = $derived(
+        !!matchingDiagram && !takesAnyClass(matchingDiagram),
+    );
+    let violations = $derived(
+        alreadyContained
+            ? [
+                  classes.length === 1
+                      ? "Class is already in this diagram"
+                      : "Classes are already in this diagram",
+              ]
+            : createsNewDiagram
+              ? hasNoSpaces(trimmedName)
+              : [],
+    );
+    let disableSubmit = $derived(
+        !trimmedName || violations.length > 0 || !diagramsLoaded,
+    );
 
     async function getCustomDiagrams() {
         const res = await bec.getCustomDiagramsForDataset(lockedDatasetName);
-        const allDiagrams = await res.json();
-        diagramList = allDiagrams.filter(diagram => {
-            const classesToAddIds = new Set(classes.map(cls => cls.id));
-            const diagramClassIds = new Set(
-                diagram.classes.map(cls => cls.uuid),
-            );
+        existingDiagrams = await res.json();
+        diagramsLoaded = true;
+    }
 
-            // only keep entries where at least on of the classes to add is not already in the diagram
-            return Array.from(classesToAddIds).some(
-                id => !diagramClassIds.has(id),
-            );
-        });
+    function takesAnyClass(diagram) {
+        const diagramClassIds = new Set(diagram.classes.map(cls => cls.uuid));
+        return classes.some(cls => !diagramClassIds.has(cls.id));
+    }
+
+    function isDiagramNameFull(name) {
+        return !existingDiagrams
+            .filter(diagram => diagram.name === name)
+            .some(takesAnyClass);
     }
 
     function onOpen() {
@@ -57,20 +95,72 @@
     }
 
     function onClose() {
-        selectedDiagram = null;
+        diagramNameInput = "";
+        diagramsLoaded = false;
     }
 
-    async function addToDiagram() {
-        const diagramName = selectedDiagram?.name;
+    function classesToAdd() {
+        return classes.map(cls => ({
+            graphUri: lockedGraphUri,
+            uuid: cls.id,
+        }));
+    }
+
+    async function submitDialog() {
+        if (matchingDiagram) {
+            await addToDiagram(matchingDiagram);
+        } else {
+            await createDiagram();
+        }
+    }
+
+    async function createDiagram() {
+        const diagramId = crypto.randomUUID();
+        const count = classes.length;
+        const diagramData = {
+            diagramId: diagramId,
+            name: trimmedName,
+            classes: classesToAdd(),
+        };
+
+        try {
+            const res = await bec.putCustomDatasetDiagram(
+                lockedDatasetName,
+                diagramId,
+                diagramData,
+            );
+
+            if (!res.ok) {
+                toastStore.error(
+                    "Create failed",
+                    `Could not create diagram "${trimmedName}".`,
+                );
+                return;
+            }
+
+            editorState.selectedDataset.updateValue(lockedDatasetName);
+            editorState.selectedGraph.updateValue(null);
+            editorState.selectedDiagram.updateValue({
+                type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+                id: diagramId,
+            });
+            toastStore.success(
+                "Diagram created",
+                `"${trimmedName}" was created with ${count} ${count === 1 ? "class" : "classes"}.`,
+            );
+        } finally {
+            forceReloadTrigger.trigger();
+        }
+    }
+
+    async function addToDiagram(diagram) {
+        const diagramName = diagram.name;
         const count = classes.length;
         try {
             const res = await bec.addToCustomDatasetDiagram(
                 lockedDatasetName,
-                selectedDiagram.diagramId,
-                classes.map(cls => ({
-                    graphUri: lockedGraphUri,
-                    uuid: cls.id,
-                })),
+                diagram.diagramId,
+                classesToAdd(),
             );
             if (res && res.ok === false) {
                 toastStore.error(
@@ -93,8 +183,8 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add to Diagram"
-    onPrimary={addToDiagram}
+    primaryLabel={createsNewDiagram ? "Create Diagram" : "Add to Diagram"}
+    onPrimary={submitDialog}
     disablePrimary={disableSubmit}
     title="Add to Dataset Diagram"
 >
@@ -102,14 +192,14 @@
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">
             Diagram
         </label>
-        <SelectEditControl
+        <ComboBoxEditControl
             id="diagram-select"
-            bind:value={selectedDiagram}
-            options={diagramList}
-            placeholder={diagramList.length > 0
-                ? "Select diagram"
-                : "No diagrams available"}
-            getOptionLabel={diagram => diagram.name}
+            bind:value={diagramNameInput}
+            optionValues={diagramNames}
+            getOptionIsDisabled={isDiagramNameFull}
+            placeholder="Select a diagram or enter a new name"
+            warn={violations.length > 0}
         />
+        <ViolationMessages {violations} />
     </div>
 </ActionDialog>
