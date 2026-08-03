@@ -123,8 +123,8 @@ class ExportHTMLServiceTest {
 
     @Test
     void exportGraphAsHTML_classWithPackage_containsPackageLink() {
-        var category =
-                BelongsToCategoryDTO.builder().label("MyPackage").uuid(UUID.randomUUID()).build();
+        var categoryUuid = UUID.randomUUID();
+        var category = BelongsToCategoryDTO.builder().label("MyPackage").uuid(categoryUuid).build();
         var clazz =
                 classBuilder("MyClass")
                         .stereotypes(List.of(CIMStereotypes.concreteString))
@@ -133,7 +133,7 @@ class ExportHTMLServiceTest {
 
         var html = exportHtml(List.of(clazz));
 
-        assertThat(html).contains("images/MyPackage.png");
+        assertThat(html).contains("images/" + categoryUuid + ".png");
         assertThat(html).contains(">MyPackage </a>");
     }
 
