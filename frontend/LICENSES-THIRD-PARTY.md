@@ -161,7 +161,7 @@
 
 ### html-to-image
 - **Package:** html-to-image
-- **Version:** 1.11.11
+- **Version:** 1.11.13
 - **License:** MIT
 - **URL:** [https://github.com/bubkoo/html-to-image#readme](https://github.com/bubkoo/html-to-image#readme)
 
