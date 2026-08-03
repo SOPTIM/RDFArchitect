@@ -346,8 +346,8 @@
                 altText="Ctrl+C"
             >
                 {multiActive
-                    ? `Copy ${selectedClassIds.length} classes`
-                    : "Copy"}
+                    ? `Copy ${selectedClassIds.length} Classes`
+                    : "Copy Class"}
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
         {/if}
@@ -356,7 +356,7 @@
             disabled={multiActive}
             faIcon={faArrowUpRightFromSquare}
         >
-            Show in diagram
+            Show in Diagram
         </ContextMenu.Item.Button>
         {#if classType === ClassType.SINGLE_CLASS}
             <ContextMenu.Item.Button
@@ -366,7 +366,7 @@
                 disabled={multiActive}
                 faIcon={faDiagramProject}
             >
-                Constraints
+                View Constraints (SHACL)
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -386,7 +386,7 @@
                     disabled={crossGraphDisabled}
                     faIcon={faObjectGroup}
                 >
-                    Add to Profile Diagram
+                    Add to Schema Diagram
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={() => {
@@ -424,7 +424,7 @@
                 variant="danger"
             >
                 {multiActive
-                    ? `Delete ${selectedClassIds.length} classes`
+                    ? `Delete ${selectedClassIds.length} Classes`
                     : "Delete Class"}
             </ContextMenu.Item.Button>
         {/if}

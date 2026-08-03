@@ -174,7 +174,7 @@
                     class="w-fit font-semibold italic hover:underline"
                     callOnClick={putChanges}
                 >
-                    save changes
+                    Save Changes
                 </ButtonControl>
             </div>
         {/if}

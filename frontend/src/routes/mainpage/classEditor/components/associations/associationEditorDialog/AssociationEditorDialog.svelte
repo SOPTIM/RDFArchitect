@@ -146,8 +146,8 @@
     size="w-2/3"
     {readonly}
     title={isNewAssociation
-        ? "Create new association"
-        : `Edit association: '${association?.label.backup}' to '${association?.inverse.label.backup}'`}
+        ? "New Association"
+        : `Edit Association "${association?.label.backup}" to "${association?.inverse.label.backup}"`}
 >
     {#if association}
         <div

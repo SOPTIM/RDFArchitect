@@ -105,8 +105,8 @@
     isValid={enumEntry?.isValid}
     {readonly}
     title={isNewEnumEntry
-        ? "Create new Enum entry"
-        : `Edit Enum entry: ${enumEntry.label.backup}`}
+        ? "New Enum Entry"
+        : `Edit Enum Entry "${enumEntry.label.backup}"`}
 >
     {#if enumEntry && classEditorContext && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">

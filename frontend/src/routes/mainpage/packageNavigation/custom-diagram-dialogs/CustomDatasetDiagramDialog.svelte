@@ -222,7 +222,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Create/Edit Custom Diagram for Dataset"
+    title="Dataset Diagram"
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}

@@ -163,9 +163,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add Schema"
+    primaryLabel="Create"
     onPrimary={addGraph}
-    title="Add Schema"
+    title="New Schema"
     disablePrimary={disableSubmit}
 >
     <div class="mx-2 flex h-full flex-col">
@@ -188,7 +188,7 @@
 
             {#if datasetIsReadOnly}
                 <div class="mt-1 mb-1 h-6 text-sm">
-                    Cannot add schemas to read-only dataset
+                    Cannot create schemas in read-only dataset
                 </div>
             {/if}
         {:else}

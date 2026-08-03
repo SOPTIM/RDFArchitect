@@ -34,7 +34,7 @@
             height={9}
             callOnClick={() => document.getElementById(id).click()}
         >
-            Select file
+            Select File
         </ButtonControl>
     </div>
     <div class="h-9 w-full content-center">
