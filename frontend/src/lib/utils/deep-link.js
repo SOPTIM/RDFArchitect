@@ -17,6 +17,8 @@
 
 import { validate } from "uuid";
 
+import { URI } from "$lib/models/dto/index.ts";
+
 /**
  * Resolves a `class` deep-link reference (an IRI or an rdfa:uuid) to a navigable class target.
  *
@@ -79,11 +81,22 @@ async function listGraphPairs(backend, datasetFilter) {
         if (!graphsRes.ok) {
             continue;
         }
-        for (const graphUri of await graphsRes.json()) {
-            pairs.push([datasetName, graphUri]);
+        for (const graph of await graphsRes.json()) {
+            pairs.push([datasetName, graphUriOf(graph)]);
         }
     }
     return pairs;
+}
+
+/**
+ * The graph list endpoint serves URIs as `{prefix, suffix}` objects, not strings — interpolating
+ * one straight into a request path yields "[object Object]" and every lookup misses.
+ *
+ * @param {string | {prefix: string | null, suffix: string}} graph
+ * @returns {string} the full graph IRI
+ */
+function graphUriOf(graph) {
+    return typeof graph === "string" ? graph : new URI(graph).toString();
 }
 
 async function tryResolveIri(backend, datasetName, graphUri, iri) {

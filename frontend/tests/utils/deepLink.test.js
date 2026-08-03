@@ -17,6 +17,7 @@
 
 import { describe, expect, test } from "vitest";
 
+import { URI } from "$lib/models/dto/index.ts";
 import { resolveClassTarget } from "$lib/utils/deep-link.js";
 
 const CLASS_IRI = "https://cim.example.org/CIM#ACLineSegment";
@@ -55,8 +56,13 @@ function fakeBackend(model) {
             return ok(Object.keys(model));
         },
         async getGraphNames(dataset) {
+            // The real endpoint serves URIs as plain {prefix, suffix} objects, never as strings.
             return model[dataset]
-                ? ok(Object.keys(model[dataset]))
+                ? ok(
+                      Object.keys(model[dataset]).map(uri => ({
+                          ...new URI(uri),
+                      })),
+                  )
                 : notFound();
         },
         async resolveIri(dataset, graph, iri) {
