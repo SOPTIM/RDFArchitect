@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.database.SnapshotPort;
+import org.rdfarchitect.exception.database.DataAccessException;
 
 class FallbackSnapshotAdapterTest {
 
@@ -53,6 +54,24 @@ class FallbackSnapshotAdapterTest {
 
         assertEquals("token", adapter.createSnapshot("ds"));
         verify(primary, never()).createSnapshot(any());
+    }
+
+    @Test
+    void createSnapshot_primaryAvailableButRejects_usesFallback() {
+        when(primary.isAvailable()).thenReturn(true);
+        when(primary.createSnapshot("ds")).thenThrow(new DataAccessException());
+        when(fallback.createSnapshot("ds")).thenReturn("token");
+
+        assertEquals("token", adapter.createSnapshot("ds"));
+    }
+
+    @Test
+    void snapshotExists_primaryAvailableButRejects_reportsNotFound() {
+        when(fallback.snapshotExists("token")).thenReturn(false);
+        when(primary.isAvailable()).thenReturn(true);
+        when(primary.snapshotExists("token")).thenThrow(new DataAccessException());
+
+        assertFalse(adapter.snapshotExists("token"));
     }
 
     @Test
