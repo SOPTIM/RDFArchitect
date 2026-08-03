@@ -18,6 +18,7 @@
 package org.rdfarchitect.database.snapshots;
 
 import org.rdfarchitect.database.SnapshotPort;
+import org.rdfarchitect.exception.database.DatabaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,12 @@ import org.slf4j.LoggerFactory;
  * secondary one when the primary is unavailable. New snapshots go to the primary whenever it is
  * reachable; lookups check the fallback first (its tokens are unknown to the primary) and the
  * primary otherwise.
+ *
+ * <p>{@link SnapshotPort#isAvailable()} is only a hint: a store can answer a reachability probe and
+ * still reject the operation itself — a Fuseki behind the default {@code shiro.ini} serves {@code
+ * /$/ping} anonymously but restricts the rest of {@code /$/**} to localhost, so a containerised
+ * backend gets a green probe and a 403 on dataset creation. Primary failures are therefore treated
+ * the same as an unreachable primary rather than propagated to the caller.
  */
 public class FallbackSnapshotAdapter implements SnapshotPort {
 
@@ -42,12 +49,21 @@ public class FallbackSnapshotAdapter implements SnapshotPort {
     @Override
     public String createSnapshot(String datasetName) {
         if (primary.isAvailable()) {
-            return primary.createSnapshot(datasetName);
+            try {
+                return primary.createSnapshot(datasetName);
+            } catch (DatabaseException e) {
+                logger.warn(
+                        "Primary snapshot store reported itself available but rejected the snapshot"
+                                + " for dataset '{}' - falling back to in-memory storage.",
+                        datasetName,
+                        e);
+            }
+        } else {
+            logger.warn(
+                    "Primary snapshot store is unavailable - storing snapshot for dataset '{}' in"
+                            + " memory. It will not survive a backend restart.",
+                    datasetName);
         }
-        logger.warn(
-                "Primary snapshot store is unavailable - storing snapshot for dataset '{}' in"
-                        + " memory. It will not survive a backend restart.",
-                datasetName);
         return fallback.createSnapshot(datasetName);
     }
 
@@ -62,7 +78,17 @@ public class FallbackSnapshotAdapter implements SnapshotPort {
 
     @Override
     public boolean snapshotExists(String base64Token) {
-        return fallback.snapshotExists(base64Token)
-                || (primary.isAvailable() && primary.snapshotExists(base64Token));
+        if (fallback.snapshotExists(base64Token)) {
+            return true;
+        }
+        if (!primary.isAvailable()) {
+            return false;
+        }
+        try {
+            return primary.snapshotExists(base64Token);
+        } catch (DatabaseException e) {
+            logger.warn("Primary snapshot store could not be queried for a token.", e);
+            return false;
+        }
     }
 }
