@@ -31,8 +31,10 @@ import org.rdfarchitect.api.dto.DataTypeDTO;
 import org.rdfarchitect.api.dto.association.AssociationDTO;
 import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -131,7 +133,7 @@ class ExportHTMLServiceTest {
 
         var html = exportHtml(List.of(clazz));
 
-        assertThat(html).contains("images\\MyPackage.png");
+        assertThat(html).contains("images/MyPackage.png");
         assertThat(html).contains(">MyPackage </a>");
     }
 
@@ -186,7 +188,11 @@ class ExportHTMLServiceTest {
     @Test
     void exportGraphAsHTML_classWithSuperClass_containsInheritedMembersSection() {
         var parentAttribute =
-                AttributeDTO.builder().label("inheritedAttribute").multiplicity("1..1").build();
+                AttributeDTO.builder()
+                        .label("inheritedAttribute")
+                        .domain("ParentClass")
+                        .multiplicity("1..1")
+                        .build();
         var parent =
                 classBuilder("ParentClass")
                         .stereotypes(List.of(CIMStereotypes.concreteString))
@@ -221,5 +227,299 @@ class ExportHTMLServiceTest {
         var html = exportHtml(List.of(clazz));
 
         assertThat(html).doesNotContain("<h3>Inherited Members</h3>");
+    }
+
+    @Test
+    void exportGraphAsHTML_labelAndCommentWithMarkup_areEscaped() {
+        var clazz =
+                classBuilder("<script>alert('x')</script>")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .comment("Comment with <b>markup</b> & special \"chars\"")
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).doesNotContain("<script>alert('x')</script>");
+        assertThat(html).contains("&lt;script&gt;alert(&#39;x&#39;)&lt;/script&gt;");
+        assertThat(html).doesNotContain("<b>markup</b>");
+        assertThat(html)
+                .contains("Comment with &lt;b&gt;markup&lt;/b&gt; &amp; special &quot;chars&quot;");
+    }
+
+    @Test
+    void exportGraphAsHTML_classMatchingTwoStereotypes_isListedOnlyUnderFirstMatchingStereotype() {
+        var clazz =
+                classBuilder("MultiStereotypeClass")
+                        .stereotypes(
+                                List.of(
+                                        CIMStereotypes.concreteString,
+                                        CIMStereotypes.shortCircuitString,
+                                        CIMStereotypes.entsoeString))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).contains("<h1>Classes (" + CIMStereotypes.shortCircuitString + ")</h1>");
+        assertThat(html).doesNotContain("<h1>Classes (" + CIMStereotypes.entsoeString + ")</h1>");
+    }
+
+    @Test
+    void
+            exportGraphAsHTML_abstractClassWithStereotype_isGroupedUnderStereotypeNotAbstractSection() {
+        var clazz =
+                classBuilder("AbstractWithStereotype")
+                        .stereotypes(List.of(CIMStereotypes.entsoeString))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).contains("<h1>Classes (" + CIMStereotypes.entsoeString + ")</h1>");
+        assertThat(html).doesNotContain("<h1>Abstract Classes</h1>");
+        assertThat(html).contains("h2 class=\"abstract\"");
+    }
+
+    @Test
+    void exportGraphAsHTML_classMatchingTwoStereotypes_appearsExactlyOnceInOutput() {
+        var clazz =
+                classBuilder("OnceOnlyClass")
+                        .stereotypes(
+                                List.of(
+                                        CIMStereotypes.concreteString,
+                                        CIMStereotypes.shortCircuitString,
+                                        CIMStereotypes.entsoeString))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(StringUtils.countOccurrencesOf(html, "id=\"OnceOnlyClass\"")).isEqualTo(1);
+    }
+
+    @Test
+    void exportGraphAsHTML_enumerationClass_containsEnumEntriesInsteadOfNativeMembers() {
+        var entry =
+                EnumEntryDTO.builder()
+                        .prefix("MyEnum")
+                        .label("VALUE_A")
+                        .comment("first value")
+                        .build();
+        var clazz =
+                classBuilder("MyEnum")
+                        .stereotypes(
+                                List.of(
+                                        CIMStereotypes.concreteString,
+                                        CIMStereotypes.enumerationString))
+                        .enumEntries(List.of(entry))
+                        .attributes(List.of(AttributeDTO.builder().label("ignoredAttr").build()))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).contains("<h3>Enumeration Values</h3>");
+        assertThat(html).contains("id=\"MyEnum.VALUE_A\"");
+        assertThat(html).contains("first value");
+        assertThat(html).doesNotContain("<h3>Native Members</h3>");
+        assertThat(html).doesNotContain("ignoredAttr");
+    }
+
+    @Test
+    void exportGraphAsHTML_attributeWithoutDataType_rendersRowWithoutTypeLink() {
+        var attribute =
+                AttributeDTO.builder().label("attr").domain("MyClass").multiplicity("1..1").build();
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .attributes(List.of(attribute))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).contains("id=\"MyClass.attr\"");
+        assertThat(html).contains("1..1");
+        assertThat(html).doesNotContain("<a href=\"#null\">");
+    }
+
+    @Test
+    void exportGraphAsHTML_associationWithoutRange_rendersRowWithoutTypeLink() {
+        var from =
+                AssociationDTO.builder()
+                        .label("myRole")
+                        .domain("MyClass")
+                        .multiplicity("0..1")
+                        .build();
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .associationPairs(List.of(new AssociationPairDTO(from, null)))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).contains("id=\"MyClass.myRole\"");
+        assertThat(html).contains("0..1");
+    }
+
+    @Test
+    void exportGraphAsHTML_classWithoutComment_doesNotContainCommentParagraph() {
+        var clazz =
+                classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).doesNotContain("<p class=\"comment\">");
+    }
+
+    @Test
+    void exportGraphAsHTML_classWithoutPackage_doesNotContainPackageParagraph() {
+        var clazz =
+                classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).doesNotContain("<p class=\"package\">");
+    }
+
+    @Test
+    void exportGraphAsHTML_multiLevelInheritance_resolvesFullAncestorChain() {
+        var grandparent =
+                classBuilder("Grandparent")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .attributes(
+                                List.of(
+                                        AttributeDTO.builder()
+                                                .label("gpAttr")
+                                                .domain("Grandparent")
+                                                .build()))
+                        .build();
+        var parent =
+                classBuilder("Parent")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(ClassUMLAdaptedDTO.builder().label("Grandparent").build())
+                        .build();
+        var child =
+                classBuilder("Child")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(ClassUMLAdaptedDTO.builder().label("Parent").build())
+                        .build();
+
+        var html = exportHtml(List.of(grandparent, parent, child));
+
+        assertThat(html).contains("Inheritance pass: ->Parent->Grandparent");
+        assertThat(html).contains("gpAttr");
+    }
+
+    @Test
+    void exportGraphAsHTML_unresolvableSuperClass_doesNotContainInheritedMembersSection() {
+        var superClassRef = ClassUMLAdaptedDTO.builder().label("NotInList").build();
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(superClassRef)
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).doesNotContain("<h3>Inherited Members</h3>");
+    }
+
+    @Test
+    void exportGraphAsHTML_threeClassInheritanceCycle_doesNotLoopInfinitely() {
+        var classA = ClassUMLAdaptedDTO.builder().label("A").build();
+        var classB = ClassUMLAdaptedDTO.builder().label("B").build();
+        var classC = ClassUMLAdaptedDTO.builder().label("C").build();
+
+        var a =
+                classBuilder("A")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(classB)
+                        .build();
+        var b =
+                classBuilder("B")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(classC)
+                        .build();
+        var c =
+                classBuilder("C")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(classA)
+                        .build();
+
+        var html = exportHtml(List.of(a, b, c));
+
+        assertThat(html).contains("Inheritance pass: ->B->C");
+    }
+
+    @Test
+    void exportGraphAsHTML_classWithUnknownStereotype_isListedInGeneralClassesSection() {
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(
+                                List.of(CIMStereotypes.concreteString, "SomeUnknownStereotype"))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html).contains("<h1>Classes</h1>");
+        assertThat(html).doesNotContain("<h1>Classes (SomeUnknownStereotype)</h1>");
+    }
+
+    @Test
+    void exportGraphAsHTML_introList_containsAllKnownStereotypesInOrder() {
+        var html = exportHtml(List.of());
+
+        var shortCircuitIndex = html.indexOf(CIMStereotypes.shortCircuitString);
+        var descriptionIndex = html.indexOf(CIMStereotypes.descriptionString);
+        var operationIndex = html.indexOf(CIMStereotypes.operationString);
+        var europeanIndex = html.indexOf(CIMStereotypes.europeanString);
+        var entsoeIndex = html.indexOf(CIMStereotypes.entsoeString);
+
+        assertThat(shortCircuitIndex).isPositive().isLessThan(descriptionIndex);
+        assertThat(descriptionIndex).isLessThan(operationIndex);
+        assertThat(operationIndex).isLessThan(europeanIndex);
+        assertThat(europeanIndex).isLessThan(entsoeIndex);
+    }
+
+    @Test
+    void exportGraphAsHTML_multipleClassesInSameSection_areRenderedInGivenOrder() {
+        var first =
+                classBuilder("AClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
+        var second =
+                classBuilder("BClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
+
+        var html = exportHtml(List.of(first, second));
+
+        assertThat(html.indexOf("id=\"AClass\""))
+                .isPositive()
+                .isLessThan(html.indexOf("id=\"BClass\""));
+    }
+
+    @Test
+    void
+            exportGraphAsHTML_classWithAttributesAndAssociations_rendersAttributesBeforeAssociations() {
+        var attribute = AttributeDTO.builder().label("myAttribute").domain("MyClass").build();
+        var from =
+                AssociationDTO.builder()
+                        .label("myRole")
+                        .domain("MyClass")
+                        .multiplicity("0..*")
+                        .build();
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .attributes(List.of(attribute))
+                        .associationPairs(List.of(new AssociationPairDTO(from, null)))
+                        .build();
+
+        var html = exportHtml(List.of(clazz));
+
+        assertThat(html.indexOf("id=\"MyClass.myAttribute\""))
+                .isPositive()
+                .isLessThan(html.indexOf("id=\"MyClass.myRole\""));
+    }
+
+    @Test
+    void exportGraphAsHTML_output_endsWithHtmlClosingTag() {
+        var html = exportHtml(List.of());
+
+        assertThat(html).endsWith("</html>");
     }
 }
