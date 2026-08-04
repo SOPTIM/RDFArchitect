@@ -70,8 +70,10 @@ export async function resolveTermTarget(backend, { dataset, graph, ref }) {
 /**
  * Resolves a `class` deep-link reference (an IRI or an rdfa:uuid) to a navigable class target.
  *
- * When `dataset`/`graph` are given, only that graph is consulted; otherwise every graph of every
- * dataset in the session (optionally narrowed to `dataset`) is probed until the class is found.
+ * When `dataset` and `graph` are given, only that graph is consulted. Either on its own narrows the
+ * search: `graph` alone is what an external tool can say when it knows which profile a class should
+ * be opened in but not what the dataset is called in this session. Without both, every remaining
+ * graph is probed until the class is found.
  *
  * @param {object} backend a BackendConnection
  * @param {{dataset: string | null, graph: string | null, classRef: string}} params
@@ -84,7 +86,7 @@ export async function resolveClassTarget(
     const candidates =
         dataset && graph
             ? [[dataset, graph]]
-            : await listGraphPairs(backend, dataset);
+            : await listGraphPairs(backend, dataset, graph);
     for (const [datasetName, graphUri] of candidates) {
         const classUUID = validate(classRef)
             ? classRef
@@ -176,8 +178,8 @@ function sameIri(uri, iri) {
     }
 }
 
-/** All (dataset, graph) pairs of the session, optionally restricted to one dataset. */
-async function listGraphPairs(backend, datasetFilter) {
+/** All (dataset, graph) pairs of the session, optionally restricted by dataset and/or graph. */
+async function listGraphPairs(backend, datasetFilter, graphFilter) {
     const datasets = await readJson(await backend.getDatasetNames());
     if (!datasets) {
         return [];
@@ -192,7 +194,11 @@ async function listGraphPairs(backend, datasetFilter) {
             continue;
         }
         for (const graph of graphs) {
-            pairs.push([datasetName, graphUriOf(graph)]);
+            const graphUri = graphUriOf(graph);
+            if (graphFilter && graphUri !== graphFilter) {
+                continue;
+            }
+            pairs.push([datasetName, graphUri]);
         }
     }
     return pairs;

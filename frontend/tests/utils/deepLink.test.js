@@ -156,6 +156,42 @@ describe("resolveClassTarget", () => {
         expect(target).toBeNull();
     });
 
+    test("restricts the search to the given graph across datasets", async () => {
+        // What an external tool sends when it knows which profile a class should open in, but not
+        // what the dataset holding it is called in this session (a loaded snapshot, say).
+        const model = {
+            other: {
+                "https://cim.example.org/SSH": {
+                    [CLASS_IRI]: {
+                        uuid: "0d0d0d0d-1111-4222-8333-444444444444",
+                        package: { uuid: PACKAGE_UUID },
+                    },
+                },
+            },
+            profiles: singleGraphModel.profiles,
+        };
+
+        const target = await resolveClassTarget(fakeBackend(model), {
+            dataset: null,
+            graph: "https://cim.example.org/EQ",
+            classRef: CLASS_IRI,
+        });
+
+        expect(target?.datasetName).toBe("profiles");
+        expect(target?.graphUri).toBe("https://cim.example.org/EQ");
+        expect(target?.classUUID).toBe(CLASS_UUID);
+    });
+
+    test("returns null when the given graph does not hold the class", async () => {
+        const target = await resolveClassTarget(fakeBackend(singleGraphModel), {
+            dataset: null,
+            graph: "https://cim.example.org/SSH",
+            classRef: CLASS_IRI,
+        });
+
+        expect(target).toBeNull();
+    });
+
     test("accepts an rdfa:uuid instead of an IRI", async () => {
         const target = await resolveClassTarget(fakeBackend(singleGraphModel), {
             dataset: null,
