@@ -40,6 +40,6 @@ ex:subClass
     rdfs:subClassOf           ex:class .
 
 ex:newPackage
-    rdf:type                  rdfs:Category ;
+    rdf:type                  cims:ClassCategory ;
     rdfs:label                "newPackage"@en ;
     <http://example.org#uuid> "75844dc0-d937-4184-bf6b-d35d8ca6d92a" .

@@ -15,10 +15,37 @@
  *
  */
 
+import { Class } from "$lib/models/dto/index.ts";
 import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
 import { ReactiveAttribute } from "$lib/models/reactive/models/reactive-attribute.svelte.js";
 import { ReactiveClass } from "$lib/models/reactive/models/reactive-class.svelte.js";
 import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-entry.svelte.js";
+
+/**
+ * A class can be derived from a class the schema does not contain, for example after pasting
+ * without copying the super class along. It has no entry in the class list, so a stand-in
+ * identified by its uri is returned instead - without it the editor would neither show the
+ * inheritance nor keep it when the class is saved.
+ *
+ * @param {Array} classes - The classes of the schema
+ * @param {Object} classDto - The class data transfer object from the API
+ * @returns {Object|null} The super class of the class, or null if it has none
+ */
+export function findSuperClass(classes, classDto) {
+    const superClass = classDto?.superClass;
+    if (!superClass) {
+        return null;
+    }
+    const uri = superClass.prefix + superClass.label;
+    return (
+        classes.find(cls => cls.prefix + cls.label === uri) ??
+        new Class({
+            uuid: uri,
+            prefix: superClass.prefix,
+            label: superClass.label,
+        })
+    );
+}
 
 /**
  * Maps a class DTO to a ReactiveClass instance
@@ -28,14 +55,7 @@ import { ReactiveEnumEntry } from "$lib/models/reactive/models/reactive-enum-ent
  * @returns {ReactiveClass} The reactive class instance
  */
 export function mapClassDtoToReactiveClass(classDto, context, getClassByUuid) {
-    let superClass = null;
-    if (classDto.superClass) {
-        superClass = context.classes.find(
-            cls =>
-                cls.prefix + cls.label ===
-                classDto.superClass.prefix + classDto.superClass.label,
-        );
-    }
+    const superClass = findSuperClass(context.classes, classDto);
     const superClassUUID = superClass ? superClass.uuid : null;
     const attributes = mapAttributeDtoListToReactiveAttributeList(
         classDto.attributes,

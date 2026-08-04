@@ -22,9 +22,7 @@
         faPlus,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import {
         copyState,
         DiagramType,
@@ -38,7 +36,8 @@
     } from "./contextMenuUtils.js";
     import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
-    import { saveCopyClass } from "../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
+    import { startPaste } from "../../../../routes/mainpage/packageNavigation/paste-flow.svelte.js";
+    import PasteMenuItems from "../../../../routes/mainpage/packageNavigation/PasteMenuItems.svelte";
     import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
 
     let {
@@ -51,8 +50,6 @@
         onClassCreated = () => {},
         onClose = () => {},
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let triggerRef = $state(null);
     let open = $state(false);
@@ -102,35 +99,13 @@
         onClose();
     }
 
-    async function pasteClass(
-        copyAsAbstract,
-        copyAttributes,
-        copyAssociations,
-    ) {
-        const res = await bec.getPackages(
+    async function pasteClass(options) {
+        onClose();
+        await startPaste(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
-        );
-        const packagesJSON = await res.json();
-        let packages = [
-            ...(packagesJSON.internalPackageList ?? []),
-            ...(packagesJSON.externalPackageList ?? []),
-        ];
-        const selectedPackageUUID =
-            editorState.selectedDiagram.getProperty("id") === "default"
-                ? null
-                : editorState.selectedDiagram.getProperty("id");
-
-        let packageDTO = selectedPackageUUID
-            ? (packages.find(pkg => pkg.uuid === selectedPackageUUID) ?? null)
-            : null;
-        await saveCopyClass(
-            editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue(),
-            packageDTO,
-            copyAsAbstract,
-            copyAttributes,
-            copyAssociations,
+            editorState.selectedDiagram.getProperty("id"),
+            options,
         );
     }
 </script>
@@ -163,38 +138,11 @@
                         Paste
                     </ContextMenu.SubMenu.Trigger>
                     <ContextMenu.SubMenu.Content>
-                        <ContextMenu.Item.Button
-                            onSelect={() => pasteClass(false, true, true)}
-                            faIcon={faPaste}
+                        <PasteMenuItems
+                            Item={ContextMenu.Item.Button}
                             disabled={disablePasteButton}
-                            altText="Ctrl+V"
-                        >
-                            Paste
-                        </ContextMenu.Item.Button>
-                        <ContextMenu.Item.Button
-                            onSelect={() => pasteClass(false, false, true)}
-                            faIcon={faPaste}
-                            disabled={disablePasteButton}
-                            altText="Ctrl+Shift+V"
-                        >
-                            Paste without Attributes/Enum Entries
-                        </ContextMenu.Item.Button>
-                        <ContextMenu.Item.Button
-                            onSelect={() => pasteClass(false, true, false)}
-                            faIcon={faPaste}
-                            disabled={disablePasteButton}
-                            altText="Ctrl+Alt+V"
-                        >
-                            Paste without Associations
-                        </ContextMenu.Item.Button>
-                        <ContextMenu.Item.Button
-                            onSelect={() => pasteClass(true, false, false)}
-                            faIcon={faPaste}
-                            disabled={disablePasteButton}
-                            altText="Ctrl+Shift+Alt+V"
-                        >
-                            Paste Bare
-                        </ContextMenu.Item.Button>
+                            onPaste={pasteClass}
+                        />
                     </ContextMenu.SubMenu.Content>
                 </ContextMenu.SubMenu.Root>
                 <ContextMenu.Separator />

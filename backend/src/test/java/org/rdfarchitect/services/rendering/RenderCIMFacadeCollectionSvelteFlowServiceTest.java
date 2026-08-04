@@ -63,6 +63,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     private static final UUID EXTERNAL_CAT_UUID =
             UUID.fromString("00000000-0000-0000-0000-000000000009");
     private static final UUID REMOTE_UUID = UUID.fromString("00000000-0000-0000-0000-00000000000a");
+    private static final UUID MISSING_TARGET_UUID =
+            UUID.fromString("00000000-0000-0000-0000-00000000000b");
+    private static final UUID MISSING_SUPER_CLASS_UUID =
+            UUID.fromString("00000000-0000-0000-0000-00000000000c");
 
     private final RenderCIMFacadeCollectionSvelteFlowService renderer =
             new RenderCIMFacadeCollectionSvelteFlowService();
@@ -103,23 +107,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
 
         var terminal = addClass("Terminal", TERMINAL_UUID, other);
 
-        var association = model.createResource(NS + "Child.Terminals");
-        association.addProperty(RDF.type, RDF.Property);
-        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
-        association.addProperty(RDFS.label, model.createLiteral("Terminals", "en"));
-        association.addProperty(RDFS.domain, child);
-        association.addProperty(RDFS.range, terminal);
-        association.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
-        association.addProperty(CIMS.associationUsed, "Yes");
-
-        var inverse = model.createResource(NS + "Terminal.Child");
-        inverse.addProperty(RDF.type, RDF.Property);
-        inverse.addProperty(RDFA.uuid, UUID.randomUUID().toString());
-        inverse.addProperty(RDFS.label, model.createLiteral("Child", "en"));
-        inverse.addProperty(RDFS.domain, terminal);
-        inverse.addProperty(RDFS.range, child);
-        inverse.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:1..1"));
-        inverse.addProperty(CIMS.associationUsed, "No");
+        var association =
+                addAssociation(child, terminal, "Child.Terminals", "Terminals", "M:0..n", "Yes");
+        var inverse = addAssociation(terminal, child, "Terminal.Child", "Child", "M:1..1", "No");
         inverse.addProperty(CIMS.inverseRoleName, association);
         association.addProperty(CIMS.inverseRoleName, inverse);
 
@@ -147,6 +137,25 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
             cimClass.addProperty(CIMS.belongsToCategory, category);
         }
         return cimClass;
+    }
+
+    private Resource addAssociation(
+            Resource domain,
+            Resource range,
+            String localName,
+            String label,
+            String multiplicity,
+            String associationUsed) {
+        var association = model.createResource(NS + localName);
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, model.createLiteral(label, "en"));
+        association.addProperty(RDFS.domain, domain);
+        association.addProperty(RDFS.range, range);
+        association.addProperty(
+                CIMS.multiplicity, model.createResource(CIMS.namespace + multiplicity));
+        association.addProperty(CIMS.associationUsed, associationUsed);
+        return association;
     }
 
     private void addAttribute(
@@ -306,6 +315,47 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         assertThat(edge.getData().getToMultiplicity()).isEqualTo("1..1");
         assertThat(edge.getData().isUseToAssociation()).isTrue();
         assertThat(edge.getData().isUseFromAssociation()).isFalse();
+    }
+
+    @Test
+    @DisplayName("skips association targets the graph does not define as classes")
+    void skipsUndefinedAssociationTarget() {
+        var child = model.getResource(NS + "Child");
+        var missingTarget = model.createResource(NS + "MissingTarget");
+        missingTarget.addProperty(RDFA.uuid, MISSING_TARGET_UUID.toString());
+        var from =
+                addAssociation(child, missingTarget, "Child.missing", "missing", "M:0..n", "Yes");
+        var to =
+                addAssociation(
+                        missingTarget, child, "MissingTarget.child", "child", "M:1..1", "No");
+        from.addProperty(CIMS.inverseRoleName, to);
+        to.addProperty(CIMS.inverseRoleName, from);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getNodes())
+                .extracting(node -> node.getData().getLabel())
+                .doesNotContain("MissingTarget");
+        assertThat(result.getEdges())
+                .extracting(edge -> edge.getTarget())
+                .doesNotContain(MISSING_TARGET_UUID);
+    }
+
+    @Test
+    @DisplayName("skips super classes the graph does not define as classes")
+    void skipsUndefinedSuperClass() {
+        var missingSuperClass = model.createResource(NS + "MissingSuperClass");
+        missingSuperClass.addProperty(RDFA.uuid, MISSING_SUPER_CLASS_UUID.toString());
+        model.getResource(NS + "Child").addProperty(RDFS.subClassOf, missingSuperClass);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getNodes())
+                .extracting(node -> node.getData().getLabel())
+                .doesNotContain("MissingSuperClass");
+        assertThat(result.getEdges())
+                .extracting(edge -> edge.getTarget())
+                .doesNotContain(MISSING_SUPER_CLASS_UUID);
     }
 
     @Test
