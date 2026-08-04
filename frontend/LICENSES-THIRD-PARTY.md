@@ -173,7 +173,7 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.16
+- **Version:** 8.5.23
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
