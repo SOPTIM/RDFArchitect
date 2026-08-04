@@ -172,7 +172,7 @@
 <div class="relative h-full w-full">
     <div class="flex h-full flex-col">
         {#if isMerged && hasSources}
-            <div class="border-border border-b px-2 py-1 shrink-0">
+            <div class="border-border shrink-0 border-b px-2 py-1">
                 <SelectEditControl
                     bind:value={activeSourceUuid}
                     options={mergedClass.sources}

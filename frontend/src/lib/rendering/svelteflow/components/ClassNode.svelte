@@ -185,16 +185,16 @@
                 {#if userSettings.get("showInheritedProperties", true)}
                     {#each section.superGroups as superClass}
                         <div
-                            class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center mt-1 py-0.5"
+                            class="text-default-text mt-1 flex flex-nowrap items-center justify-center gap-3 py-0.5 text-xs italic opacity-70"
                         >
                             <span
-                                class="w-3 border-t border-current rounded"
+                                class="w-3 rounded border-t border-current"
                             ></span>
-                            <span class="leading-none relative -top-px">
+                            <span class="relative -top-px leading-none">
                                 {superClass.label}
                             </span>
                             <span
-                                class="w-3 border-t border-current rounded"
+                                class="w-3 rounded border-t border-current"
                             ></span>
                         </div>
                         {#each superClass.attributes as attr}
@@ -252,16 +252,16 @@
             {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
                 {#each inheritedGroups as superClass}
                     <div
-                        class="text-default-text text-xs italic opacity-70 flex flex-nowrap gap-3 items-center justify-center py-0.5"
+                        class="text-default-text flex flex-nowrap items-center justify-center gap-3 py-0.5 text-xs italic opacity-70"
                     >
                         <span
-                            class="w-3 border-t border-current rounded"
+                            class="w-3 rounded border-t border-current"
                         ></span>
-                        <span class="leading-none relative -top-px">
+                        <span class="relative -top-px leading-none">
                             {superClass.label}
                         </span>
                         <span
-                            class="w-3 border-t border-current rounded"
+                            class="w-3 rounded border-t border-current"
                         ></span>
                     </div>
                     {#each superClass.attributes ?? [] as attr}
@@ -276,10 +276,10 @@
                     {/each}
                     {#if (superClass.attributes?.length ?? 0) === 0 && (superClass.enumEntries?.length ?? 0) === 0}
                         <div
-                            class="text-default-text leading-6 opacity-70 flex justify-center items-center"
+                            class="text-default-text flex items-center justify-center leading-6 opacity-70"
                         >
                             <span
-                                class="w-3 border-t border-current rounded mt-1.5 mb-2"
+                                class="mt-1.5 mb-2 w-3 rounded border-t border-current"
                             ></span>
                         </div>
                     {/if}
