@@ -47,10 +47,45 @@ use — browsers treat `http://localhost` as a trustworthy origin and accept `Se
 from it. Only widen this where you need embedding: `none` removes the SameSite restriction
 that limits cross-site request forgery.
 
+### Letting the host read the session (live datasets)
+
+A host that embeds RDFArchitect may want to work with *the datasets you are editing* — the
+CIMNotebook IDE extensions validate SPARQL against them. Datasets belong to a session, so an
+outside tool can only reach them by addressing that session, and for that it needs the session
+id. The embedded app hands it over on request:
+
+```
+host → app:  { type: "rdfa:session-request" }
+app  → host: { type: "rdfa:session", id: "<session id>" }
+```
+
+The reply goes to the exact origin that asked, and only when the app is embedded. It is off
+until the deployment opts in:
+
+```
+PUBLIC_EMBED_SESSION_HANDSHAKE=true      # on the frontend container
+```
+
+:::warning What this exposes
+The session id is the value of the session cookie, so whoever holds it can read and change
+everything in that session. With the handshake enabled, **any page that embeds RDFArchitect in an
+iframe can ask for it** — there is no way to tell a trusted embedder from an untrusted one, since a
+webview's origin is not a stable, allow-listable value.
+
+`same-site: none` already lets such a page *send* authenticated requests; the handshake
+additionally lets it *read* the answers. Enable it only where the instance is reached by people
+you trust to embed it, and prefer leaving it off on a public deployment.
+
+The IntelliJ tool window does not need this: it loads the app as a top-level document and the
+plugin scripts its own browser directly. It is the VS Code webview (an iframe) that depends on the
+handshake.
+:::
+
 ## Frontend runtime config
 
-The frontend is a static SPA with one runtime variable, rewritten at container start by `frontend/docker-entrypoint.sh`:
+The frontend is a static SPA whose runtime variables are rewritten at container start by `frontend/docker-entrypoint.sh`:
 
 | Variable              | Default (Docker) | Description                                           |
 | --------------------- | ---------------- | ----------------------------------------------------- |
 | `PUBLIC_BACKEND_URL`  | `/api`           | Where the frontend expects to find the backend.       |
+| `PUBLIC_EMBED_SESSION_HANDSHAKE` | `false` | Answer an embedding host's request for the session id (see [above](#letting-the-host-read-the-session-live-datasets)). |
