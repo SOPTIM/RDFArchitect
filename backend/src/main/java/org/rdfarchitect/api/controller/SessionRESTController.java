@@ -22,10 +22,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import jakarta.servlet.http.HttpSession;
 
+import org.rdfarchitect.api.dto.SessionDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,6 +37,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class SessionRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(SessionRESTController.class);
+
+    @Operation(
+            summary = "Current session",
+            description =
+                    "The id of the session this request belongs to. Datasets live in a session, so"
+                            + " a tool that wants to read the very datasets a browser is editing has to"
+                            + " address that session — the app hands this id to an embedding host (see"
+                            + " the embedded-session handshake) which passes it on to that tool. The id"
+                            + " is the session cookie's value and therefore grants full access to the"
+                            + " session: treat it as a credential.",
+            tags = {"session"},
+            responses = {@ApiResponse(responseCode = "200")})
+    @GetMapping
+    public SessionDTO getSession(HttpSession session) {
+        return new SessionDTO(session.getId());
+    }
 
     @Operation(
             summary = "Reset session",
