@@ -17,6 +17,19 @@ Typical deployment patterns include:
 
 Keep Fuseki on a private network reachable only by the backend. Snapshot links load datasets as read-only by default, but that protection is enforced by the backend, not by Fuseki; a user with direct Fuseki access can still modify snapshot datasets.
 
+## Session ids handed to an embedding host
+
+The session id is a capability for a whole session: whoever holds it can read and change every
+dataset in it. `GET /api/session` returns it to the caller's own session, which is harmless in
+itself, but the embedded-session handshake hands it to whatever page embeds RDFArchitect — and a
+webview's origin cannot be allow-listed, so "whatever page" is literal.
+
+The handshake is therefore off unless `PUBLIC_EMBED_SESSION_HANDSHAKE=true` is set on the frontend
+(see [Configuration](/admin-guide/configuration#letting-the-host-read-the-session-live-datasets)).
+Enable it only where you would also be comfortable with those users embedding the instance at all,
+and remember it composes with `same-site: none`: that already lets a foreign page make authenticated
+requests, and the handshake additionally lets it read the answers.
+
 ## Snapshot links
 
 Snapshot URLs are capability tokens: anyone with the URL can view the snapshot. Treat them as sensitive, especially for profiles that have not been publicly released. If you need to revoke a snapshot, delete its Fuseki dataset directly; the dataset name follows the `snapshot-<base64>` convention.
