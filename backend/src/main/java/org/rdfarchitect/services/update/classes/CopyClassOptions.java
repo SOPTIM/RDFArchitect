@@ -17,21 +17,40 @@
 
 package org.rdfarchitect.services.update.classes;
 
-import org.rdfarchitect.api.dto.packages.PackageDTO;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMClassCategory;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
-/**
- * Options shared by all classes of a single copy/paste operation: the package the copies are placed
- * in and which parts of each source class are carried over.
- *
- * @param targetPackage The package the new classes are added to, or {@code null} for the default
- *     package.
- * @param copyAsAbstract Whether the copies should be made abstract (dropping the concrete
- *     stereotype and the super class).
- * @param copyAttributes Whether the attributes of the source classes should be copied.
- * @param copyAssociations Whether the associations of the source classes should be copied.
- */
+import java.util.Set;
+
 public record CopyClassOptions(
-        PackageDTO targetPackage,
+        ICIMClassCategory targetPackage,
         boolean copyAsAbstract,
         boolean copyAttributes,
-        boolean copyAssociations) {}
+        boolean copyAssociations,
+        boolean copyInheritance,
+        Set<URI> referencesToCopy) {
+
+    public String targetPackageLabel() {
+        return targetPackage != null ? targetPackage.getLabel().getValue() : "default";
+    }
+
+    public boolean copies(CopyClassReference reference) {
+        if (!referencesToCopy.contains(reference.uri())) {
+            return false;
+        }
+        return reference.kinds().stream().anyMatch(this::copiesReferencesOfKind);
+    }
+
+    public boolean copiesMembersOf(CopyClassReference reference) {
+        return copyAttributes
+                && reference.kinds().stream().anyMatch(CopyClassReference.Kind::copiesMembers);
+    }
+
+    private boolean copiesReferencesOfKind(CopyClassReference.Kind kind) {
+        return switch (kind) {
+            case DATA_TYPE -> copyAttributes;
+            case ASSOCIATION_TARGET -> copyAssociations;
+            case SUPER_CLASS -> copyInheritance;
+        };
+    }
+}

@@ -562,6 +562,17 @@ export class BackendConnection {
         });
     }
 
+    async postPastePreview(targetDatasetName, targetGraphURI, previewRequest) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetDatasetName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste/preview`;
+        return await fetch(url, {
+            method: "POST",
+            mode: "cors",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            body: JSON.stringify(previewRequest),
+            credentials: "include",
+        });
+    }
+
     async extendClass(datasetName, graphURI, classUUID, body) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/extend`;
         return await fetch(url, {

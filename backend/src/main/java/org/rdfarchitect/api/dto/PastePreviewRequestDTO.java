@@ -19,21 +19,10 @@ package org.rdfarchitect.api.dto;
 
 import lombok.Data;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-
 import java.util.List;
-import java.util.UUID;
 
 @Data
-public class PasteClassesRequestDTO {
-
-    UUID targetPackageUUID;
-    boolean copyAsAbstract;
-    boolean copyAttributes;
-    boolean copyAssociations;
-    boolean copyInheritance;
-
-    List<URI> referencesToCopy;
+public class PastePreviewRequestDTO {
 
     List<PasteSourceClassDTO> sources;
 }

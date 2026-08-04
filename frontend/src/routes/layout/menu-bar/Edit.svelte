@@ -46,6 +46,7 @@
     import { Menubar } from "$lib/components/bitsui/menubar";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+    import { PASTE_VARIANTS } from "$lib/pasteOptions.js";
     import {
         copyState,
         editorState,
@@ -61,7 +62,8 @@
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
     import { inferSelectionLevel } from "../../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
-    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
+    import { startPaste } from "../../mainpage/packageNavigation/paste-flow.svelte.js";
+    import PasteMenuItems from "../../mainpage/packageNavigation/PasteMenuItems.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
@@ -234,23 +236,13 @@
             shortcutStore.register("deleteSelection", ["delete"], () =>
                 deleteSelectionWithShortcut(),
             ),
-            shortcutStore.register("paste", ["ctrl", "v"], () =>
-                pasteClassWithShortcut(false, true, true),
-            ),
-            shortcutStore.register(
-                "pasteWithoutAttributes",
-                ["ctrl", "shift", "v"],
-                () => pasteClassWithShortcut(false, false, true),
-            ),
-            shortcutStore.register(
-                "pasteWithoutAssociations",
-                ["ctrl", "alt", "v"],
-                () => pasteClassWithShortcut(false, true, false),
-            ),
-            shortcutStore.register(
-                "pasteBare",
-                ["ctrl", "shift", "alt", "v"],
-                () => pasteClassWithShortcut(true, false, false),
+            ...PASTE_VARIANTS.map(variant =>
+                shortcutStore.register(
+                    variant.id,
+                    variant.keys,
+                    () => pasteClassWithShortcut(variant.options),
+                    true,
+                ),
             ),
         );
     });
@@ -394,14 +386,12 @@
         );
     }
 
-    function pasteClass(copyAsAbstract, copyAttributes, copyAssociations) {
-        saveCopyClass(
+    async function pasteClass(options) {
+        await startPaste(
             editorState.selectedDataset.getValue(),
             editorState.selectedGraph.getValue(),
-            selectedPackageDetails,
-            copyAsAbstract,
-            copyAttributes,
-            copyAssociations,
+            selectedPackageDetails?.uuid ?? null,
+            options,
         );
     }
 
@@ -432,13 +422,9 @@
         }
     }
 
-    function pasteClassWithShortcut(
-        copyAsAbstract,
-        copyAttributes,
-        copyAssociations,
-    ) {
+    function pasteClassWithShortcut(options) {
         if (!disablePasteButton) {
-            pasteClass(copyAsAbstract, copyAttributes, copyAssociations);
+            pasteClass(options);
         }
     }
 
@@ -522,38 +508,11 @@
                 Paste
             </Menubar.SubMenu.Trigger>
             <Menubar.SubMenu.Content>
-                <Menubar.Item.Button
-                    onSelect={() => pasteClass(false, true, true)}
+                <PasteMenuItems
+                    Item={Menubar.Item.Button}
                     disabled={disablePasteButton}
-                    faIcon={faPaste}
-                    altText="Ctrl+V"
-                >
-                    Paste
-                </Menubar.Item.Button>
-                <Menubar.Item.Button
-                    onSelect={() => pasteClass(false, false, true)}
-                    disabled={disablePasteButton}
-                    faIcon={faPaste}
-                    altText="Ctrl+Shift+V"
-                >
-                    Paste without Attributes/Enum Entries
-                </Menubar.Item.Button>
-                <Menubar.Item.Button
-                    onSelect={() => pasteClass(false, true, false)}
-                    disabled={disablePasteButton}
-                    faIcon={faPaste}
-                    altText="Ctrl+Alt+V"
-                >
-                    Paste without Associations
-                </Menubar.Item.Button>
-                <Menubar.Item.Button
-                    onSelect={() => pasteClass(true, false, false)}
-                    disabled={disablePasteButton}
-                    faIcon={faPaste}
-                    altText="Ctrl+Shift+Alt+V"
-                >
-                    Paste Bare
-                </Menubar.Item.Button>
+                    onPaste={pasteClass}
+                />
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
         <Menubar.Separator />

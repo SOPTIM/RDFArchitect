@@ -15,25 +15,21 @@
  *
  */
 
-package org.rdfarchitect.api.dto;
+package org.rdfarchitect.services.update.classes;
 
-import lombok.Data;
+import lombok.experimental.UtilityClass;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.data.dto.CIMAssociationPair;
+import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 
 import java.util.List;
-import java.util.UUID;
 
-@Data
-public class PasteClassesRequestDTO {
+@UtilityClass
+public class ClassAssociations {
 
-    UUID targetPackageUUID;
-    boolean copyAsAbstract;
-    boolean copyAttributes;
-    boolean copyAssociations;
-    boolean copyInheritance;
-
-    List<URI> referencesToCopy;
-
-    List<PasteSourceClassDTO> sources;
+    public List<CIMAssociationPair> ownedBy(CIMClassUMLAdapted cimClass) {
+        return cimClass.getAssociationPairs().stream()
+                .filter(pair -> pair.getFrom().getDomain().getUri().equals(cimClass.getUri()))
+                .toList();
+    }
 }

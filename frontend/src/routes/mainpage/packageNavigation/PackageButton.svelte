@@ -32,7 +32,6 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { Package } from "$lib/models/dto/index.ts";
     import {
         copyState,
         editorState,
@@ -50,7 +49,8 @@
     import PackageEditorDialog from "../packageEditorDialog.svelte";
     import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
-    import { saveCopyClass } from "./save-copy-class-to-backend.js";
+    import { startPaste } from "./paste-flow.svelte.js";
+    import PasteMenuItems from "./PasteMenuItems.svelte";
 
     let {
         datasetNavEntry,
@@ -141,19 +141,12 @@
         );
     }
 
-    function pasteClass(copyAbstract, copyAttributes, copyAssociations) {
-        let packageDTO = new Package({
-            uuid: packageNavEntry.data.uuid,
-            label: packageNavEntry.data.label,
-            prefix: packageNavEntry.data?.prefix,
-        });
-        saveCopyClass(
+    async function pasteClass(options) {
+        await startPaste(
             datasetNavEntry.id,
             graphNavEntry.id,
-            packageDTO,
-            copyAbstract,
-            copyAttributes,
-            copyAssociations,
+            packageNavEntry.data.uuid,
+            options,
         );
     }
 </script>
@@ -195,38 +188,11 @@
                     Paste
                 </ContextMenu.SubMenu.Trigger>
                 <ContextMenu.SubMenu.Content>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(false, true, true)}
-                        faIcon={faPaste}
+                    <PasteMenuItems
+                        Item={ContextMenu.Item.Button}
                         disabled={disablePasteButton}
-                        altText="Ctrl+V"
-                    >
-                        Paste
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(false, false, true)}
-                        faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+Shift+V"
-                    >
-                        Paste without Attributes/Enum Entries
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(false, true, false)}
-                        faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+Alt+V"
-                    >
-                        Paste without Associations
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(true, false, false)}
-                        faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+Shift+Alt+V"
-                    >
-                        Paste Bare
-                    </ContextMenu.Item.Button>
+                        onPaste={pasteClass}
+                    />
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
             <ContextMenu.Separator />
