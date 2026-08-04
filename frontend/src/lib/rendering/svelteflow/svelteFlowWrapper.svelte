@@ -428,6 +428,10 @@
         lockedDatasetName={editorState.selectedDataset.getValue()}
         lockedGraphUri={editorState.selectedGraph.getValue()}
         lockedPackage={editorState.selectedDiagram.getProperty("id")}
+        classes={nodes.map(node => ({
+            id: node.id,
+            graphUri: node.data?.graphUri,
+        }))}
         onClose={() => contextMenus.close()}
     />
     <SvelteFlowClassContextMenu

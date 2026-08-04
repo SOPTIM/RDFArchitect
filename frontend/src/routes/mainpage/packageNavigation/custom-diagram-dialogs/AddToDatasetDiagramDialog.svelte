@@ -103,7 +103,7 @@
 
     function classesToAdd() {
         return classes.map(cls => ({
-            graphUri: lockedGraphUri,
+            graphUri: cls.graphUri ?? lockedGraphUri,
             uuid: cls.id,
         }));
     }
