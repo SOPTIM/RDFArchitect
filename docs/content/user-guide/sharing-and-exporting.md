@@ -19,6 +19,12 @@ The exported file is self-contained: it can be re-imported into RDFArchitect, lo
 
 See [SHACL — Exporting](./shacl#exporting-shacl). TTL by default.
 
+## Exporting HTML Documentation
+**File → Export → HTML Documentation** exports documentation for the currently selected graph. 
+
+The generated ZIP file contains an HTML file and PNG files for the diagrams in the graph. The documentation lists all classes, categorized by stereotype.
+
+
 ## Share snapshot
 
 **File → Share Snapshot** creates an immutable snapshot of the currently selected dataset and returns a link of the form `https://<host>/?snapshot=<token>`. Anyone opening that link loads the dataset as it was at the moment the snapshot was taken — packages, classes, associations, SHACL, everything — and can navigate the schema exactly like the author did, without needing to install anything.
