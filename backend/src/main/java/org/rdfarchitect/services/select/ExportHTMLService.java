@@ -413,7 +413,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
             ClassUMLAdaptedDTO classUMLAdaptedDTO,
             List<ClassUMLAdaptedDTO> fullClassList) {
         var builder = new StringBuilder();
-        var label = HtmlUtils.htmlEscape(classUMLAdaptedDTO.getLabel());
+        var label = escape(classUMLAdaptedDTO.getLabel());
 
         builder.append("<div id=\"").append(label).append("\" class=\"group\">\n");
         builder.append("<a href=\"#").append(label).append("\">\n");
@@ -431,7 +431,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
         if (classUMLAdaptedDTO.getComment() != null && !classUMLAdaptedDTO.getComment().isEmpty()) {
             builder.append("<p class=\"comment\">")
-                    .append(HtmlUtils.htmlEscape(classUMLAdaptedDTO.getComment()))
+                    .append(escape(classUMLAdaptedDTO.getComment()))
                     .append("</p>\n");
         }
 
@@ -457,9 +457,9 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
             return "";
         }
         return "<p class=\"package\"><a href=\"images/"
-                + HtmlUtils.htmlEscape(category.getUuid().toString())
+                + escape(category.getUuid() != null ? category.getUuid().toString() : "default")
                 + ".png\" target=\"_blank\">"
-                + HtmlUtils.htmlEscape(category.getLabel())
+                + escape(category.getLabel())
                 + " </a></p>\n";
     }
 
@@ -499,15 +499,15 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         return "<tr>\n"
                 + "<th>\n"
                 + "<p class=\"attribut\" id=\""
-                + HtmlUtils.htmlEscape(attribute.getDomain())
+                + escape(attribute.getDomain())
                 + "."
-                + HtmlUtils.htmlEscape(attribute.getLabel())
+                + escape(attribute.getLabel())
                 + "\">"
-                + HtmlUtils.htmlEscape(attribute.getLabel())
+                + escape(attribute.getLabel())
                 + " </p>\n"
                 + buildAttributeData(attribute)
                 + "<td>\n<p class=\"comment\">"
-                + HtmlUtils.htmlEscape(nullToEmpty(attribute.getComment()))
+                + escape(attribute.getComment())
                 + "</p>\n</td>\n"
                 + "</tr>\n";
     }
@@ -522,27 +522,27 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("<tr>\n");
         builder.append("<td class=\"type\">\n");
         builder.append("<p class=\"role\" id=\"")
-                .append(HtmlUtils.htmlEscape(from.getDomain()))
+                .append(escape(from.getDomain()))
                 .append(".")
-                .append(HtmlUtils.htmlEscape(from.getLabel()))
+                .append(escape(from.getLabel()))
                 .append("\">")
-                .append(HtmlUtils.htmlEscape(from.getLabel()))
+                .append(escape(from.getLabel()))
                 .append(" </p>\n");
         builder.append("</td>\n");
         builder.append("<td>\n<p class=\"cardinality\">")
-                .append(HtmlUtils.htmlEscape(nullToEmpty(from.getMultiplicity())))
+                .append(escape(from.getMultiplicity()))
                 .append("</p>\n</td>\n");
         builder.append("<td>\n<p class=\"type\">\n");
         if (from.getRange() != null) {
             builder.append("<a href=\"#")
-                    .append(HtmlUtils.htmlEscape(from.getRange().getLabel()))
+                    .append(escape(from.getRange().getLabel()))
                     .append("\">")
-                    .append(HtmlUtils.htmlEscape(from.getRange().getLabel()))
+                    .append(escape(from.getRange().getLabel()))
                     .append("</a>");
         }
         builder.append("</p>\n</td>\n");
         builder.append("<td>\n<p class=\"comment\">")
-                .append(HtmlUtils.htmlEscape(nullToEmpty(from.getComment())))
+                .append(escape(from.getComment()))
                 .append("</p>\n</td>\n");
         builder.append("</tr>\n");
         return builder.toString();
@@ -560,7 +560,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
         var pass = new StringBuilder();
         for (var ancestor : ancestors) {
-            pass.append("->").append(HtmlUtils.htmlEscape(ancestor.getLabel()));
+            pass.append("->").append(escape(ancestor.getLabel()));
         }
         builder.append("<h4> Inheritance pass: ").append(pass).append("</h4>\n");
 
@@ -623,14 +623,14 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         return "<tr>\n"
                 + "<th>\n"
                 + "<p class=\"inheritattribut\">"
-                + HtmlUtils.htmlEscape(attribute.getLabel())
+                + escape(attribute.getLabel())
                 + " </p>\n"
                 + buildAttributeData(attribute)
                 + "<td>\n</td>\n"
                 + "<td>\n<p>see <a class=\"superclass\" href=\"#"
-                + HtmlUtils.htmlEscape(ancestor.getLabel())
+                + escape(ancestor.getLabel())
                 + "\">"
-                + HtmlUtils.htmlEscape(ancestor.getLabel())
+                + escape(ancestor.getLabel())
                 + "</a>\n</p>\n</td>\n"
                 + "</tr>\n";
     }
@@ -639,14 +639,14 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         var builder = new StringBuilder();
         builder.append("</th>\n");
         builder.append("<td>\n<p class=\"cardinality\">")
-                .append(HtmlUtils.htmlEscape(nullToEmpty(attribute.getMultiplicity())))
+                .append(escape(attribute.getMultiplicity()))
                 .append("</p>\n</td>\n");
         builder.append("<td class=\"type\">\n<p class=\"type\">\n");
         if (attribute.getDataType() != null) {
             builder.append("<a href=\"#")
-                    .append(HtmlUtils.htmlEscape(attribute.getDataType().getLabel()))
+                    .append(escape(attribute.getDataType().getLabel()))
                     .append("\">")
-                    .append(HtmlUtils.htmlEscape(attribute.getDataType().getLabel()))
+                    .append(escape(attribute.getDataType().getLabel()))
                     .append("</a>\n");
         }
         builder.append("</p>\n</td>\n");
@@ -663,33 +663,29 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         var builder = new StringBuilder();
         builder.append("<tr>\n");
         builder.append("<th>\n");
-        builder.append("<p class=\"inheritrole\" id=\"")
-                .append(HtmlUtils.htmlEscape(ancestor.getLabel()))
-                .append(".")
-                .append(HtmlUtils.htmlEscape(from.getLabel()))
-                .append("\">")
-                .append(HtmlUtils.htmlEscape(from.getLabel()))
+        builder.append("<p class=\"inheritrole\"")
+                .append(escape(from.getLabel()))
                 .append(" </p>\n");
         builder.append("</th>\n");
         builder.append("<td>\n<p class=\"cardinality\">")
-                .append(HtmlUtils.htmlEscape(nullToEmpty(from.getMultiplicity())))
+                .append(escape(from.getMultiplicity()))
                 .append("</p>\n</td>\n");
         builder.append("<td class=\"type\">\n");
         builder.append("<p class=\"type\">\n");
         if (from.getRange() != null) {
             builder.append("<a href=\"#")
-                    .append(HtmlUtils.htmlEscape(from.getRange().getLabel()))
+                    .append(escape(from.getRange().getLabel()))
                     .append("\">")
-                    .append(HtmlUtils.htmlEscape(from.getRange().getLabel()))
+                    .append(escape(from.getRange().getLabel()))
                     .append("</a>\n");
         }
         builder.append("</p>\n");
         builder.append("</td>\n");
         builder.append("<td>\n</td>\n");
         builder.append("<td>\n<p>see <a class=\"superclass\" href=\"#")
-                .append(HtmlUtils.htmlEscape(ancestor.getLabel()))
+                .append(escape(ancestor.getLabel()))
                 .append("\">")
-                .append(HtmlUtils.htmlEscape(ancestor.getLabel()))
+                .append(escape(ancestor.getLabel()))
                 .append("</a>\n</p>\n</td>\n");
         builder.append("</tr>\n");
         return builder.toString();
@@ -719,20 +715,24 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         return "<tr>\n"
                 + "<th>\n"
                 + "<p class=\"attribut\" id=\""
-                + HtmlUtils.htmlEscape(nullToEmpty(entry.getPrefix()))
+                + escape(entry.getPrefix())
                 + "."
-                + HtmlUtils.htmlEscape(nullToEmpty(entry.getLabel()))
+                + escape(entry.getLabel())
                 + "\">"
-                + HtmlUtils.htmlEscape(nullToEmpty(entry.getLabel()))
+                + escape(entry.getLabel())
                 + " </p>\n"
                 + "</th>\n"
                 + "<td>\n<p class=\"comment\">"
-                + HtmlUtils.htmlEscape(nullToEmpty(entry.getComment()))
+                + escape(entry.getComment())
                 + "</p>\n</td>\n"
                 + "</tr>\n";
     }
 
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
+    }
+
+    private String escape(String value) {
+        return HtmlUtils.htmlEscape(nullToEmpty(value));
     }
 }
