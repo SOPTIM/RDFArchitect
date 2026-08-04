@@ -48,19 +48,19 @@
     const ALL_TOGGLES = [
         {
             key: "includePropertiesFromOtherProfiles",
-            label: "Other profiles",
+            label: "Other Schemas",
             icon: faLayerGroup,
             appliesTo: [DiagramType.PACKAGE],
         },
         {
             key: "useColoredPropertiesInMergedView",
-            label: "Colored by profile",
+            label: "Colored by Schema",
             icon: faPalette,
             appliesTo: [DiagramType.PACKAGE, DiagramType.CROSS_PROFILE],
         },
         {
             key: "showInheritedProperties",
-            label: "Inherited properties",
+            label: "Inherited Properties",
             icon: faAnglesUp,
             appliesTo: [DiagramType.PACKAGE, DiagramType.CROSS_PROFILE],
         },
@@ -78,7 +78,7 @@
         },
         {
             key: "includeEnumEntries",
-            label: "Enum entries",
+            label: "Enum Entries",
             icon: faListUl,
             appliesTo: [DiagramType.PACKAGE],
         },
@@ -90,7 +90,7 @@
         },
         {
             key: "includeRelationsToExternalPackages",
-            label: "External relations",
+            label: "External Relations",
             icon: faArrowUpRightFromSquare,
             appliesTo: [DiagramType.PACKAGE],
         },
@@ -137,7 +137,7 @@
             <div class="h-8 w-8">
                 <ButtonControl
                     variant="default"
-                    title="Reset filters to defaults"
+                    title="Reset Filters to Defaults"
                     callOnClick={() => renderOptions.reset()}
                 >
                     <Fa icon={faRotateLeft} />
@@ -151,7 +151,7 @@
     <div class="h-8 w-8">
         <ButtonControl
             variant="default"
-            title="Reset view"
+            title="Reset View"
             callOnClick={onResetView}
         >
             <Fa icon={faExpand} />
@@ -162,7 +162,7 @@
         <div class="h-8 w-8">
             <ButtonControl
                 variant="default"
-                title="Reset layout"
+                title="Reset Layout"
                 callOnClick={onResetLayout}
             >
                 <Fa icon={faDiagramProject} />

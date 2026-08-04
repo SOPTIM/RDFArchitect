@@ -66,27 +66,24 @@
     const enumEntries = $derived(data.enumEntries);
     const inheritedGroups = $derived([...(data.superClasses ?? [])].reverse());
 
-    const crossProfileSections = $derived(
-        isCrossProfileDiagram ? buildCrossProfileSections() : [],
-    );
-
-    const hasOtherProfileProps = $derived(
-        !isCrossProfileDiagram &&
-            collectGraphUris().some(
-                graphUri => graphUri && graphUri !== data.graphUri,
-            ),
-    );
-
-    const packageProfileSections = $derived(
-        hasOtherProfileProps ? buildPackageProfileSections() : [],
-    );
-
-    const profileSections = $derived(
-        isCrossProfileDiagram ? crossProfileSections : packageProfileSections,
+    const hasProfileInfo = $derived(
+        collectGraphUris().some(graphUri => graphUri),
     );
 
     const useProfileSections = $derived(
-        isCrossProfileDiagram || hasOtherProfileProps,
+        isCrossProfileDiagram ||
+            (renderOptions.get("includePropertiesFromOtherProfiles") &&
+                hasProfileInfo),
+    );
+
+    const profileSections = $derived(
+        useProfileSections
+            ? buildProfileSections(
+                  isCrossProfileDiagram
+                      ? collectGraphUris()
+                      : ownGraphUriFirst(collectGraphUris()),
+              )
+            : [],
     );
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
@@ -125,35 +122,18 @@
             );
     }
 
-    function buildCrossProfileSections() {
-        const showInherited = renderOptions.get("showInheritedProperties");
-
-        return collectGraphUris()
-            .map(graphUri => ({
-                graphUri,
-                graphName: getGraphLabel(graphUri),
-                superGroups: superGroupsForGraph(graphUri),
-                ownAttributes: propsForGraph(attributes, graphUri),
-                ownEnumEntries: propsForGraph(enumEntries, graphUri),
-            }))
-            .filter(
-                section =>
-                    section.ownAttributes.length > 0 ||
-                    section.ownEnumEntries.length > 0 ||
-                    (showInherited && section.superGroups.length > 0),
-            );
+    function ownGraphUriFirst(graphUris) {
+        const own = data.graphUri;
+        if (!graphUris.includes(own)) {
+            return graphUris;
+        }
+        return [own, ...graphUris.filter(graphUri => graphUri !== own)];
     }
 
-    function buildPackageProfileSections() {
+    function buildProfileSections(orderedGraphUris) {
         const showInherited = renderOptions.get("showInheritedProperties");
-        const current = data.graphUri;
-        const graphUris = collectGraphUris();
-        const ordered = [
-            ...(graphUris.includes(current) ? [current] : []),
-            ...graphUris.filter(graphUri => graphUri !== current),
-        ];
 
-        return ordered
+        return orderedGraphUris
             .map(graphUri => ({
                 graphUri,
                 graphName: getGraphLabel(graphUri),
