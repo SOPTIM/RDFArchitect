@@ -18,11 +18,13 @@
 import { describe, expect, test } from "vitest";
 
 import { URI } from "$lib/models/dto/index.ts";
-import { resolveClassTarget } from "$lib/utils/deep-link.js";
+import { resolveClassTarget, resolveTermTarget } from "$lib/utils/deep-link.js";
 
 const CLASS_IRI = "https://cim.example.org/CIM#ACLineSegment";
 const CLASS_UUID = "8f7c2d7e-3f7a-4e1c-9a5e-2b6c1d0e9f4a";
 const PACKAGE_UUID = "4a1b9c8d-7e6f-4a2b-8c3d-5e4f6a7b8c9d";
+const ATTRIBUTE_IRI = "https://cim.example.org/CIM#ACLineSegment.r";
+const ATTRIBUTE_UUID = "1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f";
 
 const singleGraphModel = {
     profiles: {
@@ -37,20 +39,29 @@ const singleGraphModel = {
 
 const ok = body => ({
     ok: true,
-    json: async () => body,
-    text: async () => String(body),
+    // The real Response carries text; json() parses it, so a fake that only implements json()
+    // hides parse-time behaviour (an empty 200 body being the interesting case).
+    text: async () => (typeof body === "string" ? body : JSON.stringify(body)),
 });
 const notFound = () => ({
     ok: false,
-    json: async () => ({}),
     text: async () => "not found",
 });
 
 /**
  * A BackendConnection stand-in over a {dataset: {graphUri: {iri: classInfo}}} fixture.
- * Classes are looked up by IRI (resolveIri) or by their fixture uuid (getClassInfo).
+ *
+ * Classes are looked up by IRI (resolveIri) or by their fixture uuid (getClassInfo). A class may
+ * declare `attributes`, which resolve like any other resource but are not classes — the backend
+ * answers "200 with an empty body" for those, as it does for a deleted class.
  */
-function fakeBackend(model) {
+function fakeBackend(model, { searchResults = [] } = {}) {
+    const resourcesOf = graph =>
+        Object.entries(graph ?? {}).flatMap(([iri, info]) => [
+            [iri, info.uuid, info.deleted ? null : info],
+            ...(info.attributes ?? []).map(a => [a.iri, a.uuid, null]),
+        ]);
+
     return {
         async getDatasetNames() {
             return ok(Object.keys(model));
@@ -66,14 +77,28 @@ function fakeBackend(model) {
                 : notFound();
         },
         async resolveIri(dataset, graph, iri) {
-            const info = model[dataset]?.[graph]?.[iri];
-            return info ? ok(info.uuid) : notFound();
+            const hit = resourcesOf(model[dataset]?.[graph]).find(
+                ([resourceIri]) => resourceIri === iri,
+            );
+            return hit ? ok(hit[1]) : notFound();
         },
         async getClassInfo(dataset, graph, uuid) {
-            const info = Object.values(model[dataset]?.[graph] ?? {}).find(
-                c => c.uuid === uuid,
+            const hit = resourcesOf(model[dataset]?.[graph]).find(
+                ([, resourceUuid]) => resourceUuid === uuid,
             );
-            return info ? ok(info) : notFound();
+            if (!hit) {
+                return notFound();
+            }
+            // Not a class (or a class that was deleted): 200, empty body.
+            return hit[2] ? ok(hit[2]) : ok("");
+        },
+        async getSearchResults(query) {
+            return ok({
+                internalSearchResults: searchResults.filter(
+                    result => result.query === query,
+                ),
+                externalSearchResults: [],
+            });
         },
     };
 }
@@ -165,6 +190,166 @@ describe("resolveClassTarget", () => {
             dataset: null,
             graph: null,
             classRef: "https://cim.example.org/CIM#DoesNotExist",
+        });
+
+        expect(target).toBeNull();
+    });
+
+    test("keeps looking past a deleted class instead of failing", async () => {
+        // Deleting a class leaves its rdfa:uuid triple behind, so the IRI still resolves and the
+        // class lookup answers 200 with an empty body.
+        const model = {
+            stale: {
+                "https://cim.example.org/EQ": {
+                    [CLASS_IRI]: { uuid: CLASS_UUID, deleted: true },
+                },
+            },
+            profiles: singleGraphModel.profiles,
+        };
+
+        const target = await resolveClassTarget(fakeBackend(model), {
+            dataset: null,
+            graph: null,
+            classRef: CLASS_IRI,
+        });
+
+        expect(target?.datasetName).toBe("profiles");
+    });
+
+    test("returns null when every candidate class was deleted", async () => {
+        const model = {
+            stale: {
+                "https://cim.example.org/EQ": {
+                    [CLASS_IRI]: { uuid: CLASS_UUID, deleted: true },
+                },
+            },
+        };
+
+        const target = await resolveClassTarget(fakeBackend(model), {
+            dataset: null,
+            graph: null,
+            classRef: CLASS_IRI,
+        });
+
+        expect(target).toBeNull();
+    });
+});
+
+describe("resolveTermTarget", () => {
+    const attributeModel = {
+        profiles: {
+            "https://cim.example.org/EQ": {
+                [CLASS_IRI]: {
+                    uuid: CLASS_UUID,
+                    package: { uuid: PACKAGE_UUID, label: "Wires" },
+                    attributes: [{ iri: ATTRIBUTE_IRI, uuid: ATTRIBUTE_UUID }],
+                },
+            },
+        },
+    };
+
+    const attributeHit = {
+        query: "r",
+        datasetName: "profiles",
+        graphUri: "https://cim.example.org/EQ",
+        packageUUID: PACKAGE_UUID,
+        parentClassUUID: CLASS_UUID,
+        parentClassUri: {
+            prefix: "https://cim.example.org/CIM#",
+            suffix: "ACLineSegment",
+        },
+        type: "ATTRIBUTE",
+        uri: {
+            prefix: "https://cim.example.org/CIM#",
+            suffix: "ACLineSegment.r",
+        },
+        uuid: ATTRIBUTE_UUID,
+    };
+
+    test("resolves a class to itself", async () => {
+        const target = await resolveTermTarget(fakeBackend(singleGraphModel), {
+            dataset: null,
+            graph: null,
+            ref: CLASS_IRI,
+        });
+
+        expect(target).toEqual({
+            datasetName: "profiles",
+            graphUri: "https://cim.example.org/EQ",
+            packageUUID: PACKAGE_UUID,
+            classUUID: CLASS_UUID,
+            propertyUUID: null,
+            type: "CLASS",
+        });
+    });
+
+    test("resolves an attribute to its declaring class", async () => {
+        const backend = fakeBackend(attributeModel, {
+            searchResults: [attributeHit],
+        });
+
+        const target = await resolveTermTarget(backend, {
+            dataset: null,
+            graph: null,
+            ref: ATTRIBUTE_IRI,
+        });
+
+        expect(target).toEqual({
+            datasetName: "profiles",
+            graphUri: "https://cim.example.org/EQ",
+            packageUUID: PACKAGE_UUID,
+            classUUID: CLASS_UUID,
+            propertyUUID: ATTRIBUTE_UUID,
+            type: "ATTRIBUTE",
+        });
+    });
+
+    test("falls back to the whole local name when the label is not the part after the dot", async () => {
+        const backend = fakeBackend(attributeModel, {
+            searchResults: [{ ...attributeHit, query: "ACLineSegment.r" }],
+        });
+
+        const target = await resolveTermTarget(backend, {
+            dataset: null,
+            graph: null,
+            ref: ATTRIBUTE_IRI,
+        });
+
+        expect(target?.propertyUUID).toBe(ATTRIBUTE_UUID);
+    });
+
+    test("ignores search hits for a different IRI that share the label", async () => {
+        const backend = fakeBackend(attributeModel, {
+            searchResults: [
+                {
+                    ...attributeHit,
+                    uri: {
+                        prefix: "https://cim.example.org/CIM#",
+                        suffix: "PowerTransformerEnd.r",
+                    },
+                    uuid: "0f0e0d0c-0b0a-4908-8706-050403020100",
+                },
+            ],
+        });
+
+        const target = await resolveTermTarget(backend, {
+            dataset: null,
+            graph: null,
+            ref: ATTRIBUTE_IRI,
+        });
+
+        expect(target).toBeNull();
+    });
+
+    test("returns null for a uuid that is not a class", async () => {
+        const backend = fakeBackend(attributeModel, {
+            searchResults: [attributeHit],
+        });
+
+        const target = await resolveTermTarget(backend, {
+            dataset: null,
+            graph: null,
+            ref: ATTRIBUTE_UUID,
         });
 
         expect(target).toBeNull();

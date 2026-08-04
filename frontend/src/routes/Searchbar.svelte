@@ -75,10 +75,11 @@
         } else if (searchResult.type === "CLASS") {
             navigateToClass({ ...target, classUUID: searchResult.uuid });
         } else {
-            // Attributes, associations, enum entries: select their owning class.
+            // Attributes, associations, enum entries: select their owning class and reveal the row.
             navigateToClass({
                 ...target,
                 classUUID: searchResult.parentClassUUID,
+                propertyUUID: searchResult.uuid,
             });
         }
     }

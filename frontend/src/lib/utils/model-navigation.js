@@ -26,13 +26,17 @@ import {
  * Opens the package diagram containing a class and selects that class in it.
  * Used by the search bar and by `class` deep links on /mainpage.
  *
- * @param {{datasetName: string, graphUri: string, packageUUID: string | null | undefined, classUUID: string}} target
+ * With `propertyUUID`, the class editor additionally reveals that attribute, association or enum
+ * entry — how a search hit or a deep link on a property lands on the row the user asked for.
+ *
+ * @param {{datasetName: string, graphUri: string, packageUUID: string | null | undefined, classUUID: string, propertyUUID?: string | null}} target
  */
 export function navigateToClass({
     datasetName,
     graphUri,
     packageUUID,
     classUUID,
+    propertyUUID = null,
 }) {
     editorState.selectedDataset.updateValue(datasetName);
     editorState.selectedGraph.updateValue(graphUri);
@@ -47,6 +51,7 @@ export function navigateToClass({
         id: classUUID,
     });
     editorState.focusedClassUUID.updateValue(classUUID);
+    editorState.focusedPropertyUUID.updateValue(propertyUUID);
     triggerNavigationReload();
 }
 
@@ -60,6 +65,7 @@ export function navigateToPackage({ datasetName, graphUri, packageUUID }) {
     editorState.selectedGraph.updateValue(graphUri);
     editorState.selectedClass.updateValue({ type: null, id: null });
     editorState.focusedClassUUID.updateValue(null);
+    editorState.focusedPropertyUUID.updateValue(null);
     editorState.selectedDiagram.updateValue({
         type: DiagramType.PACKAGE,
         id: packageUUID ?? "default",

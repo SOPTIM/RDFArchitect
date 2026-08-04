@@ -24,6 +24,11 @@
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { editorState } from "$lib/sharedState.svelte.js";
+    import {
+        claimPropertyFocus,
+        PROPERTY_HIGHLIGHT_MS,
+        scrollRowIntoView,
+    } from "$lib/utils/property-focus.js";
 
     const {
         enumEntries,
@@ -34,6 +39,9 @@
     } = $props();
 
     const classEditorContext = getContext("classEditor");
+
+    let row = $state(null);
+    let revealed = $state(false);
     let readonly = $derived(classEditorContext.readonly);
 
     $effect(() => {
@@ -41,10 +49,28 @@
         readonly = classEditorContext.readonly;
     });
 
+    // See Attribute.svelte: only the declaring class's own row answers a reveal request.
+    $effect(() => {
+        editorState.focusedPropertyUUID.subscribe();
+        if (inherited || !claimPropertyFocus(enumEntry?.uuid?.value)) {
+            return;
+        }
+        revealed = true;
+        scrollRowIntoView(row);
+        const timeout = setTimeout(
+            () => (revealed = false),
+            PROPERTY_HIGHLIGHT_MS,
+        );
+        return () => clearTimeout(timeout);
+    });
+
     onMount(() => (readonly = classEditorContext.readonly));
 </script>
 
-<tr>
+<tr
+    bind:this={row}
+    class={revealed ? "bg-background-select ring-border-select ring-2" : ""}
+>
     <td>
         <TextEditControl
             bind:value={enumEntry.label.value}

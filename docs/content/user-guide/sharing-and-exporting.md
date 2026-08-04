@@ -45,9 +45,21 @@ https://<host>/mainpage?dataset=<name>&graph=<uri>&package=<uuid|iri|default>&cl
 
 - `dataset`, `graph`, `package` — open the given package diagram. `package` accepts a package
   UUID, a package IRI, or `default` for the default package.
-- `class` — select a class (by IRI or UUID) and open the package diagram containing it. When
-  `dataset`/`graph` are omitted, every schema in the session is searched for the class.
+- `class` — select a schema term and open the package diagram containing it. When `dataset`/`graph`
+  are omitted, every schema in the session is searched for the term.
+
+Despite its name, `class` accepts any term of the model:
+
+| The IRI names an…                     | What the editor opens                                       |
+| ------------------------------------- | ----------------------------------------------------------- |
+| class (also accepted as a UUID)       | the class, selected in its package diagram                   |
+| attribute, association or enum entry  | the class **declaring** it, with that row revealed and briefly highlighted |
+
+So `?class=cim:ACLineSegment.r` opens `ACLineSegment` and points at its `r` attribute. Note that a
+term is declared once: deep-linking an inherited attribute opens the superclass that declares it,
+not the class you happened to read it on. A term that no schema in the session contains — including
+one whose class was deleted — reports "Not found".
 
 All parameters refer to the browser session's own datasets. They can be combined with a
 snapshot link — `/?snapshot=<token>&class=<iri>` first loads the snapshot, then navigates to
-the class.
+the term.

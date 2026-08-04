@@ -75,6 +75,7 @@ export const SelectionLevel = {
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClass: StateObjectPair<Object | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
+ *  focusedPropertyUUID: StateValuePair<string | null>,
  *  selectedContext: StateValuePair<string | null>,
  *  reset: () => void
  * }}
@@ -88,6 +89,8 @@ export const editorState = {
     selectedClassGraph: new StateValuePair(),
     selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
+    // An attribute/association/enum entry the class editor should reveal once, then forget.
+    focusedPropertyUUID: new StateValuePair(),
     selectedContext: new StateValuePair(),
     // The level the user selected last; drives the nav highlight (see SelectionLevel).
     activeSelectionKind: new StateValuePair(),
@@ -100,6 +103,7 @@ export const editorState = {
         this.selectedClassGraph.updateValue(null);
         this.selectedClass.updateValue({ type: null, id: null });
         this.focusedClassUUID.updateValue(null);
+        this.focusedPropertyUUID.updateValue(null);
         this.selectedContext.updateValue(null);
         this.activeSelectionKind.updateValue(null);
         multiSelectState.clear();

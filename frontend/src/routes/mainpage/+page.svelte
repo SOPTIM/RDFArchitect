@@ -24,7 +24,7 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
-    import { resolveClassTarget } from "$lib/utils/deep-link.js";
+    import { resolveTermTarget } from "$lib/utils/deep-link.js";
     import { navigateToClass } from "$lib/utils/model-navigation.js";
 
     import PackageNavigation from "./packageNavigation/packageNavigation.svelte";
@@ -33,7 +33,14 @@
     const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     onMount(() => {
-        parseModelSelectionUrlParameters();
+        // Nothing awaits this, so an unhandled rejection would leave the page silently unchanged.
+        parseModelSelectionUrlParameters().catch(error => {
+            console.error("Could not apply the URL parameters:", error);
+            toastStore.error(
+                "Could not open the link",
+                "The model selection in this link could not be applied.",
+            );
+        });
     });
 
     async function parseModelSelectionUrlParameters() {
@@ -44,9 +51,10 @@
         let pack = queryParams.get("package") || null;
         const classRef = queryParams.get("class") || null;
 
-        // A class deep link (IRI or uuid) selects the class and its package diagram; dataset and
-        // graph merely narrow the lookup. Falls through to the plain selection when not found.
-        if (classRef && (await openClassFromUrl(dataset, graph, classRef))) {
+        // A term deep link (IRI or uuid) selects the class and its package diagram; an attribute,
+        // association or enum entry selects the class declaring it. dataset and graph merely narrow
+        // the lookup. Falls through to the plain selection when not found.
+        if (classRef && (await openTermFromUrl(dataset, graph, classRef))) {
             return;
         }
 
@@ -63,16 +71,16 @@
         });
     }
 
-    async function openClassFromUrl(dataset, graph, classRef) {
-        const target = await resolveClassTarget(backend, {
+    async function openTermFromUrl(dataset, graph, ref) {
+        const target = await resolveTermTarget(backend, {
             dataset,
             graph,
-            classRef,
+            ref,
         });
         if (!target) {
             toastStore.error(
-                "Class not found",
-                `No schema in this session contains "${classRef}".`,
+                "Not found",
+                `No schema in this session contains "${ref}".`,
             );
             return false;
         }
