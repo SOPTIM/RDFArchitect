@@ -35,7 +35,11 @@
     import BrandLogo from "$lib/components/BrandLogo.svelte";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ToastContainer from "$lib/components/ToastContainer.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import {
+        PUBLIC_BACKEND_URL,
+        PUBLIC_EMBED_SESSION_HANDSHAKE,
+    } from "$lib/config/runtime";
+    import { installSessionHandshake } from "$lib/embedding/session-handshake.js";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -85,7 +89,22 @@
         installBackendFetchInterceptor();
         probeBackendConnection();
         loadSnapshot();
+        // Lets an embedding IDE read the datasets of this very session; opt-in per deployment.
+        return installSessionHandshake({
+            enabled: PUBLIC_EMBED_SESSION_HANDSHAKE,
+            fetchSessionId: sessionId,
+        });
     });
+
+    /** The backend session this browser is using, or null when it cannot be read. */
+    async function sessionId() {
+        try {
+            const res = await bec.getSession();
+            return res.ok ? ((await res.json())?.id ?? null) : null;
+        } catch {
+            return null;
+        }
+    }
 
     async function requestEnableEditing() {
         if (!selectedDataset || !isDatasetReadOnly) {

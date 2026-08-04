@@ -47,6 +47,16 @@ export class BackendConnection {
         });
     }
 
+    /** The session this browser is using — datasets belong to it. */
+    async getSession() {
+        const url = `${PUBLIC_BACKEND_URL}/session`;
+        return fetch(url, {
+            method: "GET",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            credentials: "include",
+        });
+    }
+
     async getCrossProfileID(datasetName) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramID`;
         return fetch(url, {
