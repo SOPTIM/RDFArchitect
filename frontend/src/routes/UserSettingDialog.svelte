@@ -132,7 +132,7 @@
                 labelFirst={false}
             />
             <CheckBoxEditControl
-                label="Include properties from other profiles"
+                label="Include properties from other schemas"
                 bind:value={localSettings["includePropertiesFromOtherProfiles"]}
                 labelFirst={false}
             />

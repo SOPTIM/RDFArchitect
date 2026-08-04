@@ -42,14 +42,6 @@ public interface RenderCIMFacadeCollectionUseCase {
         return renderUML(cimModel, filter, layoutData, List.of(), null);
     }
 
-    default RenderingDataDTO renderUML(
-            ICIMModelFacade cimModel,
-            GraphFilter filter,
-            RenderingLayoutData layoutData,
-            List<CIMProfileModel> otherProfiles) {
-        return renderUML(cimModel, filter, layoutData, otherProfiles, null);
-    }
-
     /**
      * Generates the rendering data for a CIM model, optionally enriching each rendered class with
      * the matching class's properties from other profiles of the same dataset.

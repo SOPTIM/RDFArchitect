@@ -95,9 +95,6 @@ public class CustomDiagramService
             var graphUri = profile.graphUri();
 
             for (var cimClass : profile.model().getCIMClasses()) {
-                if (cimClass.getUuid() == null) {
-                    continue;
-                }
                 var classUri = cimClass.getUri().toString();
                 var mergedUuid = UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
 

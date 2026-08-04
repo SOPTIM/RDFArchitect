@@ -458,9 +458,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                 null,
                                 List.of(
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI,
-                                                OTHER_COLOR,
-                                                buildOtherProfile())));
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                null);
 
         var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
         assertThat(childAttributes)
@@ -533,9 +532,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                 null,
                                 List.of(
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI,
-                                                OTHER_COLOR,
-                                                buildOtherProfile())));
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                null);
 
         var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
         assertThat(childAttributes).extracting(AttributeDTO::getLabel).containsExactly("childAttr");
@@ -673,6 +671,92 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                 List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
 
         assertThat(result.getNodes()).isNotEmpty();
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    private void addAttributeWithoutDataType(String localName, Resource domain) {
+        var attribute = model.createResource(NS + localName);
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        attribute.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+        attribute.addProperty(RDFS.domain, domain);
+        attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..1"));
+    }
+
+    @Test
+    @DisplayName("skips attributes without a datatype instead of failing the package diagram")
+    void skipsAttributeWithoutDataTypeInPackageDiagram() {
+        addAttributeWithoutDataType("Child.brokenAttr", model.getResource(NS + "Child"));
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .extracting(AttributeDTO::getLabel)
+                .containsExactly("childAttr");
+    }
+
+    @Test
+    @DisplayName("skips attributes without a datatype instead of failing the merged diagram")
+    void skipsAttributeWithoutDataTypeInMergedDiagram() {
+        addAttributeWithoutDataType("Child.brokenAttr", model.getResource(NS + "Child"));
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .extracting(AttributeDTO::getLabel)
+                .containsExactly("childAttr");
+    }
+
+    private Resource addAssociationEnd(String localName, Resource domain, Resource range) {
+        var end = model.createResource(NS + localName);
+        end.addProperty(RDF.type, RDF.Property);
+        end.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        end.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        end.addProperty(RDFS.domain, domain);
+        end.addProperty(RDFS.range, range);
+        end.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
+        end.addProperty(CIMS.associationUsed, "Yes");
+        return end;
+    }
+
+    private void linkInverse(Resource from, Resource inverse) {
+        from.addProperty(CIMS.inverseRoleName, inverse);
+        inverse.addProperty(CIMS.inverseRoleName, from);
+    }
+
+    @Test
+    @DisplayName("skips associations whose inverse end has no multiplicity")
+    void skipsAssociationWithIncompleteInverse() {
+        var base = model.getResource(NS + "Base");
+        var terminal = model.getResource(NS + "Terminal");
+        var inverse = addAssociationEnd("Terminal.Base", terminal, base);
+        inverse.removeAll(CIMS.multiplicity);
+        linkInverse(addAssociationEnd("Base.Terminals", base, terminal), inverse);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("skips associations whose inverse end has no uuid")
+    void skipsAssociationWithInverseWithoutUuid() {
+        var base = model.getResource(NS + "Base");
+        var terminal = model.getResource(NS + "Terminal");
+        var inverse = addAssociationEnd("Terminal.Base", terminal, base);
+        inverse.removeAll(RDFA.uuid);
+        linkInverse(addAssociationEnd("Base.Terminals", base, terminal), inverse);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
         assertThat(result.getEdges())
                 .filteredOn(edge -> edge.getType().equals("association"))
                 .hasSize(1);

@@ -212,9 +212,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private List<AttributeDTO> mergedAttributes(MergedFacadeClass merged) {
         var attributes = new ArrayList<AttributeDTO>();
         for (var source : merged.sources()) {
-            for (var attribute : source.cimClass().getAttributes()) {
-                attributes.add(toAttributeDTO(attribute, source.graphUri(), source.color()));
-            }
+            addAttributeDTOs(
+                    attributes,
+                    source.cimClass().getAttributes(),
+                    source.graphUri(),
+                    source.color());
         }
         return attributes;
     }
@@ -507,9 +509,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         String ownColor = merge ? renderContext.primaryColor() : null;
 
         List<AttributeDTO> attributeDTOs = new ArrayList<>();
-        for (var cimAttribute : cimClass.getAttributes()) {
-            attributeDTOs.add(toAttributeDTO(cimAttribute, ownGraphUri, ownColor));
-        }
+        addAttributeDTOs(attributeDTOs, cimClass.getAttributes(), ownGraphUri, ownColor);
 
         if (merge) {
             for (var profile : renderContext.otherProfiles()) {
@@ -517,13 +517,24 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 if (match == null) {
                     continue;
                 }
-                for (var cimAttribute : match.getAttributes()) {
-                    attributeDTOs.add(
-                            toAttributeDTO(cimAttribute, profile.graphUri(), profile.color()));
-                }
+                addAttributeDTOs(
+                        attributeDTOs, match.getAttributes(), profile.graphUri(), profile.color());
             }
         }
         return attributeDTOs;
+    }
+
+    private void addAttributeDTOs(
+            List<AttributeDTO> target,
+            List<ICIMAttribute> cimAttributes,
+            String graphUri,
+            String color) {
+        for (var cimAttribute : cimAttributes) {
+            if (!cimAttribute.isRenderable()) {
+                continue;
+            }
+            target.add(toAttributeDTO(cimAttribute, graphUri, color));
+        }
     }
 
     private AttributeDTO toAttributeDTO(ICIMAttribute cimAttribute, String graphUri, String color) {

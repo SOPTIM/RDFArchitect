@@ -77,6 +77,27 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
     }
 
     @Override
+    public boolean isRenderable() {
+        var resource = getJenaResource();
+
+        var dataType = getUniqueObjectOrNull(resource, CIMS.datatype);
+        if (dataType == null && !resource.hasProperty(CIMS.datatype)) {
+            dataType = getUniqueObjectOrNull(resource, RDFS.range);
+        }
+        if (dataType == null || !dataType.isURIResource()) {
+            return false;
+        }
+
+        var multiplicity = getUniqueObjectOrNull(resource, CIMS.multiplicity);
+        if (multiplicity == null || !multiplicity.isURIResource()) {
+            return false;
+        }
+
+        var label = getUniqueObjectOrNull(resource, RDFS.label);
+        return label != null && label.isLiteral();
+    }
+
+    @Override
     public CIMSStereotype getStereotype() {
         var stereotypes = getStereotypeList();
         if (stereotypes.isEmpty()) {

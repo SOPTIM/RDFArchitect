@@ -120,17 +120,20 @@
                     const originGraph =
                         graphUri ??
                         editorState.mergedViewOriginGraph.getValue();
+                    if (!graphUri) {
+                        editorState.mergedViewOriginGraph.updateValue(null);
+                    }
                     const originSource = originGraph
                         ? found.sources?.find(s => s.graphUri === originGraph)
                         : null;
                     const hasSaved = found.sources?.some(
                         s => s.classUUID === savedSourceUuid,
                     );
-                    activeSourceUuid =
-                        originSource?.classUUID ??
-                        (hasSaved
-                            ? savedSourceUuid
-                            : (found.sources?.[0]?.classUUID ?? null));
+                    activeSourceUuid = hasSaved
+                        ? savedSourceUuid
+                        : (originSource?.classUUID ??
+                          found.sources?.[0]?.classUUID ??
+                          null);
                 }
 
                 if (found && found.uuid !== classUuid && !graphUri) {
