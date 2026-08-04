@@ -201,7 +201,7 @@
                 }}
                 faIcon={faPlus}
             >
-                New Profile Diagram
+                New Schema Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -259,7 +259,7 @@
                         faIcon={faPlus}
                         altText="Ctrl+Alt+P"
                     >
-                        Create Profile Header
+                        New Profile Header
                     </ContextMenu.Item.Button>
                 {/if}
                 <ContextMenu.Separator />
@@ -292,7 +292,7 @@
                 faIcon={faCodeBranch}
                 altText="Ctrl+Shift+C"
             >
-                Compare...
+                Compare Schemas
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -302,7 +302,7 @@
                 faIcon={faRightLeft}
                 altText="Ctrl+Shift+M"
             >
-                Migrate...
+                Migrate Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -316,7 +316,7 @@
             </ContextMenu.Item.Button>
             <ContextMenu.SubMenu.Root>
                 <ContextMenu.SubMenu.Trigger faIcon={faFileImport}>
-                    Constraints
+                    Constraints (SHACL)
                 </ContextMenu.SubMenu.Trigger>
                 <ContextMenu.SubMenu.Content>
                     <ContextMenu.Item.Button
@@ -348,7 +348,7 @@
                         faIcon={faEye}
                         altText="Ctrl+Shift+L"
                     >
-                        Open
+                        View
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
@@ -360,7 +360,7 @@
                 faIcon={faFileExport}
                 altText="Ctrl+E"
             >
-                Export Schema
+                Export Schema (RDFS)
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => (showHTMLExportDialog = true)}

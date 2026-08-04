@@ -89,7 +89,7 @@
                             <div class="text-default-text px-4 py-2 text-sm">
                                 No schemas imported yet.
                                 <br />
-                                Right-click to add or import a schema.
+                                Right-click to create or import a schema.
                             </div>
                         {/if}
                     </div>
@@ -101,13 +101,13 @@
                 onSelect={() => (showNewGraphDialog = true)}
                 faIcon={faDiagramProject}
             >
-                Add Schema
+                New Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => (showImportDialog = true)}
                 faIcon={faFileImport}
             >
-                Import Schema
+                Import Schema (RDFS)
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
         <ImportDialog bind:showDialog={showImportDialog} />

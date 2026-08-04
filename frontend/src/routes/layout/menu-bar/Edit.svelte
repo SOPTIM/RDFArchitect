@@ -477,7 +477,7 @@
                     onSelect={() => (showNewGraphDialog = true)}
                     faIcon={faDiagramProject}
                 >
-                    Schema (RDFS)
+                    Schema
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -497,7 +497,7 @@
                         : faPlus}
                     altText="Ctrl+Alt+P"
                 >
-                    Profile header
+                    Profile Header
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={launchPackageEditor}
@@ -536,7 +536,7 @@
                     faIcon={faPaste}
                     altText="Ctrl+Shift+V"
                 >
-                    Paste without attributes/enum entries
+                    Paste without Attributes/Enum Entries
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(false, true, false)}
@@ -544,7 +544,7 @@
                     faIcon={faPaste}
                     altText="Ctrl+Alt+V"
                 >
-                    Paste without associations
+                    Paste without Associations
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => pasteClass(true, false, false)}
@@ -552,7 +552,7 @@
                     faIcon={faPaste}
                     altText="Ctrl+Shift+Alt+V"
                 >
-                    Paste bare
+                    Paste Bare
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -602,7 +602,7 @@
             {#if isDatasetReadOnly}
                 View Namespaces
             {:else}
-                Manage Namespaces
+                Edit Namespaces
             {/if}
         </Menubar.Item.Button>
         <Menubar.Separator />
@@ -619,7 +619,7 @@
                     faIcon={faTrash}
                     variant="danger"
                 >
-                    Profile header
+                    Profile Header
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={launchPackageDeleteDialog}

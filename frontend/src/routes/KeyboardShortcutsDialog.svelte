@@ -64,7 +64,7 @@
                     keys: ["Ctrl", "Alt", "V"],
                 },
                 {
-                    description: "Paste bare",
+                    description: "Paste Bare",
                     keys: ["Ctrl", "Shift", "Alt", "V"],
                 },
                 {
@@ -72,11 +72,11 @@
                     keys: ["Ctrl", "Alt", "R"],
                 },
                 {
-                    description: "Manage Namespaces",
+                    description: "Edit Namespaces",
                     keys: ["Ctrl", "Shift", "A"],
                 },
                 {
-                    description: "Create / Edit Profile Header",
+                    description: "New / Edit Profile Header",
                     keys: ["Ctrl", "Alt", "P"],
                 },
             ],
@@ -95,7 +95,7 @@
                     keys: ["Ctrl", "Shift", "D"],
                 },
                 {
-                    description: "Constraints Full View (SHACL)",
+                    description: "View Constraints (SHACL)",
                     keys: ["Ctrl", "Shift", "L"],
                 },
             ],

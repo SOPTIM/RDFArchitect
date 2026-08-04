@@ -230,7 +230,7 @@
                 "Import failed",
                 failedImports.length > 0
                     ? `${failedImports.length} file(s) could not be imported.`
-                    : "No graphs were imported.",
+                    : "No schemas were imported.",
             );
             return;
         }
@@ -308,7 +308,7 @@
     primaryLabel="Import"
     onPrimary={importGraphs}
     disablePrimary={!enableSubmit}
-    title="Import Schemas"
+    title="Import Schema (RDFS)"
     size="w-1/3"
 >
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
@@ -380,7 +380,7 @@
                                 document.getElementById(fileInputId).click();
                             }}
                         >
-                            select file
+                            Select File
                         </ButtonControl>
                     </div>
                     <p class="text-font-secondary text-sm">

@@ -155,7 +155,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title={"Create/Edit Custom Diagram for Profile"}
+    title={diagramId
+        ? `Edit Schema Diagram "${diagramName}"`
+        : "New Schema Diagram"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}

@@ -77,8 +77,8 @@
     onPrimary={deletePackage}
     primaryVariant="danger"
     title={pack?.label
-        ? `Delete package "${getPackageDisplayLabel(pack.label)}"?`
-        : "Delete package?"}
+        ? `Delete Package "${getPackageDisplayLabel(pack.label)}"?`
+        : "Delete Package?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >

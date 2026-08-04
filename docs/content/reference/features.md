@@ -142,22 +142,22 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Export schema                         | File → Export → Schema (RDFS)                    |
 | Export SHACL                          | File → Export → Constraints (SHACL)              |
 | Share snapshot                        | File → Share Snapshot                            |
-| Delete schema                         | File → Delete → Schema (RDFS)                    |
+| Delete schema                         | File → Delete → Schema                           |
 | Delete dataset                        | File → Delete → Dataset                          |
 | New class                             | Edit → New → Class                               |
 | New package                           | Edit → New → Package                             |
-| New empty schema                      | Edit → New → Schema (RDFS)                       |
-| Edit profile header                   | Edit → Edit → Profile header                     |
+| New empty schema                      | Edit → New → Schema                              |
+| Edit profile header                   | Edit → Edit → Profile Header                     |
 | Edit package                          | Edit → Edit → Package                            |
 | Undo / Redo                           | Edit → Undo / Redo (Ctrl+Z / Ctrl+Y)             |
 | Enable / Disable editing              | Edit → Enable / Disable Editing                  |
-| Manage namespaces                     | Edit → Manage Namespaces                         |
-| Delete profile header                 | Edit → Delete → Profile header                   |
+| Edit namespaces                       | Edit → Edit Namespaces                           |
+| Delete profile header                 | Edit → Delete → Profile Header                   |
 | Delete package                        | Edit → Delete → Package                          |
 | Changelog                             | View → Changelog                                 |
 | Compare schemas                       | View → Compare Schemas                           |
 | Migrate schema (5-step wizard)        | View → Migrate Schema                            |
-| Full SHACL view (generated+custom)    | View → Constraints (SHACL)                       |
+| Full SHACL view (generated+custom)    | View → View Constraints (SHACL)                  |
 | Help / feedback / about               | Help menu                                        |
 | Search across the dataset             | Search bar at the top                            |
 | Property-specific constraints (SHACL) | Class editor → SHACL icon next to each row       |

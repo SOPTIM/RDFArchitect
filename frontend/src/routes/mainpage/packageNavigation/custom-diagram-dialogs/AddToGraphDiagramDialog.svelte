@@ -100,7 +100,7 @@
     primaryLabel="Add to Diagram"
     onPrimary={addToDiagram}
     disablePrimary={disableSubmit}
-    title="Add to Profile Diagram"
+    title="Add to Schema Diagram"
 >
     <div class="mx-2 flex h-full flex-col">
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">
