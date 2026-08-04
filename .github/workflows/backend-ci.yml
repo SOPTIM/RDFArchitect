@@ -45,9 +45,16 @@ jobs:
       - name: Update third-party licenses (Renovate PRs only)
         if: >
           github.event_name == 'pull_request' &&
-          github.actor == 'renovate[bot]' &&
+          startsWith(github.head_ref, 'renovate/') &&
           github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          HEAD_REF: ${{ github.head_ref }}
         run: |
+          # Checking out a pull request leaves the workspace on a detached
+          # merge commit, so switch to the PR branch before committing to it.
+          git fetch origin "$HEAD_REF"
+          git checkout -B "$HEAD_REF" FETCH_HEAD
+
           mvn -B org.codehaus.mojo:license-maven-plugin:add-third-party
 
           # If nothing changed, don't commit
@@ -62,7 +69,7 @@ jobs:
           git add LICENSES-THIRD-PARTY.md
           git commit -m "chore: update backend LICENSES-THIRD-PARTY.md"
 
-          git push
+          git push origin "HEAD:$HEAD_REF"
       - name: Third-party license check
         run: |
           mvn -B org.codehaus.mojo:license-maven-plugin:add-third-party
