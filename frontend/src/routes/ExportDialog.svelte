@@ -49,7 +49,7 @@
     primaryLabel="Export"
     {disablePrimary}
     {onPrimary}
-    title="Export Schema"
+    title="Export Schema (RDFS)"
 >
     <GraphExport
         bind:this={graphExportComponent}

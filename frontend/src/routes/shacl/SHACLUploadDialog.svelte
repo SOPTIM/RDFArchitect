@@ -128,7 +128,7 @@
                         document.getElementById(fileInputId).click();
                     }}
                 >
-                    select file
+                    Select File
                 </ButtonControl>
             </div>
             <div class="h-9 w-full content-center">
@@ -136,7 +136,7 @@
                     {#if file}
                         {file.name}
                     {:else}
-                        no file selected
+                        No file selected
                     {/if}
                 </p>
             </div>

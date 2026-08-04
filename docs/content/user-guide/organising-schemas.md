@@ -26,7 +26,7 @@ The navigation tree marks these two categories separately, and the editing menus
 
 From **Edit → New → Class** you pick the target dataset, graph, package, and a URI namespace for the new class. The combination of label and URI namespace must be unique within the graph; the editor validates this before allowing save. On save, the class opens immediately in the class editor on the right.
 
-![Add class](/img/screenshots/add-class.png)
+![New class](/img/screenshots/add-class.png)
 
 ## Deleting
 

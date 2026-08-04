@@ -114,14 +114,14 @@
                             callOnClick={() =>
                                 zoomAndDraggableMermaid.resetTransform()}
                         >
-                            reset view
+                            Reset View
                         </ButtonControl>
                     </div>
                     <div class="h-9 w-28">
                         <ButtonControl
                             callOnClick={() => (showFilterDialog = true)}
                         >
-                            filter view
+                            Filter View
                         </ButtonControl>
                     </div>
                 </div>
