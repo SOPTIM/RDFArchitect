@@ -42,17 +42,10 @@ export async function saveApiAssociationToBackend(
     try {
         if (!res.error) {
             const associationUUIDs = res.data;
-            console.log(
-                "Successfully saved association:",
-                associationUUIDs.fromUUID,
-                associationUUIDs.toUUID,
-            );
             return { ok: true, associationUUIDs };
         }
 
-        const errorText = await res.error;
-        console.error("Could not save association:", errorText);
-        return { ok: false, errorText };
+        return { ok: false };
     } finally {
         editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();

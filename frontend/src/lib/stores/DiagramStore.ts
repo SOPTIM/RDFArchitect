@@ -17,7 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
+import { loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
+import { AsyncListSlot, createEmptyListSlot, Result } from "./storeTypes";
 import {
     getCustomDatasetDiagramList,
     getCustomGraphDiagramList,
@@ -33,35 +35,16 @@ import {
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
-type Result<T = void> = { error: unknown; data?: T };
-
-type ListState<T> = {
-    data: T[] | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
 type StoreState = {
     // key: dataset
-    datasetLists: Map<string, ListState<CustomDiagram>>;
+    datasetLists: Map<string, AsyncListSlot<CustomDiagram>>;
     // key: dataset::graph
-    graphLists: Map<string, ListState<CustomDiagram>>;
+    graphLists: Map<string, AsyncListSlot<CustomDiagram>>;
 };
 
 const LOG_PREFIX = "[customDiagramStore]";
 
 export const customDiagramStore = createCustomDiagramStore();
-
-const emptyListState = (): ListState<CustomDiagram> => ({
-    data: null,
-    fetchedAt: null,
-    pending: null,
-    error: null,
-});
-
-const graphListKey = (datasetName: string, graphURI: string) =>
-    `${datasetName}::${graphURI}`;
 
 function createCustomDiagramStore() {
     const store = writable<StoreState>({
@@ -75,107 +58,40 @@ function createCustomDiagramStore() {
     function getDatasetListState(
         state: StoreState,
         datasetName: string,
-    ): ListState<CustomDiagram> {
-        return state.datasetLists.get(datasetName) ?? emptyListState();
+    ): AsyncListSlot<CustomDiagram> {
+        return state.datasetLists.get(datasetName) ?? createEmptyListSlot();
     }
 
     function getGraphListState(
         state: StoreState,
         datasetName: string,
         graphURI: string,
-    ): ListState<CustomDiagram> {
+    ): AsyncListSlot<CustomDiagram> {
         return (
-            state.graphLists.get(graphListKey(datasetName, graphURI)) ??
-            emptyListState()
+            state.graphLists.get(makeGraphKey(datasetName, graphURI)) ??
+            createEmptyListSlot()
         );
-    }
-
-    function setDatasetListState(
-        state: StoreState,
-        datasetName: string,
-        next: ListState<CustomDiagram>,
-    ): StoreState {
-        const map = new Map(state.datasetLists);
-        map.set(datasetName, next);
-        return { ...state, datasetLists: map };
-    }
-
-    function setGraphListState(
-        state: StoreState,
-        datasetName: string,
-        graphURI: string,
-        next: ListState<CustomDiagram>,
-    ): StoreState {
-        const key = graphListKey(datasetName, graphURI);
-        const map = new Map(state.graphLists);
-        map.set(key, next);
-        return { ...state, graphLists: map };
     }
 
     // ---------- loaders ----------
     async function loadDatasetDiagrams(datasetName: string, force = false) {
         if (!datasetName) return;
-
-        const current = getDatasetListState(get(store), datasetName);
-        if (!force && current.data !== null) return;
-        if (current.pending) return current.pending;
-
-        console.log(
-            `${LOG_PREFIX} Loading dataset diagrams for "${datasetName}"`,
-        );
-
-        const pending = (async () => {
-            try {
-                const { data, error } = await getCustomDatasetDiagramList({
-                    path: { datasetName },
+        return loadSlot(
+            store,
+            s => s.datasetLists.get(datasetName) ?? createEmptyListSlot(),
+            (s, patch) => {
+                const map = new Map(s.datasetLists);
+                map.set(datasetName, {
+                    ...getDatasetListState(s, datasetName),
+                    ...patch,
                 });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load dataset diagrams`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setDatasetListState(s, datasetName, {
-                            ...getDatasetListState(s, datasetName),
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setDatasetListState(s, datasetName, {
-                        data: data ?? [],
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error loading dataset diagrams`,
-                    err,
-                );
-                update(s =>
-                    setDatasetListState(s, datasetName, {
-                        ...getDatasetListState(s, datasetName),
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setDatasetListState(s, datasetName, {
-                ...getDatasetListState(s, datasetName),
-                pending,
-            }),
+                return { ...s, datasetLists: map };
+            },
+            () => getCustomDatasetDiagramList({ path: { datasetName } }),
+            LOG_PREFIX,
+            `dataset diagrams for "${datasetName}"`,
+            force,
         );
-
-        return pending;
     }
 
     async function loadGraphDiagrams(
@@ -184,67 +100,24 @@ function createCustomDiagramStore() {
         force = false,
     ) {
         if (!datasetName || !graphURI) return;
-
-        const current = getGraphListState(get(store), datasetName, graphURI);
-        if (!force && current.data !== null) return;
-        if (current.pending) return current.pending;
-
-        console.log(
-            `${LOG_PREFIX} Loading graph diagrams for dataset="${datasetName}" graph="${graphURI}"`,
-        );
-
-        const pending = (async () => {
-            try {
-                const { data, error } = await getCustomGraphDiagramList({
-                    path: { datasetName, graphURI },
+        const key = makeGraphKey(datasetName, graphURI);
+        return loadSlot(
+            store,
+            s => s.graphLists.get(key) ?? createEmptyListSlot(),
+            (s, patch) => {
+                const map = new Map(s.graphLists);
+                map.set(key, {
+                    ...getGraphListState(s, datasetName, graphURI),
+                    ...patch,
                 });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load graph diagrams`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setGraphListState(s, datasetName, graphURI, {
-                            ...getGraphListState(s, datasetName, graphURI),
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setGraphListState(s, datasetName, graphURI, {
-                        data: data ?? [],
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error loading graph diagrams`,
-                    err,
-                );
-                update(s =>
-                    setGraphListState(s, datasetName, graphURI, {
-                        ...getGraphListState(s, datasetName, graphURI),
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setGraphListState(s, datasetName, graphURI, {
-                ...getGraphListState(s, datasetName, graphURI),
-                pending,
-            }),
+                return { ...s, graphLists: map };
+            },
+            () =>
+                getCustomGraphDiagramList({ path: { datasetName, graphURI } }),
+            LOG_PREFIX,
+            `graph diagrams for dataset="${datasetName}" graph="${graphURI}"`,
+            force,
         );
-
-        return pending;
     }
 
     // ---------- mutations ----------
@@ -489,19 +362,10 @@ function createCustomDiagramStore() {
         update(s => {
             const graphLists = new Map(s.graphLists);
 
-            graphLists.delete(graphListKey(datasetName, graphURI));
+            graphLists.delete(makeGraphKey(datasetName, graphURI));
 
             return { ...s, graphLists };
         });
-    }
-
-    function invalidateAll() {
-        update(() => ({
-            datasetLists: new Map(),
-            graphLists: new Map(),
-            datasetRenderings: new Map(),
-            graphRenderings: new Map(),
-        }));
     }
 
     return {
@@ -528,6 +392,5 @@ function createCustomDiagramStore() {
         // invalidation
         invalidateDataset,
         invalidateGraph,
-        invalidateAll,
     };
 }

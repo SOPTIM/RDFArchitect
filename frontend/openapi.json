@@ -540,7 +540,7 @@
             "type" : "array"
           },
           "superClass" : {
-            "$ref" : "#/components/schemas/SuperClassDTO"
+            "$ref" : "#/components/schemas/ClassUMLAdaptedDTO"
           },
           "uuid" : {
             "format" : "uuid",
@@ -3154,6 +3154,16 @@
             "required" : true,
             "schema" : {
               "type" : "string"
+            }
+          },
+          {
+            "description" : "Whether to recursively expand the superclass hierarchy (with their attributes and associations).",
+            "in" : "query",
+            "name" : "includeSuperClasses",
+            "required" : false,
+            "schema" : {
+              "default" : false,
+              "type" : "boolean"
             }
           }
         ],

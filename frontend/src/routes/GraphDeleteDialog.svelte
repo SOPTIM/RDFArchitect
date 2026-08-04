@@ -19,7 +19,12 @@
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
     import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     import {
         editorState,
@@ -56,6 +61,12 @@
         editorState.selectedClassDataset.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
         editorState.selectedClass.updateValue({ type: null, id: null });
+
+        classStore.invalidateGraph(datasetName, graphURI);
+        packageStore.invalidateGraph(datasetName, graphURI);
+        datatypesStore.invalidateGraph(datasetName, graphURI);
+        ontologyStore.invalidateGraph(datasetName, graphURI);
+        customDiagramStore.invalidateGraph(datasetName, graphURI);
 
         forceReloadTrigger.trigger();
     }

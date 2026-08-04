@@ -25,6 +25,11 @@
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
@@ -47,6 +52,16 @@
                 const res = await datasetStore.remove(datasetName);
                 if (res.error) return;
             }
+
+            const res = await datasetStore.remove(datasetName);
+            if (res.error) return;
+
+            graphStore.invalidateDataset(datasetName);
+            classStore.invalidateDataset(datasetName);
+            packageStore.invalidateDataset(datasetName);
+            datatypesStore.invalidateDataset(datasetName);
+            ontologyStore.invalidateDataset(datasetName);
+            customDiagramStore.invalidateDataset(datasetName);
 
             if (editorState.selectedDataset.getValue() === datasetName) {
                 editorState.reset();

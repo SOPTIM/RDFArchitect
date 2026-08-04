@@ -17,6 +17,7 @@
 
 import { writable, get } from "svelte/store";
 
+import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
 import { AsyncSlot, Result, createEmptySlot } from "./storeTypes";
 import {
@@ -62,57 +63,24 @@ function createDatasetStore() {
     // ----- Load -----
 
     async function load(force = false) {
-        const state = get(store);
-
-        if (!force && state.data !== null) return;
-        if (state.pending !== null) return state.pending;
-
-        const promise = (async () => {
-            try {
+        return loadSlot(
+            store,
+            s => s,
+            (s, patch) => ({ ...s, ...patch }),
+            async () => {
                 const { data, error } = await listDatasets();
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load datasets:`,
-                        await describeError(error),
-                    );
-                    update(s => ({
-                        ...s,
-                        pending: null,
-                        error,
-                    }));
-                    return;
-                }
-
-                const datasets = data ?? [];
-
-                const nextData: DatasetInfo[] = datasets.map(dataset => ({
+                if (error) return { error };
+                const mapped: DatasetInfo[] = (data ?? []).map(dataset => ({
                     label: dataset.name ?? "",
                     readOnly: dataset.readOnly ?? null,
                     prefixes: dataset.prefixes ?? [],
                 }));
-
-                update(s => ({
-                    ...s,
-                    pending: null,
-                    error: null,
-                    data: nextData,
-                    fetchedAt: Date.now(),
-                }));
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error while loading datasets:`,
-                    err,
-                );
-                update(s => ({
-                    ...s,
-                    pending: null,
-                    error: err,
-                }));
-            }
-        })();
-
-        update(s => ({ ...s, pending: promise }));
-        return promise;
+                return { data: mapped };
+            },
+            LOG_PREFIX,
+            "datasets",
+            force,
+        );
     }
 
     // ----- Getters -----

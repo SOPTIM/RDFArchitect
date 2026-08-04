@@ -17,7 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
+import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
+import { AsyncListSlot, createEmptyListSlot, Result } from "./storeTypes";
 import {
     listGraphs,
     deleteGraph,
@@ -29,31 +31,13 @@ import {
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
-type GraphURIState = {
-    data: Uri[] | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
 type DatasetState = {
-    graphs: Map<string, GraphURIState>;
+    graphs: Map<string, AsyncListSlot<Uri>>;
 };
-
-type Result<T = void> = { error: unknown; data?: T };
 
 const LOG_PREFIX = "[graphStore]";
 
 export const graphStore = createGraphStore();
-
-function createEmptyDatasetState(): GraphURIState {
-    return {
-        data: null,
-        fetchedAt: null,
-        pending: null,
-        error: null,
-    };
-}
 
 function createGraphStore() {
     const store = writable<DatasetState>({
@@ -65,14 +49,14 @@ function createGraphStore() {
     function getDatasetState(
         state: DatasetState,
         datasetName: string,
-    ): GraphURIState {
-        return state.graphs.get(datasetName) ?? createEmptyDatasetState();
+    ): AsyncListSlot<Uri> {
+        return state.graphs.get(datasetName) ?? createEmptyListSlot();
     }
 
     function setDatasetState(
         state: DatasetState,
         datasetName: string,
-        next: GraphURIState,
+        next: AsyncListSlot<Uri>,
     ): DatasetState {
         const byDataset = new Map(state.graphs);
         byDataset.set(datasetName, next);
@@ -81,65 +65,19 @@ function createGraphStore() {
 
     async function load(datasetName: string, force = false) {
         if (!datasetName) return;
-
-        const state = get(store);
-        const dsState = getDatasetState(state, datasetName);
-
-        if (!force && dsState.data !== null) return;
-        if (dsState.pending !== null) return dsState.pending;
-
-        const promise = (async () => {
-            try {
-                const { data, error } = await listGraphs({
-                    path: { datasetName },
-                });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load graphs for dataset "${datasetName}":`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setDatasetState(s, datasetName, {
-                            ...getDatasetState(s, datasetName),
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setDatasetState(s, datasetName, {
-                        data: data ?? [],
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error while loading graphs for dataset "${datasetName}":`,
-                    err,
-                );
-                update(s =>
-                    setDatasetState(s, datasetName, {
-                        ...getDatasetState(s, datasetName),
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setDatasetState(s, datasetName, {
-                ...getDatasetState(s, datasetName),
-                pending: promise,
-            }),
+        return loadSlot(
+            store,
+            s => getDatasetState(s, datasetName),
+            (s, patch) =>
+                setDatasetState(s, datasetName, {
+                    ...getDatasetState(s, datasetName),
+                    ...patch,
+                }),
+            () => listGraphs({ path: { datasetName } }),
+            LOG_PREFIX,
+            `graphs for dataset="${datasetName}"`,
+            force,
         );
-
-        return promise;
     }
 
     function getGraphs(datasetName: string): Uri[] | null {
@@ -227,7 +165,7 @@ function createGraphStore() {
                 "Import failed",
                 failedImports.length > 0
                     ? `${failedImports.length} file(s) could not be imported.`
-                    : "No graphs were imported.",
+                    : "No schemas were imported.",
             );
             return { error: null, data };
         }
@@ -304,10 +242,6 @@ function createGraphStore() {
         });
     }
 
-    function invalidateAll() {
-        update(() => ({ graphs: new Map() }));
-    }
-
     return {
         subscribe,
         load,
@@ -316,7 +250,6 @@ function createGraphStore() {
         importGraphs,
         remove: removeGraph,
         invalidateDataset,
-        invalidateAll,
     };
 }
 

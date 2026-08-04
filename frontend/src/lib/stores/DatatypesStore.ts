@@ -17,7 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
+import { GraphKey, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
+import { AsyncSlot, createEmptySlot } from "./storeTypes";
 import {
     listPrimitives,
     listDatatypes,
@@ -30,20 +32,11 @@ import {
 // Types
 // =============================================================================
 
-type AsyncSlot<T> = {
-    data: T | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
 type GraphVocabulary = {
     primitives: AsyncSlot<Uri[]>;
     datatypes: AsyncSlot<ClassUmlAdaptedDto[]>;
     stereotypes: AsyncSlot<string[]>;
 };
-
-type GraphKey = `${string}::${string}`;
 
 type VocabState = {
     byGraph: Map<GraphKey, GraphVocabulary>;
@@ -56,14 +49,6 @@ export const datatypesStore = createVocabStore();
 // =============================================================================
 // Helpers
 // =============================================================================
-
-function makeKey(datasetName: string, graphURI: string): GraphKey {
-    return `${datasetName}::${graphURI}`;
-}
-
-function createEmptySlot<T>(): AsyncSlot<T> {
-    return { data: null, fetchedAt: null, pending: null, error: null };
-}
 
 function createEmptyGraphVocabulary(): GraphVocabulary {
     return {
@@ -132,7 +117,7 @@ function createVocabStore() {
     ): Promise<void> {
         if (!datasetName || !graphURI) return;
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         const slotState = getGraphVocabulary(get(store), key)[slot];
 
         if (!force && slotState.data !== null) return;
@@ -209,7 +194,7 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
     ): Uri[] | null {
-        return getGraphVocabulary(get(store), makeKey(datasetName, graphURI))
+        return getGraphVocabulary(get(store), makeGraphKey(datasetName, graphURI))
             .primitives.data;
     }
 
@@ -237,7 +222,7 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
     ): ClassUmlAdaptedDto[] | null {
-        return getGraphVocabulary(get(store), makeKey(datasetName, graphURI))
+        return getGraphVocabulary(get(store), makeGraphKey(datasetName, graphURI))
             .datatypes.data;
     }
 
@@ -265,7 +250,7 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
     ): string[] | null {
-        return getGraphVocabulary(get(store), makeKey(datasetName, graphURI))
+        return getGraphVocabulary(get(store), makeGraphKey(datasetName, graphURI))
             .stereotypes.data;
     }
 
@@ -294,7 +279,7 @@ function createVocabStore() {
 
     /** Marks a graph's vocabularies as stale; next loader call will refetch. */
     function invalidateGraph(datasetName: string, graphURI: string) {
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         console.log(`${LOG_PREFIX} Invalidating graph cache key="${key}"`);
         update(s => {
             const byGraph = new Map(s.byGraph);

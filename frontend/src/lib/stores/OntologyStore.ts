@@ -17,7 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
+import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
+import { AsyncSlot, createEmptySlot, Result } from "./storeTypes";
 import {
     getOntology,
     createOntology,
@@ -30,43 +32,19 @@ import {
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
-type Result<T = void> = { error: unknown; data?: T };
-
-type LoadState<T> = {
-    data: T | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
-type GraphKey = `${string}::${string}`;
-
 type OntologyStoreState = {
-    byGraph: Map<GraphKey, LoadState<OntologyDto>>;
-    knownFields: LoadState<OntologyField[]>;
+    byGraph: Map<GraphKey, AsyncSlot<OntologyDto>>;
+    knownFields: AsyncSlot<OntologyField[]>;
 };
 
 const LOG_PREFIX = "[ontologyStore]";
 
 export const ontologyStore = createOntologyStore();
 
-function createEmptyLoadState<T>(): LoadState<T> {
-    return {
-        data: null,
-        fetchedAt: null,
-        pending: null,
-        error: null,
-    };
-}
-
-function makeGraphKey(datasetName: string, graphURI: string): GraphKey {
-    return `${datasetName}::${graphURI}`;
-}
-
 function createOntologyStore() {
     const store = writable<OntologyStoreState>({
         byGraph: new Map(),
-        knownFields: createEmptyLoadState<OntologyField[]>(),
+        knownFields: createEmptySlot<OntologyField[]>(),
     });
 
     const { subscribe, update } = store;
@@ -76,14 +54,14 @@ function createOntologyStore() {
     function getGraphState(
         state: OntologyStoreState,
         key: GraphKey,
-    ): LoadState<OntologyDto> {
-        return state.byGraph.get(key) ?? createEmptyLoadState<OntologyDto>();
+    ): AsyncSlot<OntologyDto> {
+        return state.byGraph.get(key) ?? createEmptySlot<OntologyDto>();
     }
 
     function setGraphState(
         state: OntologyStoreState,
         key: GraphKey,
-        next: LoadState<OntologyDto>,
+        next: AsyncSlot<OntologyDto>,
     ): OntologyStoreState {
         const byGraph = new Map(state.byGraph);
         byGraph.set(key, next);
@@ -111,13 +89,6 @@ function createOntologyStore() {
         });
     }
 
-    function patchKnownFields(patch: Partial<LoadState<OntologyField[]>>) {
-        update(s => ({
-            ...s,
-            knownFields: { ...s.knownFields, ...patch },
-        }));
-    }
-
     // ---------- load ontology for graph ----------
 
     async function loadOntology(
@@ -126,73 +97,17 @@ function createOntologyStore() {
         force = false,
     ) {
         if (!datasetName || !graphURI) return;
-
         const key = makeGraphKey(datasetName, graphURI);
-        const state = getGraphState(get(store), key);
-
-        if (!force && state.data !== null) return;
-        if (state.pending !== null) return state.pending;
-
-        console.log(
-            `${LOG_PREFIX} Loading ontology for dataset="${datasetName}", graph="${graphURI}"`,
+        return loadSlot(
+            store,
+            s => getGraphState(s, key),
+            (s, patch) =>
+                setGraphState(s, key, { ...getGraphState(s, key), ...patch }),
+            () => getOntology({ path: { datasetName, graphURI } }),
+            LOG_PREFIX,
+            `ontology for dataset="${datasetName}", graph="${graphURI}"`,
+            force,
         );
-
-        const pending = (async () => {
-            try {
-                const { data, error } = await getOntology({
-                    path: { datasetName, graphURI },
-                });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load ontology for dataset="${datasetName}", graph="${graphURI}":`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setGraphState(s, key, {
-                            ...getGraphState(s, key),
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setGraphState(s, key, {
-                        data: data ?? null,
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-
-                console.log(
-                    `${LOG_PREFIX} Loaded ontology for dataset="${datasetName}", graph="${graphURI}"`,
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error while loading ontology for dataset="${datasetName}", graph="${graphURI}":`,
-                    err,
-                );
-                update(s =>
-                    setGraphState(s, key, {
-                        ...getGraphState(s, key),
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setGraphState(s, key, {
-                ...getGraphState(s, key),
-                pending,
-            }),
-        );
-
-        return pending;
     }
 
     function getOntologyForGraph(
@@ -206,51 +121,18 @@ function createOntologyStore() {
     // ---------- known ontology fields (global) ----------
 
     async function loadKnownFields(force = false) {
-        const slot = get(store).knownFields;
-
-        if (!force && slot.data !== null) return;
-        if (slot.pending !== null) return slot.pending;
-
-        console.log(
-            `${LOG_PREFIX} Loading known ontology fields (force=${force})`,
+        return loadSlot(
+            store,
+            s => s.knownFields,
+            (s, patch) => ({
+                ...s,
+                knownFields: { ...s.knownFields, ...patch },
+            }),
+            () => getKnownOntologyFields(),
+            LOG_PREFIX,
+            "known ontology fields",
+            force,
         );
-
-        const pending = (async () => {
-            try {
-                const { data, error } = await getKnownOntologyFields();
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load known ontology fields:`,
-                        await describeError(error),
-                    );
-                    patchKnownFields({ pending: null, error });
-                    return;
-                }
-
-                const fields = data ?? [];
-                patchKnownFields({
-                    data: fields,
-                    fetchedAt: Date.now(),
-                    pending: null,
-                    error: null,
-                });
-
-                console.log(
-                    `${LOG_PREFIX} Loaded ${fields.length} known ontology field${fields.length === 1 ? "" : "s"}`,
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error while loading known ontology fields:`,
-                    err,
-                );
-                patchKnownFields({ pending: null, error: err });
-            }
-        })();
-
-        patchKnownFields({ pending });
-
-        return pending;
     }
 
     function getKnownFields(): OntologyField[] | null {
@@ -395,14 +277,6 @@ function createOntologyStore() {
         });
     }
 
-    function invalidateAll() {
-        console.log(`${LOG_PREFIX} Invalidating all ontology caches`);
-        update(() => ({
-            byGraph: new Map(),
-            knownFields: createEmptyLoadState<OntologyField[]>(),
-        }));
-    }
-
     return {
         subscribe,
 
@@ -422,6 +296,5 @@ function createOntologyStore() {
         // invalidation
         invalidateGraph,
         invalidateDataset,
-        invalidateAll,
     };
 }

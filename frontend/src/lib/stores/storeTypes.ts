@@ -22,8 +22,19 @@ export type AsyncSlot<T> = {
     error: unknown;
 };
 
+export type AsyncListSlot<T> = {
+    data: T[] | null;
+    fetchedAt: number | null;
+    pending: Promise<void> | null;
+    error: unknown;
+};
+
 export type Result<T = void> = { error: unknown; data?: T };
 
 export function createEmptySlot<T>(): AsyncSlot<T> {
+    return { data: null, fetchedAt: null, pending: null, error: null };
+}
+
+export function createEmptyListSlot<T>(): AsyncSlot<T> {
     return { data: null, fetchedAt: null, pending: null, error: null };
 }

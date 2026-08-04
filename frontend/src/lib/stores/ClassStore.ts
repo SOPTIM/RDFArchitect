@@ -17,7 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
+import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
+import { AsyncSlot, createEmptySlot, Result } from "./storeTypes";
 import {
     // class list & details
     getClassList,
@@ -49,7 +51,6 @@ import {
     CopyClassResponseDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
-import { AsyncSlot } from "./storeTypes";
 
 // Two cache slots per graph: the list endpoint may be called with or without
 // external classes; keep both so toggling the flag does not invalidate the
@@ -67,26 +68,14 @@ type ClassesState = {
     byGraph: Map<GraphKey, GraphClassState>;
 };
 
-type GraphKey = `${string}::${string}`;
-
-type Result<T = void> = { error: unknown; data?: T };
-
 const LOG_PREFIX = "[classStore]";
 
 export const classStore = createClassStore();
 
-function makeKey(datasetName: string, graphURI: string): GraphKey {
-    return `${datasetName}::${graphURI}`;
-}
-
-function createEmptyVariantState(): VariantState {
-    return { data: null, fetchedAt: null, pending: null, error: null };
-}
-
 function createEmptyGraphState(): GraphClassState {
     return {
-        all: createEmptyVariantState(),
-        internalOnly: createEmptyVariantState(),
+        all: createEmptySlot(),
+        internalOnly: createEmptySlot(),
     };
 }
 
@@ -231,86 +220,38 @@ function createClassStore() {
         force = false,
     ) {
         if (!datasetName || !graphURI) return;
-
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         const variant: Variant = includeExternal ? "all" : "internalOnly";
-        const variantState = getGraphState(get(store), key)[variant];
 
-        if (!force && variantState.data !== null) return;
-        if (variantState.pending !== null) return variantState.pending;
-
-        console.log(
-            `${LOG_PREFIX} Loading classes for dataset="${datasetName}", graph="${graphURI}", includeExternal=${includeExternal}, force=${force}`,
-        );
-
-        const promise = (async () => {
-            try {
-                const { data, error } = await getClassList({
+        return loadSlot(
+            store,
+            s => getGraphState(s, key)[variant],
+            (s, patch) =>
+                setVariant(s, key, variant, {
+                    ...getGraphState(s, key)[variant],
+                    ...patch,
+                }),
+            () =>
+                getClassList({
                     path: { datasetName, graphURI },
                     query: { includeExternalClasses: includeExternal },
-                });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load classes for dataset="${datasetName}", graph="${graphURI}"`,
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setVariant(s, key, variant, {
-                            ...getGraphState(s, key)[variant],
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setVariant(s, key, variant, {
-                        data: data ?? [],
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-
-                console.log(
-                    `${LOG_PREFIX} Loaded ${(data ?? []).length} classes for dataset="${datasetName}", graph="${graphURI}", variant="${variant}"`,
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error while loading classes for dataset="${datasetName}", graph="${graphURI}"`,
-                    err,
-                );
-                update(s =>
-                    setVariant(s, key, variant, {
-                        ...getGraphState(s, key)[variant],
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setVariant(s, key, variant, {
-                ...getGraphState(s, key)[variant],
-                pending: promise,
-            }),
+                }),
+            LOG_PREFIX,
+            `classes for dataset="${datasetName}", graph="${graphURI}", variant="${variant}"`,
+            force,
         );
-
-        return promise;
     }
 
     async function loadClassInfo(
         datasetName: string,
         graphURI: string,
         classUUID: string,
+        includeSuperClasses: boolean,
         force = false,
     ): Promise<void> {
         if (!datasetName || !graphURI || !classUUID) return;
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
 
         if (!force) {
             const current = getGraphState(get(store), key);
@@ -326,6 +267,7 @@ function createClassStore() {
 
         const { data, error } = await getClassInformation({
             path: { datasetName, graphURI, classUUID },
+            query: {includeSuperClasses}
         });
 
         if (error || !data) {
@@ -372,7 +314,7 @@ function createClassStore() {
         includeExternal = false,
     ): ClassUmlAdaptedDto[] | null {
         const variant: Variant = includeExternal ? "all" : "internalOnly";
-        return getGraphState(get(store), makeKey(datasetName, graphURI))[
+        return getGraphState(get(store), makeGraphKey(datasetName, graphURI))[
             variant
         ].data;
     }
@@ -382,7 +324,7 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
     ): ClassUmlAdaptedDto | null {
-        const state = getGraphState(get(store), makeKey(datasetName, graphURI));
+        const state = getGraphState(get(store), makeGraphKey(datasetName, graphURI));
         return (
             findInVariant(state.all.data, classUUID) ??
             findInVariant(state.internalOnly.data, classUUID) ??
@@ -452,7 +394,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             ...cls,
@@ -551,7 +493,7 @@ function createClassStore() {
         const newUUID = data ?? attribute.uuid;
         const stored: AttributeDto = { ...attribute, uuid: newUUID };
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], stored),
@@ -604,7 +546,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], attribute),
@@ -649,7 +591,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             enumEntries: upsertByUuid(prev.enumEntries ?? [], enumEntry),
@@ -701,7 +643,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             enumEntries: upsertByUuid(prev.enumEntries ?? [], enumEntry),
@@ -748,7 +690,7 @@ function createClassStore() {
             to: { ...pair.to, uuid: data?.toUUID ?? pair.to?.uuid },
         };
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             associationPairs: upsertAssociationPair(
@@ -807,7 +749,7 @@ function createClassStore() {
             to: { ...pair.to, uuid: data?.toUUID ?? pair.to?.uuid },
         };
 
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => {
             const filtered = (prev.associationPairs ?? []).filter(
                 p => p.from?.uuid !== associationUUID,
@@ -835,7 +777,7 @@ function createClassStore() {
         classUUID: string,
     ) {
         if (!datasetName || !graphURI || !classUUID) return;
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
 
         update(s => {
             const current = s.byGraph.get(key);
@@ -859,7 +801,7 @@ function createClassStore() {
     }
 
     function invalidateGraph(datasetName: string, graphURI: string) {
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         console.log(`${LOG_PREFIX} Invalidating graph cache key="${key}"`);
         update(s => {
             const byGraph = new Map(s.byGraph);
@@ -880,11 +822,6 @@ function createClassStore() {
             }
             return { ...s, byGraph };
         });
-    }
-
-    function invalidateAll() {
-        console.log(`${LOG_PREFIX} Invalidating all class caches`);
-        update(() => ({ byGraph: new Map() }));
     }
 
     return {
@@ -920,7 +857,6 @@ function createClassStore() {
         // invalidation
         invalidateGraph,
         invalidateDataset,
-        invalidateAll,
     };
 }
 

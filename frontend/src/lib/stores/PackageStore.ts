@@ -17,7 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
+import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
+import { AsyncSlot, createEmptySlot, Result } from "./storeTypes";
 import {
     listPackages,
     addPackage,
@@ -32,20 +34,9 @@ type PackageListInfo = {
     external: PackageDto[];
 };
 
-type GraphPackageState = {
-    data: PackageListInfo | null;
-    fetchedAt: number | null;
-    pending: Promise<void> | null;
-    error: unknown;
-};
-
 type PackagesState = {
-    byGraph: Map<GraphKey, GraphPackageState>;
+    byGraph: Map<GraphKey, AsyncSlot<PackageListInfo>>;
 };
-
-type GraphKey = `${string}::${string}`;
-
-type Result<T = void> = { error: unknown; data?: T };
 
 const LOG_PREFIX = "[packageStore]";
 
@@ -53,15 +44,6 @@ export const packageStore = createPackageStore();
 
 function makeKey(datasetName: string, graphURI: string): GraphKey {
     return `${datasetName}::${graphURI}`;
-}
-
-function createEmptyGraphState(): GraphPackageState {
-    return {
-        data: null,
-        fetchedAt: null,
-        pending: null,
-        error: null,
-    };
 }
 
 function getPackageDisplayLabel(pkg: PackageDto): string {
@@ -75,14 +57,14 @@ function createPackageStore() {
     function getGraphState(
         state: PackagesState,
         key: GraphKey,
-    ): GraphPackageState {
-        return state.byGraph.get(key) ?? createEmptyGraphState();
+    ): AsyncSlot<PackageListInfo> {
+        return state.byGraph.get(key) ?? createEmptySlot();
     }
 
     function setGraphState(
         state: PackagesState,
         key: GraphKey,
-        next: GraphPackageState,
+        next: AsyncSlot<PackageListInfo>,
     ): PackagesState {
         const byGraph = new Map(state.byGraph);
         byGraph.set(key, next);
@@ -90,73 +72,33 @@ function createPackageStore() {
     }
 
     // ----- Load -----
-
     async function load(datasetName: string, graphURI: string, force = false) {
         if (!datasetName || !graphURI) return;
-
-        const key = makeKey(datasetName, graphURI);
-        const graphState = getGraphState(get(store), key);
-
-        if (!force && graphState.data !== null) return;
-        if (graphState.pending !== null) return graphState.pending;
-
-        const promise = (async () => {
-            try {
+        const key = makeGraphKey(datasetName, graphURI);
+        return loadSlot(
+            store,
+            s => getGraphState(s, key),
+            (s, patch) => {
+                const byGraph = new Map(s.byGraph);
+                byGraph.set(key, { ...getGraphState(s, key), ...patch });
+                return { ...s, byGraph };
+            },
+            async () => {
                 const { data, error } = await listPackages({
                     path: { datasetName, graphURI },
                 });
-
-                if (error) {
-                    console.error(
-                        `${LOG_PREFIX} Failed to load packages for`,
-                        { datasetName, graphURI },
-                        await describeError(error),
-                    );
-                    update(s =>
-                        setGraphState(s, key, {
-                            ...getGraphState(s, key),
-                            pending: null,
-                            error,
-                        }),
-                    );
-                    return;
-                }
-
-                update(s =>
-                    setGraphState(s, key, {
-                        data: {
-                            internal: data?.internalPackageList ?? [],
-                            external: data?.externalPackageList ?? [],
-                        },
-                        fetchedAt: Date.now(),
-                        pending: null,
-                        error: null,
-                    }),
-                );
-            } catch (err) {
-                console.error(
-                    `${LOG_PREFIX} Unexpected error while loading packages for`,
-                    { datasetName, graphURI },
-                    err,
-                );
-                update(s =>
-                    setGraphState(s, key, {
-                        ...getGraphState(s, key),
-                        pending: null,
-                        error: err,
-                    }),
-                );
-            }
-        })();
-
-        update(s =>
-            setGraphState(s, key, {
-                ...getGraphState(s, key),
-                pending: promise,
-            }),
+                if (error) return { error };
+                return {
+                    data: {
+                        internal: data?.internalPackageList ?? [],
+                        external: data?.externalPackageList ?? [],
+                    },
+                };
+            },
+            LOG_PREFIX,
+            `packages for dataset="${datasetName}", graph="${graphURI}"`,
+            force,
         );
-
-        return promise;
     }
 
     function getPackages(
@@ -167,7 +109,6 @@ function createPackageStore() {
     }
 
     // ----- Internal: local cache patch after a successful save -----
-
     function patchLocalPackage(
         datasetName: string,
         graphURI: string,
@@ -427,10 +368,6 @@ function createPackageStore() {
         });
     }
 
-    function invalidateAll() {
-        update(() => ({ byGraph: new Map() }));
-    }
-
     return {
         subscribe,
         load,
@@ -441,6 +378,5 @@ function createPackageStore() {
         savePackage,
         invalidateGraph,
         invalidateDataset,
-        invalidateAll,
     };
 }
