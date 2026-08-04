@@ -70,7 +70,7 @@
             </p>
             <div class="w-64">
                 <ButtonControl callOnClick={generateMigrationScript}>
-                    Generate and download script
+                    Generate and Download Script
                 </ButtonControl>
             </div>
         </div>

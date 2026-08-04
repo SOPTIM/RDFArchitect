@@ -81,7 +81,7 @@ public class RenderCIMCollectionMermaidService implements RenderCIMCollectionUse
     }
 
     @Override
-    public RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId) {
+    public RenderingDataDTO renderDatasetDiagram(String datasetName, UUID diagramId) {
         throw new UnsupportedOperationException(
                 "Rendering dataset diagrams is not supported for the mermaid renderer.");
     }

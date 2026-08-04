@@ -58,12 +58,12 @@
 <ActionDialog
     bind:showDialog
     size="w-full max-w-lg"
-    primaryLabel="Delete Custom Diagram"
+    primaryLabel="Delete Diagram"
     onPrimary={deleteCustomDiagram}
     primaryVariant="danger"
     title={diagram?.label
-        ? `Delete custom Diagram "${diagram.label}"?`
-        : "Delete custom diagram?"}
+        ? `Delete Diagram "${diagram.label}"?`
+        : "Delete Diagram?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >

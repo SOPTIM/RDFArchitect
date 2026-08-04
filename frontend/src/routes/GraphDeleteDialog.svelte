@@ -69,7 +69,7 @@
     primaryLabel="Delete Schema"
     onPrimary={deleteGraph}
     disablePrimary={disableSubmit}
-    title={graphURI ? `Delete schema "${graphURI}"?` : "Delete schema?"}
+    title={graphURI ? `Delete Schema "${graphURI}"?` : "Delete Schema?"}
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
 >

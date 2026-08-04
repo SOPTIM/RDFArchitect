@@ -198,7 +198,9 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Create/Edit Custom Diagram for Dataset"
+    title={diagramId
+        ? `Edit Dataset Diagram "${diagramName}"`
+        : "New Dataset Diagram"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}

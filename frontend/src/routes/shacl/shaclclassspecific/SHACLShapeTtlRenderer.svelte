@@ -165,7 +165,7 @@
                     class="w-fit font-semibold italic hover:underline"
                     callOnClick={putChanges}
                 >
-                    save changes
+                    Save Changes
                 </ButtonControl>
             </div>
         {/if}
@@ -184,7 +184,7 @@
                 <TtlCodeEditor bind:value={localNamespaces} {readOnly} />
             {/if}
         {:else}
-            <p class="text-default-text font-semibold">no namespaces found</p>
+            <p class="text-default-text font-semibold">No namespaces found</p>
         {/if}
     </div>
     <div>
@@ -202,7 +202,7 @@
                 />
             {/if}
         {:else}
-            <p class="text-default-text font-semibold">no nodeShapes found</p>
+            <p class="text-default-text font-semibold">No NodeShapes found</p>
         {/if}
     </div>
     <div>
@@ -223,7 +223,7 @@
             {/if}
         {:else}
             <p class="text-default-text font-semibold">
-                no propertyShapes found
+                No PropertyShapes found
             </p>
         {/if}
     </div>
@@ -246,7 +246,7 @@
             {/if}
         {:else}
             <p class="text-default-text font-semibold">
-                no derived propertyShapes found
+                No derived PropertyShapes found
             </p>
         {/if}
     </div>

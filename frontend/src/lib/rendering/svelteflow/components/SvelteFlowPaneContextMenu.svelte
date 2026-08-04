@@ -122,7 +122,7 @@
                 faIcon={faPlus}
                 altText="Shift+N"
             >
-                Add class
+                New Class
             </ContextMenu.Item.Button>
 
             <ContextMenu.Separator />
@@ -145,7 +145,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Shift+V"
                     >
-                        Paste without attributes/enum entries
+                        Paste without Attributes/Enum Entries
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(false, true, false)}
@@ -153,7 +153,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Alt+V"
                     >
-                        Paste without associations
+                        Paste without Associations
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(true, false, false)}
@@ -161,7 +161,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Shift+Alt+V"
                     >
-                        Paste bare
+                        Paste Bare
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>

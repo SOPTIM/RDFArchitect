@@ -188,7 +188,7 @@
                         <th
                             class="w-50 px-2 py-1 text-left tracking-wide uppercase"
                         >
-                            Field iri
+                            Field IRI
                         </th>
                         <th
                             class="py-1 pl-2 text-right tracking-wide uppercase"
@@ -205,7 +205,7 @@
                         <th
                             class="py-1 pr-10 pl-2 text-right tracking-wide uppercase"
                         >
-                            autogenerate
+                            Autogenerate
                             <CheckBoxEditControl
                                 value={generateAll}
                                 callOnInputTrue={() => setGenerate()}

@@ -212,9 +212,7 @@
     closeOnPrimary={false}
     disablePrimary={disableSubmit}
     {readonly}
-    title={readonly
-        ? "View profile header meta data"
-        : "Edit profile header meta data"}
+    title={readonly ? "View Profile Header" : "Edit Profile Header"}
 >
     {#if loadingOntology}
         <div
@@ -305,7 +303,7 @@
                                                     onSelect={() =>
                                                         (showAddKnownEntriesPopUp = true)}
                                                 >
-                                                    Add CGMES 3.0 entries
+                                                    Add CGMES 3.0 Entries
                                                 </DropdownMenu.Item.Button>
                                             </DropdownMenu.Content>
                                         </DropdownMenu.Root>

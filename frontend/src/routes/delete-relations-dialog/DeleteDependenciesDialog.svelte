@@ -208,7 +208,7 @@
                 ? (type ?? "resource")
                 : pluralize(type ?? "resource");
             toastStore.success(
-                `${noun.charAt(0).toUpperCase() + noun.slice(1)} deleted`,
+                `${capitalize(noun)} deleted`,
                 label
                     ? `"${label}" was removed.`
                     : `${roots.length} resources were removed.`,
@@ -251,14 +251,19 @@
         return word.endsWith("s") ? `${word}es` : `${word}s`;
     }
 
+    function capitalize(word) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    }
+
     function getDialogTitle() {
         if (roots.length === 1) {
-            return `Delete ${type} "${roots[0].resourceIdentifier.label}"?`;
+            const noun = capitalize(type ?? "resource");
+            return `Delete ${noun} "${roots[0].resourceIdentifier.label}"?`;
         }
         if (roots.length > 1) {
-            return `Delete ${roots.length} ${pluralize(type ?? "resource")}?`;
+            return `Delete ${roots.length} ${capitalize(pluralize(type ?? "resource"))}?`;
         }
-        return "Delete resource?";
+        return "Delete Resource?";
     }
 </script>
 

@@ -132,7 +132,7 @@
         {:else}
             <ButtonControl
                 disabled={readonly}
-                title={readonly ? "cannot restore in readonly dataset" : ""}
+                title={readonly ? "Cannot restore in read-only dataset" : ""}
                 callOnClick={() => callRestoreVersion(change.changeId)}
             >
                 Restore Version

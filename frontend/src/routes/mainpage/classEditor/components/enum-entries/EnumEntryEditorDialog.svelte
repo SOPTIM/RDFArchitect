@@ -30,10 +30,13 @@
     import { classStore } from "$lib/stores/ClassStore.ts";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
+    import { resolveSaveTarget } from "../resolve-save-target.js";
+
     let {
         showDialog = $bindable(),
         enumEntry = $bindable(),
         enumEntries,
+        targetClass = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -43,6 +46,10 @@
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        if (targetClass) {
+            isNewEnumEntry = false;
+            return;
+        }
         if (!enumEntries.contains(enumEntry)) {
             isNewEnumEntry = true;
             enumEntry = new ReactiveEnumEntry({
@@ -59,24 +66,29 @@
     }
 
     async function saveEnumEntry() {
+        const { classUuid, domainIri } = resolveSaveTarget(
+            targetClass,
+            classEditorContext.reactiveClass,
+        );
         const apiEnumEntry = mapReactiveEnumEntryToEnumEntryDto(
             enumEntry,
-            classEditorContext.reactiveClass.namespace.backup +
-                classEditorContext.reactiveClass.label.backup,
+            domainIri,
         );
 
         const { error, data } = isNewEnumEntry
             ? await classStore.addEnumEntry(
                   classEditorContext.datasetName,
                   classEditorContext.graphUri,
-                  classEditorContext.reactiveClass.uuid.value,
+                  classUuid,
                   apiEnumEntry,
+                  isNewEnumEntry,
               )
             : await classStore.replaceEnumEntry(
                   classEditorContext.datasetName,
                   classEditorContext.graphUri,
-                  classEditorContext.reactiveClass.uuid.value,
+                  classUuid,
                   apiEnumEntry,
+                  isNewEnumEntr,
               );
 
         if (error) return;
@@ -105,8 +117,8 @@
     isValid={enumEntry?.isValid}
     {readonly}
     title={isNewEnumEntry
-        ? "Create new Enum entry"
-        : `Edit Enum entry: ${enumEntry.label.backup}`}
+        ? "New Enum Entry"
+        : `Edit Enum Entry "${enumEntry.label.backup}"`}
 >
     {#if enumEntry && classEditorContext && readonly !== undefined}
         <div class="mx-2 flex h-full flex-col space-y-1 pl-2">

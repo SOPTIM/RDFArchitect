@@ -244,14 +244,12 @@
                 </div>
             {:else}
                 <p class="mt-2 text-sm italic">
-                    No profile header meta data entries can be generated for the
-                    selected schema.
+                    No profile header entries can be generated for the selected
+                    schema.
                 </p>
             {/if}
         {:else if graphURI}
-            <p class="mt-2 text-sm italic">
-                This schema has no profile header meta data
-            </p>
+            <p class="mt-2 text-sm italic">This schema has no profile header</p>
         {/if}
     {/if}
     <label for="media-types-Download" class="mt-2 mb-1">Media type</label>

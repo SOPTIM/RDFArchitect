@@ -260,7 +260,7 @@
                             variant="default"
                             callOnClick={() => handleResetView()}
                         >
-                            reset view
+                            Reset View
                         </ButtonControl>
                     </div>
                     {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
@@ -269,7 +269,7 @@
                                 variant="default"
                                 callOnClick={() => (showFilterDialog = true)}
                             >
-                                filter view
+                                Filter View
                             </ButtonControl>
                         </div>
                     {/if}

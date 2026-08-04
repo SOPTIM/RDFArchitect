@@ -216,7 +216,9 @@
                 faIcon={faCopy}
                 altText="Ctrl+C"
             >
-                {multiActive ? `Copy ${selectionUuids.length} classes` : "Copy"}
+                {multiActive
+                    ? `Copy ${selectionUuids.length} Classes`
+                    : "Copy Class"}
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={openExtendClassDialog}
@@ -233,7 +235,7 @@
                 faIcon={faDiagramProject}
                 disabled={multiActive}
             >
-                Constraints
+                View Constraints (SHACL)
             </ContextMenu.Item.Button>
         {/if}
         <ContextMenu.SubMenu.Root>
@@ -252,7 +254,7 @@
                     faIcon={faAnglesUp}
                     disabled={classActionsDisabled || isAtFront}
                 >
-                    Move to front
+                    Move to Front
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={e => {
@@ -262,7 +264,7 @@
                     faIcon={faAngleUp}
                     disabled={classActionsDisabled || isAtFront}
                 >
-                    Move up
+                    Move Up
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Counter
                     value={classZIndex}
@@ -282,7 +284,7 @@
                     faIcon={faAngleDown}
                     disabled={classActionsDisabled || isAtBack}
                 >
-                    Move down
+                    Move Down
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={e => {
@@ -292,7 +294,7 @@
                     faIcon={faAnglesDown}
                     disabled={classActionsDisabled || isAtBack}
                 >
-                    Move to bottom
+                    Move to Bottom
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
@@ -317,8 +319,8 @@
                 altText="Del"
             >
                 {multiActive
-                    ? `Delete ${selectionUuids.length} classes`
-                    : "Delete class"}
+                    ? `Delete ${selectionUuids.length} Classes`
+                    : "Delete Class"}
             </ContextMenu.Item.Button>
         {/if}
     </ContextMenu.Content>

@@ -196,7 +196,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add Package"
+    primaryLabel="Create Package"
     onPrimary={() =>
         newPackage(
             selectedDatasetName,
@@ -206,7 +206,7 @@
             packageURINamespace,
         )}
     disablePrimary={disableSubmit}
-    title="Add Package"
+    title="New Package"
 >
     <div class="mx-2 flex h-full flex-col">
         <DatasetAndGraphSelection

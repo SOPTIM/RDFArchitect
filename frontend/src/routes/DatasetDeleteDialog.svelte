@@ -64,7 +64,7 @@
     size="w-full max-w-lg"
     primaryLabel="Delete Dataset"
     onPrimary={deleteDataset}
-    title={datasetName ? `Delete dataset "${datasetName}"?` : "Delete dataset?"}
+    title={datasetName ? `Delete Dataset "${datasetName}"?` : "Delete Dataset?"}
     primaryVariant="danger"
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"

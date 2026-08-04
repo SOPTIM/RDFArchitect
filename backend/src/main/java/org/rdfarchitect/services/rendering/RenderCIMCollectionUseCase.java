@@ -46,5 +46,5 @@ public interface RenderCIMCollectionUseCase {
      * @return a dto that contains all data required to render a UML diagram for the given
      *     collection
      */
-    RenderingDataDTO renderGlobalUML(String datasetName, UUID diagramId);
+    RenderingDataDTO renderDatasetDiagram(String datasetName, UUID diagramId);
 }

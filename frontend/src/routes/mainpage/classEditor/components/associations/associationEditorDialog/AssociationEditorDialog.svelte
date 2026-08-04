@@ -27,11 +27,13 @@
     import Direct from "./Direct.svelte";
     import { saveApiAssociationToBackend } from "../save-association-to-backend.js";
     import Inverse from "./Inverse.svelte";
+    import { resolveSaveTarget } from "../../resolve-save-target.js";
 
     let {
         showDialog = $bindable(),
         associations,
         association = $bindable(),
+        targetClass = null,
     } = $props();
 
     let classEditorContext = $state();
@@ -67,6 +69,10 @@
 
     function onOpen() {
         classEditorContext = getContext("classEditor");
+        if (targetClass) {
+            isNewAssociation = false;
+            return;
+        }
         if (!associations.contains(association)) {
             isNewAssociation = true;
             association = new ReactiveAssociation({
@@ -83,15 +89,19 @@
     }
 
     async function saveAssociation() {
+        const { classUuid, domainCls } = resolveSaveTarget(
+            targetClass,
+            classEditorContext.reactiveClass,
+        );
         const apiAssociation = mapReactiveAssociationToAssociationDto(
             association,
-            classEditorContext.reactiveClass,
+            domainCls,
             classEditorContext.getClassByUuid,
         );
         const result = await saveApiAssociationToBackend(
             classEditorContext.datasetName,
             classEditorContext.graphUri,
-            classEditorContext.reactiveClass.uuid.value,
+            classUuid,
             apiAssociation,
             isNewAssociation,
         );
@@ -128,8 +138,8 @@
     size="w-2/3"
     {readonly}
     title={isNewAssociation
-        ? "Create new association"
-        : `Edit association: '${association?.label.backup}' to '${association?.inverse.label.backup}'`}
+        ? "New Association"
+        : `Edit Association "${association?.label.backup}" to "${association?.inverse.label.backup}"`}
 >
     {#if association}
         <div

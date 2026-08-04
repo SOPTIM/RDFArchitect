@@ -30,6 +30,7 @@
         defaultExportFormat: supportedRDFMediaTypes[0].mimeType,
         showPackagePrefix: false,
         useColoredPropertiesInMergedView: true,
+        showInheritedProperties: true,
         normalizeComments: true,
     };
 
@@ -92,6 +93,11 @@
             <CheckBoxEditControl
                 label="Use colored properties in merged view"
                 bind:value={localSettings["useColoredPropertiesInMergedView"]}
+                labelFirst={false}
+            />
+            <CheckBoxEditControl
+                label="Show inherited properties"
+                bind:value={localSettings["showInheritedProperties"]}
                 labelFirst={false}
             />
         </USC.Section>

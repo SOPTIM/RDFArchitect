@@ -31,7 +31,11 @@
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
 
-    let { showDialog = $bindable(), property } = $props();
+    let {
+        showDialog = $bindable(),
+        property,
+        classUuidOverride = null,
+    } = $props();
 
     let defaultShacl = () => ({
         namespaces: "",
@@ -53,14 +57,16 @@
             editorState.selectedGraph.getValue(),
     );
 
+    function getViewedClassUuid() {
+        return classUuidOverride ?? editorState.selectedClass.getProperty("id");
+    }
+
     function onOpen() {
-        if (!editorState.selectedClass.getProperty("id") || !property) {
+        const viewedClassUuid = getViewedClassUuid();
+        if (!viewedClassUuid || !property) {
             return;
         }
-        fetchShacl(
-            editorState.selectedClass.getProperty("id"),
-            property.uuid.value,
-        );
+        fetchShacl(viewedClassUuid, property.uuid.value);
     }
 
     function onClose() {
@@ -180,7 +186,7 @@
                     path: {
                         datasetName: classDatasetName,
                         graphURI: classGraphUri,
-                        classUUID: editorState.selectedClass.getProperty("id"),
+                        classUUID: getViewedClassUuid(),
                         attributeUUID: property.uuid.value,
                     },
                     body: ttlString,
@@ -225,10 +231,7 @@
                 "An unexpected error occurred while saving property constraints.",
             );
         } finally {
-            await fetchShacl(
-                editorState.selectedClass.getProperty("id"),
-                property.uuid.value,
-            );
+            await fetchShacl(getViewedClassUuid(), property.uuid.value);
         }
     }
 

@@ -190,7 +190,7 @@
                 disabled={readonly}
                 faIcon={faDiagramProject}
             >
-                Add Schema
+                New Schema
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -201,7 +201,7 @@
                 faIcon={faFileImport}
                 altText="Ctrl+I"
             >
-                Import Schema
+                Import Schema (RDFS)
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -223,7 +223,7 @@
                 {#if readonly}
                     View Namespaces
                 {:else}
-                    Manage Namespaces
+                    Edit Namespaces
                 {/if}
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button

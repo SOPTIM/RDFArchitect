@@ -123,7 +123,7 @@
     isValid={pkg?.isValid}
     {readonly}
     title={isNewPackage
-        ? "Create Package"
+        ? "New Package"
         : readonly
           ? `View Package "${pkg.label.value}"`
           : `Edit Package "${pkg.label.backup}"`}

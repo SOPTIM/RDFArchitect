@@ -52,7 +52,7 @@
     );
     let level = $derived(graphNavEntry ? 3 : 2);
     let label = $derived(
-        graphNavEntry ? "Custom Profile Diagrams" : "Custom Dataset Diagrams",
+        graphNavEntry ? "Schema Diagrams" : "Dataset Diagrams",
     );
 
     $effect(() => {

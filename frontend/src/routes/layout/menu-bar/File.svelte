@@ -182,7 +182,7 @@
                     faIcon={faTrash}
                     variant="danger"
                 >
-                    Schema (RDFS)
+                    Schema
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
                     onSelect={() => (showDatasetDeleteDialog = true)}
