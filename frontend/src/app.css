@@ -83,6 +83,11 @@
 https://tailwindcss.com/docs/colors#using-a-custom-palette
 */
 @theme {
+    /*TODO WICHTIG: SPÄTER DIE RENDERING FARBEN FIXEN:
+       ich mag die variablen hier gerade nicht
+       es sieht sehr chaotisch aus, manche variablen sind doppelt
+       wenigstens für meine Rendering farben fix das mal
+       konkret ist das das blau und grün der bendpoints*/
     --color-*: initial;
     --color-dialog-backlight: rgba(0, 0, 0, 0.5);
 
@@ -161,4 +166,5 @@ https://tailwindcss.com/docs/colors#using-a-custom-palette
     --color-class-node-highlighted: var(--color-border-select);
     --color-class-node-highlighted-secondary: rgba(31, 117, 203, 0.45);
     --color-inheritance-edge: var(--color-soptim-dunkelgrau);
+    --color-green: #22a35a;
 }
