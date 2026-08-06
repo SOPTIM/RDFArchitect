@@ -17,26 +17,32 @@
 
 <script>
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
 
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { migrationState } from "$lib/sharedState.svelte.js";
+    import { isPrefixOnlyRename } from "$lib/utils/migrationUtils.js";
 
     import RenameTable from "./RenameTable.svelte";
 
-    let deletedAndRenamed = $state([]);
-    let added = $state([]);
-    let modified = $state([]);
+    let hiddenRenames = $state([]);
+    let visibleRenames = $state([]);
+    let visibleAdded = $state([]);
     let isLoading = $state(true);
+    let ignorePrefixes = $state(true);
 
     let renamedFrom = $state(new Map());
     let unlinkedAdded = $derived.by(() => {
         const linked = new Set(renamedFrom.keys());
-        return added.filter(c => !linked.has(c.label));
+        return visibleAdded.filter(c => !linked.has(c.label));
     });
 
     onMount(() => {
+        const storedState = get(migrationState);
+        ignorePrefixes = storedState.ignorePrefixes;
         fetch(PUBLIC_BACKEND_URL + "/migrations/class-renamings", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -44,11 +50,32 @@
         })
             .then(res => (res.ok ? res.json() : Promise.reject("Failed")))
             .then(data => {
-                deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
+                const deletedAndRenamed = data.deletedAndRenamed.sort((a, b) =>
                     a.oldResource.label.localeCompare(b.oldResource.label),
                 );
-                added = data.added;
-                modified = data.modified;
+                hiddenRenames = ignorePrefixes
+                    ? deletedAndRenamed.filter(r =>
+                          isPrefixOnlyRename(
+                              r.oldResource.iri,
+                              r.newResource?.iri,
+                          ),
+                      )
+                    : [];
+                visibleRenames = ignorePrefixes
+                    ? deletedAndRenamed.filter(
+                          r =>
+                              !isPrefixOnlyRename(
+                                  r.oldResource.iri,
+                                  r.newResource?.iri,
+                              ),
+                      )
+                    : deletedAndRenamed;
+                const hiddenTargetIRIs = hiddenRenames
+                    .map(r => r.newResource?.iri)
+                    .filter(iri => iri != null);
+                visibleAdded = data.added.filter(
+                    addedClass => !hiddenTargetIRIs.includes(addedClass.iri),
+                );
 
                 for (let rename of deletedAndRenamed) {
                     if (rename.newResource) {
@@ -79,7 +106,9 @@
     }
 
     export async function onNext() {
-        let body = deletedAndRenamed.filter(r => r.newResource != null);
+        let body = [...hiddenRenames, ...visibleRenames].filter(
+            r => r.newResource != null,
+        );
         try {
             const res = await fetch(
                 PUBLIC_BACKEND_URL + "/migrations/class-renamings",
@@ -116,17 +145,17 @@
         </p>
     </InfoBox>
 
-    {#if !isLoading && deletedAndRenamed.length === 0 && added.length === 0 && modified.length === 0}
+    {#if !isLoading && visibleRenames.length === 0 && visibleAdded.length === 0}
         <EmptyStateCard
             title="No Class Changes"
             description="There are no class changes to review in this migration."
         />
     {:else}
-        {#if deletedAndRenamed.length > 0}
+        {#if visibleRenames.length > 0}
             <RenameTable
-                renameCandidates={deletedAndRenamed}
+                renameCandidates={visibleRenames}
                 unlinkedNewItems={unlinkedAdded}
-                allAddedItems={added}
+                allAddedItems={visibleAdded}
                 onAddMapping={(rename, newItem) =>
                     addRenameMapping(rename, newItem)}
                 onDissolveMapping={rename => dissolveRenameMapping(rename)}
@@ -134,11 +163,11 @@
             />
         {/if}
 
-        {#if added.length > 0}
+        {#if visibleAdded.length > 0}
             <div>
                 <h3 class="mb-3 text-lg font-semibold">Added Classes</h3>
                 <div class="space-y-1">
-                    {#each added as addedClass}
+                    {#each visibleAdded as addedClass}
                         <div
                             class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                         >
@@ -155,17 +184,6 @@
                         </div>
                     {/each}
                 </div>
-            </div>
-        {/if}
-
-        {#if modified.length > 0}
-            <div>
-                <h3 class="mb-3] text-lg font-semibold">Modified Classes</h3>
-                <ul class="list-inside list-disc space-y-1 text-sm">
-                    {#each modified as modifiedClass}
-                        <li>{modifiedClass.label}</li>
-                    {/each}
-                </ul>
             </div>
         {/if}
     {/if}

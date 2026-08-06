@@ -17,18 +17,34 @@
 
 <script>
     import { onMount } from "svelte";
+    import { get } from "svelte/store";
 
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { migrationState } from "$lib/sharedState.svelte.js";
+    import { isPrefixOnlyRename } from "$lib/utils/migrationUtils.js";
 
     let { substeps = [], currentSubstepIndex = 0 } = $props();
 
     let classes = $state([]);
     let isLoading = $state(true);
+    let ignorePrefixes = $state(true);
 
     let currentSubstep = $derived(substeps[currentSubstepIndex]);
 
+    let filteredClasses = $derived(
+        classes.map(cls => ({
+            ...cls,
+            attributes: filterProperties(cls.attributes),
+            associations: filterProperties(cls.associations),
+            enumEntries: filterProperties(cls.enumEntries),
+        })),
+    );
+
     onMount(() => {
+        const storedState = get(migrationState);
+        ignorePrefixes = storedState.ignorePrefixes;
+
         fetch(PUBLIC_BACKEND_URL + "/migrations/property-renames", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
@@ -41,6 +57,30 @@
             .catch(e => console.log("Failed to fetch property overview:", e))
             .finally(() => (isLoading = false));
     });
+
+    function filterProperties(properties) {
+        if (!properties) return properties;
+        if (!ignorePrefixes) return properties;
+
+        const deletedAndRenamed = properties.deletedAndRenamed ?? [];
+        const added = properties.added ?? [];
+
+        const hidden = deletedAndRenamed.filter(r =>
+            isPrefixOnlyRename(r.oldResource.iri, r.newResource?.iri),
+        );
+        const visible = deletedAndRenamed.filter(
+            r => !isPrefixOnlyRename(r.oldResource.iri, r.newResource?.iri),
+        );
+        const hiddenTargetIRIs = hidden
+            .map(r => r.newResource?.iri)
+            .filter(iri => iri != null);
+
+        return {
+            ...properties,
+            deletedAndRenamed: visible,
+            added: added.filter(a => !hiddenTargetIRIs.includes(a.iri)),
+        };
+    }
 
     export async function onNext() {
         let body = buildPropertyRenameList();
@@ -114,6 +154,6 @@
     </div>
 
     <div class="no-scrollbar flex-1 overflow-y-auto p-2">
-        <currentSubstep.component {classes} {isLoading} />
+        <currentSubstep.component classes={filteredClasses} {isLoading} />
     </div>
 </div>
