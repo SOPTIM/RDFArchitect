@@ -96,6 +96,7 @@ public class QueryDatasetService
                             .getGraphWithContext(new GraphIdentifier(datasetName, graphUri))
                             .begin(ReadWrite.READ)) {
                 var graph = GraphUtils.deepCopy(ctx.getRdfGraph());
+                graph.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
                 keyword = CimProfile.wrap(graph).getDcatKeyword();
             } catch (Exception _) {
                 // ignore, keyword will be empty
