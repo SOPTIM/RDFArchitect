@@ -12,17 +12,17 @@
 - **License:** Apache License 2.0
 - **URL:** [https://commons.apache.org/proper/commons-text](https://commons.apache.org/proper/commons-text)
 
-### Apache Jena - Extras - Query Builder
-- **Package:** org.apache.jena
-- **Version:** 6.1.0
-- **License:** Apache License 2.0
-- **URL:** [https://jena.apache.org/jena-querybuilder/](https://jena.apache.org/jena-querybuilder/)
-
 ### Apache Jena - Libraries POM
 - **Package:** org.apache.jena
-- **Version:** 6.1.0
+- **Version:** 6.2.0
 - **License:** Apache License 2.0
 - **URL:** [https://jena.apache.org/apache-jena-libs/](https://jena.apache.org/apache-jena-libs/)
+
+### Apache Jena - Query Builder
+- **Package:** org.apache.jena
+- **Version:** 6.2.0
+- **License:** Apache License 2.0
+- **URL:** [https://jena.apache.org/jena-querybuilder/](https://jena.apache.org/jena-querybuilder/)
 
 ### Jackson-dataformat-YAML
 - **Package:** com.fasterxml.jackson.dataformat
