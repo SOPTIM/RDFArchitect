@@ -32,6 +32,7 @@
         updateDatasetClassPositions,
     } from "$lib/api/generated/index.ts";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
     import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import {
@@ -49,6 +50,7 @@
     import {
         getEdgeParams,
         getClosestSegmentInsertionIndex,
+        distanceToPolyline,
     } from "./components/edge/edgeUtils.ts";
     import InheritanceEdge from "./components/edge/InheritanceEdge.svelte";
     import {
@@ -64,6 +66,8 @@
         getTargetEndPoint,
         getInnerBendPoints,
         toEdgePoints,
+        findBendPointAtPosition,
+        isEndPoint,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
@@ -118,6 +122,7 @@
     let edges = $state.raw([...inputEdges]);
     let isWorkspaceReadOnly = $state();
     let containerEl;
+    let lastCursorPosition = null;
 
     let lastSelectedDiagramId = null;
 
@@ -192,12 +197,28 @@
 
         const el = containerEl;
         el.addEventListener("pointerdown", onContainerPointerDown, true);
+        el.addEventListener("pointermove", onContainerPointerMove, true);
         el.addEventListener("click", onContainerClick, true);
         el.addEventListener("contextmenu", onContainerContextMenu, true);
+
+        const unregisterAddBendPoint = shortcutStore.register(
+            "diagram-add-bend-point-at-cursor",
+            ["ctrl", "q"],
+            addBendPointAtCursor,
+        );
+        const unregisterDeleteBendPoint = shortcutStore.register(
+            "diagram-delete-bend-point-at-cursor",
+            ["ctrl", "shift", "q"],
+            deleteBendPointAtCursor,
+        );
+
         return () => {
             el.removeEventListener("pointerdown", onContainerPointerDown, true);
+            el.removeEventListener("pointermove", onContainerPointerMove, true);
             el.removeEventListener("click", onContainerClick, true);
             el.removeEventListener("contextmenu", onContainerContextMenu, true);
+            unregisterAddBendPoint();
+            unregisterDeleteBendPoint();
         };
     });
 
@@ -215,6 +236,10 @@
     function onContainerPointerDown(event) {
         selection.notifyPointerDown();
         pan.handleContainerPointerDown(event);
+    }
+
+    function onContainerPointerMove(event) {
+        lastCursorPosition = { x: event.clientX, y: event.clientY };
     }
 
     function onContainerClick(event) {
@@ -577,6 +602,98 @@
         const points = edge.data?.bendPoints ?? [];
         const nextPoints = points.filter(point => point.id !== endPointId);
         patchEdgeData(edgeId, { bendPoints: nextPoints });
+    }
+
+    // Finds the edge whose drawn polyline is closest to the given flow position,
+    // within the configured edge hit radius. Considers association and inheritance
+    // edges (both use polyline routing). Returns the edge or null.
+    function findEdgeAtFlowPosition(flowPosition, hitRadius) {
+        let closestEdge = null;
+        let closestDistance = Infinity;
+        for (const edge of edges) {
+            if (edge.source === edge.target) continue;
+            const innerBendPoints = getInnerBendPoints(getBendPoints(edge));
+            const endpoints = edgeEndpoints(edge, innerBendPoints);
+            if (!endpoints) continue;
+            const orderedPoints = [
+                endpoints.source,
+                ...innerBendPoints,
+                endpoints.target,
+            ];
+            const distance = distanceToPolyline(flowPosition, orderedPoints);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestEdge = edge;
+            }
+        }
+        return closestDistance <= hitRadius ? closestEdge : null;
+    }
+
+    // Resolves the current cursor position to a flow position and a zoom-corrected
+    // hit radius, or null if the cursor position or SvelteFlow is unavailable.
+    function cursorFlowContext(baseHitRadiusPx) {
+        const svelteFlow = svelteFlowAPI?.svelteFlow;
+        if (!svelteFlow || !lastCursorPosition) return null;
+        const flowPosition = svelteFlow.screenToFlowPosition(
+            { x: lastCursorPosition.x, y: lastCursorPosition.y },
+            { snapToGrid: false },
+        );
+        const zoom = svelteFlow.getViewport?.().zoom ?? 1;
+        return { flowPosition, hitRadius: baseHitRadiusPx / (zoom || 1) };
+    }
+
+    // Ctrl+Q: creates a bend point on the edge closest to the cursor. Selects that
+    // edge if it was not selected yet.
+    function addBendPointAtCursor() {
+        if (isDatasetReadOnly) return;
+        const context = cursorFlowContext(
+            EDGE_INTERACTION_CONFIG.edgeHitRadiusPx,
+        );
+        if (!context) return;
+        const edge = findEdgeAtFlowPosition(
+            context.flowPosition,
+            context.hitRadius,
+        );
+        if (!edge) return;
+
+        if (!edge.selected) selectOnlyEdge(edge.id);
+        handleEdgeAddBendPoint({
+            edgeId: edge.id,
+            flowPosition: context.flowPosition,
+        });
+    }
+
+    // Ctrl+Shift+Q: deletes the bend or end point under the cursor, across all
+    // edges. Selects the affected edge if it was not selected yet.
+    function deleteBendPointAtCursor() {
+        if (isDatasetReadOnly) return;
+        const context = cursorFlowContext(
+            EDGE_INTERACTION_CONFIG.pointHitRadiusPx,
+        );
+        if (!context) return;
+
+        for (const edge of edges) {
+            const hitPoint = findBendPointAtPosition(
+                getBendPoints(edge),
+                context.flowPosition,
+                context.hitRadius,
+            );
+            if (!hitPoint) continue;
+
+            if (!edge.selected) selectOnlyEdge(edge.id);
+            if (isEndPoint(hitPoint)) {
+                handleEdgeDeleteEndPoint({
+                    edgeId: edge.id,
+                    endPointId: hitPoint.id,
+                });
+            } else {
+                handleEdgeDeleteBendPoint({
+                    edgeId: edge.id,
+                    bendPointId: hitPoint.id,
+                });
+            }
+            return;
+        }
     }
 
     function patchEdgeData(edgeId, dataPatch) {
