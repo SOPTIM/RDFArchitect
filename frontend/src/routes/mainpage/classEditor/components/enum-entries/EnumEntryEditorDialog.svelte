@@ -88,12 +88,12 @@
                   classEditorContext.graphUri,
                   classUuid,
                   apiEnumEntry,
-                  isNewEnumEntr,
+                  isNewEnumEntry,
               );
 
         if (error) return;
 
-        editorState.selectedClassUUID.trigger();
+        editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
 
         enumEntry.uuid.value = data;

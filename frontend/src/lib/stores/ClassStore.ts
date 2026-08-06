@@ -267,7 +267,7 @@ function createClassStore() {
 
         const { data, error } = await getClassInformation({
             path: { datasetName, graphURI, classUUID },
-            query: {includeSuperClasses}
+            query: { includeSuperClasses },
         });
 
         if (error || !data) {
@@ -324,7 +324,10 @@ function createClassStore() {
         graphURI: string,
         classUUID: string,
     ): ClassUmlAdaptedDto | null {
-        const state = getGraphState(get(store), makeGraphKey(datasetName, graphURI));
+        const state = getGraphState(
+            get(store),
+            makeGraphKey(datasetName, graphURI),
+        );
         return (
             findInVariant(state.all.data, classUUID) ??
             findInVariant(state.internalOnly.data, classUUID) ??

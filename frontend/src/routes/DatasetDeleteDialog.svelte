@@ -23,13 +23,13 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
     import { classStore } from "$lib/stores/ClassStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
-    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     let { showDialog = $bindable(), datasetName } = $props();
 

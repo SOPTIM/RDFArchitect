@@ -91,7 +91,7 @@
             persisted.classUuid === classUuid ? persisted.sourceUuid : null;
 
         const cancellation = { cancelled: false };
-                resolving = true;
+        resolving = true;
 
         (async () => {
             await crossProfileStore.loadDiagram(datasetName);

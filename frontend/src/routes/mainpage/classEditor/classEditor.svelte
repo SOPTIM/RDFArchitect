@@ -111,7 +111,12 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            await classStore.loadClassInfo(datasetName, graphUri, classUuid, true);
+            await classStore.loadClassInfo(
+                datasetName,
+                graphUri,
+                classUuid,
+                true,
+            );
             const classDto = classStore.getClassInfo(
                 datasetName,
                 graphUri,

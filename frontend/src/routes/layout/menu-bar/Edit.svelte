@@ -30,7 +30,7 @@
         faRotateLeft,
         faRotateRight,
         faTags,
-        faTrash
+        faTrash,
     } from "@fortawesome/free-solid-svg-icons";
     import { onDestroy, onMount } from "svelte";
 
@@ -41,9 +41,8 @@
         editorState,
         forceReloadTrigger,
         multiSelectState,
-        SelectionLevel
+        SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
     import { datasetStore } from "$lib/stores/DatasetStore.ts";
     import { ontologyStore } from "$lib/stores/OntologyStore.ts";
     import { packageStore } from "$lib/stores/PackageStore.ts";
@@ -56,16 +55,13 @@
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
     import { inferSelectionLevel } from "../../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
+    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import { saveCopyClass } from "../../mainpage/packageNavigation/save-copy-class-to-backend.js";
 
-    let {
-        canUndo, canRedo, isDatasetReadOnly, reload = () => {
-        }
-    } = $props();
+    let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
 
     const shortcutsUnregister = [];
 
@@ -95,26 +91,26 @@
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
     let hasDatasetSelected = $derived(!!selectedDataset);
     let hasGraphSelected = $derived(
-        hasDatasetSelected && !!editorState.selectedGraph.getValue()
+        hasDatasetSelected && !!editorState.selectedGraph.getValue(),
     );
     let canAccessNamespaces = $derived(hasDatasetSelected);
     let canEditCurrentPackage = $derived(
         selectedPackageDetails &&
-        !selectedPackageDetails.external &&
-        selectedPackageDetails.label !== "default" &&
-        !isDatasetReadOnly
+            !selectedPackageDetails.external &&
+            selectedPackageDetails.label !== "default" &&
+            !isDatasetReadOnly,
     );
     let canDeleteCurrentPackage = $derived(
         selectedPackageDetails &&
-        !selectedPackageDetails.external &&
-        selectedPackageDetails.label !== "default" &&
-        !isDatasetReadOnly
+            !selectedPackageDetails.external &&
+            selectedPackageDetails.label !== "default" &&
+            !isDatasetReadOnly,
     );
     let graphHasOntology = $derived(!!ontology);
 
     let disableCopyClassButton = $derived(
         !editorState.selectedClass.getProperty("id") &&
-        multiSelectState.getSelected().length === 0
+            multiSelectState.getSelected().length === 0,
     );
 
     /*
@@ -128,7 +124,7 @@
                 datasetName: selected[0].datasetName,
                 graphUri: selected[0].graphUri,
                 uuids: selected.map(e => e.classUuid),
-                singleGraph: multiSelectState.isSingleGraph
+                singleGraph: multiSelectState.isSingleGraph,
             };
         }
         const uuid = editorState.selectedClass.getProperty("id");
@@ -137,15 +133,15 @@
                 datasetName: editorState.selectedClassDataset.getValue(),
                 graphUri: editorState.selectedClassGraph.getValue(),
                 uuids: [uuid],
-                singleGraph: true
+                singleGraph: true,
             };
         }
         return null;
     });
     let disableDeleteClassButton = $derived(
         isDatasetReadOnly ||
-        !deleteClassSelection ||
-        !deleteClassSelection.singleGraph
+            !deleteClassSelection ||
+            !deleteClassSelection.singleGraph,
     );
 
     // A custom diagram isn't deletable here, so it resolves to its graph/dataset.
@@ -170,9 +166,9 @@
 
     let disablePasteButton = $derived(
         isDatasetReadOnly ||
-        !hasGraphSelected ||
-        !editorState.selectedDiagram.getProperty("id") ||
-        copyState.isEmpty
+            !hasGraphSelected ||
+            !editorState.selectedDiagram.getProperty("id") ||
+            copyState.isEmpty,
     );
 
     $effect(async () => {
@@ -192,62 +188,62 @@
                 "newClass",
                 ["shift", "n"],
                 () => (showNewClassDialog = true),
-                true
+                true,
             ),
             shortcutStore.register(
                 "newPackage",
                 ["alt", "n"],
                 () => (showNewPackageDialog = true),
-                true
+                true,
             ),
             shortcutStore.register(
                 "namespaces",
                 ["ctrl", "shift", "a"],
                 () => (showNamespaceDialog = true),
-                true
+                true,
             ),
             shortcutStore.register(
                 "profileHeader",
                 ["ctrl", "alt", "p"],
                 () => (showEditOntologyDialog = true),
-                true
+                true,
             ),
             shortcutStore.register(
                 "editPackage",
                 ["ctrl", "shift", "k"],
                 () => launchPackageEditor(),
-                true
+                true,
             ),
             shortcutStore.register(
                 "toggleEdit",
                 ["ctrl", "alt", "r"],
                 () => toggleReadonly(),
-                true
+                true,
             ),
             shortcutStore.register("copyClass", ["ctrl", "c"], () =>
-                copyClassWithShortcut()
+                copyClassWithShortcut(),
             ),
             shortcutStore.register("deleteSelection", ["delete"], () =>
-                deleteSelectionWithShortcut()
+                deleteSelectionWithShortcut(),
             ),
             shortcutStore.register("paste", ["ctrl", "v"], () =>
-                pasteClassWithShortcut(false, true, true)
+                pasteClassWithShortcut(false, true, true),
             ),
             shortcutStore.register(
                 "pasteWithoutAttributes",
                 ["ctrl", "shift", "v"],
-                () => pasteClassWithShortcut(false, false, true)
+                () => pasteClassWithShortcut(false, false, true),
             ),
             shortcutStore.register(
                 "pasteWithoutAssociations",
                 ["ctrl", "alt", "v"],
-                () => pasteClassWithShortcut(false, true, false)
+                () => pasteClassWithShortcut(false, true, false),
             ),
             shortcutStore.register(
                 "pasteBare",
                 ["ctrl", "shift", "alt", "v"],
-                () => pasteClassWithShortcut(true, false, false)
-            )
+                () => pasteClassWithShortcut(true, false, false),
+            ),
         );
     });
 
@@ -263,7 +259,7 @@
         await ontologyStore.loadOntology(selectedDataset, selectedGraph);
         return ontologyStore.getOntologyForGraph(
             selectedDataset,
-            selectedGraph
+            selectedGraph,
         );
     }
 
@@ -274,7 +270,7 @@
 
         const { error } = await datasetStore.updateReadonly(
             selectedDataset,
-            false
+            false,
         );
         if (error) return;
 
@@ -289,7 +285,7 @@
 
         const { error } = await datasetStore.updateReadonly(
             selectedDataset,
-            true
+            true,
         );
         if (error) return;
 
@@ -326,7 +322,7 @@
         await packageStore.load(selectedDataset, selectedGraph);
         const packageData = packageStore.getPackages(
             selectedDataset,
-            selectedGraph
+            selectedGraph,
         );
 
         if (!packageData) {
@@ -336,14 +332,13 @@
         return [
             ...(packageData?.internal ?? []).map(p => ({
                 ...p,
-                external: false
+                external: false,
             })),
             ...(packageData?.external ?? []).map(p => ({
                 ...p,
-                external: true
-            }))
+                external: true,
+            })),
         ];
-
     }
 
     async function refreshSelectedPackageDetails(packages) {
@@ -383,7 +378,7 @@
     async function undo() {
         const { error } = await versionControlStore.undo(
             editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue()
+            editorState.selectedGraph.getValue(),
         );
         if (!error) {
             reload();
@@ -393,7 +388,7 @@
     async function redo() {
         const { error } = await versionControlStore.redo(
             editorState.selectedDataset.getValue(),
-            editorState.selectedGraph.getValue()
+            editorState.selectedGraph.getValue(),
         );
         if (!error) {
             reload();
@@ -405,8 +400,8 @@
             multiSelectState.copyEntriesOr({
                 classUUID: editorState.selectedClass.getProperty("id"),
                 graphURI: editorState.selectedClassGraph.getValue(),
-                datasetName: editorState.selectedClassDataset.getValue()
-            })
+                datasetName: editorState.selectedClassDataset.getValue(),
+            }),
         );
     }
 
@@ -417,7 +412,7 @@
             selectedPackageDetails,
             copyAsAbstract,
             copyAttributes,
-            copyAssociations
+            copyAssociations,
         );
     }
 
@@ -451,7 +446,7 @@
     function pasteClassWithShortcut(
         copyAsAbstract,
         copyAttributes,
-        copyAssociations
+        copyAssociations,
     ) {
         if (!disablePasteButton) {
             pasteClass(copyAsAbstract, copyAttributes, copyAssociations);

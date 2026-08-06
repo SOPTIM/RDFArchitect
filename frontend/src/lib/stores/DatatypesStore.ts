@@ -194,8 +194,10 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
     ): Uri[] | null {
-        return getGraphVocabulary(get(store), makeGraphKey(datasetName, graphURI))
-            .primitives.data;
+        return getGraphVocabulary(
+            get(store),
+            makeGraphKey(datasetName, graphURI),
+        ).primitives.data;
     }
 
     // ----- Datatypes -----
@@ -222,8 +224,10 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
     ): ClassUmlAdaptedDto[] | null {
-        return getGraphVocabulary(get(store), makeGraphKey(datasetName, graphURI))
-            .datatypes.data;
+        return getGraphVocabulary(
+            get(store),
+            makeGraphKey(datasetName, graphURI),
+        ).datatypes.data;
     }
 
     // ----- Stereotypes -----
@@ -250,8 +254,10 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
     ): string[] | null {
-        return getGraphVocabulary(get(store), makeGraphKey(datasetName, graphURI))
-            .stereotypes.data;
+        return getGraphVocabulary(
+            get(store),
+            makeGraphKey(datasetName, graphURI),
+        ).stereotypes.data;
     }
 
     // ----- Convenience: load all vocabularies for a graph at once -----

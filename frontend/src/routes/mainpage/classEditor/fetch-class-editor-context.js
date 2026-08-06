@@ -23,7 +23,6 @@ import {
     getXSDPrimitives,
     loadXsdPrimitives,
 } from "$lib/stores/XSDDatatypesStore.ts";
-import { load } from "asciidoctor";
 
 export async function getPackages(datasetName, graphUri) {
     // fetch packages

@@ -97,7 +97,9 @@
             );
             if (!error) {
                 generatedOntologyEntries = data;
-                generatedOntologyEntries.forEach(entry => (entry.generate = true));
+                generatedOntologyEntries.forEach(
+                    entry => (entry.generate = true),
+                );
             }
             return;
         }
