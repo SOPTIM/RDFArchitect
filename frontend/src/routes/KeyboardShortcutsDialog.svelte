@@ -60,7 +60,7 @@
                     keys: ["Ctrl", "Alt", "V"],
                 },
                 {
-                    description: "Paste bare",
+                    description: "Paste Bare",
                     keys: ["Ctrl", "Shift", "Alt", "V"],
                 },
                 {
@@ -68,11 +68,11 @@
                     keys: ["Ctrl", "Alt", "R"],
                 },
                 {
-                    description: "Manage Namespaces",
+                    description: "Edit Namespaces",
                     keys: ["Ctrl", "Shift", "A"],
                 },
                 {
-                    description: "Create / Edit Profile Header",
+                    description: "New / Edit Profile Header",
                     keys: ["Ctrl", "Alt", "P"],
                 },
             ],
@@ -91,7 +91,7 @@
                     keys: ["Ctrl", "Shift", "D"],
                 },
                 {
-                    description: "Constraints Full View (SHACL)",
+                    description: "View Constraints (SHACL)",
                     keys: ["Ctrl", "Shift", "L"],
                 },
             ],
@@ -117,7 +117,7 @@
     size="w-full max-w-3xl h-2/3"
 >
     <div
-        class="mx-2 flex flex-col gap-6 overflow-y-auto py-2 h-full sm:flex-row sm:gap-x-6"
+        class="mx-2 flex h-full flex-col gap-6 overflow-y-auto py-2 sm:flex-row sm:gap-x-6"
     >
         <div class="flex flex-1 flex-col gap-6">
             {#each sections.slice(0, 2) as section}

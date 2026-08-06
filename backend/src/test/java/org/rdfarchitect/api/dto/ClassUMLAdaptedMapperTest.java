@@ -168,7 +168,10 @@ class ClassUMLAdaptedMapperTest {
         @Test
         void toCIM_allCoreFields() {
             classDTO.setSuperClass(
-                    new SuperClassDTO("http://example.com/superClass#", "SuperClass"));
+                    ClassUMLAdaptedDTO.builder()
+                            .prefix("http://example.com/superClass#")
+                            .label("SuperClass")
+                            .build());
             classDTO.setComment("This is a test class");
             classDTO.setStereotypes(
                     List.of("Entsoe", "http://iec.ch/TC57/NonStandard/UML#concrete", "Operation"));

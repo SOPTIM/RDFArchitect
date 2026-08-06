@@ -20,25 +20,25 @@
 
 ### @fortawesome/fontawesome-svg-core
 - **Package:** @fortawesome/fontawesome-svg-core
-- **Version:** 7.3.0
+- **Version:** 7.3.1
 - **License:** MIT
 - **URL:** [https://fontawesome.com](https://fontawesome.com)
 
 ### @fortawesome/free-brands-svg-icons
 - **Package:** @fortawesome/free-brands-svg-icons
-- **Version:** 7.3.0
+- **Version:** 7.3.1
 - **License:** (CC-BY-4.0 AND MIT)
 - **URL:** [https://fontawesome.com](https://fontawesome.com)
 
 ### @fortawesome/free-regular-svg-icons
 - **Package:** @fortawesome/free-regular-svg-icons
-- **Version:** 7.3.0
+- **Version:** 7.3.1
 - **License:** (CC-BY-4.0 AND MIT)
 - **URL:** [https://fontawesome.com](https://fontawesome.com)
 
 ### @fortawesome/free-solid-svg-icons
 - **Package:** @fortawesome/free-solid-svg-icons
-- **Version:** 7.3.0
+- **Version:** 7.3.1
 - **License:** (CC-BY-4.0 AND MIT)
 - **URL:** [https://fontawesome.com](https://fontawesome.com)
 
@@ -56,19 +56,19 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.68.0
+- **Version:** 2.69.1
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
 ### @sveltejs/vite-plugin-svelte
 - **Package:** @sveltejs/vite-plugin-svelte
-- **Version:** 7.1.2
+- **Version:** 7.2.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/vite-plugin-svelte#readme](https://github.com/sveltejs/vite-plugin-svelte#readme)
 
 ### @tailwindcss/vite
 - **Package:** @tailwindcss/vite
-- **Version:** 4.3.2
+- **Version:** 4.3.3
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -80,25 +80,25 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.62.1
+- **Version:** 8.65.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.1
+- **Version:** 1.6.2
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.0.0
+- **Version:** 4.0.6
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
 ### autoprefixer
 - **Package:** autoprefixer
-- **Version:** 10.5.2
+- **Version:** 10.5.4
 - **License:** MIT
 
 ### bits-ui
@@ -120,13 +120,13 @@
 
 ### elkjs
 - **Package:** elkjs
-- **Version:** 0.11.1
-- **License:** EPL-2.0
+- **Version:** 0.12.0
+- **License:** EPL-2.0 OR GPL-3.0-or-later
 - **URL:** [https://github.com/kieler/elkjs](https://github.com/kieler/elkjs)
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.6.0
+- **Version:** 10.8.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -144,7 +144,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.20.0
+- **Version:** 3.22.0
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -156,12 +156,12 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.7.0
+- **Version:** 17.8.0
 - **License:** MIT
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 29.1.1
+- **Version:** 30.0.0
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -173,13 +173,13 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.16
+- **Version:** 8.5.24
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
 ### prettier
 - **Package:** prettier
-- **Version:** 3.9.4
+- **Version:** 3.9.6
 - **License:** MIT
 - **URL:** [https://prettier.io](https://prettier.io)
 
@@ -191,13 +191,13 @@
 
 ### prettier-plugin-tailwindcss
 - **Package:** prettier-plugin-tailwindcss
-- **Version:** 0.8.0
+- **Version:** 0.8.1
 - **License:** MIT
 - **URL:** [https://github.com/tailwindlabs/prettier-plugin-tailwindcss](https://github.com/tailwindlabs/prettier-plugin-tailwindcss)
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.4
+- **Version:** 5.56.8
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -227,7 +227,7 @@
 
 ### tailwindcss
 - **Package:** tailwindcss
-- **Version:** 4.3.2
+- **Version:** 4.3.3
 - **License:** MIT
 - **URL:** [https://tailwindcss.com](https://tailwindcss.com)
 
@@ -239,7 +239,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.62.1
+- **Version:** 8.65.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -257,13 +257,13 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.1.0
+- **Version:** 8.1.5
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
 ### vitest
 - **Package:** vitest
-- **Version:** 4.1.9
+- **Version:** 4.1.10
 - **License:** MIT
 - **URL:** [https://vitest.dev](https://vitest.dev)
 

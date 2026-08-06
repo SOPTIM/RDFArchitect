@@ -135,9 +135,9 @@
     <div class="mx-2 flex h-[60vh] max-h-[60vh] flex-col">
         <h2 class="mb-2 flex-none text-lg font-semibold">
             {#if readonly}
-                View namespaces - {datasetName}
+                View Namespaces - {datasetName}
             {:else}
-                Manage namespaces - {datasetName}
+                Edit Namespaces - {datasetName}
             {/if}
         </h2>
 

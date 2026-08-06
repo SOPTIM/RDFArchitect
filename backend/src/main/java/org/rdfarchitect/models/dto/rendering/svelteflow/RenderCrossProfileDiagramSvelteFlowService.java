@@ -33,6 +33,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.EnumEntryDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
+import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
@@ -40,6 +41,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -90,13 +92,16 @@ public class RenderCrossProfileDiagramSvelteFlowService
             CrossProfileDiagramDTO diagram, RenderingLayoutData layoutData) {
         List<NodeDTO> nodeDTOs = new ArrayList<>();
         for (var mergedClass : diagram.getClasses()) {
-            nodeDTOs.add(assembleNodeDTO(mergedClass, layoutData));
+            nodeDTOs.add(assembleNodeDTO(mergedClass, diagram.getClasses(), layoutData));
         }
         return nodeDTOs;
     }
 
     /** Assembles a NodeDTO for a single MergedClassDTO. */
-    private NodeDTO assembleNodeDTO(MergedClassDTO mergedClass, RenderingLayoutData layoutData) {
+    private NodeDTO assembleNodeDTO(
+            MergedClassDTO mergedClass,
+            List<MergedClassDTO> allClasses,
+            RenderingLayoutData layoutData) {
         var dop =
                 layoutData != null && layoutData.getClassLayoutingData() != null
                         ? layoutData.getClassLayoutingData().get(mergedClass.getUuid())
@@ -128,6 +133,7 @@ public class RenderCrossProfileDiagramSvelteFlowService
                         .stereotypes(stereotypes)
                         .attributes(attributes)
                         .enumEntries(enumEntries)
+                        .superClasses(getClassSuperClasses(mergedClass, allClasses))
                         .build();
 
         return NodeDTO.builder()
@@ -211,6 +217,61 @@ public class RenderCrossProfileDiagramSvelteFlowService
                             .build());
         }
         return enumEntries;
+    }
+
+    private List<SuperClassDTO> getClassSuperClasses(
+            MergedClassDTO mergedClass, List<MergedClassDTO> allClasses) {
+        var superClassDTOs = new ArrayList<SuperClassDTO>();
+        var visited = new HashSet<String>();
+        visited.add(mergedClass.getClassUri());
+
+        var queue = new ArrayDeque<>(mergedClass.getSuperClasses());
+        while (!queue.isEmpty()) {
+            var superClassRef = queue.poll().getValue();
+            if (superClassRef == null || superClassRef.getLabel() == null) {
+                continue;
+            }
+
+            var resolved = resolveSuperClass(superClassRef, allClasses);
+            var visitedKey = resolved != null ? resolved.getClassUri() : superClassRef.getLabel();
+            if (!visited.add(visitedKey)) {
+                continue;
+            }
+
+            if (resolved != null) {
+                superClassDTOs.add(
+                        SuperClassDTO.builder()
+                                .uuid(resolved.getUuid())
+                                .label(resolved.getLabel())
+                                .attributes(getClassAttributes(resolved))
+                                .enumEntries(getClassEnumEntries(resolved))
+                                .build());
+                queue.addAll(resolved.getSuperClasses());
+            } else {
+                superClassDTOs.add(
+                        SuperClassDTO.builder()
+                                .label(superClassRef.getLabel())
+                                .attributes(List.of())
+                                .enumEntries(List.of())
+                                .build());
+            }
+        }
+
+        return superClassDTOs;
+    }
+
+    private MergedClassDTO resolveSuperClass(
+            org.rdfarchitect.api.dto.SuperClassDTO superClassRef, List<MergedClassDTO> allClasses) {
+        var label = superClassRef.getLabel();
+        return allClasses.stream()
+                .filter(
+                        candidate -> {
+                            var uri = candidate.getClassUri();
+                            return uri != null
+                                    && (uri.endsWith("#" + label) || uri.endsWith("/" + label));
+                        })
+                .findFirst()
+                .orElse(null);
     }
 
     /** Assembles all edges (inheritance and associations) for the diagram. */

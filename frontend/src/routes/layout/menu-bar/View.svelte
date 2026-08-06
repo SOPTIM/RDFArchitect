@@ -129,7 +129,7 @@
             faIcon={faEye}
             altText="Ctrl+Shift+L"
         >
-            Constraints (SHACL)
+            View Constraints (SHACL)
         </Menubar.Item.Button>
     </Menubar.Content>
 </Menubar.Menu>

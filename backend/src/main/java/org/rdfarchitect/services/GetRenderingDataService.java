@@ -21,15 +21,16 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.dl.RenderingLayoutData;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.services.rendering.GraphToCIMCollectionConverterUseCase;
-import org.rdfarchitect.services.rendering.RenderCIMCollectionUseCase;
+import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.UUID;
@@ -39,8 +40,7 @@ import java.util.UUID;
 public class GetRenderingDataService implements GetRenderingDataUseCase {
 
     private final DatabasePort databasePort;
-    private final GraphToCIMCollectionConverterUseCase converter;
-    private final RenderCIMCollectionUseCase renderer;
+    private final RenderCIMFacadeCollectionUseCase renderer;
 
     @Override
     public RenderingDataDTO getRenderingData(
@@ -64,7 +64,9 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
                     RenderingLayoutData.builder().classLayoutingData(classLayoutingData).build();
         }
 
-        var cimCollection = converter.convert(rdfGraphCopy, graphIdentifier, filter);
-        return renderer.renderUML(cimCollection, layoutData);
+        var cimModel =
+                new CIMModelFacade(
+                        graphIdentifier.graphUri(), ModelFactory.createModelForGraph(rdfGraphCopy));
+        return renderer.renderUML(cimModel, filter, layoutData);
     }
 }

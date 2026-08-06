@@ -291,10 +291,10 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    primaryLabel="Add Class"
+    primaryLabel="Create Class"
     onPrimary={newClass}
     disablePrimary={disableSubmit}
-    title="Add Class"
+    title="New Class"
 >
     <div class="mx-2 flex h-full flex-col">
         <DatasetAndGraphSelection

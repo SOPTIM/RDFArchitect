@@ -91,7 +91,7 @@
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-2/3 text-sm leading-relaxed">
-            Please select the graph that you want to extend this class in
+            Please select the schema that you want to extend this class in
         </p>
         <DatasetAndGraphSelection
             bind:dataset={selectedDatasetName}

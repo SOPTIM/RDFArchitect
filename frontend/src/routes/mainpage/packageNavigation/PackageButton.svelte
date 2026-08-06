@@ -104,7 +104,9 @@
     let packageHighlightLabel = $derived(
         shortenIri(namespaces, packageNavEntry.tooltip),
     );
-    const packageActionLabel = $derived(readonly ? "View" : "Edit");
+    const packageActionLabel = $derived(
+        readonly ? "View Package" : "Edit Package",
+    );
     const packageActionIcon = $derived(readonly ? faEye : faPencil);
     const disablePackageAction = $derived(
         readonly ? false : isProtectedPackage,
@@ -207,7 +209,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Shift+V"
                     >
-                        Paste without attributes/enum entries
+                        Paste without Attributes/Enum Entries
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(false, true, false)}
@@ -215,7 +217,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Alt+V"
                     >
-                        Paste without associations
+                        Paste without Associations
                     </ContextMenu.Item.Button>
                     <ContextMenu.Item.Button
                         onSelect={() => pasteClass(true, false, false)}
@@ -223,7 +225,7 @@
                         disabled={disablePasteButton}
                         altText="Ctrl+Shift+Alt+V"
                     >
-                        Paste bare
+                        Paste Bare
                     </ContextMenu.Item.Button>
                 </ContextMenu.SubMenu.Content>
             </ContextMenu.SubMenu.Root>
@@ -234,7 +236,7 @@
                 }}
                 faIcon={faObjectGroup}
             >
-                Add to Profile Diagram
+                Add to Schema Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -256,7 +258,7 @@
                 {packageActionLabel}
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button onSelect={copyDatasetUrl} faIcon={faLink}>
-                Copy URL
+                Copy Link to Package
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
@@ -310,7 +312,7 @@
     <AddToDatasetDiagramDialog
         bind:showDialog={showAddToDatasetDiagramDialog}
         lockedDatasetName={datasetNavEntry.id}
-        graphUri={graphNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}

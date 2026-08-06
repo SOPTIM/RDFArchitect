@@ -35,7 +35,7 @@ Supported input formats are **RDF/XML (.rdf)**, **Turtle (.ttl)**, and **N-Tripl
 
 A separate import path for custom SHACL shapes. These are stored *next to* the schema graph and can later be viewed from the same UI as the generated SHACL (see [SHACL](./shacl)).
 
-### Create an empty schema (Edit → New → Schema (RDFS))
+### Create an empty schema (Edit → New → Schema)
 
 Starts a new, empty graph in the selected dataset. Useful when you want to build a small extension profile from scratch rather than import one.
 

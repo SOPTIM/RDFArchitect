@@ -16,7 +16,11 @@
   -->
 
 <script>
-    import { faPaste, faPlus } from "@fortawesome/free-solid-svg-icons";
+    import {
+        faObjectGroup,
+        faPaste,
+        faPlus,
+    } from "@fortawesome/free-solid-svg-icons";
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -32,6 +36,8 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
+    import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import { saveCopyClass } from "../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
     import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
 
@@ -41,6 +47,7 @@
         lockedDatasetName = "",
         lockedGraphUri = "",
         lockedPackage = "",
+        classes = [],
         onClassCreated = () => {},
         onClose = () => {},
     } = $props();
@@ -50,11 +57,16 @@
     let triggerRef = $state(null);
     let open = $state(false);
     let showNewClassDialog = $state(false);
+    let showAddAllToGraphDiagramDialog = $state(false);
+    let showAddAllToDatasetDiagramDialog = $state(false);
     let classLayoutPosition = $state(null);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
     let disablePasteButton = $derived(copyState.isEmpty);
+
+    let diagramType = $derived(editorState.selectedDiagram.getProperty("type"));
+    let addAllDisabled = $derived(classes.length === 0);
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -67,6 +79,16 @@
 
     function handleOpenChange(nextOpen) {
         handleContextMenuOpenChange(nextOpen, value => (open = value), onClose);
+    }
+
+    function openAddAllToGraphDiagramDialog() {
+        showAddAllToGraphDiagramDialog = true;
+        onClose();
+    }
+
+    function openAddAllToDatasetDiagramDialog() {
+        showAddAllToDatasetDiagramDialog = true;
+        onClose();
     }
 
     function openNewClassDialog() {
@@ -120,57 +142,79 @@
         style={triggerStyle}
         {disabled}
     />
-    {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
+    {#if diagramType !== DiagramType.CROSS_PROFILE}
         <ContextMenu.Content>
-            <ContextMenu.Item.Button
-                onSelect={openNewClassDialog}
-                {disabled}
-                faIcon={faPlus}
-                altText="Shift+N"
-            >
-                Add class
-            </ContextMenu.Item.Button>
+            {#if diagramType === DiagramType.PACKAGE}
+                <ContextMenu.Item.Button
+                    onSelect={openNewClassDialog}
+                    {disabled}
+                    faIcon={faPlus}
+                    altText="Shift+N"
+                >
+                    New Class
+                </ContextMenu.Item.Button>
 
-            <ContextMenu.Separator />
-            <ContextMenu.SubMenu.Root>
-                <ContextMenu.SubMenu.Trigger faIcon={faPaste} disabled={false}>
-                    Paste
-                </ContextMenu.SubMenu.Trigger>
-                <ContextMenu.SubMenu.Content>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(false, true, true)}
+                <ContextMenu.Separator />
+                <ContextMenu.SubMenu.Root>
+                    <ContextMenu.SubMenu.Trigger
                         faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+V"
+                        disabled={false}
                     >
                         Paste
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(false, false, true)}
-                        faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+Shift+V"
-                    >
-                        Paste without attributes/enum entries
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(false, true, false)}
-                        faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+Alt+V"
-                    >
-                        Paste without associations
-                    </ContextMenu.Item.Button>
-                    <ContextMenu.Item.Button
-                        onSelect={() => pasteClass(true, false, false)}
-                        faIcon={faPaste}
-                        disabled={disablePasteButton}
-                        altText="Ctrl+Shift+Alt+V"
-                    >
-                        Paste bare
-                    </ContextMenu.Item.Button>
-                </ContextMenu.SubMenu.Content>
-            </ContextMenu.SubMenu.Root>
+                    </ContextMenu.SubMenu.Trigger>
+                    <ContextMenu.SubMenu.Content>
+                        <ContextMenu.Item.Button
+                            onSelect={() => pasteClass(false, true, true)}
+                            faIcon={faPaste}
+                            disabled={disablePasteButton}
+                            altText="Ctrl+V"
+                        >
+                            Paste
+                        </ContextMenu.Item.Button>
+                        <ContextMenu.Item.Button
+                            onSelect={() => pasteClass(false, false, true)}
+                            faIcon={faPaste}
+                            disabled={disablePasteButton}
+                            altText="Ctrl+Shift+V"
+                        >
+                            Paste without Attributes/Enum Entries
+                        </ContextMenu.Item.Button>
+                        <ContextMenu.Item.Button
+                            onSelect={() => pasteClass(false, true, false)}
+                            faIcon={faPaste}
+                            disabled={disablePasteButton}
+                            altText="Ctrl+Alt+V"
+                        >
+                            Paste without Associations
+                        </ContextMenu.Item.Button>
+                        <ContextMenu.Item.Button
+                            onSelect={() => pasteClass(true, false, false)}
+                            faIcon={faPaste}
+                            disabled={disablePasteButton}
+                            altText="Ctrl+Shift+Alt+V"
+                        >
+                            Paste Bare
+                        </ContextMenu.Item.Button>
+                    </ContextMenu.SubMenu.Content>
+                </ContextMenu.SubMenu.Root>
+                <ContextMenu.Separator />
+            {/if}
+            {#if lockedGraphUri}
+                <ContextMenu.Item.Button
+                    onSelect={openAddAllToGraphDiagramDialog}
+                    disabled={addAllDisabled}
+                    faIcon={faObjectGroup}
+                >
+                    Add all to Schema Diagram
+                </ContextMenu.Item.Button>
+            {/if}
+            <ContextMenu.Item.Button
+                onSelect={openAddAllToDatasetDiagramDialog}
+                disabled={addAllDisabled}
+                faIcon={faObjectGroup}
+            >
+                Add all to Dataset Diagram
+            </ContextMenu.Item.Button>
         </ContextMenu.Content>
     {/if}
 </ContextMenu.Root>
@@ -183,3 +227,21 @@
     {classLayoutPosition}
     {onClassCreated}
 />
+
+{#if showAddAllToGraphDiagramDialog}
+    <AddToGraphDiagramDialog
+        bind:showDialog={showAddAllToGraphDiagramDialog}
+        {lockedDatasetName}
+        {lockedGraphUri}
+        {classes}
+    />
+{/if}
+
+{#if showAddAllToDatasetDiagramDialog}
+    <AddToDatasetDiagramDialog
+        bind:showDialog={showAddAllToDatasetDiagramDialog}
+        {lockedDatasetName}
+        {lockedGraphUri}
+        {classes}
+    />
+{/if}

@@ -22,5 +22,6 @@ import org.rdfarchitect.database.GraphIdentifier;
 
 public interface GetClassInformationUseCase {
 
-    ClassUMLAdaptedDTO getClassInformation(GraphIdentifier graphIdentifier, String classUUID);
+    ClassUMLAdaptedDTO getClassInformation(
+            GraphIdentifier graphIdentifier, String classUUID, boolean includeSuperClasses);
 }

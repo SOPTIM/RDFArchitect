@@ -33,4 +33,5 @@ public class NodeDataDTO {
     private List<String> stereotypes;
     private List<AttributeDTO> attributes;
     private List<EnumEntryDTO> enumEntries;
+    private List<SuperClassDTO> superClasses;
 }
