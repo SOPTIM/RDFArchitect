@@ -43,7 +43,6 @@
         diagramName = "",
         diagramId,
         selectedClasses = [],
-        allDiagrams = [],
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
@@ -53,9 +52,10 @@
     let graphs = $state([]);
     let classesByPackageAndGraph = $state({});
     let packagesByGraph = $state({});
+    let otherDiagrams = $state([]);
 
     let violations = $derived(
-        isValidDiagramName(localDiagramName, allDiagrams),
+        isValidDiagramName(localDiagramName, otherDiagrams),
     );
     let disableSubmit = $derived(violations.length > 0);
 
@@ -63,6 +63,7 @@
         localDiagramName = diagramName;
         localDiagramId = diagramId ? diagramId : crypto.randomUUID();
 
+        await fetchOtherDiagrams();
         await fetchGraphs();
         await createPackageMap();
         await createClassMap();
@@ -72,6 +73,20 @@
     function onClose() {
         localDiagramName = "";
         localDiagramId = crypto.randomUUID();
+    }
+
+    async function fetchOtherDiagrams() {
+        try {
+            const res =
+                await bec.getCustomDiagramsForDataset(lockedDatasetName);
+            const diagrams = await res.json();
+            otherDiagrams = diagrams.filter(
+                d => d.diagramId !== localDiagramId,
+            );
+        } catch (err) {
+            console.error("Failed to load diagrams:", err);
+            otherDiagrams = [];
+        }
     }
 
     async function getGraphs(datasetName) {

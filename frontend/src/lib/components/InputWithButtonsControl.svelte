@@ -35,6 +35,7 @@
         type,
         buttons = [],
         height = 8,
+        ...inputAttributes
     } = $props();
 
     let groupFocus = $state(false);
@@ -102,6 +103,7 @@
             {readonly}
             {list}
             {title}
+            {...inputAttributes}
         />
 
         <div

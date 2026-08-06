@@ -312,7 +312,7 @@
     <AddToDatasetDiagramDialog
         bind:showDialog={showAddToDatasetDiagramDialog}
         lockedDatasetName={datasetNavEntry.id}
-        graphUri={graphNavEntry.id}
+        lockedGraphUri={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}
