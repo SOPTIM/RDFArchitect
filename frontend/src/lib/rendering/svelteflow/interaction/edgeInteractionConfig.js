@@ -36,6 +36,12 @@ export const EDGE_INTERACTION_CONFIG = {
      * stays constant across zoom levels.
      */
     pointHitRadiusPx: 10,
+    /**
+     * Base hit radius (in screen pixels) for detecting the edge line closest to
+     * the cursor for the on-cursor bend point hotkeys. Divided by the zoom level
+     * so the felt hit area stays constant across zoom levels.
+     */
+    edgeHitRadiusPx: 20,
 
     /** Auto-pan behaviour while dragging a bend or end point near the border. */
     autoPan: {
