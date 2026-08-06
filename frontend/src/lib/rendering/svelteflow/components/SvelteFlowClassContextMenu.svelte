@@ -25,6 +25,7 @@
         faLayerGroup,
         faCopy,
         faMinus,
+        faObjectGroup,
         faTrash,
         faDiagramProject,
     } from "@fortawesome/free-solid-svg-icons";
@@ -44,6 +45,8 @@
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -70,10 +73,13 @@
     let showSHACLDialog = $state(false);
     let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
+    let showAddToGraphDiagramDialog = $state(false);
+    let showAddToDatasetDiagramDialog = $state(false);
 
     let dialogClassIds = $state([]);
     let dialogClassLabels = $state([]);
     let dialogGraphUri = $state(null);
+    let dialogClasses = $state([]);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -90,6 +96,22 @@
             ? multiSelectState.getSelected().map(e => e.classLabel)
             : contextMenuClass
               ? [contextMenuClass.label]
+              : [],
+    );
+
+    const selectionClasses = $derived(
+        multiActive
+            ? multiSelectState.getSelected().map(entry => ({
+                  id: entry.classUuid,
+                  graphUri: entry.graphUri ?? graphUri,
+              }))
+            : contextMenuClass
+              ? [
+                    {
+                        id: contextMenuClass.uuid,
+                        graphUri: contextMenuClass.graphUri ?? graphUri,
+                    },
+                ]
               : [],
     );
 
@@ -143,6 +165,18 @@
         dialogClassIds = selectionUuids;
         dialogClassLabels = selectionLabels;
         showRemoveFromDiagramDialog = true;
+        onClose();
+    }
+
+    function openAddToGraphDiagramDialog() {
+        dialogClasses = selectionClasses;
+        showAddToGraphDiagramDialog = true;
+        onClose();
+    }
+
+    function openAddToDatasetDiagramDialog() {
+        dialogClasses = selectionClasses;
+        showAddToDatasetDiagramDialog = true;
         onClose();
     }
 
@@ -236,6 +270,22 @@
                 disabled={multiActive}
             >
                 View Constraints (SHACL)
+            </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            {#if graphUri}
+                <ContextMenu.Item.Button
+                    onSelect={openAddToGraphDiagramDialog}
+                    disabled={crossGraphDisabled}
+                    faIcon={faObjectGroup}
+                >
+                    Add to Schema Diagram
+                </ContextMenu.Item.Button>
+            {/if}
+            <ContextMenu.Item.Button
+                onSelect={openAddToDatasetDiagramDialog}
+                faIcon={faObjectGroup}
+            >
+                Add to Dataset Diagram
             </ContextMenu.Item.Button>
         {/if}
         <ContextMenu.SubMenu.Root>
@@ -354,3 +404,21 @@
     classIds={dialogClassIds}
     classLabels={dialogClassLabels}
 />
+
+{#if showAddToGraphDiagramDialog}
+    <AddToGraphDiagramDialog
+        bind:showDialog={showAddToGraphDiagramDialog}
+        lockedDatasetName={datasetName}
+        lockedGraphUri={graphUri}
+        classes={dialogClasses}
+    />
+{/if}
+
+{#if showAddToDatasetDiagramDialog}
+    <AddToDatasetDiagramDialog
+        bind:showDialog={showAddToDatasetDiagramDialog}
+        lockedDatasetName={datasetName}
+        lockedGraphUri={graphUri}
+        classes={dialogClasses}
+    />
+{/if}

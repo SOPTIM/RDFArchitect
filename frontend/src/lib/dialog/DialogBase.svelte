@@ -65,6 +65,9 @@
 
     function handleInteractOutside(event) {
         event.preventDefault();
+        if (event.target?.closest?.("[data-dialog-layer]")) {
+            return;
+        }
         closeDialog();
     }
 </script>
