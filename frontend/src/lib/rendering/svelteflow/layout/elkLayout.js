@@ -21,22 +21,23 @@ import ELK from "elkjs/lib/elk.bundled.js"; //keep this import! the 'elkjs' impo
 const LAYOUT_OPTIONS = {
     //BASE
     "elk.algorithm": "layered",
-    "elk.aspectRatio": "1.78f", //1.6f = 16:10, 1.78f = 16:9, which is more common for monitors
-    "elk.edge.thickness": "2.0", //matches the 2px width of SvelteFlow edges
-    "elk.direction": "RIGHT", //horizontal as it suits monitor layouts, right because the ClassEditor is more likely to be closed than the PackageNav
+    "elk.aspectRatio": "1.78f",
+    "elk.edge.thickness": "2.0",
+    "elk.direction": "RIGHT",
     "elk.layered.thoroughness": "150",
     "elk.edgeRouting": "POLYLINE",
-    "elk.layered.slopedEdgeZoneWidth": "0.0",
+    "elk.layered.edgeRouting.polyline.slopedEdgeZoneWidth": "20.0",
     "elk.separateConnectedComponents": "false",
     "elk.layered.mergeHierarchyEdges": "false",
 
     //NODE PLACEMENT
     "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
-    "elk.layered.nodePlacement.favorStraightEdges": "false",
+    "elk.layered.nodePlacement.favorStraightEdges": "true",
 
     //CROSSING MINIMIZATION
-    "elk.layered.crossingMinimization.greedySwitchType": "TWO_SIDED",
-    "elk.layered.greedySwitch.activationThreshold": "40",
+    "elk.layered.crossingMinimization.strategy": "LAYER_SWEEP",
+    "elk.layered.crossingMinimization.greedySwitch.type": "TWO_SIDED",
+    "elk.layered.crossingMinimization.greedySwitch.activationThreshold": "40",
 
     //NODE PROMOTION
     "elk.layered.layering.nodePromotion.strategy": "NIKOLOV_IMPROVED",
@@ -53,8 +54,8 @@ const LAYOUT_OPTIONS = {
     //SPACING
     "elk.layered.spacing.edgeEdgeBetweenLayers": "20",
     "elk.layered.spacing.edgeNodeBetweenLayers": "40",
-    "elk.spacing.edgeNode": "30",
-    "elk.spacing.edgeEdge": "15",
+    "elk.spacing.edgeNode": "40",
+    "elk.spacing.edgeEdge": "20",
     "elk.layered.spacing.nodeNodeBetweenLayers": "80",
     "elk.spacing.nodeNode": "60",
 };
