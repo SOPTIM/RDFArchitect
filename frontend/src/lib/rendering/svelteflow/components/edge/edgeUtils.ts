@@ -219,7 +219,7 @@ export function getClosestSegmentInsertionIndex(
 /**
  * Returns the shortest distance from a point to a line segment.
  */
-function distanceToSegment(
+export function distanceToSegment(
     point: { x: number; y: number },
     segmentStart: { x: number; y: number },
     segmentEnd: { x: number; y: number },
@@ -240,6 +240,27 @@ function distanceToSegment(
     const projX = segmentStart.x + t * dx;
     const projY = segmentStart.y + t * dy;
     return Math.hypot(point.x - projX, point.y - projY);
+}
+
+/**
+ * Returns the shortest distance from a point to a polyline described by the given
+ * ordered points. The polyline must contain at least two points. Used to find the
+ * edge closest to the cursor for the on-cursor bend point hotkey.
+ */
+export function distanceToPolyline(
+    point: { x: number; y: number },
+    orderedPoints: { x: number; y: number }[],
+): number {
+    let shortestDistance = Infinity;
+    for (let i = 0; i < orderedPoints.length - 1; i++) {
+        const distance = distanceToSegment(
+            point,
+            orderedPoints[i],
+            orderedPoints[i + 1],
+        );
+        shortestDistance = Math.min(shortestDistance, distance);
+    }
+    return shortestDistance;
 }
 
 /**

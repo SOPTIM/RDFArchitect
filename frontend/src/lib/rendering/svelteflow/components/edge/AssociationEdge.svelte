@@ -49,14 +49,14 @@
                     {@const w = sourceNode.current.measured.width ?? 100}
                     <div
                         style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.25 - 12}px, ${pos.y - 30}px)`}
-                        class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
+                        class="nodrag nopan text-default-text pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium shadow-sm"
                     >
                         {data.toMultiplicity}
                     </div>
                 {:else}
                     <div
                         style:transform={`translate(-50%, -50%) translate(${edgeParams.sx + edgeParams.startX}px, ${edgeParams.sy + edgeParams.startY}px)`}
-                        class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
+                        class="nodrag nopan text-default-text pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium shadow-sm"
                     >
                         {data.toMultiplicity}
                     </div>
@@ -69,14 +69,14 @@
                     {@const w = targetNode.current.measured.width ?? 100}
                     <div
                         style:transform={`translate(-50%, -50%) translate(${pos.x + w * 0.75 + 12}px, ${pos.y - 30}px)`}
-                        class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
+                        class="nodrag nopan text-default-text pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium shadow-sm"
                     >
                         {data.fromMultiplicity}
                     </div>
                 {:else}
                     <div
                         style:transform={`translate(-50%, -50%) translate(${edgeParams.tx + edgeParams.endX}px, ${edgeParams.ty + edgeParams.endY}px)`}
-                        class="nodrag nopan pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium text-default-text shadow-sm"
+                        class="nodrag nopan text-default-text pointer-events-auto absolute z-50 cursor-pointer rounded bg-white/80 px-2 py-0.5 text-xs font-medium shadow-sm"
                     >
                         {data.fromMultiplicity}
                     </div>

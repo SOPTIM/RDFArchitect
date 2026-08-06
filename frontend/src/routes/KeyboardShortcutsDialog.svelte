@@ -75,6 +75,14 @@
                     description: "New / Edit Profile Header",
                     keys: ["Ctrl", "Alt", "P"],
                 },
+                {
+                    description: "Add Bend Point at Cursor",
+                    keys: ["Ctrl", "Q"],
+                },
+                {
+                    description: "Delete Bend Point at Cursor",
+                    keys: ["Ctrl", "Shift", "Q"],
+                },
             ],
         },
         {
