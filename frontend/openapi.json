@@ -1450,6 +1450,14 @@
         },
         "type" : "object"
       },
+      "RestoreVersionDTO" : {
+        "properties" : {
+          "versionId" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "SHACLToClassRelations" : {
         "properties" : {
           "derivedPropertyShapes" : {
@@ -6377,7 +6385,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "type" : "string"
+                "$ref" : "#/components/schemas/RestoreVersionDTO"
               }
             }
           },

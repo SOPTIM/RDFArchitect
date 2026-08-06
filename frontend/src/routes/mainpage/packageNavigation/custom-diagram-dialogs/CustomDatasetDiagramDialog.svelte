@@ -73,8 +73,7 @@
     }
 
     async function fetchGraphs() {
-        await graphStore.load(lockedDatasetName);
-        const result = graphStore.getGraphs(lockedDatasetName) ?? [];
+        const result = (await graphStore.getGraphs(lockedDatasetName)) ?? [];
         graphs = result
             .map(graph => {
                 return {

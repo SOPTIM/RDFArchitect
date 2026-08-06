@@ -56,7 +56,7 @@
     let packages = $state([]);
     let classes = $state([]);
 
-    let packageIri = $derived(getPackageIri(packageURINamespace, packageLabel));
+    let packageIri = $derived(packageURINamespace + packageLabel);
     let resourceIriAlreadyExists = $derived(
         !!packageIri &&
             [...packages, ...classes].some(
@@ -73,7 +73,7 @@
     );
 
     $effect(async () => {
-        namespaces = datasetStore.getNamespaces(selectedDatasetName);
+        namespaces = await datasetStore.getNamespaces(selectedDatasetName);
         packageURINamespace = null;
     });
 
@@ -94,7 +94,7 @@
         if (!selectedDatasetName) {
             return;
         }
-        namespaces = datasetStore.getNamespaces(selectedDatasetName);
+        namespaces = await datasetStore.getNamespaces(selectedDatasetName);
 
         if (selectedGraphURI) {
             await getResources(selectedDatasetName, selectedGraphURI);
@@ -128,7 +128,6 @@
             return;
         }
 
-        await packageStore.load(datasetName, graphURI);
         const result = await packageStore.getPackages(datasetName, graphURI);
         packages = [...result.internal, ...result.external];
     }
@@ -138,25 +137,7 @@
             classes = [];
             return;
         }
-        await classStore.load(datasetName, graphURI);
-        classes = classStore.getClasses(datasetName, graphURI);
-    }
-
-    function getExpandedNamespace(namespace) {
-        return (
-            namespaces.find(n => n.substitutedPrefix === namespace)?.prefix ??
-            namespace
-        );
-    }
-
-    function getPackageIri(namespace, label) {
-        if (!namespace || !label) {
-            return null;
-        }
-        if (!label?.startsWith("Package_")) {
-            label = "Package_" + label;
-        }
-        return getExpandedNamespace(namespace) + label;
+        classes = await classStore.getClasses(datasetName, graphURI);
     }
 
     function getResourceIri(resource) {

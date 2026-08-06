@@ -39,14 +39,12 @@
     const rowKey = $derived(`${change.changeId}::row`);
 
     async function callRestoreVersion(changeId) {
-        console.log("restoreVersion", changeId);
-
         const { error } = await restoreVersion({
             path: {
                 datasetName: editorState.selectedDataset.getValue(),
                 graphURI: editorState.selectedGraph.getValue(),
             },
-            query: { changeId: changeId },
+            body: { versionId: changeId },
         });
         if (!error) {
             console.log("Version restored successfully");

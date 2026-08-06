@@ -50,16 +50,14 @@
     }
 
     async function onOpen() {
-        await datasetStore.load();
-        namespaces = datasetStore.getNamespaces(datasetName);
+        namespaces = await datasetStore.getNamespaces(datasetName);
 
         if (!datasetName || !graphUri) {
             packages = [];
             return;
         }
 
-        await packageStore.load(datasetName, graphUri);
-        const result = packageStore.getPackages(datasetName, graphUri);
+        const result = await packageStore.getPackages(datasetName, graphUri);
         packages = [...result.internal, ...result.external];
 
         if (pack) {

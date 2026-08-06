@@ -15,7 +15,7 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
@@ -88,11 +88,14 @@ function createCrossProfileStore() {
     }
 
     // =========================================================================
-    // LOADERS (cached)
+    // GETTERS
     // =========================================================================
 
-    async function loadId(datasetName: string, force = false) {
-        if (!datasetName) return;
+    async function getId(
+        datasetName: string,
+        force = false,
+    ): Promise<string | null> {
+        if (!datasetName) return null;
         return loadSlot(
             store,
             s => getIdSlot(s, datasetName),
@@ -104,8 +107,11 @@ function createCrossProfileStore() {
         );
     }
 
-    async function loadDiagram(datasetName: string, force = false) {
-        if (!datasetName) return;
+    async function getDiagram(
+        datasetName: string,
+        force = false,
+    ): Promise<CrossProfileDiagramDto | null> {
+        if (!datasetName) return null;
         return loadSlot(
             store,
             s => getDiagramSlot(s, datasetName),
@@ -115,18 +121,6 @@ function createCrossProfileStore() {
             `cross-profile diagram for dataset="${datasetName}"`,
             force,
         );
-    }
-
-    // =========================================================================
-    // GETTERS
-    // =========================================================================
-
-    function getId(datasetName: string): string | null {
-        return getIdSlot(get(store), datasetName).data;
-    }
-
-    function getDiagram(datasetName: string): CrossProfileDiagramDto | null {
-        return getDiagramSlot(get(store), datasetName).data;
     }
 
     // =========================================================================
@@ -148,10 +142,6 @@ function createCrossProfileStore() {
 
     return {
         subscribe,
-
-        // loaders (cached)
-        loadId,
-        loadDiagram,
 
         // getters
         getId,

@@ -77,10 +77,10 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue() ?? "";
         graphUriUserInput = "";
 
-        await datasetStore.load();
+        const datasets = await datasetStore.getDatasets();
         readOnlyDatasets = [];
         modifiableDatasets = [];
-        for (const dataset of $datasetStore.data) {
+        for (const dataset of datasets) {
             if (dataset.readOnly) {
                 readOnlyDatasets.push(dataset.label);
             } else {
@@ -107,8 +107,7 @@
             return;
         }
 
-        await graphStore.load(datasetNameUserInput);
-        graphNames = graphStore.getGraphs(datasetNameUserInput);
+        graphNames = await graphStore.getGraphs(datasetNameUserInput);
     }
 
     async function addGraph() {

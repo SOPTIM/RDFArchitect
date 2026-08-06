@@ -46,8 +46,7 @@
     let disableSubmit = $derived(!knownFields.some(entry => entry.toAdd));
 
     async function onOpen() {
-        await ontologyStore.loadKnownFields();
-        knownFields = ontologyStore.getKnownFields();
+        knownFields = await ontologyStore.getKnownFields();
         const { data } = await ontologyStore.generateOntologyEntries(
             dataset,
             graphUri,

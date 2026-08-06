@@ -15,7 +15,7 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
@@ -42,10 +42,6 @@ const LOG_PREFIX = "[packageStore]";
 
 export const packageStore = createPackageStore();
 
-function makeKey(datasetName: string, graphURI: string): GraphKey {
-    return `${datasetName}::${graphURI}`;
-}
-
 function getPackageDisplayLabel(pkg: PackageDto): string {
     return pkg.label ?? pkg.uuid ?? "(unnamed)";
 }
@@ -71,9 +67,13 @@ function createPackageStore() {
         return { ...state, byGraph };
     }
 
-    // ----- Load -----
-    async function load(datasetName: string, graphURI: string, force = false) {
-        if (!datasetName || !graphURI) return;
+    // ----- Getter -----
+    async function getPackages(
+        datasetName: string,
+        graphURI: string,
+        force = false,
+    ): Promise<PackageListInfo | null> {
+        if (!datasetName || !graphURI) return null;
         const key = makeGraphKey(datasetName, graphURI);
         return loadSlot(
             store,
@@ -101,13 +101,6 @@ function createPackageStore() {
         );
     }
 
-    function getPackages(
-        datasetName: string,
-        graphURI: string,
-    ): PackageListInfo | null {
-        return getGraphState(get(store), makeKey(datasetName, graphURI)).data;
-    }
-
     // ----- Internal: local cache patch after a successful save -----
     function patchLocalPackage(
         datasetName: string,
@@ -115,7 +108,7 @@ function createPackageStore() {
         pkg: PackageDto,
     ) {
         if (!datasetName || !graphURI || !pkg) return;
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
 
         update(s => {
             const current = getGraphState(s, key);
@@ -163,7 +156,7 @@ function createPackageStore() {
         packageUUID: string,
     ) {
         if (!datasetName || !graphURI || !packageUUID) return;
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
 
         update(s => {
             const current = getGraphState(s, key);
@@ -349,7 +342,7 @@ function createPackageStore() {
     // ----- Invalidation -----
 
     function invalidateGraph(datasetName: string, graphURI: string) {
-        const key = makeKey(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
         update(s => {
             const byGraph = new Map(s.byGraph);
             byGraph.delete(key);
@@ -370,7 +363,6 @@ function createPackageStore() {
 
     return {
         subscribe,
-        load,
         getPackages,
         addPackage: addNewPackage,
         replacePackage: replaceExistingPackage,

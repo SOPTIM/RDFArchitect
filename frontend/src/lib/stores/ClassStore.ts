@@ -211,15 +211,15 @@ function createClassStore() {
         });
     }
 
-    // ----- Loaders -----
+    // ----- Getters -----
 
-    async function load(
+    async function getClasses(
         datasetName: string,
         graphURI: string,
         includeExternal = false,
         force = false,
-    ) {
-        if (!datasetName || !graphURI) return;
+    ): Promise<ClassUmlAdaptedDto[] | null> {
+        if (!datasetName || !graphURI) return null;
         const key = makeGraphKey(datasetName, graphURI);
         const variant: Variant = includeExternal ? "all" : "internalOnly";
 
@@ -242,14 +242,14 @@ function createClassStore() {
         );
     }
 
-    async function loadClassInfo(
+    async function getClassInfo(
         datasetName: string,
         graphURI: string,
         classUUID: string,
-        includeSuperClasses: boolean,
+        includeSuperClasses = false,
         force = false,
-    ): Promise<void> {
-        if (!datasetName || !graphURI || !classUUID) return;
+    ): Promise<ClassUmlAdaptedDto | null> {
+        if (!datasetName || !graphURI || !classUUID) return null;
 
         const key = makeGraphKey(datasetName, graphURI);
 
@@ -258,7 +258,7 @@ function createClassStore() {
             const existing =
                 findInVariant(current.all.data, classUUID) ??
                 findInVariant(current.internalOnly.data, classUUID);
-            if (hasDetails(existing)) return;
+            if (hasDetails(existing)) return existing ?? null;
         }
 
         console.log(
@@ -281,7 +281,7 @@ function createClassStore() {
                     `${LOG_PREFIX} Class details response was empty for classUUID="${classUUID}"`,
                 );
             }
-            return;
+            return null;
         }
 
         update(s => {
@@ -304,44 +304,8 @@ function createClassStore() {
         console.log(
             `${LOG_PREFIX} Loaded class details for classUUID="${classUUID}"`,
         );
-    }
 
-    // ----- Getters -----
-
-    function getClasses(
-        datasetName: string,
-        graphURI: string,
-        includeExternal = false,
-    ): ClassUmlAdaptedDto[] | null {
-        const variant: Variant = includeExternal ? "all" : "internalOnly";
-        return getGraphState(get(store), makeGraphKey(datasetName, graphURI))[
-            variant
-        ].data;
-    }
-
-    function getClass(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ): ClassUmlAdaptedDto | null {
-        const state = getGraphState(
-            get(store),
-            makeGraphKey(datasetName, graphURI),
-        );
-        return (
-            findInVariant(state.all.data, classUUID) ??
-            findInVariant(state.internalOnly.data, classUUID) ??
-            null
-        );
-    }
-
-    function getClassInfo(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ): ClassUmlAdaptedDto | null {
-        const c = getClass(datasetName, graphURI, classUUID);
-        return hasDetails(c) ? c : null;
+        return data;
     }
 
     // =========================================================================
@@ -829,10 +793,6 @@ function createClassStore() {
 
     return {
         subscribe,
-
-        // loaders
-        load,
-        loadClassInfo,
 
         // getters
         getClasses,

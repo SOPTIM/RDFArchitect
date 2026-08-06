@@ -56,11 +56,14 @@ export async function loadSlot<TState, TData>(
     logPrefix: string,
     label: string,
     force: boolean,
-): Promise<void> {
+): Promise<TData | null> {
     const slot = getSlot(get(store));
 
-    if (!force && slot.data !== null) return;
-    if (slot.pending !== null) return slot.pending;
+    if (!force && slot.data !== null) return slot.data;
+    if (slot.pending !== null) {
+        await slot.pending;
+        return getSlot(get(store)).data;
+    }
 
     console.log(`${logPrefix} Loading ${label}, force=${force}`);
 
@@ -74,7 +77,7 @@ export async function loadSlot<TState, TData>(
                     await describeError(error),
                 );
                 store.update(s => setSlot(s, { pending: null, error }));
-                return;
+                return null;
             }
 
             store.update(s =>
@@ -87,12 +90,14 @@ export async function loadSlot<TState, TData>(
             );
 
             console.log(`${logPrefix} Loaded ${label}`);
+            return data ?? null;
         } catch (err) {
             console.error(
                 `${logPrefix} Unexpected error loading ${label}:`,
                 err,
             );
             store.update(s => setSlot(s, { pending: null, error: err }));
+            return null;
         }
     })();
 

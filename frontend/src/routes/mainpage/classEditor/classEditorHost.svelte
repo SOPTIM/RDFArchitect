@@ -94,8 +94,7 @@
         resolving = true;
 
         (async () => {
-            await crossProfileStore.loadDiagram(datasetName);
-            const diagram = crossProfileStore.getDiagram(datasetName);
+            const diagram = await crossProfileStore.getDiagram(datasetName);
 
             if (cancellation.cancelled) return;
             const classes = diagram?.classes ?? [];

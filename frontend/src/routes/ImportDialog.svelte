@@ -64,8 +64,8 @@
         datasetNameUserInput =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
 
-        await datasetStore.load();
-        for (const dataset of $datasetStore.data) {
+        const datasets = await datasetStore.getDatasets();
+        for (const dataset of datasets) {
             if (dataset.readOnly) {
                 readOnlyDatasets.push(dataset.label);
             } else {

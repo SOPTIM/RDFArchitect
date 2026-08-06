@@ -28,7 +28,7 @@ let pending: Promise<Uri[]> | null = null;
  * lifetime of the browser session. Concurrent callers share a single
  * in-flight request. Returns an empty array if the request fails.
  */
-export async function loadXsdPrimitives(): Promise<Uri[]> {
+export async function getXsdPrimitives(): Promise<Uri[]> {
     if (cache !== null) return cache;
     if (pending !== null) return pending;
 
@@ -64,13 +64,4 @@ export async function loadXsdPrimitives(): Promise<Uri[]> {
     })();
 
     return pending;
-}
-
-/**
- * Returns the cached XSD primitive datatypes, or `null` if they have not
- * been loaded yet. Does not trigger a fetch — call `loadXsdPrimitives()`
- * first if you need to ensure data is available.
- */
-export function getXSDPrimitives(): Uri[] | null {
-    return cache;
 }

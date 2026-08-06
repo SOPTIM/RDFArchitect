@@ -15,7 +15,7 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
@@ -44,25 +44,11 @@ export const datasetStore = createDatasetStore();
 
 function createDatasetStore() {
     const store = writable<DatasetsState>(createEmptySlot<DatasetInfo[]>());
-
-    const { subscribe: baseSubscribe, update } = store;
-
-    let initialLoadTriggered = false;
-
-    function subscribe(
-        run: (value: DatasetsState) => void,
-        invalidate?: () => void,
-    ) {
-        if (!initialLoadTriggered) {
-            initialLoadTriggered = true;
-            void load();
-        }
-        return baseSubscribe(run, invalidate);
-    }
+    const { subscribe, update } = store; // ← update hier verfügbar machen
 
     // ----- Load -----
 
-    async function load(force = false) {
+    async function getDatasets(force = false): Promise<DatasetInfo[] | null> {
         return loadSlot(
             store,
             s => s,
@@ -85,19 +71,19 @@ function createDatasetStore() {
 
     // ----- Getters -----
 
-    function isReadOnly(datasetName: string): boolean | null {
-        const dataset = get(store).data?.find(d => d.label === datasetName);
-        if (!dataset) {
-            return null;
-        }
+    async function isReadOnly(datasetName: string): Promise<boolean | null> {
+        const datasets = await getDatasets();
+        const dataset = (datasets ?? []).find(d => d.label === datasetName);
+        if (!dataset) return null;
         return dataset.readOnly;
     }
 
-    function getNamespaces(datasetName: string): CimPrefixPair[] {
-        const dataset = get(store).data?.find(d => d.label === datasetName);
-        if (!dataset) {
-            return [];
-        }
+    async function getNamespaces(
+        datasetName: string,
+    ): Promise<CimPrefixPair[]> {
+        const datasets = await getDatasets();
+        const dataset = (datasets ?? []).find(d => d.label === datasetName);
+        if (!dataset) return [];
         return dataset.prefixes;
     }
 
@@ -158,7 +144,6 @@ function createDatasetStore() {
             return { error };
         }
 
-        // Keep getNamespaces() consistent with what the backend now holds.
         update(s => ({
             ...s,
             data:
@@ -239,7 +224,7 @@ function createDatasetStore() {
 
     return {
         subscribe,
-        load,
+        getDatasets,
         remove,
         isReadOnly,
         updateReadonly,

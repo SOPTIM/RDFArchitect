@@ -111,16 +111,11 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            await classStore.loadClassInfo(
+            const classDto = await classStore.getClassInfo(
                 datasetName,
                 graphUri,
                 classUuid,
                 true,
-            );
-            const classDto = classStore.getClassInfo(
-                datasetName,
-                graphUri,
-                classUuid,
             );
             if (classDto == null) {
                 return closeClassEditor({
@@ -141,7 +136,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = datasetStore.isReadOnly(datasetName);
+        isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
     });
 
     onMount(() => {
@@ -176,6 +171,8 @@
             classType: null,
         },
     ) {
+        loadingContext = false;
+        loadingClass = false;
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
             datasetOfClassToOpenNext = datasetName;
@@ -193,7 +190,6 @@
     }
 
     async function loadContext() {
-        await datatypesStore.loadForGraph(datasetName, graphUri);
         [
             context.classes,
             context.packages,
@@ -241,7 +237,6 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                await classStore.loadClassInfo(datasetName, graphUri, uuid);
                 const res = await classStore.getClassInfo(
                     datasetName,
                     graphUri,

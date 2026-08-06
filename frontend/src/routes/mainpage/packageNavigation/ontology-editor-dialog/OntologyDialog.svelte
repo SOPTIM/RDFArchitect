@@ -84,7 +84,7 @@
 
     async function onOpen() {
         if (!namespaces) {
-            namespaces = datasetStore.getNamespaces(dataset);
+            namespaces = await datasetStore.getNamespaces(dataset);
         }
 
         namespaces = withOntologyDefaultNamespaces(namespaces);
@@ -161,8 +161,7 @@
         if (!graphUri) {
             return null;
         }
-        await ontologyStore.loadOntology(dataset, graphUri);
-        return ontologyStore.getOntologyForGraph(dataset, graphUri);
+        return await ontologyStore.getOntologyForGraph(dataset, graphUri);
     }
 
     async function saveOntology(datasetName, graphUri, ontologyObject) {

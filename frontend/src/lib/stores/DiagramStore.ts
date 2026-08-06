@@ -15,7 +15,7 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
@@ -73,9 +73,12 @@ function createCustomDiagramStore() {
         );
     }
 
-    // ---------- loaders ----------
-    async function loadDatasetDiagrams(datasetName: string, force = false) {
-        if (!datasetName) return;
+    // ---------- getters ----------
+    async function getDatasetDiagrams(
+        datasetName: string,
+        force = false,
+    ): Promise<CustomDiagram[] | null> {
+        if (!datasetName) return null;
         return loadSlot(
             store,
             s => s.datasetLists.get(datasetName) ?? createEmptyListSlot(),
@@ -94,12 +97,12 @@ function createCustomDiagramStore() {
         );
     }
 
-    async function loadGraphDiagrams(
+    async function getGraphDiagrams(
         datasetName: string,
         graphURI: string,
         force = false,
-    ) {
-        if (!datasetName || !graphURI) return;
+    ): Promise<CustomDiagram[] | null> {
+        if (!datasetName || !graphURI) return null;
         const key = makeGraphKey(datasetName, graphURI);
         return loadSlot(
             store,
@@ -326,18 +329,6 @@ function createCustomDiagramStore() {
         return { error: null };
     }
 
-    // ---------- getters ----------
-    function getDatasetDiagrams(datasetName: string): CustomDiagram[] | null {
-        return getDatasetListState(get(store), datasetName).data;
-    }
-
-    function getGraphDiagrams(
-        datasetName: string,
-        graphURI: string,
-    ): CustomDiagram[] | null {
-        return getGraphListState(get(store), datasetName, graphURI).data;
-    }
-
     // ---------- invalidation ----------
     function invalidateDataset(datasetName: string) {
         update(s => {
@@ -371,11 +362,7 @@ function createCustomDiagramStore() {
     return {
         subscribe,
 
-        // loaders
-        loadDatasetDiagrams,
-        loadGraphDiagrams,
-
-        // getters
+        //getters
         getDatasetDiagrams,
         getGraphDiagrams,
 

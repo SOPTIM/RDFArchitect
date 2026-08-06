@@ -15,8 +15,6 @@
  *
  */
 
-import { get } from "svelte/store";
-
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
@@ -58,8 +56,7 @@ function syncList(targetArray, freshEntries, parent = null) {
 }
 
 export async function getNavEntryList(existingDatasetNavList) {
-    await datasetStore.load();
-    const datasets = get(datasetStore).data ?? [];
+    const datasets = await datasetStore.getDatasets();
     const freshEntries = datasets
         .sort((a, b) => a.label.localeCompare(b.label))
         .map(dataset =>
@@ -119,19 +116,16 @@ async function populateDataset(datasetNavEntry) {
 }
 
 async function getGraphNames(datasetName) {
-    await graphStore.load(datasetName);
-    return graphStore.getGraphs(datasetName) ?? [];
+    return (await graphStore.getGraphs(datasetName)) ?? [];
 }
 
 export async function populateGraph(datasetNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
-    await packageStore.load(datasetNavObject.id, graphNavObject.id);
-    const packageData = packageStore.getPackages(
+    const packageData = await packageStore.getPackages(
         datasetNavObject.id,
         graphNavObject.id,
     );
 
-    await classStore.load(datasetNavObject.id, graphNavObject.id);
     const allClasses = await classStore.getClasses(
         datasetNavObject.id,
         graphNavObject.id,

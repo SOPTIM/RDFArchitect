@@ -36,7 +36,8 @@
     $effect(async () => {
         forceReloadTrigger.subscribe();
         if (selectedDatasetName) {
-            readonlyDataset = datasetStore.isReadOnly(selectedDatasetName);
+            readonlyDataset =
+                await datasetStore.isReadOnly(selectedDatasetName);
         }
     });
 
@@ -59,7 +60,6 @@
         });
         if (!error) {
             changelog = data;
-            changelog.reverse();
             cleanExpandedStateMap(changelog);
         } else {
             console.error("Failed to fetch changelog:", error);

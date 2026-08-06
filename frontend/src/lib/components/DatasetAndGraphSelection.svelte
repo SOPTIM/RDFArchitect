@@ -35,6 +35,7 @@
     const graphSelectId = `graphSelect-${uuidv4()}`;
 
     let graphNames = $state([]);
+    let datasets = $state([]);
 
     const datasetLocked = $derived(lockedDatasetName !== undefined);
     const graphLocked = $derived(lockedGraphUri !== undefined);
@@ -49,8 +50,7 @@
             return;
         }
 
-        await graphStore.load(dataset);
-        graphNames = graphStore.getGraphs(dataset) ?? [];
+        graphNames = (await graphStore.getGraphs(dataset)) ?? [];
         const valid = graphNames.some(graphName => getUri(graphName) === graph);
         if (!valid && !graphLocked) {
             graph = null;
@@ -58,12 +58,12 @@
     });
 
     onMount(async () => {
-        await datasetStore.load();
+        datasets = await datasetStore.getDatasets();
         if (datasetLocked) dataset = lockedDatasetName;
         if (graphLocked) graph = lockedGraphUri;
 
         if (!datasetLocked && dataset && !allowSelectionOfReadonlyDatasets) {
-            const selectedDataset = $datasetStore.data.find(
+            const selectedDataset = datasets.find(
                 option => option.label === dataset,
             );
             if (!selectedDataset || selectedDataset.readOnly) {
@@ -72,8 +72,7 @@
         }
 
         if (dataset) {
-            await graphStore.load(dataset);
-            graphNames = graphStore.getGraphs(dataset);
+            graphNames = await graphStore.getGraphs(dataset);
         } else {
             graphNames = [];
         }
@@ -93,13 +92,13 @@
     <SelectEditControl
         id={datasetSelectId}
         bind:value={dataset}
-        options={$datasetStore.data}
+        options={datasets}
         getOptionIsDisabled={dataset =>
             !allowSelectionOfReadonlyDatasets && dataset.readOnly}
         getOptionValue={dataset => dataset.label}
         getOptionLabel={dataset =>
             dataset.label + (dataset.readOnly ? " (readonly)" : "")}
-        disabled={datasetLocked || ($datasetStore.data?.length ?? 0) === 0}
+        disabled={datasetLocked || (datasets?.length ?? 0) === 0}
         placeholder="Select dataset"
         onchange={() => (graph = null)}
     />

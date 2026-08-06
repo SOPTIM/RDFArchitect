@@ -15,7 +15,7 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
@@ -91,12 +91,12 @@ function createOntologyStore() {
 
     // ---------- load ontology for graph ----------
 
-    async function loadOntology(
+    async function getOntologyForGraph(
         datasetName: string,
         graphURI: string,
         force = false,
-    ) {
-        if (!datasetName || !graphURI) return;
+    ): Promise<OntologyDto | null> {
+        if (!datasetName || !graphURI) return null;
         const key = makeGraphKey(datasetName, graphURI);
         return loadSlot(
             store,
@@ -110,17 +110,11 @@ function createOntologyStore() {
         );
     }
 
-    function getOntologyForGraph(
-        datasetName: string,
-        graphURI: string,
-    ): OntologyDto | null {
-        const key = makeGraphKey(datasetName, graphURI);
-        return getGraphState(get(store), key).data;
-    }
-
     // ---------- known ontology fields (global) ----------
 
-    async function loadKnownFields(force = false) {
+    async function getKnownFields(
+        force = false,
+    ): Promise<OntologyField[] | null> {
         return loadSlot(
             store,
             s => s.knownFields,
@@ -133,10 +127,6 @@ function createOntologyStore() {
             "known ontology fields",
             force,
         );
-    }
-
-    function getKnownFields(): OntologyField[] | null {
-        return get(store).knownFields.data;
     }
 
     // ---------- generated ontology entries ----------
@@ -281,12 +271,10 @@ function createOntologyStore() {
         subscribe,
 
         // ontology per graph
-        loadOntology,
         getOntologyForGraph,
         generateOntologyEntries,
 
         // known fields (global)
-        loadKnownFields,
         getKnownFields,
 
         // mutations

@@ -84,7 +84,6 @@
     ) {
         const dataset = editorState.selectedDataset.getValue();
         const graph = editorState.selectedGraph.getValue();
-        await packageStore.load(dataset, graph);
         const res = await packageStore.getPackages(dataset, graph);
         let packages = [...(res.internal ?? []), ...(res.external ?? [])];
 

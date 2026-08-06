@@ -38,8 +38,7 @@
     let graphs = $state(null);
 
     async function onOpen() {
-        await graphStore.load(datasetName);
-        graphs = graphStore.getGraphs(datasetName);
+        graphs = await graphStore.getGraphs(datasetName);
     }
 
     function onClose() {
@@ -48,10 +47,7 @@
 
     async function deleteDataset() {
         try {
-            if (datasetName) {
-                const res = await datasetStore.remove(datasetName);
-                if (res.error) return;
-            }
+            if (!datasetName) return;
 
             const res = await datasetStore.remove(datasetName);
             if (res.error) return;

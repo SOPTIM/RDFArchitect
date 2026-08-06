@@ -115,7 +115,6 @@
     });
 
     async function initialize() {
-        await ontologyStore.loadOntology(datasetNavEntry.id, graphNavEntry.id);
         ontology = await ontologyStore.getOntologyForGraph(
             datasetNavEntry.id,
             graphNavEntry.id,
@@ -131,8 +130,8 @@
         );
     }
 
-    function undo() {
-        const { error } = versionControlStore.undo(
+    async function undo() {
+        const { error } = await versionControlStore.undo(
             datasetNavEntry.id,
             graphNavEntry.id,
         );

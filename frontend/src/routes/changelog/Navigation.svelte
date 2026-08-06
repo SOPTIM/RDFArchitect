@@ -40,9 +40,9 @@
     });
 
     async function fetchNavigationObject() {
-        await datasetStore.load();
         const newDatasetList = [];
-        for (const dataset of $datasetStore.data) {
+        const datasets = await datasetStore.getDatasets();
+        for (const dataset of datasets) {
             const datasetName = dataset.label;
             let showDatasetContents = datasetName === selectedDatasetName;
             showDatasetContents |= datasetList.find(
@@ -53,12 +53,11 @@
                 graphs: [],
                 showContents: showDatasetContents,
             });
-            await graphStore.load(datasetName);
-            graphStore
-                .getGraphs(datasetName)
-                .forEach(graphUri =>
-                    newDatasetList.at(-1).graphs.push(graphUri),
-                );
+            graphStore.getGraphs(datasetName).then(graphs => {
+                for (const graphUri of graphs) {
+                    newDatasetList.at(-1).graphs.push(graphUri);
+                }
+            });
         }
         datasetList = newDatasetList;
     }

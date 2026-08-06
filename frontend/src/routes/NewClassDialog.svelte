@@ -143,7 +143,7 @@
         if (!datasetName || !graphURI) {
             return;
         }
-        namespaces = datasetStore.getNamespaces(datasetName);
+        namespaces = await datasetStore.getNamespaces(datasetName);
 
         await getPackages(datasetName, graphURI);
         compareClasses = await getClasses(datasetName, graphURI);
@@ -184,7 +184,6 @@
             return;
         }
 
-        await packageStore.load(datasetName, graphURI);
         const result = await packageStore.getPackages(datasetName, graphURI);
         packages = [...result.internal, ...result.external];
     }

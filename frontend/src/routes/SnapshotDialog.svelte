@@ -34,13 +34,15 @@
     const datasetSelectId = `datasetSelect-${uuidv4()}`;
 
     let datasetName = $state(null);
+    let datasets = $state();
     let base64Token = $state();
 
     const datasetSelectionLocked = $derived(!!lockedDatasetName);
 
-    function onOpen() {
+    async function onOpen() {
         datasetName =
             lockedDatasetName ?? editorState.selectedDataset.getValue();
+        datasets = await datasetStore.getDatasets();
     }
 
     async function snapshotDataset() {
@@ -96,7 +98,7 @@
         <SelectEditControl
             id={datasetSelectId}
             bind:value={datasetName}
-            options={$datasetStore.data}
+            options={datasets}
             getOptionValue={dataset => dataset.label}
             getOptionLabel={dataset => dataset.label}
             disabled={datasetSelectionLocked || datasetStore.data?.length === 0}

@@ -110,7 +110,7 @@
                 response = await validateSchema({
                     path: {
                         datasetName: dataset,
-                        graphUri: graph,
+                        graphURI: graph,
                         cgmesVersion: cgmesVersion,
                     },
                 });
@@ -119,19 +119,17 @@
                 throw new Error(`Unknown validationMode: ${validationMode}`);
         }
 
-        const result = await response.json();
-
         showDialog = false;
 
-        if (!response.ok) {
-            console.log(result);
+        if (response.error) {
+            console.log(response);
             toastStore.error(
                 "Something went wrong while validating the schema.",
             );
             return;
         }
 
-        validationState.result.updateValue(result);
+        validationState.result.updateValue(response.data);
         await goto("/validate");
     }
 </script>

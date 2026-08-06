@@ -47,12 +47,13 @@
     async function onOpen() {
         datasetName = editorState.selectedDataset.getValue();
         if (!datasetName) return;
-        readonly = datasetStore.isReadOnly(datasetName);
+        readonly = await datasetStore.isReadOnly(datasetName);
         await loadNamespaces(datasetName);
     }
 
     async function loadNamespaces(datasetNameLocal) {
-        const namespaceDTOs = datasetStore.getNamespaces(datasetNameLocal);
+        const namespaceDTOs =
+            await datasetStore.getNamespaces(datasetNameLocal);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });

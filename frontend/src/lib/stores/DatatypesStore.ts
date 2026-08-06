@@ -114,20 +114,28 @@ function createVocabStore() {
             error?: unknown;
         }>,
         force: boolean,
-    ): Promise<void> {
-        if (!datasetName || !graphURI) return;
+    ): Promise<GraphVocabulary[K]["data"]> {
+        if (!datasetName || !graphURI)
+            return null as GraphVocabulary[K]["data"];
 
         const key = makeGraphKey(datasetName, graphURI);
         const slotState = getGraphVocabulary(get(store), key)[slot];
 
-        if (!force && slotState.data !== null) return;
-        if (slotState.pending !== null) return slotState.pending;
+        if (!force && slotState.data !== null) {
+            return slotState.data as GraphVocabulary[K]["data"];
+        }
+
+        if (slotState.pending !== null) {
+            await slotState.pending;
+            const updated = getGraphVocabulary(get(store), key)[slot];
+            return updated.data as GraphVocabulary[K]["data"];
+        }
 
         console.log(
             `${LOG_PREFIX} Loading ${label} for dataset="${datasetName}", graph="${graphURI}", force=${force}`,
         );
 
-        const promise = (async () => {
+        const promise = (async (): Promise<GraphVocabulary[K]["data"]> => {
             try {
                 const { data, error } = await fetcher();
 
@@ -139,12 +147,13 @@ function createVocabStore() {
                     update(s =>
                         patchSlot(s, key, slot, { pending: null, error }),
                     );
-                    return;
+                    return null as GraphVocabulary[K]["data"];
                 }
 
+                const result = data ?? null;
                 update(s =>
                     patchSlot(s, key, slot, {
-                        data: data ?? [],
+                        data: result,
                         fetchedAt: Date.now(),
                         pending: null,
                         error: null,
@@ -154,6 +163,8 @@ function createVocabStore() {
                 console.log(
                     `${LOG_PREFIX} Loaded ${(data ?? []).length} ${label} for dataset="${datasetName}", graph="${graphURI}"`,
                 );
+
+                return result as GraphVocabulary[K]["data"];
             } catch (err) {
                 console.error(
                     `${LOG_PREFIX} Unexpected error while loading ${label} for dataset="${datasetName}", graph="${graphURI}":`,
@@ -162,21 +173,22 @@ function createVocabStore() {
                 update(s =>
                     patchSlot(s, key, slot, { pending: null, error: err }),
                 );
+                return null as GraphVocabulary[K]["data"];
             }
         })();
 
-        update(s => patchSlot(s, key, slot, { pending: promise }));
+        update(s => patchSlot(s, key, slot, { pending: promise as never }));
 
         return promise;
     }
 
-    // ----- Primitives -----
+    // ----- Getters -----
 
-    function loadPrimitives(
+    function getPrimitives(
         datasetName: string,
         graphURI: string,
         force = false,
-    ) {
+    ): Promise<Uri[] | null> {
         return loadSlot(
             datasetName,
             graphURI,
@@ -190,23 +202,11 @@ function createVocabStore() {
         );
     }
 
-    function getPrimitives(
-        datasetName: string,
-        graphURI: string,
-    ): Uri[] | null {
-        return getGraphVocabulary(
-            get(store),
-            makeGraphKey(datasetName, graphURI),
-        ).primitives.data;
-    }
-
-    // ----- Datatypes -----
-
-    function loadDatatypes(
+    function getDatatypes(
         datasetName: string,
         graphURI: string,
         force = false,
-    ) {
+    ): Promise<ClassUmlAdaptedDto[] | null> {
         return loadSlot(
             datasetName,
             graphURI,
@@ -220,23 +220,11 @@ function createVocabStore() {
         );
     }
 
-    function getDatatypes(
-        datasetName: string,
-        graphURI: string,
-    ): ClassUmlAdaptedDto[] | null {
-        return getGraphVocabulary(
-            get(store),
-            makeGraphKey(datasetName, graphURI),
-        ).datatypes.data;
-    }
-
-    // ----- Stereotypes -----
-
-    function loadStereotypes(
+    function getStereotypes(
         datasetName: string,
         graphURI: string,
         force = false,
-    ) {
+    ): Promise<string[] | null> {
         return loadSlot(
             datasetName,
             graphURI,
@@ -248,35 +236,6 @@ function createVocabStore() {
                 }),
             force,
         );
-    }
-
-    function getStereotypes(
-        datasetName: string,
-        graphURI: string,
-    ): string[] | null {
-        return getGraphVocabulary(
-            get(store),
-            makeGraphKey(datasetName, graphURI),
-        ).stereotypes.data;
-    }
-
-    // ----- Convenience: load all vocabularies for a graph at once -----
-
-    /**
-     * Loads (or reuses cached) all graph-scoped vocabularies for a given
-     * graph in parallel. Useful for the class editor which needs all three
-     * at once.
-     */
-    async function loadForGraph(
-        datasetName: string,
-        graphURI: string,
-        force = false,
-    ): Promise<void> {
-        await Promise.all([
-            loadPrimitives(datasetName, graphURI, force),
-            loadDatatypes(datasetName, graphURI, force),
-            loadStereotypes(datasetName, graphURI, force),
-        ]);
     }
 
     // =========================================================================
@@ -311,9 +270,6 @@ function createVocabStore() {
 
     return {
         subscribe,
-
-        // loaders
-        loadForGraph,
 
         // getters
         getPrimitives,

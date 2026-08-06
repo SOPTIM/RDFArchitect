@@ -256,8 +256,7 @@
             return null;
         }
 
-        await ontologyStore.loadOntology(selectedDataset, selectedGraph);
-        return ontologyStore.getOntologyForGraph(
+        return await ontologyStore.getOntologyForGraph(
             selectedDataset,
             selectedGraph,
         );
@@ -319,8 +318,7 @@
             return [];
         }
 
-        await packageStore.load(selectedDataset, selectedGraph);
-        const packageData = packageStore.getPackages(
+        const packageData = await packageStore.getPackages(
             selectedDataset,
             selectedGraph,
         );

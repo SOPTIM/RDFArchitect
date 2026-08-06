@@ -79,18 +79,11 @@
         try {
             let diagramList;
             if (graphNavEntry) {
-                await customDiagramStore.loadGraphDiagrams(
-                    datasetNavEntry.id,
-                    graphNavEntry.id,
-                );
                 diagramList = await customDiagramStore.getGraphDiagrams(
                     datasetNavEntry.id,
                     graphNavEntry.id,
                 );
             } else {
-                await customDiagramStore.loadDatasetDiagrams(
-                    datasetNavEntry.id,
-                );
                 diagramList = await customDiagramStore.getDatasetDiagrams(
                     datasetNavEntry.id,
                 );

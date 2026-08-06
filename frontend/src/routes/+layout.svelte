@@ -69,7 +69,7 @@
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
-            ? datasetStore.isReadOnly(selectedDataset)
+            ? await datasetStore.isReadOnly(selectedDataset)
             : false;
     });
 

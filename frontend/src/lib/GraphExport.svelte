@@ -48,10 +48,7 @@
     let ontology = $state();
     let generatedOntologyEntries = $state([]);
 
-    let namespaces = $derived(
-        $datasetStore.data?.find(d => d.label === selectedDatasetName)
-            ?.prefixes ?? new Set(),
-    );
+    let namespaces = $state([]);
     let hasOntology = $derived(!!ontology);
 
     // Derived state for checkbox
@@ -70,8 +67,15 @@
     );
 
     $effect(async () => {
+        if (selectedDatasetName) {
+            namespaces = await datasetStore.getNamespaces(selectedDatasetName);
+        } else {
+            namespaces = [];
+        }
+    });
+
+    $effect(async () => {
         if (selectedDatasetName && graphURI) {
-            await ontologyStore.loadOntology(selectedDatasetName, graphURI);
             const result = await ontologyStore.getOntologyForGraph(
                 selectedDatasetName,
                 graphURI,
@@ -261,7 +265,7 @@
         bind:value={selectedMediaType}
     >
         {#each supportedMediaTypes as mediaType}
-            <option value={mediaType}>{mediaType.label}</option>
+            <option value={mediaType}>{mediaType.name}</option>
         {/each}
     </select>
 </div>

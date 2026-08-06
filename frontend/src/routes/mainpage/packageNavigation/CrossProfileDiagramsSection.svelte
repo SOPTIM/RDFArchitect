@@ -50,8 +50,9 @@
     $effect(() => {
         forceReloadTrigger.subscribe();
         (async () => {
-            await crossProfileStore.loadDiagram(datasetNavEntry.label);
-            const diagram = crossProfileStore.getDiagram(datasetNavEntry.label);
+            const diagram = await crossProfileStore.getDiagram(
+                datasetNavEntry.label,
+            );
             classes = diagram?.classes ?? [];
         })();
     });

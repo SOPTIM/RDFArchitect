@@ -24,17 +24,13 @@
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
-    import {
-        loadXsdPrimitives,
-        getXSDPrimitives,
-    } from "$lib/stores/XSDDatatypesStore.ts";
+    import { getXsdPrimitives } from "$lib/stores/XSDDatatypesStore.ts";
 
     let { entries, entry, readonly, namespaces } = $props();
 
     let datatypes = $state([]);
     onMount(async () => {
-        await loadXsdPrimitives();
-        const xsdPrimitives = getXSDPrimitives();
+        const xsdPrimitives = await getXsdPrimitives();
         const xsdDatatypes = [];
         xsdPrimitives.forEach(xsdDatatype => {
             if (xsdDatatype) {

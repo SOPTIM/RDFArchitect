@@ -83,7 +83,7 @@
 
     $effect(async () => {
         getContext("packageNavigation").reloadTrigger?.subscribe();
-        readonly = datasetStore.isReadOnly(datasetNavEntry.label);
+        readonly = await datasetStore.isReadOnly(datasetNavEntry.label);
         await fetchNamespaces();
     });
     $effect(() => {
@@ -94,8 +94,7 @@
     });
 
     onMount(async () => {
-        await crossProfileStore.loadId(datasetNavEntry.label);
-        crossProfileID = crossProfileStore.getId(datasetNavEntry.label);
+        crossProfileID = await crossProfileStore.getId(datasetNavEntry.label);
     });
 
     async function fetchNamespaces() {
@@ -104,7 +103,9 @@
             return;
         }
         try {
-            namespaces = datasetStore.getNamespaces(datasetNavEntry.label);
+            namespaces = await datasetStore.getNamespaces(
+                datasetNavEntry.label,
+            );
         } catch (err) {
             console.error("Failed to load namespaces:", err);
             namespaces = [];

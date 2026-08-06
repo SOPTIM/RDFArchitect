@@ -19,15 +19,11 @@ import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
 import { classStore } from "$lib/stores/ClassStore.ts";
 import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
 import { packageStore } from "$lib/stores/PackageStore.ts";
-import {
-    getXSDPrimitives,
-    loadXsdPrimitives,
-} from "$lib/stores/XSDDatatypesStore.ts";
+import { getXsdPrimitives } from "$lib/stores/XSDDatatypesStore.ts";
 
 export async function getPackages(datasetName, graphUri) {
     // fetch packages
-    await packageStore.load(datasetName, graphUri);
-    const packageData = packageStore.getPackages(datasetName, graphUri);
+    const packageData = await packageStore.getPackages(datasetName, graphUri);
 
     // Combine internal and external packages
     let packages = [];
@@ -49,11 +45,7 @@ export async function getPackages(datasetName, graphUri) {
 }
 
 export async function getDataTypes(datasetName, graphUri) {
-    await Promise.all([
-        loadXsdPrimitives(),
-        datatypesStore.loadForGraph(datasetName, graphUri),
-    ]);
-    const xsd = await getXSDPrimitives();
+    const xsd = await getXsdPrimitives();
     const primitivesDto = await datatypesStore.getPrimitives(
         datasetName,
         graphUri,
@@ -103,7 +95,6 @@ export async function getDataTypes(datasetName, graphUri) {
 }
 
 export async function getClasses(datasetName, graphUri) {
-    await classStore.load(datasetName, graphUri, true);
     const classDTOs = await classStore.getClasses(datasetName, graphUri, true);
     let classes = classDTOs.map(cls => new Class(cls));
     console.debug("CLASSES:", classes);

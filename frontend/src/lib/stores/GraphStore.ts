@@ -15,7 +15,7 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
@@ -63,8 +63,11 @@ function createGraphStore() {
         return { ...state, graphs: byDataset };
     }
 
-    async function load(datasetName: string, force = false) {
-        if (!datasetName) return;
+    async function getGraphs(
+        datasetName: string,
+        force = false,
+    ): Promise<Uri[] | null> {
+        if (!datasetName) return null;
         return loadSlot(
             store,
             s => getDatasetState(s, datasetName),
@@ -78,10 +81,6 @@ function createGraphStore() {
             `graphs for dataset="${datasetName}"`,
             force,
         );
-    }
-
-    function getGraphs(datasetName: string): Uri[] | null {
-        return getDatasetState(get(store), datasetName).data;
     }
 
     async function addEmptyGraph(
@@ -244,7 +243,6 @@ function createGraphStore() {
 
     return {
         subscribe,
-        load,
         getGraphs,
         addEmptyGraph,
         importGraphs,
