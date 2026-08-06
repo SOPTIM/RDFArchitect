@@ -36,7 +36,6 @@
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
 
-
     let {
         showDialog = $bindable(),
         onOpen = () => {},
