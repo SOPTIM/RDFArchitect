@@ -35,9 +35,9 @@
                 ? new Set(renamedFrom.get(cls.label).keys())
                 : new Set();
 
-            const unlinked = cls.enumEntries.added.filter(
-                attr => !linked.has(attr.label),
-            );
+            const unlinked = cls.enumEntries.added
+                .filter(attr => !linked.has(attr.label))
+                .sort((a, b) => a.label.localeCompare(b.label));
             result.set(cls.label, unlinked);
         }
         return result;
@@ -155,7 +155,7 @@
                                         Added Enum Entries
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.enumEntries.added as addedEnumEntry}
+                                        {#each cls.enumEntries.added.sort((a, b) => a.label.localeCompare(b.label)) as addedEnumEntry}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >

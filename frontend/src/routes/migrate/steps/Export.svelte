@@ -39,7 +39,7 @@
         try {
             const response = await fetchScript();
             const suggestedFilename = response.headers.get(
-                "content-disposition",
+                "content-disposition"
             );
             const blob = await response.blob();
             saveFile(blob, suggestedFilename, sparqlMediaType);
@@ -54,10 +54,10 @@
             const response = await bec.fetchReport(
                 reportType,
                 state.cgmesVersionA,
-                state.cgmesVersionB,
+                state.cgmesVersionB
             );
             const suggestedFilename = response.headers.get(
-                "content-disposition",
+                "content-disposition"
             );
             const blob = await response.blob();
             saveFile(blob, suggestedFilename, sparqlMediaType);
@@ -70,7 +70,7 @@
         return fetch(PUBLIC_BACKEND_URL + "/api/migrations/export", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
-            credentials: "include",
+            credentials: "include"
         });
     }
 </script>
@@ -96,21 +96,54 @@
 
     <div class="flex flex-col space-y-6">
         <div class="flex flex-col space-y-1">
-            <select
-                class="border-border bg-input-default-background text-default-text focus:ring-border-select rounded-md border px-2 py-1 text-sm focus:ring-2 focus:outline-none w-64"
-                bind:value={reportType}
-            >
-                <option value="SUMMARY">Summary report</option>
-                <option value="DETAILED">Detailed report</option>
-            </select>
+            <div class="flex flex-col space-y-6">
+                <div class="flex flex-col space-y-3">
+                    <h3 class="text-base font-medium">Generate artifacts</h3>
 
-            <div class="w-64">
-                <ButtonControl callOnClick={generateMigrationScript}>
-                    Generate and Download Script
-                </ButtonControl>
-                <ButtonControl callOnClick={generateMigrationReport}>
-                    Generate and download report
-                </ButtonControl>
+                    <div class="border-border rounded-lg border p-4 flex items-start justify-between gap-4">
+                        <div class="flex flex-col space-y-1 min-w-0">
+                            <span class="text-sm font-medium">Migration Script</span>
+                            <span class="text-text-subtle text-sm">
+                    SPARQL UPDATE script for automatically migrating your data to the new schema.
+                </span>
+                        </div>
+                        <div class="shrink-0 w-48">
+                            <ButtonControl callOnClick={generateMigrationScript}>
+                                Download script
+                            </ButtonControl>
+                        </div>
+                    </div>
+
+                    <div class="border-border rounded-lg border p-4 flex items-start justify-between gap-4">
+                        <div class="flex flex-col space-y-1 min-w-0">
+                            <span class="text-sm font-medium">Summary Report</span>
+                            <span class="text-text-subtle text-sm">
+                    Report containing only the directly changed classes. If another class would inherit a change it is listed underneath the superclass.
+                </span>
+                        </div>
+                        <div class="shrink-0 w-48">
+                            <ButtonControl callOnClick={() => generateMigrationReport("SUMMARY")}>
+                                Download report
+                            </ButtonControl>
+                        </div>
+                    </div>
+
+                    <div class="border-border rounded-lg border p-4 flex items-start justify-between gap-4">
+                        <div class="flex flex-col space-y-1 min-w-0">
+                            <span class="text-sm font-medium">Detailed Report</span>
+                            <span class="text-text-subtle text-sm">
+                    A report containing all affected classes. Changes inherited from a superclass are included again on every inheriting class.
+                </span>
+                        </div>
+                        <div class="shrink-0 w-48">
+                            <ButtonControl callOnClick={() => generateMigrationReport("DETAILED")}>
+                                Download report
+                            </ButtonControl>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Next Steps ... -->
             </div>
         </div>
 

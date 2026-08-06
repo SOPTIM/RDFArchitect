@@ -35,9 +35,9 @@
                 ? new Set(renamedFrom.get(cls.label).keys())
                 : new Set();
 
-            const unlinked = cls.attributes.added.filter(
-                attr => !linked.has(attr.label),
-            );
+            const unlinked = cls.attributes.added
+                .filter(attr => !linked.has(attr.label))
+                .sort((a, b) => a.label.localeCompare(b.label));
             result.set(cls.label, unlinked);
         }
         return result;
@@ -156,7 +156,7 @@
                                         Added Attributes
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.attributes.added as addedAttribute}
+                                        {#each cls.attributes.added.sort((a, b) => a.label.localeCompare(b.label)) as addedAttribute}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >

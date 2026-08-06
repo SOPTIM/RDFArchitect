@@ -216,10 +216,10 @@ public class SparqlMigrationBuilder implements MigrationScriptBuilder {
             var update =
                     switch (change.getSemanticFieldChangeType()) {
                         case TARGET_CHANGE ->
-                                updateGenerator.generateAddAssociationUpdate(associationChange);
-                        case ASSOCIATION_USED_CHANGE ->
                                 updateGenerator.generateAssociationTargetChangeUpdate(
                                         associationChange);
+                        case ASSOCIATION_USED_CHANGE ->
+                                updateGenerator.generateAddAssociationUpdate(associationChange);
                         case DOMAIN_RENAME ->
                                 updateGenerator.generateDomainRenameUpdate(associationChange);
                         default -> null;

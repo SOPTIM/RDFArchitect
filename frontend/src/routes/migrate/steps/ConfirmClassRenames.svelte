@@ -40,7 +40,10 @@
     let renamedFrom = $state(new Map());
     let unlinkedAdded = $derived.by(() => {
         const linked = new Set(renamedFrom.keys());
-        return visibleAdded.filter(c => !linked.has(c.label));
+        return visibleAdded
+            .filter(c => !linked.has(c.label))
+            .sort((a, b) => a.label.localeCompare(b.label),
+        );
     });
 
     onMount(() => {
@@ -74,7 +77,7 @@
                     .filter(iri => iri != null);
                 visibleAdded = data.added.filter(
                     addedClass => !hiddenTargetIRIs.includes(addedClass.iri),
-                );
+                ).sort((a, b) => a.label.localeCompare(b.label));
 
                 for (let rename of deletedAndRenamed) {
                     if (rename.newResource) {

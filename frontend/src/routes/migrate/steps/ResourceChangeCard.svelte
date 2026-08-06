@@ -38,24 +38,24 @@
     };
 
     const FIELD_CHANGE_LABELS = {
-        LABEL_CHANGE: "Label",
-        COMMENT_CHANGE: "Comment",
-        SUPERCLASS_CHANGE: "Superclass",
-        BELONGS_TO_CATEGORY_CHANGE: "Package",
-        DATATYPE_CHANGE: "Data type",
-        DATATYPE_RENAME: "Data type (renamed)",
+        LABEL_CHANGE: "Label changed",
+        COMMENT_CHANGE: "Comment changed",
+        SUPERCLASS_CHANGE: "Superclass changed",
+        BELONGS_TO_CATEGORY_CHANGE: "Package changed",
+        DATATYPE_CHANGE: "Data type changed",
+        DATATYPE_RENAME: "Data type renamed",
         MADE_OPTIONAL: "Made optional",
         MADE_REQUIRED: "Made required",
-        MULTIPLICITY_CHANGE: "Multiplicity",
+        MULTIPLICITY_CHANGE: "Multiplicity changed",
         STEREOTYPE_ADDED: "Stereotype added",
         STEREOTYPE_REMOVED: "Stereotype removed",
         MADE_ABSTRACT: "Made abstract",
-        DOMAIN_CHANGE: "Domain",
-        DOMAIN_RENAME: "Domain (renamed)",
-        TARGET_CHANGE: "Target",
-        ASSOCIATION_USED_CHANGE: "Association used",
-        DEFAULT_VALUE_CHANGE: "Default value",
-        FIXED_VALUE_CHANGE: "Fixed value",
+        DOMAIN_CHANGE: "Domain changed",
+        DOMAIN_RENAME: "Domain renamed",
+        TARGET_CHANGE: "Target changed",
+        ASSOCIATION_USED_CHANGE: "Association used changed",
+        DEFAULT_VALUE_CHANGE: "Default value changed",
+        FIXED_VALUE_CHANGE: "Fixed value changed",
     };
 
     let expanded = $state(false);
@@ -154,7 +154,7 @@
                         class="border-border bg-default-background flex flex-col rounded border px-2 py-1"
                     >
                         <span class="text-default-text text-xs font-semibold">
-                            {getChangeLabel()}
+                            {getChangeLabel(change.semanticFieldChangeType)}
                         </span>
                         <div
                             class="text-text-subtle font-mono text-xs break-all"

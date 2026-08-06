@@ -147,7 +147,7 @@
         </div>
     </div>
 
-    <div class="no-scrollbar flex-1 overflow-y-auto p-2">
+    <div class="flex-1 overflow-y-auto p-2">
         <currentSubstep.component classes={filteredClasses} {isLoading} />
     </div>
 </div>

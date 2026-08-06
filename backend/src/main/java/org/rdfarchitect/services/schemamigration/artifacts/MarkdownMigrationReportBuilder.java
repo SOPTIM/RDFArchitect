@@ -29,6 +29,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.config.SchemaConfig;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticClassChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChange;
+import org.rdfarchitect.models.changes.semanticchanges.SemanticFieldChangeType;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChange;
 import org.rdfarchitect.models.changes.semanticchanges.SemanticResourceChangeType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
@@ -134,7 +135,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 sb.append("> ").append(classChange.getComment()).append("\n\n");
             }
 
-            appendFieldChangesAsSentences(sb, classChange.getChanges());
+            if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
+                appendFieldChangesAsSentences(sb, classChange.getChanges());
+            }
+
             appendDirectProperties(sb, "Attributes", classChange.getAttributes());
             appendDirectProperties(sb, "Associations", classChange.getAssociations());
             appendDirectProperties(sb, "Enum Entries", classChange.getEnumEntries());
@@ -208,7 +212,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             sb.append("> ").append(classChange.getComment()).append("\n\n");
         }
 
-        appendFieldChangesAsSentences(sb, classChange.getChanges());
+        if (classChange.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE) {
+            appendFieldChangesAsSentences(sb, classChange.getChanges());
+        }
         appendPropertySection(sb, "Attributes", classChange.getAttributes());
         appendPropertySection(sb, "Associations", classChange.getAssociations());
         appendPropertySection(sb, "Enum Entries", classChange.getEnumEntries());
@@ -296,6 +302,7 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             case DOMAIN_CHANGE -> formatTransition("Domain set", from, to);
             case DOMAIN_RENAME -> formatTransition("Domain renamed", from, to);
             case TARGET_CHANGE -> formatTransition("Target set", from, to);
+            case TARGET_RENAME -> formatTransition("Target renamed", from, to);
             case ASSOCIATION_USED_CHANGE -> formatTransition("Association used set", from, to);
             case DEFAULT_VALUE_CHANGE -> formatTransition("Default value set", from, to);
             case FIXED_VALUE_CHANGE -> formatTransition("Fixed value set", from, to);
@@ -344,7 +351,11 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                 sb.append("> ").append(prop.getComment()).append("\n\n");
             }
 
-            appendFieldChangesAsSentences(sb, prop.getChanges());
+            if (prop.getSemanticResourceChangeType() != SemanticResourceChangeType.DELETE
+                    && prop.getSemanticResourceChangeType()
+                            != SemanticResourceChangeType.DELETED_FROM_INHERITANCE) {
+                appendFieldChangesAsSentences(sb, prop.getChanges());
+            }
         }
     }
 
@@ -439,6 +450,10 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
             var copy = new SemanticClassChange(classChange);
             copy.setSemanticResourceChangeType(SemanticResourceChangeType.CHANGE);
             copy.setOldIRI(null);
+
+            copy.setChanges(
+                    copy.getChanges().stream().filter(fc -> !isPrefixOnlyFieldRename(fc)).toList());
+
             result = copy;
         }
 
@@ -462,6 +477,12 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
                                 copy.setSemanticResourceChangeType(
                                         SemanticResourceChangeType.CHANGE);
                                 copy.setOldIRI(null);
+
+                                copy.setChanges(
+                                        copy.getChanges().stream()
+                                                .filter(fc -> !isPrefixOnlyFieldRename(fc))
+                                                .toList());
+
                                 return (T) copy;
                             }
                             return p;
@@ -496,5 +517,18 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
         }
 
         return new URI(change.getOldIRI()).getSuffix().equals(new URI(change.getIri()).getSuffix());
+    }
+
+    private boolean isPrefixOnlyFieldRename(SemanticFieldChange change) {
+        if (change.getFrom() == null || change.getTo() == null) return false;
+        if (change.getSemanticFieldChangeType() == SemanticFieldChangeType.DOMAIN_RENAME
+                || change.getSemanticFieldChangeType() == SemanticFieldChangeType.SUPERCLASS_RENAME
+                || change.getSemanticFieldChangeType() != SemanticFieldChangeType.TARGET_RENAME) {
+            return new URI(change.getFrom())
+                    .getSuffix()
+                    .equals(new URI(change.getTo()).getSuffix());
+        } else {
+            return false;
+        }
     }
 }

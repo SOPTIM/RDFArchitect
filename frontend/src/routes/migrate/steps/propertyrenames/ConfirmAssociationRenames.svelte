@@ -25,6 +25,7 @@
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
 
     import RenameTable from "../RenameTable.svelte";
+    import { onMount } from "svelte";
 
     const { classes, isLoading } = $props();
 
@@ -35,9 +36,9 @@
                 ? new Set(renamedFrom.get(cls.label).keys())
                 : new Set();
 
-            const unlinked = cls.associations.added.filter(
-                attr => !linked.has(attr.label),
-            );
+            const unlinked = cls.associations.added
+                .filter(attr => !linked.has(attr.label))
+                .sort((a, b) => a.label.localeCompare(b.label));
             result.set(cls.label, unlinked);
         }
         return result;
@@ -155,7 +156,7 @@
                                         Added Associations
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.associations.added as addedAssociation}
+                                        {#each cls.associations.added.sort((a, b) => a.label.localeCompare(b.label)) as addedAssociation}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
