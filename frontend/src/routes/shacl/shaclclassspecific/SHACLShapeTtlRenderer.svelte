@@ -18,8 +18,8 @@
 <script>
     import { onMount } from "svelte";
 
+    import { putShacl } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
     import TtlCodeEditor from "$lib/ttl/TtlCodeEditor.svelte";
@@ -79,25 +79,16 @@
             localNodeShapesList,
             localPropertyShapesWrapperList,
         );
-        fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(classDatasetName) +
-                "/graphs/" +
-                encodeURIComponent(classGraphUri) +
-                "/classes/" +
-                encodeURIComponent(
-                    editorState.selectedClass.getProperty("id"),
-                ) +
-                "/shacl/custom",
-            {
-                method: "PUT",
-                body: ttlString,
-                credentials: "include",
+        putShacl({
+            path: {
+                datasetName: classDatasetName,
+                graphURI: classGraphUri,
+                classUUID: editorState.selectedClass.getProperty("id"),
             },
-        )
+            body: ttlString,
+        })
             .then(res => {
-                if (res.ok) {
+                if (!res.error) {
                     console.log("successfully updated custom shacl of class.");
                     toastStore.success(
                         "SHACL shapes saved",

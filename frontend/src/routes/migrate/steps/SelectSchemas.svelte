@@ -21,11 +21,11 @@
     import { get } from "svelte/store";
     import { Fa } from "svelte-fa";
 
+    import { computeMigrationContext } from "$lib/api/generated/index.ts";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
@@ -145,34 +145,17 @@
     }
 
     export async function onNext() {
-        let body = new FormData();
-
-        if (compareMode === CompareMode.STORED_TO_STORED) {
-            body.append("datasetA", datasetA);
-            body.append("graphA", graphA);
-            body.append("datasetB", datasetB);
-            body.append("graphB", graphB);
-        } else if (compareMode === CompareMode.FILE_TO_STORED) {
-            body.append("fileA", fileA);
-            body.append("datasetB", datasetB);
-            body.append("graphB", graphB);
-        } else if (compareMode === CompareMode.STORED_TO_FILE) {
-            body.append("datasetA", datasetA);
-            body.append("graphA", graphA);
-            body.append("fileA", fileA);
-        } else if (compareMode === CompareMode.FILE_TO_FILE) {
-            body.append("fileA", fileA);
-            body.append("fileB", fileB);
-        }
-
-        let url = `${PUBLIC_BACKEND_URL}/migrations/context`;
         try {
-            let res = await fetch(url, {
-                method: "POST",
-                body: body,
-                credentials: "include",
+            let { error } = await computeMigrationContext({
+                query: {
+                    datasetA: datasetA,
+                    graphA: graphA,
+                    datasetB: datasetB,
+                    graphB: graphB,
+                },
+                body: { fileA: fileA, fileB: fileB },
             });
-            if (res.ok) {
+            if (!error) {
                 console.log("established migration context in backend");
                 migrationState.set({
                     compareMode,

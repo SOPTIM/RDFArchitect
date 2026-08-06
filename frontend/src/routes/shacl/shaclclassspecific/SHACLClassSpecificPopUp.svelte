@@ -16,8 +16,8 @@
   -->
 
 <script>
+    import { getShaclRelatedToClass } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ClassType, editorState } from "$lib/sharedState.svelte.js";
 
@@ -58,31 +58,21 @@
      */
     async function fetchShacl() {
         try {
-            const res = await fetch(
-                PUBLIC_BACKEND_URL +
-                    "/datasets/" +
-                    encodeURIComponent(datasetName) +
-                    "/graphs/" +
-                    encodeURIComponent(graphUri) +
-                    "/classes/" +
-                    encodeURIComponent(reactiveClass.uuid.value) +
-                    "/shacl",
-                {
-                    method: "GET",
-                    credentials: "include",
+            const { data, error } = await getShaclRelatedToClass({
+                path: {
+                    datasetName: datasetName,
+                    graphURI: graphUri,
+                    classUUID: reactiveClass.uuid.value,
                 },
-            );
-            if (!res.ok) {
-                console.warn(
-                    "Failed to fetch SHACL:",
-                    res.status,
-                    res.statusText,
-                );
+            });
+
+            if (error) {
+                console.warn("Failed to fetch SHACL:", error);
                 return;
             }
-            const resultObj = JSON.parse(await res.text());
-            customShacl = resultObj.custom;
-            generatedShacl = resultObj.generated;
+
+            customShacl = data.custom;
+            generatedShacl = data.generated;
             fetchKey++;
         } catch (error) {
             console.warn("Failed to fetch SHACL:", error);

@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
 import org.springframework.http.HttpHeaders;
@@ -44,11 +45,13 @@ class DatasetRESTControllerTest {
 
     @Test
     void listDatasets_returnsValueFromUseCase() {
-        when(listDatasetsUseCase.listDatasets()).thenReturn(List.of("dataset-a", "dataset-b"));
+        var dataset1 = new DatasetDTO("dataset-a", false, List.of());
+        var dataset2 = new DatasetDTO("dataset-b", false, List.of());
+        when(listDatasetsUseCase.listDatasets()).thenReturn(List.of(dataset1, dataset2));
 
         var result = controller.listDatasets(HttpHeaders.ORIGIN);
 
-        assertThat(result).containsExactly("dataset-a", "dataset-b");
+        assertThat(result).containsExactly(dataset1, dataset2);
         verify(listDatasetsUseCase).listDatasets();
     }
 

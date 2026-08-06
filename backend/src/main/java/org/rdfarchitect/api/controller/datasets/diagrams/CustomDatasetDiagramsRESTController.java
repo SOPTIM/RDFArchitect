@@ -51,12 +51,12 @@ public class CustomDatasetDiagramsRESTController {
 
     private final RenderCIMCollectionUseCase renderer;
 
-    private final DeleteCustomDiagramUseCase deleteCustomDiagram;
+    private final DeleteCustomDiagramUseCase deleteCustomDiagramUseCase;
 
-    private final ReplaceCustomDiagramUseCase replaceCustomDiagram;
+    private final ReplaceCustomDiagramUseCase replaceCustomDiagramUseCase;
 
     @GetMapping
-    public RenderingDataDTO getDiagramRenderingData(
+    public RenderingDataDTO getCustomDatasetViewRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -83,7 +83,7 @@ public class CustomDatasetDiagramsRESTController {
     }
 
     @PutMapping
-    public String replaceDiagram(
+    public String replaceCustomDatasetDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -101,7 +101,7 @@ public class CustomDatasetDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        replaceCustomDiagram.replaceCustomDiagram(datasetName, diagramId, diagram);
+        replaceCustomDiagramUseCase.replaceCustomDatasetDiagram(datasetName, diagramId, diagram);
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
@@ -112,7 +112,7 @@ public class CustomDatasetDiagramsRESTController {
     }
 
     @DeleteMapping
-    public String deleteDiagram(
+    public String deleteCustomDatasetDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -128,7 +128,7 @@ public class CustomDatasetDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        deleteCustomDiagram.deleteCustomDiagram(datasetName, diagramId);
+        deleteCustomDiagramUseCase.deleteCustomDatasetDiagram(datasetName, diagramId);
 
         logger.info(
                 "Sending response to DELETE request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",

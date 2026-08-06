@@ -24,17 +24,16 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext, onDestroy, onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { mapReactiveClassToClassDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
 
     import DeleteDependenciesDialog from "../../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -50,15 +49,13 @@
         closeClassEditor,
     } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     const classEditorContext = getContext("classEditor");
 
     const shortcutsUnregister = [];
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLClassDialog = $state(false);
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     // Hide the button labels (icon-only) once this row gets too narrow to fit
     // them. Readonly mode only shows Constraints + Close, so it can keep the
@@ -72,13 +69,13 @@
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         datasetName = classEditorContext.datasetName;
         graphUri = classEditorContext.graphUri;
     });
@@ -97,7 +94,6 @@
     });
 
     function saveChanges() {
-        console.log("Saving changes for class");
         const classDto = mapReactiveClassToClassDto(
             reactiveClass,
             classEditorContext.getClassByUuid,
@@ -105,38 +101,22 @@
             classEditorContext.getPackageByUuid,
         );
         saveChangesToBackend(classDto);
+        datatypesStore.invalidateGraph(datasetName, graphUri);
     }
 
     async function saveChangesToBackend(classDto) {
-        const classLabel = classDto.label ?? classDto.uuid;
-        const res = await bec.replaceClass(
+        const { error } = await classStore.replaceClass(
             datasetName,
             graphUri,
             classDto.uuid,
             classDto,
         );
-        const responseText = await res.text();
-        if (res.ok) {
-            console.log(
-                "Successfully saved unsaved changes to class:",
-                responseText,
-            );
+        if (!error) {
             reactiveClass.save();
             editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();
-            toastStore.success("Class saved", `"${classLabel}" was saved.`);
-        } else {
-            console.error(
-                "Could not save unsaved changes to class:",
-                responseText,
-            );
-            toastStore.error(
-                "Save failed",
-                `Could not save class "${classLabel}".`,
-            );
         }
-        forceReloadTrigger.trigger();
     }
 
     export function saveFromShortcut() {

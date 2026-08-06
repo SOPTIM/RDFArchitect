@@ -20,7 +20,7 @@
     import { Pane, Splitpanes } from "svelte-splitpanes";
     import { validate } from "uuid";
 
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { resolveIri as fetchResolveIRI } from "$lib/api/generated/index";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 
     import PackageNavigation from "./packageNavigation/packageNavigation.svelte";
@@ -49,19 +49,9 @@
     }
 
     async function resolveIRI(dataset, graph, iri) {
-        return await fetch(
-            PUBLIC_BACKEND_URL +
-                "/datasets/" +
-                encodeURIComponent(dataset) +
-                "/graphs/" +
-                encodeURIComponent(graph) +
-                "/resolve/iri/" +
-                encodeURIComponent(iri),
-            {
-                method: "GET",
-                credentials: "include",
-            },
-        ).then(res => res.text());
+        fetchResolveIRI({
+            path: { dataset: dataset, graph: graph, iri: iri },
+        }).then(res => res.data);
     }
 </script>
 

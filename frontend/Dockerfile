@@ -11,6 +11,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Generate the API client from the committed OpenAPI spec (offline, no backend needed)
+RUN npm run api:generate
+
 # Build frontend
 RUN npm run build
 

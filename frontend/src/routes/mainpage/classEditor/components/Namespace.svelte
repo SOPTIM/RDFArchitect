@@ -30,11 +30,11 @@
     const id = uuid();
     let namespaces = $derived(classEditorContext.namespaces);
     let reactiveClass = $derived(classEditorContext.reactiveClass);
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     $effect(() => {
@@ -44,7 +44,7 @@
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         namespaces = classEditorContext.namespaces;
         reactiveClass = classEditorContext.reactiveClass;
     });

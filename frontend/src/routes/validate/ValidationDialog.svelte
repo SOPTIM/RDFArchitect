@@ -16,11 +16,10 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { validateFile, validateSchema } from "$lib/api/generated/index.ts";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
@@ -33,8 +32,6 @@
         lockedDatasetName,
         lockedGraphUri,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const ValidationMode = Object.freeze({
         STORED: 0,
@@ -104,32 +101,35 @@
         let response;
         switch (validationMode) {
             case ValidationMode.FILE:
-                response = await bec.validateFile(file, cgmesVersion);
+                response = await validateFile({
+                    path: { cgmesVersion: cgmesVersion },
+                    body: file,
+                });
                 break;
             case ValidationMode.STORED:
-                response = await bec.validateSchema(
-                    dataset,
-                    graph,
-                    cgmesVersion,
-                );
+                response = await validateSchema({
+                    path: {
+                        datasetName: dataset,
+                        graphURI: graph,
+                        cgmesVersion: cgmesVersion,
+                    },
+                });
                 break;
             default:
                 throw new Error(`Unknown validationMode: ${validationMode}`);
         }
 
-        const result = await response.json();
-
         showDialog = false;
 
-        if (!response.ok) {
-            console.log(result);
+        if (response.error) {
+            console.log(response);
             toastStore.error(
                 "Something went wrong while validating the schema.",
             );
             return;
         }
 
-        validationState.result.updateValue(result);
+        validationState.result.updateValue(response.data);
         await goto("/validate");
     }
 </script>

@@ -170,7 +170,7 @@
         bind:showDialog={showEditDiagramDialog}
         lockedDatasetName={datasetNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
-        diagramName={diagram.name}
+        diagramName={diagram.label}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
     />
@@ -178,7 +178,7 @@
     <CustomDatasetDiagramDialog
         bind:showDialog={showEditDiagramDialog}
         lockedDatasetName={datasetNavEntry.id}
-        diagramName={diagram.name}
+        diagramName={diagram.label}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
     />

@@ -16,19 +16,15 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import { resetSession } from "$lib/api/generated/index.ts";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 
     let { showDialog = $bindable() } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
-    async function resetSession() {
-        try {
-            await bec.resetSession();
-        } catch {
+    async function callResetSession() {
+        const { error } = await resetSession();
+        if (error) {
             toastStore.error("Reset failed", "Could not reset the session.");
             return;
         }
@@ -41,7 +37,7 @@
     title="Reset Session?"
     primaryLabel="Reset Session"
     primaryVariant="danger"
-    onPrimary={resetSession}
+    onPrimary={callResetSession}
 >
     <div class="space-y-2 px-3 py-3">
         <p class="text-default-text text-sm leading-relaxed">

@@ -29,14 +29,14 @@
     const classEditorContext = getContext("classEditor");
     const packages = classEditorContext.packages;
     const id = uuid();
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
-    onMount(() => (readonly = classEditorContext.readonly));
+    onMount(() => (readonly = classEditorContext.readOnly));
 
     function getPackageLabel(packageUUID) {
         const pkg = classEditorContext.getPackageByUuid(packageUUID);

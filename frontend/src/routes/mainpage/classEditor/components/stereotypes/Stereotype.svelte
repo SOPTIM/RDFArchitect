@@ -35,7 +35,7 @@
     let suggestedStereotypes = $derived(
         withoutConcrete(classEditorContext.stereotypes),
     );
-    let readonly = $derived(classEditorContext.readonly);
+    let readonly = $derived(classEditorContext.readOnly);
 
     // The persisted concrete stereotype is surfaced by the "Abstract" checkbox
     // and hidden from the list. A row the user has just edited to the concrete
@@ -46,7 +46,7 @@
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
     });
 
     $effect(() => {
@@ -55,7 +55,7 @@
     });
 
     onMount(() => {
-        readonly = classEditorContext.readonly;
+        readonly = classEditorContext.readOnly;
         suggestedStereotypes = withoutConcrete(classEditorContext.stereotypes);
     });
 

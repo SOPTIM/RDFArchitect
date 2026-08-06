@@ -42,6 +42,12 @@
 - **License:** (CC-BY-4.0 AND MIT)
 - **URL:** [https://fontawesome.com](https://fontawesome.com)
 
+### @hey-api/openapi-ts
+- **Package:** @hey-api/openapi-ts
+- **Version:** 0.97.1
+- **License:** MIT
+- **URL:** [https://heyapi.dev/](https://heyapi.dev/)
+
 ### @sveltejs/adapter-auto
 - **Package:** @sveltejs/adapter-auto
 - **Version:** 7.0.1

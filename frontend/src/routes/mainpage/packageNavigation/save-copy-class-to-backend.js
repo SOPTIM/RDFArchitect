@@ -15,9 +15,6 @@
  *
  */
 
-import { BackendConnection } from "$lib/api/backend.js";
-import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
-import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import {
     ClassType,
     copyState,
@@ -25,8 +22,7 @@ import {
     editorState,
     forceReloadTrigger,
 } from "$lib/sharedState.svelte.js";
-
-const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+import { classStore } from "$lib/stores/ClassStore.ts";
 
 export async function saveCopyClass(
     datasetName,
@@ -50,9 +46,13 @@ export async function saveCopyClass(
         })),
     };
     try {
-        const res = await bec.postPasteClasses(datasetName, graphURI, payload);
-        if (res.ok) {
-            const pasted = await res.json();
+        const { data, error } = await classStore.saveCopyClass(
+            datasetName,
+            graphURI,
+            payload,
+        );
+        if (!error) {
+            const pasted = data;
             editorState.selectedDataset.updateValue(datasetName);
             editorState.selectedClassDataset.updateValue(datasetName);
             editorState.selectedGraph.updateValue(graphURI);
@@ -68,23 +68,7 @@ export async function saveCopyClass(
                     id: last.uuid,
                 });
             }
-            if (pasted.length === 1) {
-                toastStore.success(
-                    "Class pasted",
-                    `"${pasted[0].name}" was pasted.`,
-                );
-            } else {
-                toastStore.success(
-                    "Classes pasted",
-                    `${pasted.length} classes were pasted.`,
-                );
-            }
             return true;
-        } else {
-            const errorText = await res.text();
-            console.error("Could not paste classes:", errorText);
-            toastStore.error("Paste failed", `Could not paste classes.`);
-            return false;
         }
     } finally {
         forceReloadTrigger.trigger();

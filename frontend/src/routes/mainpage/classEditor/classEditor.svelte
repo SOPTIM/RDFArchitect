@@ -19,10 +19,7 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         eventStack,
         EventType,
@@ -38,13 +35,14 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
 
     import {
         getClasses,
         getDataTypes,
-        getNamespaces,
         getPackages,
-        getStereotypes,
     } from "./fetch-class-editor-context.js";
     import ShaclPropertySpecificDialog from "../../shacl/SHACLPropertySpecificDialog.svelte";
     import Associations from "./components/associations/Associations.svelte";
@@ -62,7 +60,6 @@
 
     const enumerationStereotype =
         "http://iec.ch/TC57/NonStandard/UML#enumeration";
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const context = {
         namespaces: [],
@@ -114,43 +111,21 @@
         loadingContext = true;
         loadingClass = true;
         (async () => {
-            let res = await bec.getClassInfo(
+            const classDto = await classStore.getClassInfo(
                 datasetName,
                 graphUri,
                 classUuid,
                 true,
             );
-            let resText = await res.text();
-            if (!resText) {
+            if (classDto == null) {
                 return closeClassEditor({
                     datasetName: datasetName,
                     graphUri: graphUri,
                     classUuid: null,
                 });
             }
-            let classData;
-            try {
-                classData = JSON.parse(resText);
-            } catch (e) {
-                console.error(
-                    "Failed to parse class data for class UUID",
-                    classUuid,
-                    "in dataset",
-                    datasetName,
-                    "and graph",
-                    graphUri,
-                    ":",
-                    e,
-                );
-                return closeClassEditor({
-                    datasetName: datasetName,
-                    graphUri: graphUri,
-                    classUuid: null,
-                });
-            }
-            isDatasetReadOnly = await isReadOnly(datasetName);
             await loadContext();
-            await loadReactiveClass(cancellation, classData);
+            await loadReactiveClass(cancellation, classDto);
         })();
 
         return () => {
@@ -161,7 +136,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = await isReadOnly(datasetName);
+        isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
     });
 
     onMount(() => {
@@ -196,6 +171,8 @@
             classType: null,
         },
     ) {
+        loadingContext = false;
+        loadingClass = false;
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
             datasetOfClassToOpenNext = datasetName;
@@ -223,8 +200,8 @@
             getClasses(datasetName, graphUri),
             getPackages(datasetName, graphUri),
             getDataTypes(datasetName, graphUri),
-            getStereotypes(datasetName, graphUri),
-            getNamespaces(datasetName),
+            datatypesStore.getStereotypes(datasetName, graphUri),
+            datasetStore.getNamespaces(datasetName),
         ]);
         loadingContext = false;
         editorState.selectedContext.trigger();
@@ -260,11 +237,13 @@
 
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
-                const res = await bec.getClassInfo(datasetName, graphUri, uuid);
-                if (!res || !res.ok) return null;
-                const text = await res.text();
-                if (!text) return null;
-                return JSON.parse(text);
+                const res = await classStore.getClassInfo(
+                    datasetName,
+                    graphUri,
+                    uuid,
+                );
+                if (!res) return null;
+                return res;
             }),
         );
         if (cancelled.cancelled) return;
@@ -284,7 +263,7 @@
         get graphUri() {
             return graphUri;
         },
-        get readonly() {
+        get readOnly() {
             return isDatasetReadOnly;
         },
         get namespaces() {
@@ -307,9 +286,6 @@
         },
         get targetClassInfos() {
             return context.targetClassInfos;
-        },
-        get backendConnection() {
-            return bec;
         },
         get getClassByUuid() {
             return function (uuid) {

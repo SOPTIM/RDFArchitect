@@ -16,17 +16,13 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
     let { showDialog = $bindable(), datasetName } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let colorEntries = $state([]);
 
@@ -45,55 +41,33 @@
     }
 
     async function loadColors() {
-        try {
-            const res = await bec.getCrossProfileColorData(datasetName);
-            if (!res.ok) {
-                toastStore.error("Load failed", "Could not load color data.");
-                console.error("Failed to load color data");
-                return;
-            }
-            const data = await res.json();
-            const map = data.graphColors ?? {};
-            colorEntries = Object.entries(map).map(([graphURI, color]) => ({
-                graphURI,
-                color,
-            }));
-            snapshotOriginal();
-        } catch (err) {
-            console.error("Failed to load color data:", err);
-            toastStore.error("Load failed", "An unexpected error occurred.");
+        const { error, data } =
+            await crossProfileStore.fetchColors(datasetName);
+        if (error) {
+            return;
         }
+
+        const map = data.graphColors ?? {};
+        colorEntries = Object.entries(map).map(([graphURI, color]) => ({
+            graphURI,
+            color,
+        }));
+        snapshotOriginal();
     }
 
     async function saveColors() {
         const graphColors = Object.fromEntries(
             colorEntries.map(e => [e.graphURI, e.color]),
         );
-        try {
-            const res = await bec.putCrossProfileColorData(datasetName, {
-                graphColors,
-            });
-            if (!res.ok) {
-                toastStore.error(
-                    "Save failed",
-                    `Could not save color data for "${datasetName}".`,
-                );
-                console.error("Failed to save color data");
-                return;
-            }
-            toastStore.success(
-                "Colors saved",
-                `Color settings updated for "${datasetName}".`,
-            );
-            snapshotOriginal();
-            forceReloadTrigger.trigger();
-        } catch (err) {
-            console.error("Failed to save color data:", err);
-            toastStore.error(
-                "Save failed",
-                "An unexpected error occurred while saving.",
-            );
+
+        const { error } = await crossProfileStore.saveColors(datasetName, {
+            graphColors,
+        });
+        if (error) {
+            return;
         }
+        snapshotOriginal();
+        forceReloadTrigger.trigger();
     }
 
     function discardColors() {

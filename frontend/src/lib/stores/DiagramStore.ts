@@ -1,0 +1,383 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+import { writable } from "svelte/store";
+
+import { loadSlot, makeGraphKey } from "./storeHelpers";
+import { describeError } from "./StoreLogging";
+import { AsyncListSlot, createEmptyListSlot, Result } from "./storeTypes";
+import {
+    getCustomDatasetDiagramList,
+    getCustomGraphDiagramList,
+    type CustomDiagram,
+    replaceCustomDatasetDiagram,
+    replaceCustomGraphDiagram,
+    deleteCustomDatasetDiagram,
+    deleteCustomGraphDiagram,
+    addToCustomDatasetDiagram,
+    removeFromCustomDatasetDiagram,
+    removeFromCustomGraphDiagram,
+    addToCustomGraphDiagram,
+} from "../api/generated";
+import { toastStore } from "../eventhandling/toastStore.svelte.js";
+
+type StoreState = {
+    // key: dataset
+    datasetLists: Map<string, AsyncListSlot<CustomDiagram>>;
+    // key: dataset::graph
+    graphLists: Map<string, AsyncListSlot<CustomDiagram>>;
+};
+
+const LOG_PREFIX = "[customDiagramStore]";
+
+export const customDiagramStore = createCustomDiagramStore();
+
+function createCustomDiagramStore() {
+    const store = writable<StoreState>({
+        datasetLists: new Map(),
+        graphLists: new Map(),
+    });
+
+    const { subscribe, update } = store;
+
+    // ---------- helpers ----------
+    function getDatasetListState(
+        state: StoreState,
+        datasetName: string,
+    ): AsyncListSlot<CustomDiagram> {
+        return state.datasetLists.get(datasetName) ?? createEmptyListSlot();
+    }
+
+    function getGraphListState(
+        state: StoreState,
+        datasetName: string,
+        graphURI: string,
+    ): AsyncListSlot<CustomDiagram> {
+        return (
+            state.graphLists.get(makeGraphKey(datasetName, graphURI)) ??
+            createEmptyListSlot()
+        );
+    }
+
+    // ---------- getters ----------
+    async function getDatasetDiagrams(
+        datasetName: string,
+        force = false,
+    ): Promise<CustomDiagram[] | null> {
+        if (!datasetName) return null;
+        return loadSlot(
+            store,
+            s => s.datasetLists.get(datasetName) ?? createEmptyListSlot(),
+            (s, patch) => {
+                const map = new Map(s.datasetLists);
+                map.set(datasetName, {
+                    ...getDatasetListState(s, datasetName),
+                    ...patch,
+                });
+                return { ...s, datasetLists: map };
+            },
+            () => getCustomDatasetDiagramList({ path: { datasetName } }),
+            LOG_PREFIX,
+            `dataset diagrams for "${datasetName}"`,
+            force,
+        );
+    }
+
+    async function getGraphDiagrams(
+        datasetName: string,
+        graphURI: string,
+        force = false,
+    ): Promise<CustomDiagram[] | null> {
+        if (!datasetName || !graphURI) return null;
+        const key = makeGraphKey(datasetName, graphURI);
+        return loadSlot(
+            store,
+            s => s.graphLists.get(key) ?? createEmptyListSlot(),
+            (s, patch) => {
+                const map = new Map(s.graphLists);
+                map.set(key, {
+                    ...getGraphListState(s, datasetName, graphURI),
+                    ...patch,
+                });
+                return { ...s, graphLists: map };
+            },
+            () =>
+                getCustomGraphDiagramList({ path: { datasetName, graphURI } }),
+            LOG_PREFIX,
+            `graph diagrams for dataset="${datasetName}" graph="${graphURI}"`,
+            force,
+        );
+    }
+
+    // ---------- mutations ----------
+    async function saveDatasetDiagram(
+        datasetName: string,
+        diagramId: string,
+        diagram: unknown,
+    ): Promise<Result> {
+        const { error } = await replaceCustomDatasetDiagram({
+            path: { datasetName, diagramId },
+            body: diagram as never,
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not save dataset diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error("Save failed", "Could not save dataset diagram.");
+            return { error };
+        }
+
+        invalidateDataset(datasetName);
+        toastStore.success("Diagram saved", "Dataset diagram was saved.");
+        return { error: null };
+    }
+
+    async function saveGraphDiagram(
+        datasetName: string,
+        graphURI: string,
+        diagramId: string,
+        diagram: unknown,
+    ): Promise<Result> {
+        const { error } = await replaceCustomGraphDiagram({
+            path: { datasetName, graphURI, diagramId },
+            body: diagram as never,
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not save graph diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error("Save failed", "Could not save graph diagram.");
+            return { error };
+        }
+
+        invalidateGraph(datasetName, graphURI);
+        toastStore.success("Diagram saved", "Graph diagram was saved.");
+        return { error: null };
+    }
+
+    async function deleteDatasetDiagram(
+        datasetName: string,
+        diagramId: string,
+    ): Promise<Result> {
+        const { error } = await deleteCustomDatasetDiagram({
+            path: { datasetName, diagramId },
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not delete dataset diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Delete failed",
+                "Could not delete dataset diagram.",
+            );
+            return { error };
+        }
+
+        invalidateDataset(datasetName);
+        toastStore.success("Diagram deleted", "Dataset diagram was removed.");
+        return { error: null };
+    }
+
+    async function deleteGraphDiagram(
+        datasetName: string,
+        graphURI: string,
+        diagramId: string,
+    ): Promise<Result> {
+        const { error } = await deleteCustomGraphDiagram({
+            path: { datasetName, graphURI, diagramId },
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not delete graph diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Delete failed",
+                "Could not delete graph diagram.",
+            );
+            return { error };
+        }
+
+        invalidateGraph(datasetName, graphURI);
+        toastStore.success("Diagram deleted", "Graph diagram was removed.");
+        return { error: null };
+    }
+
+    async function addClassesToDatasetDiagram(
+        datasetName: string,
+        diagramId: string,
+        classes: string[],
+    ): Promise<Result> {
+        const { error } = await addToCustomDatasetDiagram({
+            path: { datasetName, diagramId },
+            body: classes as never,
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not add classes to dataset diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Update failed",
+                "Could not add classes to diagram.",
+            );
+            return { error };
+        }
+
+        invalidateDataset(datasetName);
+        return { error: null };
+    }
+
+    async function addClassesToGraphDiagram(
+        datasetName: string,
+        graphURI: string,
+        diagramId: string,
+        classes: string[],
+    ): Promise<Result> {
+        const { error } = await addToCustomGraphDiagram({
+            path: { datasetName, graphURI, diagramId },
+            body: classes as never,
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not add classes to graph diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Update failed",
+                "Could not add classes to diagram.",
+            );
+            return { error };
+        }
+
+        invalidateGraph(datasetName, graphURI);
+        return { error: null };
+    }
+
+    async function removeClassFromDatasetDiagram(
+        datasetName: string,
+        diagramId: string,
+        classIDs: string[],
+    ): Promise<Result> {
+        const { error } = await removeFromCustomDatasetDiagram({
+            path: { datasetName, diagramId },
+            body: classIDs,
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not remove class from dataset diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Update failed",
+                "Could not remove class from diagram.",
+            );
+            return { error };
+        }
+
+        invalidateDataset(datasetName);
+        return { error: null };
+    }
+
+    async function removeClassFromGraphDiagram(
+        datasetName: string,
+        graphURI: string,
+        diagramId: string,
+        classId: string,
+    ): Promise<Result> {
+        const { error } = await removeFromCustomGraphDiagram({
+            path: { datasetName, graphURI, diagramId, classId },
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Could not remove class from graph diagram "${diagramId}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Update failed",
+                "Could not remove class from diagram.",
+            );
+            return { error };
+        }
+
+        invalidateGraph(datasetName, graphURI);
+        return { error: null };
+    }
+
+    // ---------- invalidation ----------
+    function invalidateDataset(datasetName: string) {
+        update(s => {
+            const datasetLists = new Map(s.datasetLists);
+            const graphLists = new Map(s.graphLists);
+
+            datasetLists.delete(datasetName);
+
+            const datasetPrefix = `${datasetName}::`;
+            for (const key of graphLists.keys()) {
+                if (key.startsWith(datasetPrefix)) graphLists.delete(key);
+            }
+
+            return {
+                datasetLists,
+                graphLists,
+            };
+        });
+    }
+
+    function invalidateGraph(datasetName: string, graphURI: string) {
+        update(s => {
+            const graphLists = new Map(s.graphLists);
+
+            graphLists.delete(makeGraphKey(datasetName, graphURI));
+
+            return { ...s, graphLists };
+        });
+    }
+
+    return {
+        subscribe,
+
+        //getters
+        getDatasetDiagrams,
+        getGraphDiagrams,
+
+        // mutations
+        saveDatasetDiagram,
+        saveGraphDiagram,
+        deleteDatasetDiagram,
+        deleteGraphDiagram,
+        addClassesToDatasetDiagram,
+        addClassesToGraphDiagram,
+        removeClassFromDatasetDiagram,
+        removeClassFromGraphDiagram,
+
+        // invalidation
+        invalidateDataset,
+        invalidateGraph,
+    };
+}

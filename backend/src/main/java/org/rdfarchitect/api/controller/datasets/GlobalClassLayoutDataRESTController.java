@@ -50,12 +50,12 @@ public class GlobalClassLayoutDataRESTController {
     private final UpdateClassPositionsUseCase updateClassPositionsUseCase;
 
     @Operation(
-            summary = "updates class positions",
+            summary = "updates class positions on dataset level",
             description =
                     "Updates the positions for all the classes provided in the request body with the provided coordinates.",
             tags = {"diagram", "layout", "class"})
     @PutMapping
-    public String updateClassPositions(
+    public String updateDatasetClassPositions(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
                     String originURL,

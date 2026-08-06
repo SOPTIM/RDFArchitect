@@ -37,21 +37,15 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
-    import {
-        undo,
-        fetchCanUndo,
-        redo,
-        fetchCanRedo,
-    } from "$lib/actions/versionControlActions.js";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         editorState,
         forceReloadTrigger,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
@@ -80,8 +74,6 @@
         namespaces = [],
         readonly = false,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let ontology = $state();
     let showExportDialog = $state(false);
@@ -123,21 +115,41 @@
     });
 
     async function initialize() {
-        ontology = await getOntology();
-        canUndo = await fetchCanUndo(datasetNavEntry.id, graphNavEntry.id);
-        canRedo = await fetchCanRedo(datasetNavEntry.id, graphNavEntry.id);
-    }
-
-    async function getOntology() {
-        const res = await bec.getOntology(
-            datasetNavEntry.label,
+        ontology = await ontologyStore.getOntologyForGraph(
+            datasetNavEntry.id,
             graphNavEntry.id,
         );
-        let content = await res.text();
-        if (!content) {
-            return null;
+
+        canUndo = versionControlStore.canUndo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
+        canRedo = versionControlStore.canRedo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
+    }
+
+    async function undo() {
+        const { error } = await versionControlStore.undo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
+
+        if (!error) {
+            forceReloadTrigger.trigger();
         }
-        return JSON.parse(content);
+    }
+
+    async function redo() {
+        const { error } = await versionControlStore.redo(
+            datasetNavEntry.id,
+            graphNavEntry.id,
+        );
+
+        if (!error) {
+            forceReloadTrigger.trigger();
+        }
     }
 
     function handleToggleGraph() {
@@ -205,9 +217,7 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    undo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) forceReloadTrigger.trigger();
-                    });
+                    undo();
                 }}
                 disabled={readonly || !canUndo}
                 faIcon={faRotateLeft}
@@ -218,9 +228,7 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    redo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) forceReloadTrigger.trigger();
-                    });
+                    redo();
                 }}
                 disabled={readonly || !canRedo}
                 faIcon={faRotateRight}

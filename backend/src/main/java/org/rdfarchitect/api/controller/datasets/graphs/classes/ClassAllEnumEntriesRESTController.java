@@ -19,6 +19,8 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
@@ -52,9 +54,13 @@ public class ClassAllEnumEntriesRESTController {
 
     @Operation(
             summary = "Create enum entry",
-            description = "Creates a new enum entry for a specified class..",
+            description = "Creates a new enum entry for a specified class.",
             tags = {"enum"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses =
+                    @ApiResponse(
+                            responseCode = "200",
+                            description = "UUID of the newly created enum entry.",
+                            content = @Content(schema = @Schema(implementation = UUID.class))))
     @PostMapping
     public UUID createEnumEntry(
             @Parameter(description = "The name/url of the inquirer.")

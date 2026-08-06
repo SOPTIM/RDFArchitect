@@ -18,16 +18,20 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import {
+        deleteResources,
+        getDeletionImpact,
+    } from "$lib/api/generated/index.ts";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         copyState,
+        editorState,
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
-    import { editorState } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
@@ -41,8 +45,6 @@
         resourceUuid,
         resourceUuids,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     /** @type {Array<object>} One affected-resource tree per requested resource. */
     let roots = $state([]);
@@ -126,13 +128,14 @@
             showDialog = false;
             return;
         }
-        let res = await bec.getDeletionImpact(
-            datasetName,
-            graphUri,
-            targetUuids,
-        );
-        const impactByUuid = await res.json();
-        roots = Object.values(impactByUuid);
+        let { data } = await getDeletionImpact({
+            path: {
+                datasetName: datasetName,
+                graphURI: graphUri,
+            },
+            body: targetUuids,
+        });
+        roots = Object.values(data);
 
         selectedActions = new Map();
         roots.forEach(root => initSelectedActions(root));
@@ -183,9 +186,13 @@
         console.log("Submit delete with selections:", payload);
         const isSingle = roots.length === 1;
         const label = isSingle ? roots[0].resourceIdentifier.label : null;
-        let res = await bec.deleteResources(datasetName, graphUri, payload);
-        if (!res.ok) {
-            console.error("Failed to delete resources:", await res.text());
+
+        let { error } = await deleteResources({
+            path: { datasetName: datasetName, graphURI: graphUri },
+            body: payload,
+        });
+        if (error) {
+            console.error("Failed to delete resources:", error);
             toastStore.error(
                 "Delete failed",
                 label
@@ -193,6 +200,9 @@
                     : "Could not delete the selected resources.",
             );
         } else {
+            packageStore.invalidateGraph(datasetName, graphUri);
+            classStore.invalidateGraph(datasetName, graphUri);
+
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();
             editorState.selectedClassDataset.updateValue(null);

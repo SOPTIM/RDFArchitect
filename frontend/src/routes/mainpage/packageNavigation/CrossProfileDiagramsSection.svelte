@@ -21,7 +21,6 @@
         faFileExport,
     } from "@fortawesome/free-solid-svg-icons";
 
-    import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import {
@@ -30,6 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
 
     import ClassEntry from "./ClassEntry.svelte";
     import CrossProfileColorDialog from "./custom-diagram-dialogs/CrossProfileColorDialog.svelte";
@@ -49,9 +49,12 @@
 
     $effect(() => {
         forceReloadTrigger.subscribe();
-        getCrossProfileDiagram(datasetNavEntry.label).then(diagram => {
+        (async () => {
+            const diagram = await crossProfileStore.getDiagram(
+                datasetNavEntry.label,
+            );
             classes = diagram?.classes ?? [];
-        });
+        })();
     });
 
     function selectMergedView() {

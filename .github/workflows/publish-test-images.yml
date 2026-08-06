@@ -30,6 +30,8 @@ jobs:
           echo "PUBLIC_REPOSITORY_URL=https://github.com/${GITHUB_REPOSITORY}" >> "$GITHUB_ENV"
       - name: Clean install
         run: npm run clean-install
+      - name: Generate API client
+        run: npm run api:generate
       - name: Build
         env:
           PUBLIC_APP_VERSION: ${{ env.APP_VERSION }}

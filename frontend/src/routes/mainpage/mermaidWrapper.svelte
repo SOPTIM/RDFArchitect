@@ -19,10 +19,9 @@
     import { faBoxOpen } from "@fortawesome/free-solid-svg-icons";
     import { onMount } from "svelte";
 
-    import { BackendConnection } from "$lib/api/backend.js";
+    import { getRenderingDataParameterized } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import ZoomAndDraggableMermaid from "$lib/mermaid/zoomAndDraggableMermaid.svelte";
     import {
@@ -66,14 +65,13 @@
                 graphViewState.filter.getValue()
                     .includeRelationsToExternalPackages,
         };
-        new BackendConnection(fetch, PUBLIC_BACKEND_URL)
-            .fetchMermaidUMLFiltered(
-                editorState.selectedDataset.getValue(),
-                editorState.selectedGraph.getValue(),
-                graphFilter,
-            )
-            .then(res => res.text())
-            .then(newMMString => (mermaidString = newMMString));
+
+        const { data } = await getRenderingDataParameterized(
+            editorState.selectedDataset.getValue(),
+            editorState.selectedGraph.getValue(),
+            graphFilter,
+        );
+        mermaidString = data;
     });
 
     onMount(() => {

@@ -18,30 +18,27 @@
 <script>
     import { faExclamation } from "@fortawesome/free-solid-svg-icons";
 
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
+    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
+    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const baseDeletionDescription =
         "All schemas and packages inside this dataset will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
-        graphs = null;
-        if (datasetName) {
-            const res = await bec.getGraphNames(datasetName);
-            graphs = await res.json();
-        } else {
-            graphs = [];
-        }
+        graphs = await graphStore.getGraphs(datasetName);
     }
 
     function onClose() {
@@ -50,25 +47,20 @@
 
     async function deleteDataset() {
         try {
-            if (datasetName) {
-                const res = await bec.deleteDataset(datasetName);
-                if (res && res.ok === false) {
-                    toastStore.error(
-                        "Delete failed",
-                        `Could not delete dataset "${datasetName}".`,
-                    );
-                    return;
-                }
-            }
+            if (!datasetName) return;
+
+            const res = await datasetStore.remove(datasetName);
+            if (res.error) return;
+
+            graphStore.invalidateDataset(datasetName);
+            classStore.invalidateDataset(datasetName);
+            packageStore.invalidateDataset(datasetName);
+            datatypesStore.invalidateDataset(datasetName);
+            ontologyStore.invalidateDataset(datasetName);
+            customDiagramStore.invalidateDataset(datasetName);
 
             if (editorState.selectedDataset.getValue() === datasetName) {
                 editorState.reset();
-            }
-            if (datasetName) {
-                toastStore.success(
-                    "Dataset deleted",
-                    `"${datasetName}" was removed.`,
-                );
             }
         } finally {
             forceReloadTrigger.trigger();

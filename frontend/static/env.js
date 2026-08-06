@@ -15,7 +15,7 @@
  */
 
 window.__RDFARCHITECT_CONFIG__ = {
-    PUBLIC_BACKEND_URL: "http://localhost:8080/api",
+    PUBLIC_BACKEND_URL: "http://localhost:8080",
     PUBLIC_APP_VERSION: "",
     PUBLIC_COMMIT_SHA: "",
     PUBLIC_REPOSITORY_URL: "https://github.com/SOPTIM/RDFArchitect",

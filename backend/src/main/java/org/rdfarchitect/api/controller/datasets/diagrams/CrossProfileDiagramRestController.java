@@ -43,7 +43,7 @@ public class CrossProfileDiagramRestController {
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
 
     @GetMapping
-    public CrossProfileDiagramDTO getCrossProfileRenderingData(
+    public CrossProfileDiagramDTO getCrossProfileDiagram(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

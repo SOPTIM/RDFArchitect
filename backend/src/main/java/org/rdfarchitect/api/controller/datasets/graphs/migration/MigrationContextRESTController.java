@@ -28,6 +28,7 @@ import org.rdfarchitect.services.schemamigration.ClearMigrationContextUseCase;
 import org.rdfarchitect.services.schemamigration.SetMigrationContextUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -55,7 +56,7 @@ public class MigrationContextRESTController {
                     "Computes the diff of two given graphs and stores it in the session for later usage in migration endpoints. "
                             + "Accepts the graphs either as file uploads, GraphIdentifiers or a combination of both.",
             tags = {"migration"})
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public void computeMigrationContext(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(value = "origin", required = false, defaultValue = "unknown")
