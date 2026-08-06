@@ -75,9 +75,8 @@
 
     async function fetchOtherDiagrams() {
         try {
-            const res =
-                await bec.getCustomDiagramsForDataset(lockedDatasetName);
-            const diagrams = await res.json();
+            const diagrams =
+                await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
             );

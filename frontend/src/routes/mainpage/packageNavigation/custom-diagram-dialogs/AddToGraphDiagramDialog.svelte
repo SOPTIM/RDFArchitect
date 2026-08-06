@@ -16,12 +16,9 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
     import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { hasNoSpaces } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import {
         DiagramType,
@@ -36,8 +33,6 @@
         lockedGraphUri,
         classes,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     let diagramNameInput = $state("");
     let existingDiagrams = $state([]);
@@ -121,48 +116,34 @@
 
     async function createDiagram() {
         const diagramId = crypto.randomUUID();
-        const count = classes.length;
         const diagramData = {
             diagramId: diagramId,
             name: trimmedName,
             classes: classesToAdd(),
         };
 
-        try {
-            const res = await bec.putCustomDiagram(
-                lockedDatasetName,
-                lockedGraphUri,
-                diagramId,
-                diagramData,
-            );
+        const { error } = await customDiagramStore.saveGraphDiagram(
+            lockedDatasetName,
+            lockedGraphUri,
+            diagramId,
+            diagramData,
+        );
+        if (error) return;
 
-            if (!res.ok) {
-                toastStore.error(
-                    "Create failed",
-                    `Could not create diagram "${trimmedName}".`,
-                );
-                return;
-            }
-
-            editorState.selectedDataset.updateValue(lockedDatasetName);
-            editorState.selectedGraph.updateValue(lockedGraphUri);
-            editorState.selectedDiagram.updateValue({
-                type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
-                id: diagramId,
-            });
-            toastStore.success(
-                "Diagram created",
-                `"${trimmedName}" was created with ${count} ${count === 1 ? "class" : "classes"}.`,
-            );
-        } finally {
-            forceReloadTrigger.trigger();
-        }
+        editorState.selectedDataset.updateValue(lockedDatasetName);
+        editorState.selectedGraph.updateValue(lockedGraphUri);
+        editorState.selectedDiagram.updateValue({
+            type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
+            id: diagramId,
+        });
+        forceReloadTrigger.trigger();
     }
 
     async function addToDiagram(diagram) {
         const { error } = await customDiagramStore.addClassesToGraphDiagram(
             lockedDatasetName,
             lockedGraphUri,
+            diagram.diagramId,
             classesToAdd(),
         );
         if (!error) {
