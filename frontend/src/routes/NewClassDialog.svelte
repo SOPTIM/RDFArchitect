@@ -248,8 +248,7 @@
 
         const { data, error } = await postNewClass(form);
         if (!error) {
-            const classUUID = data;
-            handleClassCreated(form, classUUID);
+            handleClassCreated(form, data);
         }
         forceReloadTrigger.trigger();
     }

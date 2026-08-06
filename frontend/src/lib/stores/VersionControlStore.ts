@@ -57,13 +57,15 @@ function createStore() {
         });
     }
 
-    async function refresh(dataset: string, graph: string) {
-        if (!dataset || !graph) return;
+    async function refresh(dataset?: string, graph?: string) {
+        const d = dataset ?? editorState.selectedDataset.getValue();
+        const g = graph ?? editorState.selectedGraph.getValue();
+        if (!d || !g) return;
         const [u, r] = await Promise.all([
-            sdkCanUndo({ path: { datasetName: dataset, graphURI: graph } }),
-            sdkCanRedo({ path: { datasetName: dataset, graphURI: graph } }),
+            sdkCanUndo({ path: { datasetName: d, graphURI: g } }),
+            sdkCanRedo({ path: { datasetName: d, graphURI: g } }),
         ]);
-        patch(dataset, graph, {
+        patch(d, g, {
             canUndo: !u.error && u.data === true,
             canRedo: !r.error && r.data === true,
         });

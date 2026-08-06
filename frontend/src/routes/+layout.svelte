@@ -115,7 +115,9 @@
     }
 
     async function fetchUndoRedo() {
-        await versionControlStore.refresh();
+        const dataset = editorState.selectedDataset.getValue();
+        const graph = editorState.selectedGraph.getValue();
+        await versionControlStore.refresh(dataset, graph);
         canUndo = versionControlStore.canUndo();
         canRedo = versionControlStore.canRedo();
     }

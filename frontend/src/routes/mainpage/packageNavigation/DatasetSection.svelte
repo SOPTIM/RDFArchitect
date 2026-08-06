@@ -94,7 +94,7 @@
     });
 
     onMount(async () => {
-        await crossProfileStore.loadId();
+        await crossProfileStore.loadId(datasetNavEntry.label);
         crossProfileID = crossProfileStore.getId(datasetNavEntry.label);
     });
 

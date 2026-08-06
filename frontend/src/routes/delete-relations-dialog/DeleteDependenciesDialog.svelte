@@ -30,9 +30,12 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
+    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { packageStore } from "$lib/stores/PackageStore.ts";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";
+
 
     let {
         showDialog = $bindable(),
@@ -198,6 +201,9 @@
                     : "Could not delete the selected resources.",
             );
         } else {
+            packageStore.invalidateGraph(datasetName, graphUri);
+            classStore.invalidateGraph(datasetName, graphUri);
+
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();
             editorState.selectedClassDataset.updateValue(null);
