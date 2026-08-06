@@ -57,7 +57,7 @@ export class BackendConnection {
         });
     }
 
-    async getGraphNames(datasetName) {
+    async getGraphs(datasetName) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs`;
         return fetch(url, {
             method: "GET",

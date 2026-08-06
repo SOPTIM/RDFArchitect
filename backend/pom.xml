@@ -424,5 +424,11 @@
             <version>${lombok-mapstruct-binding.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>de.soptim.opencgmes</groupId>
+            <artifactId>cimxml</artifactId>
+            <version>1.1.0</version>
+        </dependency>
     </dependencies>
 </project>

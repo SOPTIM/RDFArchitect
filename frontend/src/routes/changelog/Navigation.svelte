@@ -53,10 +53,8 @@
                 graphs: [],
                 showContents: showDatasetContents,
             });
-            const graphUris = await getGraphUris(datasetName);
-            graphUris.forEach(graphUri =>
-                newDatasetList.at(-1).graphs.push(graphUri),
-            );
+            const graphs = await getGraphs(datasetName);
+            graphs.forEach(graph => newDatasetList.at(-1).graphs.push(graph));
         }
         datasetList = newDatasetList;
     }
@@ -66,8 +64,8 @@
         return await res.json();
     }
 
-    async function getGraphUris(datasetName) {
-        const res = await bec.getGraphNames(datasetName);
+    async function getGraphs(datasetName) {
+        const res = await bec.getGraphs(datasetName);
         return await res.json();
     }
 </script>
@@ -100,8 +98,8 @@
                             {#each dataset.graphs as graph}
                                 <NavigationEntry
                                     level={2}
-                                    label={graph.suffix}
-                                    secondaryLabel={graph.prefix ?? ""}
+                                    label={graph.keyword ?? graph.uri.suffix}
+                                    secondaryLabel={graph.uri.prefix ?? ""}
                                     icon={faDiagramProject}
                                     isSelected={selectedDatasetName ===
                                         dataset.label &&
