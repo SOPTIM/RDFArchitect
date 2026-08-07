@@ -86,9 +86,7 @@ public class PastePreviewService implements PastePreviewUseCase {
 
     private Map<URI, List<URI>> requiredDataTypes(List<CopyClassReference> missingDataTypes) {
         var listed =
-                missingDataTypes.stream()
-                        .map(reference -> reference.uri())
-                        .collect(Collectors.toSet());
+                missingDataTypes.stream().map(CopyClassReference::uri).collect(Collectors.toSet());
 
         var requires = new LinkedHashMap<URI, List<URI>>();
         referenceResolver
