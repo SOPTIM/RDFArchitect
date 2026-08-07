@@ -28,6 +28,7 @@ import org.rdfarchitect.api.dto.PastePreviewResponseDTO.PasteUsageDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.springframework.stereotype.Service;
 
@@ -110,7 +111,7 @@ public class PastePreviewService implements PastePreviewUseCase {
         return references.stream()
                 .filter(reference -> reference.kinds().contains(kind))
                 .filter(reference -> !pastedUris.contains(reference.uri()))
-                .filter(reference -> !GraphClasses.containsClass(targetGraph, reference.uri()))
+                .filter(reference -> !CIMResourceUtils.containsClass(targetGraph, reference.uri()))
                 .toList();
     }
 

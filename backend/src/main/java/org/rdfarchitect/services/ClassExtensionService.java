@@ -93,10 +93,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         }
 
         // set new UUID and remove concrete stereotype
-        var filteredStereotypes =
-                classCopy.getStereotypes().stream()
-                        .filter(s -> !s.getStereotype().equals(CIMStereotypes.concreteString))
-                        .toList();
+        var filteredStereotypes = CIMStereotypes.withoutConcrete(classCopy.getStereotypes());
         classCopy.setUuid(UUID.randomUUID());
         classCopy.setStereotypes(filteredStereotypes);
 
@@ -110,10 +107,7 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         var superClasses = relationFinder.findSuperClasses(classUUID);
         for (var superClass : superClasses) {
             // set new UUID and remove concrete stereotype
-            var filteredStereotypes =
-                    superClass.getStereotypes().stream()
-                            .filter(s -> !s.getStereotype().equals(CIMStereotypes.concreteString))
-                            .toList();
+            var filteredStereotypes = CIMStereotypes.withoutConcrete(superClass.getStereotypes());
             superClass.setUuid(UUID.randomUUID());
             superClass.setStereotypes(filteredStereotypes);
         }

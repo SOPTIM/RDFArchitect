@@ -45,6 +45,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -236,7 +237,7 @@ public class CopyClassService implements CopyClassUseCase {
             PrefixMapping prefixMapping,
             Set<URI> copiedUris) {
 
-        if (GraphClasses.containsClass(targetGraph, sourceClass.getUri())) {
+        if (CIMResourceUtils.containsClass(targetGraph, sourceClass.getUri())) {
             return false;
         }
 
@@ -264,7 +265,7 @@ public class CopyClassService implements CopyClassUseCase {
             return null;
         }
         if (copiedUris.contains(superClass.getUri())
-                || GraphClasses.containsClass(targetGraph, superClass.getUri())) {
+                || CIMResourceUtils.containsClass(targetGraph, superClass.getUri())) {
             return superClass;
         }
         return null;
@@ -333,7 +334,7 @@ public class CopyClassService implements CopyClassUseCase {
                         new URI(cimClass.getUri().getPrefix() + label.getValue()),
                         label,
                         options.copyAsAbstract()
-                                ? withoutConcreteStereotype(cimClass)
+                                ? CIMStereotypes.withoutConcrete(cimClass.getStereotypes())
                                 : cimClass.getStereotypes(),
                         options.copyInheritance() ? cimClass.getSuperClass() : null,
                         cimPackage);
@@ -381,12 +382,6 @@ public class CopyClassService implements CopyClassUseCase {
     private void copyMembers(CIMClassUMLAdapted sourceClass, CIMClassUMLAdapted newCimClass) {
         newCimClass.setAttributes(copyAttributes(sourceClass.getAttributes(), newCimClass));
         newCimClass.setEnumEntries(copyEnumEntries(sourceClass.getEnumEntries(), newCimClass));
-    }
-
-    private List<CIMSStereotype> withoutConcreteStereotype(CIMClassUMLAdapted cimClass) {
-        return cimClass.getStereotypes().stream()
-                .filter(s -> !s.getStereotype().equals(CIMStereotypes.concreteString))
-                .toList();
     }
 
     private List<CIMAttribute> copyAttributes(List<CIMAttribute> attributes, CIMClass cimClass) {
