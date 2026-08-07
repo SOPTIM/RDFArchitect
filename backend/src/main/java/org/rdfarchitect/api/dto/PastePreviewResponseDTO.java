@@ -17,23 +17,19 @@
 
 package org.rdfarchitect.api.dto;
 
-import lombok.Data;
-
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
 import java.util.List;
-import java.util.UUID;
+import java.util.Map;
 
-@Data
-public class PasteClassesRequestDTO {
+public record PastePreviewResponseDTO(Map<String, List<PasteReferenceDTO>> missing) {
 
-    UUID targetPackageUUID;
-    boolean copyAsAbstract;
-    boolean copyAttributes;
-    boolean copyAssociations;
-    boolean copyInheritance;
+    public static PastePreviewResponseDTO empty() {
+        return new PastePreviewResponseDTO(Map.of());
+    }
 
-    List<URI> referencesToCopy;
+    public record PasteReferenceDTO(
+            String label, URI uri, List<PasteUsageDTO> usedBy, List<URI> requires) {}
 
-    List<PasteSourceClassDTO> sources;
+    public record PasteUsageDTO(String className, String memberName) {}
 }

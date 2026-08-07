@@ -24,9 +24,12 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.CopyClassResponseDTO;
 import org.rdfarchitect.api.dto.PasteClassesRequestDTO;
+import org.rdfarchitect.api.dto.PastePreviewRequestDTO;
+import org.rdfarchitect.api.dto.PastePreviewResponseDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.update.classes.CopyClassUseCase;
+import org.rdfarchitect.services.update.classes.PastePreviewUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -48,6 +51,7 @@ public class PasteRESTController {
 
     private final ExpandURIUseCase expandURIUseCase;
     private final CopyClassUseCase copyClassUseCase;
+    private final PastePreviewUseCase pastePreviewUseCase;
 
     @Operation(
             summary = "paste classes",
@@ -92,5 +96,43 @@ public class PasteRESTController {
                 targetGraphURI,
                 originURL);
         return responses;
+    }
+
+    @Operation(
+            summary = "preview paste",
+            description =
+                    "Report which data types, association targets and super classes of the given"
+                            + " source classes the target graph does not contain yet.")
+    @PostMapping("preview")
+    public PastePreviewResponseDTO previewPaste(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the target dataset.") @PathVariable
+                    String targetDatasetName,
+            @Parameter(
+                            description =
+                                    "The url encoded uri of the target graph, or \"default\" to access the default graph.")
+                    @PathVariable
+                    String targetGraphURI,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                            required = true,
+                            description = "The list of source classes that would be pasted.")
+                    @RequestBody
+                    PastePreviewRequestDTO previewRequest) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/paste/preview\" for {} class(es) from \"{}\".",
+                targetDatasetName,
+                targetGraphURI,
+                previewRequest.getSources() == null ? 0 : previewRequest.getSources().size(),
+                originURL);
+
+        var targetExtendedGraphURI = expandURIUseCase.expandUri(targetDatasetName, targetGraphURI);
+        var targetGraphIdentifier = new GraphIdentifier(targetDatasetName, targetExtendedGraphURI);
+
+        return pastePreviewUseCase.previewPaste(previewRequest, targetGraphIdentifier);
     }
 }

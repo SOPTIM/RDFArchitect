@@ -14,7 +14,7 @@ Reference document for manual testing. Verify the areas relevant to your change 
 
 - Navigate to home page
 - File menu: Import / Export Schema & Constraints, Settings, Share Snapshot, Delete Dataset/Schema
-- Edit menu: New Class/Package, Copy/Paste class, Edit/View Profile header & Package, Undo/Redo (Ctrl+Z / Ctrl+Y), Enable/Disable editing, Manage namespaces, Delete Profile header/Package
+- Edit menu: New Class/Package, Copy class, Paste (4 variants), Edit/View Profile header & Package, Undo/Redo (Ctrl+Z / Ctrl+Y), Enable/Disable editing, Manage namespaces, Delete Profile header/Package
 - View menu: Changelog, Compare Schemas, Schema Migration, Full Constraints (SHACL)
 - Help menu: Help link, Submit Feedback link, About
 
@@ -62,9 +62,19 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Right-drag pans the diagram, right-click opens the context menu without selecting the class
 - Pane context menu: Add class, Paste class
 
+## Editor – Paste
+
+- Paste submenu: Paste, Paste without Attributes/Enum Entries, Paste without Associations, Paste Bare
+- The dialog opens only when the paste would point at classes the target schema does not contain
+- Missing data types, association targets and super classes are listed by name, preselected and selectable individually
+- The options the chosen paste variant leaves out are shown unchecked, not hidden; re-checking one makes its list selectable again
+- Group checkbox selects and clears its whole list, partial selections show as indeterminate
+- A selected data type also brings the classes it needs itself, without them being listed
+
 ## Editor – Class Editor
 
 - Display and edit: Label, Namespace, Package, Derived from, Abstract, Stereotypes, Attributes, Associations, Comment
+- "Derived from" shows and keeps a super class the schema does not contain (e.g. after pasting without it)
 - Delete, Save, Discard, Close
 - Attribute Editor
 - Association Editor

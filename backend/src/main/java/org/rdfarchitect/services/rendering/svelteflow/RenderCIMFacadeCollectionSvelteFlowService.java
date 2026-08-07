@@ -137,12 +137,20 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     private void addExternallyRelatedClasses(
             ICIMModelFacade cimModel, GraphFilter filter, Map<String, ICIMClass> classes) {
+        if (!filter.isIncludeAssociations() && !filter.isIncludeInheritance()) {
+            return;
+        }
         var classesInPackage = List.copyOf(classes.values());
+        var definedClasses = cimModel.getCIMClasses();
+        var definedClassUris =
+                definedClasses.stream()
+                        .map(cimClass -> cimClass.getUri().toString())
+                        .collect(Collectors.toSet());
 
         if (filter.isIncludeAssociations()) {
             for (var cimClass : classesInPackage) {
                 for (var association : cimClass.getAssociations()) {
-                    addExternallyRelatedClass(classes, association.getRange());
+                    addExternallyRelatedClass(classes, association.getRange(), definedClassUris);
                 }
             }
         }
@@ -151,10 +159,10 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             var packageUris = classes.keySet();
             for (var cimClass : classesInPackage) {
                 for (var superClass : cimClass.getSuperClasses()) {
-                    addExternallyRelatedClass(classes, superClass);
+                    addExternallyRelatedClass(classes, superClass, definedClassUris);
                 }
             }
-            for (var cimClass : cimModel.getCIMClasses()) {
+            for (var cimClass : definedClasses) {
                 if (classes.containsKey(cimClass.getUri().toString())) {
                     continue;
                 }
@@ -171,11 +179,15 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
     }
 
-    private void addExternallyRelatedClass(Map<String, ICIMClass> classes, ICIMClass cimClass) {
-        if (cimClass.getUuid() == null || classes.containsKey(cimClass.getUri().toString())) {
+    private void addExternallyRelatedClass(
+            Map<String, ICIMClass> classes, ICIMClass cimClass, Set<String> definedClassUris) {
+        var uri = cimClass.getUri().toString();
+        if (cimClass.getUuid() == null
+                || !definedClassUris.contains(uri)
+                || classes.containsKey(uri)) {
             return;
         }
-        classes.put(cimClass.getUri().toString(), cimClass);
+        classes.put(uri, cimClass);
     }
 
     private List<NodeDTO> assembleNodeDTOList(RenderContext renderContext) {

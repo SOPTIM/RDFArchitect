@@ -15,25 +15,18 @@
  *
  */
 
-package org.rdfarchitect.api.dto;
+package org.rdfarchitect.services.update.classes;
 
-import lombok.Data;
+import org.rdfarchitect.api.dto.PastePreviewRequestDTO;
+import org.rdfarchitect.api.dto.PastePreviewResponseDTO;
+import org.rdfarchitect.database.GraphIdentifier;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+public interface PastePreviewUseCase {
 
-import java.util.List;
-import java.util.UUID;
-
-@Data
-public class PasteClassesRequestDTO {
-
-    UUID targetPackageUUID;
-    boolean copyAsAbstract;
-    boolean copyAttributes;
-    boolean copyAssociations;
-    boolean copyInheritance;
-
-    List<URI> referencesToCopy;
-
-    List<PasteSourceClassDTO> sources;
+    /**
+     * Reports which data types, association targets and super classes of the given source classes
+     * the target graph does not contain yet.
+     */
+    PastePreviewResponseDTO previewPaste(
+            PastePreviewRequestDTO previewRequest, GraphIdentifier targetGraphIdentifier);
 }

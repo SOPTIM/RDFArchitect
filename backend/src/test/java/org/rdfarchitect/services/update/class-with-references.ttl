@@ -1,0 +1,177 @@
+PREFIX cims:   <http://iec.ch/TC57/1999/rdf-schema-extensions-19990926#>
+PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:   <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
+PREFIX uml:    <http://iec.ch/TC57/NonStandard/UML#>
+PREFIX ex:     <http://example.org#>
+
+ex:class
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "oldLabel"@en ;
+    rdfs:subClassOf           ex:BaseClass ;
+    cims:stereotype           uml:concrete ;
+    <http://example.org#uuid> "43836908-c7f7-4749-bb8b-3ac9250de655" .
+
+ex:BaseClass
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "BaseClass"@en ;
+    <http://example.org#uuid> "8c1b2a77-4f6d-4e18-95c7-2a3b4c5d6e70" .
+
+ex:BaseClass.attribute
+    rdf:type                  rdf:Property ;
+    rdfs:label                "attribute"@en ;
+    rdfs:domain               ex:BaseClass ;
+    cims:dataType             xsd:string ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "9d2c3b88-3e5c-4f29-86b8-1b2c3d4e5f81" .
+
+ex:class.attribute
+    rdf:type                  rdf:Property ;
+    rdfs:label                "attribute"@en ;
+    rdfs:domain               ex:class ;
+    cims:dataType             ex:MyDataType ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "1b8f1a2c-7d3e-4f4a-9c21-0d5a6e7b8c90" .
+
+ex:class.otherAttribute
+    rdf:type                  rdf:Property ;
+    rdfs:label                "otherAttribute"@en ;
+    rdfs:domain               ex:class ;
+    cims:dataType             ex:OtherDataType ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "6a0b3c88-7c8d-4ea5-9fb6-2a7b8c9d0e47" .
+
+ex:OtherDataType
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "OtherDataType"@en ;
+    cims:stereotype           "CIMDatatype" ;
+    <http://example.org#uuid> "7b1c4d99-8d9e-4fb6-a0c7-3b8c9d0e1f58" .
+
+ex:MyDataType
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "MyDataType"@en ;
+    rdfs:comment              "A data type." ;
+    cims:stereotype           "CIMDatatype" ;
+    <http://example.org#uuid> "2c9e0d11-5b47-4ad2-8f3a-6e1c9b2d7f45" .
+
+ex:class.valueAttribute
+    rdf:type                  rdf:Property ;
+    rdfs:label                "valueAttribute"@en ;
+    rdfs:domain               ex:class ;
+    cims:dataType             ex:ValueType ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "9d3e6f11-0f1a-4b28-c2e9-5d0e1f2a3b7a" .
+
+ex:ValueType
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "ValueType"@en ;
+    cims:stereotype           "CIMDatatype" ;
+    <http://example.org#uuid> "8c2d5e00-9e0f-4a17-b1d8-4c9d0e1f2a69" .
+
+ex:ValueType.unit
+    rdf:type                  rdf:Property ;
+    rdfs:label                "unit"@en ;
+    rdfs:domain               ex:ValueType ;
+    cims:dataType             ex:DeepType ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "0e4f7a22-1a2b-4c39-d3f0-6e1f2a3b4c8b" .
+
+ex:DeepType
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "DeepType"@en ;
+    cims:stereotype           "Primitive" ;
+    <http://example.org#uuid> "1f5a8b33-2b3c-4d40-e4a1-7f2a3b4c5d9c" .
+
+ex:MyDataType.value
+    rdf:type                  rdf:Property ;
+    rdfs:label                "value"@en ;
+    rdfs:domain               ex:MyDataType ;
+    cims:dataType             ex:ValueType ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "3d7c4b22-9a58-4c63-b0e1-7f2d8a3e4c56" .
+
+ex:associatedClass
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "associatedClass"@en ;
+    cims:stereotype           uml:concrete ;
+    <http://example.org#uuid> "4e6d5c33-8b69-4d74-a1f2-8a3e9b4d5c67" .
+
+ex:associatedClass.attribute
+    rdf:type                  rdf:Property ;
+    rdfs:label                "attribute"@en ;
+    rdfs:domain               ex:associatedClass ;
+    cims:dataType             ex:ValueType ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "5f5e6d44-7c7a-4e85-92a3-9b4d0c5e6f78" .
+
+ex:class.associatedClass
+    rdf:type                  rdf:Property ;
+    rdfs:label                "associatedClass"@en ;
+    rdfs:domain               ex:class ;
+    rdfs:range                ex:associatedClass ;
+    cims:AssociationUsed      "Yes" ;
+    cims:inverseRoleName      ex:associatedClass.class ;
+    cims:multiplicity         cims:M:0..n ;
+    <http://example.org#uuid> "6a4f7e55-6d8b-4f96-83b4-0c5e1d6f7a89" .
+
+ex:associatedClass.class
+    rdf:type                  rdf:Property ;
+    rdfs:label                "class"@en ;
+    rdfs:domain               ex:associatedClass ;
+    rdfs:range                ex:class ;
+    cims:AssociationUsed      "Yes" ;
+    cims:inverseRoleName      ex:class.associatedClass ;
+    cims:multiplicity         cims:M:0..n ;
+    <http://example.org#uuid> "7b3a8f66-5e9c-4a07-74c5-1d6f2e7a8b90" .
+
+ex:derivedClass
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "derivedClass"@en ;
+    rdfs:subClassOf           ex:associatedClass ;
+    <http://example.org#uuid> "3c7d0e55-4f5a-4b72-8c83-9d4e5f6a7b14" .
+
+ex:derivedClass.associatedClass
+    rdf:type                  rdf:Property ;
+    rdfs:label                "associatedClass"@en ;
+    rdfs:domain               ex:derivedClass ;
+    rdfs:range                ex:associatedClass ;
+    cims:AssociationUsed      "Yes" ;
+    cims:inverseRoleName      ex:associatedClass.derivedClass ;
+    cims:multiplicity         cims:M:0..n ;
+    <http://example.org#uuid> "4d8e1f66-5a6b-4c83-9d94-0e5f6a7b8c25" .
+
+ex:associatedClass.derivedClass
+    rdf:type                  rdf:Property ;
+    rdfs:label                "derivedClass"@en ;
+    rdfs:domain               ex:associatedClass ;
+    rdfs:range                ex:derivedClass ;
+    cims:AssociationUsed      "Yes" ;
+    cims:inverseRoleName      ex:derivedClass.associatedClass ;
+    cims:multiplicity         cims:M:0..n ;
+    <http://example.org#uuid> "5e9f2a77-6b7c-4d94-8ea5-1f6a7b8c9d36" .
+
+ex:otherClass
+    rdf:type                  rdfs:Class ;
+    rdfs:label                "otherClass"@en ;
+    <http://example.org#uuid> "1a9b8c77-2d3e-4f50-8a61-7b2c3d4e5f92" .
+
+ex:otherClass.attribute
+    rdf:type                  rdf:Property ;
+    rdfs:label                "attribute"@en ;
+    rdfs:domain               ex:otherClass ;
+    cims:dataType             ex:associatedClass ;
+    cims:multiplicity         cims:M:1..1 ;
+    cims:stereotype           uml:attribute ;
+    <http://example.org#uuid> "2b8c9d66-3e4f-4a61-9b72-8c3d4e5f6a03" .
+
+ex:newPackage
+    rdf:type                  cims:ClassCategory ;
+    rdfs:label                "newPackage"@en ;
+    <http://example.org#uuid> "75844dc0-d937-4184-bf6b-d35d8ca6d92a" .

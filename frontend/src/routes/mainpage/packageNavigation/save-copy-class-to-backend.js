@@ -19,6 +19,10 @@ import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import {
+    DEFAULT_PASTE_OPTIONS,
+    PASTE_REFERENCE_KINDS,
+} from "$lib/pasteOptions.js";
+import {
     ClassType,
     copyState,
     DiagramType,
@@ -28,26 +32,59 @@ import {
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+function sourcesOf(entries) {
+    return entries.map(e => ({
+        sourceDatasetName: e.datasetName,
+        sourceGraphURI: e.graphURI,
+        classUUID: e.classUUID,
+    }));
+}
+
+/**
+ * What the paste would carry along, or null when it needs no decision and can just run. Only what
+ * the chosen paste variant copies can make the paste incomplete, so only that decides. A failing
+ * preview reports null too: the paste still works and skips whatever the target schema already
+ * contains.
+ */
+export async function loadPastePreview(datasetName, graphURI, options) {
+    const entries = copyState.getEntries();
+    const copiesAnything = PASTE_REFERENCE_KINDS.some(
+        ({ option }) => options[option],
+    );
+    if (entries.length === 0 || !copiesAnything) return null;
+    try {
+        const res = await bec.postPastePreview(datasetName, graphURI, {
+            sources: sourcesOf(entries),
+        });
+        if (!res.ok) return null;
+        const preview = await res.json();
+        const missing = PASTE_REFERENCE_KINDS.some(
+            ({ kind, option }) =>
+                options[option] && preview.missing?.[kind]?.length > 0,
+        );
+        return missing ? preview : null;
+    } catch (e) {
+        console.error("Could not preview paste:", e);
+        return null;
+    }
+}
+
 export async function saveCopyClass(
     datasetName,
     graphURI,
-    packageDTO,
-    copyAbstract,
-    copyAttributes,
-    copyAssociations,
+    targetPackageUUID,
+    options,
 ) {
     const entries = copyState.getEntries();
     if (entries.length === 0) return false;
     const payload = {
-        targetPackage: packageDTO?.uuid === "default" ? null : packageDTO,
-        copyAsAbstract: copyAbstract,
-        copyAttributes: copyAttributes,
-        copyAssociations: copyAssociations,
-        sources: entries.map(e => ({
-            sourceDatasetName: e.datasetName,
-            sourceGraphURI: e.graphURI,
-            classUUID: e.classUUID,
-        })),
+        targetPackageUUID:
+            targetPackageUUID === "default"
+                ? null
+                : (targetPackageUUID ?? null),
+        ...DEFAULT_PASTE_OPTIONS,
+        ...options,
+        sources: sourcesOf(entries),
     };
     try {
         const res = await bec.postPasteClasses(datasetName, graphURI, payload);
@@ -59,7 +96,7 @@ export async function saveCopyClass(
             editorState.selectedClassGraph.updateValue(graphURI);
             editorState.selectedDiagram.updateValue({
                 type: DiagramType.PACKAGE,
-                id: packageDTO?.uuid ?? "default",
+                id: targetPackageUUID ?? "default",
             });
             const last = pasted[pasted.length - 1];
             if (last) {

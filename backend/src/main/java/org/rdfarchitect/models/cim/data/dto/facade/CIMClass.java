@@ -18,6 +18,7 @@
 package org.rdfarchitect.models.cim.data.dto.facade;
 
 import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ResIterator;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
@@ -29,6 +30,7 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -110,13 +112,19 @@ public class CIMClass extends CIMResource implements ICIMClass {
             return List.of();
         }
         var entries = new ArrayList<ICIMEnumEntry>();
-        for (var entry : getModel().listSubjectsWithProperty(RDF.type, jenaResource).toList()) {
+        for (var entry : byUri(getModel().listSubjectsWithProperty(RDF.type, jenaResource))) {
             entries.add(new CIMEnumEntry(getGraphUri(), getModel(), entry));
         }
         return entries;
     }
 
     private List<Resource> listDirectProperties() {
-        return getModel().listSubjectsWithProperty(RDFS.domain, getJenaResource()).toList();
+        return byUri(getModel().listSubjectsWithProperty(RDFS.domain, getJenaResource()));
+    }
+
+    private static List<Resource> byUri(ResIterator resources) {
+        return resources.toList().stream()
+                .sorted(Comparator.comparing(resource -> String.valueOf(resource.getURI())))
+                .toList();
     }
 }
