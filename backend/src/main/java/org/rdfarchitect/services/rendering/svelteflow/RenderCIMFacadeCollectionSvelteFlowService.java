@@ -141,8 +141,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             return;
         }
         var classesInPackage = List.copyOf(classes.values());
+        var definedClasses = cimModel.getCIMClasses();
         var definedClassUris =
-                cimModel.getCIMClasses().stream()
+                definedClasses.stream()
                         .map(cimClass -> cimClass.getUri().toString())
                         .collect(Collectors.toSet());
 
@@ -161,7 +162,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     addExternallyRelatedClass(classes, superClass, definedClassUris);
                 }
             }
-            for (var cimClass : cimModel.getCIMClasses()) {
+            for (var cimClass : definedClasses) {
                 if (classes.containsKey(cimClass.getUri().toString())) {
                     continue;
                 }
