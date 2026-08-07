@@ -15,18 +15,8 @@
  *
  */
 
-package org.rdfarchitect.models.dto.rendering;
+package org.rdfarchitect.services.rendering;
 
-import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
 
-public interface RenderCrossProfileDiagramUseCase {
-
-    /**
-     * Renders the cross-profile (merged) diagram for a dataset from the CIM facades of all its
-     * graphs.
-     *
-     * @param datasetName The name of the dataset.
-     * @return The rendering data for the merged diagram.
-     */
-    RenderingDataDTO renderCrossProfileDiagram(String datasetName);
-}
+public record CIMProfileModel(String graphUri, String color, ICIMModelFacade model) {}

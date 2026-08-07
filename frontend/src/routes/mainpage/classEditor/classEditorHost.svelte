@@ -107,18 +107,36 @@
                     found = classes.find(c => c.uuid === classUuid) ?? null;
                 }
 
+                if (!found) {
+                    found =
+                        classes.find(c =>
+                            c.sources?.some(s => s.classUUID === classUuid),
+                        ) ?? null;
+                }
+
                 mergedClass = found;
 
                 if (found) {
+                    const originGraph =
+                        graphUri ??
+                        editorState.mergedViewOriginGraph.getValue();
+                    if (!graphUri) {
+                        editorState.mergedViewOriginGraph.updateValue(null);
+                    }
+                    const originSource = originGraph
+                        ? found.sources?.find(s => s.graphUri === originGraph)
+                        : null;
                     const hasSaved = found.sources?.some(
                         s => s.classUUID === savedSourceUuid,
                     );
                     activeSourceUuid = hasSaved
                         ? savedSourceUuid
-                        : (found.sources?.[0]?.classUUID ?? null);
+                        : (originSource?.classUUID ??
+                          found.sources?.[0]?.classUUID ??
+                          null);
                 }
 
-                if (found && found.uuid !== classUuid) {
+                if (found && found.uuid !== classUuid && !graphUri) {
                     editorState.selectedClass.updateValue({
                         type: ClassType.MERGED_CLASS,
                         id: found.uuid,

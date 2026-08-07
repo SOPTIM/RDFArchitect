@@ -29,6 +29,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.NodeDataDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.PositionDTO;
 import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
@@ -36,11 +37,13 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
+import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -72,7 +75,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
     @Override
     public RenderingDataDTO renderUML(
-            ICIMModelFacade cimModel, GraphFilter filter, RenderingLayoutData layoutData) {
+            ICIMModelFacade cimModel,
+            GraphFilter filter,
+            RenderingLayoutData layoutData,
+            List<CIMProfileModel> otherProfiles,
+            String primaryColor) {
         var classes = selectClasses(cimModel, filter);
         if (classes.isEmpty()) {
             return createEmptyDiagram();
@@ -85,12 +92,276 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .map(ICIMClass::getUuid)
                                 .collect(Collectors.toSet()),
                         filter,
-                        layoutData);
+                        layoutData,
+                        cimModel.getGraphUri(),
+                        primaryColor,
+                        buildProfileLookups(filter, otherProfiles));
 
         var nodes = assembleNodeDTOList(renderContext);
         var edges = assembleEdgeDTOList(renderContext);
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
+    }
+
+    private List<ProfileLookup> buildProfileLookups(
+            GraphFilter filter, List<CIMProfileModel> otherProfiles) {
+        if (!filter.isIncludePropertiesFromOtherProfiles() || otherProfiles == null) {
+            return List.of();
+        }
+        var lookups = new ArrayList<ProfileLookup>();
+        for (var profile : otherProfiles) {
+            var classByUri = new LinkedHashMap<String, ICIMClass>();
+            for (var cimClass : profile.model().getCIMClasses()) {
+                classByUri.putIfAbsent(cimClass.getUri().toString(), cimClass);
+            }
+            lookups.add(new ProfileLookup(profile.graphUri(), profile.color(), classByUri));
+        }
+        return lookups;
+    }
+
+    @Override
+    public RenderingDataDTO renderMergedUML(
+            List<CIMProfileModel> profiles, RenderingLayoutData layoutData) {
+        var mergedClasses = mergeClassesByUri(profiles);
+        if (mergedClasses.isEmpty()) {
+            return createEmptyDiagram();
+        }
+
+        var nodes = new ArrayList<NodeDTO>();
+        for (var merged : mergedClasses.values()) {
+            nodes.add(assembleMergedNode(merged, mergedClasses, layoutData));
+        }
+        var edges = assembleMergedEdges(mergedClasses);
+
+        return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
+    }
+
+    private Map<String, MergedFacadeClass> mergeClassesByUri(List<CIMProfileModel> profiles) {
+        var merged = new LinkedHashMap<String, MergedFacadeClass>();
+        if (profiles == null) {
+            return merged;
+        }
+        for (var profile : profiles) {
+            for (var cimClass : profile.model().getCIMClasses()) {
+                var key = cimClass.getUri().toString();
+                var entry =
+                        merged.computeIfAbsent(
+                                key,
+                                classUri ->
+                                        new MergedFacadeClass(
+                                                classUri,
+                                                cimClass.getLabel().getValue(),
+                                                UUID.nameUUIDFromBytes(
+                                                        classUri.getBytes(StandardCharsets.UTF_8)),
+                                                new ArrayList<>()));
+                entry.sources()
+                        .add(new MergedSource(profile.graphUri(), profile.color(), cimClass));
+            }
+        }
+        return merged;
+    }
+
+    private NodeDTO assembleMergedNode(
+            MergedFacadeClass merged,
+            Map<String, MergedFacadeClass> allClasses,
+            RenderingLayoutData layoutData) {
+        var dop =
+                layoutData != null && layoutData.getClassLayoutingData() != null
+                        ? layoutData.getClassLayoutingData().get(merged.uuid())
+                        : null;
+        var positionDTO =
+                dop != null
+                        ? PositionDTO.builder()
+                                .x(dop.getPosition().getX())
+                                .y(dop.getPosition().getY())
+                                .z(dop.getPosition().getZ())
+                                .build()
+                        : PositionDTO.builder().x(0).y(0).z(0).build();
+
+        var nodeDataDTO =
+                NodeDataDTO.builder()
+                        .graphUri(merged.sources().getFirst().graphUri())
+                        .label(merged.label())
+                        .belongsToCategory(null)
+                        .stereotypes(mergedStereotypes(merged))
+                        .attributes(mergedAttributes(merged))
+                        .enumEntries(mergedEnumEntries(merged))
+                        .superClasses(mergedSuperClasses(merged, allClasses))
+                        .build();
+
+        return NodeDTO.builder()
+                .id(merged.uuid())
+                .type(CLASS_NODE_TYPE)
+                .position(positionDTO)
+                .data(nodeDataDTO)
+                .build();
+    }
+
+    private List<String> mergedStereotypes(MergedFacadeClass merged) {
+        var union = new ArrayList<CIMSStereotype>();
+        for (var source : merged.sources()) {
+            for (var stereotype : source.cimClass().getStereotypes()) {
+                if (!union.contains(stereotype)) {
+                    union.add(stereotype);
+                }
+            }
+        }
+        return stereotypesToRender(union);
+    }
+
+    private List<AttributeDTO> mergedAttributes(MergedFacadeClass merged) {
+        var attributes = new ArrayList<AttributeDTO>();
+        for (var source : merged.sources()) {
+            addAttributeDTOs(
+                    attributes,
+                    source.cimClass().getAttributes(),
+                    source.graphUri(),
+                    source.color());
+        }
+        return attributes;
+    }
+
+    private List<EnumEntryDTO> mergedEnumEntries(MergedFacadeClass merged) {
+        var enumEntries = new ArrayList<EnumEntryDTO>();
+        for (var source : merged.sources()) {
+            for (var enumEntry : source.cimClass().getEnumEntries()) {
+                enumEntries.add(
+                        EnumEntryDTO.builder()
+                                .label(enumEntry.getLabel().getValue())
+                                .graphUri(source.graphUri())
+                                .color(source.color())
+                                .build());
+            }
+        }
+        return enumEntries;
+    }
+
+    private List<SuperClassDTO> mergedSuperClasses(
+            MergedFacadeClass merged, Map<String, MergedFacadeClass> allClasses) {
+        var superClassDTOs = new ArrayList<SuperClassDTO>();
+        var visited = new HashSet<String>();
+        visited.add(merged.uri());
+
+        var queue = new ArrayDeque<>(collectSuperClassRefs(merged));
+        while (!queue.isEmpty()) {
+            var ref = queue.poll();
+            if (!visited.add(ref.uri())) {
+                continue;
+            }
+            var resolved = allClasses.get(ref.uri());
+            if (resolved != null) {
+                superClassDTOs.add(
+                        SuperClassDTO.builder()
+                                .uuid(resolved.uuid())
+                                .label(resolved.label())
+                                .attributes(mergedAttributes(resolved))
+                                .enumEntries(mergedEnumEntries(resolved))
+                                .build());
+                queue.addAll(collectSuperClassRefs(resolved));
+            } else {
+                superClassDTOs.add(
+                        SuperClassDTO.builder()
+                                .label(ref.label())
+                                .attributes(List.of())
+                                .enumEntries(List.of())
+                                .build());
+            }
+        }
+        return superClassDTOs;
+    }
+
+    private List<SuperClassRef> collectSuperClassRefs(MergedFacadeClass merged) {
+        var refs = new LinkedHashMap<String, SuperClassRef>();
+        for (var source : merged.sources()) {
+            for (var superClass : source.cimClass().getSuperClasses()) {
+                refs.putIfAbsent(
+                        superClass.getUri().toString(),
+                        new SuperClassRef(
+                                superClass.getUri().toString(), superClass.getLabel().getValue()));
+            }
+        }
+        return new ArrayList<>(refs.values());
+    }
+
+    private List<EdgeDTO> assembleMergedEdges(Map<String, MergedFacadeClass> mergedClasses) {
+        var edges = new ArrayList<EdgeDTO>();
+        edges.addAll(assembleMergedInheritanceEdges(mergedClasses));
+        edges.addAll(assembleMergedAssociationEdges(mergedClasses));
+        return edges;
+    }
+
+    private List<EdgeDTO> assembleMergedInheritanceEdges(
+            Map<String, MergedFacadeClass> mergedClasses) {
+        var edges = new ArrayList<EdgeDTO>();
+        for (var merged : mergedClasses.values()) {
+            for (var ref : collectSuperClassRefs(merged)) {
+                var superClass = mergedClasses.get(ref.uri());
+                if (superClass == null) {
+                    continue;
+                }
+                edges.add(
+                        EdgeDTO.builder()
+                                .id(UUID.randomUUID().toString())
+                                .type(INHERITANCE_EDGE_TYPE)
+                                .source(merged.uuid())
+                                .target(superClass.uuid())
+                                .data(null)
+                                .build());
+            }
+        }
+        return edges;
+    }
+
+    private List<EdgeDTO> assembleMergedAssociationEdges(
+            Map<String, MergedFacadeClass> mergedClasses) {
+        var edges = new ArrayList<EdgeDTO>();
+        var handledPairs = new HashSet<String>();
+        for (var merged : mergedClasses.values()) {
+            for (var source : merged.sources()) {
+                for (var association : source.cimClass().getAssociations()) {
+                    if (!association.isRenderable()) {
+                        continue;
+                    }
+                    var range = association.getRange();
+                    var target = mergedClasses.get(range.getUri().toString());
+                    if (target == null) {
+                        continue;
+                    }
+                    var pairKey =
+                            merged.uuid().compareTo(target.uuid()) < 0
+                                    ? merged.uuid() + "|" + target.uuid()
+                                    : target.uuid() + "|" + merged.uuid();
+                    if (!handledPairs.add(pairKey)) {
+                        continue;
+                    }
+                    var inverse = association.getInverseAssociation();
+                    var edgeData =
+                            EdgeDataDTO.builder()
+                                    .fromMultiplicity(
+                                            extractMultiplicityString(
+                                                    association.getMultiplicity()))
+                                    .toMultiplicity(
+                                            extractMultiplicityString(inverse.getMultiplicity()))
+                                    .useToAssociation(
+                                            getAssociationUsedValue(
+                                                    association.getAssociationUsed()))
+                                    .useFromAssociation(
+                                            getAssociationUsedValue(inverse.getAssociationUsed()))
+                                    .graphUri(source.graphUri())
+                                    .color(source.color())
+                                    .build();
+                    edges.add(
+                            EdgeDTO.builder()
+                                    .id(UUID.randomUUID().toString())
+                                    .type(ASSOCIATION_EDGE_TYPE)
+                                    .source(merged.uuid())
+                                    .target(target.uuid())
+                                    .data(edgeData)
+                                    .build());
+                }
+            }
+        }
+        return edges;
     }
 
     private SvelteFlowDTO createEmptyDiagram() {
@@ -142,7 +413,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         if (filter.isIncludeAssociations()) {
             for (var cimClass : classesInPackage) {
                 for (var association : cimClass.getAssociations()) {
-                    addExternallyRelatedClass(classes, association.getRange());
+                    if (association.isRenderable()) {
+                        addExternallyRelatedClass(classes, association.getRange());
+                    }
                 }
             }
         }
@@ -231,20 +504,54 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             return List.of();
         }
 
+        boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
+        String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
+        String ownColor = merge ? renderContext.primaryColor() : null;
+
         List<AttributeDTO> attributeDTOs = new ArrayList<>();
-        for (var cimAttribute : cimClass.getAttributes()) {
-            attributeDTOs.add(
-                    AttributeDTO.builder()
-                            .label(cimAttribute.getLabel().getValue())
-                            .type(cimAttribute.getDataType().getLabel().getValue())
-                            .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
-                            .build());
+        addAttributeDTOs(attributeDTOs, cimClass.getAttributes(), ownGraphUri, ownColor);
+
+        if (merge) {
+            for (var profile : renderContext.otherProfiles()) {
+                var match = profile.classByUri().get(cimClass.getUri().toString());
+                if (match == null) {
+                    continue;
+                }
+                addAttributeDTOs(
+                        attributeDTOs, match.getAttributes(), profile.graphUri(), profile.color());
+            }
         }
         return attributeDTOs;
     }
 
+    private void addAttributeDTOs(
+            List<AttributeDTO> target,
+            List<ICIMAttribute> cimAttributes,
+            String graphUri,
+            String color) {
+        for (var cimAttribute : cimAttributes) {
+            if (!cimAttribute.isRenderable()) {
+                continue;
+            }
+            target.add(toAttributeDTO(cimAttribute, graphUri, color));
+        }
+    }
+
+    private AttributeDTO toAttributeDTO(ICIMAttribute cimAttribute, String graphUri, String color) {
+        return AttributeDTO.builder()
+                .label(cimAttribute.getLabel().getValue())
+                .type(cimAttribute.getDataType().getLabel().getValue())
+                .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
+                .graphUri(graphUri)
+                .color(color)
+                .build();
+    }
+
     private List<String> getClassStereotypes(ICIMClass cimClass) {
-        var stereotypes = cimClass.getStereotypes();
+        return stereotypesToRender(cimClass.getStereotypes());
+    }
+
+    private List<String> stereotypesToRender(List<CIMSStereotype> stereotypes) {
         var stereotypesToRender = new ArrayList<String>();
 
         if (CollectionUtils.isEmpty(stereotypes)
@@ -273,10 +580,35 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             return List.of();
         }
 
+        boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
+        String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
+        String ownColor = merge ? renderContext.primaryColor() : null;
+
         List<EnumEntryDTO> enumEntries = new ArrayList<>();
         for (var cimEnumEntry : cimClass.getEnumEntries()) {
             enumEntries.add(
-                    EnumEntryDTO.builder().label(cimEnumEntry.getLabel().getValue()).build());
+                    EnumEntryDTO.builder()
+                            .label(cimEnumEntry.getLabel().getValue())
+                            .graphUri(ownGraphUri)
+                            .color(ownColor)
+                            .build());
+        }
+
+        if (merge) {
+            for (var profile : renderContext.otherProfiles()) {
+                var match = profile.classByUri().get(cimClass.getUri().toString());
+                if (match == null) {
+                    continue;
+                }
+                for (var cimEnumEntry : match.getEnumEntries()) {
+                    enumEntries.add(
+                            EnumEntryDTO.builder()
+                                    .label(cimEnumEntry.getLabel().getValue())
+                                    .graphUri(profile.graphUri())
+                                    .color(profile.color())
+                                    .build());
+                }
+            }
         }
         return enumEntries;
     }
@@ -347,7 +679,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         var handledAssociationUris = new HashSet<String>();
         for (var cimClass : renderContext.classes()) {
             for (var from : cimClass.getAssociations()) {
-                if (handledAssociationUris.contains(from.getUri().toString())) {
+                if (handledAssociationUris.contains(from.getUri().toString())
+                        || !from.isRenderable()) {
                     continue;
                 }
                 var rangeUUID = from.getRange().getUuid();
@@ -403,5 +736,18 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             List<ICIMClass> classes,
             Set<UUID> nodeUUIDs,
             GraphFilter filter,
-            RenderingLayoutData layoutingData) {}
+            RenderingLayoutData layoutingData,
+            String primaryGraphUri,
+            String primaryColor,
+            List<ProfileLookup> otherProfiles) {}
+
+    private record ProfileLookup(
+            String graphUri, String color, Map<String, ICIMClass> classByUri) {}
+
+    private record MergedFacadeClass(
+            String uri, String label, UUID uuid, List<MergedSource> sources) {}
+
+    private record MergedSource(String graphUri, String color, ICIMClass cimClass) {}
+
+    private record SuperClassRef(String uri, String label) {}
 }

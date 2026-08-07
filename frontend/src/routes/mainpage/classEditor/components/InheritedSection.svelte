@@ -20,7 +20,7 @@
     import { getContext } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { userSettings } from "$lib/userSettings.svelte.js";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
 
     const { groups = [], label, colspan, rows } = $props();
 
@@ -28,7 +28,7 @@
 
     let expanded = $state(false);
     let visible = $derived(
-        userSettings.get("showInheritedProperties", true) && groups.length > 0,
+        renderOptions.get("showInheritedProperties") && groups.length > 0,
     );
 </script>
 

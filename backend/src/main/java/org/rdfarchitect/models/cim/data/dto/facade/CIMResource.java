@@ -164,6 +164,16 @@ abstract class CIMResource implements ICIMResource {
         return nodes.getFirst();
     }
 
+    /**
+     * The single object of {@code property} on {@code resource}, or null if there is none or more
+     * than one. Unlike {@link #getUniqueJenaPropertyNode(Property)} this never throws, so it can be
+     * used to check upfront whether a getter would resolve.
+     */
+    protected RDFNode getUniqueObjectOrNull(Resource resource, Property property) {
+        var statements = resource.listProperties(property).toList();
+        return statements.size() == 1 ? statements.getFirst().getObject() : null;
+    }
+
     protected List<CIMSStereotype> getStereotypeList() {
         var stereotypes = new ArrayList<CIMSStereotype>();
         for (var node : getJenaPropertyNodes(CIMS.stereotype)) {

@@ -23,6 +23,7 @@ import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSAssociationUsed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.util.UUID;
 
@@ -58,6 +59,38 @@ public class CIMAssociation extends CIMResource implements ICIMAssociation {
     public ICIMAssociation getInverseAssociation() {
         var inverse = getRequiredUniqueJenaProperty(CIMS.inverseRoleName);
         return new CIMAssociation(getGraphUri(), getModel(), inverse);
+    }
+
+    @Override
+    public boolean isRenderable() {
+        var resource = getJenaResource();
+
+        var range = getUniqueObjectOrNull(resource, RDFS.range);
+        if (range == null || !range.isURIResource()) {
+            return false;
+        }
+
+        var inverse = getUniqueObjectOrNull(resource, CIMS.inverseRoleName);
+        if (inverse == null || !inverse.isURIResource() || !hasUuid(inverse.asResource())) {
+            return false;
+        }
+
+        return hasRenderableEndProperties(resource)
+                && hasRenderableEndProperties(inverse.asResource());
+    }
+
+    private boolean hasUuid(Resource resource) {
+        var uuid = getUniqueObjectOrNull(resource, RDFA.uuid);
+        return uuid != null && uuid.isLiteral();
+    }
+
+    private boolean hasRenderableEndProperties(Resource association) {
+        var multiplicity = getUniqueObjectOrNull(association, CIMS.multiplicity);
+        if (multiplicity == null || !multiplicity.isURIResource()) {
+            return false;
+        }
+        var associationUsed = getUniqueObjectOrNull(association, CIMS.associationUsed);
+        return associationUsed != null && associationUsed.isLiteral();
     }
 
     @Override

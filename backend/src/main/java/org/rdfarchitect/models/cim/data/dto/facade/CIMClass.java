@@ -117,6 +117,8 @@ public class CIMClass extends CIMResource implements ICIMClass {
     }
 
     private List<Resource> listDirectProperties() {
-        return getModel().listSubjectsWithProperty(RDFS.domain, getJenaResource()).toList();
+        return getModel().listSubjectsWithProperty(RDFS.domain, getJenaResource()).toList().stream()
+                .filter(property -> getModel().contains(property, RDFA.uuid))
+                .toList();
     }
 }

@@ -40,6 +40,7 @@ import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.rendering.svelteflow.RenderCIMFacadeCollectionSvelteFlowService;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
@@ -406,5 +407,392 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
 
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
+    }
+
+    private static final String OTHER_GRAPH_URI = "http://graph2#";
+    private static final String OTHER_COLOR = "#ff0000";
+
+    private CIMModelFacade buildOtherProfile() {
+        var otherModel = ModelFactory.createDefaultModel();
+
+        var child = otherModel.createResource(NS + "Child");
+        child.addProperty(RDF.type, RDFS.Class);
+        child.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        child.addProperty(RDFS.label, otherModel.createLiteral("Child", "en"));
+
+        var attribute = otherModel.createResource(NS + "Child.otherChildAttr");
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        attribute.addProperty(RDFS.label, otherModel.createLiteral("otherChildAttr", "en"));
+        attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+        attribute.addProperty(RDFS.domain, child);
+        attribute.addProperty(
+                CIMS.multiplicity, otherModel.createResource(CIMS.namespace + "M:0..1"));
+        attribute.addProperty(CIMS.datatype, otherModel.createResource(XSD.xstring.getURI()));
+
+        var phaseCode = otherModel.createResource(NS + "PhaseCode");
+        phaseCode.addProperty(RDF.type, RDFS.Class);
+        phaseCode.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        phaseCode.addProperty(RDFS.label, otherModel.createLiteral("PhaseCode", "en"));
+        phaseCode.addProperty(CIMS.stereotype, CIMStereotypes.enumeration);
+        var entry = otherModel.createResource(NS + "PhaseCode.B");
+        entry.addProperty(RDF.type, phaseCode);
+        entry.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        entry.addProperty(RDFS.label, otherModel.createLiteral("B", "en"));
+        entry.addProperty(CIMS.stereotype, CIMStereotypes.enumLiteral);
+
+        return new CIMModelFacade(OTHER_GRAPH_URI, otherModel);
+    }
+
+    @Test
+    @DisplayName("merges attributes and enum entries from other profiles when enabled")
+    void mergesOtherProfileProperties() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                null);
+
+        var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
+        assertThat(childAttributes)
+                .filteredOn(attribute -> attribute.getLabel().equals("childAttr"))
+                .singleElement()
+                .satisfies(
+                        attribute -> {
+                            assertThat(attribute.getGraphUri()).isEqualTo(GRAPH_URI);
+                            assertThat(attribute.getColor()).isNull();
+                        });
+        assertThat(childAttributes)
+                .filteredOn(attribute -> attribute.getLabel().equals("otherChildAttr"))
+                .singleElement()
+                .satisfies(
+                        attribute -> {
+                            assertThat(attribute.getGraphUri()).isEqualTo(OTHER_GRAPH_URI);
+                            assertThat(attribute.getColor()).isEqualTo(OTHER_COLOR);
+                        });
+
+        var enumEntries = nodeByLabel(result, "PhaseCode").getData().getEnumEntries();
+        assertThat(enumEntries)
+                .filteredOn(entry -> entry.getLabel().equals("A"))
+                .singleElement()
+                .satisfies(entry -> assertThat(entry.getGraphUri()).isEqualTo(GRAPH_URI));
+        assertThat(enumEntries)
+                .filteredOn(entry -> entry.getLabel().equals("B"))
+                .singleElement()
+                .satisfies(
+                        entry -> {
+                            assertThat(entry.getGraphUri()).isEqualTo(OTHER_GRAPH_URI);
+                            assertThat(entry.getColor()).isEqualTo(OTHER_COLOR);
+                        });
+    }
+
+    @Test
+    @DisplayName("colorizes the rendered graph's own properties with the primary color")
+    void colorizesOwnPropertiesWithPrimaryColor() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                "#123456");
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .filteredOn(attribute -> attribute.getLabel().equals("childAttr"))
+                .singleElement()
+                .satisfies(
+                        attribute -> {
+                            assertThat(attribute.getGraphUri()).isEqualTo(GRAPH_URI);
+                            assertThat(attribute.getColor()).isEqualTo("#123456");
+                        });
+    }
+
+    @Test
+    @DisplayName("leaves attributes ungrouped when other-profile merge is disabled")
+    void keepsAttributesUngroupedWhenDisabled() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                coreFilter(),
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                null);
+
+        var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
+        assertThat(childAttributes).extracting(AttributeDTO::getLabel).containsExactly("childAttr");
+        assertThat(childAttributes)
+                .allSatisfy(attribute -> assertThat(attribute.getGraphUri()).isNull());
+    }
+
+    private static UUID mergedUuid(String label) {
+        return UUID.nameUUIDFromBytes((NS + label).getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName(
+            "merged diagram combines same-uri classes into one node with per-source properties")
+    void mergedDiagramCombinesClassesAcrossProfiles() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(
+                                        new CIMProfileModel(GRAPH_URI, "#111111", facade),
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                null);
+
+        var childNodes =
+                result.getNodes().stream()
+                        .filter(node -> node.getData().getLabel().equals("Child"))
+                        .toList();
+        assertThat(childNodes).hasSize(1);
+        assertThat(childNodes.getFirst().getId()).isEqualTo(mergedUuid("Child"));
+        assertThat(childNodes.getFirst().getData().getAttributes())
+                .extracting(AttributeDTO::getLabel)
+                .containsExactlyInAnyOrder("childAttr", "otherChildAttr");
+        assertThat(childNodes.getFirst().getData().getAttributes())
+                .filteredOn(attribute -> attribute.getLabel().equals("otherChildAttr"))
+                .singleElement()
+                .satisfies(
+                        attribute -> {
+                            assertThat(attribute.getGraphUri()).isEqualTo(OTHER_GRAPH_URI);
+                            assertThat(attribute.getColor()).isEqualTo(OTHER_COLOR);
+                        });
+
+        assertThat(nodeByLabel(result, "PhaseCode").getData().getEnumEntries())
+                .extracting(EnumEntryDTO::getLabel)
+                .containsExactlyInAnyOrder("A", "B");
+    }
+
+    @Test
+    @DisplayName("merged diagram renders inheritance and deduplicated association edges by uri")
+    void mergedDiagramRendersEdges() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+
+        var inheritanceEdges =
+                result.getEdges().stream()
+                        .filter(edge -> edge.getType().equals("inheritance"))
+                        .map(edge -> List.of(edge.getSource(), edge.getTarget()))
+                        .toList();
+        assertThat(inheritanceEdges)
+                .containsExactlyInAnyOrder(
+                        List.of(mergedUuid("Child"), mergedUuid("Base")),
+                        List.of(mergedUuid("Base"), mergedUuid("Root")));
+
+        var associationEdges =
+                result.getEdges().stream()
+                        .filter(edge -> edge.getType().equals("association"))
+                        .toList();
+        assertThat(associationEdges)
+                .singleElement()
+                .satisfies(
+                        edge -> {
+                            assertThat(List.of(edge.getSource(), edge.getTarget()))
+                                    .containsExactlyInAnyOrder(
+                                            mergedUuid("Child"), mergedUuid("Terminal"));
+                            assertThat(
+                                            List.of(
+                                                    edge.getData().getFromMultiplicity(),
+                                                    edge.getData().getToMultiplicity()))
+                                    .containsExactlyInAnyOrder("0..n", "1..1");
+                        });
+    }
+
+    @Test
+    @DisplayName("merged diagram lists super classes outside the diagram as label-only")
+    void mergedDiagramRendersExternalSuperClassLabelOnly() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+
+        var externalSuperClass =
+                nodeByLabel(result, "Child").getData().getSuperClasses().stream()
+                        .filter(superClass -> superClass.getLabel().equals("ExternalBase"))
+                        .findFirst()
+                        .orElseThrow();
+        assertThat(externalSuperClass.getUuid()).isNull();
+        assertThat(externalSuperClass.getAttributes()).isEmpty();
+    }
+
+    private void addAssociationWithoutRange(String localName, Resource domain) {
+        var association = model.createResource(NS + localName);
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        association.addProperty(RDFS.domain, domain);
+        association.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
+        association.addProperty(CIMS.associationUsed, "Yes");
+        association.addProperty(
+                CIMS.inverseRoleName, model.createResource(NS + localName + ".inv"));
+    }
+
+    @Test
+    @DisplayName("skips associations without a range instead of failing the package diagram")
+    void skipsAssociationWithoutRangeInPackageDiagram() {
+        addAssociationWithoutRange("Child.Broken", model.getResource(NS + "Child"));
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getNodes()).isNotEmpty();
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("skips associations without a range instead of failing the merged diagram")
+    void skipsAssociationWithoutRangeInMergedDiagram() {
+        addAssociationWithoutRange("Child.Broken", model.getResource(NS + "Child"));
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+
+        assertThat(result.getNodes()).isNotEmpty();
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    private void addAttributeWithoutDataType(String localName, Resource domain) {
+        var attribute = model.createResource(NS + localName);
+        attribute.addProperty(RDF.type, RDF.Property);
+        attribute.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        attribute.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        attribute.addProperty(CIMS.stereotype, CIMStereotypes.attribute);
+        attribute.addProperty(RDFS.domain, domain);
+        attribute.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..1"));
+    }
+
+    @Test
+    @DisplayName("skips attributes without a datatype instead of failing the package diagram")
+    void skipsAttributeWithoutDataTypeInPackageDiagram() {
+        addAttributeWithoutDataType("Child.brokenAttr", model.getResource(NS + "Child"));
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .extracting(AttributeDTO::getLabel)
+                .containsExactly("childAttr");
+    }
+
+    @Test
+    @DisplayName("skips attributes without a datatype instead of failing the merged diagram")
+    void skipsAttributeWithoutDataTypeInMergedDiagram() {
+        addAttributeWithoutDataType("Child.brokenAttr", model.getResource(NS + "Child"));
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .extracting(AttributeDTO::getLabel)
+                .containsExactly("childAttr");
+    }
+
+    private Resource addAssociationEnd(String localName, Resource domain, Resource range) {
+        var end = model.createResource(NS + localName);
+        end.addProperty(RDF.type, RDF.Property);
+        end.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        end.addProperty(RDFS.label, model.createLiteral(localName, "en"));
+        end.addProperty(RDFS.domain, domain);
+        end.addProperty(RDFS.range, range);
+        end.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
+        end.addProperty(CIMS.associationUsed, "Yes");
+        return end;
+    }
+
+    private void linkInverse(Resource from, Resource inverse) {
+        from.addProperty(CIMS.inverseRoleName, inverse);
+        inverse.addProperty(CIMS.inverseRoleName, from);
+    }
+
+    @Test
+    @DisplayName("skips associations whose inverse end has no multiplicity")
+    void skipsAssociationWithIncompleteInverse() {
+        var base = model.getResource(NS + "Base");
+        var terminal = model.getResource(NS + "Terminal");
+        var inverse = addAssociationEnd("Terminal.Base", terminal, base);
+        inverse.removeAll(CIMS.multiplicity);
+        linkInverse(addAssociationEnd("Base.Terminals", base, terminal), inverse);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("skips associations whose inverse end has no uuid")
+    void skipsAssociationWithInverseWithoutUuid() {
+        var base = model.getResource(NS + "Base");
+        var terminal = model.getResource(NS + "Terminal");
+        var inverse = addAssociationEnd("Terminal.Base", terminal, base);
+        inverse.removeAll(RDFA.uuid);
+        linkInverse(addAssociationEnd("Base.Terminals", base, terminal), inverse);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        assertThat(result.getEdges())
+                .filteredOn(edge -> edge.getType().equals("association"))
+                .hasSize(1);
+    }
+
+    @Test
+    @DisplayName("merged diagram is empty when there are no profiles")
+    void mergedDiagramEmptyForNoProfiles() {
+        var result = (SvelteFlowDTO) renderer.renderMergedUML(List.of(), null);
+
+        assertThat(result.getNodes()).isEmpty();
+        assertThat(result.getEdges()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("merged node uuid uses the full class uri, not the rdfs:label")
+    void mergedUuidUsesFullUriNotLabel() {
+        var labelModel = ModelFactory.createDefaultModel();
+        var cimClass = labelModel.createResource(NS + "ACLS");
+        cimClass.addProperty(RDF.type, RDFS.Class);
+        cimClass.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        cimClass.addProperty(RDFS.label, labelModel.createLiteral("ACLineSegment", "en"));
+        var labelFacade = new CIMModelFacade(GRAPH_URI, labelModel);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(new CIMProfileModel(GRAPH_URI, null, labelFacade)), null);
+
+        assertThat(result.getNodes())
+                .singleElement()
+                .satisfies(
+                        node -> {
+                            assertThat(node.getData().getLabel()).isEqualTo("ACLineSegment");
+                            assertThat(node.getId()).isEqualTo(mergedUuid("ACLS"));
+                            assertThat(node.getId()).isNotEqualTo(mergedUuid("ACLineSegment"));
+                        });
     }
 }
