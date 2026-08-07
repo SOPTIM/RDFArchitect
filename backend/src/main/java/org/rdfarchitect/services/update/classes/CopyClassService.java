@@ -32,15 +32,20 @@ import org.rdfarchitect.models.cim.data.dto.CIMAttribute;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.CIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMAssociation;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMAttribute;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClassCategory;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMEnumEntry;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSInverseRoleName;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
-import org.rdfarchitect.models.cim.data.dto.relations.RDFSComment;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSDomain;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSSubClassOf;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFType;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSPrimitiveDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.RDFSRange;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
@@ -137,7 +142,7 @@ public class CopyClassService implements CopyClassUseCase {
 
     private List<CopyClassReference> resolveSelectedReferences(
             List<CopyClassSource> sources,
-            List<CIMClassUMLAdapted> sourceClasses,
+            List<ICIMClass> sourceClasses,
             CopyClassOptions options) {
 
         if (options.referencesToCopy().isEmpty()) {
@@ -152,12 +157,11 @@ public class CopyClassService implements CopyClassUseCase {
                 .toList();
     }
 
-    private Map<URI, CIMClassUMLAdapted> readReferencedClasses(
-            List<CopyClassReference> references) {
+    private Map<URI, ICIMClass> readReferencedClasses(List<CopyClassReference> references) {
         if (references.isEmpty()) {
             return Map.of();
         }
-        var referencedClasses = new LinkedHashMap<URI, CIMClassUMLAdapted>();
+        var referencedClasses = new LinkedHashMap<URI, ICIMClass>();
         var sources = references.stream().map(CopyClassReference::toSource).toList();
         for (var sourceClass : sourceReader.readSourceClasses(sources)) {
             if (sourceClass != null) {
@@ -201,7 +205,7 @@ public class CopyClassService implements CopyClassUseCase {
 
     private List<String> copyReferencedClasses(
             List<CopyClassReference> references,
-            Map<URI, CIMClassUMLAdapted> referencedClasses,
+            Map<URI, ICIMClass> referencedClasses,
             CopyClassOptions options,
             ICIMClassCategory cimPackage,
             Graph targetGraph,
@@ -230,7 +234,7 @@ public class CopyClassService implements CopyClassUseCase {
 
     private boolean copyReferencedClass(
             CopyClassReference reference,
-            CIMClassUMLAdapted sourceClass,
+            ICIMClass sourceClass,
             CopyClassOptions options,
             ICIMClassCategory cimPackage,
             Graph targetGraph,
@@ -259,8 +263,8 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private RDFSSubClassOf resolvableSuperClass(
-            CIMClassUMLAdapted sourceClass, Graph targetGraph, Set<URI> copiedUris) {
-        var superClass = sourceClass.getSuperClass();
+            ICIMClass sourceClass, Graph targetGraph, Set<URI> copiedUris) {
+        var superClass = superClassOf(sourceClass);
         if (superClass == null) {
             return null;
         }
@@ -269,6 +273,15 @@ public class CopyClassService implements CopyClassUseCase {
             return superClass;
         }
         return null;
+    }
+
+    private RDFSSubClassOf superClassOf(ICIMClass sourceClass) {
+        var superClasses = sourceClass.getSuperClasses();
+        if (superClasses.isEmpty()) {
+            return null;
+        }
+        var superClass = superClasses.getFirst();
+        return new RDFSSubClassOf(superClass.getUri(), superClass.getLabel());
     }
 
     private String buildReferenceMessage(CopyClassReference reference, CopyClassOptions options) {
@@ -291,7 +304,7 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private String buildCopyMessage(
-            CIMClassUMLAdapted sourceClass, CopyClassOptions options, RDFSLabel label) {
+            ICIMClass sourceClass, CopyClassOptions options, RDFSLabel label) {
         var sourcePackage =
                 sourceClass.getBelongsToCategory() != null
                         ? sourceClass.getBelongsToCategory().getLabel().getValue()
@@ -323,7 +336,7 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private CIMClassUMLAdapted copyCimClass(
-            CIMClassUMLAdapted cimClass,
+            ICIMClass cimClass,
             ICIMClassCategory cimPackage,
             RDFSLabel label,
             Graph targetGraph,
@@ -336,7 +349,7 @@ public class CopyClassService implements CopyClassUseCase {
                         options.copyAsAbstract()
                                 ? CIMStereotypes.withoutConcrete(cimClass.getStereotypes())
                                 : cimClass.getStereotypes(),
-                        options.copyInheritance() ? cimClass.getSuperClass() : null,
+                        options.copyInheritance() ? superClassOf(cimClass) : null,
                         cimPackage);
         if (options.copyAttributes()) {
             copyMembers(cimClass, newCimClass);
@@ -348,7 +361,7 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private CIMClassUMLAdapted copyClassBase(
-            CIMClassUMLAdapted sourceClass,
+            ICIMClass sourceClass,
             URI uri,
             RDFSLabel label,
             List<CIMSStereotype> stereotypes,
@@ -365,12 +378,7 @@ public class CopyClassService implements CopyClassUseCase {
                         .enumEntries(List.of())
                         .associationPairs(List.of())
                         .build();
-        if (sourceClass.getComment() != null) {
-            newCimClass.setComment(
-                    new RDFSComment(
-                            sourceClass.getComment().getValue(),
-                            sourceClass.getComment().getFormat()));
-        }
+        newCimClass.setComment(sourceClass.getComment());
         if (cimPackage != null) {
             newCimClass.setBelongsToCategory(
                     new CIMSBelongsToCategory(
@@ -379,117 +387,136 @@ public class CopyClassService implements CopyClassUseCase {
         return newCimClass;
     }
 
-    private void copyMembers(CIMClassUMLAdapted sourceClass, CIMClassUMLAdapted newCimClass) {
+    private void copyMembers(ICIMClass sourceClass, CIMClassUMLAdapted newCimClass) {
         newCimClass.setAttributes(copyAttributes(sourceClass.getAttributes(), newCimClass));
         newCimClass.setEnumEntries(copyEnumEntries(sourceClass.getEnumEntries(), newCimClass));
     }
 
-    private List<CIMAttribute> copyAttributes(List<CIMAttribute> attributes, CIMClass cimClass) {
+    private List<CIMAttribute> copyAttributes(List<ICIMAttribute> attributes, CIMClass cimClass) {
         return attributes.stream()
                 .map(
-                        attr -> {
-                            var uri =
-                                    new URI(
-                                            cimClass.getUri().getPrefix()
-                                                    + cimClass.getUri().getSuffix()
-                                                    + "."
-                                                    + attr.getLabel().getValue());
-                            var domain =
-                                    new RDFSDomain(
-                                            cimClass.getUri(),
-                                            new RDFSLabel(cimClass.getUri().getSuffix(), "en"));
-                            return attr.toBuilder()
-                                    .uuid(UUID.randomUUID())
-                                    .uri(uri)
-                                    .domain(domain)
-                                    .build();
-                        })
+                        attr ->
+                                CIMAttribute.builder()
+                                        .uuid(UUID.randomUUID())
+                                        .uri(memberUri(cimClass, attr.getLabel()))
+                                        .label(attr.getLabel())
+                                        .domain(ownDomain(cimClass))
+                                        .multiplicity(attr.getMultiplicity())
+                                        .dataType(copyDataType(attr))
+                                        .comment(attr.getComment())
+                                        .stereotype(attr.getStereotype())
+                                        .fixedValue(attr.getFixed())
+                                        .defaultValue(attr.getDefault())
+                                        .build())
                 .toList();
     }
 
-    private List<CIMEnumEntry> copyEnumEntries(List<CIMEnumEntry> enumEntries, CIMClass cimClass) {
+    private CIMSDataType copyDataType(ICIMAttribute attribute) {
+        var kind = attribute.getDataTypeKind();
+        if (kind == CIMSDataType.Type.UNKNOWN) {
+            return null;
+        }
+        var dataType = attribute.getDataType();
+        if (kind == CIMSDataType.Type.PRIMITIVE) {
+            return new CIMSPrimitiveDataType(dataType.getUri(), dataType.getLabel());
+        }
+        return new RDFSRange(dataType.getUri(), dataType.getLabel());
+    }
+
+    private List<CIMEnumEntry> copyEnumEntries(List<ICIMEnumEntry> enumEntries, CIMClass cimClass) {
         return enumEntries.stream()
                 .map(
-                        entry -> {
-                            var rdfType =
-                                    new RDFType(
-                                            cimClass.getUri(),
-                                            new RDFSLabel(cimClass.getUri().getSuffix(), "en"));
-                            var uri =
-                                    new URI(
-                                            cimClass.getUri().getPrefix()
-                                                    + cimClass.getUri().getSuffix()
-                                                    + "."
-                                                    + entry.getLabel().getValue());
-                            return entry.toBuilder()
-                                    .uuid(UUID.randomUUID())
-                                    .type(rdfType)
-                                    .uri(uri)
-                                    .build();
-                        })
+                        entry ->
+                                CIMEnumEntry.builder()
+                                        .uuid(UUID.randomUUID())
+                                        .uri(memberUri(cimClass, entry.getLabel()))
+                                        .type(new RDFType(cimClass.getUri(), ownLabel(cimClass)))
+                                        .label(entry.getLabel())
+                                        .comment(entry.getComment())
+                                        .stereotype(entry.getStereotype())
+                                        .build())
                 .toList();
+    }
+
+    private URI memberUri(CIMClass cimClass, RDFSLabel memberLabel) {
+        return new URI(
+                cimClass.getUri().getPrefix()
+                        + cimClass.getUri().getSuffix()
+                        + "."
+                        + memberLabel.getValue());
+    }
+
+    private RDFSDomain ownDomain(CIMClass cimClass) {
+        return new RDFSDomain(cimClass.getUri(), ownLabel(cimClass));
+    }
+
+    private RDFSLabel ownLabel(CIMClass cimClass) {
+        return new RDFSLabel(cimClass.getUri().getSuffix(), "en");
     }
 
     private List<CIMAssociationPair> copyAssociations(
-            CIMClassUMLAdapted sourceClass, CIMClass newClass, Graph graph) {
-        return ClassAssociations.ownedBy(sourceClass).stream()
-                .map(pair -> copyAssociationPair(pair, newClass, graph))
+            ICIMClass sourceClass, CIMClass newClass, Graph graph) {
+        return sourceClass.getAssociations().stream()
+                .map(association -> copyAssociationPair(association, newClass, graph))
                 .filter(Objects::nonNull)
                 .toList();
     }
 
     private CIMAssociationPair copyAssociationPair(
-            CIMAssociationPair pair, CIMClass newClass, Graph graph) {
+            ICIMAssociation from, CIMClass newClass, Graph graph) {
+        var to = from.getInverseAssociation();
         var existingToLabels =
                 UniqueLabelFactory.existingAssociationLabels(
-                        graph, pair.getTo().getDomain().getUri(), pair.getTo().getLabel());
-        var newToLabel = UniqueLabelFactory.uniqueLabel(pair.getTo().getLabel(), existingToLabels);
+                        graph, to.getDomain().getUri(), to.getLabel());
+        var newToLabel = UniqueLabelFactory.uniqueLabel(to.getLabel(), existingToLabels);
         var existingFromLabels =
                 UniqueLabelFactory.existingAssociationLabels(
-                        graph, newClass.getUri(), pair.getFrom().getLabel());
+                        graph, newClass.getUri(), from.getLabel());
         if (!existingFromLabels.isEmpty()) {
             return null;
         }
-        var newFromLabel = pair.getFrom().getLabel();
+        var newFromLabel = from.getLabel();
 
-        var from = buildFromAssociation(pair.getFrom(), newClass, newToLabel, newFromLabel);
-        var to = buildToAssociation(pair.getTo(), newClass, newToLabel, newFromLabel);
-
-        return new CIMAssociationPair(from, to);
+        return new CIMAssociationPair(
+                buildFromAssociation(from, newClass, newToLabel, newFromLabel),
+                buildToAssociation(to, newClass, newToLabel, newFromLabel));
     }
 
     private CIMAssociation buildFromAssociation(
-            CIMAssociation original,
+            ICIMAssociation original,
             CIMClass newClass,
             RDFSLabel newToLabel,
             RDFSLabel newFromLabel) {
-        return original.toBuilder()
+        var range = original.getRange();
+        return CIMAssociation.builder()
                 .uuid(UUID.randomUUID())
                 .label(newFromLabel)
                 .uri(new URI(newClass.getUri() + "." + newFromLabel.getValue()))
-                .domain(
-                        new RDFSDomain(
-                                newClass.getUri(),
-                                new RDFSLabel(newClass.getUri().getSuffix(), "en")))
+                .comment(original.getComment())
+                .multiplicity(original.getMultiplicity())
+                .domain(ownDomain(newClass))
+                .range(new RDFSRange(range.getUri(), range.getLabel()))
+                .associationUsed(original.getAssociationUsed())
                 .inverseRoleName(
-                        new CIMSInverseRoleName(
-                                original.getRange().getUri() + "." + newToLabel.getValue()))
+                        new CIMSInverseRoleName(range.getUri() + "." + newToLabel.getValue()))
                 .build();
     }
 
     private CIMAssociation buildToAssociation(
-            CIMAssociation original,
+            ICIMAssociation original,
             CIMClass newClass,
             RDFSLabel newToLabel,
             RDFSLabel newFromLabel) {
-        return original.toBuilder()
+        var domain = original.getDomain();
+        return CIMAssociation.builder()
                 .uuid(UUID.randomUUID())
                 .label(newToLabel)
-                .uri(new URI(original.getDomain().getUri() + "." + newToLabel.getValue()))
-                .range(
-                        new RDFSRange(
-                                newClass.getUri(),
-                                new RDFSLabel(newClass.getUri().getSuffix(), "en")))
+                .uri(new URI(domain.getUri() + "." + newToLabel.getValue()))
+                .comment(original.getComment())
+                .multiplicity(original.getMultiplicity())
+                .domain(new RDFSDomain(domain.getUri(), domain.getLabel()))
+                .range(new RDFSRange(newClass.getUri(), ownLabel(newClass)))
+                .associationUsed(original.getAssociationUsed())
                 .inverseRoleName(
                         new CIMSInverseRoleName(newClass.getUri() + "." + newFromLabel.getValue()))
                 .build();

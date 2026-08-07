@@ -29,10 +29,9 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
-import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
@@ -53,7 +52,7 @@ public class CopyClassReferenceResolver {
     private final DatabasePort databasePort;
 
     public List<CopyClassReference> resolve(
-            List<CopyClassSource> sources, List<CIMClassUMLAdapted> sourceClasses) {
+            List<CopyClassSource> sources, List<ICIMClass> sourceClasses) {
 
         var urisByGraph =
                 new LinkedHashMap<GraphIdentifier, Map<CopyClassReference.Kind, Set<URI>>>();
@@ -147,7 +146,7 @@ public class CopyClassReferenceResolver {
     }
 
     private Map<URI, Set<CopyClassReference.Usage>> usagesOf(
-            CIMClassUMLAdapted sourceClass, CopyClassReference.Kind kind) {
+            ICIMClass sourceClass, CopyClassReference.Kind kind) {
         return switch (kind) {
             case DATA_TYPE -> dataTypeUsages(sourceClass);
             case ASSOCIATION_TARGET -> associationTargetUsages(sourceClass);
@@ -203,49 +202,47 @@ public class CopyClassReferenceResolver {
                 referencedClass.getUuid(),
                 referencedClass.getUri(),
                 referencedClass.getLabel().getValue(),
-                dataTypeUris(model, referencedClass),
+                dataTypeUris(referencedClass),
                 EnumSet.noneOf(CopyClassReference.Kind.class));
     }
 
-    private Set<URI> dataTypeUris(Model model, ICIMClass referencedClass) {
+    private Set<URI> dataTypeUris(ICIMClass referencedClass) {
         var uris = new LinkedHashSet<URI>();
         for (var attribute : referencedClass.getAttributes()) {
-            var resource = model.getResource(attribute.getUri().toString());
-            if (resource.hasProperty(CIMS.datatype) || resource.hasProperty(RDFS.range)) {
+            if (attribute.getDataTypeKind() != CIMSDataType.Type.UNKNOWN) {
                 uris.add(attribute.getDataType().getUri());
             }
         }
         return uris;
     }
 
-    private Map<URI, Set<CopyClassReference.Usage>> dataTypeUsages(CIMClassUMLAdapted sourceClass) {
+    private Map<URI, Set<CopyClassReference.Usage>> dataTypeUsages(ICIMClass sourceClass) {
         var usages = new LinkedHashMap<URI, Set<CopyClassReference.Usage>>();
         for (var attribute : sourceClass.getAttributes()) {
-            var dataType = attribute.getDataType();
-            if (dataType != null) {
-                addUsage(usages, dataType.getUri(), usage(sourceClass, attribute.getLabel()));
+            if (attribute.getDataTypeKind() != CIMSDataType.Type.UNKNOWN) {
+                addUsage(
+                        usages,
+                        attribute.getDataType().getUri(),
+                        usage(sourceClass, attribute.getLabel()));
             }
         }
         return usages;
     }
 
-    private Map<URI, Set<CopyClassReference.Usage>> associationTargetUsages(
-            CIMClassUMLAdapted sourceClass) {
+    private Map<URI, Set<CopyClassReference.Usage>> associationTargetUsages(ICIMClass sourceClass) {
         var usages = new LinkedHashMap<URI, Set<CopyClassReference.Usage>>();
-        for (var pair : ClassAssociations.ownedBy(sourceClass)) {
-            var range = pair.getFrom().getRange();
-            if (range != null) {
-                addUsage(usages, range.getUri(), usage(sourceClass, pair.getFrom().getLabel()));
-            }
+        for (var association : sourceClass.getAssociations()) {
+            addUsage(
+                    usages,
+                    association.getRange().getUri(),
+                    usage(sourceClass, association.getLabel()));
         }
         return usages;
     }
 
-    private Map<URI, Set<CopyClassReference.Usage>> superClassUsages(
-            CIMClassUMLAdapted sourceClass) {
+    private Map<URI, Set<CopyClassReference.Usage>> superClassUsages(ICIMClass sourceClass) {
         var usages = new LinkedHashMap<URI, Set<CopyClassReference.Usage>>();
-        var superClass = sourceClass.getSuperClass();
-        if (superClass != null) {
+        for (var superClass : sourceClass.getSuperClasses()) {
             addUsage(usages, superClass.getUri(), usage(sourceClass, null));
         }
         return usages;
@@ -260,7 +257,7 @@ public class CopyClassReferenceResolver {
         }
     }
 
-    private CopyClassReference.Usage usage(CIMClassUMLAdapted sourceClass, RDFSLabel memberLabel) {
+    private CopyClassReference.Usage usage(ICIMClass sourceClass, RDFSLabel memberLabel) {
         return new CopyClassReference.Usage(
                 sourceClass.getLabel().getValue(),
                 memberLabel == null ? null : memberLabel.getValue());
