@@ -27,6 +27,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsDefault;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsFixed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 
@@ -95,6 +96,17 @@ public class CIMAttribute extends CIMResource implements ICIMAttribute {
 
         var label = getUniqueObjectOrNull(resource, RDFS.label);
         return label != null && label.isLiteral();
+    }
+
+    @Override
+    public CIMSDataType.Type getDataTypeKind() {
+        if (getUniqueJenaProperty(CIMS.datatype) != null) {
+            return CIMSDataType.Type.PRIMITIVE;
+        }
+        if (getUniqueJenaProperty(RDFS.range) != null) {
+            return CIMSDataType.Type.RANGE;
+        }
+        return CIMSDataType.Type.UNKNOWN;
     }
 
     @Override

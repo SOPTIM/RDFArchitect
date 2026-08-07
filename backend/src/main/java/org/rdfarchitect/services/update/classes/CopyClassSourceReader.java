@@ -20,20 +20,21 @@ package org.rdfarchitect.services.update.classes;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.PasteSourceClassDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
-import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
+import org.rdfarchitect.models.cim.data.dto.facade.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.rdf.graph.GraphUtils;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -61,38 +62,33 @@ public class CopyClassSourceReader {
                 .toList();
     }
 
-    public List<CIMClassUMLAdapted> readSourceClasses(List<CopyClassSource> sources) {
-        var sourcesByGraph =
-                sources.stream()
-                        .collect(
-                                Collectors.groupingBy(
-                                        CopyClassSource::graphIdentifier,
-                                        LinkedHashMap::new,
-                                        Collectors.toList()));
-
-        var classesBySource = new HashMap<CopyClassSource, CIMClassUMLAdapted>();
-        sourcesByGraph.forEach(
-                (graphIdentifier, graphSources) ->
-                        classesBySource.putAll(readSourceClasses(graphIdentifier, graphSources)));
-        return sources.stream().map(classesBySource::get).toList();
+    /**
+     * Reads the sources off a private snapshot of each source graph. The returned facades resolve
+     * their properties lazily, so they must not be bound to the graph of an open transaction: the
+     * caller keeps using them after this method returns, and pasting within one schema would
+     * otherwise need a read and a write transaction on the same graph context at once.
+     */
+    public List<ICIMClass> readSourceClasses(List<CopyClassSource> sources) {
+        var modelsByGraph = new LinkedHashMap<GraphIdentifier, Model>();
+        for (var source : sources) {
+            modelsByGraph.computeIfAbsent(source.graphIdentifier(), this::snapshotOf);
+        }
+        return sources.stream()
+                .map(source -> toClass(modelsByGraph.get(source.graphIdentifier()), source))
+                .toList();
     }
 
-    private Map<CopyClassSource, CIMClassUMLAdapted> readSourceClasses(
-            GraphIdentifier graphIdentifier, List<CopyClassSource> sources) {
-
-        var prefixMapping = databasePort.getPrefixMapping(graphIdentifier.datasetName());
-        var classesBySource = new HashMap<CopyClassSource, CIMClassUMLAdapted>();
+    private Model snapshotOf(GraphIdentifier graphIdentifier) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            for (var source : sources) {
-                classesBySource.put(
-                        source,
-                        CIMUMLObjectFactory.createCIMClassUMLAdapted(
-                                ctx.getRdfGraph(),
-                                graphIdentifier.graphUri(),
-                                prefixMapping,
-                                source.classUUID().toString()));
-            }
+            return ModelFactory.createModelForGraph(GraphUtils.deepCopy(ctx.getRdfGraph()));
         }
-        return classesBySource;
+    }
+
+    private ICIMClass toClass(Model model, CopyClassSource source) {
+        var classUUID = source.classUUID().toString();
+        if (!model.listSubjectsWithProperty(RDFA.uuid, classUUID).hasNext()) {
+            return null;
+        }
+        return new CIMClass(source.graphIdentifier().graphUri(), model, source.classUUID());
     }
 }
