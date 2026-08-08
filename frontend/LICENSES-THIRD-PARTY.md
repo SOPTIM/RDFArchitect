@@ -92,7 +92,7 @@
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.0.6
+- **Version:** 4.0.7
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
@@ -257,7 +257,7 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.1.5
+- **Version:** 8.2.0
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
