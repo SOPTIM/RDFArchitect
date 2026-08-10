@@ -199,11 +199,13 @@
         <span class="text-default-text mt-1 font-bold">{label}</span>
     </div>
     <div
-        class="class-node-divider bg-class-node-lower-background p-2 text-center"
+        class="class-node-divider bg-class-node-lower-background p-2 text-left"
     >
         {#if useProfileSections}
             {#each profileSections as section (section.graphUri)}
-                <div class="text-default-text text-xs italic opacity-70">
+                <div
+                    class="text-default-text text-center text-xs italic opacity-70"
+                >
                     {section.graphName}
                 </div>
                 {#if renderOptions.get("showInheritedProperties")}

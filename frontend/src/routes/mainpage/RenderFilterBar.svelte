@@ -109,7 +109,7 @@
             <DropdownMenu.Trigger>
                 <button
                     type="button"
-                    class="border-border text-blue group-hover:text-white group-data-[state=open]:text-white flex h-8 items-center gap-2 rounded border px-3 text-sm hover:cursor-pointer"
+                    class="border-border text-blue flex h-8 items-center gap-2 rounded border px-3 text-sm group-hover:text-white group-data-[state=open]:text-white hover:cursor-pointer"
                 >
                     <Fa icon={faFilter} />
                     Filters
