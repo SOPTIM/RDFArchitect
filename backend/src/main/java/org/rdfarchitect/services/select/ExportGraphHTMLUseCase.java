@@ -21,5 +21,5 @@ import org.rdfarchitect.database.GraphIdentifier;
 
 public interface ExportGraphHTMLUseCase {
 
-    byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier);
+    byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier, String fileEnding);
 }

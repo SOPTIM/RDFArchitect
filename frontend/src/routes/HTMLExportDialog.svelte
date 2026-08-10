@@ -43,9 +43,15 @@
         fileExtension: ".zip",
     };
 
+    const supportedMediaTypes = [
+        { name: "PNG", ending: "png" },
+        { name: "SVG", ending: "svg" },
+    ];
+
     let selectedDatasetName = $state(null);
     let graphURI = $state(null);
     let isExporting = $state(false);
+    let selectedMediaType = $state();
     let disablePrimary = $derived(
         !selectedDatasetName || !graphURI || isExporting,
     );
@@ -63,6 +69,7 @@
             const response = await bec.getHTMLExport(
                 selectedDatasetName,
                 graphURI,
+                selectedMediaType.ending,
             );
             if (!response.ok) {
                 toastStore.error(
@@ -82,6 +89,7 @@
             const images = await generatePackageImages(
                 selectedDatasetName,
                 graphURI,
+                selectedMediaType,
             );
             const imagesFolder = zip.folder("images");
             for (const { filename, blob } of images) {
@@ -149,5 +157,17 @@
             {lockedGraphUri}
             displayAsCard={false}
         />
+        <label for="media-types-Download" class="mt-2 mb-1">
+            Diagram File Type
+        </label>
+        <select
+            class=" border-border bg-window-background focus:border-blue h-9 w-fit rounded border-2 p-2"
+            id="media-types-Download"
+            bind:value={selectedMediaType}
+        >
+            {#each supportedMediaTypes as mediaType}
+                <option value={mediaType}>{mediaType.name}</option>
+            {/each}
+        </select>
     </div>
 </ActionDialog>

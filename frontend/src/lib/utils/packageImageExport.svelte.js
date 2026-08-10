@@ -51,7 +51,7 @@ async function getPackageDiagram(datasetName, graphURI, packageUUID) {
     return text ? JSON.parse(text) : null;
 }
 
-async function renderPackageToPng(nodes, edges) {
+async function renderPackage(nodes, edges, fileType) {
     const clipper = document.createElement("div");
     clipper.style.position = "fixed";
     clipper.style.top = "0";
@@ -73,7 +73,7 @@ async function renderPackageToPng(nodes, edges) {
     const app = mount(PackageSnapshotRenderer, { target: container, props });
 
     try {
-        for (let i = 0; i < 400 && !props.ready; i++) {
+        for (let i = 0; i < 8000 && !props.ready; i++) {
             await new Promise(r => setTimeout(r, 25));
         }
         if (!props.ready) {
@@ -88,20 +88,32 @@ async function renderPackageToPng(nodes, edges) {
         await new Promise(r => requestAnimationFrame(r));
 
         const { width, height } = props.size ?? { width: 1600, height: 1000 };
-        return await htmlToImage.toBlob(container, {
-            backgroundColor: "#ffffff",
-            pixelRatio: 3,
-            width,
-            height,
-            cacheBust: true,
-        });
+        if (fileType.ending === "png") {
+            return await htmlToImage.toBlob(container, {
+                backgroundColor: "#ffffff",
+                pixelRatio: 3,
+                width,
+                height,
+                cacheBust: true,
+            });
+        } else {
+            const dataUrl = await htmlToImage.toSvg(container, {
+                backgroundColor: "#ffffff",
+                width,
+                height,
+                cacheBust: true,
+            });
+
+            const res = await fetch(dataUrl);
+            return await res.blob();
+        }
     } finally {
         unmount(app);
         clipper.remove();
     }
 }
 
-export async function generatePackageImages(datasetName, graphURI) {
+export async function generatePackageImages(datasetName, graphURI, fileType) {
     const images = [];
     const packages = await getAllPackages(datasetName, graphURI);
 
@@ -121,18 +133,24 @@ export async function generatePackageImages(datasetName, graphURI) {
             ) {
                 continue;
             }
-            const blob = await renderPackageToPng(
+            const blob = await renderPackage(
                 diagram.nodes,
                 diagram.edges ?? [],
+                fileType,
             );
+
             if (blob) {
                 images.push({
-                    filename: `${sanitizeFilename(packageUUID)}.png`,
+                    filename:
+                        `${sanitizeFilename(packageUUID)}.` + fileType.ending,
                     blob,
                 });
             }
         } catch (e) {
-            console.error(`Failed to render package "${label}" as PNG:`, e);
+            console.error(
+                `Failed to render package "${label}" as ${fileType.name}:`,
+                e,
+            );
         }
     }
     return images;

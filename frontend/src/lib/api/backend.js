@@ -747,8 +747,8 @@ export class BackendConnection {
         });
     }
 
-    async getHTMLExport(datasetName, graphURI) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport`;
+    async getHTMLExport(datasetName, graphURI, fileEnding) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport/${encodeURIComponent(fileEnding)}`;
         return await fetch(url, {
             method: "GET",
             headers: new Headers({ "Content-Type": "application/json" }),

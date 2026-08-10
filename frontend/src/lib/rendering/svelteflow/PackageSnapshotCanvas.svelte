@@ -28,7 +28,10 @@
     import ClassNode from "./components/ClassNode.svelte";
     import EdgeMarkers from "./components/EdgeMarkers.svelte";
     import InheritanceEdge from "./components/InheritanceEdge.svelte";
-    import { decorateEdges } from "./diagram/diagramElements.js";
+    import {
+        decorateEdges,
+        hasDefaultNodeLayout,
+    } from "./diagram/diagramElements.js";
     import { getLayoutedNodes } from "./layout/elkLayout.js";
 
     let {
@@ -58,16 +61,18 @@
 
     async function layoutOnce() {
         laidOut = true;
-        const layouted = await getLayoutedNodes(nodes, edges);
-        nodes = [...layouted];
+        if (hasDefaultNodeLayout(nodes)) {
+            const layouted = await getLayoutedNodes(nodes, edges);
+            nodes = [...layouted];
+        }
 
         const padding = 60;
-        const xs = layouted.map(n => n.position.x);
-        const ys = layouted.map(n => n.position.y);
-        const rights = layouted.map(
+        const xs = nodes.map(n => n.position.x);
+        const ys = nodes.map(n => n.position.y);
+        const rights = nodes.map(
             n => n.position.x + (n.measured?.width ?? n.width ?? 200),
         );
-        const bottoms = layouted.map(
+        const bottoms = nodes.map(
             n => n.position.y + (n.measured?.height ?? n.height ?? 100),
         );
         const minX = Math.min(...xs);

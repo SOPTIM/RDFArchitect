@@ -52,7 +52,7 @@ class ExportHTMLServiceTest {
 
     private String exportHtml(List<ClassUMLAdaptedDTO> classList) {
         when(getClassListUseCase.getFullClassList(GRAPH_IDENTIFIER)).thenReturn(classList);
-        byte[] result = exportHTMLService.exportGraphAsHTML(GRAPH_IDENTIFIER);
+        byte[] result = exportHTMLService.exportGraphAsHTML(GRAPH_IDENTIFIER, "png");
         return new String(result, StandardCharsets.UTF_8);
     }
 

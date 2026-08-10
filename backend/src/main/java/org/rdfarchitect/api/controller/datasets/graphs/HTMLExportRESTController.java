@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/htmlexport")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/htmlexport/{fileEnding}")
 @RequiredArgsConstructor
 public class HTMLExportRESTController {
 
@@ -75,7 +75,9 @@ public class HTMLExportRESTController {
                             description =
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
-                    String graphURI) {
+                    String graphURI,
+            @Parameter(description = "The file ending of the diagram files.") @PathVariable
+                    String fileEnding) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/htmlexport\" from \"{}\".",
                 datasetName,
@@ -86,7 +88,7 @@ public class HTMLExportRESTController {
 
         var output =
                 exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier(datasetName, extendedGraphURI));
+                        new GraphIdentifier(datasetName, extendedGraphURI), fileEnding);
 
         var fileName = "default";
         if (!extendedGraphURI.equals("default")) {

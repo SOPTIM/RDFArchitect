@@ -51,11 +51,11 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                     CIMStereotypes.entsoeString);
 
     @Override
-    public byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier) {
+    public byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier, String fileEnding) {
 
         var classList = getClassListUseCase.getFullClassList(graphIdentifier);
 
-        String html = header() + buildBody(classList) + "</html>";
+        String html = header() + buildBody(classList, fileEnding) + "</html>";
 
         return html.getBytes(StandardCharsets.UTF_8);
     }
@@ -317,8 +317,11 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
             </style>""";
     }
 
-    private String buildBody(List<ClassUMLAdaptedDTO> classList) {
-        return "<body>\n" + buildStereotypeList() + buildStereotypeSections(classList) + "</body>";
+    private String buildBody(List<ClassUMLAdaptedDTO> classList, String fileEnding) {
+        return "<body>\n"
+                + buildStereotypeList()
+                + buildStereotypeSections(classList, fileEnding)
+                + "</body>";
     }
 
     private String buildStereotypeList() {
@@ -334,7 +337,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         return builder.toString();
     }
 
-    private String buildStereotypeSections(List<ClassUMLAdaptedDTO> classList) {
+    private String buildStereotypeSections(List<ClassUMLAdaptedDTO> classList, String fileEnding) {
         var builder = new StringBuilder();
 
         var processedUuids = new HashSet<UUID>();
@@ -349,7 +352,9 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                                                     && !processedUuids.contains(c.getUuid()))
                             .toList();
             if (!stereotypeClasses.isEmpty()) {
-                builder.append(buildStereotypeSection(stereotype, stereotypeClasses, classList));
+                builder.append(
+                        buildStereotypeSection(
+                                stereotype, stereotypeClasses, classList, fileEnding));
                 stereotypeClasses.stream()
                         .filter(c -> c.getUuid() != null)
                         .forEach(c -> processedUuids.add(c.getUuid()));
@@ -361,7 +366,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                         .filter(c -> (!isConcrete(c) && !processedUuids.contains(c.getUuid())))
                         .toList();
         if (!abstractClasses.isEmpty()) {
-            builder.append(buildAbstractSection(abstractClasses, classList));
+            builder.append(buildAbstractSection(abstractClasses, classList, fileEnding));
             abstractClasses.stream()
                     .filter(c -> c.getUuid() != null)
                     .forEach(c -> processedUuids.add(c.getUuid()));
@@ -370,28 +375,32 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         var remainingClasses =
                 classList.stream().filter(c -> !processedUuids.contains(c.getUuid())).toList();
         if (!remainingClasses.isEmpty()) {
-            builder.append(buildRemainingSection(remainingClasses, classList));
+            builder.append(buildRemainingSection(remainingClasses, classList, fileEnding));
         }
 
         return builder.toString();
     }
 
     private String buildAbstractSection(
-            List<ClassUMLAdaptedDTO> sectionClasses, List<ClassUMLAdaptedDTO> fullClassList) {
+            List<ClassUMLAdaptedDTO> sectionClasses,
+            List<ClassUMLAdaptedDTO> fullClassList,
+            String fileEnding) {
         var builder = new StringBuilder();
         builder.append("<h1>Abstract Classes</h1>\n");
         for (var classUMLAdaptedDTO : sectionClasses) {
-            builder.append(buildClass(null, classUMLAdaptedDTO, fullClassList));
+            builder.append(buildClass(null, classUMLAdaptedDTO, fullClassList, fileEnding));
         }
         return builder.toString();
     }
 
     private String buildRemainingSection(
-            List<ClassUMLAdaptedDTO> sectionClasses, List<ClassUMLAdaptedDTO> fullClassList) {
+            List<ClassUMLAdaptedDTO> sectionClasses,
+            List<ClassUMLAdaptedDTO> fullClassList,
+            String fileEnding) {
         var builder = new StringBuilder();
         builder.append("<h1>Classes</h1>\n");
         for (var classUMLAdaptedDTO : sectionClasses) {
-            builder.append(buildClass(null, classUMLAdaptedDTO, fullClassList));
+            builder.append(buildClass(null, classUMLAdaptedDTO, fullClassList, fileEnding));
         }
         return builder.toString();
     }
@@ -399,11 +408,12 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     private String buildStereotypeSection(
             String stereotype,
             List<ClassUMLAdaptedDTO> sectionClasses,
-            List<ClassUMLAdaptedDTO> fullClassList) {
+            List<ClassUMLAdaptedDTO> fullClassList,
+            String fileEnding) {
         var builder = new StringBuilder();
         builder.append("<h1>Classes (").append(stereotype).append(")</h1>\n");
         for (var classUMLAdaptedDTO : sectionClasses) {
-            builder.append(buildClass(stereotype, classUMLAdaptedDTO, fullClassList));
+            builder.append(buildClass(stereotype, classUMLAdaptedDTO, fullClassList, fileEnding));
         }
         return builder.toString();
     }
@@ -411,7 +421,8 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     private String buildClass(
             String stereotype,
             ClassUMLAdaptedDTO classUMLAdaptedDTO,
-            List<ClassUMLAdaptedDTO> fullClassList) {
+            List<ClassUMLAdaptedDTO> fullClassList,
+            String fileEnding) {
         var builder = new StringBuilder();
         var label = escape(classUMLAdaptedDTO.getLabel());
 
@@ -427,7 +438,8 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("</h2>\n");
         builder.append("</a>\n");
 
-        builder.append(buildPackageReference(classUMLAdaptedDTO.getBelongsToCategory()));
+        builder.append(
+                buildPackageReference(classUMLAdaptedDTO.getBelongsToCategory(), fileEnding));
 
         if (classUMLAdaptedDTO.getComment() != null && !classUMLAdaptedDTO.getComment().isEmpty()) {
             builder.append("<p class=\"comment\">")
@@ -452,13 +464,15 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                 && classUMLAdaptedDTO.getStereotypes().contains(CIMStereotypes.concreteString);
     }
 
-    private String buildPackageReference(BelongsToCategoryDTO category) {
+    private String buildPackageReference(BelongsToCategoryDTO category, String fileEnding) {
         if (category == null) {
             return "";
         }
         return "<p class=\"package\"><a href=\"images/"
                 + escape(category.getUuid() != null ? category.getUuid().toString() : "default")
-                + ".png\" target=\"_blank\">"
+                + "."
+                + fileEnding
+                + "\" target=\"_blank\">"
                 + escape(category.getLabel())
                 + " </a></p>\n";
     }
