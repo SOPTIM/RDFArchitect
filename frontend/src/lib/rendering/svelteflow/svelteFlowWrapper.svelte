@@ -555,6 +555,12 @@
             selected: edge.id === edgeId,
         }));
     }
+    // Selects only the clicked edge on a plain left click. Independent of the
+    // class-based auto selection: clicking an edge always selects just that edge.
+    function handleEdgeClick({ edge }) {
+        if (!edge?.id) return;
+        selectOnlyEdge(edge.id);
+    }
 
     function updateEdgeBendPoints(edgeId, newBendPoints) {
         patchEdgeData(edgeId, { bendPoints: newBendPoints });
@@ -848,10 +854,12 @@
         onpaneclick={() => contextMenus.close()}
         onpanecontextmenu={e => contextMenus.handlePaneContextMenu(e)}
         onedgecontextmenu={e => contextMenus.handleEdgeContextMenu(e)}
-        onselectionchange={e => selection.handleSelectionChange(e)}
+        onselectionchange={e =>
+            selection.handleSelectionChange(e, boxSelecting)}
         onselectionstart={() => {
             boxSelecting = true;
         }}
+        onedgeclick={e => handleEdgeClick(e)}
         onselectionend={() => {
             boxSelecting = false;
             selection.handleSelectionEnd();

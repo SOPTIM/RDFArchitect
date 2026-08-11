@@ -91,7 +91,10 @@ export class DiagramSelectionController {
         };
     }
 
-    handleSelectionChange({ nodes: selectedNodes, edges: selectedEdges }) {
+    handleSelectionChange(
+        { nodes: selectedNodes, edges: selectedEdges },
+        isBoxSelection,
+    ) {
         if (this.#nodeDragActive) {
             return;
         }
@@ -106,7 +109,10 @@ export class DiagramSelectionController {
         untrack(() => multiSelectState.setSelection(entries));
 
         const selectedClassIds = new Set(entries.map(entry => entry.classUuid));
-        this.#reconcileEdgeSelection(selectedClassIds, selectedEdges);
+        this.#reconcileEdgeSelection(
+            selectedClassIds,
+            isBoxSelection ? selectedEdges : null,
+        );
     }
 
     #reconcileEdgeSelection(selectedClassIds, autoSelectedEdges) {
