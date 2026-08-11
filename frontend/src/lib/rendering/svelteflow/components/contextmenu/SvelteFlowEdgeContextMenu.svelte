@@ -23,7 +23,6 @@
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
 
     import {
         getContextMenuTriggerStyle,
@@ -48,10 +47,6 @@
 
     let onBendPoint = $derived(!!request?.hitBendPointId);
     let onEndPoint = $derived(!!request?.hitEndPointId);
-    let atLimit = $derived(
-        (request?.bendPointCount ?? 0) >=
-            EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge,
-    );
 
     $effect(() => {
         syncContextMenuTrigger({
@@ -67,7 +62,7 @@
     }
 
     function addBendPoint() {
-        if (atLimit || !request) return;
+        if (!request) return;
         onAddBendPoint({
             edgeId: request.edgeId,
             flowPosition: request.flowPosition,
@@ -128,8 +123,7 @@
             <ContextMenu.Item.Button
                 onSelect={addBendPoint}
                 faIcon={faPlus}
-                disabled={atLimit}
-                altText={atLimit ? "Max bend points reached" : "Ctrl+Q"}
+                altText={"Ctrl+Q"}
             >
                 Add bend point here
             </ContextMenu.Item.Button>

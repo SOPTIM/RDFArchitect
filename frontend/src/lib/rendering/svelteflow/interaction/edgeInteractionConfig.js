@@ -22,9 +22,6 @@
  * than how the user interacts with them.
  */
 export const EDGE_INTERACTION_CONFIG = {
-    /** Maximum number of active bend points allowed per edge. */
-    maxBendPointsPerEdge: 20,
-
     /** Radius (in flow units) of an active bend/end point handle. */
     activePointRadiusPx: 8,
     /** Radius (in flow units) of an inactive bend/end point hint. */
