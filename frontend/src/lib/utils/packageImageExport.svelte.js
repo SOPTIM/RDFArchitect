@@ -73,7 +73,7 @@ async function renderPackage(nodes, edges, fileType) {
     const app = mount(PackageSnapshotRenderer, { target: container, props });
 
     try {
-        for (let i = 0; i < 8000 && !props.ready; i++) {
+        for (let i = 0; i < 400 && !props.ready; i++) {
             await new Promise(r => setTimeout(r, 25));
         }
         if (!props.ready) {
