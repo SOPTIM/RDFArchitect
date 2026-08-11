@@ -127,6 +127,49 @@ class UpdateClassServiceTest {
     }
 
     @Test
+    void addClass_uriIsReferencedOnly_keepsUuidOfReferencedResource() {
+        var ghostUri = NodeFactory.createURI(PREFIX + "ghost");
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph()
+                    .add(
+                            NodeFactory.createURI(PREFIX + "class.associatedClass"),
+                            RDFS.range.asNode(),
+                            ghostUri);
+            ctx.commit("referenced only resource");
+        }
+
+        UUID referencedUuid;
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            referencedUuid =
+                    UUID.fromString(
+                            model.getResource(PREFIX + "ghost").getProperty(RDFA.uuid).getString());
+        }
+
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(UUID.randomUUID())
+                        .prefix(PREFIX)
+                        .label("default")
+                        .build();
+
+        var newUuid =
+                updateClassService.addClass(graphIdentifier, packageDTO, PREFIX, "ghost", null);
+
+        assertThat(newUuid).isEqualTo(referencedUuid);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            assertThat(
+                            model.listStatements(
+                                            model.getResource(PREFIX + "ghost"),
+                                            RDFA.uuid,
+                                            (RDFNode) null)
+                                    .toList())
+                    .hasSize(1);
+        }
+    }
+
+    @Test
     void addClass_packageWithSameIriExists_throwsConflict() {
         var packageUri = PREFIX + "packageCollision";
         var graphCtx = databasePort.getGraphWithContext(graphIdentifier);

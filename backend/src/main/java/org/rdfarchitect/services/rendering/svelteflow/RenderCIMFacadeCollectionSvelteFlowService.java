@@ -518,6 +518,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                 NodeDataDTO.builder()
                         .graphUri(cimClass.getGraphUri())
                         .label(cimClass.getLabel().getValue())
+                        .external(cimClass.isExternal())
                         .belongsToCategory(
                                 cimClass.getBelongsToCategory() != null
                                         ? cimClass.getBelongsToCategory().getLabel().getValue()

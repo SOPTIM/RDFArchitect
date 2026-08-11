@@ -54,6 +54,11 @@ public class CIMClass extends CIMResource implements ICIMClass {
     }
 
     @Override
+    public boolean isExternal() {
+        return false;
+    }
+
+    @Override
     public RDFSLabel getLabel() {
         if (getUniqueJenaPropertyNode(RDFS.label) == null) {
             return new RDFSLabel(getUri().getSuffix());

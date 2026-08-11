@@ -110,7 +110,9 @@
             await getPackages(ds, graph);
         }
 
-        compareClasses = await getClasses(ds, graph);
+        // Only classes defined in this graph block a name; a name that is merely
+        // referenced can be created and takes over that reference.
+        compareClasses = await getClasses(ds, graph, false);
         refreshClassNameValidation();
     }
 
@@ -151,7 +153,7 @@
         }
 
         await getPackages(datasetName, graphURI);
-        compareClasses = await getClasses(datasetName, graphURI);
+        compareClasses = await getClasses(datasetName, graphURI, false);
 
         classPackage = packageSelectionLocked
             ? applyLockedPackage()

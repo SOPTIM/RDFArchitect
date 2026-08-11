@@ -20,6 +20,7 @@ package org.rdfarchitect.services.dl.update.classlayout;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.Model;
 import org.rdfarchitect.api.dto.dl.ClassLayoutPositionDTO;
 import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
@@ -27,6 +28,7 @@ import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.DiagramObjectPoint;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.data.dto.relations.XYZPosition;
@@ -68,6 +70,24 @@ public class UpdateClassLayoutService
                             ? packageMapper.toCIMObject(packageDTO).getUuid()
                             : diagramLayout.getDefaultPackageMRID().getUuid();
 
+            var existingDiagramObject =
+                    DLObjectFetcher.fetchDiagramDOForClass(
+                            diagramLayoutModel, packageUUID, classUUID);
+            if (existingDiagramObject != null) {
+                // The class takes over an uri that already had layout data, for example because a
+                // class of that name was deleted while references to it remained. Keeping that
+                // layout data avoids a second diagram object for the same class.
+                if (classLayoutPosition != null) {
+                    moveDiagramObject(
+                            diagramLayoutModel,
+                            existingDiagramObject,
+                            classLayoutPosition.getXPosition(),
+                            classLayoutPosition.getYPosition());
+                    ctx.commit();
+                }
+                return;
+            }
+
             var doMRID =
                     DiagramLayoutServiceUtils.insertDiagramObject(
                             diagramLayoutModel, packageUUID, className, classUUID);
@@ -77,6 +97,22 @@ public class UpdateClassLayoutService
                     diagramLayoutModel, doMRID, packageUUID, xPosition, yPosition);
             ctx.commit();
         }
+    }
+
+    private void moveDiagramObject(
+            Model diagramLayoutModel,
+            DiagramObject diagramObject,
+            float xPosition,
+            float yPosition) {
+        var diagramObjectPoint =
+                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
+        if (diagramObjectPoint == null) {
+            return;
+        }
+        DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
+        diagramObjectPoint.setPosition(
+                new XYZPosition(xPosition, yPosition, diagramObjectPoint.getPosition().getZ()));
+        DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
     }
 
     @Override

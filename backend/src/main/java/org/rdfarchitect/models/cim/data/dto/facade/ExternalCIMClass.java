@@ -47,6 +47,11 @@ public class ExternalCIMClass implements ICIMClass {
     }
 
     @Override
+    public boolean isExternal() {
+        return true;
+    }
+
+    @Override
     public UUID getUuid() {
         if (!this.resource.hasProperty(RDFA.uuid)) {
             return null;

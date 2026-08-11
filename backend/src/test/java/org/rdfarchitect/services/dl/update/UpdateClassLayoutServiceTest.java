@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.dl.update;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -79,6 +81,41 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
 
         // Assert
         assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
+        assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
+    }
+
+    @Test
+    void createClassLayoutData_layoutDataExists_keepsExistingLayoutData() {
+        // Arrange: a class that already has layout data, as when it takes over an uri whose
+        // class was deleted while references to it remained
+        addGraphFromFile("package_and_class.ttl");
+        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("http://example.org#")
+                        .build();
+        var classPositionDTO = new ClassPositionDTO();
+        classPositionDTO.setClassUUID(CLASS_A_UUID);
+        classPositionDTO.setXPosition(123.0F);
+        classPositionDTO.setYPosition(456.0F);
+        service.updateClassPositions(graphIdentifier, PACKAGE_A_UUID, List.of(classPositionDTO));
+
+        // Act
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, null);
+
+        // Assert
+        assertThat(
+                        diagramLayout
+                                .getDiagramLayoutModelDirect()
+                                .listSubjectsWithProperty(
+                                        DL.belongsToIdentifiedObject,
+                                        ResourceFactory.createResource(
+                                                new MRID(CLASS_A_UUID).getFullMRID()))
+                                .toList())
+                .hasSize(1);
         assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
     }
 

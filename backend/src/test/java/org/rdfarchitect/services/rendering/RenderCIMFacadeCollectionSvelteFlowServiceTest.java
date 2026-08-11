@@ -201,6 +201,39 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("marks a deleted class that is still referenced by a kept association as external")
+    void marksReferencedOnlyAssociationTargetAsExternal() {
+        var deleted = model.createResource(NS + "Deleted");
+        deleted.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        var association = model.createResource(NS + "Child.Deleted");
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, model.createLiteral("Deleted", "en"));
+        association.addProperty(RDFS.domain, model.getResource(NS + "Child"));
+        association.addProperty(RDFS.range, deleted);
+        association.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
+        association.addProperty(CIMS.associationUsed, "Yes");
+        var inverse = model.createResource(NS + "Deleted.Child");
+        inverse.addProperty(RDF.type, RDF.Property);
+        inverse.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        inverse.addProperty(RDFS.label, model.createLiteral("Child", "en"));
+        inverse.addProperty(RDFS.domain, deleted);
+        inverse.addProperty(RDFS.range, model.getResource(NS + "Child"));
+        inverse.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:1..1"));
+        inverse.addProperty(CIMS.associationUsed, "No");
+        inverse.addProperty(CIMS.inverseRoleName, association);
+        association.addProperty(CIMS.inverseRoleName, inverse);
+
+        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+
+        var deletedNode = nodeByLabel(result, "Deleted");
+        assertThat(deletedNode.getData().isExternal()).isTrue();
+        assertThat(deletedNode.getData().getAttributes()).isEmpty();
+        assertThat(deletedNode.getData().getSuperClasses()).isEmpty();
+        assertThat(nodeByLabel(result, "Child").getData().isExternal()).isFalse();
+    }
+
+    @Test
     @DisplayName("renders direct attributes and stereotypes of a class")
     void rendersDirectAttributesAndStereotypes() {
         var result =
