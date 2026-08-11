@@ -45,6 +45,7 @@
         sourceNodeId,
         targetNodeId,
         onPointsChange,
+        onPointsCommit,
     } = $props();
 
     const { screenToFlowPosition, getInternalNode, getViewport, setViewport } =
@@ -120,11 +121,15 @@
     }
 
     function endDrag() {
+        const wasDragging = drag !== null;
         drag = null;
         autoPan.stop();
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", endDrag);
         window.removeEventListener("contextmenu", endDrag);
+        if (wasDragging) {
+            onPointsCommit?.();
+        }
     }
 
     function onMove(event) {
