@@ -68,6 +68,7 @@
         toEdgePoints,
         findBendPointAtPosition,
         isEndPoint,
+        dissolveCollinearBendPoints,
     } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
@@ -755,6 +756,8 @@
     // points become sided end points, interior points become bend points.
     // Inheritance edges are skipped until they move to the shared routing.
     function applyLayoutedEdges(layoutedEdges) {
+        const tolerance =
+            EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx;
         edges = edges.map(edge => {
             const routingPoints = layoutedEdges.get(edge.id);
             if (!routingPoints || routingPoints.length === 0) {
@@ -764,7 +767,10 @@
                 ...edge,
                 data: {
                     ...edge.data,
-                    bendPoints: toEdgePoints(routingPoints),
+                    bendPoints: dissolveCollinearBendPoints(
+                        toEdgePoints(routingPoints),
+                        tolerance,
+                    ),
                 },
             };
         });
