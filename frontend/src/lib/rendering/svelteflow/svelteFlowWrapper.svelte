@@ -110,6 +110,8 @@
     const selection = new DiagramSelectionController({
         getNodes: () => nodes,
         setNodes: value => (nodes = value),
+        getEdges: () => edges,
+        setEdges: value => (edges = value),
         pan,
         contextMenus,
         nodeOrder: nodeOrderCtrl,
@@ -413,43 +415,55 @@
     }
 
     function handleNodeDrag({ nodes: draggedNodes }) {
-        let anyEndPointMoved = false;
+        const draggedNodeIds = new Set(draggedNodes.map(node => node.id));
+        const dragDelta = computeDragDelta(draggedNodes);
+        let anyPointMoved = false;
+
         const updatedEdges = edges.map(edge => {
             const points = edge.data?.bendPoints ?? [];
+            let nextPoints = points;
+
             const sourceEnd = getSourceEndPoint(points);
             const targetEnd = getTargetEndPoint(points);
-            if (!sourceEnd && !targetEnd) {
-                return edge;
+            if (sourceEnd || targetEnd) {
+                for (const node of draggedNodes) {
+                    const previous = lastDragPositions.get(node.id);
+                    if (!previous) continue;
+                    const dx = node.position.x - previous.x;
+                    const dy = node.position.y - previous.y;
+                    if (dx === 0 && dy === 0) continue;
+                    nextPoints = shiftEndPointsForNode(
+                        nextPoints,
+                        edge,
+                        node.id,
+                        dx,
+                        dy,
+                    );
+                }
             }
 
-            let nextPoints = points;
-            for (const node of draggedNodes) {
-                const previous = lastDragPositions.get(node.id);
-                if (!previous) continue;
-                const dx = node.position.x - previous.x;
-                const dy = node.position.y - previous.y;
-                if (dx === 0 && dy === 0) continue;
-
-                nextPoints = shiftEndPointsForNode(
+            const bothClassesDragged =
+                draggedNodeIds.has(edge.source) &&
+                draggedNodeIds.has(edge.target);
+            if (bothClassesDragged && dragDelta) {
+                nextPoints = shiftInnerBendPoints(
                     nextPoints,
-                    edge,
-                    node.id,
-                    dx,
-                    dy,
+                    dragDelta.dx,
+                    dragDelta.dy,
                 );
             }
 
             if (nextPoints === points) {
                 return edge;
             }
-            anyEndPointMoved = true;
+            anyPointMoved = true;
             return {
                 ...edge,
                 data: { ...edge.data, bendPoints: nextPoints },
             };
         });
 
-        if (anyEndPointMoved) {
+        if (anyPointMoved) {
             edges = updatedEdges;
         }
 
@@ -461,9 +475,26 @@
         }
     }
 
-    // Shifts the source and/or target end point of an edge by (dx, dy) if that
-    // side is attached to the given moved node. End points are the first/last
-    // element of the bend points array.
+    function computeDragDelta(draggedNodes) {
+        for (const node of draggedNodes) {
+            const previous = lastDragPositions.get(node.id);
+            if (!previous) continue;
+            const dx = node.position.x - previous.x;
+            const dy = node.position.y - previous.y;
+            if (dx === 0 && dy === 0) continue;
+            return { dx, dy };
+        }
+        return null;
+    }
+
+    function shiftInnerBendPoints(points, dx, dy) {
+        return points.map(point =>
+            isEndPoint(point)
+                ? point
+                : { ...point, x: point.x + dx, y: point.y + dy },
+        );
+    }
+
     function shiftEndPointsForNode(points, edge, movedNodeId, dx, dy) {
         const sourceEnd = getSourceEndPoint(points);
         const targetEnd = getTargetEndPoint(points);
@@ -555,11 +586,6 @@
         if (!edge) return;
         const allPoints = getBendPoints(edge);
         const innerBendPoints = getInnerBendPoints(allPoints);
-        if (
-            innerBendPoints.length >=
-            EDGE_INTERACTION_CONFIG.maxBendPointsPerEdge
-        )
-            return;
 
         const endpoints = edgeEndpoints(edge, innerBendPoints);
         let insertionIndex = innerBendPoints.length;
