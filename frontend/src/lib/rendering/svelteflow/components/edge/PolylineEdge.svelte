@@ -22,7 +22,9 @@
         getInnerBendPoints,
         getSourceEndPoint,
         getTargetEndPoint,
+        dissolveCollinearBendPoints,
     } from "$lib/rendering/svelteflow/interaction/bendPointOperations.js";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
 
     import EdgeBendPoints from "./EdgeBendPoints.svelte";
@@ -134,6 +136,17 @@
     function handleBendPointsChange(nextPoints) {
         patchEdgeData({ bendPoints: nextPoints });
     }
+
+    function handleBendPointsCommit() {
+        const current = data?.bendPoints ?? [];
+        const dissolved = dissolveCollinearBendPoints(
+            current,
+            EDGE_INTERACTION_CONFIG.collinearBendPointTolerancePx,
+        );
+        if (dissolved !== current) {
+            patchEdgeData({ bendPoints: dissolved });
+        }
+    }
 </script>
 
 {@render children(path, edgeParams)}
@@ -161,5 +174,7 @@
         sourceNodeId={source}
         targetNodeId={target}
         onPointsChange={handleBendPointsChange}
+        onPointsCommit={handleBendPointsCommit}
+    />
     />
 {/if}
