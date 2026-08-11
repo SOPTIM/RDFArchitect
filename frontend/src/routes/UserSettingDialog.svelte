@@ -74,7 +74,7 @@
     size="w-1/3"
     title="Settings"
 >
-    <div class="mx-2 flex h-full flex-col gap-4 overflow-y-auto py-2 px-1">
+    <div class="mx-2 flex h-full flex-col gap-4 overflow-y-auto px-1 py-2">
         <USC.Section title="Export">
             <CheckBoxEditControl
                 label="Use 'Package_' prefix"

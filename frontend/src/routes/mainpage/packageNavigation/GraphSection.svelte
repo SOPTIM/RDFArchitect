@@ -34,6 +34,9 @@
         faRotateRight,
         faGear,
         faCircleCheck,
+        faEyeDropper,
+        faPalette,
+        faSliders,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -47,6 +50,7 @@
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import { graphColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
@@ -67,6 +71,8 @@
     import NewPackageDialog from "../../NewPackageDialog.svelte";
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
+    import PickSchemaColorDialog from "./PickSchemaColorDialog.svelte";
+    import SchemaColorsDialog from "./SchemaColorsDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
@@ -97,11 +103,17 @@
     let canUndo = $state(false);
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
+    let showSchemaColorsDialog = $state(false);
+    let showPickColorDialog = $state(false);
 
     let wasGraphSelected = false;
 
     let graphHighlightLabel = $derived(
         shortenIri(namespaces, graphNavEntry.id),
+    );
+
+    const graphColor = $derived(
+        graphColors.get(datasetNavEntry.id, graphNavEntry.id),
     );
 
     const isGraphSelected = $derived(
@@ -171,6 +183,7 @@
                 level={2}
                 label={graphNavEntry.label}
                 icon={faDiagramProject}
+                iconColor={graphColor}
                 hasChildren={graphNavEntry.children.length > 0}
                 expanded={graphNavEntry.isOpen}
                 isSelected={graphSelectionState === "active"}
@@ -201,6 +214,30 @@
             >
                 New Schema Diagram
             </ContextMenu.Item.Button>
+            <ContextMenu.Separator />
+            <ContextMenu.SubMenu.Root>
+                <ContextMenu.SubMenu.Trigger faIcon={faPalette}>
+                    Schema Color
+                </ContextMenu.SubMenu.Trigger>
+                <ContextMenu.SubMenu.Content>
+                    <ContextMenu.Item.Button
+                        onSelect={() => {
+                            showPickColorDialog = true;
+                        }}
+                        faIcon={faEyeDropper}
+                    >
+                        Pick Color
+                    </ContextMenu.Item.Button>
+                    <ContextMenu.Item.Button
+                        onSelect={() => {
+                            showSchemaColorsDialog = true;
+                        }}
+                        faIcon={faSliders}
+                    >
+                        Manage All Colors
+                    </ContextMenu.Item.Button>
+                </ContextMenu.SubMenu.Content>
+            </ContextMenu.SubMenu.Root>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -429,6 +466,16 @@
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
+<SchemaColorsDialog
+    bind:showDialog={showSchemaColorsDialog}
+    datasetName={datasetNavEntry.id}
+/>
+<PickSchemaColorDialog
+    bind:showDialog={showPickColorDialog}
+    datasetName={datasetNavEntry.id}
+    graphUri={graphNavEntry.id}
+    graphLabel={graphNavEntry.label}
+/>
 <OntologyDialog
     bind:showDialog={showEditOntologyDialog}
     graphUri={graphNavEntry.id}
