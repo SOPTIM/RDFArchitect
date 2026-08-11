@@ -756,4 +756,14 @@ export class BackendConnection {
             credentials: "include",
         });
     }
+
+    async getAsciiDocExport(datasetName, graphURI, fileEnding) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/asciidocexport/${encodeURIComponent(fileEnding)}`;
+        return await fetch(url, {
+            method: "GET",
+            headers: new Headers({ "Content-Type": "application/json" }),
+            mode: "cors",
+            credentials: "include",
+        });
+    }
 }

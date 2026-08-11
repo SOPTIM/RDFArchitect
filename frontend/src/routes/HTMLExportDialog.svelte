@@ -48,10 +48,26 @@
         { name: "SVG", ending: "svg" },
     ];
 
+    const supportedDocumentFormats = [
+        {
+            name: "HTML",
+            ending: "html",
+            fetch: (dataset, graph, imageEnding) =>
+                bec.getHTMLExport(dataset, graph, imageEnding),
+        },
+        {
+            name: "AsciiDoc",
+            ending: "adoc",
+            fetch: (dataset, graph, imageEnding) =>
+                bec.getAsciiDocExport(dataset, graph, imageEnding),
+        },
+    ];
+
     let selectedDatasetName = $state(null);
     let graphURI = $state(null);
     let isExporting = $state(false);
     let selectedMediaType = $state();
+    let selectedDocumentFormat = $state(supportedDocumentFormats[0]);
     let disablePrimary = $derived(
         !selectedDatasetName || !graphURI || isExporting,
     );
@@ -64,9 +80,10 @@
 
     async function onPrimary() {
         if (!selectedDatasetName || !graphURI) return;
+        const documentFormat = selectedDocumentFormat;
         isExporting = true;
         try {
-            const response = await bec.getHTMLExport(
+            const response = await documentFormat.fetch(
                 selectedDatasetName,
                 graphURI,
                 selectedMediaType.ending,
@@ -74,17 +91,20 @@
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphURI}" as HTML.`,
+                    `Could not export "${graphURI}" as ${documentFormat.name}.`,
                 );
                 return;
             }
-            const htmlBlob = await response.blob();
+            const documentBlob = await response.blob();
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
 
             const zip = new JSZip();
-            zip.file(getHtmlFilename(suggestedFilename), htmlBlob);
+            zip.file(
+                getDocumentFilename(suggestedFilename, documentFormat),
+                documentBlob,
+            );
 
             const images = await generatePackageImages(
                 selectedDatasetName,
@@ -99,17 +119,17 @@
             const zipBlob = await zip.generateAsync({ type: "blob" });
             saveFile(
                 zipBlob,
-                `${getGraphLabel(graphURI)}-html-export.zip`,
+                `${getGraphLabel(graphURI)}-${documentFormat.ending}-export.zip`,
                 zipMediaType,
             );
 
             toastStore.success(
                 "Export ready",
-                `"${graphURI}" downloaded as HTML export (zip).`,
+                `"${graphURI}" downloaded as ${documentFormat.name} export (zip).`,
             );
             showDialog = false;
         } catch (e) {
-            console.error("Failed to download HTML export:", e);
+            console.error("Failed to download documentation export:", e);
             toastStore.error(
                 "Export failed",
                 "An unexpected error occurred while exporting.",
@@ -119,9 +139,9 @@
         }
     }
 
-    function getHtmlFilename(contentDisposition) {
+    function getDocumentFilename(contentDisposition, documentFormat) {
         const match = contentDisposition?.match(/filename="?([^"]+)"?/);
-        return match?.[1] ?? "export.html";
+        return match?.[1] ?? `export.${documentFormat.ending}`;
     }
 
     function getGraphLabel(graphURI) {
@@ -140,7 +160,7 @@
     {onPrimary}
     {onOpen}
     closeOnPrimary={false}
-    title="Export as HTML"
+    title="Export Documentation"
 >
     {#if isExporting}
         <div
@@ -157,6 +177,18 @@
             {lockedGraphUri}
             displayAsCard={false}
         />
+        <label for="document-formats-Download" class="mt-2 mb-1">
+            Document Format
+        </label>
+        <select
+            class=" border-border bg-window-background focus:border-blue h-9 w-fit rounded border-2 p-2"
+            id="document-formats-Download"
+            bind:value={selectedDocumentFormat}
+        >
+            {#each supportedDocumentFormats as documentFormat}
+                <option value={documentFormat}>{documentFormat.name}</option>
+            {/each}
+        </select>
         <label for="media-types-Download" class="mt-2 mb-1">
             Diagram File Type
         </label>

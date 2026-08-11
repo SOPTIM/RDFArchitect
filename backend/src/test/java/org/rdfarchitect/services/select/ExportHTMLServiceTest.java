@@ -216,6 +216,32 @@ class ExportHTMLServiceTest {
     }
 
     @Test
+    void exportGraphAsHTML_inheritedAssociation_containsRoleName() {
+        var parentAssociation =
+                AssociationDTO.builder()
+                        .label("inheritedRole")
+                        .domain("ParentClass")
+                        .multiplicity("0..n")
+                        .range(new DataTypeDTO("OtherClass", "example"))
+                        .build();
+        var parent =
+                classBuilder("ParentClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .associationPairs(List.of(new AssociationPairDTO(parentAssociation, null)))
+                        .build();
+        var superClassRef = ClassUMLAdaptedDTO.builder().label("ParentClass").build();
+        var child =
+                classBuilder("ChildClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .superClass(superClassRef)
+                        .build();
+
+        var html = exportHtml(List.of(parent, child));
+
+        assertThat(html).contains("<p class=\"inheritrole\">inheritedRole </p>");
+    }
+
+    @Test
     void exportGraphAsHTML_selfReferencingSuperClass_doesNotLoopInfinitely() {
         var selfRef = ClassUMLAdaptedDTO.builder().label("MyClass").build();
         var clazz =

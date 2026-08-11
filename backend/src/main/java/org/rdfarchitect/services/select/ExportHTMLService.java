@@ -26,29 +26,17 @@ import org.rdfarchitect.api.dto.association.AssociationPairDTO;
 import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
     private final GetClassListUseCase getClassListUseCase;
-
-    private final List<String> stereotypes =
-            List.of(
-                    CIMStereotypes.shortCircuitString,
-                    CIMStereotypes.descriptionString,
-                    CIMStereotypes.operationString,
-                    CIMStereotypes.europeanString,
-                    CIMStereotypes.entsoeString);
 
     @Override
     public byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier, String fileEnding) {
@@ -329,7 +317,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("<div class=\"intro\">\n");
         builder.append("<p>List of stereotypes to categorize subProfiles:</p>\n");
         builder.append("<ul>\n");
-        for (var stereotype : stereotypes) {
+        for (var stereotype : ProfileDocumentationStructure.STEREOTYPES) {
             builder.append("<li>").append(stereotype).append("</li>\n");
         }
         builder.append("</ul>\n");
@@ -339,81 +327,13 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
     private String buildStereotypeSections(List<ClassUMLAdaptedDTO> classList, String fileEnding) {
         var builder = new StringBuilder();
-
-        var processedUuids = new HashSet<UUID>();
-
-        for (var stereotype : stereotypes) {
-            var stereotypeClasses =
-                    classList.stream()
-                            .filter(
-                                    c ->
-                                            c.getStereotypes() != null
-                                                    && c.getStereotypes().contains(stereotype)
-                                                    && !processedUuids.contains(c.getUuid()))
-                            .toList();
-            if (!stereotypeClasses.isEmpty()) {
+        for (var section : ProfileDocumentationStructure.buildSections(classList)) {
+            builder.append("<h1>").append(section.title()).append("</h1>\n");
+            for (var classUMLAdaptedDTO : section.classes()) {
                 builder.append(
-                        buildStereotypeSection(
-                                stereotype, stereotypeClasses, classList, fileEnding));
-                stereotypeClasses.stream()
-                        .filter(c -> c.getUuid() != null)
-                        .forEach(c -> processedUuids.add(c.getUuid()));
+                        buildClass(
+                                section.stereotype(), classUMLAdaptedDTO, classList, fileEnding));
             }
-        }
-
-        var abstractClasses =
-                classList.stream()
-                        .filter(c -> (!isConcrete(c) && !processedUuids.contains(c.getUuid())))
-                        .toList();
-        if (!abstractClasses.isEmpty()) {
-            builder.append(buildAbstractSection(abstractClasses, classList, fileEnding));
-            abstractClasses.stream()
-                    .filter(c -> c.getUuid() != null)
-                    .forEach(c -> processedUuids.add(c.getUuid()));
-        }
-
-        var remainingClasses =
-                classList.stream().filter(c -> !processedUuids.contains(c.getUuid())).toList();
-        if (!remainingClasses.isEmpty()) {
-            builder.append(buildRemainingSection(remainingClasses, classList, fileEnding));
-        }
-
-        return builder.toString();
-    }
-
-    private String buildAbstractSection(
-            List<ClassUMLAdaptedDTO> sectionClasses,
-            List<ClassUMLAdaptedDTO> fullClassList,
-            String fileEnding) {
-        var builder = new StringBuilder();
-        builder.append("<h1>Abstract Classes</h1>\n");
-        for (var classUMLAdaptedDTO : sectionClasses) {
-            builder.append(buildClass(null, classUMLAdaptedDTO, fullClassList, fileEnding));
-        }
-        return builder.toString();
-    }
-
-    private String buildRemainingSection(
-            List<ClassUMLAdaptedDTO> sectionClasses,
-            List<ClassUMLAdaptedDTO> fullClassList,
-            String fileEnding) {
-        var builder = new StringBuilder();
-        builder.append("<h1>Classes</h1>\n");
-        for (var classUMLAdaptedDTO : sectionClasses) {
-            builder.append(buildClass(null, classUMLAdaptedDTO, fullClassList, fileEnding));
-        }
-        return builder.toString();
-    }
-
-    private String buildStereotypeSection(
-            String stereotype,
-            List<ClassUMLAdaptedDTO> sectionClasses,
-            List<ClassUMLAdaptedDTO> fullClassList,
-            String fileEnding) {
-        var builder = new StringBuilder();
-        builder.append("<h1>Classes (").append(stereotype).append(")</h1>\n");
-        for (var classUMLAdaptedDTO : sectionClasses) {
-            builder.append(buildClass(stereotype, classUMLAdaptedDTO, fullClassList, fileEnding));
         }
         return builder.toString();
     }
@@ -429,7 +349,10 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("<div id=\"").append(label).append("\" class=\"group\">\n");
         builder.append("<a href=\"#").append(label).append("\">\n");
         builder.append("<h2 class=\"")
-                .append(isConcrete(classUMLAdaptedDTO) ? "concrete" : "abstract")
+                .append(
+                        ProfileDocumentationStructure.isConcrete(classUMLAdaptedDTO)
+                                ? "concrete"
+                                : "abstract")
                 .append("\">")
                 .append(label);
         if (stereotype != null && !stereotype.isEmpty()) {
@@ -447,7 +370,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                     .append("</p>\n");
         }
 
-        if (isEnumeration(classUMLAdaptedDTO)) {
+        if (ProfileDocumentationStructure.isEnumeration(classUMLAdaptedDTO)) {
             builder.append(buildEnumEntries(classUMLAdaptedDTO));
         } else {
             builder.append(buildNativeMembers(stereotype, classUMLAdaptedDTO));
@@ -457,11 +380,6 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("</div>\n");
 
         return builder.toString();
-    }
-
-    private boolean isConcrete(ClassUMLAdaptedDTO classUMLAdaptedDTO) {
-        return classUMLAdaptedDTO.getStereotypes() != null
-                && classUMLAdaptedDTO.getStereotypes().contains(CIMStereotypes.concreteString);
     }
 
     private String buildPackageReference(BelongsToCategoryDTO category, String fileEnding) {
@@ -564,7 +482,8 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
 
     private String buildInheritedMembers(
             ClassUMLAdaptedDTO classUMLAdaptedDTO, List<ClassUMLAdaptedDTO> classList) {
-        var ancestors = resolveAncestorChain(classUMLAdaptedDTO, classList);
+        var ancestors =
+                ProfileDocumentationStructure.resolveAncestorChain(classUMLAdaptedDTO, classList);
         if (ancestors.isEmpty()) {
             return "";
         }
@@ -594,43 +513,6 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("</table>\n");
 
         return builder.toString();
-    }
-
-    private List<ClassUMLAdaptedDTO> resolveAncestorChain(
-            ClassUMLAdaptedDTO classUMLAdaptedDTO, List<ClassUMLAdaptedDTO> classList) {
-        var ancestors = new ArrayList<ClassUMLAdaptedDTO>();
-        var visited = new HashSet<String>();
-        visited.add(classUMLAdaptedDTO.getPrefix() + "#" + classUMLAdaptedDTO.getLabel());
-
-        var currentSuperClass = classUMLAdaptedDTO.getSuperClass();
-        while (currentSuperClass != null) {
-            var key = currentSuperClass.getPrefix() + "#" + currentSuperClass.getLabel();
-            if (!visited.add(key)) {
-                break;
-            }
-
-            var resolved = findClassByLabel(currentSuperClass, classList);
-            if (resolved == null) {
-                break;
-            }
-
-            ancestors.add(resolved);
-            currentSuperClass = resolved.getSuperClass();
-        }
-
-        return ancestors;
-    }
-
-    private ClassUMLAdaptedDTO findClassByLabel(
-            ClassUMLAdaptedDTO superClass, List<ClassUMLAdaptedDTO> classList) {
-        return classList.stream()
-                .filter(c -> c.getLabel() != null && c.getLabel().equals(superClass.getLabel()))
-                .filter(
-                        c ->
-                                superClass.getPrefix() == null
-                                        || superClass.getPrefix().equals(c.getPrefix()))
-                .findFirst()
-                .orElse(null);
     }
 
     private String buildInheritedAttributeRow(AttributeDTO attribute, ClassUMLAdaptedDTO ancestor) {
@@ -677,7 +559,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         var builder = new StringBuilder();
         builder.append("<tr>\n");
         builder.append("<th>\n");
-        builder.append("<p class=\"inheritrole\"")
+        builder.append("<p class=\"inheritrole\">")
                 .append(escape(from.getLabel()))
                 .append(" </p>\n");
         builder.append("</th>\n");
@@ -703,11 +585,6 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                 .append("</a>\n</p>\n</td>\n");
         builder.append("</tr>\n");
         return builder.toString();
-    }
-
-    private boolean isEnumeration(ClassUMLAdaptedDTO classUMLAdaptedDTO) {
-        return classUMLAdaptedDTO.getStereotypes() != null
-                && classUMLAdaptedDTO.getStereotypes().contains(CIMStereotypes.enumerationString);
     }
 
     private String buildEnumEntries(ClassUMLAdaptedDTO classUMLAdaptedDTO) {

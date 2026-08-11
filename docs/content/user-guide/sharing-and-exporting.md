@@ -19,10 +19,28 @@ The exported file is self-contained: it can be re-imported into RDFArchitect, lo
 
 See [SHACL — Exporting](./shacl#exporting-shacl). TTL by default.
 
-## Exporting HTML Documentation
-**File → Export → HTML Documentation** exports documentation for the currently selected graph. 
+## Exporting documentation
 
-The generated ZIP file contains an HTML file and PNG files for the diagrams in the graph. The documentation lists all classes, categorized by stereotype.
+**File → Export → Documentation (HTML, AsciiDoc)** exports documentation for the currently selected graph. The dialog includes:
+
+- **Document Format** — HTML (`.html`) or AsciiDoc (`.adoc`). Both describe the same content.
+- **Diagram File Type** — PNG or SVG for the package diagrams.
+
+The generated ZIP file contains the document plus an `images/` folder with one diagram per package. The documentation lists all classes, categorized by stereotype, each with its package diagram, comment, native members, inherited members and — for enumerations — its values.
+
+### AsciiDoc output
+
+The AsciiDoc export is meant for documentation toolchains (Asciidoctor, Antora, DocBook or PDF conversion):
+
+- Sections start at level 1 (`==`), so the file renders as a standalone document. To place it deeper inside a larger document, include it with an offset:
+
+  ```asciidoc
+  include::EQ.adoc[leveloffset=+1]
+  ```
+
+- Every class gets an anchor prefixed with the name of the exported graph, for example `[[EQ_BoundaryPoint]]`. This keeps anchors unique when several profiles are included in the same document, and lets you reference a class from your own text with `xref:EQ_BoundaryPoint[]`.
+- Types and super classes are cross-referenced (`xref:`) when the referenced class is part of the same export; classes outside the export are written as plain text so that no reference dangles.
+- Package diagrams are referenced as `link:images/<package-uuid>.<png|svg>[<package>]`. Keep the `images/` folder next to the `.adoc` file, or point Asciidoctor at it with `:imagesdir:`.
 
 
 ## Share snapshot

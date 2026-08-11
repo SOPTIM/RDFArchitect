@@ -165,7 +165,7 @@
                     faIcon={faDownload}
                     altText="Ctrl+Alt+H"
                 >
-                    HTML Documentation
+                    Documentation (HTML, AsciiDoc)
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>

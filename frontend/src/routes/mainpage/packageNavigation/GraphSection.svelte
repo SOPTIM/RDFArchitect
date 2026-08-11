@@ -367,7 +367,7 @@
                 faIcon={faFileExport}
                 altText="Ctrl+Alt+H"
             >
-                Export HTML Documentation
+                Export Documentation
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button

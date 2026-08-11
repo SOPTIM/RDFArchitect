@@ -37,7 +37,7 @@
                     keys: ["Ctrl", "Shift", "E"],
                 },
                 {
-                    description: "Export HTML Documentation",
+                    description: "Export Documentation",
                     keys: ["Ctrl", "Alt", "H"],
                 },
                 { description: "Share Snapshot", keys: ["Ctrl", "Shift", "S"] },
