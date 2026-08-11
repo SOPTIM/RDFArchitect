@@ -31,6 +31,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.cim.data.queries.update.cimupdates.CIMUpdatesTestBase;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSBelongsToCategory;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
@@ -214,6 +215,72 @@ class CIMUpdatesClassesTest extends CIMUpdatesTestBase {
                                         CIMStereotypes.concrete.asNode()))
                         .isTrue();
             }
+        }
+
+        @Test
+        @DisplayName("Takes over the uri of a referenced only resource when renaming a class")
+        void replaceClass_targetUriIsReferencedOnly_takesOverUri() {
+            // Arrange
+            addGraphFromFile(CLASS_AND_SUBCLASS_FILE_PATH);
+            // Referencing the uri makes it a referenced only resource, which is given a uuid
+            addTriple(
+                    NodeFactory.createURI(SUB_CLASS_URI),
+                    RDFS.subClassOf.asNode(),
+                    NodeFactory.createURI(OTHER_CLASS_URI));
+
+            // Act
+            executeWriteTransaction(
+                    graph ->
+                            CIMUpdates.replaceClass(
+                                    graph,
+                                    databasePort.getPrefixMapping(DATASET_NAME),
+                                    new CIMClassUMLAdapted(renamedToOtherClass()),
+                                    false));
+
+            // Assert
+            try (var ctx = testGraph.begin(ReadWrite.READ)) {
+                var uuids =
+                        ctx.getRdfGraph()
+                                .find(
+                                        NodeFactory.createURI(OTHER_CLASS_URI),
+                                        RDFA.uuid.asNode(),
+                                        Node.ANY)
+                                .toList();
+                assertThat(uuids).hasSize(1);
+                assertThat(uuids.getFirst().getObject().getLiteralLexicalForm())
+                        .isEqualTo(MY_UUID.toString());
+            }
+        }
+
+        @Test
+        @DisplayName("Rejects renaming a class onto the uri of another existing class")
+        void replaceClass_targetUriIsExistingClass_throws() {
+            // Arrange
+            addGraphFromFile(CLASS_AND_SUBCLASS_FILE_PATH);
+            addTriple(
+                    NodeFactory.createURI(OTHER_CLASS_URI), RDF.type.asNode(), RDFS.Class.asNode());
+
+            // Act + Assert
+            assertThatThrownBy(
+                            () ->
+                                    executeWriteTransaction(
+                                            graph ->
+                                                    CIMUpdates.replaceClass(
+                                                            graph,
+                                                            databasePort.getPrefixMapping(
+                                                                    DATASET_NAME),
+                                                            new CIMClassUMLAdapted(
+                                                                    renamedToOtherClass()),
+                                                            false)))
+                    .isInstanceOf(ResourceConflictException.class);
+        }
+
+        private CIMClass renamedToOtherClass() {
+            return CIMClass.builder()
+                    .uuid(MY_UUID)
+                    .uri(new URI(OTHER_CLASS_URI))
+                    .label(new RDFSLabel(OTHER_CLASS_LABEL, "en"))
+                    .build();
         }
     }
 

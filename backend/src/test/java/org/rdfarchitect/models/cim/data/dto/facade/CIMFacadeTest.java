@@ -58,6 +58,10 @@ class CIMFacadeTest {
             UUID.fromString("00000000-0000-0000-0000-000000000007");
     private static final UUID ENUM_UUID = UUID.fromString("00000000-0000-0000-0000-000000000008");
     private static final UUID ENTRY_UUID = UUID.fromString("00000000-0000-0000-0000-000000000009");
+    private static final UUID RECLOSER_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000010");
+    private static final UUID REFERENCED_ONLY_UUID =
+            UUID.fromString("00000000-0000-0000-0000-000000000011");
 
     private Model model;
 
@@ -178,6 +182,28 @@ class CIMFacadeTest {
     }
 
     @Test
+    @DisplayName("returns a referenced only super class as ExternalCIMClass even if it has a uuid")
+    void superClassesWithReferencedOnlyResource() {
+        var referencedOnly = model.createResource(NS + "ReferencedOnly");
+        referencedOnly.addProperty(RDFA.uuid, REFERENCED_ONLY_UUID.toString());
+        var recloser = model.createResource(NS + "Recloser");
+        recloser.addProperty(RDF.type, RDFS.Class);
+        recloser.addProperty(RDFA.uuid, RECLOSER_UUID.toString());
+        recloser.addProperty(RDFS.label, model.createLiteral("Recloser", "en"));
+        recloser.addProperty(RDFS.subClassOf, referencedOnly);
+
+        var superClasses = new CIMClass(GRAPH_URI, model, RECLOSER_UUID).getSuperClasses();
+
+        assertThat(superClasses)
+                .singleElement()
+                .isInstanceOf(ExternalCIMClass.class)
+                .satisfies(
+                        external ->
+                                assertThat(external.getUri().toString())
+                                        .isEqualTo(NS + "ReferencedOnly"));
+    }
+
+    @Test
     @DisplayName("resolves the category a class belongs to")
     void belongsToCategory() {
         var category = breaker().getBelongsToCategory();
@@ -292,7 +318,7 @@ class CIMFacadeTest {
 
         var dataType = breaker().getAttributes().getFirst().getDataType();
 
-        assertThat(dataType).isInstanceOf(CIMClass.class);
+        assertThat(dataType).isInstanceOf(ExternalCIMClass.class);
         assertThat(dataType.getLabel().getValue()).isEqualTo("string");
     }
 
