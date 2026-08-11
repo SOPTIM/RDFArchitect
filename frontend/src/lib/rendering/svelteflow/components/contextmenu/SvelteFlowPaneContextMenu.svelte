@@ -36,10 +36,10 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
-    import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
-    import { saveCopyClass } from "../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
-    import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
+    import AddToDatasetDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import { saveCopyClass } from "../../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
+    import NewClassDialog from "../../../../../routes/NewClassDialog.svelte";
 
     let {
         request = null,

@@ -44,12 +44,12 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
-    import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
-    import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
-    import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
-    import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import DeleteDependenciesDialog from "../../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import AddToDatasetDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
+    import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import RemoveFromDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
+    import ExtendClassDialog from "../../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
+    import SHACLClassSpecificPopUp from "../../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
         request = null,
