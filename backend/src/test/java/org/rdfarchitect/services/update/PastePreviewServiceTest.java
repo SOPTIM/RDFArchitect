@@ -22,7 +22,10 @@ import static org.assertj.core.api.Assertions.tuple;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
+import org.apache.jena.graph.NodeFactory;
+import org.apache.jena.query.ReadWrite;
 import org.apache.jena.sparql.graph.GraphFactory;
+import org.apache.jena.vocabulary.RDFS;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.PastePreviewRequestDTO;
@@ -65,6 +68,7 @@ class PastePreviewServiceTest {
     private static final String OTHER_CLASS_UUID = "1a9b8c77-2d3e-4f50-8a61-7b2c3d4e5f92";
     private static final String DERIVED_CLASS_UUID = "3c7d0e55-4f5a-4b72-8c83-9d4e5f6a7b14";
     private static final String ASSOCIATED_CLASS_UUID = "4e6d5c33-8b69-4d74-a1f2-8a3e9b4d5c67";
+    private static final String UNKNOWN_CLASS_UUID = "0f0e0d0c-0b0a-4988-8766-554433221100";
 
     @BeforeEach
     void setUp() {
@@ -232,6 +236,50 @@ class PastePreviewServiceTest {
         assertThat(missing(preview, Kind.DATA_TYPE)).isEmpty();
         assertThat(missing(preview, Kind.ASSOCIATION_TARGET)).isEmpty();
         assertThat(missing(preview, Kind.SUPER_CLASS)).isEmpty();
+    }
+
+    @Test
+    void previewPaste_sourceClassIsNotInTheGraph_namesNothing() {
+        var preview =
+                pastePreviewService.previewPaste(
+                        previewRequest(UNKNOWN_CLASS_UUID), targetGraphIdentifier);
+
+        assertThat(missing(preview, Kind.DATA_TYPE)).isEmpty();
+        assertThat(missing(preview, Kind.ASSOCIATION_TARGET)).isEmpty();
+        assertThat(missing(preview, Kind.SUPER_CLASS)).isEmpty();
+    }
+
+    @Test
+    void previewPaste_oneSourceClassIsNotInTheGraph_namesTheReferencesOfTheOtherOne() {
+        var preview =
+                pastePreviewService.previewPaste(
+                        previewRequest(UNKNOWN_CLASS_UUID, DERIVED_CLASS_UUID),
+                        targetGraphIdentifier);
+
+        assertThat(missing(preview, Kind.SUPER_CLASS))
+                .extracting(PasteReferenceDTO::label)
+                .containsExactly("associatedClass");
+    }
+
+    @Test
+    void previewPaste_associationWithoutRange_namesNoAssociationTarget() {
+        try (var ctx =
+                databasePort.getGraphWithContext(sourceGraphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph()
+                    .remove(
+                            NodeFactory.createURI("http://example.org#class.associatedClass"),
+                            RDFS.range.asNode(),
+                            NodeFactory.createURI("http://example.org#associatedClass"));
+            ctx.commit("Removed a triple for the test.");
+        }
+
+        var preview =
+                pastePreviewService.previewPaste(previewRequest(CLASS_UUID), targetGraphIdentifier);
+
+        assertThat(missing(preview, Kind.ASSOCIATION_TARGET)).isEmpty();
+        assertThat(missing(preview, Kind.DATA_TYPE))
+                .extracting(PasteReferenceDTO::label)
+                .containsExactly("MyDataType", "OtherDataType", "ValueType");
     }
 
     @Test

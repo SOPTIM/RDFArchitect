@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- RDFA-552: Paste variants and a dialog for the classes a paste refers to ([#218](https://github.com/SOPTIM/RDFArchitect/pull/218))
+
 ## [1.3.0] - 2026-08-12
 
 ### Added

@@ -67,7 +67,7 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Paste submenu: Paste, Paste without Attributes/Enum Entries, Paste without Associations, Paste Bare
 - The dialog opens only when the paste would point at classes the target schema does not contain
 - Missing data types, association targets and super classes are listed by name, preselected and selectable individually
-- The options the chosen paste variant leaves out are shown unchecked, not hidden; re-checking one makes its list selectable again
+- Only the reference groups the chosen paste variant copies are listed, e.g. Paste without Associations leaves out the association targets and Paste Bare opens no dialog at all
 - Group checkbox selects and clears its whole list, partial selections show as indeterminate
 - A selected data type also brings the classes it needs itself, without them being listed
 

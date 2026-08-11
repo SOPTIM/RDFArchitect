@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -34,8 +35,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CopyClassSourceReader {
@@ -63,18 +67,30 @@ public class CopyClassSourceReader {
     }
 
     /**
-     * Reads the sources off a private snapshot of each source graph. The returned facades resolve
-     * their properties lazily, so they must not be bound to the graph of an open transaction: the
-     * caller keeps using them after this method returns, and pasting within one schema would
-     * otherwise need a read and a write transaction on the same graph context at once.
+     * Reads the sources off a private snapshot of each source graph, skipping the ones their graph
+     * does not contain (any more). The returned facades resolve their properties lazily, so they
+     * must not be bound to the graph of an open transaction: the caller keeps using them after this
+     * method returns, and pasting within one schema would otherwise need a read and a write
+     * transaction on the same graph context at once.
      */
-    public List<ICIMClass> readSourceClasses(List<CopyClassSource> sources) {
-        var modelsByGraph = new LinkedHashMap<GraphIdentifier, Model>();
-        for (var source : sources) {
-            modelsByGraph.computeIfAbsent(source.graphIdentifier(), this::snapshotOf);
-        }
+    public List<ResolvedSource> readSources(List<CopyClassSource> sources) {
+        return readSources(sources, newSourceSnapshots());
+    }
+
+    public SourceSnapshots newSourceSnapshots() {
+        return new SourceSnapshots();
+    }
+
+    /**
+     * Reads the sources off {@code snapshots}, taking a snapshot of every source graph they do not
+     * hold yet. Callers that read from the same graphs more than once pass the same snapshots to
+     * copy each of those graphs only once.
+     */
+    public List<ResolvedSource> readSources(
+            List<CopyClassSource> sources, SourceSnapshots snapshots) {
         return sources.stream()
-                .map(source -> toClass(modelsByGraph.get(source.graphIdentifier()), source))
+                .map(source -> toResolvedSource(snapshots.of(source.graphIdentifier()), source))
+                .filter(Objects::nonNull)
                 .toList();
     }
 
@@ -84,11 +100,29 @@ public class CopyClassSourceReader {
         }
     }
 
-    private ICIMClass toClass(Model model, CopyClassSource source) {
+    private ResolvedSource toResolvedSource(Model model, CopyClassSource source) {
         var classUUID = source.classUUID().toString();
         if (!model.listSubjectsWithProperty(RDFA.uuid, classUUID).hasNext()) {
+            log.warn(
+                    "Skipping source class '{}' because graph '{}' does not contain it.",
+                    classUUID,
+                    source.graphIdentifier().graphUri());
             return null;
         }
-        return new CIMClass(source.graphIdentifier().graphUri(), model, source.classUUID());
+        return new ResolvedSource(
+                source.graphIdentifier(),
+                new CIMClass(source.graphIdentifier().graphUri(), model, source.classUUID()));
+    }
+
+    public record ResolvedSource(GraphIdentifier graphIdentifier, ICIMClass cimClass) {}
+
+    public final class SourceSnapshots {
+
+        private final Map<GraphIdentifier, Model> modelsByGraph = new LinkedHashMap<>();
+
+        private Model of(GraphIdentifier graphIdentifier) {
+            return modelsByGraph.computeIfAbsent(
+                    graphIdentifier, CopyClassSourceReader.this::snapshotOf);
+        }
     }
 }

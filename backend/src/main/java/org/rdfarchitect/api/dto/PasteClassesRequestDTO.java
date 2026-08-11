@@ -33,6 +33,11 @@ public class PasteClassesRequestDTO {
     boolean copyAssociations;
     boolean copyInheritance;
 
+    /**
+     * The referenced classes to copy along, out of the ones {@code /paste/preview} reports as
+     * missing. A listed data type also brings the data types its own attributes need, so classes
+     * the target graph does not contain yet may be copied without being listed here.
+     */
     List<URI> referencesToCopy;
 
     List<PasteSourceClassDTO> sources;

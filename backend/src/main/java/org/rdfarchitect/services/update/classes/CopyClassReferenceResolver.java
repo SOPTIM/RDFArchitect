@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update.classes;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
@@ -32,6 +33,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.services.update.classes.CopyClassSourceReader.ResolvedSource;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayDeque;
@@ -45,24 +47,24 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CopyClassReferenceResolver {
 
     private final DatabasePort databasePort;
 
-    public List<CopyClassReference> resolve(
-            List<CopyClassSource> sources, List<ICIMClass> sourceClasses) {
+    public List<CopyClassReference> resolve(List<ResolvedSource> sources) {
 
         var urisByGraph =
                 new LinkedHashMap<GraphIdentifier, Map<CopyClassReference.Kind, Set<URI>>>();
         var usedBy = new UsagesByReference();
-        for (var i = 0; i < sources.size(); i++) {
+        for (var source : sources) {
             var urisByKind =
                     urisByGraph.computeIfAbsent(
-                            sources.get(i).graphIdentifier(),
+                            source.graphIdentifier(),
                             graphIdentifier -> new EnumMap<>(CopyClassReference.Kind.class));
-            var sourceClass = sourceClasses.get(i);
+            var sourceClass = source.cimClass();
             for (var kind : CopyClassReference.Kind.values()) {
                 var usages = usagesOf(sourceClass, kind);
                 urisByKind
@@ -232,10 +234,17 @@ public class CopyClassReferenceResolver {
     private Map<URI, Set<CopyClassReference.Usage>> associationTargetUsages(ICIMClass sourceClass) {
         var usages = new LinkedHashMap<URI, Set<CopyClassReference.Usage>>();
         for (var association : sourceClass.getAssociations()) {
-            addUsage(
-                    usages,
-                    association.getRange().getUri(),
-                    usage(sourceClass, association.getLabel()));
+            try {
+                addUsage(
+                        usages,
+                        association.getRange().getUri(),
+                        usage(sourceClass, association.getLabel()));
+            } catch (IllegalStateException exception) {
+                log.warn(
+                        "Skipping an association of class '{}' because it is incomplete: {}",
+                        sourceClass.getUri(),
+                        exception.getMessage());
+            }
         }
         return usages;
     }

@@ -32,6 +32,8 @@ import {
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
+export const PASTE_PREVIEW_FAILED = Symbol("pastePreviewFailed");
+
 function sourcesOf(entries) {
     return entries.map(e => ({
         sourceDatasetName: e.datasetName,
@@ -42,9 +44,8 @@ function sourcesOf(entries) {
 
 /**
  * What the paste would carry along, or null when it needs no decision and can just run. Only what
- * the chosen paste variant copies can make the paste incomplete, so only that decides. A failing
- * preview reports null too: the paste still works and skips whatever the target schema already
- * contains.
+ * the chosen paste variant copies can make the paste incomplete, so only that decides. A preview
+ * that fails reports PASTE_PREVIEW_FAILED and has already told the user that the paste failed.
  */
 export async function loadPastePreview(datasetName, graphURI, options) {
     const entries = copyState.getEntries();
@@ -56,7 +57,9 @@ export async function loadPastePreview(datasetName, graphURI, options) {
         const res = await bec.postPastePreview(datasetName, graphURI, {
             sources: sourcesOf(entries),
         });
-        if (!res.ok) return null;
+        if (!res.ok) {
+            return reportPreviewFailure(await res.text());
+        }
         const preview = await res.json();
         const missing = PASTE_REFERENCE_KINDS.some(
             ({ kind, option }) =>
@@ -64,9 +67,14 @@ export async function loadPastePreview(datasetName, graphURI, options) {
         );
         return missing ? preview : null;
     } catch (e) {
-        console.error("Could not preview paste:", e);
-        return null;
+        return reportPreviewFailure(e);
     }
+}
+
+function reportPreviewFailure(reason) {
+    console.error("Could not preview paste:", reason);
+    toastStore.error("Paste failed", "Could not paste classes.");
+    return PASTE_PREVIEW_FAILED;
 }
 
 export async function saveCopyClass(
@@ -90,6 +98,13 @@ export async function saveCopyClass(
         const res = await bec.postPasteClasses(datasetName, graphURI, payload);
         if (res.ok) {
             const pasted = await res.json();
+            if (pasted.length === 0) {
+                toastStore.error(
+                    "Paste failed",
+                    "The copied classes are no longer available.",
+                );
+                return false;
+            }
             editorState.selectedDataset.updateValue(datasetName);
             editorState.selectedClassDataset.updateValue(datasetName);
             editorState.selectedGraph.updateValue(graphURI);

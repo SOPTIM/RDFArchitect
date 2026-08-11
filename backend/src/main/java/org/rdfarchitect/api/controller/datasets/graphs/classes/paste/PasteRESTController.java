@@ -56,7 +56,9 @@ public class PasteRESTController {
     @Operation(
             summary = "paste classes",
             description =
-                    "Create copies of one or more previously copied classes in the target graph.")
+                    "Create copies of one or more previously copied classes in the target graph."
+                            + " A referenced data type listed in referencesToCopy also brings the"
+                            + " data types its own attributes need.")
     @PostMapping
     public List<CopyClassResponseDTO> pasteClasses(
             @Parameter(description = "The name/url of the inquirer.")

@@ -27,7 +27,6 @@ import org.rdfarchitect.api.dto.PastePreviewResponseDTO.PasteReferenceDTO;
 import org.rdfarchitect.api.dto.PastePreviewResponseDTO.PasteUsageDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.models.cim.data.dto.facade.ICIMClass;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.springframework.stereotype.Service;
@@ -56,9 +55,16 @@ public class PastePreviewService implements PastePreviewUseCase {
             return PastePreviewResponseDTO.empty();
         }
 
-        var sourceClasses = sourceReader.readSourceClasses(sources);
-        var references = referenceResolver.resolve(sources, sourceClasses);
-        var pastedUris = sourceClasses.stream().map(ICIMClass::getUri).collect(Collectors.toSet());
+        var resolvedSources = sourceReader.readSources(sources);
+        if (resolvedSources.isEmpty()) {
+            return PastePreviewResponseDTO.empty();
+        }
+
+        var references = referenceResolver.resolve(resolvedSources);
+        var pastedUris =
+                resolvedSources.stream()
+                        .map(resolvedSource -> resolvedSource.cimClass().getUri())
+                        .collect(Collectors.toSet());
 
         var missingByKind =
                 new EnumMap<CopyClassReference.Kind, List<CopyClassReference>>(

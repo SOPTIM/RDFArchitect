@@ -17,6 +17,7 @@
 
 import {
     loadPastePreview,
+    PASTE_PREVIEW_FAILED,
     saveCopyClass,
 } from "./save-copy-class-to-backend.js";
 
@@ -36,6 +37,9 @@ export async function startPaste(
 ) {
     target = { datasetName, graphURI, targetPackageUUID };
     const preview = await loadPastePreview(datasetName, graphURI, options);
+    if (preview === PASTE_PREVIEW_FAILED) {
+        return;
+    }
     if (!preview) {
         await confirmPaste(options);
         return;

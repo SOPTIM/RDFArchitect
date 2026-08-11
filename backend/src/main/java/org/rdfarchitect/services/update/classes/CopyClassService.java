@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.update.classes;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -52,6 +54,8 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
+import org.rdfarchitect.services.update.classes.CopyClassSourceReader.ResolvedSource;
+import org.rdfarchitect.services.update.classes.CopyClassSourceReader.SourceSnapshots;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -65,6 +69,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 public class CopyClassService implements CopyClassUseCase {
 
@@ -98,9 +103,13 @@ public class CopyClassService implements CopyClassUseCase {
                         resolveTargetPackage(
                                 pasteRequest.getTargetPackageUUID(), targetGraphIdentifier));
 
-        var sourceClasses = sourceReader.readSourceClasses(sources);
-        var references = resolveSelectedReferences(sources, sourceClasses, options);
-        var referencedClasses = readReferencedClasses(references);
+        var snapshots = sourceReader.newSourceSnapshots();
+        var resolvedSources = sourceReader.readSources(sources, snapshots);
+        if (resolvedSources.isEmpty()) {
+            return List.of();
+        }
+        var references = resolveSelectedReferences(resolvedSources, options);
+        var referencedClasses = readReferencedClasses(references, snapshots);
 
         var cimPackage = options.targetPackage();
         var prefixMapping = databasePort.getPrefixMapping(targetGraphIdentifier.datasetName());
@@ -112,7 +121,8 @@ public class CopyClassService implements CopyClassUseCase {
                 databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.WRITE)) {
             var targetGraph = ctx.getRdfGraph();
 
-            for (var cimClass : sourceClasses) {
+            for (var resolvedSource : resolvedSources) {
+                var cimClass = resolvedSource.cimClass();
                 var label = UniqueLabelFactory.uniqueClassLabel(targetGraph, cimClass.getLabel());
 
                 var newCimClass = copyCimClass(cimClass, cimPackage, label, targetGraph, options);
@@ -141,32 +151,26 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private List<CopyClassReference> resolveSelectedReferences(
-            List<CopyClassSource> sources,
-            List<ICIMClass> sourceClasses,
-            CopyClassOptions options) {
+            List<ResolvedSource> sources, CopyClassOptions options) {
 
         if (options.referencesToCopy().isEmpty()) {
             return List.of();
         }
-        var selected =
-                referenceResolver.resolve(sources, sourceClasses).stream()
-                        .filter(options::copies)
-                        .toList();
+        var selected = referenceResolver.resolve(sources).stream().filter(options::copies).toList();
         return Stream.concat(
                         selected.stream(), referenceResolver.resolveDataTypesOf(selected).stream())
                 .toList();
     }
 
-    private Map<URI, ICIMClass> readReferencedClasses(List<CopyClassReference> references) {
+    private Map<URI, ICIMClass> readReferencedClasses(
+            List<CopyClassReference> references, SourceSnapshots snapshots) {
         if (references.isEmpty()) {
             return Map.of();
         }
         var referencedClasses = new LinkedHashMap<URI, ICIMClass>();
         var sources = references.stream().map(CopyClassReference::toSource).toList();
-        for (var sourceClass : sourceReader.readSourceClasses(sources)) {
-            if (sourceClass != null) {
-                referencedClasses.put(sourceClass.getUri(), sourceClass);
-            }
+        for (var resolvedSource : sourceReader.readSources(sources, snapshots)) {
+            referencedClasses.put(resolvedSource.cimClass().getUri(), resolvedSource.cimClass());
         }
         return referencedClasses;
     }
@@ -463,6 +467,19 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private CIMAssociationPair copyAssociationPair(
+            ICIMAssociation from, CIMClass newClass, Graph graph) {
+        try {
+            return buildAssociationPair(from, newClass, graph);
+        } catch (IllegalStateException exception) {
+            log.warn(
+                    "Skipping an association of class '{}' because it is incomplete: {}",
+                    newClass.getUri(),
+                    exception.getMessage());
+            return null;
+        }
+    }
+
+    private CIMAssociationPair buildAssociationPair(
             ICIMAssociation from, CIMClass newClass, Graph graph) {
         var to = from.getInverseAssociation();
         var existingToLabels =

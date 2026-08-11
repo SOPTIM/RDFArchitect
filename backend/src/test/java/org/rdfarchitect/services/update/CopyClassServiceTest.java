@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
@@ -39,6 +40,7 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
+import org.rdfarchitect.exception.database.DataAccessException;
 import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
@@ -71,6 +73,7 @@ class CopyClassServiceTest {
     private static final UUID TARGET_PACKAGE_UUID =
             UUID.fromString("75844dc0-d937-4184-bf6b-d35d8ca6d92a");
     private static final String CLASS_UUID = "43836908-c7f7-4749-bb8b-3ac9250de655";
+    private static final String UNKNOWN_CLASS_UUID = "0f0e0d0c-0b0a-4988-8766-554433221100";
     private static final String DATA_TYPE_UUID = "2c9e0d11-5b47-4ad2-8f3a-6e1c9b2d7f45";
     private static final String OTHER_CLASS_UUID = "1a9b8c77-2d3e-4f50-8a61-7b2c3d4e5f92";
     private static final String DERIVED_CLASS_UUID = "3c7d0e55-4f5a-4b72-8c83-9d4e5f6a7b14";
@@ -628,6 +631,94 @@ class CopyClassServiceTest {
                                                     .asLangLiteral()
                                                     .asNode()))
                     .isTrue();
+        }
+    }
+
+    @Test
+    void copyClasses_oneSourceClassIsNotInTheGraph_pastesTheOtherOne() {
+        setUpReferenceGraphs();
+
+        var request = referenceRequest();
+        request.setSources(
+                List.of(referenceSource(UNKNOWN_CLASS_UUID), referenceSource(CLASS_UUID)));
+
+        var responses = copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        assertThat(responses).extracting(CopyClassResponseDTO::getName).containsExactly("oldLabel");
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isTrue();
+        }
+    }
+
+    @Test
+    void copyClasses_noSourceClassIsInTheGraph_pastesNothing() {
+        setUpReferenceGraphs();
+
+        var request = referenceRequest();
+        request.setSources(List.of(referenceSource(UNKNOWN_CLASS_UUID)));
+
+        var responses = copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        assertThat(responses).isEmpty();
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
+        }
+    }
+
+    @Test
+    void copyClass_inverseAssociationIsIncomplete_pastesClassWithoutThatAssociation() {
+        setUpReferenceGraphs();
+        removeFromSourceGraph(
+                PREFIX + "associatedClass.class",
+                RDFS.domain.asNode(),
+                NodeFactory.createURI(PREFIX + "associatedClass"));
+
+        var responses = copyClassService.copyClasses(referenceRequest(), targetGraphIdentifier);
+
+        assertThat(responses).extracting(CopyClassResponseDTO::getName).containsExactly("oldLabel");
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            var graph = ctx.getRdfGraph();
+            assertThat(containsClass(graph, PREFIX + "oldLabel")).isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel.associatedClass"),
+                                    Node.ANY,
+                                    Node.ANY))
+                    .isFalse();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel.attribute"),
+                                    RDFS.domain.asNode(),
+                                    NodeFactory.createURI(PREFIX + "oldLabel")))
+                    .isTrue();
+        }
+    }
+
+    @Test
+    void copyClass_targetPackageIsNotInTheTargetGraph_pastesNothing() {
+        setUpReferenceGraphs();
+
+        var request = referenceRequest();
+        request.setTargetPackageUUID(UUID.fromString(UNKNOWN_CLASS_UUID));
+
+        assertThatThrownBy(() -> copyClassService.copyClasses(request, targetGraphIdentifier))
+                .isInstanceOf(DataAccessException.class);
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
+        }
+    }
+
+    private void removeFromSourceGraph(String subjectUri, Node predicate, Node object) {
+        try (var ctx =
+                databasePort
+                        .getGraphWithContext(referenceSourceGraphIdentifier)
+                        .begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph().remove(NodeFactory.createURI(subjectUri), predicate, object);
+            ctx.commit("Removed a triple for the test.");
         }
     }
 
