@@ -50,8 +50,8 @@
     import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import AddToWorkspaceDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
-    import ExtendSchemaSubMenu from "../../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
     import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
+    import ExtendSchemaSubMenu from "../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
 
     let {
         request = null,
