@@ -27,11 +27,20 @@ export interface InactiveBendPoint {
 }
 
 /**
- * The corner rounding factor is exposed to the user as a percentage (0..100).
- * Even a small geometric factor already produces a strong visual rounding, so
- * 100 % maps to this maximum effective factor rather than to 1.
+ * The corner rounding factor is exposed to the user as a percentage (0..100),
+ * mapped onto this maximum corner radius in pixels (flow units).
  */
-const MAX_EFFECTIVE_ROUNDING_FACTOR = 0.3;
+const MAX_CORNER_RADIUS_PX = 30;
+/**
+ * Caps how far the rounding may reach relative to the radius itself, as a
+ * multiple of the radius. Without this, a very sharp corner would need a
+ * tangent length approaching infinity for a mathematically exact fillet,
+ * pulling the drawn curve's peak far away from the actual bend point the
+ * sharper (and longer) the surrounding segments get. This keeps the rounding
+ * visually anchored near the bend point at the cost of a not-quite-circular
+ * arc on extremely sharp corners.
+ */
+const MAX_TANGENT_TO_RADIUS_RATIO = 3;
 
 /**
  * Calculates the intersection point between a line (from the target to the node center)
@@ -324,8 +333,7 @@ export function getRoundedCornerPolylinePath(
     }
 
     const clampedPercent = Math.max(0, Math.min(100, roundingPercent));
-    const clampedFactor =
-        (clampedPercent / 100) * MAX_EFFECTIVE_ROUNDING_FACTOR;
+    const radius = (clampedPercent / 100) * MAX_CORNER_RADIUS_PX;
     let path = `M ${points[0].x} ${points[0].y}`;
 
     for (let i = 1; i < points.length - 1; i++) {
@@ -333,11 +341,15 @@ export function getRoundedCornerPolylinePath(
         const corner = points[i];
         const next = points[i + 1];
 
-        const reachBefore = cornerReach(previous, corner, clampedFactor);
-        const reachAfter = cornerReach(next, corner, clampedFactor);
+        const tangentLength = cornerTangentLength(
+            previous,
+            corner,
+            next,
+            radius,
+        );
 
-        const entry = pointTowards(corner, previous, reachBefore);
-        const exit = pointTowards(corner, next, reachAfter);
+        const entry = pointTowards(corner, previous, tangentLength);
+        const exit = pointTowards(corner, next, tangentLength);
 
         path += ` L ${entry.x} ${entry.y}`;
         path += ` Q ${corner.x} ${corner.y}, ${exit.x} ${exit.y}`;
@@ -349,19 +361,42 @@ export function getRoundedCornerPolylinePath(
 }
 
 /**
- * Returns how far the rounding may reach from `corner` towards `neighbour`:
- * half of the segment length scaled by the rounding factor.
+ * Returns the tangent length (distance along each adjacent segment from the
+ * corner) needed to inscribe a circular fillet of the given radius at the
+ * corner, based on the interior angle between the two segments. Sharp corners
+ * (small angle) need a longer tangent for the same visual radius than shallow
+ * corners, unlike a fixed fraction of the segment length. The result is
+ * clamped so it never eats more than half of either adjacent segment, which
+ * keeps neighboring corners' fillets from overlapping.
  */
-function cornerReach(
-    neighbour: { x: number; y: number },
+function cornerTangentLength(
+    previous: { x: number; y: number },
     corner: { x: number; y: number },
-    roundingFactor: number,
+    next: { x: number; y: number },
+    radius: number,
 ): number {
-    const segmentLength = Math.hypot(
-        neighbour.x - corner.x,
-        neighbour.y - corner.y,
+    if (radius <= 0) return 0;
+
+    const toPrevious = { x: previous.x - corner.x, y: previous.y - corner.y };
+    const toNext = { x: next.x - corner.x, y: next.y - corner.y };
+    const lengthToPrevious = Math.hypot(toPrevious.x, toPrevious.y);
+    const lengthToNext = Math.hypot(toNext.x, toNext.y);
+    if (lengthToPrevious === 0 || lengthToNext === 0) return 0;
+
+    const cosAngle = Math.max(
+        -1,
+        Math.min(
+            1,
+            (toPrevious.x * toNext.x + toPrevious.y * toNext.y) /
+                (lengthToPrevious * lengthToNext),
+        ),
     );
-    return (segmentLength / 2) * roundingFactor;
+    const interiorAngle = Math.acos(cosAngle);
+    const tangentLength = radius / Math.tan(interiorAngle / 2);
+
+    const maxReach = Math.min(lengthToPrevious, lengthToNext) / 2;
+    const maxReachFromRadius = radius * MAX_TANGENT_TO_RADIUS_RATIO;
+    return Math.min(tangentLength, maxReach, maxReachFromRadius);
 }
 
 /**
