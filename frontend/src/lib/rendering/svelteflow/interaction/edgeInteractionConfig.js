@@ -40,6 +40,14 @@ export const EDGE_INTERACTION_CONFIG = {
      */
     edgeHitRadiusPx: 20,
 
+    /**
+     * Maximum perpendicular distance (in flow units) of an inner bend point to the
+     * straight line between its neighbours for it to count as redundant and be
+     * dissolved. Larger values dissolve points that are only roughly collinear,
+     * smaller values only near-exactly collinear ones.
+     */
+    collinearBendPointTolerancePx: 8,
+
     /** Auto-pan behaviour while dragging a bend or end point near the border. */
     autoPan: {
         /** Distance from the container edge within which auto-pan triggers. */
