@@ -14,6 +14,9 @@
  *    limitations under the License.
  *
  */
+
+import { distanceToSegment } from "$lib/rendering/svelteflow/components/edge/edgeUtils.ts";
+
 /**
  * Returns true if a point is an end point (docked to a class border). The flag may
  * arrive as `isEndPoint` or, depending on Jackson serialization, as `endPoint`.
@@ -134,4 +137,46 @@ export function toEdgePoints(routingPoints) {
         }
         return createBendPoint(routingPoint.x, routingPoint.y);
     });
+}
+
+/**
+ * Removes redundant (near-collinear) inner bend points from the ordered points
+ * array. An inner bend point is redundant when its perpendicular distance to the
+ * straight line between its two current neighbours is within the given tolerance.
+ *
+ * Uses an iterative triplet scan: it walks the points, and whenever the middle of
+ * a triplet is within tolerance it is dropped and scanning continues with the
+ * updated neighbourhood (the just-kept point paired with the next candidate),
+ * rather than against the original neighbours. This matches the robust behaviour
+ * known from polyline simplification (Douglas-Peucker family).
+ *
+ * End points (first/last when flagged) are never removed and always act as
+ * line-defining anchors, so only interior bend points can be dissolved.
+ *
+ * @param {Array<{x:number,y:number,id:string}>} points ordered edge points
+ * @param {number} tolerance max perpendicular distance to count as collinear
+ * @returns {Array} a new points array with redundant inner points removed
+ */
+export function dissolveCollinearBendPoints(points, tolerance) {
+    if (points.length < 3) {
+        return points;
+    }
+
+    const kept = [points[0]];
+    for (let i = 1; i < points.length - 1; i++) {
+        const previous = kept[kept.length - 1];
+        const candidate = points[i];
+        const next = points[i + 1];
+
+        const isRedundant =
+            !isEndPoint(candidate) &&
+            distanceToSegment(candidate, previous, next) <= tolerance;
+
+        if (!isRedundant) {
+            kept.push(candidate);
+        }
+    }
+    kept.push(points[points.length - 1]);
+
+    return kept.length === points.length ? points : kept;
 }
