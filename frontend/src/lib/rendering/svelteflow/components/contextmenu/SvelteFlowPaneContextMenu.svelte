@@ -34,12 +34,13 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
-    import AddToWorkspaceDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
-    import { startPaste } from "../../../../routes/mainpage/packageNavigation/paste-flow.svelte.js";
-    import PasteMenuItems from "../../../../routes/mainpage/packageNavigation/PasteMenuItems.svelte";
-    import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
-
+    import AddToGraphDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "../../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
+    import { startPaste } from "../../../../../routes/mainpage/packageNavigation/paste-flow.svelte.js";
+    import PasteMenuItems from "../../../../../routes/mainpage/packageNavigation/PasteMenuItems.svelte";
+    import NewClassDialog from "../../../../../routes/NewClassDialog.svelte";
+    import { saveCopyClass } from "../../../../../routes/mainpage/packageNavigation/save-copy-class-to-backend.js";
+    //TODO check die pfade hier nochmal
     let {
         request = null,
         disabled = false,
