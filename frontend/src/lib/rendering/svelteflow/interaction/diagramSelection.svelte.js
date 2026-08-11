@@ -32,6 +32,8 @@ import {
 export class DiagramSelectionController {
     #getNodes;
     #setNodes;
+    #getEdges;
+    #setEdges;
     #pan;
     #contextMenus;
     #nodeOrder;
@@ -39,9 +41,19 @@ export class DiagramSelectionController {
     #nodeDragActive = false;
     #suppressClickOpen = false;
 
-    constructor({ getNodes, setNodes, pan, contextMenus, nodeOrder }) {
+    constructor({
+        getNodes,
+        setNodes,
+        getEdges,
+        setEdges,
+        pan,
+        contextMenus,
+        nodeOrder,
+    }) {
         this.#getNodes = getNodes;
         this.#setNodes = setNodes;
+        this.#getEdges = getEdges;
+        this.#setEdges = setEdges;
         this.#pan = pan;
         this.#contextMenus = contextMenus;
         this.#nodeOrder = nodeOrder;
@@ -79,7 +91,7 @@ export class DiagramSelectionController {
         };
     }
 
-    handleSelectionChange({ nodes: selectedNodes }) {
+    handleSelectionChange({ nodes: selectedNodes, edges: selectedEdges }) {
         if (this.#nodeDragActive) {
             return;
         }
@@ -92,6 +104,32 @@ export class DiagramSelectionController {
               ? mergeSelections(this.#pan.boxPriorSelection, boxed)
               : boxed;
         untrack(() => multiSelectState.setSelection(entries));
+
+        const selectedClassIds = new Set(entries.map(entry => entry.classUuid));
+        this.#reconcileEdgeSelection(selectedClassIds, selectedEdges);
+    }
+
+    #reconcileEdgeSelection(selectedClassIds, autoSelectedEdges) {
+        const autoSelectedIds = new Set(
+            (autoSelectedEdges ?? []).map(edge => edge.id),
+        );
+        let changed = false;
+        const next = this.#getEdges().map(edge => {
+            const shouldSelect =
+                selectedClassIds.has(edge.source) &&
+                selectedClassIds.has(edge.target);
+            if (!!edge.selected === shouldSelect) {
+                return edge;
+            }
+            if (!shouldSelect && !autoSelectedIds.has(edge.id)) {
+                return edge;
+            }
+            changed = true;
+            return { ...edge, selected: shouldSelect };
+        });
+        if (changed) {
+            this.#setEdges(next);
+        }
     }
 
     handleSelectionEnd() {
@@ -120,6 +158,7 @@ export class DiagramSelectionController {
             multiSelectState.getSelected().map(entry => entry.classUuid),
         );
         this.#applyNodeSelection(node => selectedIds.has(node.id));
+        this.#reconcileEdgeSelection(selectedIds, null);
     }
 
     #dimOpenClassWhenSelectionEmpty() {
