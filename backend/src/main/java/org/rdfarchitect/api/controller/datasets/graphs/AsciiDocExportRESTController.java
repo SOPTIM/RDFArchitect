@@ -40,6 +40,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/asciidocexport/{fileEnding}")
 @RequiredArgsConstructor
@@ -103,6 +105,9 @@ public class AsciiDocExportRESTController {
         var contentDisposition = ContentDisposition.attachment().filename(fileName).build();
         headers.setContentDisposition(contentDisposition);
         headers.setContentType(ASCIIDOC);
+        // without this the browser hides the header from the frontend, which would then have to
+        // fall back to a generic file name
+        headers.setAccessControlExposeHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION));
         var body = ResponseEntity.ok().headers(headers).body(output);
 
         logger.info(
