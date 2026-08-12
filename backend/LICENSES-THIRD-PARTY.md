@@ -48,6 +48,12 @@
 - **License:** Apache License 2.0
 - **URL:** [https://mapstruct.org/mapstruct/](https://mapstruct.org/mapstruct/)
 
+### OpenCGMES - IEC61970-552 CIMXML
+- **Package:** de.soptim.opencgmes
+- **Version:** 1.1.0
+- **License:** Apache License 2.0
+- **URL:** [https://github.com/SOPTIM/OpenCGMES](https://github.com/SOPTIM/OpenCGMES)
+
 ### spring-boot-starter
 - **Package:** org.springframework.boot
 - **Version:** 4.1.0

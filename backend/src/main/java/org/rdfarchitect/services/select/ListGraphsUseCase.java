@@ -17,11 +17,11 @@
 
 package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.api.dto.GraphDTO;
 
 import java.util.List;
 
 public interface ListGraphsUseCase {
 
-    List<URI> listGraphs(String datasetName);
+    List<GraphDTO> listGraphs(String datasetName);
 }

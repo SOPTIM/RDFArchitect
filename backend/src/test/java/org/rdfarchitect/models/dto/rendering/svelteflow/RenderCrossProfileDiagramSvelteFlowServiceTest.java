@@ -39,6 +39,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.SvelteFlowDTO;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +52,7 @@ class RenderCrossProfileDiagramSvelteFlowServiceTest {
     private static final String GRAPH_COLOR = "#ff0000";
 
     @Mock private FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
+    @Mock private ListGraphsUseCase listGraphsUseCase;
 
     @InjectMocks private RenderCrossProfileDiagramSvelteFlowService service;
 
