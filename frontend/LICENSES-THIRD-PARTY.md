@@ -56,7 +56,7 @@
 
 ### @sveltejs/kit
 - **Package:** @sveltejs/kit
-- **Version:** 2.69.1
+- **Version:** 2.70.2
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -161,7 +161,7 @@
 
 ### jsdom
 - **Package:** jsdom
-- **Version:** 30.0.0
+- **Version:** 30.0.1
 - **License:** MIT
 - **URL:** [https://github.com/jsdom/jsdom](https://github.com/jsdom/jsdom)
 
@@ -173,7 +173,7 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.24
+- **Version:** 8.5.25
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
