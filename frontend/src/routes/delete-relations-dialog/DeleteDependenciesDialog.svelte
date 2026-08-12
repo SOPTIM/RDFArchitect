@@ -23,7 +23,6 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
-        copyState,
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
@@ -179,7 +178,6 @@
         const payload = dedupePayload(
             roots.flatMap(root => buildPayload(root)),
         );
-        pruneCopyState(payload);
         console.log("Submit delete with selections:", payload);
         const isSingle = roots.length === 1;
         const label = isSingle ? roots[0].resourceIdentifier.label : null;
@@ -208,15 +206,6 @@
                     ? `"${label}" was removed.`
                     : `${roots.length} resources were removed.`,
             );
-        }
-    }
-
-    function pruneCopyState(payload) {
-        if (copyState.isEmpty) return;
-        for (const entry of payload) {
-            if (entry.action === "DELETE") {
-                copyState.remove(datasetName, graphUri, entry.uuid);
-            }
         }
     }
 

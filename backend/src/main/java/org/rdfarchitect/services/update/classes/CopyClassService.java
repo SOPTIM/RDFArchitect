@@ -60,6 +60,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,7 +106,11 @@ public class CopyClassService implements CopyClassUseCase {
 
         var snapshots = sourceReader.newSourceSnapshots();
         var resolvedSources = sourceReader.readSources(sources, snapshots);
-        if (resolvedSources.isEmpty()) {
+        if (resolvedSources.size() != sources.size()) {
+            log.warn(
+                    "Pasting nothing because only {} of the {} copied classes are still available.",
+                    resolvedSources.size(),
+                    sources.size());
             return List.of();
         }
         var references = resolveSelectedReferences(resolvedSources, options);
@@ -120,19 +125,20 @@ public class CopyClassService implements CopyClassUseCase {
         try (var ctx =
                 databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.WRITE)) {
             var targetGraph = ctx.getRdfGraph();
+            var batch = planBatch(resolvedSources, targetGraph);
 
-            for (var resolvedSource : resolvedSources) {
-                var cimClass = resolvedSource.cimClass();
-                var label = UniqueLabelFactory.uniqueClassLabel(targetGraph, cimClass.getLabel());
-
-                var newCimClass = copyCimClass(cimClass, cimPackage, label, targetGraph, options);
+            for (var pastedClass : batch.pastedClasses()) {
+                var newCimClass = copyCimClass(pastedClass, cimPackage, batch, options);
 
                 var newClassUUID =
                         CIMUpdates.insertUMLAdaptedClass(
                                 targetGraph, prefixMapping, newCimClass, newValuesAsBlankNode);
 
-                messages.add(buildCopyMessage(cimClass, options, label));
-                responses.add(new CopyClassResponseDTO(newClassUUID.toString(), label.getValue()));
+                messages.add(
+                        buildCopyMessage(pastedClass.sourceClass(), options, pastedClass.label()));
+                responses.add(
+                        new CopyClassResponseDTO(
+                                newClassUUID.toString(), pastedClass.label().getValue()));
             }
 
             messages.addAll(
@@ -148,6 +154,29 @@ public class CopyClassService implements CopyClassUseCase {
         }
 
         return responses;
+    }
+
+    private PasteBatch planBatch(List<ResolvedSource> resolvedSources, Graph targetGraph) {
+        var takenLabels = new HashSet<String>();
+        var pastedClasses = new ArrayList<PastedClass>();
+        for (var resolvedSource : resolvedSources) {
+            var sourceClass = resolvedSource.cimClass();
+            var label =
+                    UniqueLabelFactory.uniqueClassLabel(
+                            targetGraph, sourceClass.getLabel(), takenLabels);
+            takenLabels.add(label.getValue());
+            pastedClasses.add(
+                    new PastedClass(
+                            sourceClass,
+                            label,
+                            new URI(sourceClass.getUri().getPrefix() + label.getValue())));
+        }
+        var pastedBySourceUri = new LinkedHashMap<URI, PastedClass>();
+        pastedClasses.forEach(
+                pastedClass ->
+                        pastedBySourceUri.putIfAbsent(
+                                pastedClass.sourceClass().getUri(), pastedClass));
+        return new PasteBatch(targetGraph, pastedClasses, pastedBySourceUri);
     }
 
     private List<CopyClassReference> resolveSelectedReferences(
@@ -340,28 +369,38 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private CIMClassUMLAdapted copyCimClass(
-            ICIMClass cimClass,
+            PastedClass pastedClass,
             ICIMClassCategory cimPackage,
-            RDFSLabel label,
-            Graph targetGraph,
+            PasteBatch batch,
             CopyClassOptions options) {
+        var cimClass = pastedClass.sourceClass();
         var newCimClass =
                 copyClassBase(
                         cimClass,
-                        new URI(cimClass.getUri().getPrefix() + label.getValue()),
-                        label,
+                        pastedClass.uri(),
+                        pastedClass.label(),
                         options.copyAsAbstract()
                                 ? CIMStereotypes.withoutConcrete(cimClass.getStereotypes())
                                 : cimClass.getStereotypes(),
-                        options.copyInheritance() ? superClassOf(cimClass) : null,
+                        options.copyInheritance() ? superClassIn(cimClass, batch) : null,
                         cimPackage);
         if (options.copyAttributes()) {
             copyMembers(cimClass, newCimClass);
         }
         if (options.copyAssociations()) {
-            newCimClass.setAssociationPairs(copyAssociations(cimClass, newCimClass, targetGraph));
+            newCimClass.setAssociationPairs(copyAssociations(cimClass, newCimClass, batch));
         }
         return newCimClass;
+    }
+
+    private RDFSSubClassOf superClassIn(ICIMClass sourceClass, PasteBatch batch) {
+        var superClass = superClassOf(sourceClass);
+        if (superClass == null) {
+            return null;
+        }
+        return new RDFSSubClassOf(
+                batch.uriOf(superClass.getUri()),
+                batch.labelOf(superClass.getUri(), superClass.getLabel()));
     }
 
     private CIMClassUMLAdapted copyClassBase(
@@ -459,17 +498,17 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private List<CIMAssociationPair> copyAssociations(
-            ICIMClass sourceClass, CIMClass newClass, Graph graph) {
+            ICIMClass sourceClass, CIMClass newClass, PasteBatch batch) {
         return sourceClass.getAssociations().stream()
-                .map(association -> copyAssociationPair(association, newClass, graph))
+                .map(association -> copyAssociationPair(association, newClass, batch))
                 .filter(Objects::nonNull)
                 .toList();
     }
 
     private CIMAssociationPair copyAssociationPair(
-            ICIMAssociation from, CIMClass newClass, Graph graph) {
+            ICIMAssociation from, CIMClass newClass, PasteBatch batch) {
         try {
-            return buildAssociationPair(from, newClass, graph);
+            return buildAssociationPair(from, newClass, batch);
         } catch (IllegalStateException exception) {
             log.warn(
                     "Skipping an association of class '{}' because it is incomplete: {}",
@@ -480,31 +519,33 @@ public class CopyClassService implements CopyClassUseCase {
     }
 
     private CIMAssociationPair buildAssociationPair(
-            ICIMAssociation from, CIMClass newClass, Graph graph) {
+            ICIMAssociation from, CIMClass newClass, PasteBatch batch) {
         var to = from.getInverseAssociation();
         var existingToLabels =
                 UniqueLabelFactory.existingAssociationLabels(
-                        graph, to.getDomain().getUri(), to.getLabel());
+                        batch.targetGraph(), batch.uriOf(to.getDomain().getUri()), to.getLabel());
         var newToLabel = UniqueLabelFactory.uniqueLabel(to.getLabel(), existingToLabels);
         var existingFromLabels =
                 UniqueLabelFactory.existingAssociationLabels(
-                        graph, newClass.getUri(), from.getLabel());
+                        batch.targetGraph(), newClass.getUri(), from.getLabel());
         if (!existingFromLabels.isEmpty()) {
             return null;
         }
         var newFromLabel = from.getLabel();
 
         return new CIMAssociationPair(
-                buildFromAssociation(from, newClass, newToLabel, newFromLabel),
-                buildToAssociation(to, newClass, newToLabel, newFromLabel));
+                buildFromAssociation(from, newClass, batch, newToLabel, newFromLabel),
+                buildToAssociation(to, newClass, batch, newToLabel, newFromLabel));
     }
 
     private CIMAssociation buildFromAssociation(
             ICIMAssociation original,
             CIMClass newClass,
+            PasteBatch batch,
             RDFSLabel newToLabel,
             RDFSLabel newFromLabel) {
         var range = original.getRange();
+        var rangeUri = batch.uriOf(range.getUri());
         return CIMAssociation.builder()
                 .uuid(UUID.randomUUID())
                 .label(newFromLabel)
@@ -512,30 +553,51 @@ public class CopyClassService implements CopyClassUseCase {
                 .comment(original.getComment())
                 .multiplicity(original.getMultiplicity())
                 .domain(ownDomain(newClass))
-                .range(new RDFSRange(range.getUri(), range.getLabel()))
+                .range(new RDFSRange(rangeUri, batch.labelOf(range.getUri(), range.getLabel())))
                 .associationUsed(original.getAssociationUsed())
-                .inverseRoleName(
-                        new CIMSInverseRoleName(range.getUri() + "." + newToLabel.getValue()))
+                .inverseRoleName(new CIMSInverseRoleName(rangeUri + "." + newToLabel.getValue()))
                 .build();
     }
 
     private CIMAssociation buildToAssociation(
             ICIMAssociation original,
             CIMClass newClass,
+            PasteBatch batch,
             RDFSLabel newToLabel,
             RDFSLabel newFromLabel) {
         var domain = original.getDomain();
+        var domainUri = batch.uriOf(domain.getUri());
         return CIMAssociation.builder()
                 .uuid(UUID.randomUUID())
                 .label(newToLabel)
-                .uri(new URI(domain.getUri() + "." + newToLabel.getValue()))
+                .uri(new URI(domainUri + "." + newToLabel.getValue()))
                 .comment(original.getComment())
                 .multiplicity(original.getMultiplicity())
-                .domain(new RDFSDomain(domain.getUri(), domain.getLabel()))
+                .domain(
+                        new RDFSDomain(
+                                domainUri, batch.labelOf(domain.getUri(), domain.getLabel())))
                 .range(new RDFSRange(newClass.getUri(), ownLabel(newClass)))
                 .associationUsed(original.getAssociationUsed())
                 .inverseRoleName(
                         new CIMSInverseRoleName(newClass.getUri() + "." + newFromLabel.getValue()))
                 .build();
+    }
+
+    private record PastedClass(ICIMClass sourceClass, RDFSLabel label, URI uri) {}
+
+    private record PasteBatch(
+            Graph targetGraph,
+            List<PastedClass> pastedClasses,
+            Map<URI, PastedClass> pastedBySourceUri) {
+
+        private URI uriOf(URI sourceUri) {
+            var pastedClass = pastedBySourceUri.get(sourceUri);
+            return pastedClass == null ? sourceUri : pastedClass.uri();
+        }
+
+        private RDFSLabel labelOf(URI sourceUri, RDFSLabel sourceLabel) {
+            var pastedClass = pastedBySourceUri.get(sourceUri);
+            return pastedClass == null ? sourceLabel : pastedClass.label();
+        }
     }
 }

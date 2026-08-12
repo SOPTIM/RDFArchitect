@@ -56,7 +56,7 @@ public class PastePreviewService implements PastePreviewUseCase {
         }
 
         var resolvedSources = sourceReader.readSources(sources);
-        if (resolvedSources.isEmpty()) {
+        if (resolvedSources.size() != sources.size()) {
             return PastePreviewResponseDTO.empty();
         }
 

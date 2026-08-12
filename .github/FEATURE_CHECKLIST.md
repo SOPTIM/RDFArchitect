@@ -70,6 +70,8 @@ Reference document for manual testing. Verify the areas relevant to your change 
 - Only the reference groups the chosen paste variant copies are listed, e.g. Paste without Associations leaves out the association targets and Paste Bare opens no dialog at all
 - Group checkbox selects and clears its whole list, partial selections show as indeterminate
 - A selected data type also brings the classes it needs itself, without them being listed
+- Pasting a class together with a class it points at: when that one is renamed, the pasted class points at the renamed one
+- Copying several classes, deleting one of them, then pasting: nothing is pasted and a "Paste failed" toast appears
 
 ## Editor – Class Editor
 

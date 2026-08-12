@@ -76,6 +76,8 @@ class CopyClassServiceTest {
     private static final String UNKNOWN_CLASS_UUID = "0f0e0d0c-0b0a-4988-8766-554433221100";
     private static final String DATA_TYPE_UUID = "2c9e0d11-5b47-4ad2-8f3a-6e1c9b2d7f45";
     private static final String OTHER_CLASS_UUID = "1a9b8c77-2d3e-4f50-8a61-7b2c3d4e5f92";
+    private static final String ASSOCIATED_CLASS_UUID = "4e6d5c33-8b69-4d74-a1f2-8a3e9b4d5c67";
+    private static final String NUMERIC_CLASS_UUID = "5a1c2d3e-4f50-4a61-9b72-8c3d4e5f6a01";
     private static final String DERIVED_CLASS_UUID = "3c7d0e55-4f5a-4b72-8c83-9d4e5f6a7b14";
     private static final String DATA_TYPE_URI = PREFIX + "MyDataType";
     private static final String OTHER_DATA_TYPE_URI = PREFIX + "OtherDataType";
@@ -147,12 +149,16 @@ class CopyClassServiceTest {
         return source;
     }
 
-    private CopyClassResponseDTO copyClass(PasteClassesRequestDTO pasteRequest) {
+    private PasteSourceClassDTO defaultGraphSource(String classUUID) {
         var source = new PasteSourceClassDTO();
         source.setSourceDatasetName(graphIdentifier.datasetName());
         source.setSourceGraphURI(graphIdentifier.graphUri());
-        source.setClassUUID(CLASS_UUID);
-        pasteRequest.setSources(List.of(source));
+        source.setClassUUID(classUUID);
+        return source;
+    }
+
+    private CopyClassResponseDTO copyClass(PasteClassesRequestDTO pasteRequest) {
+        pasteRequest.setSources(List.of(defaultGraphSource(CLASS_UUID)));
 
         return copyClassService.copyClasses(pasteRequest, graphIdentifier).get(0);
     }
@@ -635,7 +641,7 @@ class CopyClassServiceTest {
     }
 
     @Test
-    void copyClasses_oneSourceClassIsNotInTheGraph_pastesTheOtherOne() {
+    void copyClasses_oneSourceClassIsNotInTheGraph_pastesNothing() {
         setUpReferenceGraphs();
 
         var request = referenceRequest();
@@ -644,10 +650,28 @@ class CopyClassServiceTest {
 
         var responses = copyClassService.copyClasses(request, targetGraphIdentifier);
 
-        assertThat(responses).extracting(CopyClassResponseDTO::getName).containsExactly("oldLabel");
+        assertThat(responses).isEmpty();
         try (var ctx =
                 databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
-            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isTrue();
+            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
+        }
+    }
+
+    @Test
+    void copyClasses_oneSourceClassIsOnlyLeftAsAReferencedUuid_pastesNothing() {
+        setUpReferenceGraphs();
+        stripToUuid(PREFIX + "associatedClass");
+
+        var request = referenceRequest();
+        request.setSources(
+                List.of(referenceSource(CLASS_UUID), referenceSource(ASSOCIATED_CLASS_UUID)));
+
+        var responses = copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        assertThat(responses).isEmpty();
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
         }
     }
 
@@ -709,6 +733,118 @@ class CopyClassServiceTest {
         try (var ctx =
                 databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
             assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "oldLabel")).isFalse();
+        }
+    }
+
+    @Test
+    void copyClass_labelIsANumber_pastesACopyInsteadOfMergingIntoTheSourceClass() {
+        addClassToGraph(graphIdentifier, PREFIX + "123", "123", NUMERIC_CLASS_UUID);
+
+        var request = new PasteClassesRequestDTO();
+        request.setTargetPackageUUID(TARGET_PACKAGE_UUID);
+        request.setCopyAttributes(true);
+        request.setSources(List.of(defaultGraphSource(NUMERIC_CLASS_UUID)));
+
+        var responses = copyClassService.copyClasses(request, graphIdentifier);
+
+        assertThat(responses).extracting(CopyClassResponseDTO::getName).containsExactly("123-Copy");
+        assertThat(responses.get(0).getUuid()).isNotEqualTo(NUMERIC_CLASS_UUID);
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(containsClass(ctx.getRdfGraph(), PREFIX + "123-Copy")).isTrue();
+        }
+    }
+
+    @Test
+    void copyClasses_associationTargetIsPastedWithANewLabel_pointsAtTheNewClass() {
+        setUpReferenceGraphs();
+        addClassToGraph(targetGraphIdentifier, PREFIX + "associatedClass", "associatedClass", null);
+
+        var request = referenceRequest();
+        request.setSources(
+                List.of(referenceSource(CLASS_UUID), referenceSource(ASSOCIATED_CLASS_UUID)));
+
+        copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            var graph = ctx.getRdfGraph();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "oldLabel.associatedClass"),
+                                    RDFS.range.asNode(),
+                                    NodeFactory.createURI(PREFIX + "associatedClass-Copy")))
+                    .isTrue();
+            assertThat(
+                            graph.contains(
+                                    NodeFactory.createURI(PREFIX + "associatedClass-Copy.class"),
+                                    RDFS.domain.asNode(),
+                                    NodeFactory.createURI(PREFIX + "associatedClass-Copy")))
+                    .isTrue();
+        }
+    }
+
+    @Test
+    void copyClasses_superClassIsPastedWithANewLabel_pointsAtTheNewClass() {
+        setUpReferenceGraphs();
+        addClassToGraph(targetGraphIdentifier, PREFIX + "associatedClass", "associatedClass", null);
+
+        var request = referenceRequest();
+        request.setSources(
+                List.of(
+                        referenceSource(DERIVED_CLASS_UUID),
+                        referenceSource(ASSOCIATED_CLASS_UUID)));
+
+        copyClassService.copyClasses(request, targetGraphIdentifier);
+
+        try (var ctx =
+                databasePort.getGraphWithContext(targetGraphIdentifier).begin(ReadWrite.READ)) {
+            assertThat(
+                            ctx.getRdfGraph()
+                                    .contains(
+                                            NodeFactory.createURI(PREFIX + "derivedClass"),
+                                            RDFS.subClassOf.asNode(),
+                                            NodeFactory.createURI(PREFIX + "associatedClass-Copy")))
+                    .isTrue();
+        }
+    }
+
+    private void addClassToGraph(
+            GraphIdentifier graph, String classUri, String label, String classUUID) {
+        try (var ctx = databasePort.getGraphWithContext(graph).begin(ReadWrite.WRITE)) {
+            var classNode = NodeFactory.createURI(classUri);
+            ctx.getRdfGraph().add(classNode, RDF.type.asNode(), RDFS.Class.asNode());
+            ctx.getRdfGraph()
+                    .add(
+                            classNode,
+                            RDFS.label.asNode(),
+                            new RDFSLabel(label, "en").asLangLiteral().asNode());
+            if (classUUID != null) {
+                ctx.getRdfGraph()
+                        .add(
+                                classNode,
+                                RDFA.uuid.asNode(),
+                                NodeFactory.createLiteralString(classUUID));
+            }
+            ctx.commit("Added a class for the test.");
+        }
+    }
+
+    private void stripToUuid(String subjectUri) {
+        try (var ctx =
+                databasePort
+                        .getGraphWithContext(referenceSourceGraphIdentifier)
+                        .begin(ReadWrite.WRITE)) {
+            var subject = NodeFactory.createURI(subjectUri);
+            ctx.getRdfGraph()
+                    .find(subject, Node.ANY, Node.ANY)
+                    .toList()
+                    .forEach(
+                            triple -> {
+                                if (!triple.getPredicate().equals(RDFA.uuid.asNode())) {
+                                    ctx.getRdfGraph().delete(triple);
+                                }
+                            });
+            ctx.commit("Left a referenced uuid behind for the test.");
         }
     }
 

@@ -25,6 +25,7 @@ import org.apache.jena.graph.Graph;
 import org.apache.jena.graph.NodeFactory;
 import org.apache.jena.query.QueryExecutionFactory;
 import org.apache.jena.query.ResultSetFactory;
+import org.apache.jena.sparql.expr.NodeValue;
 import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.database.inmemory.SessionDataStore;
@@ -37,8 +38,10 @@ import java.util.Set;
 @UtilityClass
 public class UniqueLabelFactory {
 
-    public RDFSLabel uniqueClassLabel(Graph graph, RDFSLabel label) {
-        return uniqueLabel(label, existingClassLabels(graph, label));
+    public RDFSLabel uniqueClassLabel(Graph graph, RDFSLabel label, Set<String> takenLabels) {
+        var existingLabels = new HashSet<>(existingClassLabels(graph, label));
+        existingLabels.addAll(takenLabels);
+        return uniqueLabel(label, existingLabels);
     }
 
     public Set<String> existingAssociationLabels(Graph graph, URI domainUri, RDFSLabel label) {
@@ -73,7 +76,9 @@ public class UniqueLabelFactory {
         return new SelectBuilder()
                 .addVar("?label")
                 .addWhere("?s", RDFS.label, "?label")
-                .addFilter(exprFactory.strstarts(exprFactory.str("?label"), label.getValue()));
+                .addFilter(
+                        exprFactory.strstarts(
+                                exprFactory.str("?label"), NodeValue.makeString(label.getValue())));
     }
 
     private Set<String> queryLabels(Graph graph, SelectBuilder builder) {

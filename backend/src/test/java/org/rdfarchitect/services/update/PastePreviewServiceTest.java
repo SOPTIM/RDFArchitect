@@ -250,15 +250,15 @@ class PastePreviewServiceTest {
     }
 
     @Test
-    void previewPaste_oneSourceClassIsNotInTheGraph_namesTheReferencesOfTheOtherOne() {
+    void previewPaste_oneSourceClassIsNotInTheGraph_namesNothing() {
         var preview =
                 pastePreviewService.previewPaste(
                         previewRequest(UNKNOWN_CLASS_UUID, DERIVED_CLASS_UUID),
                         targetGraphIdentifier);
 
-        assertThat(missing(preview, Kind.SUPER_CLASS))
-                .extracting(PasteReferenceDTO::label)
-                .containsExactly("associatedClass");
+        assertThat(missing(preview, Kind.DATA_TYPE)).isEmpty();
+        assertThat(missing(preview, Kind.ASSOCIATION_TARGET)).isEmpty();
+        assertThat(missing(preview, Kind.SUPER_CLASS)).isEmpty();
     }
 
     @Test

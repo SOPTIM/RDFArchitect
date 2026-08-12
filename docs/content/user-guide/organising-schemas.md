@@ -37,7 +37,9 @@ From **Edit → New → Class** you pick the target dataset, graph, package, and
 - **Paste without Associations** (Ctrl+Alt+V)
 - **Paste Bare** (Ctrl+Shift+Alt+V) — the class on its own, as an abstract class.
 
-A pasted class keeps its label, unless the target schema already uses it: then it becomes `MyClass-Copy`, and `MyClass-Copy(1)`, `MyClass-Copy(2)`, … for further copies.
+A pasted class keeps its label, unless the target schema already uses it: then it becomes `MyClass-Copy`, and `MyClass-Copy(1)`, `MyClass-Copy(2)`, … for further copies. Classes pasted together keep pointing at each other: when one of them is renamed this way, the others refer to the renamed class, not to the one they were copied from.
+
+A paste is all or nothing. If one of the copied classes is gone by the time it is pasted — deleted in the meantime, or in a schema that was deleted — nothing is pasted and the paste reports a failure.
 
 ### Classes the copy points at
 

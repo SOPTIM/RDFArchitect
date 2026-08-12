@@ -101,7 +101,7 @@ export async function saveCopyClass(
             if (pasted.length === 0) {
                 toastStore.error(
                     "Paste failed",
-                    "The copied classes are no longer available.",
+                    "At least one of the copied classes is no longer available.",
                 );
                 return false;
             }

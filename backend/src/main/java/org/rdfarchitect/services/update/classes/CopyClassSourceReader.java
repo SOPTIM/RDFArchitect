@@ -23,6 +23,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.vocabulary.RDF;
+import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.PasteSourceClassDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -102,9 +104,10 @@ public class CopyClassSourceReader {
 
     private ResolvedSource toResolvedSource(Model model, CopyClassSource source) {
         var classUUID = source.classUUID().toString();
-        if (!model.listSubjectsWithProperty(RDFA.uuid, classUUID).hasNext()) {
+        if (model.listSubjectsWithProperty(RDFA.uuid, classUUID).toList().stream()
+                .noneMatch(resource -> resource.hasProperty(RDF.type, RDFS.Class))) {
             log.warn(
-                    "Skipping source class '{}' because graph '{}' does not contain it.",
+                    "Skipping source class '{}' because graph '{}' does not contain it any more.",
                     classUUID,
                     source.graphIdentifier().graphUri());
             return null;
