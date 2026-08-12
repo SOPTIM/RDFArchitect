@@ -22,6 +22,7 @@ import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import PackageSnapshotRenderer from "$lib/rendering/svelteflow/PackageSnapshotRenderer.svelte";
+import { PackageStatus } from "$lib/utils/exportProgress.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -57,8 +58,8 @@ function displayFilenameOf(packageUUID, label, fileEnding) {
     return `${slugifyLabel(label)}-${packageUUID}.${fileEnding}`;
 }
 
-async function getAllPackages(datasetName, graphURI) {
-    const res = await bec.getPackages(datasetName, graphURI);
+async function getAllPackages(datasetName, graphURI, signal) {
+    const res = await bec.getPackages(datasetName, graphURI, signal);
     const json = await res.json();
     return [
         ...(json.internalPackageList ?? []),
@@ -66,15 +67,20 @@ async function getAllPackages(datasetName, graphURI) {
     ];
 }
 
-async function getPackageDiagram(datasetName, graphURI, packageUUID) {
-    const res = await bec.fetchFilteredRenderingData(datasetName, graphURI, {
-        packageUUID,
-        includeEnumEntries: true,
-        includeAttributes: true,
-        includeAssociations: true,
-        includeInheritance: true,
-        includeRelationsToExternalPackages: true,
-    });
+async function getPackageDiagram(datasetName, graphURI, packageUUID, signal) {
+    const res = await bec.fetchFilteredRenderingData(
+        datasetName,
+        graphURI,
+        {
+            packageUUID,
+            includeEnumEntries: true,
+            includeAttributes: true,
+            includeAssociations: true,
+            includeInheritance: true,
+            includeRelationsToExternalPackages: true,
+        },
+        signal,
+    );
     const text = await res.text();
     return text ? JSON.parse(text) : null;
 }
@@ -141,24 +147,50 @@ async function renderPackage(nodes, edges, fileType) {
     }
 }
 
-export async function generatePackageImages(datasetName, graphURI, fileType) {
+/**
+ * Renders one diagram per package of the graph.
+ *
+ * @param progress optional {@link ExportProgress} that receives the packages and
+ *     their outcome, and whose cancellation stops the loop at the next package
+ */
+export async function generatePackageImages(
+    datasetName,
+    graphURI,
+    fileType,
+    progress,
+) {
     const images = [];
-    const packages = await getAllPackages(datasetName, graphURI);
+    const signal = progress?.signal;
+    const packages = await getAllPackages(datasetName, graphURI, signal);
+
+    progress?.startDiagrams(
+        packages.map(pkg => ({
+            uuid: pkg.uuid ?? "default",
+            label: pkg.label ?? "default",
+        })),
+    );
 
     for (const pkg of packages) {
+        if (progress?.cancelled) {
+            break;
+        }
+
         const packageUUID = pkg.uuid ?? "default";
         const label = pkg.label ?? "default";
+        progress?.packageStarted(packageUUID);
         try {
             const diagram = await getPackageDiagram(
                 datasetName,
                 graphURI,
                 packageUUID,
+                signal,
             );
             if (
                 !diagram ||
                 diagram.format !== "SVELTEFLOW" ||
                 !diagram.nodes?.length
             ) {
+                progress?.packageFinished(packageUUID, PackageStatus.EMPTY);
                 continue;
             }
             const blob = await renderPackage(
@@ -181,7 +213,12 @@ export async function generatePackageImages(datasetName, graphURI, fileType) {
                     blob,
                 });
             }
+            progress?.packageFinished(
+                packageUUID,
+                blob ? PackageStatus.DONE : PackageStatus.FAILED,
+            );
         } catch (e) {
+            progress?.packageFinished(packageUUID, PackageStatus.FAILED);
             console.error(
                 `Failed to render package "${label}" as ${fileType.name}:`,
                 e,

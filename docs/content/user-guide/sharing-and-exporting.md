@@ -23,11 +23,13 @@ See [SHACL — Exporting](./shacl#exporting-shacl). TTL by default.
 
 **File → Export → Documentation (HTML, AsciiDoc)** exports documentation for the currently selected graph. The dialog includes:
 
-- **Document Format** — HTML (`.html`) or AsciiDoc (`.adoc`). Both describe the same content.
-- **Diagram File Type** — PNG or SVG for the package diagrams.
-- **Package Diagram** — whether a class only links to the diagram of its package, or shows it as a picture in the document. A package diagram appears once per class of that package, so showing the pictures makes for a considerably longer document.
+- **Document → Format** — HTML (`.html`) or AsciiDoc (`.adoc`). Both describe the same content.
+- **Package diagrams → File type** — PNG or SVG.
+- **Package diagrams → Shown as** — *Link*, so a class only links to the diagram of its package, or *Picture in the document*, so the diagram is shown inline. A package diagram appears once per class of that package, so showing the pictures makes for a considerably longer document.
 
 The generated ZIP file contains the document plus an `images/` folder with one diagram per package; the diagram files are named after their package. The documentation lists all classes, categorized by stereotype, followed by the concrete classes, the abstract classes and the enumerations. Each class comes with its package diagram, comment, native members, inherited members and — for enumerations — its values.
+
+Every package diagram is rendered in the browser, so a large profile can take a while. The dialog shows the progress per package while it works and can be stopped with **Cancel**; nothing is downloaded then. If a diagram cannot be rendered, the export finishes without it and names the affected packages.
 
 ### AsciiDoc output
 

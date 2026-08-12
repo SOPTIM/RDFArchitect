@@ -27,7 +27,12 @@ export class BackendConnection {
         this.url = url;
     }
 
-    async fetchFilteredRenderingData(datasetName, graphURI, graphFilter) {
+    async fetchFilteredRenderingData(
+        datasetName,
+        graphURI,
+        graphFilter,
+        signal,
+    ) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/rendering`;
         return fetch(url, {
             method: "POST",
@@ -35,6 +40,7 @@ export class BackendConnection {
             headers: new Headers({ "Content-Type": "application/json" }),
             body: JSON.stringify(graphFilter),
             credentials: "include",
+            signal,
         });
     }
 
@@ -111,13 +117,14 @@ export class BackendConnection {
         });
     }
 
-    async getPackages(datasetName, graphURI) {
+    async getPackages(datasetName, graphURI, signal) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
             headers: new Headers({ "Content-Type": "application/json" }),
             credentials: "include",
+            signal,
         });
     }
 
@@ -752,6 +759,7 @@ export class BackendConnection {
         graphURI,
         fileEnding,
         embedDiagrams = false,
+        signal,
     ) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
         return await fetch(url, {
@@ -759,6 +767,7 @@ export class BackendConnection {
             headers: new Headers({ "Content-Type": "application/json" }),
             mode: "cors",
             credentials: "include",
+            signal,
         });
     }
 
@@ -767,6 +776,7 @@ export class BackendConnection {
         graphURI,
         fileEnding,
         embedDiagrams = false,
+        signal,
     ) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/asciidocexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
         return await fetch(url, {
@@ -774,6 +784,7 @@ export class BackendConnection {
             headers: new Headers({ "Content-Type": "application/json" }),
             mode: "cors",
             credentials: "include",
+            signal,
         });
     }
 }
