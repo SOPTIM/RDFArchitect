@@ -126,6 +126,13 @@ public interface DatabasePort {
     List<String> listDatasets();
 
     /**
+     * Creates an empty dataset without any graphs. Existing datasets are left untouched.
+     *
+     * @param datasetName the literal dataset name to create
+     */
+    void createDataset(String datasetName);
+
+    /**
      * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
      * it.
      *

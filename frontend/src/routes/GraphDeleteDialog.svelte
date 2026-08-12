@@ -60,7 +60,6 @@
             if (res.ok) {
                 console.log("successfully deleted data");
                 const deletedGraph = graphURI;
-                editorState.selectedDataset.updateValue(null);
                 editorState.selectedGraph.updateValue(null);
                 editorState.selectedDiagram.updateValue({
                     type: null,
@@ -111,8 +110,8 @@
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-3/4 text-sm leading-relaxed">
             {datasetName
-                ? `The schema will be removed from dataset "${datasetName}".`
-                : "Select a dataset and schema to delete."}
+                ? `The schema will be removed from workspace "${datasetName}".`
+                : "Select a workspace and schema to delete."}
             <br />
             This action is not reversible.
         </p>

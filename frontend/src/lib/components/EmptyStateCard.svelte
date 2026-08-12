@@ -18,7 +18,7 @@
 <script>
     import { Fa } from "svelte-fa";
 
-    let { title = "", description = "", icon = null } = $props();
+    let { title = "", description = "", icon = null, children } = $props();
 </script>
 
 <div
@@ -36,6 +36,12 @@
 
     {#if description}
         <p class="empty-state-text mt-1 text-sm">{description}</p>
+    {/if}
+
+    {#if children}
+        <div class="mt-5 flex justify-center">
+            {@render children()}
+        </div>
     {/if}
 </div>
 

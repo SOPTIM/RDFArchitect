@@ -313,7 +313,7 @@
 >
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
         {#if !datasetSelectionLocked}
-            <label for={datasetInputId} class="mb-1">Dataset</label>
+            <label for={datasetInputId} class="mb-1">Workspace</label>
             <input
                 class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                 type="text"
@@ -330,11 +330,11 @@
 
             {#if isDatasetReadOnly(datasetNameUserInput)}
                 <div class="text-red mt-1 mb-1 h-6 text-sm">
-                    Cannot import into read-only dataset
+                    Cannot import into read-only workspace
                 </div>
             {/if}
         {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
+            <p class="mb-1 font-semibold">Workspace</p>
             <div
                 class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
             >

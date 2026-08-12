@@ -110,6 +110,41 @@ export const editorState = {
         multiSelectState.clear();
     },
 
+    /** Snapshot of everything selected below the dataset level. */
+    captureSelection() {
+        return {
+            graph: this.selectedGraph.getValue(),
+            diagram: { ...(this.selectedDiagram.getValue() ?? {}) },
+            classDataset: this.selectedClassDataset.getValue(),
+            classGraph: this.selectedClassGraph.getValue(),
+            selectedClass: { ...(this.selectedClass.getValue() ?? {}) },
+            focusedClassUUID: this.focusedClassUUID.getValue(),
+            context: this.selectedContext.getValue(),
+            activeSelectionKind: this.activeSelectionKind.getValue(),
+        };
+    },
+
+    /** Restores a snapshot taken by {@link captureSelection}. */
+    applySelection(selection) {
+        if (!selection) {
+            return;
+        }
+        this.selectedGraph.updateValue(selection.graph ?? null);
+        this.selectedDiagram.updateValue(
+            selection.diagram ?? { type: null, id: null },
+        );
+        this.selectedClassDataset.updateValue(selection.classDataset ?? null);
+        this.selectedClassGraph.updateValue(selection.classGraph ?? null);
+        this.selectedClass.updateValue(
+            selection.selectedClass ?? { type: null, id: null },
+        );
+        this.focusedClassUUID.updateValue(selection.focusedClassUUID ?? null);
+        this.selectedContext.updateValue(selection.context ?? null);
+        this.activeSelectionKind.updateValue(
+            selection.activeSelectionKind ?? null,
+        );
+    },
+
     selectDataset(datasetName) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.DATASET);

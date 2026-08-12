@@ -170,13 +170,13 @@
 >
     <div class="mx-2 flex h-full flex-col">
         {#if !datasetSelectionLocked}
-            <label for={datasetInputId} class="mb-1">Dataset</label>
+            <label for={datasetInputId} class="mb-1">Workspace</label>
             <input
                 class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                 type="text"
                 id={datasetInputId}
                 list={datasetListId}
-                placeholder="Dataset name"
+                placeholder="Workspace name"
                 bind:value={datasetNameUserInput}
                 onchange={() => refreshGraphNames()}
             />
@@ -188,11 +188,11 @@
 
             {#if datasetIsReadOnly}
                 <div class="mt-1 mb-1 h-6 text-sm">
-                    Cannot create schemas in read-only dataset
+                    Cannot create schemas in read-only workspace
                 </div>
             {/if}
         {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
+            <p class="mb-1 font-semibold">Workspace</p>
             <div
                 class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
             >

@@ -122,7 +122,7 @@
         ? "border-border bg-background-subtle rounded border p-3"
         : ""}
 >
-    <label for={datasetSelectId} class="mb-1 block text-sm">Dataset</label>
+    <label for={datasetSelectId} class="mb-1 block text-sm">Workspace</label>
     <SelectEditControl
         id={datasetSelectId}
         bind:value={dataset}
@@ -133,7 +133,7 @@
         getOptionLabel={dataset =>
             dataset.label + (dataset.readonly ? " (readonly)" : "")}
         disabled={datasetLocked || datasets.length === 0}
-        placeholder="Select dataset"
+        placeholder="Select workspace"
         onchange={() => (graph = null)}
     />
 
@@ -145,7 +145,7 @@
         bind:value={graph}
         options={graphs}
         disabled={graphSelectDisabled}
-        placeholder={dataset ? "Select schema" : "Select a dataset first"}
+        placeholder={dataset ? "Select schema" : "Select a workspace first"}
         getOptionValue={getUri}
         getOptionLabel={g => g.keyword ?? g.uri.suffix}
     />

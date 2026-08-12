@@ -29,9 +29,15 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class UpdateDatasetService implements DeleteDatasetUseCase, ReplaceNamespacesUseCase {
+public class UpdateDatasetService
+        implements CreateDatasetUseCase, DeleteDatasetUseCase, ReplaceNamespacesUseCase {
 
     private final DatabasePort databasePort;
+
+    @Override
+    public void createDataset(String datasetName) {
+        databasePort.createDataset(datasetName);
+    }
 
     @Override
     public void deleteDataset(String datasetName) {

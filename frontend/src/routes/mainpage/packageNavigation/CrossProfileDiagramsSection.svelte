@@ -69,7 +69,7 @@
 </script>
 
 <div
-    class="bg-border my-1 ml-14 h-0.5"
+    class="bg-border my-1 ml-10 h-0.5"
     role="presentation"
     oncontextmenu={e => e.stopPropagation()}
 ></div>
@@ -77,7 +77,7 @@
 <ContextMenu.Root>
     <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
         <NavigationEntry
-            level={2}
+            level={1}
             label="Merged View"
             icon={faObjectGroup}
             hasChildren={classes.length > 0}
@@ -120,6 +120,7 @@
                 classType={ClassType.MERGED_CLASS}
                 diagramType={DiagramType.CROSS_PROFILE}
                 readonly={true}
+                level={2}
             />
         {/each}
     </div>

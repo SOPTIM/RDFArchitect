@@ -39,7 +39,7 @@
         diagram = $bindable(),
         classes,
         readonly,
-        level = 4,
+        level = 3,
         onToggle,
     } = $props();
 
@@ -159,6 +159,7 @@
                     diagramGraphUri={graphNavEntry?.id}
                     {rangeSiblings}
                     {readonly}
+                    level={level + 1}
                 />
             {/each}
         </div>

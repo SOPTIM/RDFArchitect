@@ -57,6 +57,7 @@
         diagramGraphUri,
         rangeSiblings = null,
         namespaces = [],
+        level = 3,
         readonly = false,
         onPackChange = () => {},
         classType = ClassType.SINGLE_CLASS,
@@ -326,7 +327,7 @@
 <ContextMenu.Root>
     <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
         <NavigationEntry
-            level={4}
+            {level}
             label={classNavEntry.label}
             icon={faFileLines}
             isSelected={classState === "active"}
@@ -395,7 +396,7 @@
                     disabled={crossGraphDisabled}
                     faIcon={faObjectGroup}
                 >
-                    Add to Dataset Diagram
+                    Add to Workspace Diagram
                 </ContextMenu.Item.Button>
             {/if}
             <ContextMenu.Separator />

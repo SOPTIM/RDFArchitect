@@ -238,8 +238,8 @@
     {onOpen}
     {onClose}
     title={diagramId
-        ? `Edit Dataset Diagram "${diagramName}"`
-        : "New Dataset Diagram"}
+        ? `Edit Workspace Diagram "${diagramName}"`
+        : "New Workspace Diagram"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}

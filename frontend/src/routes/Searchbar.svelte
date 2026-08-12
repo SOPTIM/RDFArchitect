@@ -39,8 +39,8 @@
 
     const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const filters = [
-        { name: "All Datasets", value: "all" },
-        { name: "Current Dataset", value: "dataset" },
+        { name: "All Workspaces", value: "all" },
+        { name: "Current Workspace", value: "dataset" },
         { name: "Current Schema", value: "graph" },
         { name: "Current Package", value: "package" },
     ];
@@ -48,7 +48,7 @@
     const shortcutsUnregister = [];
 
     let showScopeDropdown = $state(false);
-    let selectedFilter = $state({ name: "All Datasets", value: "all" });
+    let selectedFilter = $state({ name: "All Workspaces", value: "all" });
     let queryString = $state("");
     let searchResults = $state([]);
     let inputElement = $state(null);

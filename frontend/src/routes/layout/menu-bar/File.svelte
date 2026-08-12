@@ -31,7 +31,6 @@
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
 
-    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import DocumentationExportDialog from "../../DocumentationExportDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
@@ -40,6 +39,7 @@
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import UserSettingDialog from "../../UserSettingDialog.svelte";
+    import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
 
     let { isDatasetReadOnly } = $props();
 
@@ -51,14 +51,14 @@
     let showSHACLExportDialog = $state(false);
     let showSHACLUploadDialog = $state(false);
     let showDeleteDialog = $state(false);
-    let showDatasetDeleteDialog = $state(false);
+    let showWorkspaceDeleteDialog = $state(false);
     let showUserSettingDialog = $state(false);
     let showDocumentationExportDialog = $state(false);
 
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
-    let hasDatasetSelected = $derived(!!selectedDataset);
-    let hasGraphSelected = $derived(hasDatasetSelected && !!selectedGraph);
+    let hasWorkspaceSelected = $derived(!!selectedDataset);
+    let hasGraphSelected = $derived(hasWorkspaceSelected && !!selectedGraph);
 
     $effect(() => {
         editorState.selectedDataset.subscribe();
@@ -200,12 +200,12 @@
                     Schema
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
-                    onSelect={() => (showDatasetDeleteDialog = true)}
-                    disabled={!hasDatasetSelected}
+                    onSelect={() => (showWorkspaceDeleteDialog = true)}
+                    disabled={!hasWorkspaceSelected}
                     faIcon={faTrash}
                     variant="danger"
                 >
-                    Dataset
+                    Workspace
                 </Menubar.Item.Button>
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
@@ -221,7 +221,7 @@
 <UserSettingDialog bind:showDialog={showUserSettingDialog} />
 
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
-<DatasetDeleteDialog
-    bind:showDialog={showDatasetDeleteDialog}
-    datasetName={selectedDataset}
+<WorkspaceDeleteDialog
+    bind:showDialog={showWorkspaceDeleteDialog}
+    workspaceName={selectedDataset}
 />

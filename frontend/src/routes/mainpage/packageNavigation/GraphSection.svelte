@@ -182,7 +182,7 @@
     <ContextMenu.Root>
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
-                level={2}
+                level={1}
                 label={graphNavEntry.label}
                 icon={faDiagramProject}
                 iconColor={graphColor}

@@ -155,7 +155,7 @@
     <ContextMenu.Root>
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
-                level={3}
+                level={2}
                 label={packageNavEntry.label}
                 icon={packageNavEntry?.isOpen ? faFolderOpen : faFolder}
                 isSelected={packageSelectionState === "active"}
@@ -210,7 +210,7 @@
                 }}
                 faIcon={faObjectGroup}
             >
-                Add to Dataset Diagram
+                Add to Workspace Diagram
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button

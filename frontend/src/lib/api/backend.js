@@ -73,6 +73,14 @@ export class BackendConnection {
         });
     }
 
+    async createDataset(datasetName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}`;
+        return fetch(url, {
+            method: "PUT",
+            credentials: "include",
+        });
+    }
+
     async deleteDataset(datasetName) {
         const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}`;
         return fetch(url, {

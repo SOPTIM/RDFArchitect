@@ -53,9 +53,9 @@
                   editorState.selectedDiagram.getProperty("type") ===
                       DiagramType.CUSTOM_DATASET_DIAGRAM,
     );
-    let level = $derived(graphNavEntry ? 3 : 2);
+    let level = $derived(graphNavEntry ? 2 : 1);
     let label = $derived(
-        graphNavEntry ? "Schema Diagrams" : "Dataset Diagrams",
+        graphNavEntry ? "Schema Diagrams" : "Workspace Diagrams",
     );
 
     $effect(() => {
@@ -190,7 +190,7 @@
 
 {#if diagrams.length > 0}
     <div
-        class="bg-border my-1 ml-14 h-0.5"
+        class="bg-border my-1 ml-10 h-0.5"
         role="presentation"
         oncontextmenu={e => e.stopPropagation()}
     ></div>
@@ -219,7 +219,7 @@
                 bind:diagram={diagrams[index]}
                 classes={classesByDiagram[diagram.diagramId]}
                 {readonly}
-                level={graphNavEntry ? 4 : 3}
+                level={graphNavEntry ? 3 : 2}
                 onToggle={() => ensureClassesLoaded(diagram)}
             />
         {/each}

@@ -181,19 +181,10 @@ export function classHighlight(dataset, graph, classUuid) {
     return null;
 }
 
-export function datasetHighlight(dataset) {
-    const { datasetLabel } = normContext(dataset);
-    const level = deepestSelectedLevel();
-    if (level === SelectionLevel.CLASS) {
-        return someOpenClass(datasetLabel) ? "ancestor" : null;
-    }
-    if (!isSelectedDataset(datasetLabel)) {
-        return null;
-    }
-    return level === SelectionLevel.DATASET ? "active" : "ancestor";
-}
-
-/** Highlight state of a graph entry (see {@link datasetHighlight}). */
+/**
+ * Highlight state of a graph entry: "active" when the graph itself is the most
+ * specific selection, "ancestor" when something inside it is.
+ */
 export function graphHighlight(dataset, graph) {
     const { datasetLabel, graphUri } = normContext(dataset, graph);
     const level = deepestSelectedLevel();

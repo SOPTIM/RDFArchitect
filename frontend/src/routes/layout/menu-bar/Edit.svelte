@@ -55,7 +55,6 @@
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
 
-    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
@@ -67,6 +66,7 @@
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
 
     let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
 
@@ -81,7 +81,7 @@
     let showOntologyDeleteDependenciesDialog = $state(false);
     let showClassDeleteDependenciesDialog = $state(false);
     let showGraphDeleteDialog = $state(false);
-    let showDatasetDeleteDialog = $state(false);
+    let showWorkspaceDeleteDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -415,7 +415,7 @@
                 }
                 break;
             case SelectionLevel.DATASET:
-                showDatasetDeleteDialog = true;
+                showWorkspaceDeleteDialog = true;
                 break;
         }
     }
@@ -621,9 +621,9 @@
     />
 {/if}
 <GraphDeleteDialog bind:showDialog={showGraphDeleteDialog} />
-<DatasetDeleteDialog
-    bind:showDialog={showDatasetDeleteDialog}
-    datasetName={selectedDataset}
+<WorkspaceDeleteDialog
+    bind:showDialog={showWorkspaceDeleteDialog}
+    workspaceName={selectedDataset}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 {#if ontology}

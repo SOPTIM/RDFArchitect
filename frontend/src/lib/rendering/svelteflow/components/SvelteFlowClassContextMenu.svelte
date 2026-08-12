@@ -285,7 +285,7 @@
                 onSelect={openAddToDatasetDiagramDialog}
                 faIcon={faObjectGroup}
             >
-                Add to Dataset Diagram
+                Add to Workspace Diagram
             </ContextMenu.Item.Button>
         {/if}
         <ContextMenu.SubMenu.Root>

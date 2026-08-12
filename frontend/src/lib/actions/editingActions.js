@@ -42,13 +42,13 @@ export async function enableEditing(datasetName) {
     if (res && res.ok === false) {
         toastStore.error(
             "Could not enable editing",
-            `Dataset "${datasetName}" remains read-only.`,
+            `Workspace "${datasetName}" remains read-only.`,
         );
         return false;
     }
     toastStore.success(
         "Editing enabled",
-        `Dataset "${datasetName}" is now editable.`,
+        `Workspace "${datasetName}" is now editable.`,
     );
     return true;
 }
@@ -65,13 +65,13 @@ export async function disableEditing(datasetName) {
     if (res && res.ok === false) {
         toastStore.error(
             "Could not disable editing",
-            `Dataset "${datasetName}" remains editable.`,
+            `Workspace "${datasetName}" remains editable.`,
         );
         return false;
     }
     toastStore.success(
         "Editing disabled",
-        `Dataset "${datasetName}" is now read-only.`,
+        `Workspace "${datasetName}" is now read-only.`,
     );
     return true;
 }

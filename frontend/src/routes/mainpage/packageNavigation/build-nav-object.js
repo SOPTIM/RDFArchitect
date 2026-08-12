@@ -49,45 +49,29 @@ function syncList(targetArray, freshEntries, parent = null) {
     freshEntries.forEach(entry => (entry.parent = parent));
 }
 
-export async function getNavEntryList(existingDatasetNavList) {
-    const freshEntries = (await getDatasetNames())
-        .sort((a, b) => a.localeCompare(b))
-        .map(label =>
-            reuseOrCreate(existingDatasetNavList, { label, id: label }),
-        );
-
-    const result = existingDatasetNavList ?? [];
-    syncList(result, freshEntries, null);
-
-    for (const datasetNavEntry of result) {
-        try {
-            await populateDataset(datasetNavEntry);
-        } catch (err) {
-            console.error(
-                "Error populating dataset " + datasetNavEntry.id,
-                err,
-            );
-            toastStore.error(
-                "Failed to load dataset",
-                `Could not load graphs for dataset "${datasetNavEntry.id}". Other datasets are still available.`,
-            );
-        }
+/**
+ * Builds the navigation tree of a single workspace. Schemas are the top level;
+ * the returned entry only carries them and is not rendered itself.
+ */
+export async function getWorkspaceNavEntry(workspaceName, existingNavEntry) {
+    if (!workspaceName) {
+        return null;
     }
-    return result;
-}
+    const workspaceNavEntry =
+        existingNavEntry?.id === workspaceName
+            ? existingNavEntry
+            : new NavEntry({ label: workspaceName, id: workspaceName });
 
-async function getDatasetNames() {
     try {
-        const res = await bec.getDatasetNames();
-        if (!res.ok) {
-            console.error(`Error fetching dataset names: HTTP ${res.status}`);
-            return [];
-        }
-        return await res.json();
+        await populateDataset(workspaceNavEntry);
     } catch (err) {
-        console.error("Error fetching dataset names", err);
-        return [];
+        console.error("Error populating workspace " + workspaceName, err);
+        toastStore.error(
+            "Failed to load workspace",
+            `Could not load schemas for workspace "${workspaceName}".`,
+        );
     }
+    return workspaceNavEntry;
 }
 
 async function populateDataset(datasetNavEntry) {

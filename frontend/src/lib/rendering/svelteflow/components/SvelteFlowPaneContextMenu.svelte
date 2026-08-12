@@ -161,7 +161,7 @@
                 disabled={addAllDisabled}
                 faIcon={faObjectGroup}
             >
-                Add all to Dataset Diagram
+                Add all to Workspace Diagram
             </ContextMenu.Item.Button>
         </ContextMenu.Content>
     {/if}

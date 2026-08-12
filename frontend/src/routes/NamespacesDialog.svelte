@@ -39,7 +39,7 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable() } = $props();
+    let { showDialog = $bindable(), lockedDatasetName } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -50,7 +50,8 @@
     let listRef;
 
     async function onOpen() {
-        datasetName = editorState.selectedDataset.getValue();
+        datasetName =
+            lockedDatasetName ?? editorState.selectedDataset.getValue();
         if (!datasetName) return;
         readonly = await isReadOnly(datasetName);
         await loadNamespaces(datasetName);

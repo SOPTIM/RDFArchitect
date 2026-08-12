@@ -16,15 +16,42 @@
   -->
 
 <script>
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
     import { validate } from "uuid";
 
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import {
+        DiagramType,
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
+    import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
+    import NoWorkspacePlaceholder from "./emptyStates/NoWorkspacePlaceholder.svelte";
     import PackageNavigation from "./packageNavigation/packageNavigation.svelte";
     import PackageWindow from "./packageWindow.svelte";
+    import WorkspaceTabs from "./workspaceTabs/WorkspaceTabs.svelte";
+
+    const activeWorkspace = $derived(editorState.selectedDataset.getValue());
+    const hasNoWorkspaces = $derived(
+        workspaceState.isLoaded() && workspaceState.getNames().length === 0,
+    );
+    const hasNoSchemas = $derived(
+        !hasNoWorkspaces &&
+            workspaceState.getSchemaCount(activeWorkspace) === 0,
+    );
+
+    // The placeholder replaces the navigation, so the schema count is tracked
+    // here — inside the navigation it would never refresh again.
+    $effect(async () => {
+        forceReloadTrigger.subscribe();
+        const workspaceName = activeWorkspace;
+        await untrack(
+            async () => await workspaceState.refreshSchemaCount(workspaceName),
+        );
+    });
 
     onMount(() => {
         parseModelSelectionUrlParameters();
@@ -36,9 +63,10 @@
         const dataset = queryParams.get("dataset") || null;
         const graph = queryParams.get("graph") || null;
         let pack = queryParams.get("package") || null;
+        if (!dataset) return;
         editorState.selectedDataset.updateValue(dataset);
         editorState.selectedGraph.updateValue(graph);
-        if (!dataset || !graph || !pack) return;
+        if (!graph || !pack) return;
         if (pack !== "default" && !validate(pack)) {
             pack = await resolveIRI(dataset, graph, pack);
         }
@@ -65,19 +93,26 @@
     }
 </script>
 
-<div class="h-full w-full">
-    <Splitpanes theme="opencgmes-theme" class="flex h-full">
-        <Pane
-            size={18}
-            maxSize={30}
-            class="bg-window-background rounded-xs border-none "
-        >
-            <div class="h-full">
-                <PackageNavigation />
-            </div>
-        </Pane>
-        <Pane size={82} class="bg-window-background rounded-xs border-none">
-            <PackageWindow />
-        </Pane>
-    </Splitpanes>
+<div class="flex h-full w-full flex-col">
+    <WorkspaceTabs />
+    {#if hasNoWorkspaces}
+        <NoWorkspacePlaceholder />
+    {:else if hasNoSchemas}
+        <NoSchemaPlaceholder workspaceName={activeWorkspace} />
+    {:else}
+        <Splitpanes theme="opencgmes-theme" class="flex min-h-0 flex-1">
+            <Pane
+                size={18}
+                maxSize={30}
+                class="bg-window-background rounded-xs border-none "
+            >
+                <div class="h-full">
+                    <PackageNavigation />
+                </div>
+            </Pane>
+            <Pane size={82} class="bg-window-background rounded-xs border-none">
+                <PackageWindow />
+            </Pane>
+        </Splitpanes>
+    {/if}
 </div>
