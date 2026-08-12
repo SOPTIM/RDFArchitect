@@ -70,17 +70,17 @@ class ExportAsciiDocServiceTest {
 
         assertThat(adoc).startsWith("List of stereotypes to categorize subProfiles:");
         assertThat(adoc).contains("* " + CIMStereotypes.entsoeString);
-        assertThat(adoc).doesNotContain("== Classes");
+        assertThat(adoc).doesNotContain("== Concrete Classes");
     }
 
     @Test
-    void exportGraphAsAsciiDoc_concreteClassWithoutStereotype_isListedInGeneralClassesSection() {
+    void exportGraphAsAsciiDoc_concreteClassWithoutStereotype_isListedAsConcrete() {
         var clazz =
                 classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
 
         var adoc = exportAsciiDoc(List.of(clazz));
 
-        assertThat(adoc).contains("== Classes\n");
+        assertThat(adoc).contains("== Concrete Classes\n");
         assertThat(adoc).contains("[[EQ_MyClass]]\n=== MyClass\n");
     }
 
@@ -91,6 +91,28 @@ class ExportAsciiDocServiceTest {
         var adoc = exportAsciiDoc(List.of(clazz));
 
         assertThat(adoc).contains("== Abstract Classes");
+    }
+
+    @Test
+    void exportGraphAsAsciiDoc_enumeration_isListedInOwnSectionBehindTheClasses() {
+        var enumeration =
+                classBuilder("MyEnum")
+                        .stereotypes(List.of(CIMStereotypes.enumerationString))
+                        .build();
+        var concreteClass =
+                classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
+        var abstractClass = classBuilder("AbstractClass").stereotypes(List.of()).build();
+
+        var adoc = exportAsciiDoc(List.of(enumeration, concreteClass, abstractClass));
+
+        assertThat(adoc)
+                .containsSubsequence(
+                        "== Concrete Classes",
+                        "[[EQ_MyClass]]",
+                        "== Abstract Classes",
+                        "[[EQ_AbstractClass]]",
+                        "== Enumerations",
+                        "[[EQ_MyEnum]]");
     }
 
     @Test

@@ -67,18 +67,18 @@ class ExportHTMLServiceTest {
         assertThat(html).startsWith("<!DOCTYPE html>");
         assertThat(html).contains("<title>Profile Documentation</title>");
         assertThat(html).contains("List of stereotypes to categorize subProfiles");
-        assertThat(html).doesNotContain("<h1>Classes</h1>");
+        assertThat(html).doesNotContain("<h1>Concrete Classes</h1>");
         assertThat(html).doesNotContain("<h1>Abstract Classes</h1>");
     }
 
     @Test
-    void exportGraphAsHTML_concreteClassWithoutStereotype_isListedInGeneralClassesSection() {
+    void exportGraphAsHTML_concreteClassWithoutStereotype_isListedAsConcrete() {
         var clazz =
                 classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
 
         var html = exportHtml(List.of(clazz));
 
-        assertThat(html).contains("<h1>Classes</h1>");
+        assertThat(html).contains("<h1>Concrete Classes</h1>");
         assertThat(html).contains("id=\"MyClass\"");
         assertThat(html).contains("h2 class=\"concrete\"");
         assertThat(html).contains(">MyClass<");
@@ -95,6 +95,28 @@ class ExportHTMLServiceTest {
     }
 
     @Test
+    void exportGraphAsHTML_enumeration_isListedInOwnSectionBehindTheClasses() {
+        var enumeration =
+                classBuilder("MyEnum")
+                        .stereotypes(List.of(CIMStereotypes.enumerationString))
+                        .build();
+        var concreteClass =
+                classBuilder("MyClass").stereotypes(List.of(CIMStereotypes.concreteString)).build();
+        var abstractClass = classBuilder("AbstractClass").stereotypes(List.of()).build();
+
+        var html = exportHtml(List.of(enumeration, concreteClass, abstractClass));
+
+        assertThat(html)
+                .containsSubsequence(
+                        "<h1>Concrete Classes</h1>",
+                        "id=\"MyClass\"",
+                        "<h1>Abstract Classes</h1>",
+                        "id=\"AbstractClass\"",
+                        "<h1>Enumerations</h1>",
+                        "id=\"MyEnum\"");
+    }
+
+    @Test
     void exportGraphAsHTML_classWithKnownStereotype_isGroupedUnderStereotypeSection() {
         var clazz =
                 classBuilder("EntsoeClass")
@@ -105,7 +127,7 @@ class ExportHTMLServiceTest {
         var html = exportHtml(List.of(clazz));
 
         assertThat(html).contains("<h1>Classes (" + CIMStereotypes.entsoeString + ")</h1>");
-        assertThat(html).doesNotContain("<h1>Classes</h1>");
+        assertThat(html).doesNotContain("<h1>Concrete Classes</h1>");
     }
 
     @Test
@@ -484,7 +506,7 @@ class ExportHTMLServiceTest {
 
         var html = exportHtml(List.of(clazz));
 
-        assertThat(html).contains("<h1>Classes</h1>");
+        assertThat(html).contains("<h1>Concrete Classes</h1>");
         assertThat(html).doesNotContain("<h1>Classes (SomeUnknownStereotype)</h1>");
     }
 

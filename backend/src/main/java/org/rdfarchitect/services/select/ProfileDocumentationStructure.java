@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * Document structure shared by the profile documentation exports. It decides which class is
@@ -57,7 +58,9 @@ public final class ProfileDocumentationStructure {
 
     /**
      * Groups the classes into the sections of the documentation: one section per known stereotype,
-     * followed by the abstract classes and finally everything that is left.
+     * followed by the concrete classes, the abstract classes and finally the enumerations. The
+     * enumerations come last because their values are of little interest while reading the classes
+     * that use them.
      */
     public static List<Section> buildSections(List<ClassUMLAdaptedDTO> classList) {
         var sections = new ArrayList<Section>();
@@ -79,22 +82,46 @@ public final class ProfileDocumentationStructure {
             }
         }
 
-        var abstractClasses =
-                classList.stream()
-                        .filter(c -> !isConcrete(c) && !processedUuids.contains(c.getUuid()))
-                        .toList();
-        if (!abstractClasses.isEmpty()) {
-            sections.add(new Section("Abstract Classes", null, abstractClasses));
-            markProcessed(abstractClasses, processedUuids);
-        }
-
-        var remainingClasses =
-                classList.stream().filter(c -> !processedUuids.contains(c.getUuid())).toList();
-        if (!remainingClasses.isEmpty()) {
-            sections.add(new Section("Classes", null, remainingClasses));
-        }
+        addSection(
+                sections,
+                "Concrete Classes",
+                remaining(classList, processedUuids)
+                        .filter(c -> isConcrete(c) && !isEnumeration(c))
+                        .toList(),
+                processedUuids);
+        addSection(
+                sections,
+                "Abstract Classes",
+                remaining(classList, processedUuids)
+                        .filter(c -> !isConcrete(c) && !isEnumeration(c))
+                        .toList(),
+                processedUuids);
+        addSection(
+                sections,
+                "Enumerations",
+                remaining(classList, processedUuids)
+                        .filter(ProfileDocumentationStructure::isEnumeration)
+                        .toList(),
+                processedUuids);
 
         return sections;
+    }
+
+    private static Stream<ClassUMLAdaptedDTO> remaining(
+            List<ClassUMLAdaptedDTO> classList, HashSet<UUID> processedUuids) {
+        return classList.stream().filter(c -> !processedUuids.contains(c.getUuid()));
+    }
+
+    private static void addSection(
+            List<Section> sections,
+            String title,
+            List<ClassUMLAdaptedDTO> classes,
+            HashSet<UUID> processedUuids) {
+        if (classes.isEmpty()) {
+            return;
+        }
+        sections.add(new Section(title, null, classes));
+        markProcessed(classes, processedUuids);
     }
 
     private static void markProcessed(
