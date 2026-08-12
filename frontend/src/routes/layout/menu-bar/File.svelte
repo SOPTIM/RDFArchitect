@@ -32,9 +32,9 @@
     import { editorState } from "$lib/sharedState.svelte.js";
 
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
+    import DocumentationExportDialog from "../../DocumentationExportDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
-    import HTMLExportDialog from "../../HTMLExportDialog.svelte";
     import ImportDialog from "../../ImportDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
@@ -53,7 +53,7 @@
     let showDeleteDialog = $state(false);
     let showDatasetDeleteDialog = $state(false);
     let showUserSettingDialog = $state(false);
-    let showHTMLExportDialog = $state(false);
+    let showDocumentationExportDialog = $state(false);
 
     let selectedDataset = $derived(editorState.selectedDataset.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
@@ -106,7 +106,7 @@
             shortcutStore.register(
                 "htmlExport",
                 ["ctrl", "alt", "h"],
-                () => (showHTMLExportDialog = true),
+                () => (showDocumentationExportDialog = true),
                 true,
             ),
         );
@@ -161,7 +161,7 @@
                     Constraints (SHACL)
                 </Menubar.Item.Button>
                 <Menubar.Item.Button
-                    onSelect={() => (showHTMLExportDialog = true)}
+                    onSelect={() => (showDocumentationExportDialog = true)}
                     faIcon={faDownload}
                     altText="Ctrl+Alt+H"
                 >
@@ -217,7 +217,7 @@
 <SnapshotDialog bind:showDialog={showSnapshotDialog} />
 <SHACLUploadDialog bind:showDialog={showSHACLUploadDialog} />
 <SHACLExportDialog bind:showDialog={showSHACLExportDialog} />
-<HTMLExportDialog bind:showDialog={showHTMLExportDialog} />
+<DocumentationExportDialog bind:showDialog={showDocumentationExportDialog} />
 <UserSettingDialog bind:showDialog={showUserSettingDialog} />
 
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
