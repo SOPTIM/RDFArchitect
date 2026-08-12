@@ -20,6 +20,7 @@
     import {
         Background,
         SvelteFlow,
+        useEdges,
         useNodes,
         useNodesInitialized,
         useSvelteFlow,
@@ -29,27 +30,47 @@
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
+    import SvelteFlowEdgeContextMenu from "$lib/rendering/svelteflow/components/contextmenu/SvelteFlowEdgeContextMenu.svelte";
+    import { EDGE_INTERACTION_CONFIG } from "$lib/rendering/svelteflow/interaction/edgeInteractionConfig.js";
     import {
         editorState,
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
-    import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
-    import EdgeMarkers from "./components/EdgeMarkers.svelte";
-    import InheritanceEdge from "./components/InheritanceEdge.svelte";
-    import SvelteFlowClassContextMenu from "./components/SvelteFlowClassContextMenu.svelte";
-    import SvelteFlowPaneContextMenu from "./components/SvelteFlowPaneContextMenu.svelte";
+    import SvelteFlowClassContextMenu from "./components/contextmenu/SvelteFlowClassContextMenu.svelte";
+    import SvelteFlowPaneContextMenu from "./components/contextmenu/SvelteFlowPaneContextMenu.svelte";
+    import AssociationEdge from "./components/edge/AssociationEdge.svelte";
+    import EdgeMarkers from "./components/edge/EdgeMarkers.svelte";
+    import {
+        getEdgeParams,
+        getClosestSegmentInsertionIndex,
+        distanceToPolyline,
+    } from "./components/edge/edgeUtils.ts";
+    import InheritanceEdge from "./components/edge/InheritanceEdge.svelte";
     import {
         decorateEdges,
         hasDefaultNodeLayout,
     } from "./diagram/diagramElements.js";
+    import {
+        createBendPoint,
+        insertBendPointAt,
+        removeBendPoint,
+        getBendPoints,
+        getSourceEndPoint,
+        getTargetEndPoint,
+        getInnerBendPoints,
+        toEdgePoints,
+        findBendPointAtPosition,
+        isEndPoint,
+    } from "./interaction/bendPointOperations.js";
     import { ContextMenuController } from "./interaction/contextMenus.svelte.js";
     import { DiagramSelectionController } from "./interaction/diagramSelection.svelte.js";
     import { NodeOrderController } from "./interaction/nodeOrder.svelte.js";
     import { PanController } from "./interaction/panController.svelte.js";
-    import { getLayoutedNodes } from "./layout/elkLayout.js";
+    import { layoutDiagram } from "./layout/elkLayout.js";
 
     let {
         nodes: inputNodes,
@@ -77,6 +98,8 @@
     const contextMenus = new ContextMenuController({
         getSvelteFlow: () => svelteFlowAPI?.svelteFlow,
         getIsReadOnly: () => isDatasetReadOnly,
+        getEdges: () => edges,
+        selectEdge: edgeId => selectOnlyEdge(edgeId),
     });
 
     const pan = new PanController({
@@ -87,6 +110,8 @@
     const selection = new DiagramSelectionController({
         getNodes: () => nodes,
         setNodes: value => (nodes = value),
+        getEdges: () => edges,
+        setEdges: value => (edges = value),
         pan,
         contextMenus,
         nodeOrder: nodeOrderCtrl,
@@ -98,19 +123,25 @@
     let edges = $state.raw([...inputEdges]);
     let isDatasetReadOnly = $state();
     let containerEl;
+    let lastCursorPosition = null;
 
     let lastSelectedDiagramId = null;
 
     let selectionZKey = "";
 
-    let nodesInit = useNodesInitialized();
+    let nodesInitialized = useNodesInitialized();
     let layouted = $state(false);
 
     let selectionZFrame = null;
     let boxSelecting = false;
+    // Tracks the last seen position per dragged node id, to compute the delta
+    // for moving attached end points live during a class drag.
+    let lastDragPositions = new Map();
+
+    let hasFittedInitially = false;
     let hasDefaultLayout = $derived(hasDefaultNodeLayout(nodes));
     let applyLayout = $derived(
-        nodesInit.current && !layouted && hasDefaultLayout,
+        nodesInitialized.current && !layouted && hasDefaultLayout,
     );
 
     $effect(() => {
@@ -161,16 +192,34 @@
         svelteFlowAPI = {
             svelteFlow: useSvelteFlow(),
             nodes: useNodes(),
+            edges: useEdges(),
+            useNodesInitialized: useNodesInitialized(),
         };
 
         const el = containerEl;
         el.addEventListener("pointerdown", onContainerPointerDown, true);
+        el.addEventListener("pointermove", onContainerPointerMove, true);
         el.addEventListener("click", onContainerClick, true);
         el.addEventListener("contextmenu", onContainerContextMenu, true);
+
+        const unregisterAddBendPoint = shortcutStore.register(
+            "diagram-add-bend-point-at-cursor",
+            ["ctrl", "q"],
+            addBendPointAtCursor,
+        );
+        const unregisterDeleteBendPoint = shortcutStore.register(
+            "diagram-delete-bend-point-at-cursor",
+            ["ctrl", "shift", "q"],
+            deleteBendPointAtCursor,
+        );
+
         return () => {
             el.removeEventListener("pointerdown", onContainerPointerDown, true);
+            el.removeEventListener("pointermove", onContainerPointerMove, true);
             el.removeEventListener("click", onContainerClick, true);
             el.removeEventListener("contextmenu", onContainerContextMenu, true);
+            unregisterAddBendPoint();
+            unregisterDeleteBendPoint();
         };
     });
 
@@ -181,9 +230,17 @@
         }
     });
 
+    /*TODO SEHR WICHTIG: AM ENDE AUFRÄUMEN
+        bend point code vllt auslagern, andere sachen, etc
+        es muss ja nicht alles hier im svelteFlowWrapper liegen*/
+
     function onContainerPointerDown(event) {
         selection.notifyPointerDown();
         pan.handleContainerPointerDown(event);
+    }
+
+    function onContainerPointerMove(event) {
+        lastCursorPosition = { x: event.clientX, y: event.clientY };
     }
 
     function onContainerClick(event) {
@@ -192,14 +249,40 @@
 
     function onContainerContextMenu(event) {
         pan.handleContainerContextMenuCapture(event);
+        if (event.defaultPrevented) {
+            return;
+        }
+        routeBendPointContextMenu(event);
     }
 
+    function routeBendPointContextMenu(event) {
+        const target = event.target;
+        if (!(target instanceof Element)) return;
+
+        const bendPointCircle = target.closest("[data-edge-id]");
+        if (!bendPointCircle) return;
+
+        const edgeId = bendPointCircle.getAttribute("data-edge-id");
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+
+        contextMenus.handleEdgeContextMenu({ event, edge });
+    }
     function applyAutoLayoutIfNeeded() {
         if (applyLayout) {
             applyELKLayout();
         } else if (!hasDefaultLayout) {
             isLoading = false;
+            fitInitiallyIfNeeded();
         }
+    }
+
+    function fitInitiallyIfNeeded() {
+        if (hasFittedInitially || !nodesInitialized.current) {
+            return;
+        }
+        hasFittedInitially = true;
+        untrack(() => fitViewIncludingBendPoints({ duration: 0 }));
     }
 
     async function refreshReadOnlyState() {
@@ -281,6 +364,7 @@
 
     function resetDiagramSyncState(hasDefaultLayoutAfterSync) {
         layouted = false;
+        hasFittedInitially = false;
 
         // Keep the loading state active until persisted positions or ELK layout
         if (!hasDefaultLayoutAfterSync) {
@@ -290,7 +374,7 @@
 
     function focusRequestedClassInDiagram() {
         const focusClassUUID = editorState.focusedClassUUID.getValue();
-        if (!focusClassUUID || !nodesInit.current) {
+        if (!focusClassUUID || !nodesInitialized.current) {
             return;
         }
 
@@ -318,6 +402,115 @@
     async function isReadOnly(datasetName) {
         const res = await bec.isReadOnly(datasetName);
         return await res.json();
+    }
+
+    function handleNodeDragStart({ nodes: draggedNodes }) {
+        lastDragPositions.clear();
+        for (const node of draggedNodes) {
+            lastDragPositions.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+            });
+        }
+    }
+
+    function handleNodeDrag({ nodes: draggedNodes }) {
+        const draggedNodeIds = new Set(draggedNodes.map(node => node.id));
+        const dragDelta = computeDragDelta(draggedNodes);
+        let anyPointMoved = false;
+
+        const updatedEdges = edges.map(edge => {
+            const points = edge.data?.bendPoints ?? [];
+            let nextPoints = points;
+
+            const sourceEnd = getSourceEndPoint(points);
+            const targetEnd = getTargetEndPoint(points);
+            if (sourceEnd || targetEnd) {
+                for (const node of draggedNodes) {
+                    const previous = lastDragPositions.get(node.id);
+                    if (!previous) continue;
+                    const dx = node.position.x - previous.x;
+                    const dy = node.position.y - previous.y;
+                    if (dx === 0 && dy === 0) continue;
+                    nextPoints = shiftEndPointsForNode(
+                        nextPoints,
+                        edge,
+                        node.id,
+                        dx,
+                        dy,
+                    );
+                }
+            }
+
+            const bothClassesDragged =
+                draggedNodeIds.has(edge.source) &&
+                draggedNodeIds.has(edge.target);
+            if (bothClassesDragged && dragDelta) {
+                nextPoints = shiftInnerBendPoints(
+                    nextPoints,
+                    dragDelta.dx,
+                    dragDelta.dy,
+                );
+            }
+
+            if (nextPoints === points) {
+                return edge;
+            }
+            anyPointMoved = true;
+            return {
+                ...edge,
+                data: { ...edge.data, bendPoints: nextPoints },
+            };
+        });
+
+        if (anyPointMoved) {
+            edges = updatedEdges;
+        }
+
+        for (const node of draggedNodes) {
+            lastDragPositions.set(node.id, {
+                x: node.position.x,
+                y: node.position.y,
+            });
+        }
+    }
+
+    function computeDragDelta(draggedNodes) {
+        for (const node of draggedNodes) {
+            const previous = lastDragPositions.get(node.id);
+            if (!previous) continue;
+            const dx = node.position.x - previous.x;
+            const dy = node.position.y - previous.y;
+            if (dx === 0 && dy === 0) continue;
+            return { dx, dy };
+        }
+        return null;
+    }
+
+    function shiftInnerBendPoints(points, dx, dy) {
+        return points.map(point =>
+            isEndPoint(point)
+                ? point
+                : { ...point, x: point.x + dx, y: point.y + dy },
+        );
+    }
+
+    function shiftEndPointsForNode(points, edge, movedNodeId, dx, dy) {
+        const sourceEnd = getSourceEndPoint(points);
+        const targetEnd = getTargetEndPoint(points);
+        const shiftSource = edge.source === movedNodeId && sourceEnd;
+        const shiftTarget = edge.target === movedNodeId && targetEnd;
+        if (!shiftSource && !shiftTarget) return points;
+
+        return points.map(point => {
+            if (shiftSource && point.id === sourceEnd.id) {
+                return { ...point, x: point.x + dx, y: point.y + dy };
+            }
+            if (shiftTarget && point.id === targetEnd.id) {
+                return { ...point, x: point.x + dx, y: point.y + dy };
+            }
+            return point;
+        });
     }
 
     function handleNodeMove(nodeMoveEvent) {
@@ -354,15 +547,278 @@
             );
         }
     }
+    function selectOnlyEdge(edgeId) {
+        edges = edges.map(edge => ({
+            ...edge,
+            selected: edge.id === edgeId,
+        }));
+    }
+
+    function updateEdgeBendPoints(edgeId, newBendPoints) {
+        patchEdgeData(edgeId, { bendPoints: newBendPoints });
+    }
+
+    function edgeEndpoints(edge, innerBendPoints) {
+        const svelteFlow = svelteFlowAPI?.svelteFlow;
+        if (!svelteFlow?.getInternalNode) return null;
+        const sourceNode = svelteFlow.getInternalNode(edge.source);
+        const targetNode = svelteFlow.getInternalNode(edge.target);
+        if (!sourceNode || !targetNode) return null;
+        const allPoints = edge.data?.bendPoints ?? [];
+        const params = getEdgeParams(
+            sourceNode,
+            targetNode,
+            0,
+            innerBendPoints,
+            {
+                source: getSourceEndPoint(allPoints),
+                target: getTargetEndPoint(allPoints),
+            },
+        );
+        return {
+            source: { x: params.sx, y: params.sy },
+            target: { x: params.tx, y: params.ty },
+        };
+    }
+
+    function handleEdgeAddBendPoint({ edgeId, flowPosition }) {
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const allPoints = getBendPoints(edge);
+        const innerBendPoints = getInnerBendPoints(allPoints);
+
+        const endpoints = edgeEndpoints(edge, innerBendPoints);
+        let insertionIndex = innerBendPoints.length;
+        if (endpoints) {
+            const orderedPoints = [
+                endpoints.source,
+                ...innerBendPoints,
+                endpoints.target,
+            ];
+            insertionIndex = getClosestSegmentInsertionIndex(
+                orderedPoints,
+                flowPosition,
+            );
+        }
+
+        const newBendPoints = insertBendPointAt(
+            allPoints,
+            insertionIndex,
+            createBendPoint(flowPosition.x, flowPosition.y),
+        );
+        updateEdgeBendPoints(edgeId, newBendPoints);
+    }
+
+    function handleEdgeDeleteBendPoint({ edgeId, bendPointId }) {
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const next = removeBendPoint(getBendPoints(edge), bendPointId);
+        updateEdgeBendPoints(edgeId, next);
+    }
+
+    function handleEdgeClearBendPoints({ edgeId }) {
+        patchEdgeData(edgeId, { bendPoints: [] });
+    }
+
+    function handleEdgeDeleteEndPoint({ edgeId, endPointId }) {
+        const edge = edges.find(e => e.id === edgeId);
+        if (!edge) return;
+        const points = edge.data?.bendPoints ?? [];
+        const nextPoints = points.filter(point => point.id !== endPointId);
+        patchEdgeData(edgeId, { bendPoints: nextPoints });
+    }
+
+    // Finds the edge whose drawn polyline is closest to the given flow position,
+    // within the configured edge hit radius. Considers association and inheritance
+    // edges (both use polyline routing). Returns the edge or null.
+    function findEdgeAtFlowPosition(flowPosition, hitRadius) {
+        let closestEdge = null;
+        let closestDistance = Infinity;
+        for (const edge of edges) {
+            if (edge.source === edge.target) continue;
+            const innerBendPoints = getInnerBendPoints(getBendPoints(edge));
+            const endpoints = edgeEndpoints(edge, innerBendPoints);
+            if (!endpoints) continue;
+            const orderedPoints = [
+                endpoints.source,
+                ...innerBendPoints,
+                endpoints.target,
+            ];
+            const distance = distanceToPolyline(flowPosition, orderedPoints);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestEdge = edge;
+            }
+        }
+        return closestDistance <= hitRadius ? closestEdge : null;
+    }
+
+    // Resolves the current cursor position to a flow position and a zoom-corrected
+    // hit radius, or null if the cursor position or SvelteFlow is unavailable.
+    function cursorFlowContext(baseHitRadiusPx) {
+        const svelteFlow = svelteFlowAPI?.svelteFlow;
+        if (!svelteFlow || !lastCursorPosition) return null;
+        const flowPosition = svelteFlow.screenToFlowPosition(
+            { x: lastCursorPosition.x, y: lastCursorPosition.y },
+            { snapToGrid: false },
+        );
+        const zoom = svelteFlow.getViewport?.().zoom ?? 1;
+        return { flowPosition, hitRadius: baseHitRadiusPx / (zoom || 1) };
+    }
+
+    // Ctrl+Q: creates a bend point on the edge closest to the cursor. Selects that
+    // edge if it was not selected yet.
+    function addBendPointAtCursor() {
+        if (isDatasetReadOnly) return;
+        const context = cursorFlowContext(
+            EDGE_INTERACTION_CONFIG.edgeHitRadiusPx,
+        );
+        if (!context) return;
+        const edge = findEdgeAtFlowPosition(
+            context.flowPosition,
+            context.hitRadius,
+        );
+        if (!edge) return;
+
+        if (!edge.selected) selectOnlyEdge(edge.id);
+        handleEdgeAddBendPoint({
+            edgeId: edge.id,
+            flowPosition: context.flowPosition,
+        });
+    }
+
+    // Ctrl+Shift+Q: deletes the bend or end point under the cursor, across all
+    // edges. Selects the affected edge if it was not selected yet.
+    function deleteBendPointAtCursor() {
+        if (isDatasetReadOnly) return;
+        const context = cursorFlowContext(
+            EDGE_INTERACTION_CONFIG.pointHitRadiusPx,
+        );
+        if (!context) return;
+
+        for (const edge of edges) {
+            const hitPoint = findBendPointAtPosition(
+                getBendPoints(edge),
+                context.flowPosition,
+                context.hitRadius,
+            );
+            if (!hitPoint) continue;
+
+            if (!edge.selected) selectOnlyEdge(edge.id);
+            if (isEndPoint(hitPoint)) {
+                handleEdgeDeleteEndPoint({
+                    edgeId: edge.id,
+                    endPointId: hitPoint.id,
+                });
+            } else {
+                handleEdgeDeleteBendPoint({
+                    edgeId: edge.id,
+                    bendPointId: hitPoint.id,
+                });
+            }
+            return;
+        }
+    }
+
+    function patchEdgeData(edgeId, dataPatch) {
+        edges = edges.map(edge =>
+            edge.id === edgeId
+                ? { ...edge, data: { ...edge.data, ...dataPatch } }
+                : edge,
+        );
+    }
 
     export async function applyELKLayout() {
         if (!isLoading) isLoading = true;
         layouted = true;
-        const layoutedNodes = await getLayoutedNodes(nodes, edges);
+        const { nodes: layoutedNodes, layoutedEdges } = await layoutDiagram(
+            nodes,
+            edges,
+        );
         nodes = [...layoutedNodes];
+        applyLayoutedEdges(layoutedEdges);
         updateNodePositions(nodes);
-        await svelteFlowAPI.svelteFlow.fitView();
+        await tick();
+        await fitViewIncludingBendPoints();
         isLoading = false;
+    }
+
+    // Applies ELK's computed routing to the association edges. Source/target
+    // points become sided end points, interior points become bend points.
+    // Inheritance edges are skipped until they move to the shared routing.
+    function applyLayoutedEdges(layoutedEdges) {
+        edges = edges.map(edge => {
+            const routingPoints = layoutedEdges.get(edge.id);
+            if (!routingPoints || routingPoints.length === 0) {
+                return edge;
+            }
+            return {
+                ...edge,
+                data: {
+                    ...edge.data,
+                    bendPoints: toEdgePoints(routingPoints),
+                },
+            };
+        });
+    }
+
+    export async function fitViewIncludingBendPoints({ duration = 400 } = {}) {
+        const bounds = getDiagramBounds();
+
+        if (!bounds) {
+            await svelteFlowAPI.svelteFlow.fitView({ duration });
+            return;
+        }
+
+        return svelteFlowAPI.svelteFlow.fitBounds(bounds, {
+            padding: 0.1, //matches the same padding of SvelteFlows fitView
+            duration,
+        });
+    }
+
+    function getDiagramBounds() {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+
+        for (const node of nodes) {
+            const internalNode = svelteFlowAPI.svelteFlow.getInternalNode(
+                node.id,
+            );
+            const position =
+                internalNode?.internals?.positionAbsolute ?? node.position;
+            const width = internalNode?.measured?.width ?? 0;
+            const height = internalNode?.measured?.height ?? 0;
+            minX = Math.min(minX, position.x);
+            minY = Math.min(minY, position.y);
+            maxX = Math.max(maxX, position.x + width);
+            maxY = Math.max(maxY, position.y + height);
+        }
+
+        for (const edge of edges) {
+            for (const bendPoint of edge.data?.bendPoints ?? []) {
+                minX = Math.min(minX, bendPoint.x);
+                minY = Math.min(minY, bendPoint.y);
+                maxX = Math.max(maxX, bendPoint.x);
+                maxY = Math.max(maxY, bendPoint.y);
+            }
+        }
+        if (
+            !Number.isFinite(minX) ||
+            !Number.isFinite(minY) ||
+            !Number.isFinite(maxX) ||
+            !Number.isFinite(maxY)
+        ) {
+            return null;
+        }
+
+        return {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+        };
     }
 </script>
 
@@ -382,7 +838,6 @@
         {nodeTypes}
         {edgeTypes}
         nodesDraggable={!isDatasetReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
-        fitView
         elementsSelectable={true}
         nodesFocusable={false}
         zIndexMode={"manual"}
@@ -400,10 +855,12 @@
             selection.handleSelectionEnd();
             applySelectionZIndices();
         }}
-        onnodedragstart={({ node }) => {
+        onnodedragstart={e => {
             selection.notifyNodeDragStart();
-            nodeOrderCtrl.bringToFrontTemporarily(node?.id);
+            nodeOrderCtrl.bringToFrontTemporarily(e.node?.id);
+            handleNodeDragStart(e);
         }}
+        onnodedrag={e => handleNodeDrag(e)}
         onnodedragstop={e => {
             selection.notifyNodeDragStop();
             handleNodeMove(e);
@@ -414,7 +871,7 @@
         selectionKey={"Shift"}
         connectionMode={"loose"}
         multiSelectionKey={"Shift"}
-        deleteKeyCode={null}
+        deleteKey={null}
         minZoom={0.1}
         maxZoom={5}
     >
@@ -447,6 +904,15 @@
         onMoveClass={e => nodeOrderCtrl.moveClass(e)}
         onSetLayer={e => nodeOrderCtrl.setLayer(e)}
         onPersistLayer={e => nodeOrderCtrl.persistLayer(e)}
+    />
+    <SvelteFlowEdgeContextMenu
+        request={contextMenus.edgeRequest}
+        disabled={isDatasetReadOnly || !contextMenus.edgeRequest}
+        onClose={() => contextMenus.close()}
+        onAddBendPoint={handleEdgeAddBendPoint}
+        onDeleteBendPoint={handleEdgeDeleteBendPoint}
+        onDeleteEndPoint={handleEdgeDeleteEndPoint}
+        onClearBendPoints={handleEdgeClearBendPoints}
     />
 </div>
 

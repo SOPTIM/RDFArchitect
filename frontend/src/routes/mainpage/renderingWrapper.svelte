@@ -250,7 +250,7 @@
         if (renderingFormat === MERMAID_FORMAT) {
             mermaidWrapper.resetTransform();
         } else if (renderingFormat === SVELTEFLOW_FORMAT) {
-            svelteFlowAPI.svelteFlow.fitView();
+            svelteFlowWrapper.fitViewIncludingBendPoints();
         }
     }
 </script>
@@ -267,7 +267,7 @@
                             variant="default"
                             callOnClick={() => handleResetView()}
                         >
-                            Reset View
+                            Fit View
                         </ButtonControl>
                     </div>
                     {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
