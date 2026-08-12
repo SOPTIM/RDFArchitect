@@ -29,5 +29,6 @@ public class AttributeDTO {
     private String type;
     private String multiplicity;
     private String graphUri;
+    private String graphKeyword;
     private String color;
 }

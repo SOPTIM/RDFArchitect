@@ -90,7 +90,18 @@
             ...(enumEntries ?? []),
             ...inheritedProps,
         ];
-        return [...new Set(allProps.map(graphUriOf))].sort();
+
+        const graphUriMap = new Map();
+        for (const prop of allProps) {
+            const graphUri = graphUriOf(prop);
+            if (!graphUriMap.has(graphUri)) {
+                graphUriMap.set(graphUri, prop.graphKeyword);
+            }
+        }
+
+        return [...graphUriMap.entries()]
+            .map(([graphUri, keyword]) => ({ graphUri, keyword }))
+            .sort((a, b) => a.graphUri.localeCompare(b.graphUri));
     }
 
     function superGroupsForGraph(graphUri) {
@@ -110,9 +121,9 @@
         const showInherited = userSettings.get("showInheritedProperties", true);
 
         return collectGraphUris()
-            .map(graphUri => ({
+            .map(({ graphUri, keyword }) => ({
                 graphUri,
-                graphName: getGraphLabel(graphUri),
+                graphName: getGraphLabel(graphUri, keyword),
                 superGroups: superGroupsForGraph(graphUri),
                 ownAttributes: propsForGraph(attributes, graphUri),
                 ownEnumEntries: propsForGraph(enumEntries, graphUri),
@@ -125,7 +136,10 @@
             );
     }
 
-    function getGraphLabel(graphURI) {
+    function getGraphLabel(graphURI, keyword) {
+        if (keyword) {
+            return keyword;
+        }
         try {
             return new URI(graphURI).suffix;
         } catch {

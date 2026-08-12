@@ -37,6 +37,7 @@ import org.rdfarchitect.api.dto.rendering.svelteflow.sub.SuperClassDTO;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
 import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -59,6 +60,7 @@ public class RenderCrossProfileDiagramSvelteFlowService
         implements RenderCrossProfileDiagramUseCase {
 
     private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
+    private final ListGraphsUseCase listGraphsUseCase;
 
     // CONSTANTS FOR SVELTEFLOW CUSTOM NODE/EDGE TYPES
     private static final String CLASS_NODE_TYPE = "class";
@@ -81,18 +83,37 @@ public class RenderCrossProfileDiagramSvelteFlowService
             classUriToUUIDMap.put(mergedClass.getClassUri(), mergedClass.getUuid());
         }
 
-        var nodes = assembleNodeDTOList(diagram, layoutData);
-        var edges = assembleEdgeDTOList(diagram, classUriToUUIDMap);
+        Map<String, String> graphUriToKeywordMap = buildGraphUriToKeywordMap(datasetName);
+
+        var nodes = assembleNodeDTOList(diagram, layoutData, graphUriToKeywordMap);
+        var edges = assembleEdgeDTOList(diagram, classUriToUUIDMap, graphUriToKeywordMap);
 
         return SvelteFlowDTO.builder().nodes(nodes).edges(edges).build();
     }
 
+    private Map<String, String> buildGraphUriToKeywordMap(String datasetName) {
+        Map<String, String> map = new HashMap<>();
+        var graphs = listGraphsUseCase.listGraphs(datasetName);
+        if (!CollectionUtils.isEmpty(graphs)) {
+            for (var graph : graphs) {
+                if (graph.getUri() != null) {
+                    map.put(graph.getUri().toString(), graph.getKeyword());
+                }
+            }
+        }
+        return map;
+    }
+
     /** Assembles a list of NodeDTOs from all MergedClassDTOs in the diagram. */
     private List<NodeDTO> assembleNodeDTOList(
-            CrossProfileDiagramDTO diagram, RenderingLayoutData layoutData) {
+            CrossProfileDiagramDTO diagram,
+            RenderingLayoutData layoutData,
+            Map<String, String> graphUriToKeywordMap) {
         List<NodeDTO> nodeDTOs = new ArrayList<>();
         for (var mergedClass : diagram.getClasses()) {
-            nodeDTOs.add(assembleNodeDTO(mergedClass, diagram.getClasses(), layoutData));
+            nodeDTOs.add(
+                    assembleNodeDTO(
+                            mergedClass, diagram.getClasses(), layoutData, graphUriToKeywordMap));
         }
         return nodeDTOs;
     }
@@ -101,7 +122,8 @@ public class RenderCrossProfileDiagramSvelteFlowService
     private NodeDTO assembleNodeDTO(
             MergedClassDTO mergedClass,
             List<MergedClassDTO> allClasses,
-            RenderingLayoutData layoutData) {
+            RenderingLayoutData layoutData,
+            Map<String, String> graphUriToKeywordMap) {
         var dop =
                 layoutData != null && layoutData.getClassLayoutingData() != null
                         ? layoutData.getClassLayoutingData().get(mergedClass.getUuid())
@@ -117,12 +139,12 @@ public class RenderCrossProfileDiagramSvelteFlowService
                         : PositionDTO.builder().x(0).y(0).z(0).build();
 
         var stereotypes = getClassStereotypes(mergedClass);
-        var attributes = getClassAttributes(mergedClass);
-        var enumEntries = getClassEnumEntries(mergedClass);
+        var attributes = getClassAttributes(mergedClass, graphUriToKeywordMap);
+        var enumEntries = getClassEnumEntries(mergedClass, graphUriToKeywordMap);
 
         String graphUri =
                 !CollectionUtils.isEmpty(mergedClass.getSources())
-                        ? mergedClass.getSources().get(0).getGraphUri()
+                        ? mergedClass.getSources().getFirst().getGraph().getUri().toString()
                         : null;
 
         var nodeDataDTO =
@@ -133,7 +155,8 @@ public class RenderCrossProfileDiagramSvelteFlowService
                         .stereotypes(stereotypes)
                         .attributes(attributes)
                         .enumEntries(enumEntries)
-                        .superClasses(getClassSuperClasses(mergedClass, allClasses))
+                        .superClasses(
+                                getClassSuperClasses(mergedClass, allClasses, graphUriToKeywordMap))
                         .build();
 
         return NodeDTO.builder()
@@ -180,7 +203,8 @@ public class RenderCrossProfileDiagramSvelteFlowService
     }
 
     /** Returns a list of AttributeDTOs from the GraphSourced attributes of a MergedClassDTO. */
-    private List<AttributeDTO> getClassAttributes(MergedClassDTO mergedClass) {
+    private List<AttributeDTO> getClassAttributes(
+            MergedClassDTO mergedClass, Map<String, String> graphUriToKeywordMap) {
         List<AttributeDTO> attributeDTOs = new ArrayList<>();
         if (CollectionUtils.isEmpty(mergedClass.getAttributes())) {
             return attributeDTOs;
@@ -194,6 +218,7 @@ public class RenderCrossProfileDiagramSvelteFlowService
                             .type(attr.getDataType() != null ? attr.getDataType().getLabel() : null)
                             .multiplicity(attr.getMultiplicity())
                             .graphUri(graphSourced.getGraphUri())
+                            .graphKeyword(graphUriToKeywordMap.get(graphSourced.getGraphUri()))
                             .color(graphSourced.getGraphColor())
                             .build());
         }
@@ -201,7 +226,8 @@ public class RenderCrossProfileDiagramSvelteFlowService
     }
 
     /** Returns a list of EnumEntryDTOs from the GraphSourced enum entries of a MergedClassDTO. */
-    private List<EnumEntryDTO> getClassEnumEntries(MergedClassDTO mergedClass) {
+    private List<EnumEntryDTO> getClassEnumEntries(
+            MergedClassDTO mergedClass, Map<String, String> graphUriToKeywordMap) {
         List<EnumEntryDTO> enumEntries = new ArrayList<>();
         if (CollectionUtils.isEmpty(mergedClass.getEnumEntries())) {
             return enumEntries;
@@ -213,6 +239,7 @@ public class RenderCrossProfileDiagramSvelteFlowService
                     EnumEntryDTO.builder()
                             .label(entry.getLabel())
                             .graphUri(graphSourced.getGraphUri())
+                            .graphKeyword(graphUriToKeywordMap.get(graphSourced.getGraphUri()))
                             .color(graphSourced.getGraphColor())
                             .build());
         }
@@ -220,7 +247,9 @@ public class RenderCrossProfileDiagramSvelteFlowService
     }
 
     private List<SuperClassDTO> getClassSuperClasses(
-            MergedClassDTO mergedClass, List<MergedClassDTO> allClasses) {
+            MergedClassDTO mergedClass,
+            List<MergedClassDTO> allClasses,
+            Map<String, String> graphUriToKeywordMap) {
         var superClassDTOs = new ArrayList<SuperClassDTO>();
         var visited = new HashSet<String>();
         visited.add(mergedClass.getClassUri());
@@ -243,8 +272,8 @@ public class RenderCrossProfileDiagramSvelteFlowService
                         SuperClassDTO.builder()
                                 .uuid(resolved.getUuid())
                                 .label(resolved.getLabel())
-                                .attributes(getClassAttributes(resolved))
-                                .enumEntries(getClassEnumEntries(resolved))
+                                .attributes(getClassAttributes(resolved, graphUriToKeywordMap))
+                                .enumEntries(getClassEnumEntries(resolved, graphUriToKeywordMap))
                                 .build());
                 queue.addAll(resolved.getSuperClasses());
             } else {
@@ -276,10 +305,13 @@ public class RenderCrossProfileDiagramSvelteFlowService
 
     /** Assembles all edges (inheritance and associations) for the diagram. */
     private List<EdgeDTO> assembleEdgeDTOList(
-            CrossProfileDiagramDTO diagram, Map<String, UUID> classUriToUUIDMap) {
+            CrossProfileDiagramDTO diagram,
+            Map<String, UUID> classUriToUUIDMap,
+            Map<String, String> graphUriToKeywordMap) {
         List<EdgeDTO> edges = new ArrayList<>();
         edges.addAll(assembleInheritanceEdgeDTOList(diagram, classUriToUUIDMap));
-        edges.addAll(assembleAssociationEdgeDTOList(diagram, classUriToUUIDMap));
+        edges.addAll(
+                assembleAssociationEdgeDTOList(diagram, classUriToUUIDMap, graphUriToKeywordMap));
         return edges;
     }
 
@@ -329,7 +361,9 @@ public class RenderCrossProfileDiagramSvelteFlowService
      * sorted UUID pair.
      */
     private List<EdgeDTO> assembleAssociationEdgeDTOList(
-            CrossProfileDiagramDTO diagram, Map<String, UUID> classUriToUUIDMap) {
+            CrossProfileDiagramDTO diagram,
+            Map<String, UUID> classUriToUUIDMap,
+            Map<String, String> graphUriToKeywordMap) {
         List<EdgeDTO> associationEdges = new ArrayList<>();
         var handledPairs = new HashSet<String>();
 
@@ -386,6 +420,7 @@ public class RenderCrossProfileDiagramSvelteFlowService
                                 .useToAssociation(from.isAssociationUsed())
                                 .useFromAssociation(to.isAssociationUsed())
                                 .graphUri(graphSourced.getGraphUri())
+                                .graphKeyword(graphUriToKeywordMap.get(graphSourced.getGraphUri()))
                                 .color(graphSourced.getGraphColor())
                                 .build();
 
