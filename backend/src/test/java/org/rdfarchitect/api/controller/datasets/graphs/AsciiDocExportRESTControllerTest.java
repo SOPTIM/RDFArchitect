@@ -46,7 +46,7 @@ class AsciiDocExportRESTControllerTest {
     private void stubExport(String graphURI, String expandedGraphURI) {
         when(expandURIUseCase.expandUri("dataset", graphURI)).thenReturn(expandedGraphURI);
         when(exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier("dataset", expandedGraphURI), "png"))
+                        new GraphIdentifier("dataset", expandedGraphURI), "png", false))
                 .thenReturn("== Concrete Classes".getBytes(StandardCharsets.UTF_8));
     }
 
@@ -54,7 +54,8 @@ class AsciiDocExportRESTControllerTest {
     void getAsciiDocExport_namesTheFileAfterTheGraph() {
         stubExport("EQ", "http://example.com/EQ");
 
-        var response = controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png");
+        var response =
+                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("EQ.adoc");
@@ -64,7 +65,8 @@ class AsciiDocExportRESTControllerTest {
     void getAsciiDocExport_exposesTheContentDispositionToTheBrowser() {
         stubExport("EQ", "http://example.com/EQ");
 
-        var response = controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png");
+        var response =
+                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getAccessControlExposeHeaders())
                 .containsExactly(HttpHeaders.CONTENT_DISPOSITION);
@@ -75,7 +77,8 @@ class AsciiDocExportRESTControllerTest {
         stubExport("default", "default");
 
         var response =
-                controller.getAsciiDocExport(HttpHeaders.ORIGIN, "dataset", "default", "png");
+                controller.getAsciiDocExport(
+                        HttpHeaders.ORIGIN, "dataset", "default", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("default.adoc");

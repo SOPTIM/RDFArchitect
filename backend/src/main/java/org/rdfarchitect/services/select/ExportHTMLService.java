@@ -39,14 +39,22 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
     private final GetClassListUseCase getClassListUseCase;
 
     @Override
-    public byte[] exportGraphAsHTML(GraphIdentifier graphIdentifier, String fileEnding) {
+    public byte[] exportGraphAsHTML(
+            GraphIdentifier graphIdentifier, String fileEnding, boolean embedDiagrams) {
 
         var classList = getClassListUseCase.getFullClassList(graphIdentifier);
+        var diagrams = new DiagramOptions(fileEnding, embedDiagrams);
 
-        String html = header() + buildBody(classList, fileEnding) + "</html>";
+        String html = header() + buildBody(classList, diagrams) + "</html>";
 
         return html.getBytes(StandardCharsets.UTF_8);
     }
+
+    /**
+     * @param fileEnding file ending of the package diagram files
+     * @param embedded whether the diagram is shown in the document instead of only being linked
+     */
+    private record DiagramOptions(String fileEnding, boolean embedded) {}
 
     private String header() {
         return "<!DOCTYPE html>\n"
@@ -224,6 +232,16 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
                 color: var(--color-blue);
             }
 
+            img.diagram {
+                display: block;
+                max-width: 100%;
+                height: auto;
+                background: var(--color-white);
+                border: 1px solid var(--color-border);
+                border-radius: 4px;
+                margin: 0 0 1rem 0;
+            }
+
             p.comment {
                 color: var(--color-default-text);
                 background: var(--color-background-subtle);
@@ -305,10 +323,10 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
             </style>""";
     }
 
-    private String buildBody(List<ClassUMLAdaptedDTO> classList, String fileEnding) {
+    private String buildBody(List<ClassUMLAdaptedDTO> classList, DiagramOptions diagrams) {
         return "<body>\n"
                 + buildStereotypeList()
-                + buildStereotypeSections(classList, fileEnding)
+                + buildStereotypeSections(classList, diagrams)
                 + "</body>";
     }
 
@@ -325,14 +343,14 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         return builder.toString();
     }
 
-    private String buildStereotypeSections(List<ClassUMLAdaptedDTO> classList, String fileEnding) {
+    private String buildStereotypeSections(
+            List<ClassUMLAdaptedDTO> classList, DiagramOptions diagrams) {
         var builder = new StringBuilder();
         for (var section : ProfileDocumentationStructure.buildSections(classList)) {
             builder.append("<h1>").append(section.title()).append("</h1>\n");
             for (var classUMLAdaptedDTO : section.classes()) {
                 builder.append(
-                        buildClass(
-                                section.stereotype(), classUMLAdaptedDTO, classList, fileEnding));
+                        buildClass(section.stereotype(), classUMLAdaptedDTO, classList, diagrams));
             }
         }
         return builder.toString();
@@ -342,7 +360,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
             String stereotype,
             ClassUMLAdaptedDTO classUMLAdaptedDTO,
             List<ClassUMLAdaptedDTO> fullClassList,
-            String fileEnding) {
+            DiagramOptions diagrams) {
         var builder = new StringBuilder();
         var label = escape(classUMLAdaptedDTO.getLabel());
 
@@ -361,8 +379,7 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         builder.append("</h2>\n");
         builder.append("</a>\n");
 
-        builder.append(
-                buildPackageReference(classUMLAdaptedDTO.getBelongsToCategory(), fileEnding));
+        builder.append(buildPackageReference(classUMLAdaptedDTO.getBelongsToCategory(), diagrams));
 
         if (classUMLAdaptedDTO.getComment() != null && !classUMLAdaptedDTO.getComment().isEmpty()) {
             builder.append("<p class=\"comment\">")
@@ -382,17 +399,37 @@ public class ExportHTMLService implements ExportGraphHTMLUseCase {
         return builder.toString();
     }
 
-    private String buildPackageReference(BelongsToCategoryDTO category, String fileEnding) {
+    private String buildPackageReference(BelongsToCategoryDTO category, DiagramOptions diagrams) {
         if (category == null) {
             return "";
         }
-        return "<p class=\"package\"><a href=\"images/"
-                + escape(category.getUuid() != null ? category.getUuid().toString() : "default")
-                + "."
-                + fileEnding
-                + "\" target=\"_blank\">"
-                + escape(category.getLabel())
-                + " </a></p>\n";
+        var image =
+                "images/"
+                        + escape(
+                                category.getUuid() != null
+                                        ? category.getUuid().toString()
+                                        : "default")
+                        + "."
+                        + diagrams.fileEnding();
+        var label = escape(category.getLabel());
+
+        var builder = new StringBuilder();
+        builder.append("<p class=\"package\"><a href=\"")
+                .append(image)
+                .append("\" target=\"_blank\">")
+                .append(label)
+                .append(" </a></p>\n");
+        if (diagrams.embedded()) {
+            // the diagram is linked as well, so that it can be opened in its full size
+            builder.append("<a href=\"")
+                    .append(image)
+                    .append("\" target=\"_blank\"><img class=\"diagram\" src=\"")
+                    .append(image)
+                    .append("\" alt=\"")
+                    .append(label)
+                    .append("\"></a>\n");
+        }
+        return builder.toString();
     }
 
     private String buildNativeMembers(String stereotype, ClassUMLAdaptedDTO classUMLAdaptedDTO) {

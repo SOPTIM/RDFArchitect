@@ -51,8 +51,16 @@ class ExportHTMLServiceTest {
     @InjectMocks private ExportHTMLService exportHTMLService;
 
     private String exportHtml(List<ClassUMLAdaptedDTO> classList) {
+        return exportHtml(classList, false);
+    }
+
+    private String exportHtmlWithEmbeddedDiagrams(List<ClassUMLAdaptedDTO> classList) {
+        return exportHtml(classList, true);
+    }
+
+    private String exportHtml(List<ClassUMLAdaptedDTO> classList, boolean embedDiagrams) {
         when(getClassListUseCase.getFullClassList(GRAPH_IDENTIFIER)).thenReturn(classList);
-        byte[] result = exportHTMLService.exportGraphAsHTML(GRAPH_IDENTIFIER, "png");
+        byte[] result = exportHTMLService.exportGraphAsHTML(GRAPH_IDENTIFIER, "png", embedDiagrams);
         return new String(result, StandardCharsets.UTF_8);
     }
 
@@ -157,6 +165,26 @@ class ExportHTMLServiceTest {
 
         assertThat(html).contains("images/" + categoryUuid + ".png");
         assertThat(html).contains(">MyPackage </a>");
+        assertThat(html).doesNotContain("<img");
+    }
+
+    @Test
+    void exportGraphAsHTML_embeddedDiagrams_showsTheDiagramBelowThePackageLink() {
+        var categoryUuid = UUID.randomUUID();
+        var category = BelongsToCategoryDTO.builder().label("MyPackage").uuid(categoryUuid).build();
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .belongsToCategory(category)
+                        .build();
+
+        var html = exportHtmlWithEmbeddedDiagrams(List.of(clazz));
+
+        assertThat(html)
+                .contains(
+                        "<img class=\"diagram\" src=\"images/"
+                                + categoryUuid
+                                + ".png\" alt=\"MyPackage\">");
     }
 
     @Test

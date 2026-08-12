@@ -60,7 +60,8 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
     private final GetClassListUseCase getClassListUseCase;
 
     @Override
-    public byte[] exportGraphAsAsciiDoc(GraphIdentifier graphIdentifier, String fileEnding) {
+    public byte[] exportGraphAsAsciiDoc(
+            GraphIdentifier graphIdentifier, String fileEnding, boolean embedDiagrams) {
         var classList = getClassListUseCase.getFullClassList(graphIdentifier);
         var context =
                 new Context(
@@ -69,7 +70,8 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
                                 .map(ClassUMLAdaptedDTO::getLabel)
                                 .filter(label -> label != null && !label.isEmpty())
                                 .collect(Collectors.toUnmodifiableSet()),
-                        fileEnding);
+                        fileEnding,
+                        embedDiagrams);
 
         var document = buildStereotypeList() + buildSections(classList, context);
 
@@ -148,10 +150,18 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
             return "";
         }
         var image =
-                (category.getUuid() != null ? category.getUuid().toString() : DEFAULT_NAME)
+                "images/"
+                        + (category.getUuid() != null
+                                ? category.getUuid().toString()
+                                : DEFAULT_NAME)
                         + "."
                         + context.fileEnding();
-        return "link:images/" + image + "[" + escape(category.getLabel()) + "]\n\n";
+        var label = escape(category.getLabel());
+
+        if (context.embedDiagrams()) {
+            return "." + label + "\nimage::" + image + "[" + label + "]\n\n";
+        }
+        return "link:" + image + "[" + label + "]\n\n";
     }
 
     private String buildNativeMembers(
@@ -356,8 +366,14 @@ public class ExportAsciiDocService implements ExportGraphAsciiDocUseCase {
      * @param anchorPrefix prefix of all anchors of this document
      * @param exportedLabels labels of all classes contained in this export
      * @param fileEnding file ending of the package diagram files
+     * @param embedDiagrams whether the package diagram is shown in the document instead of only
+     *     being linked
      */
-    private record Context(String anchorPrefix, Set<String> exportedLabels, String fileEnding) {
+    private record Context(
+            String anchorPrefix,
+            Set<String> exportedLabels,
+            String fileEnding,
+            boolean embedDiagrams) {
 
         String anchorOf(String label) {
             return anchorPrefix + "_" + identifier(label == null ? "" : label);

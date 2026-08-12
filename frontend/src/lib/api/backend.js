@@ -747,8 +747,13 @@ export class BackendConnection {
         });
     }
 
-    async getHTMLExport(datasetName, graphURI, fileEnding) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport/${encodeURIComponent(fileEnding)}`;
+    async getHTMLExport(
+        datasetName,
+        graphURI,
+        fileEnding,
+        embedDiagrams = false,
+    ) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
         return await fetch(url, {
             method: "GET",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -757,8 +762,13 @@ export class BackendConnection {
         });
     }
 
-    async getAsciiDocExport(datasetName, graphURI, fileEnding) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/asciidocexport/${encodeURIComponent(fileEnding)}`;
+    async getAsciiDocExport(
+        datasetName,
+        graphURI,
+        fileEnding,
+        embedDiagrams = false,
+    ) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/asciidocexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
         return await fetch(url, {
             method: "GET",
             headers: new Headers({ "Content-Type": "application/json" }),

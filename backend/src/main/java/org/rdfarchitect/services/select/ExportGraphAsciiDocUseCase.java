@@ -21,5 +21,11 @@ import org.rdfarchitect.database.GraphIdentifier;
 
 public interface ExportGraphAsciiDocUseCase {
 
-    byte[] exportGraphAsAsciiDoc(GraphIdentifier graphIdentifier, String fileEnding);
+    /**
+     * @param fileEnding file ending of the package diagram files
+     * @param embedDiagrams whether the package diagram is shown in the document instead of only
+     *     being linked
+     */
+    byte[] exportGraphAsAsciiDoc(
+            GraphIdentifier graphIdentifier, String fileEnding, boolean embedDiagrams);
 }

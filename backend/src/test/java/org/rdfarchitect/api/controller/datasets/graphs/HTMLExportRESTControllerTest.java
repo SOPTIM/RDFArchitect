@@ -46,7 +46,7 @@ class HTMLExportRESTControllerTest {
     private void stubExport(String graphURI, String expandedGraphURI) {
         when(expandURIUseCase.expandUri("dataset", graphURI)).thenReturn(expandedGraphURI);
         when(exportGraphHTMLUseCase.exportGraphAsHTML(
-                        new GraphIdentifier("dataset", expandedGraphURI), "png"))
+                        new GraphIdentifier("dataset", expandedGraphURI), "png", false))
                 .thenReturn("<html></html>".getBytes(StandardCharsets.UTF_8));
     }
 
@@ -54,7 +54,7 @@ class HTMLExportRESTControllerTest {
     void getHTMLExport_namesTheFileAfterTheGraph() {
         stubExport("EQ", "http://example.com/EQ");
 
-        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png");
+        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("EQ.html");
@@ -64,7 +64,7 @@ class HTMLExportRESTControllerTest {
     void getHTMLExport_exposesTheContentDispositionToTheBrowser() {
         stubExport("EQ", "http://example.com/EQ");
 
-        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png");
+        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "EQ", "png", false);
 
         assertThat(response.getHeaders().getAccessControlExposeHeaders())
                 .containsExactly(HttpHeaders.CONTENT_DISPOSITION);
@@ -74,7 +74,8 @@ class HTMLExportRESTControllerTest {
     void getHTMLExport_defaultGraph_fallsBackToDefaultFileName() {
         stubExport("default", "default");
 
-        var response = controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "default", "png");
+        var response =
+                controller.getHTMLExport(HttpHeaders.ORIGIN, "dataset", "default", "png", false);
 
         assertThat(response.getHeaders().getContentDisposition().getFilename())
                 .isEqualTo("default.html");

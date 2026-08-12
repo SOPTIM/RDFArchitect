@@ -25,8 +25,9 @@ See [SHACL — Exporting](./shacl#exporting-shacl). TTL by default.
 
 - **Document Format** — HTML (`.html`) or AsciiDoc (`.adoc`). Both describe the same content.
 - **Diagram File Type** — PNG or SVG for the package diagrams.
+- **Package Diagram** — whether a class only links to the diagram of its package, or shows it as a picture in the document. A package diagram appears once per class of that package, so showing the pictures makes for a considerably longer document.
 
-The generated ZIP file contains the document plus an `images/` folder with one diagram per package. The documentation lists all classes, categorized by stereotype, each with its package diagram, comment, native members, inherited members and — for enumerations — its values.
+The generated ZIP file contains the document plus an `images/` folder with one diagram per package; the diagram files are named after their package. The documentation lists all classes, categorized by stereotype, followed by the concrete classes, the abstract classes and the enumerations. Each class comes with its package diagram, comment, native members, inherited members and — for enumerations — its values.
 
 ### AsciiDoc output
 
@@ -40,7 +41,7 @@ The AsciiDoc export is meant for documentation toolchains (Asciidoctor, Antora, 
 
 - Every class gets an anchor prefixed with the name of the exported graph, for example `[[EQ_BoundaryPoint]]`. This keeps anchors unique when several profiles are included in the same document, and lets you reference a class from your own text with `xref:EQ_BoundaryPoint[]`.
 - Types and super classes are cross-referenced (`xref:`) when the referenced class is part of the same export; classes outside the export are written as plain text so that no reference dangles.
-- Package diagrams are referenced as `link:images/<package-uuid>.<png|svg>[<package>]`. Keep the `images/` folder next to the `.adoc` file, or point Asciidoctor at it with `:imagesdir:`.
+- Package diagrams are referenced as `link:images/<package>.<png|svg>[<package>]`, or as an `image::` block when the dialog is set to show them in the document. Keep the `images/` folder next to the `.adoc` file, or point Asciidoctor at it with `:imagesdir:`.
 
 
 ## Share snapshot

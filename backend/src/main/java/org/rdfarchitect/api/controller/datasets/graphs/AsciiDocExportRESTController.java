@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -82,7 +83,12 @@ public class AsciiDocExportRESTController {
                     @PathVariable
                     String graphURI,
             @Parameter(description = "The file ending of the diagram files.") @PathVariable
-                    String fileEnding) {
+                    String fileEnding,
+            @Parameter(
+                            description =
+                                    "Whether the package diagram is shown in the document instead of only being linked.")
+                    @RequestParam(defaultValue = "false")
+                    boolean embedDiagrams) {
         logger.info(
                 "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/asciidocexport\" from \"{}\".",
                 datasetName,
@@ -93,7 +99,9 @@ public class AsciiDocExportRESTController {
 
         var output =
                 exportGraphAsciiDocUseCase.exportGraphAsAsciiDoc(
-                        new GraphIdentifier(datasetName, extendedGraphURI), fileEnding);
+                        new GraphIdentifier(datasetName, extendedGraphURI),
+                        fileEnding,
+                        embedDiagrams);
 
         var fileName = "default";
         if (!extendedGraphURI.equals("default")) {

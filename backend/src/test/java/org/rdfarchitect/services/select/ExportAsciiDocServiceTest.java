@@ -50,13 +50,25 @@ class ExportAsciiDocServiceTest {
     @InjectMocks private ExportAsciiDocService exportAsciiDocService;
 
     private String exportAsciiDoc(List<ClassUMLAdaptedDTO> classList) {
-        return exportAsciiDoc(GRAPH_IDENTIFIER, classList);
+        return exportAsciiDoc(GRAPH_IDENTIFIER, classList, false);
+    }
+
+    private String exportAsciiDocWithEmbeddedDiagrams(List<ClassUMLAdaptedDTO> classList) {
+        return exportAsciiDoc(GRAPH_IDENTIFIER, classList, true);
     }
 
     private String exportAsciiDoc(
             GraphIdentifier graphIdentifier, List<ClassUMLAdaptedDTO> classList) {
+        return exportAsciiDoc(graphIdentifier, classList, false);
+    }
+
+    private String exportAsciiDoc(
+            GraphIdentifier graphIdentifier,
+            List<ClassUMLAdaptedDTO> classList,
+            boolean embedDiagrams) {
         when(getClassListUseCase.getFullClassList(graphIdentifier)).thenReturn(classList);
-        byte[] result = exportAsciiDocService.exportGraphAsAsciiDoc(graphIdentifier, "png");
+        byte[] result =
+                exportAsciiDocService.exportGraphAsAsciiDoc(graphIdentifier, "png", embedDiagrams);
         return new String(result, StandardCharsets.UTF_8);
     }
 
@@ -158,6 +170,25 @@ class ExportAsciiDocServiceTest {
         var adoc = exportAsciiDoc(List.of(clazz));
 
         assertThat(adoc).contains("link:images/" + packageUuid + ".png[Package++_++Core]");
+    }
+
+    @Test
+    void exportGraphAsAsciiDoc_embeddedDiagrams_showsTheDiagramInsteadOfLinkingIt() {
+        var packageUuid = UUID.randomUUID();
+        var clazz =
+                classBuilder("MyClass")
+                        .stereotypes(List.of(CIMStereotypes.concreteString))
+                        .belongsToCategory(
+                                BelongsToCategoryDTO.builder()
+                                        .uuid(packageUuid)
+                                        .label("Core")
+                                        .build())
+                        .build();
+
+        var adoc = exportAsciiDocWithEmbeddedDiagrams(List.of(clazz));
+
+        assertThat(adoc).contains(".Core\nimage::images/" + packageUuid + ".png[Core]");
+        assertThat(adoc).doesNotContain("link:images/");
     }
 
     @Test

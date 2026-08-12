@@ -52,15 +52,25 @@
         {
             name: "HTML",
             ending: "html",
-            fetch: (dataset, graph, imageEnding) =>
-                bec.getHTMLExport(dataset, graph, imageEnding),
+            fetch: (dataset, graph, imageEnding, embedDiagrams) =>
+                bec.getHTMLExport(dataset, graph, imageEnding, embedDiagrams),
         },
         {
             name: "AsciiDoc",
             ending: "adoc",
-            fetch: (dataset, graph, imageEnding) =>
-                bec.getAsciiDocExport(dataset, graph, imageEnding),
+            fetch: (dataset, graph, imageEnding, embedDiagrams) =>
+                bec.getAsciiDocExport(
+                    dataset,
+                    graph,
+                    imageEnding,
+                    embedDiagrams,
+                ),
         },
+    ];
+
+    const supportedDiagramPlacements = [
+        { name: "Link", embed: false },
+        { name: "Picture in the document", embed: true },
     ];
 
     let selectedDatasetName = $state(null);
@@ -68,6 +78,7 @@
     let isExporting = $state(false);
     let selectedMediaType = $state();
     let selectedDocumentFormat = $state(supportedDocumentFormats[0]);
+    let selectedDiagramPlacement = $state(supportedDiagramPlacements[0]);
     let disablePrimary = $derived(
         !selectedDatasetName || !graphURI || isExporting,
     );
@@ -87,6 +98,7 @@
                 selectedDatasetName,
                 graphURI,
                 selectedMediaType.ending,
+                selectedDiagramPlacement.embed,
             );
             if (!response.ok) {
                 toastStore.error(
@@ -209,6 +221,20 @@
         >
             {#each supportedMediaTypes as mediaType}
                 <option value={mediaType}>{mediaType.name}</option>
+            {/each}
+        </select>
+        <label for="diagram-placements-Download" class="mt-2 mb-1">
+            Package Diagram
+        </label>
+        <select
+            class=" border-border bg-window-background focus:border-blue h-9 w-fit rounded border-2 p-2"
+            id="diagram-placements-Download"
+            bind:value={selectedDiagramPlacement}
+        >
+            {#each supportedDiagramPlacements as diagramPlacement}
+                <option value={diagramPlacement}>
+                    {diagramPlacement.name}
+                </option>
             {/each}
         </select>
     </div>
