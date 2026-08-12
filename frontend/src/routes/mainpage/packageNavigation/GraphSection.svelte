@@ -54,7 +54,9 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
+    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
+    import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import PackageButton from "./PackageButton.svelte";
     import {
         graphHighlight,
@@ -62,11 +64,10 @@
     } from "./packageNavigationUtils.svelte.js";
     import CompareDialog from "../../compare/CompareDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
+    import DocumentationExportDialog from "../../DocumentationExportDialog.svelte";
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
-    import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
-    import OntologyDialog from "./ontology-editor-dialog/OntologyDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
@@ -97,6 +98,7 @@
     let canUndo = $state(false);
     let canRedo = $state(false);
     let showEditOntologyDialog = $state(false);
+    let showDocumentationExportDialog = $state(false);
 
     let wasGraphSelected = false;
 
@@ -360,6 +362,13 @@
             >
                 Export Schema (RDFS)
             </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => (showDocumentationExportDialog = true)}
+                faIcon={faFileExport}
+                altText="Ctrl+Alt+H"
+            >
+                Export Documentation
+            </ContextMenu.Item.Button>
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -448,6 +457,11 @@
 />
 <ValidationDialog
     bind:showDialog={showValidationDialog}
+    lockedDatasetName={datasetNavEntry.id}
+    lockedGraphUri={graphNavEntry.id}
+/>
+<DocumentationExportDialog
+    bind:showDialog={showDocumentationExportDialog}
     lockedDatasetName={datasetNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />

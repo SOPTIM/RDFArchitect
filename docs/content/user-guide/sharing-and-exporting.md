@@ -19,6 +19,33 @@ The exported file is self-contained: it can be re-imported into RDFArchitect, lo
 
 See [SHACL — Exporting](./shacl#exporting-shacl). TTL by default.
 
+## Exporting documentation
+
+**File → Export → Documentation (HTML, AsciiDoc)** exports documentation for the currently selected graph. The dialog includes:
+
+- **Document → Format** — HTML (`.html`) or AsciiDoc (`.adoc`). Both describe the same content.
+- **Package diagrams → File type** — PNG or SVG.
+- **Package diagrams → Shown as** — *Link*, so a class only links to the diagram of its package, or *Picture in the document*, so the diagram is shown inline. A package diagram appears once per class of that package, so showing the pictures makes for a considerably longer document.
+
+The generated ZIP file contains the document plus an `images/` folder with one diagram per package; the diagram files are named after their package. The documentation lists all classes, categorized by stereotype, followed by the concrete classes, the abstract classes and the enumerations. Each class comes with its package diagram, comment, native members, inherited members and — for enumerations — its values.
+
+Every package diagram is rendered in the browser, so a large profile can take a while. The dialog shows the progress per package while it works and can be stopped with **Cancel**; nothing is downloaded then. If a diagram cannot be rendered, the export finishes without it and names the affected packages.
+
+### AsciiDoc output
+
+The AsciiDoc export is meant for documentation toolchains (Asciidoctor, Antora, DocBook or PDF conversion):
+
+- Sections start at level 1 (`==`), so the file renders as a standalone document. To place it deeper inside a larger document, include it with an offset:
+
+  ```asciidoc
+  include::EQ.adoc[leveloffset=+1]
+  ```
+
+- Every class gets an anchor prefixed with the name of the exported graph, for example `[[EQ_BoundaryPoint]]`. This keeps anchors unique when several profiles are included in the same document, and lets you reference a class from your own text with `xref:EQ_BoundaryPoint[]`.
+- Types and super classes are cross-referenced (`xref:`) when the referenced class is part of the same export; classes outside the export are written as plain text so that no reference dangles.
+- Package diagrams are referenced as `link:images/<package>.<png|svg>[<package>]`, or as an `image::` block when the dialog is set to show them in the document. Keep the `images/` folder next to the `.adoc` file, or point Asciidoctor at it with `:imagesdir:`.
+
+
 ## Share snapshot
 
 **File → Share Snapshot** creates an immutable snapshot of the currently selected dataset and returns a link of the form `https://<host>/?snapshot=<token>`. Anyone opening that link loads the dataset as it was at the moment the snapshot was taken — packages, classes, associations, SHACL, everything — and can navigate the schema exactly like the author did, without needing to install anything.

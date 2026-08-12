@@ -1,0 +1,666 @@
+/*
+ *    Copyright (c) 2024-2026 SOPTIM AG
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ *
+ */
+
+package org.rdfarchitect.services.select;
+
+import lombok.RequiredArgsConstructor;
+
+import org.rdfarchitect.api.dto.BelongsToCategoryDTO;
+import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
+import org.rdfarchitect.api.dto.association.AssociationDTO;
+import org.rdfarchitect.api.dto.association.AssociationPairDTO;
+import org.rdfarchitect.api.dto.attributes.AttributeDTO;
+import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
+import org.rdfarchitect.database.GraphIdentifier;
+import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class ExportHTMLService implements ExportGraphHTMLUseCase {
+
+    private final GetClassListUseCase getClassListUseCase;
+
+    @Override
+    public byte[] exportGraphAsHTML(
+            GraphIdentifier graphIdentifier, String fileEnding, boolean embedDiagrams) {
+
+        var classList = getClassListUseCase.getFullClassList(graphIdentifier);
+        var diagrams = new DiagramOptions(fileEnding, embedDiagrams);
+
+        String html = header() + buildBody(classList, diagrams) + "</html>";
+
+        return html.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * @param fileEnding file ending of the package diagram files
+     * @param embedded whether the diagram is shown in the document instead of only being linked
+     */
+    private record DiagramOptions(String fileEnding, boolean embedded) {}
+
+    private String header() {
+        return "<!DOCTYPE html>\n"
+                + "<html lang=\"en\">\n"
+                + "<head>\n"
+                + "<meta charset=\"UTF-8\">\n"
+                + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+                + "<title>Profile Documentation</title>\n"
+                + style()
+                + "\n</head>\n";
+    }
+
+    private String style() {
+        return """
+            <style>
+            :root {
+                /* soptim colors */
+                --color-soptim-blau: #009ee0;
+                --color-soptim-dunkelgrau: #7d7d7d;
+                --color-soptim-dunkelblau: #14162b;
+                --color-soptim-pink: #e74890;
+                --color-soptim-orange: #f0881a;
+
+                /* opencgmes colors */
+                --color-blue: #1f75cb;
+                --color-lightblue: #e3eef8;
+                --color-orange: #fc6d26;
+                --color-purple: #6e49cb;
+                --color-red: #db3b21;
+                --color-gray: #2e2e2e;
+                --color-lightgray: #e0e0e0;
+                --color-white: #ffffff;
+                --color-text-subtle: #787878;
+                --color-background-subtle: #f1f1f1;
+
+                --color-default-text: #303030;
+                --color-default-background: #e0e0e0;
+
+                --color-window-background: #f9f9f9;
+
+                --color-border: #e0e0e0;
+                --color-border-select: #1f75cb;
+                --color-background-select: rgba(31, 117, 203, 0.08);
+                --color-border-strong: #c6c6c6;
+
+                --color-nav-surface: #ffffff;
+                --color-nav-border: #dfe6ef;
+                --color-nav-hover-background: #e8efff;
+                --color-nav-active-background: #d8e7ff;
+                --color-nav-active-text: #0f3e78;
+
+                --color-nav-open-class-background: #e8f1fc;
+                --color-nav-text: #1f2937;
+                --color-nav-secondary-text: #5c6676;
+                --color-nav-badge-background: #1f75cb;
+                --color-nav-badge-text: #ffffff;
+                --color-nav-external-badge-background: #f0881a;
+
+                --color-class-node-upper-background: var(--color-default-background);
+                --color-class-node-lower-background: #f2f2f2;
+                --color-inheritance-edge: var(--color-soptim-dunkelgrau);
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    "Bahnschrift",
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    "Segoe UI",
+                    Roboto,
+                    Oxygen,
+                    Ubuntu,
+                    Cantarell,
+                    "Open Sans",
+                    "Helvetica Neue",
+                    sans-serif;
+                background-color: var(--color-window-background);
+                color: var(--color-default-text);
+                margin: 0;
+                padding: 2rem;
+                line-height: 1.5;
+            }
+
+            h1 {
+                font-size: 1.6rem;
+                color: var(--color-soptim-dunkelblau);
+                border-bottom: 2px solid var(--color-blue);
+                padding-bottom: 0.4rem;
+                margin-top: 2.5rem;
+            }
+
+            h1:first-of-type {
+                margin-top: 1.5rem;
+            }
+
+            h3 {
+                font-size: 1.05rem;
+                color: var(--color-blue);
+                margin-bottom: 0.5rem;
+                margin-top: 1.2rem;
+            }
+
+            h4 {
+                font-size: 0.85rem;
+                color: var(--color-nav-secondary-text);
+                font-weight: normal;
+                font-style: italic;
+                margin: 0.2rem 0 0.8rem 0;
+            }
+
+            .intro {
+                background: var(--color-nav-surface);
+                border: 1px solid var(--color-nav-border);
+                border-radius: 8px;
+                padding: 1rem 1.5rem;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+                max-width: 500px;
+            }
+
+            .intro ul {
+                margin: 0.5rem 0 0 0;
+                padding-left: 1.2rem;
+            }
+
+            .group {
+                background: var(--color-nav-surface);
+                border: 1px solid var(--color-nav-border);
+                border-radius: 8px;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+                padding: 1.25rem 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .group a {
+                text-decoration: none;
+            }
+
+            h2.concrete,
+            h2.abstract {
+                margin: 0 0 0.5rem 0;
+                font-size: 1.25rem;
+            }
+
+            h2.concrete,
+            h2.abstract {
+                color: var(--color-soptim-dunkelblau);
+            }
+
+            h2.concrete::before {
+                content: "● ";
+                color: var(--color-blue);
+                font-size: 0.7rem;
+                vertical-align: middle;
+            }
+
+            h2.abstract::before {
+                content: "◇ ";
+                color: var(--color-purple);
+                font-size: 0.8rem;
+                vertical-align: middle;
+            }
+
+            p.package {
+                font-style: italic;
+                color: var(--color-text-subtle);
+                font-size: 0.9rem;
+                margin: 0 0 0.6rem 0;
+            }
+
+            p.package a {
+                color: var(--color-blue);
+            }
+
+            img.diagram {
+                display: block;
+                max-width: 100%;
+                height: auto;
+                background: var(--color-white);
+                border: 1px solid var(--color-border);
+                border-radius: 4px;
+                margin: 0 0 1rem 0;
+            }
+
+            p.comment {
+                color: var(--color-default-text);
+                background: var(--color-background-subtle);
+                border-left: 3px solid var(--color-blue);
+                padding: 0.5rem 0.8rem;
+                margin: 0.5rem 0 1rem 0;
+                border-radius: 0 4px 4px 0;
+            }
+
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                margin-bottom: 0.75rem;
+                font-size: 0.9rem;
+            }
+
+            table, th, td {
+                border: 1px solid var(--color-border);
+            }
+
+            th, td {
+                padding: 0.5rem 0.7rem;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            tr:nth-child(even) {
+                background-color: var(--color-background-subtle);
+            }
+
+            tr:hover {
+                background-color: var(--color-nav-hover-background);
+            }
+
+            p.attribut,
+            p.inheritattribut {
+                font-weight: 600;
+                color: var(--color-soptim-dunkelblau);
+                margin: 0;
+            }
+
+            p.role,
+            p.inheritrole {
+                font-weight: 600;
+                color: var(--color-blue);
+                margin: 0;
+            }
+
+            p.cardinality {
+                text-align: center;
+                color: var(--color-text-subtle);
+                margin: 0;
+                font-variant-numeric: tabular-nums;
+            }
+
+            p.type {
+                margin: 0;
+            }
+
+            p.type a {
+                color: var(--color-orange);
+                text-decoration: none;
+                font-weight: 500;
+            }
+
+            p.type a:hover {
+                text-decoration: underline;
+            }
+
+            a.superclass {
+                font-style: italic;
+                color: var(--color-orange);
+                text-decoration: none;
+            }
+
+            a.superclass:hover {
+                text-decoration: underline;
+            }
+            </style>""";
+    }
+
+    private String buildBody(List<ClassUMLAdaptedDTO> classList, DiagramOptions diagrams) {
+        return "<body>\n"
+                + buildStereotypeList()
+                + buildStereotypeSections(classList, diagrams)
+                + "</body>";
+    }
+
+    private String buildStereotypeList() {
+        var builder = new StringBuilder();
+        builder.append("<div class=\"intro\">\n");
+        builder.append("<p>List of stereotypes to categorize subProfiles:</p>\n");
+        builder.append("<ul>\n");
+        for (var stereotype : ProfileDocumentationStructure.STEREOTYPES) {
+            builder.append("<li>").append(stereotype).append("</li>\n");
+        }
+        builder.append("</ul>\n");
+        builder.append("</div>\n");
+        return builder.toString();
+    }
+
+    private String buildStereotypeSections(
+            List<ClassUMLAdaptedDTO> classList, DiagramOptions diagrams) {
+        var builder = new StringBuilder();
+        for (var section : ProfileDocumentationStructure.buildSections(classList)) {
+            builder.append("<h1>").append(section.title()).append("</h1>\n");
+            for (var classUMLAdaptedDTO : section.classes()) {
+                builder.append(
+                        buildClass(section.stereotype(), classUMLAdaptedDTO, classList, diagrams));
+            }
+        }
+        return builder.toString();
+    }
+
+    private String buildClass(
+            String stereotype,
+            ClassUMLAdaptedDTO classUMLAdaptedDTO,
+            List<ClassUMLAdaptedDTO> fullClassList,
+            DiagramOptions diagrams) {
+        var builder = new StringBuilder();
+        var label = escape(classUMLAdaptedDTO.getLabel());
+
+        builder.append("<div id=\"").append(label).append("\" class=\"group\">\n");
+        builder.append("<a href=\"#").append(label).append("\">\n");
+        builder.append("<h2 class=\"")
+                .append(
+                        ProfileDocumentationStructure.isConcrete(classUMLAdaptedDTO)
+                                ? "concrete"
+                                : "abstract")
+                .append("\">")
+                .append(label);
+        if (stereotype != null && !stereotype.isEmpty()) {
+            builder.append(" (").append(stereotype).append(") ");
+        }
+        builder.append("</h2>\n");
+        builder.append("</a>\n");
+
+        builder.append(buildPackageReference(classUMLAdaptedDTO.getBelongsToCategory(), diagrams));
+
+        if (classUMLAdaptedDTO.getComment() != null && !classUMLAdaptedDTO.getComment().isEmpty()) {
+            builder.append("<p class=\"comment\">")
+                    .append(escape(classUMLAdaptedDTO.getComment()))
+                    .append("</p>\n");
+        }
+
+        if (ProfileDocumentationStructure.isEnumeration(classUMLAdaptedDTO)) {
+            builder.append(buildEnumEntries(classUMLAdaptedDTO));
+        } else {
+            builder.append(buildNativeMembers(stereotype, classUMLAdaptedDTO));
+            builder.append(buildInheritedMembers(classUMLAdaptedDTO, fullClassList));
+        }
+
+        builder.append("</div>\n");
+
+        return builder.toString();
+    }
+
+    private String buildPackageReference(BelongsToCategoryDTO category, DiagramOptions diagrams) {
+        if (category == null) {
+            return "";
+        }
+        var image =
+                "images/"
+                        + escape(
+                                category.getUuid() != null
+                                        ? category.getUuid().toString()
+                                        : "default")
+                        + "."
+                        + diagrams.fileEnding();
+        var label = escape(category.getLabel());
+
+        var builder = new StringBuilder();
+        builder.append("<p class=\"package\"><a href=\"")
+                .append(image)
+                .append("\" target=\"_blank\">")
+                .append(label)
+                .append(" </a></p>\n");
+        if (diagrams.embedded()) {
+            // the diagram is linked as well, so that it can be opened in its full size
+            builder.append("<a href=\"")
+                    .append(image)
+                    .append("\" target=\"_blank\"><img class=\"diagram\" src=\"")
+                    .append(image)
+                    .append("\" alt=\"")
+                    .append(label)
+                    .append("\"></a>\n");
+        }
+        return builder.toString();
+    }
+
+    private String buildNativeMembers(String stereotype, ClassUMLAdaptedDTO classUMLAdaptedDTO) {
+        var attributes = classUMLAdaptedDTO.getAttributes();
+        var associationPairs = classUMLAdaptedDTO.getAssociationPairs();
+
+        if ((attributes == null || attributes.isEmpty())
+                && (associationPairs == null || associationPairs.isEmpty())) {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        builder.append("<h3>Native Members");
+        if (stereotype != null && !stereotype.isEmpty()) {
+            builder.append(" (").append(stereotype).append(")");
+        }
+        builder.append("</h3>\n<table>\n");
+        if (attributes != null) {
+            for (var attribute : attributes) {
+                builder.append(buildAttributeRow(attribute));
+            }
+        }
+
+        if (associationPairs != null) {
+            for (var pair : associationPairs) {
+                builder.append(buildAssociationRow(pair));
+            }
+        }
+
+        builder.append("</table>\n");
+
+        return builder.toString();
+    }
+
+    private String buildAttributeRow(AttributeDTO attribute) {
+        return "<tr>\n"
+                + "<th>\n"
+                + "<p class=\"attribut\" id=\""
+                + escape(attribute.getDomain())
+                + "."
+                + escape(attribute.getLabel())
+                + "\">"
+                + escape(attribute.getLabel())
+                + " </p>\n"
+                + buildAttributeData(attribute)
+                + "<td>\n<p class=\"comment\">"
+                + escape(attribute.getComment())
+                + "</p>\n</td>\n"
+                + "</tr>\n";
+    }
+
+    private String buildAssociationRow(AssociationPairDTO pair) {
+        AssociationDTO from = pair.getFrom();
+        if (from == null) {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        builder.append("<tr>\n");
+        builder.append("<td class=\"type\">\n");
+        builder.append("<p class=\"role\" id=\"")
+                .append(escape(from.getDomain()))
+                .append(".")
+                .append(escape(from.getLabel()))
+                .append("\">")
+                .append(escape(from.getLabel()))
+                .append(" </p>\n");
+        builder.append("</td>\n");
+        builder.append("<td>\n<p class=\"cardinality\">")
+                .append(escape(from.getMultiplicity()))
+                .append("</p>\n</td>\n");
+        builder.append("<td>\n<p class=\"type\">\n");
+        if (from.getRange() != null) {
+            builder.append("<a href=\"#")
+                    .append(escape(from.getRange().getLabel()))
+                    .append("\">")
+                    .append(escape(from.getRange().getLabel()))
+                    .append("</a>");
+        }
+        builder.append("</p>\n</td>\n");
+        builder.append("<td>\n<p class=\"comment\">")
+                .append(escape(from.getComment()))
+                .append("</p>\n</td>\n");
+        builder.append("</tr>\n");
+        return builder.toString();
+    }
+
+    private String buildInheritedMembers(
+            ClassUMLAdaptedDTO classUMLAdaptedDTO, List<ClassUMLAdaptedDTO> classList) {
+        var ancestors =
+                ProfileDocumentationStructure.resolveAncestorChain(classUMLAdaptedDTO, classList);
+        if (ancestors.isEmpty()) {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        builder.append("<h3>Inherited Members</h3>\n");
+
+        var pass = new StringBuilder();
+        for (var ancestor : ancestors) {
+            pass.append("->").append(escape(ancestor.getLabel()));
+        }
+        builder.append("<h4> Inheritance pass: ").append(pass).append("</h4>\n");
+
+        builder.append("<table>\n");
+        for (var ancestor : ancestors) {
+            if (ancestor != null && ancestor.getAttributes() != null) {
+                for (var attribute : ancestor.getAttributes()) {
+                    builder.append(buildInheritedAttributeRow(attribute, ancestor));
+                }
+            }
+            if (ancestor != null && ancestor.getAssociationPairs() != null) {
+                for (var pair : ancestor.getAssociationPairs()) {
+                    builder.append(buildInheritedAssociationRow(pair, ancestor));
+                }
+            }
+        }
+        builder.append("</table>\n");
+
+        return builder.toString();
+    }
+
+    private String buildInheritedAttributeRow(AttributeDTO attribute, ClassUMLAdaptedDTO ancestor) {
+        return "<tr>\n"
+                + "<th>\n"
+                + "<p class=\"inheritattribut\">"
+                + escape(attribute.getLabel())
+                + " </p>\n"
+                + buildAttributeData(attribute)
+                + "<td>\n</td>\n"
+                + "<td>\n<p>see <a class=\"superclass\" href=\"#"
+                + escape(ancestor.getLabel())
+                + "\">"
+                + escape(ancestor.getLabel())
+                + "</a>\n</p>\n</td>\n"
+                + "</tr>\n";
+    }
+
+    private String buildAttributeData(AttributeDTO attribute) {
+        var builder = new StringBuilder();
+        builder.append("</th>\n");
+        builder.append("<td>\n<p class=\"cardinality\">")
+                .append(escape(attribute.getMultiplicity()))
+                .append("</p>\n</td>\n");
+        builder.append("<td class=\"type\">\n<p class=\"type\">\n");
+        if (attribute.getDataType() != null) {
+            builder.append("<a href=\"#")
+                    .append(escape(attribute.getDataType().getLabel()))
+                    .append("\">")
+                    .append(escape(attribute.getDataType().getLabel()))
+                    .append("</a>\n");
+        }
+        builder.append("</p>\n</td>\n");
+        return builder.toString();
+    }
+
+    private String buildInheritedAssociationRow(
+            AssociationPairDTO pair, ClassUMLAdaptedDTO ancestor) {
+        AssociationDTO from = pair.getFrom();
+        if (from == null) {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        builder.append("<tr>\n");
+        builder.append("<th>\n");
+        builder.append("<p class=\"inheritrole\">")
+                .append(escape(from.getLabel()))
+                .append(" </p>\n");
+        builder.append("</th>\n");
+        builder.append("<td>\n<p class=\"cardinality\">")
+                .append(escape(from.getMultiplicity()))
+                .append("</p>\n</td>\n");
+        builder.append("<td class=\"type\">\n");
+        builder.append("<p class=\"type\">\n");
+        if (from.getRange() != null) {
+            builder.append("<a href=\"#")
+                    .append(escape(from.getRange().getLabel()))
+                    .append("\">")
+                    .append(escape(from.getRange().getLabel()))
+                    .append("</a>\n");
+        }
+        builder.append("</p>\n");
+        builder.append("</td>\n");
+        builder.append("<td>\n</td>\n");
+        builder.append("<td>\n<p>see <a class=\"superclass\" href=\"#")
+                .append(escape(ancestor.getLabel()))
+                .append("\">")
+                .append(escape(ancestor.getLabel()))
+                .append("</a>\n</p>\n</td>\n");
+        builder.append("</tr>\n");
+        return builder.toString();
+    }
+
+    private String buildEnumEntries(ClassUMLAdaptedDTO classUMLAdaptedDTO) {
+        var entries = classUMLAdaptedDTO.getEnumEntries();
+        if (entries == null || entries.isEmpty()) {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        builder.append("<h3>Enumeration Values</h3>\n<table>\n");
+        for (var entry : entries) {
+            builder.append(buildEnumEntryRow(entry));
+        }
+        builder.append("</table>\n");
+        return builder.toString();
+    }
+
+    private String buildEnumEntryRow(EnumEntryDTO entry) {
+        return "<tr>\n"
+                + "<th>\n"
+                + "<p class=\"attribut\" id=\""
+                + escape(entry.getPrefix())
+                + "."
+                + escape(entry.getLabel())
+                + "\">"
+                + escape(entry.getLabel())
+                + " </p>\n"
+                + "</th>\n"
+                + "<td>\n<p class=\"comment\">"
+                + escape(entry.getComment())
+                + "</p>\n</td>\n"
+                + "</tr>\n";
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private String escape(String value) {
+        return HtmlUtils.htmlEscape(nullToEmpty(value));
+    }
+}
