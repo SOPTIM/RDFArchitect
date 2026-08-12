@@ -100,6 +100,7 @@ public class QueryDatasetService
                 keyword = CimProfile.wrap(graph).getDcatKeyword();
             } catch (Exception e) {
                 keyword = null;
+                e.printStackTrace();
             } finally {
                 result.add(new GraphDTO(new URI(graphUri), keyword));
             }
