@@ -25,8 +25,36 @@ import PackageSnapshotRenderer from "$lib/rendering/svelteflow/PackageSnapshotRe
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-function sanitizeFilename(name) {
-    return (name || "default").replace(/[\\/:*?"<>|]+/g, "_");
+/**
+ * Filename the backend embeds in the exported document for a package diagram
+ * (see ExportHTMLService/ExportAsciiDocService#buildPackageReference). Kept in
+ * sync with the backend so the generated images can be found again by name.
+ */
+function sourceFilenameOf(packageUUID, fileEnding) {
+    return `${packageUUID}.${fileEnding}`;
+}
+
+/** Turns a package label into a filesystem-safe, human-readable slug. */
+function slugifyLabel(label) {
+    const slug = (label ?? "")
+        .trim()
+        .replace(/[^A-Za-z0-9_-]+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^_|_$/g, "");
+    return slug || "package";
+}
+
+/**
+ * Human-readable filename for a package diagram. The uuid is always appended
+ * so that two packages with the same (or similarly sanitized) label never
+ * collide; "default" - the catch-all bucket for classes without a package -
+ * has no uuid and is left as is.
+ */
+function displayFilenameOf(packageUUID, label, fileEnding) {
+    if (packageUUID === "default") {
+        return sourceFilenameOf(packageUUID, fileEnding);
+    }
+    return `${slugifyLabel(label)}-${packageUUID}.${fileEnding}`;
 }
 
 async function getAllPackages(datasetName, graphURI) {
@@ -141,8 +169,15 @@ export async function generatePackageImages(datasetName, graphURI, fileType) {
 
             if (blob) {
                 images.push({
-                    filename:
-                        `${sanitizeFilename(packageUUID)}.` + fileType.ending,
+                    sourceFilename: sourceFilenameOf(
+                        packageUUID,
+                        fileType.ending,
+                    ),
+                    filename: displayFilenameOf(
+                        packageUUID,
+                        label,
+                        fileType.ending,
+                    ),
                     blob,
                 });
             }

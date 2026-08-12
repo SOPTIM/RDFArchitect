@@ -95,22 +95,32 @@
                 );
                 return;
             }
-            const documentBlob = await response.blob();
+            const contentType =
+                response.headers.get("content-type") ?? "text/plain";
             const suggestedFilename = response.headers.get(
                 "content-disposition",
             );
-
-            const zip = new JSZip();
-            zip.file(
-                getDocumentFilename(suggestedFilename, documentFormat),
-                documentBlob,
-            );
+            let documentText = await response.text();
 
             const images = await generatePackageImages(
                 selectedDatasetName,
                 graphURI,
                 selectedMediaType,
             );
+            for (const { sourceFilename, filename } of images) {
+                if (filename !== sourceFilename) {
+                    documentText = documentText
+                        .split(`images/${sourceFilename}`)
+                        .join(`images/${filename}`);
+                }
+            }
+
+            const zip = new JSZip();
+            zip.file(
+                getDocumentFilename(suggestedFilename, documentFormat),
+                new Blob([documentText], { type: contentType }),
+            );
+
             const imagesFolder = zip.folder("images");
             for (const { filename, blob } of images) {
                 imagesFolder.file(filename, blob);
