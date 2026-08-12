@@ -63,7 +63,7 @@ export async function getWorkspaceNavEntry(workspaceName, existingNavEntry) {
             : new NavEntry({ label: workspaceName, id: workspaceName });
 
     try {
-        await populateDataset(workspaceNavEntry);
+        await populateWorkspace(workspaceNavEntry);
     } catch (err) {
         console.error("Error populating workspace " + workspaceName, err);
         toastStore.error(
@@ -74,10 +74,10 @@ export async function getWorkspaceNavEntry(workspaceName, existingNavEntry) {
     return workspaceNavEntry;
 }
 
-async function populateDataset(datasetNavEntry) {
-    const existingGraphNavList = datasetNavEntry.children;
+async function populateWorkspace(workspaceNavEntry) {
+    const existingGraphNavList = workspaceNavEntry.children;
 
-    const freshEntries = (await getGraphNames(datasetNavEntry.id))
+    const freshEntries = (await getGraphNames(workspaceNavEntry.id))
         .sort((a, b) => getUri(a).localeCompare(getUri(b)))
         .map(graph => {
             const fullUri = getUri(graph);
@@ -88,47 +88,50 @@ async function populateDataset(datasetNavEntry) {
             });
         });
 
-    if (datasetNavEntry.children) {
-        syncList(datasetNavEntry.children, freshEntries, datasetNavEntry);
+    if (workspaceNavEntry.children) {
+        syncList(workspaceNavEntry.children, freshEntries, workspaceNavEntry);
     } else {
-        datasetNavEntry.children = freshEntries;
-        freshEntries.forEach(entry => (entry.parent = datasetNavEntry));
+        workspaceNavEntry.children = freshEntries;
+        freshEntries.forEach(entry => (entry.parent = workspaceNavEntry));
     }
 
-    for (const graphNavEntry of datasetNavEntry.children) {
-        if (isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)) {
+    for (const graphNavEntry of workspaceNavEntry.children) {
+        if (isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id)) {
             graphNavEntry.parent?.open();
         }
-        await populateGraph(datasetNavEntry, graphNavEntry);
+        await populateGraph(workspaceNavEntry, graphNavEntry);
     }
 }
 
-async function getGraphNames(datasetName) {
+async function getGraphNames(workspaceName) {
     try {
-        const res = await bec.getGraphs(datasetName);
+        const res = await bec.getGraphs(workspaceName);
         if (!res.ok) {
             console.error(
-                `Error fetching graph names for dataset "${datasetName}": HTTP ${res.status}`,
+                `Error fetching graph names for workspace "${workspaceName}": HTTP ${res.status}`,
             );
             return [];
         }
         return await res.json();
     } catch (err) {
         console.error(
-            "Error fetching graph names for dataset " + datasetName,
+            "Error fetching graph names for workspace " + workspaceName,
             err,
         );
         return [];
     }
 }
 
-export async function populateGraph(datasetNavObject, graphNavObject) {
+export async function populateGraph(workspaceNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
     const packageApiObject = await getPackages(
-        datasetNavObject.id,
+        workspaceNavObject.id,
         graphNavObject.id,
     );
-    const allClasses = await getClasses(datasetNavObject.id, graphNavObject.id);
+    const allClasses = await getClasses(
+        workspaceNavObject.id,
+        graphNavObject.id,
+    );
 
     const freshEntries = [
         ...packageApiObject.internalPackageList.map(pack =>
@@ -153,7 +156,7 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
     for (const packageNavEntry of graphNavObject.children) {
         if (
             isSelectedPackage(
-                datasetNavObject.id,
+                workspaceNavObject.id,
                 graphNavObject.id,
                 packageNavEntry.id,
             )
@@ -163,7 +166,7 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
         populatePackage(
             packageNavEntry,
             allClasses,
-            datasetNavObject.id,
+            workspaceNavObject.id,
             graphNavObject.id,
         );
     }
@@ -197,14 +200,14 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
     return entry;
 }
 
-async function getPackages(datasetName, graphURI) {
+async function getPackages(workspaceName, graphURI) {
     try {
-        const res = await bec.getPackages(datasetName, graphURI);
+        const res = await bec.getPackages(workspaceName, graphURI);
         return await res.json();
     } catch (err) {
         console.error(
-            "Error fetching packages for dataset " +
-                datasetName +
+            "Error fetching packages for workspace " +
+                workspaceName +
                 " and graph " +
                 graphURI,
             err,
@@ -213,7 +216,7 @@ async function getPackages(datasetName, graphURI) {
     }
 }
 
-function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
+function populatePackage(packageNavObject, allClasses, workspaceId, graphId) {
     const existingClassList = packageNavObject.children;
 
     console.debug(
@@ -251,7 +254,7 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
         let diagramType = editorState.selectedDiagram.getProperty("type");
         if (
             diagramType === DiagramType.PACKAGE &&
-            isSelectedClass(datasetId, graphId, classNavEntry.id)
+            isSelectedClass(workspaceId, graphId, classNavEntry.id)
         ) {
             classNavEntry.parent?.open();
         }
@@ -260,12 +263,12 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
     return packageNavObject;
 }
 
-async function getClasses(datasetName, graphURI) {
+async function getClasses(workspaceName, graphURI) {
     try {
-        const res = await bec.getClasses(datasetName, graphURI);
+        const res = await bec.getClasses(workspaceName, graphURI);
         console.debug(
-            "Fetched classes for dataset " +
-                datasetName +
+            "Fetched classes for workspace " +
+                workspaceName +
                 " and graph " +
                 graphURI,
             res,
@@ -273,8 +276,8 @@ async function getClasses(datasetName, graphURI) {
         return await res.json();
     } catch (err) {
         console.error(
-            "Error fetching classes for dataset " +
-                datasetName +
+            "Error fetching classes for workspace " +
+                workspaceName +
                 " and graph " +
                 graphURI,
             err,

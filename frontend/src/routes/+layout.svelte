@@ -65,21 +65,21 @@
     let canRedo = $state(false);
     let menubarValue = $state(undefined);
 
-    let isDatasetReadOnly = $state(false);
+    let isWorkspaceReadOnly = $state(false);
 
     let isLeftAltPressed = false;
 
-    let selectedDataset = $derived(editorState.selectedDataset.getValue());
+    let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
         await fetchUndoRedo();
-        isDatasetReadOnly = selectedDataset
-            ? await isReadOnly(selectedDataset)
+        isWorkspaceReadOnly = selectedWorkspace
+            ? await isReadOnly(selectedWorkspace)
             : false;
     });
 
@@ -90,16 +90,16 @@
     });
 
     async function requestEnableEditing() {
-        if (!selectedDataset || !isDatasetReadOnly) {
+        if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
         }
-        if (!(await enableEditing(selectedDataset))) {
+        if (!(await enableEditing(selectedWorkspace))) {
             return;
         }
         forceReloadTrigger.trigger();
         editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
-        isDatasetReadOnly = false;
+        isWorkspaceReadOnly = false;
     }
 
     async function loadSnapshot() {
@@ -126,14 +126,14 @@
         canRedo = await fetchCanRedo();
     }
 
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
+    async function isReadOnly(workspaceName) {
+        const res = await bec.isReadOnly(workspaceName);
         return await res.json();
     }
 
     async function reload() {
         await fetchUndoRedo();
-        editorState.selectedDataset.trigger();
+        editorState.selectedWorkspace.trigger();
         editorState.selectedGraph.trigger();
         editorState.selectedClass.trigger();
         forceReloadTrigger.trigger();
@@ -241,11 +241,11 @@
                                 bind:value={menubarValue}
                                 class="toolbar-menubar"
                             >
-                                <File {isDatasetReadOnly} />
+                                <File {isWorkspaceReadOnly} />
                                 <Edit
                                     {canRedo}
                                     {canUndo}
-                                    {isDatasetReadOnly}
+                                    {isWorkspaceReadOnly}
                                     {reload}
                                 />
                                 <View />
@@ -269,7 +269,7 @@
                     <div
                         class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
                     >
-                        {#if isDatasetReadOnly}
+                        {#if isWorkspaceReadOnly}
                             <ButtonControl
                                 callOnClick={requestEnableEditing}
                                 height={9}

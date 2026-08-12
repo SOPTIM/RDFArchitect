@@ -22,15 +22,15 @@ import { editorState } from "$lib/sharedState.svelte.js";
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 export async function saveApiEnumEntryToBackend(
-    dataset,
+    workspace,
     graph,
     classUUID,
     enumEntry,
     isNewEnumEntry,
 ) {
     const saveEnumEntryCall = isNewEnumEntry
-        ? bec.postEnumEntry(dataset, graph, classUUID, enumEntry)
-        : bec.putEnumEntry(dataset, graph, classUUID, enumEntry);
+        ? bec.postEnumEntry(workspace, graph, classUUID, enumEntry)
+        : bec.putEnumEntry(workspace, graph, classUUID, enumEntry);
 
     try {
         const res = await saveEnumEntryCall;

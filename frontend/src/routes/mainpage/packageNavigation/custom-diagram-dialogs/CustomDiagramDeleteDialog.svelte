@@ -27,7 +27,12 @@
         editorState,
     } from "$lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
+    let {
+        showDialog = $bindable(),
+        workspaceName,
+        graphUri,
+        diagram,
+    } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -35,12 +40,12 @@
         try {
             const res = graphUri
                 ? await bec.deleteCustomGraphDiagram(
-                      datasetName,
+                      workspaceName,
                       graphUri,
                       diagram.diagramId,
                   )
-                : await bec.deleteCustomDatasetDiagram(
-                      datasetName,
+                : await bec.deleteCustomWorkspaceDiagram(
+                      workspaceName,
                       diagram.diagramId,
                   );
             if (!res.ok) {
@@ -64,7 +69,7 @@
                     type: null,
                     id: null,
                 });
-                editorState.selectedClassDataset.updateValue(null);
+                editorState.selectedClassWorkspace.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClass.updateValue({ type: null, id: null });
             }

@@ -20,26 +20,26 @@ import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import { editorState, forceReloadTrigger } from "$lib/sharedState.svelte.js";
 
-function resolveTargets(datasetName, graphURI) {
-    const dataset = datasetName ?? editorState.selectedDataset.getValue();
+function resolveTargets(workspaceName, graphURI) {
+    const workspace = workspaceName ?? editorState.selectedWorkspace.getValue();
     const graph = graphURI ?? editorState.selectedGraph.getValue();
 
-    if (!dataset || !graph) return null;
+    if (!workspace || !graph) return null;
 
     return {
-        dataset,
+        workspace,
         graph,
-        encodedDataset: encodeURIComponent(dataset),
+        encodedWorkspace: encodeURIComponent(workspace),
         encodedGraph: encodeURIComponent(graph),
     };
 }
 
-export async function fetchCanUndo(datasetName, graphURI) {
-    const targets = resolveTargets(datasetName, graphURI);
+export async function fetchCanUndo(workspaceName, graphURI) {
+    const targets = resolveTargets(workspaceName, graphURI);
     if (!targets) return false;
 
     const res = await fetch(
-        `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/canUndo`,
+        `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedWorkspace}/graphs/${targets.encodedGraph}/canUndo`,
         {
             method: "POST",
             credentials: "include",
@@ -55,13 +55,13 @@ export async function fetchCanUndo(datasetName, graphURI) {
     return false;
 }
 
-export function undo(datasetName, graphURI) {
+export function undo(workspaceName, graphURI) {
     return eventStack.guardAction(async () => {
-        const targets = resolveTargets(datasetName, graphURI);
+        const targets = resolveTargets(workspaceName, graphURI);
         if (!targets) return false;
 
         const res = await fetch(
-            `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/undo`,
+            `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedWorkspace}/graphs/${targets.encodedGraph}/undo`,
             {
                 method: "POST",
                 credentials: "include",
@@ -81,12 +81,12 @@ export function undo(datasetName, graphURI) {
     });
 }
 
-export async function fetchCanRedo(datasetName, graphURI) {
-    const targets = resolveTargets(datasetName, graphURI);
+export async function fetchCanRedo(workspaceName, graphURI) {
+    const targets = resolveTargets(workspaceName, graphURI);
     if (!targets) return false;
 
     const res = await fetch(
-        `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/canRedo`,
+        `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedWorkspace}/graphs/${targets.encodedGraph}/canRedo`,
         {
             method: "POST",
             credentials: "include",
@@ -102,13 +102,13 @@ export async function fetchCanRedo(datasetName, graphURI) {
     return false;
 }
 
-export function redo(datasetName, graphURI) {
+export function redo(workspaceName, graphURI) {
     return eventStack.guardAction(async () => {
-        const targets = resolveTargets(datasetName, graphURI);
+        const targets = resolveTargets(workspaceName, graphURI);
         if (!targets) return false;
 
         const res = await fetch(
-            `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedDataset}/graphs/${targets.encodedGraph}/redo`,
+            `${PUBLIC_BACKEND_URL}/datasets/${targets.encodedWorkspace}/graphs/${targets.encodedGraph}/redo`,
             {
                 method: "POST",
                 credentials: "include",

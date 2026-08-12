@@ -76,7 +76,7 @@
 
     const contextMenus = new ContextMenuController({
         getSvelteFlow: () => svelteFlowAPI?.svelteFlow,
-        getIsReadOnly: () => isDatasetReadOnly,
+        getIsReadOnly: () => isWorkspaceReadOnly,
     });
 
     const pan = new PanController({
@@ -96,7 +96,7 @@
     let nodes = $state.raw([...inputNodes]);
     // svelte-ignore state_referenced_locally
     let edges = $state.raw([...inputEdges]);
-    let isDatasetReadOnly = $state();
+    let isWorkspaceReadOnly = $state();
     let containerEl;
 
     let lastSelectedDiagramId = null;
@@ -127,7 +127,7 @@
 
     $effect(() => {
         forceReloadTrigger.subscribe();
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         refreshReadOnlyState();
     });
 
@@ -203,8 +203,8 @@
     }
 
     async function refreshReadOnlyState() {
-        const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+        const workspace = editorState.selectedWorkspace.getValue();
+        isWorkspaceReadOnly = workspace ? await isReadOnly(workspace) : false;
     }
 
     function resetTempFrontWhenNoClassOpen() {
@@ -315,8 +315,8 @@
         });
     }
 
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
+    async function isReadOnly(workspaceName) {
+        const res = await bec.isReadOnly(workspaceName);
         return await res.json();
     }
 
@@ -341,14 +341,14 @@
 
         if (editorState.selectedGraph.getValue()) {
             bec.updateClassPositions(
-                editorState.selectedDataset.getValue(),
+                editorState.selectedWorkspace.getValue(),
                 editorState.selectedGraph.getValue(),
                 diagramUUID,
                 classPositionDTOList,
             );
         } else {
             bec.updateGlobalClassPositions(
-                editorState.selectedDataset.getValue(),
+                editorState.selectedWorkspace.getValue(),
                 diagramUUID,
                 classPositionDTOList,
             );
@@ -381,7 +381,7 @@
         bind:edges
         {nodeTypes}
         {edgeTypes}
-        nodesDraggable={!isDatasetReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
+        nodesDraggable={!isWorkspaceReadOnly && !pan.shiftHeld && !pan.ctrlHeld}
         fitView
         elementsSelectable={true}
         nodesFocusable={false}
@@ -424,8 +424,8 @@
 
     <SvelteFlowPaneContextMenu
         request={contextMenus.paneRequest}
-        disabled={isDatasetReadOnly}
-        lockedDatasetName={editorState.selectedDataset.getValue()}
+        disabled={isWorkspaceReadOnly}
+        lockedWorkspaceName={editorState.selectedWorkspace.getValue()}
         lockedGraphUri={editorState.selectedGraph.getValue()}
         lockedPackage={editorState.selectedDiagram.getProperty("id")}
         classes={nodes.map(node => ({
@@ -437,9 +437,9 @@
     <SvelteFlowClassContextMenu
         request={contextMenus.classRequest}
         disabled={!contextMenus.contextMenuClass}
-        readOnly={isDatasetReadOnly}
+        readOnly={isWorkspaceReadOnly}
         contextMenuClass={contextMenus.contextMenuClass}
-        datasetName={editorState.selectedDataset.getValue()}
+        workspaceName={editorState.selectedWorkspace.getValue()}
         graphUri={editorState.selectedGraph.getValue()}
         nodeOrder={nodeOrderCtrl.nodeOrder}
         nodeCount={nodes.length}

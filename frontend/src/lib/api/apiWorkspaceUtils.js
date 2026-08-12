@@ -20,37 +20,37 @@ import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-export async function isReadOnly(datasetName) {
-    const res = await bec.isReadOnly(datasetName);
+export async function isReadOnly(workspaceName) {
+    const res = await bec.isReadOnly(workspaceName);
     return await res.json();
 }
 
-export async function getNamespaces(datasetName) {
-    if (!datasetName) {
+export async function getNamespaces(workspaceName) {
+    if (!workspaceName) {
         return [];
     }
-    const res = await bec.getNamespaces(datasetName);
+    const res = await bec.getNamespaces(workspaceName);
     return await res.json();
 }
 
-export async function getDatasetNames() {
-    const res = await bec.getDatasetNames();
-    let datasetNames = await res.json();
-    let readOnlyDatasets = [];
-    let modifiableDatasets = [];
+export async function getWorkspaceNames() {
+    const res = await bec.getWorkspaceNames();
+    let workspaceNames = await res.json();
+    let readOnlyWorkspaces = [];
+    let modifiableWorkspaces = [];
 
-    for (const dataset of datasetNames) {
-        if (await isReadOnly(dataset)) {
-            readOnlyDatasets.push(dataset);
+    for (const workspace of workspaceNames) {
+        if (await isReadOnly(workspace)) {
+            readOnlyWorkspaces.push(workspace);
         } else {
-            modifiableDatasets.push(dataset);
+            modifiableWorkspaces.push(workspace);
         }
     }
-    return { modifiable: modifiableDatasets, readonly: readOnlyDatasets };
+    return { modifiable: modifiableWorkspaces, readonly: readOnlyWorkspaces };
 }
 
-export async function getCrossProfileDiagram(datasetName) {
-    if (!datasetName) return null;
-    const res = await bec.getCrossProfileDiagramForDataset(datasetName);
+export async function getCrossProfileDiagram(workspaceName) {
+    if (!workspaceName) return null;
+    const res = await bec.getCrossProfileDiagramForWorkspace(workspaceName);
     return await res.json();
 }

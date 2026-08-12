@@ -31,7 +31,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
         classes,
     } = $props();
@@ -74,7 +74,8 @@
     );
 
     async function getCustomDiagrams() {
-        const res = await bec.getCustomDiagramsForDataset(lockedDatasetName);
+        const res =
+            await bec.getCustomDiagramsForWorkspace(lockedWorkspaceName);
         existingDiagrams = await res.json();
         diagramsLoaded = true;
     }
@@ -126,8 +127,8 @@
         };
 
         try {
-            const res = await bec.putCustomDatasetDiagram(
-                lockedDatasetName,
+            const res = await bec.putCustomWorkspaceDiagram(
+                lockedWorkspaceName,
                 diagramId,
                 diagramData,
             );
@@ -140,10 +141,10 @@
                 return;
             }
 
-            editorState.selectedDataset.updateValue(lockedDatasetName);
+            editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
             editorState.selectedGraph.updateValue(null);
             editorState.selectedDiagram.updateValue({
-                type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+                type: DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
                 id: diagramId,
             });
             toastStore.success(
@@ -159,8 +160,8 @@
         const diagramName = diagram.name;
         const count = classes.length;
         try {
-            const res = await bec.addToCustomDatasetDiagram(
-                lockedDatasetName,
+            const res = await bec.addToCustomWorkspaceDiagram(
+                lockedWorkspaceName,
                 diagram.diagramId,
                 classesToAdd(),
             );

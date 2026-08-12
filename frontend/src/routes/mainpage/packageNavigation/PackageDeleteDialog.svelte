@@ -27,14 +27,14 @@
     } from "$lib/sharedState.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
-    let { showDialog = $bindable(), datasetName, graphUri, pack } = $props();
+    let { showDialog = $bindable(), workspaceName, graphUri, pack } = $props();
 
     async function deletePackage() {
         const packageLabel = pack?.label
             ? getPackageDisplayLabel(pack.label)
             : null;
         try {
-            const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/packages/${encodeURIComponent(pack.uuid)}`;
+            const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphUri)}/packages/${encodeURIComponent(pack.uuid)}`;
             const res = await fetch(url, {
                 method: "DELETE",
                 credentials: "include",
@@ -54,7 +54,7 @@
                     type: null,
                     id: null,
                 });
-                editorState.selectedClassDataset.updateValue(null);
+                editorState.selectedClassWorkspace.updateValue(null);
                 editorState.selectedClassGraph.updateValue(null);
                 editorState.selectedClass.updateValue({ type: null, id: null });
             }

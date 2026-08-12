@@ -15,16 +15,16 @@
  *
  */
 
-import { getNamespaces as getNamespacesFromApi } from "$lib/api/apiDatasetUtils.js";
+import { getNamespaces as getNamespacesFromApi } from "$lib/api/apiWorkspaceUtils.js";
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-export async function getPackages(datasetName, graphUri) {
+export async function getPackages(workspaceName, graphUri) {
     // fetch packages
-    const res = await bec.getPackages(datasetName, graphUri);
+    const res = await bec.getPackages(workspaceName, graphUri);
     let packagesDto = await res.json();
 
     // Combine internal and external packages
@@ -46,15 +46,18 @@ export async function getPackages(datasetName, graphUri) {
     return packages;
 }
 
-export async function getDataTypes(datasetName, graphUri) {
+export async function getDataTypes(workspaceName, graphUri) {
     // fetch xsd datatypes
     const xsd = await bec.getXSDPrimitives();
     let xsdPrimitivesDto = await xsd.json();
     // fetch primitive datatypes
-    const resPrimitivesClasses = await bec.getPrimitives(datasetName, graphUri);
+    const resPrimitivesClasses = await bec.getPrimitives(
+        workspaceName,
+        graphUri,
+    );
     let primitivesDto = await resPrimitivesClasses.json();
     // fetch other datatypes (e.g. CIMDatatype)
-    const resDataTypes = await bec.getDataTypes(datasetName, graphUri);
+    const resDataTypes = await bec.getDataTypes(workspaceName, graphUri);
     let dataTypesDto = await resDataTypes.json();
 
     // combine all datatypes into one list
@@ -97,12 +100,12 @@ export async function getDataTypes(datasetName, graphUri) {
 }
 
 export async function getClasses(
-    datasetName,
+    workspaceName,
     graphUri,
     includeExternalClasses = true,
 ) {
     const res = await bec.getClasses(
-        datasetName,
+        workspaceName,
         graphUri,
         includeExternalClasses,
     );
@@ -113,16 +116,16 @@ export async function getClasses(
     return classes;
 }
 
-export async function getStereotypes(datasetName, graphUri) {
-    const res = await bec.getStereotypes(datasetName, graphUri);
+export async function getStereotypes(workspaceName, graphUri) {
+    const res = await bec.getStereotypes(workspaceName, graphUri);
     let stereotypesJSON = await res.json();
 
     console.debug("STEREOTYPES:", stereotypesJSON);
     return stereotypesJSON;
 }
 
-export async function getNamespaces(datasetName) {
-    const namespaces = await getNamespacesFromApi(datasetName);
+export async function getNamespaces(workspaceName) {
+    const namespaces = await getNamespacesFromApi(workspaceName);
     console.debug("NAMESPACES:", namespaces);
     return namespaces;
 }

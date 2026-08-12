@@ -34,7 +34,7 @@
     import PackageWindow from "./packageWindow.svelte";
     import WorkspaceTabs from "./workspaceTabs/WorkspaceTabs.svelte";
 
-    const activeWorkspace = $derived(editorState.selectedDataset.getValue());
+    const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
     const hasNoWorkspaces = $derived(
         workspaceState.isLoaded() && workspaceState.getNames().length === 0,
     );
@@ -60,15 +60,15 @@
     async function parseModelSelectionUrlParameters() {
         const url = new URL(window.location.href);
         const queryParams = new URLSearchParams(url.search);
-        const dataset = queryParams.get("dataset") || null;
+        const workspace = queryParams.get("dataset") || null;
         const graph = queryParams.get("graph") || null;
         let pack = queryParams.get("package") || null;
-        if (!dataset) return;
-        editorState.selectedDataset.updateValue(dataset);
+        if (!workspace) return;
+        editorState.selectedWorkspace.updateValue(workspace);
         editorState.selectedGraph.updateValue(graph);
         if (!graph || !pack) return;
         if (pack !== "default" && !validate(pack)) {
-            pack = await resolveIRI(dataset, graph, pack);
+            pack = await resolveIRI(workspace, graph, pack);
         }
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
@@ -76,11 +76,11 @@
         });
     }
 
-    async function resolveIRI(dataset, graph, iri) {
+    async function resolveIRI(workspace, graph, iri) {
         return await fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
-                encodeURIComponent(dataset) +
+                encodeURIComponent(workspace) +
                 "/graphs/" +
                 encodeURIComponent(graph) +
                 "/resolve/iri/" +

@@ -97,7 +97,7 @@ export class ContextMenuController {
     handleNodeContextMenu({ event, node }) {
         this.#consumeEvent(event);
         const isInSelection = multiSelectState.isSelected(
-            editorState.selectedDataset.getValue(),
+            editorState.selectedWorkspace.getValue(),
             node.data?.graphUri,
             node.id,
         );

@@ -29,56 +29,56 @@
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable(), lockedDatasetName } = $props();
+    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    const datasetSelectId = `datasetSelect-${uuidv4()}`;
+    const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
 
-    let datasetName = $state(null);
-    let datasets = $state([]);
+    let workspaceName = $state(null);
+    let workspaces = $state([]);
     let base64Token = $state();
 
-    const datasetSelectionLocked = $derived(!!lockedDatasetName);
+    const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
 
     function onOpen() {
-        datasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
-        if (datasetSelectionLocked) {
-            datasets = [{ label: lockedDatasetName }];
+        workspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
+        if (workspaceSelectionLocked) {
+            workspaces = [{ label: lockedWorkspaceName }];
         } else {
-            loadDatasets();
+            loadWorkspaces();
         }
     }
 
-    async function snapshotDataset() {
-        const res = await bec.createSnapshot(datasetName);
+    async function snapshotWorkspace() {
+        const res = await bec.createSnapshot(workspaceName);
         if (res.ok) {
             base64Token = await res.text();
             console.log(
-                "Successfully created snapshot for dataset",
-                datasetName,
+                "Successfully created snapshot for workspace",
+                workspaceName,
             );
             toastStore.success(
                 "Snapshot ready",
-                `Share link created for "${datasetName}".`,
+                `Share link created for "${workspaceName}".`,
             );
         } else {
             console.error(
-                "Error creating snapshot for dataset:",
+                "Error creating snapshot for workspace:",
                 res.statusText,
             );
             toastStore.error(
                 "Snapshot failed",
-                `Could not create a snapshot for "${datasetName}".`,
+                `Could not create a snapshot for "${workspaceName}".`,
             );
         }
     }
 
-    async function loadDatasets() {
-        const res = await bec.getDatasetNames();
-        const datasetNames = await res.json();
-        datasets = datasetNames.map(name => ({ label: name }));
+    async function loadWorkspaces() {
+        const res = await bec.getWorkspaceNames();
+        const workspaceNames = await res.json();
+        workspaces = workspaceNames.map(name => ({ label: name }));
     }
 
     async function copyToClipboard() {
@@ -101,21 +101,21 @@
     bind:showDialog
     {onOpen}
     primaryLabel="Share Snapshot"
-    onPrimary={snapshotDataset}
+    onPrimary={snapshotWorkspace}
     closeOnPrimary={false}
     title="Share Snapshot"
-    disablePrimary={!datasetName}
+    disablePrimary={!workspaceName}
 >
     <div class="mx-2 flex h-full flex-col">
-        <label for={datasetSelectId} class="mb-1">Dataset</label>
+        <label for={workspaceSelectId} class="mb-1">Workspace</label>
         <SelectEditControl
-            id={datasetSelectId}
-            bind:value={datasetName}
-            options={datasets}
-            getOptionValue={dataset => dataset.label}
-            getOptionLabel={dataset => dataset.label}
-            disabled={datasetSelectionLocked || datasets.length === 0}
-            placeholder="Select dataset"
+            id={workspaceSelectId}
+            bind:value={workspaceName}
+            options={workspaces}
+            getOptionValue={workspace => workspace.label}
+            getOptionLabel={workspace => workspace.label}
+            disabled={workspaceSelectionLocked || workspaces.length === 0}
+            placeholder="Select workspace"
         />
 
         <div class="mt-4 flex h-full flex-col">

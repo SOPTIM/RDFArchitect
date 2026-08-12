@@ -15,7 +15,7 @@
  *
  */
 
-import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
+import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -30,8 +30,8 @@ const selectionByWorkspace = new Map();
 /**
  * The workspaces of the current session including their read-only state. A
  * workspace is the top level of the navigation and holds schemas, packages and
- * diagrams; the backend calls it a dataset. The active workspace is
- * `editorState.selectedDataset`.
+ * diagrams; on the wire it is still called a dataset. The active workspace is
+ * `editorState.selectedWorkspace`.
  */
 export const workspaceState = {
     names: new StateValuePair([]),
@@ -49,7 +49,7 @@ export const workspaceState = {
     },
 
     getActive() {
-        return editorState.selectedDataset.getValue();
+        return editorState.selectedWorkspace.getValue();
     },
 
     isReadOnly(name) {
@@ -114,14 +114,14 @@ export const workspaceState = {
             selectionByWorkspace.set(active, editorState.captureSelection());
         }
         editorState.reset();
-        editorState.selectDataset(name);
+        editorState.selectWorkspace(name);
         if (name && selectionByWorkspace.has(name)) {
             editorState.applySelection(selectionByWorkspace.get(name));
         }
     },
 
     async create(name) {
-        const res = await bec.createDataset(name);
+        const res = await bec.createWorkspace(name);
         if (!res.ok) {
             toastStore.error(
                 "Create failed",
@@ -149,7 +149,7 @@ export const workspaceState = {
     },
 
     async remove(name) {
-        const res = await bec.deleteDataset(name);
+        const res = await bec.deleteWorkspace(name);
         if (res && res.ok === false) {
             toastStore.error(
                 "Delete failed",
@@ -175,7 +175,7 @@ export const workspaceState = {
 
 async function fetchWorkspaceNames() {
     try {
-        const res = await bec.getDatasetNames();
+        const res = await bec.getWorkspaceNames();
         if (!res.ok) {
             console.error(`Error fetching workspaces: HTTP ${res.status}`);
             return [];

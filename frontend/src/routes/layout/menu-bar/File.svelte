@@ -41,7 +41,7 @@
     import UserSettingDialog from "../../UserSettingDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
 
-    let { isDatasetReadOnly } = $props();
+    let { isWorkspaceReadOnly } = $props();
 
     const shortcutsUnregister = [];
 
@@ -55,13 +55,13 @@
     let showUserSettingDialog = $state(false);
     let showDocumentationExportDialog = $state(false);
 
-    let selectedDataset = $derived(editorState.selectedDataset.getValue());
+    let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
-    let hasWorkspaceSelected = $derived(!!selectedDataset);
+    let hasWorkspaceSelected = $derived(!!selectedWorkspace);
     let hasGraphSelected = $derived(hasWorkspaceSelected && !!selectedGraph);
 
     $effect(() => {
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         editorState.selectedGraph.subscribe();
     });
 
@@ -193,7 +193,7 @@
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
                     onSelect={() => (showDeleteDialog = true)}
-                    disabled={!hasGraphSelected || isDatasetReadOnly}
+                    disabled={!hasGraphSelected || isWorkspaceReadOnly}
                     faIcon={faTrash}
                     variant="danger"
                 >
@@ -223,5 +223,5 @@
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <WorkspaceDeleteDialog
     bind:showDialog={showWorkspaceDeleteDialog}
-    workspaceName={selectedDataset}
+    workspaceName={selectedWorkspace}
 />

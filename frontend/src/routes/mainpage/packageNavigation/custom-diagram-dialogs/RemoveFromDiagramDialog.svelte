@@ -29,7 +29,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         graphUri,
         diagramId,
         classIds = [],
@@ -49,13 +49,13 @@
         try {
             const res = graphUri
                 ? await bec.removeFromCustomGraphDiagram(
-                      lockedDatasetName,
+                      lockedWorkspaceName,
                       graphUri,
                       diagramId,
                       classIds,
                   )
-                : await bec.removeFromCustomDatasetDiagram(
-                      lockedDatasetName,
+                : await bec.removeFromCustomWorkspaceDiagram(
+                      lockedWorkspaceName,
                       diagramId,
                       classIds,
                   );

@@ -40,7 +40,7 @@
     const backend = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const filters = [
         { name: "All Workspaces", value: "all" },
-        { name: "Current Workspace", value: "dataset" },
+        { name: "Current Workspace", value: "workspace" },
         { name: "Current Schema", value: "graph" },
         { name: "Current Package", value: "package" },
     ];
@@ -66,7 +66,7 @@
     });
 
     function selectSubject(searchResult) {
-        editorState.selectedDataset.updateValue(searchResult.datasetName);
+        editorState.selectedWorkspace.updateValue(searchResult.datasetName);
         editorState.selectedGraph.updateValue(searchResult.graphUri);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
@@ -74,7 +74,7 @@
         });
 
         if (searchResult.type === "CLASS") {
-            editorState.selectedClassDataset.updateValue(
+            editorState.selectedClassWorkspace.updateValue(
                 searchResult.datasetName,
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
@@ -91,7 +91,7 @@
                 id: searchResult.uuid,
             });
         } else {
-            editorState.selectedClassDataset.updateValue(
+            editorState.selectedClassWorkspace.updateValue(
                 searchResult.datasetName,
             );
             editorState.selectedClassGraph.updateValue(searchResult.graphUri);
@@ -103,7 +103,7 @@
                 searchResult.parentClassUUID,
             );
         }
-        editorState.selectedDataset.trigger();
+        editorState.selectedWorkspace.trigger();
         editorState.selectedGraph.trigger();
         editorState.selectedDiagram.trigger();
         forceReloadTrigger.trigger();
@@ -121,10 +121,10 @@
         const body = {
             datasetName:
                 selectedFilter.value !== "all"
-                    ? editorState.selectedDataset.getValue()
+                    ? editorState.selectedWorkspace.getValue()
                     : null,
             graphUri:
-                selectedFilter.value !== "dataset" &&
+                selectedFilter.value !== "workspace" &&
                 selectedFilter.value !== "all"
                     ? editorState.selectedGraph.getValue()
                     : null,

@@ -22,13 +22,13 @@ import { getPackageId } from "../packageNavigationUtils.svelte.js";
 
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-async function getPackages(datasetName, graphURI) {
-    const res = await bec.getPackages(datasetName, graphURI);
+async function getPackages(workspaceName, graphURI) {
+    const res = await bec.getPackages(workspaceName, graphURI);
     return await res.json();
 }
 
-export async function createPackageListForGraph(datasetName, graphURI) {
-    const res = await getPackages(datasetName, graphURI);
+export async function createPackageListForGraph(workspaceName, graphURI) {
+    const res = await getPackages(workspaceName, graphURI);
 
     return [...res.internalPackageList, ...res.externalPackageList]
         .map(pack => {
@@ -49,18 +49,18 @@ export async function createPackageListForGraph(datasetName, graphURI) {
         });
 }
 
-async function getClasses(datasetName, graphURI) {
-    const res = await bec.getClasses(datasetName, graphURI);
+async function getClasses(workspaceName, graphURI) {
+    const res = await bec.getClasses(workspaceName, graphURI);
     return await res.json();
 }
 
 export async function createClassListForGraph(
-    datasetName,
+    workspaceName,
     graphURI,
     selectedClasses,
 ) {
     try {
-        const classList = (await getClasses(datasetName, graphURI)) ?? [];
+        const classList = (await getClasses(workspaceName, graphURI)) ?? [];
 
         const grouped = {};
 

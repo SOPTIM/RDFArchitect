@@ -22,7 +22,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -32,10 +32,10 @@
         graphExportComponent
             ? () =>
                   graphExportComponent.handleExport(
-                      (datasetName, graphURI) =>
+                      (workspaceName, graphURI) =>
                           PUBLIC_BACKEND_URL +
                           "/datasets/" +
-                          encodeURIComponent(datasetName) +
+                          encodeURIComponent(workspaceName) +
                           "/graphs/" +
                           encodeURIComponent(graphURI) +
                           "/content",
@@ -55,7 +55,7 @@
         bind:this={graphExportComponent}
         bind:showDialog
         bind:disablePrimary
-        {lockedDatasetName}
+        {lockedWorkspaceName}
         {lockedGraphUri}
         generateOntologyEntries={true}
     />

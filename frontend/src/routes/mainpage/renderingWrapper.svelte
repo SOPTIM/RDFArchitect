@@ -45,7 +45,7 @@
     let svelteFlowAPI = $state({});
 
     let response = $state(null);
-    let isDatasetReadOnly = $state();
+    let isWorkspaceReadOnly = $state();
     let renderingFormat = $state(null);
     let mermaidWrapper = $state();
     let svelteFlowWrapper = $state();
@@ -59,25 +59,25 @@
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        editorState.selectedDataset.subscribe();
-        const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await isReadOnly(dataset) : false;
+        editorState.selectedWorkspace.subscribe();
+        const workspace = editorState.selectedWorkspace.getValue();
+        isWorkspaceReadOnly = workspace ? await isReadOnly(workspace) : false;
     });
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDiagram.subscribe();
 
-        const datasetName = editorState.selectedDataset.getValue();
+        const workspaceName = editorState.selectedWorkspace.getValue();
         const graphUri = editorState.selectedGraph.getValue();
         const diagramId = editorState.selectedDiagram.getProperty("id");
         const diagramType = editorState.selectedDiagram.getProperty("type");
         const filter = renderOptions.graphFilter();
 
         const nextDiagramRequestKey = getDiagramRequestKey(
-            datasetName,
+            workspaceName,
             graphUri,
             diagramId,
             filter,
@@ -94,13 +94,13 @@
         if (diagramId) {
             if (diagramType === DiagramType.CUSTOM_GRAPH_DIAGRAM) {
                 await fetchGraphDiagramRenderingData(diagramId);
-            } else if (diagramType === DiagramType.CUSTOM_DATASET_DIAGRAM) {
-                await fetchDatasetDiagramRenderingData(diagramId);
+            } else if (diagramType === DiagramType.CUSTOM_WORKSPACE_DIAGRAM) {
+                await fetchWorkspaceDiagramRenderingData(diagramId);
             } else if (diagramType === DiagramType.CROSS_PROFILE) {
                 await fetchCrossProfileRenderingData();
             } else {
                 await fetchPackageRenderingData(
-                    datasetName,
+                    workspaceName,
                     graphUri,
                     diagramId,
                     filter,
@@ -115,7 +115,7 @@
     });
 
     async function fetchPackageRenderingData(
-        datasetName,
+        workspaceName,
         graphUri,
         packageUUID,
         filter,
@@ -134,7 +134,7 @@
 
         try {
             const res = await bec.fetchFilteredRenderingData(
-                datasetName,
+                workspaceName,
                 graphUri,
                 graphFilter,
             );
@@ -160,10 +160,10 @@
         }
     }
 
-    async function fetchDatasetDiagramRenderingData(diagramId) {
+    async function fetchWorkspaceDiagramRenderingData(diagramId) {
         try {
-            const res = await bec.getCustomDatasetDiagramRenderingData(
-                editorState.selectedDataset.getValue(),
+            const res = await bec.getCustomWorkspaceDiagramRenderingData(
+                editorState.selectedWorkspace.getValue(),
                 diagramId,
             );
 
@@ -187,7 +187,7 @@
     async function fetchGraphDiagramRenderingData(diagramId) {
         try {
             const res = await bec.getCustomGraphDiagramRenderingData(
-                editorState.selectedDataset.getValue(),
+                editorState.selectedWorkspace.getValue(),
                 editorState.selectedGraph.getValue(),
                 diagramId,
             );
@@ -211,9 +211,10 @@
 
     async function fetchCrossProfileRenderingData() {
         try {
-            const res = await bec.getCrossProfileDiagramRenderingDataForDataset(
-                editorState.selectedDataset.getValue(),
-            );
+            const res =
+                await bec.getCrossProfileDiagramRenderingDataForWorkspace(
+                    editorState.selectedWorkspace.getValue(),
+                );
 
             const responseText = await res.text();
             if (!responseText) {
@@ -232,17 +233,22 @@
         }
     }
 
-    function getDiagramRequestKey(datasetName, graphUri, packageUUID, filter) {
+    function getDiagramRequestKey(
+        workspaceName,
+        graphUri,
+        packageUUID,
+        filter,
+    ) {
         return JSON.stringify({
-            datasetName,
+            workspaceName,
             graphUri,
             packageUUID,
             filter,
         });
     }
 
-    async function isReadOnly(datasetName) {
-        const res = await bec.isReadOnly(datasetName);
+    async function isReadOnly(workspaceName) {
+        const res = await bec.isReadOnly(workspaceName);
         return await res.json();
     }
 
@@ -263,7 +269,7 @@
                 onResetView={() => handleResetView()}
                 onResetLayout={async () =>
                     await svelteFlowWrapper.applyELKLayout()}
-                showResetLayout={!isDatasetReadOnly &&
+                showResetLayout={!isWorkspaceReadOnly &&
                     renderingFormat === SVELTEFLOW_FORMAT}
             />
         {/if}

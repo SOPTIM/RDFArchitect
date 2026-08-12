@@ -26,7 +26,7 @@
     import { onMount, onDestroy } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
+    import { getCrossProfileDiagram } from "$lib/api/apiWorkspaceUtils.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import {
@@ -43,7 +43,7 @@
 
     import ClassEditor from "./classEditor.svelte";
 
-    let { datasetName, graphUri, classUuid, isMerged } = $props();
+    let { workspaceName, graphUri, classUuid, isMerged } = $props();
 
     let mergedClass = $state(null);
     let resolving = $state(false);
@@ -84,7 +84,7 @@
     });
 
     $effect(() => {
-        if (!datasetName || !classUuid) return;
+        if (!workspaceName || !classUuid) return;
         forceReloadTrigger.subscribe();
 
         if (!isMerged) {
@@ -100,7 +100,7 @@
 
         const cancellation = { cancelled: false };
         resolving = true;
-        getCrossProfileDiagram(datasetName)
+        getCrossProfileDiagram(workspaceName)
             .then(diagram => {
                 if (cancellation.cancelled) return;
                 const classes = diagram?.classes ?? [];
@@ -176,7 +176,7 @@
 
     function sourceColor(source) {
         const uri = sourceGraphUri(source);
-        return uri ? graphColors.get(datasetName, uri) : null;
+        return uri ? graphColors.get(workspaceName, uri) : null;
     }
 
     function sourceLabel(source) {
@@ -185,18 +185,18 @@
 
     function closeClassEditorHost(
         {
-            datasetName = null,
+            workspaceName = null,
             graphUri = null,
             classUuid = null,
             classType = null,
         } = {
-            datasetName: null,
+            workspaceName: null,
             graphUri: null,
             classUuid: null,
             classType: null,
         },
     ) {
-        editorState.selectedClassDataset.updateValue(datasetName);
+        editorState.selectedClassWorkspace.updateValue(workspaceName);
         editorState.selectedClassGraph.updateValue(graphUri);
         editorState.selectedClass.updateValue({
             type: classType,
@@ -252,7 +252,7 @@
         {:else if resolvedGraphUri && resolvedClassUuid}
             <div class="h-full overflow-auto">
                 <ClassEditor
-                    {datasetName}
+                    {workspaceName}
                     graphUri={resolvedGraphUri}
                     classUuid={resolvedClassUuid}
                 />

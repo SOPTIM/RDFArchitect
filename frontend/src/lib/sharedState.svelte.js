@@ -42,7 +42,7 @@ export {
  */
 export const DiagramType = {
     CUSTOM_GRAPH_DIAGRAM: "customGraphDiagram",
-    CUSTOM_DATASET_DIAGRAM: "customDatasetDiagram",
+    CUSTOM_WORKSPACE_DIAGRAM: "customWorkspaceDiagram",
     CROSS_PROFILE: "crossProfile",
     PACKAGE: "package",
 };
@@ -57,7 +57,7 @@ export const ClassType = {
  * mark the last-picked level (recency the nested fields can't express alone).
  */
 export const SelectionLevel = {
-    DATASET: "dataset",
+    WORKSPACE: "workspace",
     GRAPH: "graph",
     PACKAGE: "package",
     DIAGRAM: "diagram",
@@ -68,10 +68,10 @@ export const SelectionLevel = {
 /**
  * The editorState object contains the state of the editor. Content might expand in the future.
  * @type {{
- *  selectedDataset: StateValuePair<string | null>,
+ *  selectedWorkspace: StateValuePair<string | null>,
  *  selectedGraph: StateValuePair<string | null>,
  *  selectedDiagram: StateObjectPair<Object | null>,
- *  selectedClassDataset: StateValuePair<string | null>,
+ *  selectedClassWorkspace: StateValuePair<string | null>,
  *  selectedClassGraph: StateValuePair<string | null>,
  *  selectedClass: StateObjectPair<Object | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
@@ -81,11 +81,11 @@ export const SelectionLevel = {
  * }}
  */
 export const editorState = {
-    selectedDataset: new StateValuePair(),
+    selectedWorkspace: new StateValuePair(),
     selectedGraph: new StateValuePair(),
     //can either be a package uuid or a custom diagram uuid
     selectedDiagram: new StateObjectPair({ type: null, id: null }),
-    selectedClassDataset: new StateValuePair(),
+    selectedClassWorkspace: new StateValuePair(),
     selectedClassGraph: new StateValuePair(),
     selectedClass: new StateObjectPair({ type: null, id: null }),
     focusedClassUUID: new StateValuePair(),
@@ -97,10 +97,10 @@ export const editorState = {
     mergedViewOriginGraph: new StateValuePair(),
 
     reset() {
-        this.selectedDataset.updateValue(null);
+        this.selectedWorkspace.updateValue(null);
         this.selectedGraph.updateValue(null);
         this.selectedDiagram.updateValue({ type: null, id: null });
-        this.selectedClassDataset.updateValue(null);
+        this.selectedClassWorkspace.updateValue(null);
         this.selectedClassGraph.updateValue(null);
         this.selectedClass.updateValue({ type: null, id: null });
         this.focusedClassUUID.updateValue(null);
@@ -110,12 +110,12 @@ export const editorState = {
         multiSelectState.clear();
     },
 
-    /** Snapshot of everything selected below the dataset level. */
+    /** Snapshot of everything selected below the workspace level. */
     captureSelection() {
         return {
             graph: this.selectedGraph.getValue(),
             diagram: { ...(this.selectedDiagram.getValue() ?? {}) },
-            classDataset: this.selectedClassDataset.getValue(),
+            classWorkspace: this.selectedClassWorkspace.getValue(),
             classGraph: this.selectedClassGraph.getValue(),
             selectedClass: { ...(this.selectedClass.getValue() ?? {}) },
             focusedClassUUID: this.focusedClassUUID.getValue(),
@@ -133,7 +133,9 @@ export const editorState = {
         this.selectedDiagram.updateValue(
             selection.diagram ?? { type: null, id: null },
         );
-        this.selectedClassDataset.updateValue(selection.classDataset ?? null);
+        this.selectedClassWorkspace.updateValue(
+            selection.classWorkspace ?? null,
+        );
         this.selectedClassGraph.updateValue(selection.classGraph ?? null);
         this.selectedClass.updateValue(
             selection.selectedClass ?? { type: null, id: null },
@@ -145,34 +147,34 @@ export const editorState = {
         );
     },
 
-    selectDataset(datasetName) {
+    selectWorkspace(workspaceName) {
         multiSelectState.clear();
-        this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
-        if (this.selectedDataset.getValue() === datasetName) {
+        this.activeSelectionKind.updateValue(SelectionLevel.WORKSPACE);
+        if (this.selectedWorkspace.getValue() === workspaceName) {
             return;
         }
         this.selectedGraph.updateValue(null);
         this.selectedDiagram.updateValue({ type: null, id: null });
-        this.selectedDataset.updateValue(datasetName);
+        this.selectedWorkspace.updateValue(workspaceName);
     },
 
-    selectGraph(datasetName, graphUri) {
+    selectGraph(workspaceName, graphUri) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
         const graphChanged =
-            this.selectedDataset.getValue() !== datasetName ||
+            this.selectedWorkspace.getValue() !== workspaceName ||
             this.selectedGraph.getValue() !== graphUri;
-        this.selectedDataset.updateValue(datasetName);
+        this.selectedWorkspace.updateValue(workspaceName);
         this.selectedGraph.updateValue(graphUri);
         if (graphChanged) {
             this.selectedDiagram.updateValue({ type: null, id: null });
         }
     },
 
-    selectPackage(datasetName, graphUri, packageId) {
+    selectPackage(workspaceName, graphUri, packageId) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.PACKAGE);
-        this.selectedDataset.updateValue(datasetName);
+        this.selectedWorkspace.updateValue(workspaceName);
         this.selectedGraph.updateValue(graphUri);
         this.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
@@ -180,10 +182,10 @@ export const editorState = {
         });
     },
 
-    selectCustomDiagram(datasetName, graphUri, diagramId, diagramType) {
+    selectCustomDiagram(workspaceName, graphUri, diagramId, diagramType) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.DIAGRAM);
-        this.selectedDataset.updateValue(datasetName);
+        this.selectedWorkspace.updateValue(workspaceName);
         this.selectedGraph.updateValue(graphUri ?? null);
         this.selectedDiagram.updateValue({ type: diagramType, id: diagramId });
     },
@@ -192,10 +194,10 @@ export const editorState = {
         this.activeSelectionKind.updateValue(SelectionLevel.CLASS);
     },
 
-    dissolveToDataset() {
+    dissolveToWorkspace() {
         this.selectedGraph.updateValue(null);
         this.selectedDiagram.updateValue({ type: null, id: null });
-        this.activeSelectionKind.updateValue(SelectionLevel.DATASET);
+        this.activeSelectionKind.updateValue(SelectionLevel.WORKSPACE);
     },
 
     dissolveToGraph() {
@@ -216,9 +218,9 @@ export const compareState = {
 
 /**
  * Stores the classes that were copied and are available for paste.
- * Each entry is `{ classUUID, graphURI, datasetName }`. Supports copying multiple
+ * Each entry is `{ classUUID, graphURI, workspaceName }`. Supports copying multiple
  * classes at once (multiselect).
- * @type {{ entries: StateValuePair<Array<{classUUID: string, graphURI: string, datasetName: string}>> }}
+ * @type {{ entries: StateValuePair<Array<{classUUID: string, graphURI: string, workspaceName: string}>> }}
  */
 export const copyState = {
     entries: new StateValuePair([]),
@@ -235,13 +237,13 @@ export const copyState = {
         this.entries.updateValue([...entries]);
     },
 
-    remove(datasetName, graphURI, classUUID) {
+    remove(workspaceName, graphURI, classUUID) {
         this.entries.updateValue(
             this.getEntries().filter(
                 e =>
                     e.classUUID !== classUUID ||
                     e.graphURI !== graphURI ||
-                    e.datasetName !== datasetName,
+                    e.workspaceName !== workspaceName,
             ),
         );
     },
@@ -263,10 +265,10 @@ export const multiSelectState = new MultiSelectState();
 
 export const migrationState = writable({
     compareMode: null,
-    datasetA: null,
+    workspaceA: null,
     graphA: null,
     graphB: null,
-    datasetB: null,
+    workspaceB: null,
     fileA: null,
     fileB: null,
     cgmesVersionA: null,

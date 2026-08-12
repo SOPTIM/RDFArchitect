@@ -40,6 +40,7 @@
     import { shortenIri } from "$lib/utils/iri.js";
 
     import ClassEntry from "./ClassEntry.svelte";
+    import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import {
         isSelectedPackage,
         packageHighlight,
@@ -47,13 +48,13 @@
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import NewClassDialog from "../../NewClassDialog.svelte";
     import PackageEditorDialog from "../packageEditorDialog.svelte";
-    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import { startPaste } from "./paste-flow.svelte.js";
     import PasteMenuItems from "./PasteMenuItems.svelte";
 
     let {
-        datasetNavEntry,
+        workspaceNavEntry,
         graphNavEntry,
         packageNavEntry,
         namespaces = [],
@@ -61,7 +62,7 @@
     } = $props();
     let showNewClassDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
-    let showAddToDatasetDiagramDialog = $state(false);
+    let showAddToWorkspaceDiagramDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showDeleteDependenciesDialog = $state(false);
 
@@ -74,7 +75,7 @@
     );
 
     const selectionTrigger = $derived([
-        editorState.selectedDataset.subscribe(),
+        editorState.selectedWorkspace.subscribe(),
         editorState.selectedGraph.subscribe(),
         editorState.selectedDiagram.subscribe(),
         editorState.activeSelectionKind.subscribe(),
@@ -86,7 +87,7 @@
     let isPackageSelected = $derived(
         selectionTrigger &&
             isSelectedPackage(
-                datasetNavEntry.id,
+                workspaceNavEntry.id,
                 graphNavEntry.id,
                 packageNavEntry.id,
             ),
@@ -94,7 +95,7 @@
     let packageSelectionState = $derived(
         selectionTrigger &&
             packageHighlight(
-                datasetNavEntry.id,
+                workspaceNavEntry.id,
                 graphNavEntry.id,
                 packageNavEntry.id,
                 packageNavEntry.children,
@@ -119,9 +120,9 @@
         wasPackageSelected = isPackageSelected;
     });
 
-    function copyDatasetUrl() {
+    function copyWorkspaceUrl() {
         const params = new URLSearchParams({
-            dataset: datasetNavEntry.id,
+            dataset: workspaceNavEntry.id,
             graph: graphNavEntry.id,
             package: packageNavEntry.id,
         });
@@ -135,7 +136,7 @@
 
     function selectPackage() {
         editorState.selectPackage(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
             packageNavEntry.id,
         );
@@ -143,7 +144,7 @@
 
     async function pasteClass(options) {
         await startPaste(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
             packageNavEntry.data.uuid,
             options,
@@ -206,7 +207,7 @@
             </ContextMenu.Item.Button>
             <ContextMenu.Item.Button
                 onSelect={() => {
-                    showAddToDatasetDiagramDialog = true;
+                    showAddToWorkspaceDiagramDialog = true;
                 }}
                 faIcon={faObjectGroup}
             >
@@ -223,7 +224,10 @@
             >
                 {packageActionLabel}
             </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button onSelect={copyDatasetUrl} faIcon={faLink}>
+            <ContextMenu.Item.Button
+                onSelect={copyWorkspaceUrl}
+                faIcon={faLink}
+            >
                 Copy Link to Package
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
@@ -245,7 +249,7 @@
         >
             {#each packageNavEntry.children as classNavEntry (classNavEntry.id)}
                 <ClassEntry
-                    {datasetNavEntry}
+                    {workspaceNavEntry}
                     {graphNavEntry}
                     {classNavEntry}
                     {namespaces}
@@ -259,7 +263,7 @@
 {#if showNewClassDialog}
     <NewClassDialog
         bind:showDialog={showNewClassDialog}
-        lockedDatasetName={datasetNavEntry.id}
+        lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
         lockedPackage={packageNavEntry.data}
     />
@@ -268,16 +272,16 @@
 {#if showAddToGraphDiagramDialog}
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+        lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
 {/if}
 
-{#if showAddToDatasetDiagramDialog}
-    <AddToDatasetDiagramDialog
-        bind:showDialog={showAddToDatasetDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+{#if showAddToWorkspaceDiagramDialog}
+    <AddToWorkspaceDiagramDialog
+        bind:showDialog={showAddToWorkspaceDiagramDialog}
+        lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
         classes={packageNavEntry.children}
     />
@@ -286,7 +290,7 @@
 {#if showPackageEditorDialog}
     <PackageEditorDialog
         bind:showDialog={showPackageEditorDialog}
-        datasetName={datasetNavEntry.id}
+        workspaceName={workspaceNavEntry.id}
         graphUri={graphNavEntry.id}
         pack={packageNavEntry.data}
         {readonly}
@@ -296,7 +300,7 @@
 {#if showDeleteDependenciesDialog}
     <DeleteDependenciesDialog
         bind:showDialog={showDeleteDependenciesDialog}
-        datasetName={datasetNavEntry.id}
+        workspaceName={workspaceNavEntry.id}
         graphUri={graphNavEntry.id}
         resourceUuid={packageNavEntry.data.uuid}
     />

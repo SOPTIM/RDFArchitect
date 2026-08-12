@@ -40,7 +40,7 @@
 
     const isInSelection = $derived(
         multiSelectState.isSelected(
-            editorState.selectedDataset.getValue(),
+            editorState.selectedWorkspace.getValue(),
             selectionGraphUri,
             id,
         ),

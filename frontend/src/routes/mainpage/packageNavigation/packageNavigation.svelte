@@ -18,7 +18,7 @@
 <script>
     import { setContext, untrack } from "svelte";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
@@ -43,7 +43,7 @@
     let namespaces = $state([]);
     let crossProfileID = $state();
 
-    const activeWorkspace = $derived(editorState.selectedDataset.getValue());
+    const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
     const readonly = $derived(workspaceState.isReadOnly(activeWorkspace));
     // Entries of a workspace that is no longer active must not be rendered:
     // their sections would fire requests mixing the new workspace with the old
@@ -134,7 +134,7 @@
                                 >
                                     {#each graphNavEntries as graphNavEntry (graphNavEntry.id)}
                                         <GraphSection
-                                            datasetNavEntry={workspaceNavEntry}
+                                            {workspaceNavEntry}
                                             {graphNavEntry}
                                             {namespaces}
                                             {readonly}
@@ -143,13 +143,13 @@
 
                                     {#if packagesWithClassesCount > 1}
                                         <CrossProfileDiagramsSection
-                                            datasetNavEntry={workspaceNavEntry}
+                                            {workspaceNavEntry}
                                             {crossProfileID}
                                         />
                                     {/if}
 
                                     <CustomDiagramsSection
-                                        datasetNavEntry={workspaceNavEntry}
+                                        {workspaceNavEntry}
                                         allGraphNavEntries={graphNavEntries}
                                         {readonly}
                                     />

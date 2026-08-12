@@ -24,52 +24,52 @@ import {
 
 const ANY_GRAPH = Symbol("anyGraph");
 
-function normContext(dataset, graph) {
+function normContext(workspace, graph) {
     return {
-        datasetLabel: dataset?.label ?? dataset,
+        workspaceLabel: workspace?.label ?? workspace,
         graphUri: graph ? getUri(graph) : null,
     };
 }
 
-export function isSelectedDataset(dataset) {
-    if (dataset.label !== undefined) {
-        dataset = dataset.label;
+export function isSelectedWorkspace(workspace) {
+    if (workspace.label !== undefined) {
+        workspace = workspace.label;
     }
-    return editorState.selectedDataset.getValue() === dataset;
+    return editorState.selectedWorkspace.getValue() === workspace;
 }
 
-export function isSelectedGraph(dataset, graph) {
+export function isSelectedGraph(workspace, graph) {
     return (
-        isSelectedDataset(dataset) &&
+        isSelectedWorkspace(workspace) &&
         editorState.selectedGraph.getValue() === getUri(graph)
     );
 }
 
-export function isSelectedPackage(dataset, graph, pack) {
+export function isSelectedPackage(workspace, graph, pack) {
     return (
-        isSelectedGraph(dataset, graph) &&
+        isSelectedGraph(workspace, graph) &&
         editorState.selectedDiagram.getProperty("id") === getPackageId(pack)
     );
 }
 
-export function isSelectedCustomDiagram(dataset, graph, diagram) {
+export function isSelectedCustomDiagram(workspace, graph, diagram) {
     return graph
-        ? isSelectedGraph(dataset, graph) &&
+        ? isSelectedGraph(workspace, graph) &&
               editorState.selectedDiagram.getProperty("id") ===
                   diagram.diagramId
-        : isSelectedDataset(dataset) &&
+        : isSelectedWorkspace(workspace) &&
               editorState.selectedDiagram.getProperty("id") ===
                   diagram.diagramId;
 }
 
-export function isSelectedClass(dataset, graph, cls) {
+export function isSelectedClass(workspace, graph, cls) {
     if (typeof cls === "string") {
         cls = { uuid: cls };
     }
-    const { datasetLabel, graphUri } = normContext(dataset, graph);
+    const { workspaceLabel, graphUri } = normContext(workspace, graph);
     return (
         editorState.selectedClass.getProperty("id") === cls.uuid &&
-        editorState.selectedClassDataset.getValue() === datasetLabel &&
+        editorState.selectedClassWorkspace.getValue() === workspaceLabel &&
         editorState.selectedClassGraph.getValue() === graphUri
     );
 }
@@ -86,7 +86,7 @@ function isCustomDiagramSelected() {
     const type = editorState.selectedDiagram.getProperty("type");
     return (
         type === DiagramType.CUSTOM_GRAPH_DIAGRAM ||
-        type === DiagramType.CUSTOM_DATASET_DIAGRAM
+        type === DiagramType.CUSTOM_WORKSPACE_DIAGRAM
     );
 }
 
@@ -100,8 +100,8 @@ function inferContextLevel() {
     if (editorState.selectedGraph.getValue()) {
         return SelectionLevel.GRAPH;
     }
-    if (editorState.selectedDataset.getValue()) {
-        return SelectionLevel.DATASET;
+    if (editorState.selectedWorkspace.getValue()) {
+        return SelectionLevel.WORKSPACE;
     }
     return SelectionLevel.NONE;
 }
@@ -132,9 +132,9 @@ function deepestSelectedLevel() {
             if (editorState.selectedGraph.getValue())
                 return SelectionLevel.GRAPH;
             break;
-        case SelectionLevel.DATASET:
-            if (editorState.selectedDataset.getValue())
-                return SelectionLevel.DATASET;
+        case SelectionLevel.WORKSPACE:
+            if (editorState.selectedWorkspace.getValue())
+                return SelectionLevel.WORKSPACE;
             break;
     }
     return inferSelectionLevel();
@@ -151,7 +151,7 @@ function getSelectedClasses() {
     }
     return [
         {
-            datasetName: editorState.selectedClassDataset.getValue(),
+            workspaceName: editorState.selectedClassWorkspace.getValue(),
             graphUri: editorState.selectedClassGraph.getValue(),
             classUuid: uuid,
             packageId: editorState.selectedDiagram.getProperty("id"),
@@ -159,23 +159,27 @@ function getSelectedClasses() {
     ];
 }
 
-function someOpenClass(datasetLabel, graphUri = ANY_GRAPH, matchUuid = null) {
+function someOpenClass(workspaceLabel, graphUri = ANY_GRAPH, matchUuid = null) {
     return getSelectedClasses().some(
         c =>
-            c.datasetName === datasetLabel &&
+            c.workspaceName === workspaceLabel &&
             (graphUri === ANY_GRAPH || c.graphUri === graphUri) &&
             (!matchUuid || matchUuid(c.classUuid)),
     );
 }
 
-export function classHighlight(dataset, graph, classUuid) {
-    const { datasetLabel, graphUri } = normContext(dataset, graph);
+export function classHighlight(workspace, graph, classUuid) {
+    const { workspaceLabel, graphUri } = normContext(workspace, graph);
     const uuid = classUuid?.uuid ?? classUuid;
-    const inSelection = someOpenClass(datasetLabel, graphUri, u => u === uuid);
+    const inSelection = someOpenClass(
+        workspaceLabel,
+        graphUri,
+        u => u === uuid,
+    );
     if (inSelection && deepestSelectedLevel() === SelectionLevel.CLASS) {
         return "active";
     }
-    if (inSelection || isSelectedClass(dataset, graph, uuid)) {
+    if (inSelection || isSelectedClass(workspace, graph, uuid)) {
         return "secondary";
     }
     return null;
@@ -185,32 +189,32 @@ export function classHighlight(dataset, graph, classUuid) {
  * Highlight state of a graph entry: "active" when the graph itself is the most
  * specific selection, "ancestor" when something inside it is.
  */
-export function graphHighlight(dataset, graph) {
-    const { datasetLabel, graphUri } = normContext(dataset, graph);
+export function graphHighlight(workspace, graph) {
+    const { workspaceLabel, graphUri } = normContext(workspace, graph);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
-        return someOpenClass(datasetLabel, graphUri) ? "ancestor" : null;
+        return someOpenClass(workspaceLabel, graphUri) ? "ancestor" : null;
     }
-    if (!isSelectedGraph(datasetLabel, graph)) {
+    if (!isSelectedGraph(workspaceLabel, graph)) {
         return null;
     }
     return level === SelectionLevel.GRAPH ? "active" : "ancestor";
 }
 
-export function packageHighlight(dataset, graph, pack, classEntries = []) {
-    const { datasetLabel, graphUri } = normContext(dataset, graph);
+export function packageHighlight(workspace, graph, pack, classEntries = []) {
+    const { workspaceLabel, graphUri } = normContext(workspace, graph);
     const level = deepestSelectedLevel();
     if (level === SelectionLevel.CLASS) {
         const childUuids = new Set(
             (classEntries ?? []).map(c => c?.id ?? c?.uuid ?? c),
         );
-        return someOpenClass(datasetLabel, graphUri, u => childUuids.has(u))
+        return someOpenClass(workspaceLabel, graphUri, u => childUuids.has(u))
             ? "ancestor"
             : null;
     }
     if (
         level === SelectionLevel.PACKAGE &&
-        isSelectedPackage(dataset, graph, pack)
+        isSelectedPackage(workspace, graph, pack)
     ) {
         return "active";
     }

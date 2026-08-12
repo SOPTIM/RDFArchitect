@@ -69,9 +69,9 @@
 
 <NewGraphDialog
     bind:showDialog={showNewGraphDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />
 <ImportDialog
     bind:showDialog={showImportDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />

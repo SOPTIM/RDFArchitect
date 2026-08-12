@@ -18,50 +18,50 @@
     import { onMount } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
+    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
 
     let {
-        dataset = $bindable(),
+        workspace = $bindable(),
         graph = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
-        allowSelectionOfReadonlyDatasets = true,
+        allowSelectionOfReadonlyWorkspaces = true,
         displayAsCard = true,
     } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    const datasetSelectId = `datasetSelect-${uuidv4()}`;
+    const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
     const graphSelectId = `graphSelect-${uuidv4()}`;
 
-    let datasets = $state([]);
+    let workspaces = $state([]);
     let graphs = $state([]);
 
-    const datasetLocked = $derived(lockedDatasetName !== undefined);
+    const workspaceLocked = $derived(lockedWorkspaceName !== undefined);
     const graphLocked = $derived(lockedGraphUri !== undefined);
 
-    const graphSelectDisabled = $derived(graphLocked || !dataset);
+    const graphSelectDisabled = $derived(graphLocked || !workspace);
 
     $effect(() => {
-        if (datasetLocked) return;
-        if (!dataset) {
+        if (workspaceLocked) return;
+        if (!workspace) {
             graph = graphLocked ? lockedGraphUri : null;
             graphs = [];
             return;
         }
-        loadGraphsFor(dataset);
+        loadGraphsFor(workspace);
     });
 
     onMount(async () => {
-        if (datasetLocked) dataset = lockedDatasetName;
+        if (workspaceLocked) workspace = lockedWorkspaceName;
         if (graphLocked) graph = lockedGraphUri;
 
-        await loadDatasets();
-        if (dataset) {
-            await loadGraphsFor(dataset);
+        await loadWorkspaces();
+        if (workspace) {
+            await loadGraphsFor(workspace);
         } else {
             graphs = [];
         }
@@ -77,37 +77,41 @@
         return (uri.prefix ?? "") + (uri.suffix ?? "");
     }
 
-    async function loadDatasets() {
-        const res = await bec.getDatasetNames();
-        const datasetNames = await res.json();
-        const newDatasets = datasetNames.map(name => ({
+    async function loadWorkspaces() {
+        const res = await bec.getWorkspaceNames();
+        const workspaceNames = await res.json();
+        const newWorkspaces = workspaceNames.map(name => ({
             label: name,
             readonly: false,
         }));
-        if (!allowSelectionOfReadonlyDatasets) {
-            for (const dataset of newDatasets) {
-                dataset.readonly = await isReadOnly(dataset.label);
+        if (!allowSelectionOfReadonlyWorkspaces) {
+            for (const workspace of newWorkspaces) {
+                workspace.readonly = await isReadOnly(workspace.label);
             }
         }
-        datasets = newDatasets;
+        workspaces = newWorkspaces;
 
-        if (!datasetLocked && dataset && !allowSelectionOfReadonlyDatasets) {
-            const selectedDataset = newDatasets.find(
-                option => option.label === dataset,
+        if (
+            !workspaceLocked &&
+            workspace &&
+            !allowSelectionOfReadonlyWorkspaces
+        ) {
+            const selectedWorkspace = newWorkspaces.find(
+                option => option.label === workspace,
             );
-            if (!selectedDataset || selectedDataset.readonly) {
-                dataset = null;
+            if (!selectedWorkspace || selectedWorkspace.readonly) {
+                workspace = null;
             }
         }
     }
 
-    async function loadGraphsFor(dataset) {
-        if (!dataset) {
+    async function loadGraphsFor(workspace) {
+        if (!workspace) {
             graphs = [];
             return;
         }
 
-        const res = await bec.getGraphs(dataset);
+        const res = await bec.getGraphs(workspace);
         graphs = await res.json();
 
         const valid = graphs.some(graphName => getUri(graphName) === graph);
@@ -122,17 +126,17 @@
         ? "border-border bg-background-subtle rounded border p-3"
         : ""}
 >
-    <label for={datasetSelectId} class="mb-1 block text-sm">Workspace</label>
+    <label for={workspaceSelectId} class="mb-1 block text-sm">Workspace</label>
     <SelectEditControl
-        id={datasetSelectId}
-        bind:value={dataset}
-        options={datasets}
-        getOptionIsDisabled={dataset =>
-            !allowSelectionOfReadonlyDatasets && dataset.readonly}
-        getOptionValue={dataset => dataset.label}
-        getOptionLabel={dataset =>
-            dataset.label + (dataset.readonly ? " (readonly)" : "")}
-        disabled={datasetLocked || datasets.length === 0}
+        id={workspaceSelectId}
+        bind:value={workspace}
+        options={workspaces}
+        getOptionIsDisabled={workspace =>
+            !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
+        getOptionValue={workspace => workspace.label}
+        getOptionLabel={workspace =>
+            workspace.label + (workspace.readonly ? " (readonly)" : "")}
+        disabled={workspaceLocked || workspaces.length === 0}
         placeholder="Select workspace"
         onchange={() => (graph = null)}
     />
@@ -145,7 +149,7 @@
         bind:value={graph}
         options={graphs}
         disabled={graphSelectDisabled}
-        placeholder={dataset ? "Select schema" : "Select a workspace first"}
+        placeholder={workspace ? "Select schema" : "Select a workspace first"}
         getOptionValue={getUri}
         getOptionLabel={g => g.keyword ?? g.uri.suffix}
     />

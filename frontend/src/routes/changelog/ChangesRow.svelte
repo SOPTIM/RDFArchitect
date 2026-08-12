@@ -45,7 +45,7 @@
         console.log("restoreVersion", changeId);
 
         const res = await bec.restoreVersion(
-            editorState.selectedDataset.getValue(),
+            editorState.selectedWorkspace.getValue(),
             editorState.selectedGraph.getValue(),
             changeId,
         );

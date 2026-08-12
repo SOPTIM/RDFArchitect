@@ -40,7 +40,7 @@
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
-    import CustomDatasetDiagramDialog from "../packageNavigation/custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
+    import CustomWorkspaceDiagramDialog from "../packageNavigation/custom-diagram-dialogs/CustomWorkspaceDiagramDialog.svelte";
 
     // Rendered inside a ContextMenu.Root: the workspace tabs and the
     // navigation background share these actions.
@@ -136,22 +136,22 @@
 
 <NewGraphDialog
     bind:showDialog={showNewGraphDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />
 <ImportDialog
     bind:showDialog={showImportDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />
-<CustomDatasetDiagramDialog
+<CustomWorkspaceDiagramDialog
     bind:showDialog={showNewDiagramDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />
 <NamespacesDialog
     bind:showDialog={showNamespacesDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />
 <SnapshotDialog
     bind:showDialog={showSnapshotDialog}
-    lockedDatasetName={workspaceName}
+    lockedWorkspaceName={workspaceName}
 />
 <WorkspaceDeleteDialog bind:showDialog={showDeleteDialog} {workspaceName} />

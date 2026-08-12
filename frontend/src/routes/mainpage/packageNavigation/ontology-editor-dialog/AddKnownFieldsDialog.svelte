@@ -26,7 +26,7 @@
         existingEntries,
         scrollToBottom,
         namespaces,
-        dataset,
+        workspace,
         graphUri,
     } = $props();
 
@@ -51,7 +51,7 @@
     async function onOpen() {
         knownFields = await getKnownFields();
         generatedEntries = await (
-            await bec.generateOntologyEntries(dataset, graphUri)
+            await bec.generateOntologyEntries(workspace, graphUri)
         ).json();
         setToAdd();
         resetOverride();

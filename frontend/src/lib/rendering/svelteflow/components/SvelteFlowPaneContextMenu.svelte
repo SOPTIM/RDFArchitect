@@ -34,8 +34,8 @@
         handleContextMenuOpenChange,
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
-    import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import { startPaste } from "../../../../routes/mainpage/packageNavigation/paste-flow.svelte.js";
     import PasteMenuItems from "../../../../routes/mainpage/packageNavigation/PasteMenuItems.svelte";
     import NewClassDialog from "../../../../routes/NewClassDialog.svelte";
@@ -43,7 +43,7 @@
     let {
         request = null,
         disabled = false,
-        lockedDatasetName = "",
+        lockedWorkspaceName = "",
         lockedGraphUri = "",
         lockedPackage = "",
         classes = [],
@@ -55,7 +55,7 @@
     let open = $state(false);
     let showNewClassDialog = $state(false);
     let showAddAllToGraphDiagramDialog = $state(false);
-    let showAddAllToDatasetDiagramDialog = $state(false);
+    let showAddAllToWorkspaceDiagramDialog = $state(false);
     let classLayoutPosition = $state(null);
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
@@ -83,8 +83,8 @@
         onClose();
     }
 
-    function openAddAllToDatasetDiagramDialog() {
-        showAddAllToDatasetDiagramDialog = true;
+    function openAddAllToWorkspaceDiagramDialog() {
+        showAddAllToWorkspaceDiagramDialog = true;
         onClose();
     }
 
@@ -102,7 +102,7 @@
     async function pasteClass(options) {
         onClose();
         await startPaste(
-            editorState.selectedDataset.getValue(),
+            editorState.selectedWorkspace.getValue(),
             editorState.selectedGraph.getValue(),
             editorState.selectedDiagram.getProperty("id"),
             options,
@@ -157,7 +157,7 @@
                 </ContextMenu.Item.Button>
             {/if}
             <ContextMenu.Item.Button
-                onSelect={openAddAllToDatasetDiagramDialog}
+                onSelect={openAddAllToWorkspaceDiagramDialog}
                 disabled={addAllDisabled}
                 faIcon={faObjectGroup}
             >
@@ -169,7 +169,7 @@
 
 <NewClassDialog
     bind:showDialog={showNewClassDialog}
-    {lockedDatasetName}
+    {lockedWorkspaceName}
     {lockedGraphUri}
     {lockedPackage}
     {classLayoutPosition}
@@ -179,16 +179,16 @@
 {#if showAddAllToGraphDiagramDialog}
     <AddToGraphDiagramDialog
         bind:showDialog={showAddAllToGraphDiagramDialog}
-        {lockedDatasetName}
+        {lockedWorkspaceName}
         {lockedGraphUri}
         {classes}
     />
 {/if}
 
-{#if showAddAllToDatasetDiagramDialog}
-    <AddToDatasetDiagramDialog
-        bind:showDialog={showAddAllToDatasetDiagramDialog}
-        {lockedDatasetName}
+{#if showAddAllToWorkspaceDiagramDialog}
+    <AddToWorkspaceDiagramDialog
+        bind:showDialog={showAddAllToWorkspaceDiagramDialog}
+        {lockedWorkspaceName}
         {lockedGraphUri}
         {classes}
     />

@@ -19,7 +19,7 @@
     import { faRotateLeft, faSave } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
@@ -38,7 +38,7 @@
 
     let {
         showDialog = $bindable(),
-        dataset,
+        workspace,
         graphUri,
         namespaces,
         ontology = $bindable(),
@@ -88,7 +88,7 @@
 
     async function onOpen() {
         if (!namespaces) {
-            namespaces = await getNamespaces(dataset);
+            namespaces = await getNamespaces(workspace);
         }
 
         namespaces = withOntologyDefaultNamespaces(namespaces);
@@ -130,7 +130,7 @@
     async function save() {
         loadingOntology = true;
         try {
-            await saveOntology(dataset, graphUri, ontologyObject);
+            await saveOntology(workspace, graphUri, ontologyObject);
             const ontology = await getOntology();
             if (ontology) {
                 ontologyObject = new ReactiveOntology(
@@ -165,7 +165,7 @@
         if (!graphUri) {
             return null;
         }
-        const res = await bec.getOntology(dataset, graphUri);
+        const res = await bec.getOntology(workspace, graphUri);
         let content = await res.text();
         if (!content) {
             return null;
@@ -173,11 +173,11 @@
         return JSON.parse(content);
     }
 
-    async function saveOntology(datasetName, graphUri, ontologyObject) {
+    async function saveOntology(workspaceName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
         const res = ontologyObject.uuid.value
-            ? await bec.putOntology(datasetName, graphUri, serializable)
-            : await bec.postOntology(datasetName, graphUri, serializable);
+            ? await bec.putOntology(workspaceName, graphUri, serializable)
+            : await bec.postOntology(workspaceName, graphUri, serializable);
         if (res && res.ok === false) {
             toastStore.error(
                 "Save failed",
@@ -350,6 +350,6 @@
     existingEntries={ontologyObject.entries}
     scrollToBottom={scrollEntriesToBottom}
     {namespaces}
-    {dataset}
+    {workspace}
     {graphUri}
 />

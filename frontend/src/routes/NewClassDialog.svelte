@@ -20,10 +20,10 @@
     import { v4 as uuidv4 } from "uuid";
 
     import { BackendConnection } from "$lib/api/backend.js";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -41,7 +41,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
         lockedPackage,
         classLayoutPosition = null,
@@ -50,7 +50,7 @@
 
     const uuid = uuidv4();
     const domIds = {
-        datasetName: "datasetNameNewClass" + uuid,
+        workspaceName: "workspaceNameNewClass" + uuid,
         graphURI: "graphUriNewClass" + uuid,
         classPackage: "classPackageNewClass" + uuid,
         classURINamespace: "classURINamespaceNewClass" + uuid,
@@ -64,7 +64,7 @@
         label: "default",
     });
 
-    let datasetName = $state(null);
+    let workspaceName = $state(null);
     let graphURI = $state(null);
 
     let classPackage = $state(null);
@@ -77,7 +77,7 @@
     let compareClasses = $state([]);
 
     let disableSubmit = $derived(
-        !datasetName ||
+        !workspaceName ||
             !graphURI ||
             !classPackage ||
             !classURINamespace?.value ||
@@ -89,13 +89,13 @@
     const packageSelectionLocked = $derived(!!normalizedLockedPackage);
 
     $effect(async () => {
-        const ds = datasetName;
+        const ds = workspaceName;
         const graph = graphURI;
 
-        await untrack(() => onDatasetOrGraphChanged(ds, graph));
+        await untrack(() => onWorkspaceOrGraphChanged(ds, graph));
     });
 
-    async function onDatasetOrGraphChanged(ds, graph) {
+    async function onWorkspaceOrGraphChanged(ds, graph) {
         namespaces = await fetchNamespaces(ds);
         if (classURINamespace) classURINamespace.value = null;
         classPackage = null;
@@ -134,8 +134,8 @@
     }
 
     async function onOpen() {
-        datasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        workspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
         classURINamespace = new ReactiveValueWrapper(null);
@@ -143,17 +143,17 @@
             isInvalidClassLabel(label, classURINamespace, compareClasses),
         );
 
-        if (!datasetName) {
+        if (!workspaceName) {
             return;
         }
-        namespaces = await fetchNamespaces(datasetName);
+        namespaces = await fetchNamespaces(workspaceName);
 
         if (!graphURI) {
             return;
         }
 
-        await getPackages(datasetName, graphURI);
-        compareClasses = await getClasses(datasetName, graphURI, false);
+        await getPackages(workspaceName, graphURI);
+        compareClasses = await getClasses(workspaceName, graphURI, false);
 
         classPackage = packageSelectionLocked
             ? applyLockedPackage()
@@ -172,12 +172,12 @@
     }
 
     function onClose() {
-        datasetName = null;
-        clearOnDatasetChange();
+        workspaceName = null;
+        clearOnWorkspaceChange();
         className = null;
     }
 
-    function clearOnDatasetChange() {
+    function clearOnWorkspaceChange() {
         namespaces = [];
         classURINamespace = null;
         graphURI = null;
@@ -185,20 +185,20 @@
         classPackage = null;
     }
 
-    async function fetchNamespaces(datasetName) {
-        if (!datasetName) {
+    async function fetchNamespaces(workspaceName) {
+        if (!workspaceName) {
             return [];
         }
-        const res = await bec.getNamespaces(datasetName);
+        const res = await bec.getNamespaces(workspaceName);
         return await res.json();
     }
 
-    async function getPackages(datasetName, graphURI) {
-        if (!datasetName || !graphURI) {
+    async function getPackages(workspaceName, graphURI) {
+        if (!workspaceName || !graphURI) {
             packages = [];
             return;
         }
-        const res = await bec.getPackages(datasetName, graphURI);
+        const res = await bec.getPackages(workspaceName, graphURI);
         const packagesJSON = await res.json();
         packages = [
             ...packagesJSON.internalPackageList,
@@ -208,7 +208,7 @@
 
     function snapshotFormState() {
         return {
-            datasetName,
+            workspaceName,
             graphURI,
             className: className?.value,
             classURIPrefix: classURINamespace?.value,
@@ -227,17 +227,17 @@
             requestBody.classLayoutPosition = classLayoutPosition;
         }
 
-        return bec.postClass(form.datasetName, form.graphURI, requestBody);
+        return bec.postClass(form.workspaceName, form.graphURI, requestBody);
     }
 
     function updateEditorSelection(form, classUUID) {
-        editorState.selectedDataset.updateValue(form.datasetName);
+        editorState.selectedWorkspace.updateValue(form.workspaceName);
         editorState.selectedGraph.updateValue(form.graphURI);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
             id: form.packageUUID,
         });
-        editorState.selectedClassDataset.updateValue(form.datasetName);
+        editorState.selectedClassWorkspace.updateValue(form.workspaceName);
         editorState.selectedClassGraph.updateValue(form.graphURI);
         editorState.selectedClass.updateValue({
             type: ClassType.SINGLE_CLASS,
@@ -249,7 +249,7 @@
         console.log("successfully added class");
         onClassCreated({
             classUUID,
-            datasetName: form.datasetName,
+            workspaceName: form.workspaceName,
             graphURI: form.graphURI,
             packageUUID: form.packageUUID,
             className: form.className,
@@ -299,12 +299,12 @@
     title="New Class"
 >
     <div class="mx-2 flex h-full flex-col">
-        <DatasetAndGraphSelection
-            bind:dataset={datasetName}
+        <WorkspaceAndGraphSelection
+            bind:workspace={workspaceName}
             bind:graph={graphURI}
-            {lockedDatasetName}
+            {lockedWorkspaceName}
             {lockedGraphUri}
-            allowSelectionOfReadonlyDatasets={false}
+            allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
         <label for={domIds.classPackage} class="mt-3 mb-1 block text-sm">
@@ -314,8 +314,8 @@
             id={domIds.classPackage}
             bind:value={classPackage}
             options={packages}
-            disabled={packageSelectionLocked || !datasetName || !graphURI}
-            placeholder={datasetName && graphURI
+            disabled={packageSelectionLocked || !workspaceName || !graphURI}
+            placeholder={workspaceName && graphURI
                 ? "Select package"
                 : "Select a schema first"}
             getOptionLabel={pkg => getPackageDisplayLabel(pkg.label)}
@@ -329,10 +329,10 @@
                 id={domIds.classURINamespace}
                 bind:value={classURINamespace.value}
                 options={namespaces}
-                disabled={!datasetName}
-                placeholder={datasetName
+                disabled={!workspaceName}
+                placeholder={workspaceName
                     ? "Select namespace"
-                    : "Select a dataset first"}
+                    : "Select a workspace first"}
                 getOptionValue={namespace => namespace.prefix}
                 getOptionLabel={namespace =>
                     `${namespace.substitutedPrefix} (${namespace.prefix})`}

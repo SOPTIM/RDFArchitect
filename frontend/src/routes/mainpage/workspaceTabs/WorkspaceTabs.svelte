@@ -32,7 +32,7 @@
     let showNewWorkspaceDialog = $state(false);
 
     const workspaces = $derived(workspaceState.getNames());
-    const activeWorkspace = $derived(editorState.selectedDataset.getValue());
+    const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
