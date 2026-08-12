@@ -98,9 +98,8 @@ public class QueryDatasetService
                 var graph = GraphUtils.deepCopy(ctx.getRdfGraph());
                 graph.getPrefixMapping().setNsPrefixes(databasePort.getPrefixMapping(datasetName));
                 keyword = CimProfile.wrap(graph).getDcatKeyword();
-            } catch (Exception e) {
+            } catch (IllegalArgumentException e) {
                 keyword = null;
-                e.printStackTrace();
             } finally {
                 result.add(new GraphDTO(new URI(graphUri), keyword));
             }
