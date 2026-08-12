@@ -67,8 +67,14 @@
         }
     });
 
+    /**
+     * Full URI of a graph as it comes from the backend: a GraphDTO holding the
+     * URI next to its dcat:keyword. A bare URI is still accepted so that a
+     * locked graph can be passed in as is.
+     */
     function getUri(graph) {
-        return (!graph.prefix ? "" : graph.prefix) + graph.suffix;
+        const uri = graph.uri ?? graph;
+        return (uri.prefix ?? "") + (uri.suffix ?? "");
     }
 
     async function loadDatasets() {
