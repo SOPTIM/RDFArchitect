@@ -76,7 +76,7 @@ export const workspaceState = {
             return;
         }
         try {
-            const res = await bec.getGraphNames(name);
+            const res = await bec.getGraphs(name);
             const schemaCount = (await res.json()).length;
             this.schemaSummary.updateValue({ name, schemaCount });
         } catch (err) {
