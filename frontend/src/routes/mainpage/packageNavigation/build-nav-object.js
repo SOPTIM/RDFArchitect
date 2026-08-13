@@ -91,10 +91,10 @@ async function populateDataset(datasetNavEntry) {
 
     const freshEntries = (await getGraphNames(datasetNavEntry.id))
         .sort((a, b) => getUri(a).localeCompare(getUri(b)))
-        .map(uri => {
-            const fullUri = getUri(uri);
+        .map(graph => {
+            const fullUri = getUri(graph);
             return reuseOrCreate(existingGraphNavList, {
-                label: new URI(fullUri).suffix,
+                label: graph.keyword ?? new URI(fullUri).suffix,
                 tooltip: fullUri,
                 id: fullUri,
             });

@@ -20,11 +20,13 @@ package org.rdfarchitect.api.dto.cross_profile_diagram;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import org.rdfarchitect.api.dto.GraphDTO;
+
 import java.util.UUID;
 
 @Data
 @AllArgsConstructor
 public class ClassSourceDTO {
     private UUID classUUID;
-    private String graphUri;
+    private GraphDTO graph;
 }

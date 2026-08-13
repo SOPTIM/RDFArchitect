@@ -53,11 +53,8 @@
                 graphs: [],
                 showContents: showDatasetContents,
             });
-            graphStore.getGraphs(datasetName).then(graphs => {
-                for (const graphUri of graphs) {
-                    newDatasetList.at(-1).graphs.push(graphUri);
-                }
-            });
+            const graphs = await graphStore.getGraphs(datasetName);
+            graphs.forEach(graph => newDatasetList.at(-1).graphs.push(graph));
         }
         datasetList = newDatasetList;
     }
@@ -91,8 +88,8 @@
                             {#each dataset.graphs as graph}
                                 <NavigationEntry
                                     level={2}
-                                    label={graph.suffix}
-                                    secondaryLabel={graph.prefix ?? ""}
+                                    label={graph.keyword ?? graph.uri.suffix}
+                                    secondaryLabel={graph.uri.prefix ?? ""}
                                     icon={faDiagramProject}
                                     isSelected={selectedDatasetName ===
                                         dataset.label &&

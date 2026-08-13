@@ -62,7 +62,7 @@
 <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
     <NavigationEntry
         level={1}
-        label={graph.suffix}
+        label={graph.keyword ?? graph.uri.suffix}
         icon={graphIcon}
         title={getUri(graph)}
         selected={graph.selected}

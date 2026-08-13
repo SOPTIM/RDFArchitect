@@ -39,6 +39,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
 import org.rdfarchitect.services.select.GetClassListUseCase;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -64,6 +65,7 @@ public class CustomDiagramService
 
     private final DatabasePort databasePort;
     private final GetClassListUseCase getClassListUseCase;
+    private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
     public List<CustomDiagram> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
@@ -81,6 +83,9 @@ public class CustomDiagramService
     public CrossProfileDiagramDTO getCrossProfileDiagram(
             String datasetName, boolean includeProperties, boolean doLayout) {
         var graphUris = databasePort.listGraphUris(datasetName);
+        var graphDTOs = listGraphsUseCase.listGraphs(datasetName);
+        var graphDTOsMap =
+                graphDTOs.stream().collect(Collectors.toMap(g -> g.getUri().toString(), g -> g));
         var crossProfileDiagramInfo = databasePort.getCrossProfileDiagramInfo(datasetName);
         var crossProfileDiagramUUID = crossProfileDiagramInfo.getCrossProfileDiagramUUID();
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
@@ -111,7 +116,8 @@ public class CustomDiagramService
                                                 .label(dto.getLabel())
                                                 .build());
 
-                merged.getSources().add(new ClassSourceDTO(dto.getUuid(), graphUri));
+                merged.getSources()
+                        .add(new ClassSourceDTO(dto.getUuid(), graphDTOsMap.get(graphUri)));
 
                 if (includeProperties) {
                     mergeProperties(graphUri, dto, merged, graphColor);

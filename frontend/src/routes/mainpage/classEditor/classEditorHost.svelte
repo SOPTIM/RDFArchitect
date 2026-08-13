@@ -70,7 +70,7 @@
 
     $effect(() => {
         if (isMerged && activeSource) {
-            resolvedGraphUri = activeSource.graphUri;
+            resolvedGraphUri = new URI(activeSource.graph.uri);
             resolvedClassUuid = activeSource.classUUID;
         }
     });
@@ -140,14 +140,6 @@
     );
     onDestroy(() => eventStack.removeEvent(closeClassEditorHost));
 
-    function extractGraphLabel(graphUri) {
-        try {
-            return new URI(graphUri).suffix;
-        } catch {
-            return graphUri;
-        }
-    }
-
     function closeClassEditorHost(
         {
             datasetName = null,
@@ -179,7 +171,7 @@
                     options={mergedClass.sources}
                     getOptionValue={source => source.classUUID}
                     getOptionLabel={source =>
-                        extractGraphLabel(source.graphUri)}
+                        source?.graph?.keyword ?? source?.graph?.uri?.suffix}
                     height={8}
                 />
             </div>

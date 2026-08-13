@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-08-12
+
+### Added
+
+- RDFA-644: Export profile documentation as HTML and AsciiDoc ([43e87cb7](https://github.com/SOPTIM/RDFArchitect/commit/43e87cb7), [#211](https://github.com/SOPTIM/RDFArchitect/pull/211))
+- RDFA-581: Added graph shortnames/dcat:keyword usage instead of graph name ([d0197d0d](https://github.com/SOPTIM/RDFArchitect/commit/d0197d0d), [#219](https://github.com/SOPTIM/RDFArchitect/pull/219))
+- RDFA-669: Create diagram from add to dialog ([0e2b48d6](https://github.com/SOPTIM/RDFArchitect/commit/0e2b48d6), [#215](https://github.com/SOPTIM/RDFArchitect/pull/215))
+- RDFA-681: Show inherited properties in class editor ([5d2f4177](https://github.com/SOPTIM/RDFArchitect/commit/5d2f4177), [#208](https://github.com/SOPTIM/RDFArchitect/pull/208))
+- RDFA-682: Show inherited properties in merged view ([3f26847d](https://github.com/SOPTIM/RDFArchitect/commit/3f26847d), [#207](https://github.com/SOPTIM/RDFArchitect/pull/207))
+- RDFA-650: Show inherited properties in package diagram ([26fe39b3](https://github.com/SOPTIM/RDFArchitect/commit/26fe39b3), [#204](https://github.com/SOPTIM/RDFArchitect/pull/204))
+- RDFA-625: Added RDFS Validation ([abfbd806](https://github.com/SOPTIM/RDFArchitect/commit/abfbd806), [#194](https://github.com/SOPTIM/RDFArchitect/pull/194))
+
+### Fixed
+
+- Push third-party license updates to the Renovate PR branch ([3d368023](https://github.com/SOPTIM/RDFArchitect/commit/3d368023), [#216](https://github.com/SOPTIM/RDFArchitect/pull/216))
+- RDFA-675: Unify wording for ui actions ([ea9fdd6b](https://github.com/SOPTIM/RDFArchitect/commit/ea9fdd6b), [#213](https://github.com/SOPTIM/RDFArchitect/pull/213))
+- RDFA-540: Missing class editor skeleton loading animation ([de2d13a4](https://github.com/SOPTIM/RDFArchitect/commit/de2d13a4), [#201](https://github.com/SOPTIM/RDFArchitect/pull/201))
+- RDFA-558: Create class bugs ([82d07f00](https://github.com/SOPTIM/RDFArchitect/commit/82d07f00), [#198](https://github.com/SOPTIM/RDFArchitect/pull/198))
+- RDFA-589: Added validation checks for no spaces in IRIs ([ff3e4f59](https://github.com/SOPTIM/RDFArchitect/commit/ff3e4f59), [#199](https://github.com/SOPTIM/RDFArchitect/pull/199))
+
 ## [1.2.0] - 2026-07-07
 
 ### Added
