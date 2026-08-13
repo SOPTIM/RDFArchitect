@@ -15,7 +15,6 @@
  *
  */
 
-import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
 import { BackendConnection } from "$lib/api/backend.js";
 import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -28,69 +27,40 @@ const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 const selectionByWorkspace = new Map();
 
 /**
- * The workspaces of the current session including their read-only state. A
- * workspace is the top level of the navigation and holds schemas, packages and
- * diagrams; on the wire it is still called a dataset. The active workspace is
- * `editorState.selectedWorkspace`.
+ * The workspaces of the current session. A workspace is the top level of the
+ * navigation and holds schemas, packages and diagrams; on the wire it is still
+ * called a dataset. The active workspace is `editorState.selectedWorkspace`.
+ *
+ * Everything a single workspace knows about itself (read-only state, number of
+ * schemas) is loaded where it is shown, see `asyncValue`.
  */
 export const workspaceState = {
-    names: new StateValuePair([]),
-    loaded: new StateValuePair(false),
-    readonlyByName: new StateValuePair({}),
-    // Schema count of a single workspace; only valid for `name`.
-    schemaSummary: new StateValuePair({ name: null, schemaCount: null }),
+    /** @type {StateValuePair<string[] | null>} null until the first load */
+    names: new StateValuePair(null),
 
     getNames() {
         return this.names.getValue() ?? [];
     },
 
     isLoaded() {
-        return this.loaded.getValue();
+        return this.names.getValue() !== null;
     },
 
     getActive() {
         return editorState.selectedWorkspace.getValue();
     },
 
-    isReadOnly(name) {
-        return !!(name && this.readonlyByName.getValue()?.[name]);
-    },
-
-    setReadOnly(name, readonly) {
-        this.readonlyByName.updateValue({
-            ...this.readonlyByName.getValue(),
-            [name]: readonly,
-        });
-    },
-
-    /** Number of schemas in `name`, or null while unknown. */
-    getSchemaCount(name) {
-        const summary = this.schemaSummary.getValue();
-        return summary?.name === name ? summary.schemaCount : null;
-    },
-
-    /** Reloads the schema count of a single workspace. */
-    async refreshSchemaCount(name) {
-        if (!name) {
-            this.schemaSummary.updateValue({ name: null, schemaCount: null });
-            return;
-        }
-        try {
-            const res = await bec.getGraphs(name);
-            const schemaCount = (await res.json()).length;
-            this.schemaSummary.updateValue({ name, schemaCount });
-        } catch (err) {
-            console.error(`Error fetching schemas of workspace ${name}`, err);
-            this.schemaSummary.updateValue({ name: null, schemaCount: null });
-        }
-    },
-
-    /** Reloads the list, keeping the active workspace if it still exists. */
+    /**
+     * Reloads the list, keeping the active workspace if it still exists. A
+     * failed request leaves the previous list untouched, so a backend outage
+     * does not look like "no workspaces".
+     */
     async load() {
         const names = await fetchWorkspaceNames();
+        if (names === null) {
+            return;
+        }
         this.names.updateValue(names);
-        this.loaded.updateValue(true);
-        await this.refreshReadOnlyStates(names);
 
         for (const name of [...selectionByWorkspace.keys()]) {
             if (!names.includes(name)) {
@@ -135,17 +105,8 @@ export const workspaceState = {
                 a.localeCompare(b),
             ),
         );
-        this.setReadOnly(name, false);
         this.activate(name);
         return true;
-    },
-
-    async refreshReadOnlyStates(names) {
-        const states = {};
-        for (const name of names) {
-            states[name] = await isReadOnly(name);
-        }
-        this.readonlyByName.updateValue(states);
     },
 
     async remove(name) {
@@ -162,9 +123,6 @@ export const workspaceState = {
             workspaceName => workspaceName !== name,
         );
         this.names.updateValue(remaining);
-        const readonlyStates = { ...this.readonlyByName.getValue() };
-        delete readonlyStates[name];
-        this.readonlyByName.updateValue(readonlyStates);
         if (this.getActive() === name) {
             editorState.reset();
             this.activate(remaining[0] ?? null);
@@ -173,17 +131,18 @@ export const workspaceState = {
     },
 };
 
+/** @returns {Promise<string[] | null>} null when the request failed */
 async function fetchWorkspaceNames() {
     try {
         const res = await bec.getWorkspaceNames();
         if (!res.ok) {
             console.error(`Error fetching workspaces: HTTP ${res.status}`);
-            return [];
+            return null;
         }
         const names = await res.json();
         return names.sort((a, b) => a.localeCompare(b));
     } catch (err) {
         console.error("Error fetching workspaces", err);
-        return [];
+        return null;
     }
 }

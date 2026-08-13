@@ -18,8 +18,9 @@
 <script>
     import { setContext, untrack } from "svelte";
 
-    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
+    import { getNamespaces, isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
@@ -28,7 +29,6 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import { getWorkspaceNavEntry } from "./build-nav-object.js";
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
@@ -38,13 +38,14 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const localReloadTrigger = new SimpleTrigger();
+    const readonlyValue = asyncValue(() => activeWorkspace, isReadOnly);
 
     let workspaceNavEntry = $state(null);
     let namespaces = $state([]);
     let crossProfileID = $state();
 
     const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
-    const readonly = $derived(workspaceState.isReadOnly(activeWorkspace));
+    const readonly = $derived(readonlyValue.current ?? false);
     // Entries of a workspace that is no longer active must not be rendered:
     // their sections would fire requests mixing the new workspace with the old
     // schemas while the tree is being rebuilt.
@@ -160,6 +161,6 @@
                 </div>
             </div>
         </ContextMenu.TriggerArea>
-        <WorkspaceActionsMenu workspaceName={activeWorkspace} />
+        <WorkspaceActionsMenu workspaceName={activeWorkspace} {readonly} />
     </ContextMenu.Root>
 </div>

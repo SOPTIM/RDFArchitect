@@ -23,8 +23,9 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
+    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
+    import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
@@ -37,9 +38,10 @@
     const inactiveTabClasses =
         "text-nav-text border-transparent hover:bg-nav-hover-background";
 
-    let showDeleteDialog = $state(false);
+    const readonlyValue = asyncValue(() => name, isReadOnly);
 
-    const readonly = $derived(workspaceState.isReadOnly(name));
+    let showDeleteDialog = $state(false);
+    const readonly = $derived(readonlyValue.current ?? false);
 </script>
 
 <ContextMenu.Root>
@@ -79,5 +81,9 @@
             </button>
         </div>
     </ContextMenu.TriggerArea>
-    <WorkspaceActionsMenu workspaceName={name} bind:showDeleteDialog />
+    <WorkspaceActionsMenu
+        workspaceName={name}
+        {readonly}
+        bind:showDeleteDialog
+    />
 </ContextMenu.Root>

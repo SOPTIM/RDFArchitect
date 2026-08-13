@@ -16,16 +16,14 @@
   -->
 
 <script>
-    import { onMount, untrack } from "svelte";
+    import { onMount } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
     import { validate } from "uuid";
 
+    import { BackendConnection } from "$lib/api/backend.js";
+    import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
-    import {
-        DiagramType,
-        editorState,
-        forceReloadTrigger,
-    } from "$lib/sharedState.svelte.js";
+    import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
@@ -34,28 +32,27 @@
     import PackageWindow from "./packageWindow.svelte";
     import WorkspaceTabs from "./workspaceTabs/WorkspaceTabs.svelte";
 
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+    // The placeholder replaces the navigation, so the schema count is loaded
+    // here — inside the navigation it would never refresh again.
+    const schemaCount = asyncValue(() => activeWorkspace, loadSchemaCount);
+
     const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
     const hasNoWorkspaces = $derived(
         workspaceState.isLoaded() && workspaceState.getNames().length === 0,
     );
     const hasNoSchemas = $derived(
-        !hasNoWorkspaces &&
-            workspaceState.getSchemaCount(activeWorkspace) === 0,
+        !hasNoWorkspaces && schemaCount.current === 0,
     );
-
-    // The placeholder replaces the navigation, so the schema count is tracked
-    // here — inside the navigation it would never refresh again.
-    $effect(async () => {
-        forceReloadTrigger.subscribe();
-        const workspaceName = activeWorkspace;
-        await untrack(
-            async () => await workspaceState.refreshSchemaCount(workspaceName),
-        );
-    });
 
     onMount(() => {
         parseModelSelectionUrlParameters();
     });
+
+    async function loadSchemaCount(workspaceName) {
+        const res = await bec.getGraphs(workspaceName);
+        return (await res.json()).length;
+    }
 
     async function parseModelSelectionUrlParameters() {
         const url = new URL(window.location.href);

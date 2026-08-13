@@ -18,19 +18,21 @@
 <script>
     import { faDiagramProject } from "@fortawesome/free-solid-svg-icons";
 
+    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
+    import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
     let { workspaceName } = $props();
 
+    const readonlyValue = asyncValue(() => workspaceName, isReadOnly);
+
     let showNewGraphDialog = $state(false);
     let showImportDialog = $state(false);
-
-    const readonly = $derived(workspaceState.isReadOnly(workspaceName));
+    const readonly = $derived(readonlyValue.current ?? false);
 </script>
 
 <ContextMenu.Root>
@@ -71,6 +73,7 @@
     </ContextMenu.TriggerArea>
     <WorkspaceActionsMenu
         {workspaceName}
+        {readonly}
         bind:showNewGraphDialog
         bind:showImportDialog
     />

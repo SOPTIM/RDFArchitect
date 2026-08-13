@@ -33,7 +33,6 @@
     } from "$lib/actions/editingActions.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
@@ -44,6 +43,7 @@
 
     let {
         workspaceName,
+        readonly = false,
         showDeleteDialog = $bindable(false),
         showNewGraphDialog = $bindable(false),
         showImportDialog = $bindable(false),
@@ -53,8 +53,6 @@
     let showNamespacesDialog = $state(false);
     let showSnapshotDialog = $state(false);
 
-    const readonly = $derived(workspaceState.isReadOnly(workspaceName));
-
     async function toggleEditing(editingEnabled) {
         const succeeded = editingEnabled
             ? await enableEditing(workspaceName)
@@ -62,7 +60,6 @@
         if (!succeeded) {
             return;
         }
-        workspaceState.setReadOnly(workspaceName, !editingEnabled);
         forceReloadTrigger.trigger();
     }
 </script>
