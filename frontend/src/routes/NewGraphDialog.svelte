@@ -194,13 +194,6 @@
                     Cannot create schemas in read-only workspace
                 </div>
             {/if}
-        {:else}
-            <p class="mb-1 font-semibold">Workspace</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {lockedWorkspaceName}
-            </div>
         {/if}
 
         <label for={graphInputId} class="mt-2 mb-1">Schema (RDFS)</label>

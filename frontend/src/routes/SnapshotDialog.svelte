@@ -107,16 +107,18 @@
     disablePrimary={!workspaceName}
 >
     <div class="mx-2 flex h-full flex-col">
-        <label for={workspaceSelectId} class="mb-1">Workspace</label>
-        <SelectEditControl
-            id={workspaceSelectId}
-            bind:value={workspaceName}
-            options={workspaces}
-            getOptionValue={workspace => workspace.label}
-            getOptionLabel={workspace => workspace.label}
-            disabled={workspaceSelectionLocked || workspaces.length === 0}
-            placeholder="Select workspace"
-        />
+        {#if !workspaceSelectionLocked}
+            <label for={workspaceSelectId} class="mb-1">Workspace</label>
+            <SelectEditControl
+                id={workspaceSelectId}
+                bind:value={workspaceName}
+                options={workspaces}
+                getOptionValue={workspace => workspace.label}
+                getOptionLabel={workspace => workspace.label}
+                disabled={workspaces.length === 0}
+                placeholder="Select workspace"
+            />
+        {/if}
 
         <div class="mt-4 flex h-full flex-col">
             <p class="mb-1">Snapshot Link</p>

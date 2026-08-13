@@ -126,22 +126,29 @@
         ? "border-border bg-background-subtle rounded border p-3"
         : ""}
 >
-    <label for={workspaceSelectId} class="mb-1 block text-sm">Workspace</label>
-    <SelectEditControl
-        id={workspaceSelectId}
-        bind:value={workspace}
-        options={workspaces}
-        getOptionIsDisabled={workspace =>
-            !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
-        getOptionValue={workspace => workspace.label}
-        getOptionLabel={workspace =>
-            workspace.label + (workspace.readonly ? " (readonly)" : "")}
-        disabled={workspaceLocked || workspaces.length === 0}
-        placeholder="Select workspace"
-        onchange={() => (graph = null)}
-    />
+    {#if !workspaceLocked}
+        <label for={workspaceSelectId} class="mb-1 block text-sm">
+            Workspace
+        </label>
+        <SelectEditControl
+            id={workspaceSelectId}
+            bind:value={workspace}
+            options={workspaces}
+            getOptionIsDisabled={workspace =>
+                !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
+            getOptionValue={workspace => workspace.label}
+            getOptionLabel={workspace =>
+                workspace.label + (workspace.readonly ? " (readonly)" : "")}
+            disabled={workspaces.length === 0}
+            placeholder="Select workspace"
+            onchange={() => (graph = null)}
+        />
+    {/if}
 
-    <label for={graphSelectId} class="mt-3 mb-1 block text-sm">
+    <label
+        for={graphSelectId}
+        class={`mb-1 block text-sm ${workspaceLocked ? "" : "mt-3"}`}
+    >
         Schema (RDFS)
     </label>
     <SelectEditControl

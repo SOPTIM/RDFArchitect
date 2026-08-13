@@ -42,12 +42,13 @@
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
     import CustomWorkspaceDiagramDialog from "../packageNavigation/custom-diagram-dialogs/CustomWorkspaceDiagramDialog.svelte";
 
-    // Rendered inside a ContextMenu.Root: the workspace tabs and the
-    // navigation background share these actions.
-    let { workspaceName, showDeleteDialog = $bindable(false) } = $props();
+    let {
+        workspaceName,
+        showDeleteDialog = $bindable(false),
+        showNewGraphDialog = $bindable(false),
+        showImportDialog = $bindable(false),
+    } = $props();
 
-    let showNewGraphDialog = $state(false);
-    let showImportDialog = $state(false);
     let showNewDiagramDialog = $state(false);
     let showNamespacesDialog = $state(false);
     let showSnapshotDialog = $state(false);
