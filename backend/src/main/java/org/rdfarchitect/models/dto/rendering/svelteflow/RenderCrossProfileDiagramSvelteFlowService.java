@@ -27,10 +27,10 @@ import org.rdfarchitect.services.dl.select.FetchRenderingLayoutDataUseCase;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -50,6 +50,7 @@ public class RenderCrossProfileDiagramSvelteFlowService
     private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
     private final FetchRenderingLayoutDataUseCase fetchRenderingLayoutDataUseCase;
     private final RenderCIMFacadeCollectionUseCase renderer;
+    private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
     public RenderingDataDTO renderCrossProfileDiagram(String datasetName) {
@@ -62,10 +63,10 @@ public class RenderCrossProfileDiagramSvelteFlowService
     }
 
     private List<CIMProfileModel> buildProfiles(String datasetName) {
-        var profiles = new ArrayList<CIMProfileModel>();
-        for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            profiles.add(CIMProfileModels.load(databasePort, datasetName, graphUri));
-        }
-        return profiles;
+        return CIMProfileModels.loadAll(
+                databasePort,
+                CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName),
+                datasetName,
+                null);
     }
 }

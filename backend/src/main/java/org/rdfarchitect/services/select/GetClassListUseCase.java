@@ -33,4 +33,12 @@ public interface GetClassListUseCase {
      */
     List<ClassUMLAdaptedDTO> getClassList(
             GraphIdentifier graphIdentifier, boolean includeExternalClasses);
+
+    /**
+     * Gets the list of classes in the graph with full information.
+     *
+     * @param graphIdentifier The graph to getClassDefinition.
+     * @return The list of classes in the graph.
+     */
+    List<ClassUMLAdaptedDTO> getFullClassList(GraphIdentifier graphIdentifier);
 }

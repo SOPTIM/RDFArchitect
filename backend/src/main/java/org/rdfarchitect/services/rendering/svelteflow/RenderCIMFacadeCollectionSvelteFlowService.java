@@ -93,7 +93,8 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             GraphFilter filter,
             RenderingLayoutData layoutData,
             List<CIMProfileModel> otherProfiles,
-            String primaryColor) {
+            String primaryColor,
+            String primaryKeyword) {
         var classes = selectClasses(cimModel, filter);
         if (classes.isEmpty()) {
             return createEmptyDiagram();
@@ -109,6 +110,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         layoutData,
                         cimModel.getGraphUri(),
                         primaryColor,
+                        primaryKeyword,
                         buildProfileLookups(filter, otherProfiles));
 
         var nodes = assembleNodeDTOList(renderContext);
@@ -128,7 +130,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             for (var cimClass : profile.model().getCIMClasses()) {
                 classByUri.putIfAbsent(cimClass.getUri().toString(), cimClass);
             }
-            lookups.add(new ProfileLookup(profile.graphUri(), profile.color(), classByUri));
+            lookups.add(
+                    new ProfileLookup(
+                            profile.graphUri(), profile.keyword(), profile.color(), classByUri));
         }
         return lookups;
     }
@@ -169,7 +173,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                                         classUri.getBytes(StandardCharsets.UTF_8)),
                                                 new ArrayList<>()));
                 entry.sources()
-                        .add(new MergedSource(profile.graphUri(), profile.color(), cimClass));
+                        .add(
+                                new MergedSource(
+                                        profile.graphUri(),
+                                        profile.keyword(),
+                                        profile.color(),
+                                        cimClass));
             }
         }
         return merged;
@@ -230,6 +239,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     attributes,
                     source.cimClass().getAttributes(),
                     source.graphUri(),
+                    source.keyword(),
                     source.color());
         }
         attributes.sort(MERGED_ATTRIBUTE_ORDER);
@@ -244,6 +254,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                         EnumEntryDTO.builder()
                                 .label(enumEntry.getLabel().getValue())
                                 .graphUri(source.graphUri())
+                                .graphKeyword(source.keyword())
                                 .color(source.color())
                                 .build());
             }
@@ -360,6 +371,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                     .useFromAssociation(
                                             getAssociationUsedValue(inverse.getAssociationUsed()))
                                     .graphUri(source.graphUri())
+                                    .graphKeyword(source.keyword())
                                     .color(source.color())
                                     .build();
                     edges.add(
@@ -518,10 +530,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
         String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
+        String ownKeyword = merge ? renderContext.primaryKeyword() : null;
         String ownColor = merge ? renderContext.primaryColor() : null;
 
         List<AttributeDTO> attributeDTOs = new ArrayList<>();
-        addAttributeDTOs(attributeDTOs, cimClass.getAttributes(), ownGraphUri, ownColor);
+        addAttributeDTOs(
+                attributeDTOs, cimClass.getAttributes(), ownGraphUri, ownKeyword, ownColor);
 
         if (merge) {
             for (var profile : renderContext.otherProfiles()) {
@@ -530,7 +544,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     continue;
                 }
                 addAttributeDTOs(
-                        attributeDTOs, match.getAttributes(), profile.graphUri(), profile.color());
+                        attributeDTOs,
+                        match.getAttributes(),
+                        profile.graphUri(),
+                        profile.keyword(),
+                        profile.color());
             }
         }
         return attributeDTOs;
@@ -540,21 +558,24 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             List<AttributeDTO> target,
             List<ICIMAttribute> cimAttributes,
             String graphUri,
+            String keyword,
             String color) {
         for (var cimAttribute : cimAttributes) {
             if (!cimAttribute.isRenderable()) {
                 continue;
             }
-            target.add(toAttributeDTO(cimAttribute, graphUri, color));
+            target.add(toAttributeDTO(cimAttribute, graphUri, keyword, color));
         }
     }
 
-    private AttributeDTO toAttributeDTO(ICIMAttribute cimAttribute, String graphUri, String color) {
+    private AttributeDTO toAttributeDTO(
+            ICIMAttribute cimAttribute, String graphUri, String keyword, String color) {
         return AttributeDTO.builder()
                 .label(cimAttribute.getLabel().getValue())
                 .type(cimAttribute.getDataType().getLabel().getValue())
                 .multiplicity(extractMultiplicityString(cimAttribute.getMultiplicity()))
                 .graphUri(graphUri)
+                .graphKeyword(keyword)
                 .color(color)
                 .build();
     }
@@ -594,6 +615,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
 
         boolean merge = renderContext.filter().isIncludePropertiesFromOtherProfiles();
         String ownGraphUri = merge ? renderContext.primaryGraphUri() : null;
+        String ownKeyword = merge ? renderContext.primaryKeyword() : null;
         String ownColor = merge ? renderContext.primaryColor() : null;
 
         List<EnumEntryDTO> enumEntries = new ArrayList<>();
@@ -602,6 +624,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     EnumEntryDTO.builder()
                             .label(cimEnumEntry.getLabel().getValue())
                             .graphUri(ownGraphUri)
+                            .graphKeyword(ownKeyword)
                             .color(ownColor)
                             .build());
         }
@@ -617,6 +640,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                             EnumEntryDTO.builder()
                                     .label(cimEnumEntry.getLabel().getValue())
                                     .graphUri(profile.graphUri())
+                                    .graphKeyword(profile.keyword())
                                     .color(profile.color())
                                     .build());
                 }
@@ -751,15 +775,17 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             RenderingLayoutData layoutingData,
             String primaryGraphUri,
             String primaryColor,
+            String primaryKeyword,
             List<ProfileLookup> otherProfiles) {}
 
     private record ProfileLookup(
-            String graphUri, String color, Map<String, ICIMClass> classByUri) {}
+            String graphUri, String keyword, String color, Map<String, ICIMClass> classByUri) {}
 
     private record MergedFacadeClass(
             String uri, String label, UUID uuid, List<MergedSource> sources) {}
 
-    private record MergedSource(String graphUri, String color, ICIMClass cimClass) {}
+    private record MergedSource(
+            String graphUri, String keyword, String color, ICIMClass cimClass) {}
 
     private record SuperClassRef(String uri, String label) {}
 }

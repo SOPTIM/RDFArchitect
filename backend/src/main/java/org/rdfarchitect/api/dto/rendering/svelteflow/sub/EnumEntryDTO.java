@@ -27,5 +27,6 @@ public class EnumEntryDTO {
 
     private String label;
     private String graphUri;
+    private String graphKeyword;
     private String color;
 }

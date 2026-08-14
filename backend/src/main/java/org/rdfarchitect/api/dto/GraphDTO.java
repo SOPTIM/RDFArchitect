@@ -15,21 +15,16 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+package org.rdfarchitect.api.dto;
 
-import lombok.Builder;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
-/** DTO representing the specific data object in a SvelteFlow edge. */
-@Data
-@Builder
-public class EdgeDataDTO {
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 
-    private String toMultiplicity;
-    private String fromMultiplicity;
-    private boolean useToAssociation;
-    private boolean useFromAssociation;
-    private String graphUri;
-    private String graphKeyword;
-    private String color;
+@Data
+@AllArgsConstructor
+public class GraphDTO {
+    private URI uri;
+    private String keyword;
 }

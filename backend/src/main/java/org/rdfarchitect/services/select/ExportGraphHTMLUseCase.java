@@ -15,21 +15,17 @@
  *
  */
 
-package org.rdfarchitect.api.dto.rendering.svelteflow.sub;
+package org.rdfarchitect.services.select;
 
-import lombok.Builder;
-import lombok.Data;
+import org.rdfarchitect.database.GraphIdentifier;
 
-/** DTO representing the specific data object in a SvelteFlow edge. */
-@Data
-@Builder
-public class EdgeDataDTO {
+public interface ExportGraphHTMLUseCase {
 
-    private String toMultiplicity;
-    private String fromMultiplicity;
-    private boolean useToAssociation;
-    private boolean useFromAssociation;
-    private String graphUri;
-    private String graphKeyword;
-    private String color;
+    /**
+     * @param fileEnding file ending of the package diagram files
+     * @param embedDiagrams whether the package diagram is shown in the document instead of only
+     *     being linked
+     */
+    byte[] exportGraphAsHTML(
+            GraphIdentifier graphIdentifier, String fileEnding, boolean embedDiagrams);
 }

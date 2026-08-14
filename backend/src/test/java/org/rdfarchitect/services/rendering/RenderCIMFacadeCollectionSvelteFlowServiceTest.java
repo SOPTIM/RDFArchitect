@@ -18,6 +18,7 @@
 package org.rdfarchitect.services.rendering;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.ModelFactory;
@@ -178,7 +179,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders all package classes plus externally related classes as nodes")
     void rendersPackageClasses() {
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -193,7 +195,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders direct attributes and stereotypes of a class")
     void rendersDirectAttributesAndStereotypes() {
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         var childData = nodeByLabel(result, "Child").getData();
         assertThat(childData.getStereotypes()).doesNotContain("abstract");
@@ -217,7 +220,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders the transitive super class chain with inherited attributes")
     void rendersInheritedProperties() {
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         var superClasses = nodeByLabel(result, "Child").getData().getSuperClasses();
         assertThat(superClasses)
@@ -256,7 +260,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders enum entries for enumeration classes")
     void rendersEnumEntries() {
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         var enumData = nodeByLabel(result, "PhaseCode").getData();
         assertThat(enumData.getStereotypes()).contains("abstract", "enumeration");
@@ -269,7 +274,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders inheritance edges between internal classes only")
     void rendersInheritanceEdges() {
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         var inheritanceEdges =
                 result.getEdges().stream()
@@ -285,7 +291,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     @DisplayName("renders a single association edge per association pair")
     void rendersAssociationEdges() {
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         var associationEdges =
                 result.getEdges().stream()
@@ -308,7 +315,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         filter.setIncludeAttributes(false);
         filter.setIncludeEnumEntries(false);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         var childData = nodeByLabel(result, "Child").getData();
         assertThat(childData.getAttributes()).isEmpty();
@@ -323,7 +331,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var filter = coreFilter();
         filter.setIncludeInheritance(false);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         assertThat(result.getEdges()).noneMatch(edge -> edge.getType().equals("inheritance"));
     }
@@ -334,7 +343,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var filter = coreFilter();
         filter.setIncludeAssociations(false);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -348,7 +358,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var filter = coreFilter();
         filter.setIncludeRelationsToExternalPackages(false);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -362,7 +373,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var filter = new GraphFilter(true);
         filter.setPackageUUID("default");
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -375,7 +387,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var filter = new GraphFilter(true);
         filter.setPackageUUID(EXTERNAL_CAT_UUID.toString());
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -390,7 +403,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var filter = new GraphFilter(true);
         filter.setAllowedUUIDs(List.of(CHILD_UUID.toString(), BASE_UUID.toString()));
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null);
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -412,7 +426,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
 
         var result =
                 (SvelteFlowDTO)
-                        renderer.renderUML(emptyFacade, coreFilter(), null, List.of(), null);
+                        renderer.renderUML(emptyFacade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getNodes()).isEmpty();
         assertThat(result.getEdges()).isEmpty();
@@ -467,7 +481,11 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                 null,
                                 List.of(
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
+                                null,
                                 null);
 
         var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
@@ -517,8 +535,12 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                 null,
                                 List.of(
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
-                                "#123456");
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
+                                "#123456",
+                                null);
 
         assertThat(nodeByLabel(result, "Child").getData().getAttributes())
                 .filteredOn(attribute -> attribute.getLabel().equals("childAttr"))
@@ -541,7 +563,11 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                                 null,
                                 List.of(
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
+                                null,
                                 null);
 
         var childAttributes = nodeByLabel(result, "Child").getData().getAttributes();
@@ -555,6 +581,55 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("tags merged properties with the short name of the profile they come from")
+    void mergedDiagramTagsPropertiesWithGraphKeyword() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderMergedUML(
+                                List.of(
+                                        new CIMProfileModel(GRAPH_URI, null, "core", facade),
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                "other",
+                                                buildOtherProfile())),
+                                null);
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .extracting(AttributeDTO::getLabel, AttributeDTO::getGraphKeyword)
+                .containsExactly(tuple("childAttr", "core"), tuple("otherChildAttr", "other"));
+        assertThat(nodeByLabel(result, "PhaseCode").getData().getEnumEntries())
+                .extracting(EnumEntryDTO::getLabel, EnumEntryDTO::getGraphKeyword)
+                .containsExactly(tuple("A", "core"), tuple("B", "other"));
+    }
+
+    @Test
+    @DisplayName("tags own properties with the rendered graph's short name when merging")
+    void packageDiagramTagsOwnPropertiesWithGraphKeyword() {
+        var filter = coreFilter();
+        filter.setIncludePropertiesFromOtherProfiles(true);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(
+                                facade,
+                                filter,
+                                null,
+                                List.of(
+                                        new CIMProfileModel(
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                "other",
+                                                buildOtherProfile())),
+                                null,
+                                "core");
+
+        assertThat(nodeByLabel(result, "Child").getData().getAttributes())
+                .extracting(AttributeDTO::getLabel, AttributeDTO::getGraphKeyword)
+                .containsExactly(tuple("childAttr", "core"), tuple("otherChildAttr", "other"));
+    }
+
+    @Test
     @DisplayName(
             "merged diagram combines same-uri classes into one node with per-source properties")
     void mergedDiagramCombinesClassesAcrossProfiles() {
@@ -562,9 +637,12 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
                                 List.of(
-                                        new CIMProfileModel(GRAPH_URI, "#111111", facade),
+                                        new CIMProfileModel(GRAPH_URI, "#111111", null, facade),
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
                                 null);
 
         var childNodes =
@@ -611,9 +689,12 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
                                 List.of(
-                                        new CIMProfileModel(GRAPH_URI, "#111111", facade),
+                                        new CIMProfileModel(GRAPH_URI, "#111111", null, facade),
                                         new CIMProfileModel(
-                                                OTHER_GRAPH_URI, OTHER_COLOR, buildOtherProfile())),
+                                                OTHER_GRAPH_URI,
+                                                OTHER_COLOR,
+                                                null,
+                                                buildOtherProfile())),
                                 null);
 
         assertThat(nodeByLabel(result, "Child").getData().getAttributes())
@@ -630,7 +711,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var result =
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
-                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
 
         var inheritanceEdges =
                 result.getEdges().stream()
@@ -677,7 +758,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 addAssociationEnd("Child.OtherTerminals", child, terminal),
                 addAssociationEnd("Terminal.OtherChild", terminal, child));
 
-        var edges = mergedAssociationEdges(List.of(new CIMProfileModel(GRAPH_URI, null, facade)));
+        var edges =
+                mergedAssociationEdges(List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)));
 
         assertThat(edges).hasSize(2);
         assertThat(edges)
@@ -694,8 +776,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var edges =
                 mergedAssociationEdges(
                         List.of(
-                                new CIMProfileModel(GRAPH_URI, null, facade),
-                                new CIMProfileModel(OTHER_GRAPH_URI, OTHER_COLOR, facade)));
+                                new CIMProfileModel(GRAPH_URI, null, null, facade),
+                                new CIMProfileModel(OTHER_GRAPH_URI, OTHER_COLOR, null, facade)));
 
         assertThat(edges).hasSize(1);
     }
@@ -706,7 +788,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var result =
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
-                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
 
         var externalSuperClass =
                 nodeByLabel(result, "Child").getData().getSuperClasses().stream()
@@ -735,7 +817,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         addAssociationWithoutRange("Child.Broken", model.getResource(NS + "Child"));
 
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getNodes()).isNotEmpty();
         assertThat(result.getEdges())
@@ -751,7 +834,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var result =
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
-                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
 
         assertThat(result.getNodes()).isNotEmpty();
         assertThat(result.getEdges())
@@ -775,7 +858,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         addAttributeWithoutDataType("Child.brokenAttr", model.getResource(NS + "Child"));
 
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(nodeByLabel(result, "Child").getData().getAttributes())
                 .extracting(AttributeDTO::getLabel)
@@ -790,7 +874,7 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var result =
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
-                                List.of(new CIMProfileModel(GRAPH_URI, null, facade)), null);
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, facade)), null);
 
         assertThat(nodeByLabel(result, "Child").getData().getAttributes())
                 .extracting(AttributeDTO::getLabel)
@@ -824,7 +908,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         linkInverse(addAssociationEnd("Base.Terminals", base, terminal), inverse);
 
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getEdges())
                 .filteredOn(edge -> edge.getType().equals("association"))
@@ -842,7 +927,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         linkInverse(from, addAssociationEnd("Terminal.Base", terminal, base));
 
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getEdges())
                 .filteredOn(edge -> edge.getType().equals("association"))
@@ -859,7 +945,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         linkInverse(addAssociationEnd("Base.Terminals", base, terminal), inverse);
 
         var result =
-                (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null, List.of(), null);
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getEdges())
                 .filteredOn(edge -> edge.getType().equals("association"))
@@ -888,7 +975,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         var result =
                 (SvelteFlowDTO)
                         renderer.renderMergedUML(
-                                List.of(new CIMProfileModel(GRAPH_URI, null, labelFacade)), null);
+                                List.of(new CIMProfileModel(GRAPH_URI, null, null, labelFacade)),
+                                null);
 
         assertThat(result.getNodes())
                 .singleElement()

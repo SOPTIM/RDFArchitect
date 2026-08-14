@@ -30,6 +30,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,7 +47,8 @@ class CustomDiagramsServiceTest {
     @BeforeEach
     void setUp() {
         databasePort = mock(DatabasePort.class);
-        service = new CustomDiagramService(databasePort);
+        var listGraphsUseCase = mock(ListGraphsUseCase.class);
+        service = new CustomDiagramService(databasePort, listGraphsUseCase);
 
         graphIdentifier = mock(GraphIdentifier.class);
         when(graphIdentifier.graphUri()).thenReturn("http://example.org#graph");

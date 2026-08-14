@@ -67,7 +67,7 @@
     const inheritedGroups = $derived([...(data.superClasses ?? [])].reverse());
 
     const hasProfileInfo = $derived(
-        collectGraphUris().some(graphUri => graphUri),
+        collectGraphUris().some(graph => graph.graphUri),
     );
 
     const useProfileSections = $derived(
@@ -106,7 +106,18 @@
             ...(enumEntries ?? []),
             ...inheritedProps,
         ];
-        return [...new Set(allProps.map(graphUriOf))].sort();
+
+        const graphUriMap = new Map();
+        for (const prop of allProps) {
+            const graphUri = graphUriOf(prop);
+            if (!graphUriMap.has(graphUri)) {
+                graphUriMap.set(graphUri, prop.graphKeyword);
+            }
+        }
+
+        return [...graphUriMap.entries()]
+            .map(([graphUri, keyword]) => ({ graphUri, keyword }))
+            .sort((a, b) => a.graphUri.localeCompare(b.graphUri));
     }
 
     function superGroupsForGraph(graphUri) {
@@ -122,21 +133,24 @@
             );
     }
 
-    function ownGraphUriFirst(graphUris) {
+    function ownGraphUriFirst(graphs) {
         const own = data.graphUri;
-        if (!graphUris.includes(own)) {
-            return graphUris;
+        if (!graphs.some(graph => graph.graphUri === own)) {
+            return graphs;
         }
-        return [own, ...graphUris.filter(graphUri => graphUri !== own)];
+        return [
+            ...graphs.filter(graph => graph.graphUri === own),
+            ...graphs.filter(graph => graph.graphUri !== own),
+        ];
     }
 
-    function buildProfileSections(orderedGraphUris) {
+    function buildProfileSections(orderedGraphs) {
         const showInherited = renderOptions.get("showInheritedProperties");
 
-        return orderedGraphUris
-            .map(graphUri => ({
+        return orderedGraphs
+            .map(({ graphUri, keyword }) => ({
                 graphUri,
-                graphName: getGraphLabel(graphUri),
+                graphName: getGraphLabel(graphUri, keyword),
                 superGroups: superGroupsForGraph(graphUri),
                 ownAttributes: propsForGraph(attributes, graphUri),
                 ownEnumEntries: propsForGraph(enumEntries, graphUri),
@@ -149,7 +163,10 @@
             );
     }
 
-    function getGraphLabel(graphURI) {
+    function getGraphLabel(graphURI, keyword) {
+        if (keyword) {
+            return keyword;
+        }
         try {
             return new URI(graphURI).suffix;
         } catch {

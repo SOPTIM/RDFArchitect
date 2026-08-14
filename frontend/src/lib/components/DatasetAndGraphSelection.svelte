@@ -38,7 +38,7 @@
     const graphSelectId = `graphSelect-${uuidv4()}`;
 
     let datasets = $state([]);
-    let graphNames = $state([]);
+    let graphs = $state([]);
 
     const datasetLocked = $derived(lockedDatasetName !== undefined);
     const graphLocked = $derived(lockedGraphUri !== undefined);
@@ -49,7 +49,7 @@
         if (datasetLocked) return;
         if (!dataset) {
             graph = graphLocked ? lockedGraphUri : null;
-            graphNames = [];
+            graphs = [];
             return;
         }
         loadGraphsFor(dataset);
@@ -63,12 +63,18 @@
         if (dataset) {
             await loadGraphsFor(dataset);
         } else {
-            graphNames = [];
+            graphs = [];
         }
     });
 
+    /**
+     * Full URI of a graph as it comes from the backend: a GraphDTO holding the
+     * URI next to its dcat:keyword. A bare URI is still accepted so that a
+     * locked graph can be passed in as is.
+     */
     function getUri(graph) {
-        return (!graph.prefix ? "" : graph.prefix) + graph.suffix;
+        const uri = graph.uri ?? graph;
+        return (uri.prefix ?? "") + (uri.suffix ?? "");
     }
 
     async function loadDatasets() {
@@ -97,14 +103,14 @@
 
     async function loadGraphsFor(dataset) {
         if (!dataset) {
-            graphNames = [];
+            graphs = [];
             return;
         }
 
-        const res = await bec.getGraphNames(dataset);
-        graphNames = await res.json();
+        const res = await bec.getGraphs(dataset);
+        graphs = await res.json();
 
-        const valid = graphNames.some(graphName => getUri(graphName) === graph);
+        const valid = graphs.some(graphName => getUri(graphName) === graph);
         if (!valid && !graphLocked) {
             graph = null;
         }
@@ -137,10 +143,10 @@
     <SelectEditControl
         id={graphSelectId}
         bind:value={graph}
-        options={graphNames}
+        options={graphs}
         disabled={graphSelectDisabled}
         placeholder={dataset ? "Select schema" : "Select a dataset first"}
         getOptionValue={getUri}
-        getOptionLabel={g => g.suffix}
+        getOptionLabel={g => g.keyword ?? g.uri.suffix}
     />
 </div>

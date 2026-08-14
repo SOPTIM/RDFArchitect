@@ -30,12 +30,11 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
-import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +44,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
 
     private final DatabasePort databasePort;
     private final RenderCIMFacadeCollectionUseCase renderer;
+    private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
     public RenderingDataDTO getRenderingData(
@@ -72,31 +72,26 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
                 new CIMModelFacade(
                         graphIdentifier.graphUri(), ModelFactory.createModelForGraph(rdfGraphCopy));
 
-        var otherProfiles =
-                filter.isIncludePropertiesFromOtherProfiles()
-                        ? loadOtherProfiles(graphIdentifier)
-                        : List.<CIMProfileModel>of();
-        var primaryColor =
-                filter.isIncludePropertiesFromOtherProfiles()
-                        ? databasePort
-                                .getCrossProfileDiagramInfo(graphIdentifier.datasetName())
-                                .getColor(graphIdentifier.graphUri())
-                        : null;
-
-        return renderer.renderUML(cimModel, filter, layoutData, otherProfiles, primaryColor);
-    }
-
-    private List<CIMProfileModel> loadOtherProfiles(GraphIdentifier graphIdentifier) {
-        var datasetName = graphIdentifier.datasetName();
-        var otherProfiles = new ArrayList<CIMProfileModel>();
-
-        for (var graphUri : databasePort.listGraphUris(datasetName)) {
-            if (graphUri.equals(graphIdentifier.graphUri())) {
-                continue;
-            }
-            otherProfiles.add(CIMProfileModels.load(databasePort, datasetName, graphUri));
+        if (!filter.isIncludePropertiesFromOtherProfiles()) {
+            return renderer.renderUML(cimModel, filter, layoutData, List.of(), null, null);
         }
 
-        return otherProfiles;
+        var datasetName = graphIdentifier.datasetName();
+        var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
+        var otherProfiles =
+                CIMProfileModels.loadAll(
+                        databasePort, keywords, datasetName, graphIdentifier.graphUri());
+        var primaryColor =
+                databasePort
+                        .getCrossProfileDiagramInfo(datasetName)
+                        .getColor(graphIdentifier.graphUri());
+
+        return renderer.renderUML(
+                cimModel,
+                filter,
+                layoutData,
+                otherProfiles,
+                primaryColor,
+                keywords.get(graphIdentifier.graphUri()));
     }
 }
