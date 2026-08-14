@@ -17,11 +17,11 @@
 <script>
     import { DropdownMenu as BitsUiDropdownMenu } from "bits-ui";
 
-    let { children } = $props();
+    let { children, class: className = "" } = $props();
 </script>
 
 <BitsUiDropdownMenu.Trigger
-    class="group hover:bg-button-default-background data-[state=open]:bg-button-default-background  rounded  transition-colors hover:cursor-pointer hover:text-white data-[state=open]:text-white"
+    class="group hover:bg-button-default-background data-[state=open]:bg-button-default-background  rounded  transition-colors hover:cursor-pointer hover:text-white data-[state=open]:text-white {className}"
 >
     {@render children?.()}
 </BitsUiDropdownMenu.Trigger>
