@@ -129,6 +129,7 @@
                 true,
             );
             let resText = await res.text();
+            if (cancellation.cancelled) return;
             if (!resText) {
                 return closeClassEditor({
                     datasetName: datasetName,
@@ -156,7 +157,9 @@
                     classUuid: null,
                 });
             }
-            isDatasetReadOnly = await isReadOnly(datasetName);
+            const readOnly = await isReadOnly(datasetName);
+            if (cancellation.cancelled) return;
+            isDatasetReadOnly = readOnly;
             if (classData.external) {
                 reactiveClass = undefined;
                 externalClass = classData;
@@ -165,7 +168,7 @@
                 return;
             }
             externalClass = null;
-            await loadContext();
+            await loadContext(cancellation);
             await loadReactiveClass(cancellation, classData);
         })();
 
@@ -274,20 +277,21 @@
         return packages.find(pkg => pkg.uuid === diagramId) ?? null;
     }
 
-    async function loadContext() {
-        [
-            context.classes,
-            context.packages,
-            context.datatypes,
-            context.stereotypes,
-            context.namespaces,
-        ] = await Promise.all([
-            getClasses(datasetName, graphUri),
-            getPackages(datasetName, graphUri),
-            getDataTypes(datasetName, graphUri),
-            getStereotypes(datasetName, graphUri),
-            getNamespaces(datasetName),
-        ]);
+    async function loadContext(cancellation) {
+        const [classes, packages, datatypes, stereotypes, namespaces] =
+            await Promise.all([
+                getClasses(datasetName, graphUri),
+                getPackages(datasetName, graphUri),
+                getDataTypes(datasetName, graphUri),
+                getStereotypes(datasetName, graphUri),
+                getNamespaces(datasetName),
+            ]);
+        if (cancellation.cancelled) return;
+        context.classes = classes;
+        context.packages = packages;
+        context.datatypes = datatypes;
+        context.stereotypes = stereotypes;
+        context.namespaces = namespaces;
         loadingContext = false;
         editorState.selectedContext.trigger();
     }
