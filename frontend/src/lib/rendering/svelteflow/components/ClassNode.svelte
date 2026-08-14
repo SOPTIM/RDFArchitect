@@ -364,6 +364,12 @@
         z-index: 2;
     }
 
+    .class-node-external {
+        --color-class-node-upper-background: rgba(224, 224, 224, 0.45);
+        --color-class-node-lower-background: rgba(242, 242, 242, 0.4);
+        --color-default-text: #5a5a5a;
+    }
+
     .class-node-external::after {
         box-shadow: none;
         border: 1px dashed var(--color-default-text);
