@@ -109,6 +109,16 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public void renameDataset(String oldDatasetName, String newDatasetName) {
+        database.renameDataset(oldDatasetName, newDatasetName);
+    }
+
+    @Override
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+        database.renameGraph(graphIdentifier, newGraphUri);
+    }
+
+    @Override
     public void fetchFromDatabase(DatabaseConnection databaseConnection) {
         database.fetchFromDatabase(databaseConnection);
     }

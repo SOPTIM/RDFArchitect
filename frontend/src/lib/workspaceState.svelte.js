@@ -109,6 +109,30 @@ export const workspaceState = {
         return true;
     },
 
+    async rename(name, newName) {
+        const res = await bec.renameWorkspace(name, newName);
+        if (!res.ok) {
+            toastStore.error(
+                "Rename failed",
+                `Could not rename workspace "${name}".`,
+            );
+            return false;
+        }
+        if (selectionByWorkspace.has(name)) {
+            selectionByWorkspace.set(newName, selectionByWorkspace.get(name));
+            selectionByWorkspace.delete(name);
+        }
+        this.names.updateValue(
+            this.getNames()
+                .map(workspaceName =>
+                    workspaceName === name ? newName : workspaceName,
+                )
+                .sort((a, b) => a.localeCompare(b)),
+        );
+        editorState.renameWorkspace(name, newName);
+        return true;
+    },
+
     async remove(name) {
         const res = await bec.deleteWorkspace(name);
         if (res && res.ok === false) {

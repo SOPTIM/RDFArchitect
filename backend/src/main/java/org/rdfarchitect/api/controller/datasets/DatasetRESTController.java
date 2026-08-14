@@ -27,15 +27,18 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.CreateDatasetUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
+import org.rdfarchitect.services.update.dataset.RenameDatasetUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -50,6 +53,7 @@ public class DatasetRESTController {
     private final ListDatasetsUseCase listDatasetsUseCase;
     private final CreateDatasetUseCase createDatasetUseCase;
     private final DeleteDatasetUseCase deleteDatasetUseCase;
+    private final RenameDatasetUseCase renameDatasetUseCase;
 
     @Operation(
             summary = "List datasets",
@@ -96,6 +100,37 @@ public class DatasetRESTController {
 
         logger.info(
                 "Sending response to PUT request: \"/api/datasets/{{}}\" to \"{}\".",
+                datasetName,
+                originURL);
+        return Response.SUCCESS;
+    }
+
+    @Operation(
+            summary = "Rename dataset",
+            description = "Renames a dataset, keeping all of its graphs, diagrams and namespaces.",
+            tags = {"dataset"},
+            responses = {@ApiResponse(responseCode = "200")})
+    @PostMapping("/{datasetName}/rename")
+    public String renameDataset(
+            @Parameter(description = "The name/url of the inquirer.")
+                    @RequestHeader(
+                            value = HttpHeaders.ORIGIN,
+                            required = false,
+                            defaultValue = "unknown")
+                    String originURL,
+            @Parameter(description = "The literal name of the dataset.") @PathVariable
+                    String datasetName,
+            @Parameter(description = "The literal name to rename the dataset to.") @RequestParam
+                    String newDatasetName) {
+        logger.info(
+                "Received POST request: \"/api/datasets/{{}}/rename\" from \"{}\".",
+                datasetName,
+                originURL);
+
+        renameDatasetUseCase.renameDataset(datasetName, newDatasetName);
+
+        logger.info(
+                "Sending response to POST request: \"/api/datasets/{{}}/rename\" to \"{}\".",
                 datasetName,
                 originURL);
         return Response.SUCCESS;

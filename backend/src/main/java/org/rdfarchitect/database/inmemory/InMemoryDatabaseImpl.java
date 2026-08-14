@@ -68,6 +68,16 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     }
 
     @Override
+    public void renameDataset(String oldDatasetName, String newDatasetName) {
+        getOrCreateSessionDataStore().renameDataset(oldDatasetName, newDatasetName);
+    }
+
+    @Override
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+        getOrCreateSessionDataStore().renameGraph(graphIdentifier, newGraphUri);
+    }
+
+    @Override
     public List<String> listDatasets() {
         return getOrCreateSessionDataStore().listDatasets();
     }

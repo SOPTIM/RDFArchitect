@@ -141,6 +141,23 @@ public interface DatabasePort {
     void deleteDataset(String datasetName);
 
     /**
+     * Renames a dataset, keeping all of its graphs, diagrams and namespaces.
+     *
+     * @param oldDatasetName the current literal dataset name
+     * @param newDatasetName the literal dataset name to rename to
+     */
+    void renameDataset(String oldDatasetName, String newDatasetName);
+
+    /**
+     * Renames a graph within its dataset and rewrites all references to it. The content and history
+     * of the graph are kept.
+     *
+     * @param graphIdentifier identifies dataset and current graph URI
+     * @param newGraphUri the graph URI to rename to
+     */
+    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
+
+    /**
      * Synchronizes dataset metadata and graph structure from the backing database.
      *
      * @param databaseConnection resolved database connection

@@ -87,6 +87,36 @@ public class SessionDataStoreImpl implements SessionDataStore {
     }
 
     @Override
+    public void renameDataset(String oldDatasetName, String newDatasetName) {
+        lock.lock();
+        try {
+            if (oldDatasetName.equals(newDatasetName)) {
+                return;
+            }
+            assertThatDatasetExists(oldDatasetName);
+            if (graphCollections.containsKey(newDatasetName)) {
+                throw new DataAccessException("Dataset " + newDatasetName + " already exists");
+            }
+            graphCollections.put(newDatasetName, graphCollections.remove(oldDatasetName));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+        lock.lock();
+        try {
+            assertThatGraphExists(graphIdentifier);
+            graphCollections
+                    .get(graphIdentifier.datasetName())
+                    .rename(graphIdentifier.graphUri(), newGraphUri);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
     public List<String> listDatasets() {
         lock.lock();
         try {

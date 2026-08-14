@@ -29,8 +29,10 @@ import org.apache.jena.shared.PrefixMapping;
 import org.apache.jena.shared.impl.PrefixMappingImpl;
 import org.apache.jena.sparql.graph.GraphFactory;
 import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
@@ -153,6 +155,57 @@ public class GraphWithContextCollection {
             }
         } finally {
             rwLock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Registers the graph currently known as {@code oldGraphUri} under {@code newGraphUri} and
+     * rewrites every reference to it inside this collection. The graph itself, including its
+     * undo/redo history, is kept as is.
+     *
+     * @param oldGraphUri the graph URI to rename
+     * @param newGraphUri the graph URI to rename to
+     */
+    public void rename(String oldGraphUri, String newGraphUri) {
+        rwLock.writeLock().lock();
+        try {
+            oldGraphUri = prefixes.expandPrefix(oldGraphUri);
+            newGraphUri = prefixes.expandPrefix(newGraphUri);
+            assertValidGraphName(oldGraphUri);
+            assertValidGraphName(newGraphUri);
+            if (oldGraphUri.equals(newGraphUri)) {
+                return;
+            }
+            if (!graphs.containsKey(oldGraphUri)) {
+                throw new IllegalArgumentException("Graph URI " + oldGraphUri + " does not exist.");
+            }
+            if (graphs.containsKey(newGraphUri)) {
+                throw new IllegalArgumentException("Graph URI " + newGraphUri + " already exists.");
+            }
+            graphs.put(newGraphUri, graphs.remove(oldGraphUri));
+            renameGraphInDiagrams(oldGraphUri, newGraphUri);
+            crossProfileDiagramInfo.renameGraph(oldGraphUri, newGraphUri);
+        } finally {
+            rwLock.writeLock().unlock();
+        }
+    }
+
+    private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
+        var oldUri = new URI(oldGraphUri);
+        var newUri = new URI(newGraphUri);
+        for (var diagram : customDiagrams.values()) {
+            var classes = diagram.getClasses();
+            if (classes.stream().noneMatch(entry -> oldUri.equals(entry.getGraphUri()))) {
+                continue;
+            }
+            diagram.setClasses(
+                    classes.stream()
+                            .map(
+                                    entry ->
+                                            oldUri.equals(entry.getGraphUri())
+                                                    ? new ClassInDiagram(entry.getUuid(), newUri)
+                                                    : entry)
+                            .toList());
         }
     }
 

@@ -1,0 +1,284 @@
+<!--
+  -    Copyright (c) 2024-2026 SOPTIM AG
+  -
+  -    Licensed under the Apache License, Version 2.0 (the "License");
+  -    you may not use this file except in compliance with the License.
+  -    You may obtain a copy of the License at
+  -
+  -        http://www.apache.org/licenses/LICENSE-2.0
+  -
+  -    Unless required by applicable law or agreed to in writing, software
+  -    distributed under the License is distributed on an "AS IS" BASIS,
+  -    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  -    See the License for the specific language governing permissions and
+  -    limitations under the License.
+  -
+  -->
+
+<script>
+    import { v4 as uuidv4 } from "uuid";
+
+    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
+    import { BackendConnection } from "$lib/api/backend.js";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { URI } from "$lib/models/dto/index.ts";
+    import {
+        editorState,
+        forceReloadTrigger,
+    } from "$lib/sharedState.svelte.js";
+
+    import { getUri } from "./mainpage/packageNavigation/packageNavigationUtils.svelte.js";
+
+    let { showDialog = $bindable(), workspaceName, graphUri } = $props();
+
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
+    const uniqueId = uuidv4();
+    const defaultNamespace = "http://graph#";
+    const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
+    const dcatKeywordIri = "http://www.w3.org/ns/dcat#keyword";
+    const namespaceInputId = `renameGraphNamespace-${uniqueId}`;
+    const namespaceListId = `renameGraphNamespaces-${uniqueId}`;
+    const labelInputId = `renameGraphLabel-${uniqueId}`;
+
+    let namespaceUserInput = $state("");
+    let labelUserInput = $state("");
+    let initialLabel = $state("");
+    let namespaceOptions = $state([]);
+    let otherGraphUris = $state([]);
+    let ontology = $state(null);
+
+    const trimmedNamespace = $derived(namespaceUserInput.trim());
+    const trimmedLabel = $derived(labelUserInput.trim());
+    const resolvedGraphUri = $derived(
+        trimmedNamespace && trimmedLabel ? trimmedNamespace + trimmedLabel : "",
+    );
+    const namespaceIsInvalid = $derived(
+        !!trimmedNamespace && !uriSchemePattern.test(trimmedNamespace),
+    );
+    const graphExists = $derived(
+        !!resolvedGraphUri && otherGraphUris.includes(resolvedGraphUri),
+    );
+    const uriChanged = $derived(resolvedGraphUri !== graphUri);
+    // The tree labels a schema by its dcat:keyword and only falls back to the
+    // URI suffix, so a new label has to reach the keyword as well.
+    const hasProfileHeader = $derived(!!ontology);
+    const labelChanged = $derived(trimmedLabel !== initialLabel);
+    const keywordFollowsLabel = $derived(hasProfileHeader && labelChanged);
+    const disableSubmit = $derived(
+        !resolvedGraphUri || namespaceIsInvalid || graphExists || !uriChanged,
+    );
+
+    async function onOpen() {
+        const uri = graphUri ? new URI(graphUri) : null;
+        namespaceUserInput = uri?.prefix || defaultNamespace;
+        initialLabel = uri?.suffix ?? "";
+        labelUserInput = initialLabel;
+
+        namespaceOptions = await loadNamespaceOptions();
+        otherGraphUris = await loadOtherGraphUris();
+        ontology = await loadOntology();
+    }
+
+    function onClose() {
+        namespaceUserInput = "";
+        labelUserInput = "";
+        initialLabel = "";
+        namespaceOptions = [];
+        otherGraphUris = [];
+        ontology = null;
+    }
+
+    async function loadOntology() {
+        if (!workspaceName || !graphUri) {
+            return null;
+        }
+        try {
+            const res = await bec.getOntology(workspaceName, graphUri);
+            const content = await res.text();
+            return content ? JSON.parse(content) : null;
+        } catch (err) {
+            console.error("Failed to load profile header:", err);
+            return null;
+        }
+    }
+
+    function withKeyword(source, keyword) {
+        const entries = source.entries ?? [];
+        if (!keyword) {
+            return {
+                ...source,
+                entries: entries.filter(entry => entry.iri !== dcatKeywordIri),
+            };
+        }
+        if (entries.some(entry => entry.iri === dcatKeywordIri)) {
+            return {
+                ...source,
+                entries: entries.map(entry =>
+                    entry.iri === dcatKeywordIri
+                        ? { ...entry, value: keyword }
+                        : entry,
+                ),
+            };
+        }
+        return {
+            ...source,
+            entries: [
+                ...entries,
+                {
+                    iri: dcatKeywordIri,
+                    isIriEntry: false,
+                    datatypeIri: null,
+                    value: keyword,
+                },
+            ],
+        };
+    }
+
+    async function loadNamespaceOptions() {
+        let namespaces = [];
+        try {
+            namespaces = await getNamespaces(workspaceName);
+        } catch (err) {
+            console.error("Failed to load namespaces:", err);
+        }
+        const options = namespaces
+            .map(namespace => namespace?.prefix)
+            .filter(prefix => !!prefix);
+        return [
+            ...new Set([defaultNamespace, ...options, namespaceUserInput]),
+        ].sort((a, b) => a.localeCompare(b));
+    }
+
+    async function loadOtherGraphUris() {
+        if (!workspaceName) {
+            return [];
+        }
+        try {
+            const res = await bec.getGraphs(workspaceName);
+            if (!res.ok) {
+                return [];
+            }
+            const graphs = await res.json();
+            return graphs.map(getUri).filter(uri => uri !== graphUri);
+        } catch (err) {
+            console.error("Failed to load schemas:", err);
+            return [];
+        }
+    }
+
+    async function renameGraph() {
+        const oldGraphUri = graphUri;
+        const newGraphUri = resolvedGraphUri;
+        const shouldUpdateKeyword = keywordFollowsLabel;
+        const keyword = trimmedLabel;
+        const currentOntology = ontology;
+        try {
+            if (!(await sendGraphRename(oldGraphUri, newGraphUri))) {
+                return;
+            }
+            if (
+                shouldUpdateKeyword &&
+                !(await sendKeyword(newGraphUri, currentOntology, keyword))
+            ) {
+                return;
+            }
+            toastStore.success(
+                "Schema renamed",
+                `"${oldGraphUri}" is now "${newGraphUri}".`,
+            );
+        } catch (err) {
+            console.error("Failed to rename schema:", err);
+            toastStore.error(
+                "Rename failed",
+                "An unexpected error occurred while renaming the schema.",
+            );
+        } finally {
+            forceReloadTrigger.trigger();
+        }
+    }
+
+    async function sendGraphRename(oldGraphUri, newGraphUri) {
+        const res = await bec.renameGraph(
+            workspaceName,
+            oldGraphUri,
+            newGraphUri,
+        );
+        if (!res.ok) {
+            toastStore.error(
+                "Rename failed",
+                `Could not rename schema "${oldGraphUri}".`,
+            );
+            return false;
+        }
+        editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
+        return true;
+    }
+
+    async function sendKeyword(targetGraphUri, currentOntology, keyword) {
+        const res = await bec.putOntology(
+            workspaceName,
+            targetGraphUri,
+            withKeyword(currentOntology, keyword),
+        );
+        if (res && res.ok === false) {
+            toastStore.error(
+                "Rename failed",
+                "Could not update the display name in the profile header.",
+            );
+            return false;
+        }
+        return true;
+    }
+</script>
+
+<ActionDialog
+    bind:showDialog
+    {onOpen}
+    {onClose}
+    primaryLabel="Rename Schema"
+    onPrimary={renameGraph}
+    title="Rename Schema"
+    disablePrimary={disableSubmit}
+>
+    <div class="mx-2 flex h-full flex-col">
+        <label for={namespaceInputId} class="mb-1">Namespace</label>
+        <input
+            class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
+            type="text"
+            id={namespaceInputId}
+            list={namespaceListId}
+            placeholder={defaultNamespace}
+            autocomplete="off"
+            bind:value={namespaceUserInput}
+        />
+        <datalist id={namespaceListId}>
+            {#each namespaceOptions as namespaceOption}
+                <option value={namespaceOption}>{namespaceOption}</option>
+            {/each}
+        </datalist>
+
+        <label for={labelInputId} class="mt-2 mb-1">Label</label>
+        <input
+            class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
+            type="text"
+            id={labelInputId}
+            placeholder="Schema label"
+            autocomplete="off"
+            bind:value={labelUserInput}
+        />
+
+        {#if namespaceIsInvalid}
+            <div class="mt-1 mb-1 h-6 text-sm">
+                Namespace must start with a scheme, e.g. http://
+            </div>
+        {:else if graphExists}
+            <div class="mt-1 mb-1 h-6 text-sm">Schema already exists</div>
+        {:else if resolvedGraphUri}
+            <div class="text-nav-text mt-1 mb-1 h-6 truncate text-sm">
+                {resolvedGraphUri}
+            </div>
+        {/if}
+    </div>
+</ActionDialog>

@@ -89,6 +89,22 @@ export class BackendConnection {
         });
     }
 
+    async renameWorkspace(workspaceName, newWorkspaceName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/rename?newDatasetName=${encodeURIComponent(newWorkspaceName)}`;
+        return fetch(url, {
+            method: "POST",
+            credentials: "include",
+        });
+    }
+
+    async renameGraph(workspaceName, graphURI, newGraphURI) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/rename?newGraphURI=${encodeURIComponent(newGraphURI)}`;
+        return fetch(url, {
+            method: "POST",
+            credentials: "include",
+        });
+    }
+
     async getClassInfo(
         workspaceName,
         graphURI,

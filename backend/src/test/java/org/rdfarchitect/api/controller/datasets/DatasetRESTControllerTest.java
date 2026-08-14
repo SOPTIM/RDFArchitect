@@ -26,6 +26,7 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
 import org.rdfarchitect.services.update.dataset.CreateDatasetUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
+import org.rdfarchitect.services.update.dataset.RenameDatasetUseCase;
 import org.springframework.http.HttpHeaders;
 
 import java.util.List;
@@ -35,6 +36,7 @@ class DatasetRESTControllerTest {
     private ListDatasetsUseCase listDatasetsUseCase;
     private CreateDatasetUseCase createDatasetUseCase;
     private DeleteDatasetUseCase deleteDatasetUseCase;
+    private RenameDatasetUseCase renameDatasetUseCase;
     private DatasetRESTController controller;
 
     @BeforeEach
@@ -42,9 +44,13 @@ class DatasetRESTControllerTest {
         listDatasetsUseCase = mock(ListDatasetsUseCase.class);
         createDatasetUseCase = mock(CreateDatasetUseCase.class);
         deleteDatasetUseCase = mock(DeleteDatasetUseCase.class);
+        renameDatasetUseCase = mock(RenameDatasetUseCase.class);
         controller =
                 new DatasetRESTController(
-                        listDatasetsUseCase, createDatasetUseCase, deleteDatasetUseCase);
+                        listDatasetsUseCase,
+                        createDatasetUseCase,
+                        deleteDatasetUseCase,
+                        renameDatasetUseCase);
     }
 
     @Test
@@ -63,6 +69,14 @@ class DatasetRESTControllerTest {
 
         assertThat(response).isEqualTo(Response.SUCCESS);
         verify(createDatasetUseCase).createDataset("dataset-a");
+    }
+
+    @Test
+    void renameDataset_invokesUseCaseAndReturnsSuccess() {
+        var response = controller.renameDataset(HttpHeaders.ORIGIN, "dataset-a", "dataset-b");
+
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(renameDatasetUseCase).renameDataset("dataset-a", "dataset-b");
     }
 
     @Test
