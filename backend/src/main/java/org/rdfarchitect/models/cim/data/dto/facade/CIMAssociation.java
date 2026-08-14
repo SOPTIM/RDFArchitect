@@ -90,7 +90,11 @@ public class CIMAssociation extends CIMResource implements ICIMAssociation {
             return false;
         }
         var associationUsed = getUniqueObjectOrNull(association, CIMS.associationUsed);
-        return associationUsed != null && associationUsed.isLiteral();
+        if (associationUsed == null || !associationUsed.isLiteral()) {
+            return false;
+        }
+        var value = associationUsed.asLiteral().getLexicalForm();
+        return CIMS.yes.getLexicalForm().equals(value) || CIMS.no.getLexicalForm().equals(value);
     }
 
     @Override

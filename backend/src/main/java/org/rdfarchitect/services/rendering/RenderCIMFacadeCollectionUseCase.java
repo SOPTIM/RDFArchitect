@@ -30,19 +30,6 @@ import java.util.List;
 public interface RenderCIMFacadeCollectionUseCase {
 
     /**
-     * Generates the rendering data for a CIM model using pre-fetched layout data.
-     *
-     * @param cimModel the CIM model facade to read the diagram content from
-     * @param filter filter deciding which parts of the model are rendered
-     * @param layoutData pre-fetched diagram layout data (may be null)
-     * @return a dto that contains all data required to render a UML diagram for the given model
-     */
-    default RenderingDataDTO renderUML(
-            ICIMModelFacade cimModel, GraphFilter filter, RenderingLayoutData layoutData) {
-        return renderUML(cimModel, filter, layoutData, List.of(), null);
-    }
-
-    /**
      * Generates the rendering data for a CIM model, optionally enriching each rendered class with
      * the matching class's properties from other profiles of the same dataset.
      *

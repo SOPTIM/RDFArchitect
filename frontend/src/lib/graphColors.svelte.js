@@ -49,14 +49,18 @@ function createGraphColors() {
     let byDataset = $state({});
     const pendingLoads = new Map();
 
-    async function put(datasetName, colorsByGraph) {
-        const payload = Object.fromEntries(
+    function normalizeColors(colorsByGraph) {
+        return Object.fromEntries(
             Object.entries(colorsByGraph)
                 .map(([graphUri, color]) => [graphUri, normalizeHex(color)])
                 .filter(([, color]) => color !== null),
         );
+    }
+
+    async function put(datasetName, colorsByGraph) {
+        const payload = normalizeColors(colorsByGraph);
         if (Object.keys(payload).length === 0) {
-            return true;
+            return Object.keys(colorsByGraph).length === 0;
         }
         try {
             const res = await bec.putCrossProfileColorData(datasetName, {
@@ -165,7 +169,10 @@ function createGraphColors() {
 
         async replaceAll(datasetName, colorsByGraph) {
             const previous = byDataset[datasetName] ?? {};
-            byDataset[datasetName] = { ...previous, ...colorsByGraph };
+            byDataset[datasetName] = {
+                ...previous,
+                ...normalizeColors(colorsByGraph),
+            };
 
             const saved = await put(datasetName, colorsByGraph);
             if (!saved) {

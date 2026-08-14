@@ -46,9 +46,11 @@ import org.springframework.util.CollectionUtils;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -72,6 +74,18 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private static final String ASSOCIATION_EDGE_TYPE = "association";
 
     private static final String DEFAULT_PACKAGE = "default";
+
+    private static final Comparator<AttributeDTO> MERGED_ATTRIBUTE_ORDER =
+            Comparator.comparing(
+                            AttributeDTO::getGraphUri,
+                            Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(attribute -> attribute.getLabel().toLowerCase(Locale.ROOT));
+
+    private static final Comparator<EnumEntryDTO> MERGED_ENUM_ENTRY_ORDER =
+            Comparator.comparing(
+                            EnumEntryDTO::getGraphUri,
+                            Comparator.nullsLast(Comparator.naturalOrder()))
+                    .thenComparing(entry -> entry.getLabel().toLowerCase(Locale.ROOT));
 
     @Override
     public RenderingDataDTO renderUML(
@@ -218,6 +232,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     source.graphUri(),
                     source.color());
         }
+        attributes.sort(MERGED_ATTRIBUTE_ORDER);
         return attributes;
     }
 
@@ -233,6 +248,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                 .build());
             }
         }
+        enumEntries.sort(MERGED_ENUM_ENTRY_ORDER);
         return enumEntries;
     }
 
@@ -315,11 +331,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
     private List<EdgeDTO> assembleMergedAssociationEdges(
             Map<String, MergedFacadeClass> mergedClasses) {
         var edges = new ArrayList<EdgeDTO>();
-        var handledPairs = new HashSet<String>();
+        var handledAssociationUris = new HashSet<String>();
         for (var merged : mergedClasses.values()) {
             for (var source : merged.sources()) {
                 for (var association : source.cimClass().getAssociations()) {
-                    if (!association.isRenderable()) {
+                    if (handledAssociationUris.contains(association.getUri().toString())
+                            || !association.isRenderable()) {
                         continue;
                     }
                     var range = association.getRange();
@@ -327,14 +344,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                     if (target == null) {
                         continue;
                     }
-                    var pairKey =
-                            merged.uuid().compareTo(target.uuid()) < 0
-                                    ? merged.uuid() + "|" + target.uuid()
-                                    : target.uuid() + "|" + merged.uuid();
-                    if (!handledPairs.add(pairKey)) {
-                        continue;
-                    }
                     var inverse = association.getInverseAssociation();
+                    handledAssociationUris.add(association.getUri().toString());
+                    handledAssociationUris.add(inverse.getUri().toString());
                     var edgeData =
                             EdgeDataDTO.builder()
                                     .fromMultiplicity(
