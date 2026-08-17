@@ -25,7 +25,6 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
-        copyState,
         editorState,
         forceReloadTrigger,
         multiSelectState,

@@ -1045,14 +1045,72 @@
           "copyAttributes" : {
             "type" : "boolean"
           },
+          "copyInheritance" : {
+            "type" : "boolean"
+          },
+          "referencesToCopy" : {
+            "items" : {
+              "$ref" : "#/components/schemas/URI"
+            },
+            "type" : "array"
+          },
           "sources" : {
             "items" : {
               "$ref" : "#/components/schemas/PasteSourceClassDTO"
             },
             "type" : "array"
           },
-          "targetPackage" : {
-            "$ref" : "#/components/schemas/PackageDTO"
+          "targetPackageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PastePreviewRequestDTO" : {
+        "properties" : {
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PasteSourceClassDTO"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "PastePreviewResponseDTO" : {
+        "properties" : {
+          "missing" : {
+            "additionalProperties" : {
+              "items" : {
+                "$ref" : "#/components/schemas/PasteReferenceDTO"
+              },
+              "type" : "array"
+            },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
+      "PasteReferenceDTO" : {
+        "properties" : {
+          "label" : {
+            "type" : "string"
+          },
+          "requires" : {
+            "items" : {
+              "$ref" : "#/components/schemas/URI"
+            },
+            "type" : "array"
+          },
+          "uri" : {
+            "$ref" : "#/components/schemas/URI"
+          },
+          "usedBy" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PasteUsageDTO"
+            },
+            "type" : "array"
           }
         },
         "type" : "object"
@@ -1066,6 +1124,17 @@
             "type" : "string"
           },
           "sourceGraphURI" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "PasteUsageDTO" : {
+        "properties" : {
+          "className" : {
+            "type" : "string"
+          },
+          "memberName" : {
             "type" : "string"
           }
         },
@@ -7692,7 +7761,7 @@
     },
     "/api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste" : {
       "post" : {
-        "description" : "Create copies of one or more previously copied classes in the target graph.",
+        "description" : "Create copies of one or more previously copied classes in the target graph. A referenced data type listed in referencesToCopy also brings the data types its own attributes need.",
         "operationId" : "pasteClasses",
         "parameters" : [
           {
@@ -7751,6 +7820,69 @@
           }
         },
         "summary" : "paste classes",
+        "tags" : [
+          "paste-rest-controller"
+        ]
+      }
+    },
+    "/api/datasets/{targetDatasetName}/graphs/{targetGraphURI}/paste/preview" : {
+      "post" : {
+        "description" : "Report which data types, association targets and super classes of the given source classes the target graph does not contain yet.",
+        "operationId" : "previewPaste",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the target dataset.",
+            "in" : "path",
+            "name" : "targetDatasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the target graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "targetGraphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PastePreviewRequestDTO"
+              }
+            }
+          },
+          "description" : "The list of source classes that would be pasted.",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PastePreviewResponseDTO"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "preview paste",
         "tags" : [
           "paste-rest-controller"
         ]

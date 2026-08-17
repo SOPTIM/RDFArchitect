@@ -15,6 +15,8 @@
  *
  */
 
+import { previewPaste } from "$lib/api/generated/index.ts";
+import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import {
     DEFAULT_PASTE_OPTIONS,
     PASTE_REFERENCE_KINDS,
@@ -50,13 +52,16 @@ export async function loadPastePreview(datasetName, graphURI, options) {
     );
     if (entries.length === 0 || !copiesAnything) return null;
     try {
-        const res = await bec.postPastePreview(datasetName, graphURI, {
-            sources: sourcesOf(entries),
+        const { data, error } = await previewPaste({
+            path: { datasetName, graphURI },
+            body: {
+                sources: sourcesOf(entries),
+            },
         });
-        if (!res.ok) {
-            return reportPreviewFailure(await res.text());
+        if (error) {
+            return reportPreviewFailure(error);
         }
-        const preview = await res.json();
+        const preview = data;
         const missing = PASTE_REFERENCE_KINDS.some(
             ({ kind, option }) =>
                 options[option] && preview.missing?.[kind]?.length > 0,
