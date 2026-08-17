@@ -68,7 +68,7 @@
 
 ### @sveltejs/vite-plugin-svelte
 - **Package:** @sveltejs/vite-plugin-svelte
-- **Version:** 7.3.0
+- **Version:** 7.2.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/vite-plugin-svelte#readme](https://github.com/sveltejs/vite-plugin-svelte#readme)
 
@@ -86,7 +86,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.66.0
+- **Version:** 8.65.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -98,7 +98,7 @@
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.0.8
+- **Version:** 4.0.6
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
@@ -132,7 +132,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.8.1
+- **Version:** 10.8.0
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -162,7 +162,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.9.0
+- **Version:** 17.8.0
 - **License:** MIT
 
 ### html-to-image
@@ -185,13 +185,13 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.16.1
+- **Version:** 11.16.0
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.26
+- **Version:** 8.5.25
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.66.0
+- **Version:** 8.65.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -275,7 +275,7 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.2.1
+- **Version:** 8.1.5
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 

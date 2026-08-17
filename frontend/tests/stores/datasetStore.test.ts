@@ -19,7 +19,7 @@ import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
-import { CimPrefixPair } from "../../src/lib/api/generated";
+import { type CimPrefixPair } from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { createDatasetStore } from "../../src/lib/stores/datasetStore";
 

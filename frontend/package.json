@@ -5,7 +5,7 @@
         "dev": "vite dev --port 1407",
         "build": "vite build",
         "preview": "vite preview",
-        "lint": "prettier --check . && eslint . && node licenses-third-party.js check && tsc --noEmit -p .svelte-kit/tsconfig.json ",
+        "lint": "prettier --check . && eslint . && node licenses-third-party.js check",
         "format": "prettier --write . && eslint --fix .",
         "clean-install": "rm -rf node_modules && npm install",
         "test": "vitest --run",

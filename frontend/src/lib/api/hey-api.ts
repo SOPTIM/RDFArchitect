@@ -16,7 +16,7 @@
  */
 
 import { PUBLIC_BACKEND_URL } from "../config/runtime";
-import { CreateClientConfig } from "./generated/client";
+import { type CreateClientConfig } from "./generated/client";
 
 export const createClientConfig: CreateClientConfig = config => ({
     ...config,
