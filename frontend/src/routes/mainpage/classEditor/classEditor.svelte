@@ -21,12 +21,14 @@
 
     import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
         eventStack,
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import {
         findSuperClass,
         mapClassDtoToReactiveClass,
@@ -79,6 +81,10 @@
 
     let reactiveClass = $state();
 
+    let externalClass = $state(null);
+
+    let creatingClass = $state(false);
+
     let inheritedAttributes = $state([]);
 
     let inheritedAssociations = $state([]);
@@ -115,6 +121,9 @@
         const cancellation = { cancelled: false };
         loadingContext = true;
         loadingClass = true;
+        // Clearing this up front keeps the panel of the previously opened class from showing
+        // through the loading overlay while the newly selected one is fetched.
+        externalClass = null;
         (async () => {
             let res = await bec.getClassInfo(
                 datasetName,
@@ -123,6 +132,7 @@
                 true,
             );
             let resText = await res.text();
+            if (cancellation.cancelled) return;
             if (!resText) {
                 return closeClassEditor({
                     datasetName: datasetName,
@@ -150,8 +160,17 @@
                     classUuid: null,
                 });
             }
-            isDatasetReadOnly = await isReadOnly(datasetName);
-            await loadContext();
+            const readOnly = await isReadOnly(datasetName);
+            if (cancellation.cancelled) return;
+            isDatasetReadOnly = readOnly;
+            if (classData.external) {
+                reactiveClass = undefined;
+                externalClass = classData;
+                loadingContext = false;
+                loadingClass = false;
+                return;
+            }
+            await loadContext(cancellation);
             await loadReactiveClass(cancellation, classData);
         })();
 
@@ -214,20 +233,67 @@
         });
     }
 
-    async function loadContext() {
-        [
-            context.classes,
-            context.packages,
-            context.datatypes,
-            context.stereotypes,
-            context.namespaces,
-        ] = await Promise.all([
-            getClasses(datasetName, graphUri),
-            getPackages(datasetName, graphUri),
-            getDataTypes(datasetName, graphUri),
-            getStereotypes(datasetName, graphUri),
-            getNamespaces(datasetName),
-        ]);
+    /**
+     * Creates the class for a referenced only resource. Its namespace comes from the referenced
+     * uri and its package from the diagram it is shown in, so nothing has to be asked for. The
+     * backend reuses the uuid of the referenced resource, so the class keeps its identity and its
+     * layout data.
+     */
+    async function createReferencedClass() {
+        creatingClass = true;
+        try {
+            const res = await bec.postClass(datasetName, graphUri, {
+                packageDTO: await packageOfCurrentDiagram(),
+                classURIPrefix: externalClass.prefix,
+                className: externalClass.label,
+            });
+            if (!res.ok) {
+                toastStore.error(
+                    "Create failed",
+                    `Could not create class "${externalClass.label}".`,
+                );
+                return;
+            }
+            toastStore.success(
+                "Class created",
+                `"${externalClass.label}" was added.`,
+            );
+            forceReloadTrigger.trigger();
+        } catch (e) {
+            console.error("failed to create referenced class:", e);
+            toastStore.error(
+                "Create failed",
+                "An unexpected error occurred while creating the class.",
+            );
+        } finally {
+            creatingClass = false;
+        }
+    }
+
+    async function packageOfCurrentDiagram() {
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        if (!diagramId || diagramId === "default") {
+            return null;
+        }
+        const packages = await getPackages(datasetName, graphUri);
+        return packages.find(pkg => pkg.uuid === diagramId) ?? null;
+    }
+
+    async function loadContext(cancellation) {
+        const [classes, packages, datatypes, stereotypes, namespaces] =
+            await Promise.all([
+                getClasses(datasetName, graphUri),
+                getPackages(datasetName, graphUri),
+                getDataTypes(datasetName, graphUri),
+                getStereotypes(datasetName, graphUri),
+                getNamespaces(datasetName),
+            ]);
+        if (cancellation.cancelled) return;
+        context.classes = classes;
+        context.packages = packages;
+        context.datatypes = datatypes;
+        context.stereotypes = stereotypes;
+        context.namespaces = namespaces;
         loadingContext = false;
         editorState.selectedContext.trigger();
     }
@@ -380,7 +446,30 @@
         horizontal
         class="bg-window-background h-full"
     >
-        {#if reactiveClass}
+        {#if externalClass}
+            <Pane
+                size={100}
+                class="bg-window-background z-2 size-full rounded-xs border-none"
+            >
+                <div
+                    class="text-default-text flex size-full flex-col items-center justify-center gap-3 p-4 text-center"
+                >
+                    <span class="text-lg font-bold">{externalClass.label}</span>
+                    <span class="text-sm opacity-70">
+                        This class is referenced here but not defined in this
+                        schema.
+                    </span>
+                    {#if !isDatasetReadOnly}
+                        <ButtonControl
+                            callOnClick={createReferencedClass}
+                            disabled={creatingClass}
+                        >
+                            Create class
+                        </ButtonControl>
+                    {/if}
+                </div>
+            </Pane>
+        {:else if reactiveClass}
             <Pane
                 size={75}
                 class="bg-window-background z-2 size-full rounded-xs border-none"

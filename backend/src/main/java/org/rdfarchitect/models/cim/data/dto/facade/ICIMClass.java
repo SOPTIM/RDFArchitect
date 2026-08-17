@@ -23,6 +23,13 @@ import java.util.List;
 
 public interface ICIMClass extends ICIMResource {
 
+    /**
+     * Whether this class is only referenced by other resources instead of being defined in this
+     * graph. A referenced only class carries a {@code rdfa:uuid}, so the uuid must not be used to
+     * tell the two apart.
+     */
+    boolean isExternal();
+
     List<ICIMClass> getSuperClasses();
 
     ICIMClassCategory getBelongsToCategory();

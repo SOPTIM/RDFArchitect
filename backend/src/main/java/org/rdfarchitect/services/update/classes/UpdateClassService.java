@@ -92,17 +92,24 @@ public class UpdateClassService
             oldClassUri = resource.getURI();
         }
 
+        UUID releasedUuid;
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
             var graph = ctx.getRdfGraph();
             var cimClass = classMapper.toCIMObject(newClass);
             assertNoPackageWithSameIri(graph, cimClass);
-            CIMUpdates.replaceClass(
-                    graph,
-                    databasePort.getPrefixMapping(graphIdentifier.datasetName()),
-                    cimClass,
-                    newValuesAsBlankNode);
+            releasedUuid =
+                    CIMUpdates.replaceClass(
+                            graph,
+                            databasePort.getPrefixMapping(graphIdentifier.datasetName()),
+                            cimClass,
+                            newValuesAsBlankNode);
             ctx.commit(
                     "Updated class \"%s\" (%s)".formatted(newClass.getLabel(), newClass.getUuid()));
+        }
+
+        if (releasedUuid != null) {
+            deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, releasedUuid);
+            removeFromDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
         }
 
         updateDiagramObjectNameUseCase.updateDiagramObjectName(

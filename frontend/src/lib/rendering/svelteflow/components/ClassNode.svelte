@@ -87,6 +87,7 @@
     );
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
+    const isExternal = $derived(data.external === true);
 
     function graphUriOf(prop) {
         return prop.graphUri ?? "";
@@ -177,6 +178,8 @@
 
 <div
     class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
+        isExternal ? "class-node-external" : ""
+    } ${
         highlightState === "active"
             ? "class-node-highlighted"
             : highlightState === "secondary"
@@ -218,7 +221,11 @@
     <div
         class="class-node-divider bg-class-node-lower-background p-2 text-left"
     >
-        {#if useProfileSections}
+        {#if isExternal}
+            <div class="text-default-text text-xs italic opacity-70">
+                not defined in this schema
+            </div>
+        {:else if useProfileSections}
             {#each profileSections as section (section.graphUri)}
                 <div
                     class="text-default-text text-center text-xs italic opacity-70"
@@ -354,6 +361,17 @@
         box-shadow: inset 0 0 0 1px var(--color-default-text);
         pointer-events: none;
         z-index: 2;
+    }
+
+    .class-node-external {
+        --color-class-node-upper-background: rgba(224, 224, 224, 0.45);
+        --color-class-node-lower-background: rgba(242, 242, 242, 0.4);
+        --color-default-text: #5a5a5a;
+    }
+
+    .class-node-external::after {
+        box-shadow: none;
+        border: 1px dashed var(--color-default-text);
     }
 
     .class-node-highlighted::after {

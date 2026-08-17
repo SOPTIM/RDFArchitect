@@ -201,6 +201,41 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("marks a deleted class that is still referenced by a kept association as external")
+    void marksReferencedOnlyAssociationTargetAsExternal() {
+        var deleted = model.createResource(NS + "Deleted");
+        deleted.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        var association = model.createResource(NS + "Child.Deleted");
+        association.addProperty(RDF.type, RDF.Property);
+        association.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        association.addProperty(RDFS.label, model.createLiteral("Deleted", "en"));
+        association.addProperty(RDFS.domain, model.getResource(NS + "Child"));
+        association.addProperty(RDFS.range, deleted);
+        association.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:0..n"));
+        association.addProperty(CIMS.associationUsed, "Yes");
+        var inverse = model.createResource(NS + "Deleted.Child");
+        inverse.addProperty(RDF.type, RDF.Property);
+        inverse.addProperty(RDFA.uuid, UUID.randomUUID().toString());
+        inverse.addProperty(RDFS.label, model.createLiteral("Child", "en"));
+        inverse.addProperty(RDFS.domain, deleted);
+        inverse.addProperty(RDFS.range, model.getResource(NS + "Child"));
+        inverse.addProperty(CIMS.multiplicity, model.createResource(CIMS.namespace + "M:1..1"));
+        inverse.addProperty(CIMS.associationUsed, "No");
+        inverse.addProperty(CIMS.inverseRoleName, association);
+        association.addProperty(CIMS.inverseRoleName, inverse);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        var deletedNode = nodeByLabel(result, "Deleted");
+        assertThat(deletedNode.getData().isExternal()).isTrue();
+        assertThat(deletedNode.getData().getAttributes()).isEmpty();
+        assertThat(deletedNode.getData().getSuperClasses()).isEmpty();
+        assertThat(nodeByLabel(result, "Child").getData().isExternal()).isFalse();
+    }
+
+    @Test
     @DisplayName("renders direct attributes and stereotypes of a class")
     void rendersDirectAttributesAndStereotypes() {
         var result =
@@ -318,8 +353,8 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
-    @DisplayName("skips association targets the graph does not define as classes")
-    void skipsUndefinedAssociationTarget() {
+    @DisplayName("renders association targets the graph does not define as external classes")
+    void rendersUndefinedAssociationTargetAsExternal() {
         var child = model.getResource(NS + "Child");
         var missingTarget = model.createResource(NS + "MissingTarget");
         missingTarget.addProperty(RDFA.uuid, MISSING_TARGET_UUID.toString());
@@ -335,17 +370,15 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 (SvelteFlowDTO)
                         renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
-        assertThat(result.getNodes())
-                .extracting(node -> node.getData().getLabel())
-                .doesNotContain("MissingTarget");
+        assertThat(nodeByLabel(result, "MissingTarget").getData().isExternal()).isTrue();
         assertThat(result.getEdges())
                 .extracting(edge -> edge.getTarget())
-                .doesNotContain(MISSING_TARGET_UUID);
+                .contains(MISSING_TARGET_UUID);
     }
 
     @Test
-    @DisplayName("skips super classes the graph does not define as classes")
-    void skipsUndefinedSuperClass() {
+    @DisplayName("renders super classes the graph does not define as external classes")
+    void rendersUndefinedSuperClassAsExternal() {
         var missingSuperClass = model.createResource(NS + "MissingSuperClass");
         missingSuperClass.addProperty(RDFA.uuid, MISSING_SUPER_CLASS_UUID.toString());
         model.getResource(NS + "Child").addProperty(RDFS.subClassOf, missingSuperClass);
@@ -354,12 +387,10 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
                 (SvelteFlowDTO)
                         renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
-        assertThat(result.getNodes())
-                .extracting(node -> node.getData().getLabel())
-                .doesNotContain("MissingSuperClass");
+        assertThat(nodeByLabel(result, "MissingSuperClass").getData().isExternal()).isTrue();
         assertThat(result.getEdges())
                 .extracting(edge -> edge.getTarget())
-                .doesNotContain(MISSING_SUPER_CLASS_UUID);
+                .contains(MISSING_SUPER_CLASS_UUID);
     }
 
     @Test

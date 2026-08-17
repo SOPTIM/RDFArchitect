@@ -27,6 +27,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.RDFSLabel;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.relations.model.properties.CIMPropertyUtils;
 
 import java.util.ArrayList;
@@ -45,10 +46,16 @@ public class CIMClass extends CIMResource implements ICIMClass {
     }
 
     public static ICIMClass fromResource(String graphUri, Model model, Resource resource) {
-        if (model.contains(resource, RDFA.uuid)) {
-            return new CIMClass(graphUri, model, resource);
+        var inModel = resource.inModel(model);
+        if (!inModel.hasProperty(RDFA.uuid) || CIMResourceUtils.isExternalResource(inModel)) {
+            return new ExternalCIMClass(graphUri, model, resource);
         }
-        return new ExternalCIMClass(graphUri, model, resource);
+        return new CIMClass(graphUri, model, resource);
+    }
+
+    @Override
+    public boolean isExternal() {
+        return false;
     }
 
     @Override
