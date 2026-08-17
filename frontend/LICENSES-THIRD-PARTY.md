@@ -62,7 +62,7 @@
 
 ### @sveltejs/vite-plugin-svelte
 - **Package:** @sveltejs/vite-plugin-svelte
-- **Version:** 7.2.0
+- **Version:** 7.3.0
 - **License:** MIT
 - **URL:** [https://github.com/sveltejs/vite-plugin-svelte#readme](https://github.com/sveltejs/vite-plugin-svelte#readme)
 
@@ -80,7 +80,7 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.65.0
+- **Version:** 8.66.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
@@ -92,7 +92,7 @@
 
 ### asciidoctor
 - **Package:** asciidoctor
-- **Version:** 4.0.6
+- **Version:** 4.0.8
 - **License:** MIT
 - **URL:** [https://github.com/asciidoctor/asciidoctor.js](https://github.com/asciidoctor/asciidoctor.js)
 
@@ -126,7 +126,7 @@
 
 ### eslint
 - **Package:** eslint
-- **Version:** 10.8.0
+- **Version:** 10.8.1
 - **License:** MIT
 - **URL:** [https://eslint.org](https://eslint.org)
 
@@ -156,7 +156,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.8.0
+- **Version:** 17.9.0
 - **License:** MIT
 
 ### html-to-image
@@ -185,7 +185,7 @@
 
 ### postcss
 - **Package:** postcss
-- **Version:** 8.5.25
+- **Version:** 8.5.26
 - **License:** MIT
 - **URL:** [https://postcss.org/](https://postcss.org/)
 
@@ -251,7 +251,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.65.0
+- **Version:** 8.66.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 
@@ -269,7 +269,7 @@
 
 ### vite
 - **Package:** vite
-- **Version:** 8.1.5
+- **Version:** 8.2.1
 - **License:** MIT
 - **URL:** [https://vite.dev](https://vite.dev)
 
