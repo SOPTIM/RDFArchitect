@@ -437,17 +437,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
         var classesInPackage = List.copyOf(classes.values());
         var definedClasses = cimModel.getCIMClasses();
-        var definedClassUris =
-                definedClasses.stream()
-                        .map(cimClass -> cimClass.getUri().toString())
-                        .collect(Collectors.toSet());
 
         if (filter.isIncludeAssociations()) {
             for (var cimClass : classesInPackage) {
                 for (var association : cimClass.getAssociations()) {
                     if (association.isRenderable()) {
-                        addExternallyRelatedClass(
-                                classes, association.getRange(), definedClassUris);
+                        addExternallyRelatedClass(classes, association.getRange());
                     }
                 }
             }
@@ -457,7 +452,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
             var packageUris = classes.keySet();
             for (var cimClass : classesInPackage) {
                 for (var superClass : cimClass.getSuperClasses()) {
-                    addExternallyRelatedClass(classes, superClass, definedClassUris);
+                    addExternallyRelatedClass(classes, superClass);
                 }
             }
             for (var cimClass : definedClasses) {
@@ -477,12 +472,9 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
     }
 
-    private void addExternallyRelatedClass(
-            Map<String, ICIMClass> classes, ICIMClass cimClass, Set<String> definedClassUris) {
+    private void addExternallyRelatedClass(Map<String, ICIMClass> classes, ICIMClass cimClass) {
         var uri = cimClass.getUri().toString();
-        if (cimClass.getUuid() == null
-                || !definedClassUris.contains(uri)
-                || classes.containsKey(uri)) {
+        if (cimClass.getUuid() == null || classes.containsKey(uri)) {
             return;
         }
         classes.put(uri, cimClass);
