@@ -76,14 +76,18 @@ public class CIMUpdates {
      * @param newClass The new {@link CIMClassUMLAdapted} to replace.
      * @param newValuesAsBlankNode whether to persist new attribute fixed/default values as
      *     blank-node wrappers (existing attributes always keep their existing shape).
+     * @return the uuid that a referenced only resource lost because the class took over its uri, or
+     *     {@code null} if the uri was free. Diagram layout data may still be keyed on it, so the
+     *     caller has to clean that up.
      */
-    public void replaceClass(
+    public UUID replaceClass(
             Graph graph,
             PrefixMapping prefixMapping,
             CIMClassUMLAdapted newClass,
             boolean newValuesAsBlankNode) {
         assertNoPackageWithSameIri(graph, newClass.getUri());
-        releaseUriFromExternalResource(graph, newClass.getUri(), newClass.getUuid());
+        var releasedUuid =
+                releaseUriFromExternalResource(graph, newClass.getUri(), newClass.getUuid());
         var dataset = SessionDataStore.wrapGraphInDataset(graph, null);
         // replace attributes in database
         var updateAttributes =
@@ -110,6 +114,7 @@ public class CIMUpdates {
         // replace classObject in database
         var updateClassBase = replaceClassBase(prefixMapping, null, newClass);
         UpdateExecutionFactory.create(updateClassBase.build(), dataset).execute();
+        return releasedUuid;
     }
 
     public UUID insertClass(Graph graph, PrefixMapping prefixMapping, CIMClass newClass) {
@@ -766,8 +771,10 @@ public class CIMUpdates {
      * resources carries a {@code rdfa:uuid} of its own; that identity is dropped so the renamed
      * resource becomes the single owner of the URI. A URI that is still owned by another existing
      * resource cannot be taken over.
+     *
+     * @return the dropped uuid, or {@code null} if the uri carried no foreign identity.
      */
-    private void releaseUriFromExternalResource(Graph graph, URI uri, UUID newOwnerUuid) {
+    private UUID releaseUriFromExternalResource(Graph graph, URI uri, UUID newOwnerUuid) {
         var model = ModelFactory.createModelForGraph(graph);
         var resource = model.getResource(uri.toString());
         var foreignUuids =
@@ -775,7 +782,7 @@ public class CIMUpdates {
                         .filter(stmt -> !stmt.getString().equals(newOwnerUuid.toString()))
                         .toList();
         if (foreignUuids.isEmpty()) {
-            return;
+            return null;
         }
         if (!CIMResourceUtils.isExternalResource(resource)) {
             throw new ResourceConflictException(
@@ -784,6 +791,7 @@ public class CIMUpdates {
                             + " because another resource with the same IRI already exists.");
         }
         model.remove(foreignUuids);
+        return UUID.fromString(foreignUuids.getFirst().getString());
     }
 
     private void deleteUuidIfNotReferencedAnyWhereElse(Graph graph, UUID uuid) {

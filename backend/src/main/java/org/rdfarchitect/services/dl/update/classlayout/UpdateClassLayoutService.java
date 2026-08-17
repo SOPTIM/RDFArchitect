@@ -81,6 +81,7 @@ public class UpdateClassLayoutService
                     moveDiagramObject(
                             diagramLayoutModel,
                             existingDiagramObject,
+                            packageUUID,
                             classLayoutPosition.getXPosition(),
                             classLayoutPosition.getYPosition());
                     ctx.commit();
@@ -102,11 +103,14 @@ public class UpdateClassLayoutService
     private void moveDiagramObject(
             Model diagramLayoutModel,
             DiagramObject diagramObject,
+            UUID diagramUUID,
             float xPosition,
             float yPosition) {
         var diagramObjectPoint =
                 DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
         if (diagramObjectPoint == null) {
+            DiagramLayoutServiceUtils.insertDiagramObjectPoint(
+                    diagramLayoutModel, diagramObject.getMRID(), diagramUUID, xPosition, yPosition);
             return;
         }
         DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());

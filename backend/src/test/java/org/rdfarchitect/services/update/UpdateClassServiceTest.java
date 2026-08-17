@@ -19,7 +19,10 @@ package org.rdfarchitect.services.update;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import static utils.TestUtils.readMultipartFileFromFile;
 
@@ -60,6 +63,8 @@ class UpdateClassServiceTest {
 
     private UpdateClassService updateClassService;
     private DatabasePort databasePort;
+    private UpdateClassLayoutService mockUpdateClassLayoutService;
+    private CustomDiagramService mockCustomDiagramService;
     private final GraphIdentifier graphIdentifier = new GraphIdentifier("default", "default");
 
     @Autowired private ClassUMLAdaptedMapper classMapper;
@@ -73,8 +78,8 @@ class UpdateClassServiceTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        var mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
-        var mockCustomDiagramService = mock(CustomDiagramService.class);
+        mockUpdateClassLayoutService = mock(UpdateClassLayoutService.class);
+        mockCustomDiagramService = mock(CustomDiagramService.class);
         updateClassService =
                 new UpdateClassService(
                         databasePort,
@@ -128,23 +133,7 @@ class UpdateClassServiceTest {
 
     @Test
     void addClass_uriIsReferencedOnly_keepsUuidOfReferencedResource() {
-        var ghostUri = NodeFactory.createURI(PREFIX + "ghost");
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            ctx.getRdfGraph()
-                    .add(
-                            NodeFactory.createURI(PREFIX + "class.associatedClass"),
-                            RDFS.range.asNode(),
-                            ghostUri);
-            ctx.commit("referenced only resource");
-        }
-
-        UUID referencedUuid;
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-            referencedUuid =
-                    UUID.fromString(
-                            model.getResource(PREFIX + "ghost").getProperty(RDFA.uuid).getString());
-        }
+        var referencedUuid = addReferencedOnlyResource("ghost");
 
         var packageDTO =
                 PackageDTO.builder()
@@ -260,6 +249,57 @@ class UpdateClassServiceTest {
                                             RDFS.subClassOf.asNode(),
                                             NodeFactory.createURI(PREFIX + "newClass")))
                     .isTrue();
+        }
+    }
+
+    @Test
+    void replaceClass_takesOverReferencedOnlyUri_cleansUpItsLayoutData() {
+        var referencedUuid = addReferencedOnlyResource("ghost");
+        var newClass =
+                ClassUMLAdaptedDTO.builder()
+                        .uuid(UUID.fromString(CLASS_UUID))
+                        .prefix(PREFIX)
+                        .label("ghost")
+                        .build();
+
+        updateClassService.replaceClass(graphIdentifier, newClass);
+
+        // The referenced only resource is gone, so anything keyed on its uuid has to go with it
+        verify(mockUpdateClassLayoutService).deleteClassLayoutData(graphIdentifier, referencedUuid);
+        verify(mockCustomDiagramService).removeFromAllDiagrams(graphIdentifier, referencedUuid);
+    }
+
+    @Test
+    void replaceClass_uriIsFree_keepsLayoutDataUntouched() {
+        var newClass =
+                ClassUMLAdaptedDTO.builder()
+                        .uuid(UUID.fromString(CLASS_UUID))
+                        .prefix(PREFIX)
+                        .label("newClass")
+                        .build();
+
+        updateClassService.replaceClass(graphIdentifier, newClass);
+
+        verify(mockUpdateClassLayoutService, never())
+                .deleteClassLayoutData(any(GraphIdentifier.class), any(UUID.class));
+        verify(mockCustomDiagramService, never())
+                .removeFromAllDiagrams(any(GraphIdentifier.class), any(UUID.class));
+    }
+
+    /** Referencing a uri that nothing defines makes it a referenced only resource with a uuid. */
+    private UUID addReferencedOnlyResource(String label) {
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            ctx.getRdfGraph()
+                    .add(
+                            NodeFactory.createURI(PREFIX + "class.associatedClass"),
+                            RDFS.range.asNode(),
+                            NodeFactory.createURI(PREFIX + label));
+            ctx.commit("referenced only resource");
+        }
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            return UUID.fromString(
+                    model.getResource(PREFIX + label).getProperty(RDFA.uuid).getString());
         }
     }
 
