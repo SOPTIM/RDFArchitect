@@ -16,10 +16,10 @@
  */
 
 import { Class, DataType, DataTypeTypes, Package } from "$lib/models/dto";
-import { classStore } from "$lib/stores/ClassStore.ts";
-import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
-import { packageStore } from "$lib/stores/PackageStore.ts";
-import { getXsdPrimitives } from "$lib/stores/XSDDatatypesStore.ts";
+import { classStore } from "$lib/stores/classStore.ts";
+import { datatypesStore } from "$lib/stores/datatypesStore.ts";
+import { packageStore } from "$lib/stores/packageStore.ts";
+import { getXsdPrimitives } from "$lib/stores/xsdDatatypesStore.ts";
 
 export async function getPackages(datasetName, graphUri) {
     // fetch packages

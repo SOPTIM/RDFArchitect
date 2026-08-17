@@ -48,8 +48,8 @@
         forceReloadTrigger,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
-    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
     import { shortenIri } from "$lib/utils/iri.js";
 
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";

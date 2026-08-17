@@ -15,7 +15,7 @@
  *
  */
 
-import { describeError } from "./StoreLogging";
+import { describeError } from "./storeLogging";
 import { getPrimitiveDatatypes, type Uri } from "../api/generated";
 
 const LOG_PREFIX = "[xsdPrimitivesStore]";

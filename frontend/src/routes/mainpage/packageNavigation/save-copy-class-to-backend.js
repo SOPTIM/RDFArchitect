@@ -22,7 +22,7 @@ import {
     editorState,
     forceReloadTrigger,
 } from "$lib/sharedState.svelte.js";
-import { classStore } from "$lib/stores/ClassStore.ts";
+import { classStore } from "$lib/stores/classStore.ts";
 
 export async function saveCopyClass(
     datasetName,

@@ -26,9 +26,9 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {

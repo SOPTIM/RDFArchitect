@@ -35,9 +35,9 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { datatypesStore } from "$lib/stores/datatypesStore.ts";
 
     import {
         getClasses,

@@ -17,7 +17,7 @@
 
 import { get, type Writable } from "svelte/store";
 
-import { describeError } from "./StoreLogging";
+import { describeError } from "./storeLogging";
 import { type AsyncSlot } from "./storeTypes";
 
 // =============================================================================

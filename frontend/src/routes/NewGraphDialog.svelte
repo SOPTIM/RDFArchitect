@@ -20,8 +20,8 @@
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { URI } from "$lib/models/dto/index.ts";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
 
     import {
         DiagramType,

@@ -32,8 +32,8 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
-    import { datatypesStore } from "$lib/stores/DatatypesStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datatypesStore } from "$lib/stores/datatypesStore.ts";
 
     import DeleteDependenciesDialog from "../../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";

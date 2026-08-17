@@ -18,7 +18,7 @@
 import { writable, get } from "svelte/store";
 
 import { type GraphKey, makeGraphKey } from "./storeHelpers";
-import { describeError } from "./StoreLogging";
+import { describeError } from "./storeLogging";
 import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 import {
     listPrimitives,

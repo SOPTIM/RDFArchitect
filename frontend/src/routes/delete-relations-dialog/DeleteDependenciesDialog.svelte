@@ -30,8 +30,8 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
 
     import { getDefaultAction } from "./deleteDependencyDefaults.js";
     import DeleteDependencyNode from "./DeleteDependencyNode.svelte";

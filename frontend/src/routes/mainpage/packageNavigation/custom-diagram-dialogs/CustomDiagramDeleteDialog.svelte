@@ -23,7 +23,7 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
 
     let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
 

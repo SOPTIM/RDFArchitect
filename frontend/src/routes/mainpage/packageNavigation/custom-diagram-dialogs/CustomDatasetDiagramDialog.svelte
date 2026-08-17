@@ -26,8 +26,8 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
 
     import { getUri } from "../packageNavigationUtils.svelte.js";
     import {

@@ -21,10 +21,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as api from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { editorState } from "../../src/lib/sharedState.svelte.js";
-import { classStore } from "../../src/lib/stores/ClassStore";
-import { customDiagramStore } from "../../src/lib/stores/DiagramStore";
-import { ontologyStore } from "../../src/lib/stores/OntologyStore";
-import { packageStore } from "../../src/lib/stores/PackageStore";
+import { classStore } from "../../src/lib/stores/classStore";
+import { customDiagramStore } from "../../src/lib/stores/diagramStore";
+import { ontologyStore } from "../../src/lib/stores/ontologyStore";
+import { packageStore } from "../../src/lib/stores/packageStore";
 import { createVersionControlStore } from "../../src/lib/stores/versionControlStore";
 
 // ---------------------------------------------------------------------------
@@ -45,16 +45,16 @@ vi.mock("$lib/sharedState.svelte.js", () => ({
     },
 }));
 
-vi.mock("$lib/stores/ClassStore", () => ({
+vi.mock("$lib/stores/classStore", () => ({
     classStore: { invalidateGraph: vi.fn() },
 }));
-vi.mock("$lib/stores/DiagramStore", () => ({
+vi.mock("$lib/stores/diagramStore", () => ({
     customDiagramStore: { invalidateDataset: vi.fn() },
 }));
-vi.mock("$lib/stores/OntologyStore", () => ({
+vi.mock("$lib/stores/ontologyStore", () => ({
     ontologyStore: { invalidateGraph: vi.fn() },
 }));
-vi.mock("$lib/stores/PackageStore", () => ({
+vi.mock("$lib/stores/packageStore", () => ({
     packageStore: { invalidateGraph: vi.fn() },
 }));
 

@@ -29,7 +29,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
     import ClassEntry from "./ClassEntry.svelte";
     import SchemaColorsDialog from "./SchemaColorsDialog.svelte";

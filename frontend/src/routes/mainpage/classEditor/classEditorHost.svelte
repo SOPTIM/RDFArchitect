@@ -39,7 +39,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
     import ClassEditor from "./classEditor.svelte";
 

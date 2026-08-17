@@ -34,7 +34,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
 
     let { showDialog = $bindable() } = $props();
 

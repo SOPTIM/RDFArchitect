@@ -23,7 +23,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
 
     let {
         showDialog = $bindable(),

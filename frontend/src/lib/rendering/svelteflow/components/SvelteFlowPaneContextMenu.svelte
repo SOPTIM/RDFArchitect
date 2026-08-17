@@ -28,7 +28,7 @@
         DiagramType,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
 
     import {
         getContextMenuTriggerStyle,

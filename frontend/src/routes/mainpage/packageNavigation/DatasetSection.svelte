@@ -37,8 +37,8 @@
         forceReloadTrigger,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
 
     import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
     import CustomDiagramsSection from "./CustomDiagramsSection.svelte";

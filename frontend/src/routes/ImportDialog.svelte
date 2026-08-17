@@ -22,8 +22,8 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {

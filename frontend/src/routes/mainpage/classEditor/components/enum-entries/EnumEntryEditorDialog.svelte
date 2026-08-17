@@ -27,7 +27,7 @@
     import { getControlButtonsForReactiveObject } from "$lib/models/reactive/utils/reactive-objects-control-button-utils.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { editorState } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
     import { getNsPrefixNsUriString } from "$lib/utils/namespace.js";
 
     import { resolveSaveTarget } from "../resolve-save-target.js";

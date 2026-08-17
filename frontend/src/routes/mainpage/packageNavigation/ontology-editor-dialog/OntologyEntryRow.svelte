@@ -24,7 +24,7 @@
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ComboBoxEditControl from "$lib/components/ComboBoxEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
-    import { getXsdPrimitives } from "$lib/stores/XSDDatatypesStore.ts";
+    import { getXsdPrimitives } from "$lib/stores/xsdDatatypesStore.ts";
 
     let { entries, entry, readonly, namespaces } = $props();
 

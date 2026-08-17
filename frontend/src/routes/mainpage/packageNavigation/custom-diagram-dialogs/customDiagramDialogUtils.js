@@ -15,8 +15,8 @@
  *
  */
 
-import { classStore } from "$lib/stores/ClassStore.ts";
-import { packageStore } from "$lib/stores/PackageStore.ts";
+import { classStore } from "$lib/stores/classStore.ts";
+import { packageStore } from "$lib/stores/packageStore.ts";
 
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
 

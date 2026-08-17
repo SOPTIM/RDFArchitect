@@ -18,7 +18,7 @@
 import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
-import { describeError } from "./StoreLogging";
+import { describeError } from "./storeLogging";
 import { type AsyncSlot, type Result, createEmptySlot } from "./storeTypes";
 import {
     listDatasets,

@@ -25,8 +25,8 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 

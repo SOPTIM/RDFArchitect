@@ -19,8 +19,8 @@
     import { v4 as uuidv4 } from "uuid";
 
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { graphStore } from "$lib/stores/GraphStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { graphStore } from "$lib/stores/graphStore.ts";
 
     let {
         dataset = $bindable(),

@@ -24,9 +24,9 @@
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
 
     import {
         editorState,

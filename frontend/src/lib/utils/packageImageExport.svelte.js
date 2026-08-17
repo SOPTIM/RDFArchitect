@@ -21,7 +21,7 @@ import { mount, unmount, tick } from "svelte";
 import { getRenderingDataParameterized } from "$lib/api/generated/index.ts";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 import PackageSnapshotRenderer from "$lib/rendering/svelteflow/PackageSnapshotRenderer.svelte";
-import { packageStore } from "$lib/stores/PackageStore.ts";
+import { packageStore } from "$lib/stores/packageStore.ts";
 import { PackageStatus } from "$lib/utils/exportProgress.svelte.js";
 
 /**

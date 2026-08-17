@@ -17,7 +17,7 @@
 <script>
     import CheckBoxEditControl from "$lib/components/CheckBoxEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
-    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
 
     let {
         showDialog = $bindable(),

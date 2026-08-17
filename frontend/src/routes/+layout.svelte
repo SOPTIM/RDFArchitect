@@ -31,8 +31,8 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 
     import {
         DiagramType,

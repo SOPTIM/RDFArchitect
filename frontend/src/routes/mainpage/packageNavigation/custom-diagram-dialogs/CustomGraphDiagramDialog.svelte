@@ -26,7 +26,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { customDiagramStore } from "$lib/stores/DiagramStore.ts";
+    import { customDiagramStore } from "$lib/stores/diagramStore.ts";
 
     import { getPackageId } from "../packageNavigationUtils.svelte.js";
     import {

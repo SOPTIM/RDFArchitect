@@ -19,7 +19,6 @@ import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
-import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
 import { createCrossProfileStore } from "../../src/lib/stores/crossProfileStore";
 
 // ---------------------------------------------------------------------------
@@ -27,7 +26,6 @@ import { createCrossProfileStore } from "../../src/lib/stores/crossProfileStore"
 // ---------------------------------------------------------------------------
 
 const DATASET_A = "datasetA";
-const DATASET_B = "datasetB";
 
 const MOCK_DIAGRAM_ID = "diag-123";
 const MOCK_DIAGRAM = {
@@ -142,119 +140,8 @@ describe("crossProfileStore", () => {
     });
 
     // -------------------------------------------------------------------------
-    describe("getColors", () => {
-        test("fetches and caches color data", async () => {
-            vi.mocked(api.getCrossProfileColors).mockResolvedValue({
-                data: MOCK_COLORS,
-                error: undefined,
-            });
 
-            const result = await store.getColors(DATASET_A);
-            expect(result).toEqual(MOCK_COLORS);
-        });
-
-        test("force=true bypasses the cache", async () => {
-            vi.mocked(api.getCrossProfileColors).mockResolvedValue({
-                data: MOCK_COLORS,
-                error: undefined,
-            });
-
-            await store.getColors(DATASET_A);
-            await store.getColors(DATASET_A, true);
-
-            expect(api.getCrossProfileColors).toHaveBeenCalledTimes(2);
-        });
-    });
-
-    // -------------------------------------------------------------------------
-    describe("saveColors", () => {
-        const NEW_COLORS = {
-            graphColors: {
-                graph1: "#ffffff",
-                graph2: "#000001",
-            },
-        };
-
-        test("updates the API and the local cache on success", async () => {
-            vi.mocked(api.updateCrossProfileColors).mockResolvedValue({
-                data: undefined,
-                error: undefined,
-            });
-
-            const result = await store.saveColors(DATASET_A, NEW_COLORS);
-
-            expect(result.error).toBeNull();
-            expect(api.updateCrossProfileColors).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A },
-                body: NEW_COLORS,
-            });
-
-            // Ensure store was updated directly
-            const state = get(store);
-            expect(state.colors.get(DATASET_A)?.data).toEqual(NEW_COLORS);
-            expect(toastStore.success).toHaveBeenCalledWith(
-                "Colors saved",
-                "Color data was saved successfully.",
-            );
-        });
-
-        test("returns error and does not update store when API fails", async () => {
-            const error = new Error("Failed to save");
-            vi.mocked(api.updateCrossProfileColors).mockResolvedValue({
-                data: undefined,
-                error,
-            });
-
-            // Seed store with initial data
-            vi.mocked(api.getCrossProfileColors).mockResolvedValue({
-                data: MOCK_COLORS,
-                error: undefined,
-            });
-            await store.getColors(DATASET_A);
-
-            const result = await store.saveColors(DATASET_A, NEW_COLORS);
-
-            expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith(
-                "Save failed",
-                "Could not save color data.",
-            );
-
-            // Store should still have the old data
-            const state = get(store);
-            expect(state.colors.get(DATASET_A)?.data).toEqual(MOCK_COLORS);
-        });
-
-        test("early returns if datasetName is empty", async () => {
-            const result = await store.saveColors("", NEW_COLORS);
-            expect(result.error).toBeNull();
-            expect(api.updateCrossProfileColors).not.toHaveBeenCalled();
-        });
-    });
-
-    // -------------------------------------------------------------------------
-    describe("invalidateDataset", () => {
-        test("clears cache for a specific dataset without affecting others", async () => {
-            vi.mocked(api.getCrossProfileColors)
-                .mockResolvedValueOnce({ data: MOCK_COLORS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_COLORS, error: undefined });
-
-            await store.getColors(DATASET_A);
-            await store.getColors(DATASET_B);
-
-            let state = get(store);
-            expect(state.colors.has(DATASET_A)).toBe(true);
-            expect(state.colors.has(DATASET_B)).toBe(true);
-
-            store.invalidateDataset(DATASET_A);
-
-            state = get(store);
-            expect(state.colors.has(DATASET_A)).toBe(false);
-            expect(state.colors.has(DATASET_B)).toBe(true);
-        });
-    });
-
-    test("invalidateDataset removes the dataset from all three caches (ids, diagrams, colors)", async () => {
+    test("invalidateDataset removes the dataset from both caches (ids, diagrams)", async () => {
         vi.mocked(api.getCrossProfileDiagramId).mockResolvedValue({
             data: "id-1",
             error: undefined,
@@ -270,7 +157,6 @@ describe("crossProfileStore", () => {
 
         await store.getId(DATASET_A);
         await store.getDiagram(DATASET_A);
-        await store.getColors(DATASET_A);
 
         store.invalidateDataset(DATASET_A);
 

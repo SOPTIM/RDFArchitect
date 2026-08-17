@@ -24,7 +24,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";

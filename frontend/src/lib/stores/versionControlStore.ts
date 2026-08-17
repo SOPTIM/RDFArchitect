@@ -18,10 +18,10 @@
 import { writable, get } from "svelte/store";
 
 import { editorState } from "../sharedState.svelte.js";
-import { classStore } from "./ClassStore";
-import { customDiagramStore } from "./DiagramStore";
-import { ontologyStore } from "./OntologyStore";
-import { packageStore } from "./PackageStore";
+import { classStore } from "./classStore";
+import { customDiagramStore } from "./diagramStore";
+import { ontologyStore } from "./ontologyStore";
+import { packageStore } from "./packageStore";
 import { makeGraphKey } from "./storeHelpers";
 import {
     undo as sdkUndo,

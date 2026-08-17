@@ -43,10 +43,10 @@
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
-    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
-    import { packageStore } from "$lib/stores/PackageStore.ts";
-    import { versionControlStore } from "$lib/stores/VersionControlStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { packageStore } from "$lib/stores/packageStore.ts";
+    import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";

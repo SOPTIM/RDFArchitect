@@ -25,12 +25,12 @@
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { ontologyStore } from "$lib/stores/OntologyStore.ts";
+    import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
-    import { datasetStore } from "../lib/stores/DatasetStore.ts";
+    import { datasetStore } from "./stores/datasetStore.ts";
 
     let {
         showDialog = $bindable(),

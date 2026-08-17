@@ -19,7 +19,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
-import { createClassStore } from "../../src/lib/stores/ClassStore";
+import { createClassStore } from "../../src/lib/stores/classStore";
 
 import type {
     AssociationPairDto,

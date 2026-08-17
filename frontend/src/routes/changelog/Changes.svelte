@@ -20,7 +20,7 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/DatasetStore.ts";
+    import { datasetStore } from "$lib/stores/datasetStore.ts";
 
     import ChangesRow from "./ChangesRow.svelte";
 

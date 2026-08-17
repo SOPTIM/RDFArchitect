@@ -22,7 +22,7 @@
     import { mapReactiveAssociationToAssociationDto } from "$lib/models/reactive/mapper/map-reactive-object-to-dto.js";
     import { ReactiveAssociation } from "$lib/models/reactive/models/reactive-association.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { classStore } from "$lib/stores/ClassStore.ts";
+    import { classStore } from "$lib/stores/classStore.ts";
 
     import Direct from "./Direct.svelte";
     import Inverse from "./Inverse.svelte";
