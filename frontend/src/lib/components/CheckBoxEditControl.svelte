@@ -22,6 +22,7 @@
         callOnInputTrue = () => {},
         callOnInputFalse = () => {},
         disabled = false,
+        indeterminate = false,
         labelFirst = true,
         readonly = false,
     } = $props();
@@ -42,6 +43,7 @@
            rounded
            border-none disabled:cursor-not-allowed"
         bind:checked={value}
+        {indeterminate}
         onchange={() => {
             if (value) {
                 callOnInputTrue();

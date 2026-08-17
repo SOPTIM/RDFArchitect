@@ -19,26 +19,10 @@ package org.rdfarchitect.api.dto;
 
 import lombok.Data;
 
-import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
-
 import java.util.List;
-import java.util.UUID;
 
 @Data
-public class PasteClassesRequestDTO {
-
-    UUID targetPackageUUID;
-    boolean copyAsAbstract;
-    boolean copyAttributes;
-    boolean copyAssociations;
-    boolean copyInheritance;
-
-    /**
-     * The referenced classes to copy along, out of the ones {@code /paste/preview} reports as
-     * missing. A listed data type also brings the data types its own attributes need, so classes
-     * the target graph does not contain yet may be copied without being listed here.
-     */
-    List<URI> referencesToCopy;
+public class PastePreviewRequestDTO {
 
     List<PasteSourceClassDTO> sources;
 }

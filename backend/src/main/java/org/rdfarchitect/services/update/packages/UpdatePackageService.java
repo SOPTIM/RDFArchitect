@@ -23,8 +23,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
-import org.apache.jena.vocabulary.RDF;
-import org.apache.jena.vocabulary.RDFS;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.api.dto.packages.PackageMapper;
 import org.rdfarchitect.database.DatabasePort;
@@ -39,6 +37,7 @@ import org.rdfarchitect.models.cim.queries.select.CIMQueryBuilder;
 import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.services.dl.update.ReplaceDiagramUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.CreatePackageLayoutDataUseCase;
 import org.rdfarchitect.services.dl.update.packagelayout.DeletePackageLayoutDataUseCase;
@@ -113,8 +112,7 @@ public class UpdatePackageService
     }
 
     private void assertNoClassWithSameIri(Graph graph, CIMPackage newPackage) {
-        var packageUri = newPackage.getUri().toNode();
-        if (graph.contains(packageUri, RDF.type.asNode(), RDFS.Class.asNode())) {
+        if (CIMResourceUtils.containsClass(graph, newPackage.getUri())) {
             throw new ResourceConflictException(
                     "Cannot save package "
                             + newPackage.getUri()

@@ -21,6 +21,7 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsDefault;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSIsFixed;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+import org.rdfarchitect.models.cim.data.dto.relations.datatype.CIMSDataType;
 
 public interface ICIMAttribute extends ICIMResource {
 
@@ -36,6 +37,13 @@ public interface ICIMAttribute extends ICIMResource {
      * throwing.
      */
     boolean isRenderable();
+
+    /**
+     * Whether {@link #getDataType()} is backed by {@code cims:dataType}, {@code rdfs:range}, or
+     * neither. Callers that write the attribute back need the distinction, and it is the only way
+     * to tell whether {@link #getDataType()} would throw.
+     */
+    CIMSDataType.Type getDataTypeKind();
 
     CIMSStereotype getStereotype();
 
