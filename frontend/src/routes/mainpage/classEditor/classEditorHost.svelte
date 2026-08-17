@@ -19,15 +19,21 @@
 </script>
 
 <script>
+    import {
+        faCaretDown,
+        faDiagramProject,
+    } from "@fortawesome/free-solid-svg-icons";
     import { onMount, onDestroy } from "svelte";
+    import { Fa } from "svelte-fa";
 
     import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
+    import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import {
         eventStack,
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
+    import { graphColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
     import {
         ClassType,
@@ -54,6 +60,8 @@
     let hasSources = $derived(
         !!mergedClass && (mergedClass.sources?.length ?? 0) > 0,
     );
+
+    let activeColor = $derived(sourceColor(activeSource));
 
     $effect(() => {
         if (
@@ -107,18 +115,41 @@
                     found = classes.find(c => c.uuid === classUuid) ?? null;
                 }
 
+                if (!found) {
+                    found =
+                        classes.find(c =>
+                            c.sources?.some(s => s.classUUID === classUuid),
+                        ) ?? null;
+                }
+
                 mergedClass = found;
 
                 if (found) {
+                    const originGraph =
+                        graphUri ??
+                        editorState.mergedViewOriginGraph.getValue();
+                    if (!graphUri) {
+                        editorState.mergedViewOriginGraph.updateValue(null);
+                    }
+                    const originSource = originGraph
+                        ? found.sources?.find(
+                              s =>
+                                  s.graph?.uri &&
+                                  new URI(s.graph.uri).toString() ===
+                                      String(originGraph),
+                          )
+                        : null;
                     const hasSaved = found.sources?.some(
                         s => s.classUUID === savedSourceUuid,
                     );
                     activeSourceUuid = hasSaved
                         ? savedSourceUuid
-                        : (found.sources?.[0]?.classUUID ?? null);
+                        : (originSource?.classUUID ??
+                          found.sources?.[0]?.classUUID ??
+                          null);
                 }
 
-                if (found && found.uuid !== classUuid) {
+                if (found && found.uuid !== classUuid && !graphUri) {
                     editorState.selectedClass.updateValue({
                         type: ClassType.MERGED_CLASS,
                         id: found.uuid,
@@ -138,6 +169,19 @@
         eventStack.addEvent(closeClassEditorHost, EventType.CLASS_EDITOR),
     );
     onDestroy(() => eventStack.removeEvent(closeClassEditorHost));
+
+    function sourceGraphUri(source) {
+        return source?.graph?.uri ? new URI(source.graph.uri).toString() : null;
+    }
+
+    function sourceColor(source) {
+        const uri = sourceGraphUri(source);
+        return uri ? graphColors.get(datasetName, uri) : null;
+    }
+
+    function sourceLabel(source) {
+        return source?.graph?.keyword ?? source?.graph?.uri?.suffix;
+    }
 
     function closeClassEditorHost(
         {
@@ -165,14 +209,39 @@
     <div class="flex h-full flex-col">
         {#if isMerged && hasSources}
             <div class="border-border shrink-0 border-b px-2 py-1">
-                <SelectEditControl
-                    bind:value={activeSourceUuid}
-                    options={mergedClass.sources}
-                    getOptionValue={source => source.classUUID}
-                    getOptionLabel={source =>
-                        source?.graph?.keyword ?? source?.graph?.uri?.suffix}
-                    height={8}
-                />
+                <DropdownMenu.Root>
+                    <DropdownMenu.Trigger class="w-full">
+                        <div
+                            class="bg-window-background text-default-text border-button-border flex h-8 w-full min-w-0 items-center gap-2 rounded border border-solid px-2 font-[350] shadow-xs"
+                            title={sourceGraphUri(activeSource)}
+                        >
+                            <span
+                                class="shrink-0"
+                                style={activeColor
+                                    ? `color: ${activeColor};`
+                                    : ""}
+                            >
+                                <Fa icon={faDiagramProject} />
+                            </span>
+                            <span class="min-w-0 flex-1 truncate text-left">
+                                {sourceLabel(activeSource)}
+                            </span>
+                            <Fa icon={faCaretDown} />
+                        </div>
+                    </DropdownMenu.Trigger>
+                    <DropdownMenu.Content>
+                        {#each mergedClass.sources as source (source.classUUID)}
+                            <DropdownMenu.Item.Button
+                                faIcon={faDiagramProject}
+                                iconColor={sourceColor(source)}
+                                onSelect={() =>
+                                    (activeSourceUuid = source.classUUID)}
+                            >
+                                {sourceLabel(source)}
+                            </DropdownMenu.Item.Button>
+                        {/each}
+                    </DropdownMenu.Content>
+                </DropdownMenu.Root>
             </div>
         {/if}
 

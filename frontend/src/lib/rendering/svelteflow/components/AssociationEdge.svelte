@@ -23,7 +23,7 @@
         useInternalNode,
     } from "@xyflow/svelte";
 
-    import { userSettings } from "$lib/userSettings.svelte.js";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
 
     import { getEdgeParams } from "./edgeUtils.ts";
 
@@ -34,7 +34,7 @@
     let targetNode = useInternalNode(target);
 
     let style = $derived(
-        userSettings.get("useColoredPropertiesInMergedView") && data.color
+        renderOptions.get("useColoredPropertiesInMergedView") && data.color
             ? `stroke-width: 2px; stroke: ${data.color};`
             : "stroke-width: 2px; stroke: #000;",
     );

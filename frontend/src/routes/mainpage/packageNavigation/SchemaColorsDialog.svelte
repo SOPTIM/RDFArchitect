@@ -16,84 +16,63 @@
   -->
 
 <script>
-    import { BackendConnection } from "$lib/api/backend.js";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { graphColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
     import { userSettings } from "$lib/userSettings.svelte.js";
+    import { normalizeHex } from "$lib/utils/color.js";
 
     let { showDialog = $bindable(), datasetName } = $props();
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
-
     let colorEntries = $state([]);
+    let originalJson = $state("[]");
 
-    let originalJson = $state("");
+    const hasChanges = $derived(JSON.stringify(colorEntries) !== originalJson);
 
-    let hasChanges = $derived(JSON.stringify(colorEntries) !== originalJson);
+    const duplicateColors = $derived(
+        new Set(
+            colorEntries
+                .map(entry => entry.color)
+                .filter((color, index, all) => all.indexOf(color) !== index),
+        ),
+    );
+
+    const colorsShownInMergedView = $derived(
+        userSettings.get("useColoredPropertiesInMergedView"),
+    );
 
     async function onOpen() {
         if (!datasetName) return;
-        await loadColors();
+        const loaded = await graphColors.reload(datasetName);
+        colorEntries = Object.entries(loaded)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([graphURI, color]) => ({ graphURI, color }));
+        snapshotOriginal();
     }
 
     function onClose() {
         colorEntries = [];
-        originalJson = "";
-    }
-
-    async function loadColors() {
-        try {
-            const res = await bec.getCrossProfileColorData(datasetName);
-            if (!res.ok) {
-                toastStore.error("Load failed", "Could not load color data.");
-                console.error("Failed to load color data");
-                return;
-            }
-            const data = await res.json();
-            const map = data.graphColors ?? {};
-            colorEntries = Object.entries(map).map(([graphURI, color]) => ({
-                graphURI,
-                color,
-            }));
-            snapshotOriginal();
-        } catch (err) {
-            console.error("Failed to load color data:", err);
-            toastStore.error("Load failed", "An unexpected error occurred.");
-        }
+        originalJson = "[]";
     }
 
     async function saveColors() {
-        const graphColors = Object.fromEntries(
-            colorEntries.map(e => [e.graphURI, e.color]),
+        const graphColorMap = Object.fromEntries(
+            colorEntries.map(entry => [entry.graphURI, entry.color]),
         );
-        try {
-            const res = await bec.putCrossProfileColorData(datasetName, {
-                graphColors,
-            });
-            if (!res.ok) {
-                toastStore.error(
-                    "Save failed",
-                    `Could not save color data for "${datasetName}".`,
-                );
-                console.error("Failed to save color data");
-                return;
-            }
-            toastStore.success(
-                "Colors saved",
-                `Color settings updated for "${datasetName}".`,
-            );
-            snapshotOriginal();
-            forceReloadTrigger.trigger();
-        } catch (err) {
-            console.error("Failed to save color data:", err);
+        const saved = await graphColors.replaceAll(datasetName, graphColorMap);
+        if (!saved) {
             toastStore.error(
                 "Save failed",
-                "An unexpected error occurred while saving.",
+                `Could not save color data for "${datasetName}".`,
             );
+            return;
         }
+        toastStore.success(
+            "Colors saved",
+            `Color settings updated for "${datasetName}".`,
+        );
+        snapshotOriginal();
     }
 
     function discardColors() {
@@ -111,35 +90,46 @@
             return uri;
         }
     }
+
+    /** Rejects invalid input by snapping the field back to the current color. */
+    function applyHexInput(entry, input) {
+        const hex = normalizeHex(input.value);
+        if (hex) {
+            entry.color = hex;
+        }
+        input.value = entry.color;
+    }
 </script>
 
 <ModifyDataDialog
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Merged View Colors – {datasetName} {userSettings.get(
-        'useColoredPropertiesInMergedView',
-    )
-        ? ''
-        : '(disabled in settings)'}"
+    title="Schema Colors – {datasetName}"
     saveChanges={saveColors}
     discardChanges={discardColors}
     {hasChanges}
     isValid={true}
 >
     <div class="mx-2 flex h-[60vh] max-h-[60vh] flex-col">
-        <div class="min-h-0 flex-1 overflow-y-auto">
+        <div class="flex min-h-0 flex-1 flex-col">
             {#if colorEntries.length === 0}
                 <p class="text-muted-foreground text-sm italic">
-                    No graphs available for this dataset.
+                    No schemas available for this dataset.
                 </p>
             {:else}
-                <p class="mb-3 text-sm">
-                    Assign a color to each schema. The color is used in the
-                    merged view.
+                <p class="text-muted-foreground mb-2 text-sm">
+                    {#if colorsShownInMergedView}
+                        Each schema is shown in its color in the merged view and
+                        in the navigation.
+                    {:else}
+                        Colors are shown in the navigation. Enable "colored
+                        properties" in the settings to use them in the merged
+                        view as well.
+                    {/if}
                 </p>
 
-                <div class="flex flex-col gap-2 pr-1">
+                <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
                     {#each colorEntries as entry (entry.graphURI)}
                         <div
                             class="flex items-center gap-3 rounded border px-3 py-2"
@@ -164,16 +154,22 @@
                                 >
                                     {entry.graphURI}
                                 </p>
+                                {#if duplicateColors.has(entry.color)}
+                                    <p class="text-xs italic">
+                                        This color is used by another schema.
+                                    </p>
+                                {/if}
                             </div>
 
                             <input
                                 type="text"
-                                bind:value={entry.color}
+                                value={entry.color}
                                 maxlength="7"
-                                pattern="^#[0-9a-fA-F]{6}$"
                                 placeholder="#000000"
                                 class="w-24 rounded border px-2 py-1 font-mono text-sm"
                                 title="Hex color code"
+                                onchange={event =>
+                                    applyHexInput(entry, event.currentTarget)}
                             />
                         </div>
                     {/each}

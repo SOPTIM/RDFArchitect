@@ -19,13 +19,13 @@
     import { Handle, Position } from "@xyflow/svelte";
 
     import { URI } from "$lib/models/dto/index.ts";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         DiagramType,
         editorState,
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { userSettings } from "$lib/userSettings.svelte.js";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     let { id, data, dragging } = $props();
@@ -66,8 +66,24 @@
     const enumEntries = $derived(data.enumEntries);
     const inheritedGroups = $derived([...(data.superClasses ?? [])].reverse());
 
-    const crossProfileSections = $derived(
-        isCrossProfileDiagram ? buildCrossProfileSections() : [],
+    const hasProfileInfo = $derived(
+        collectGraphUris().some(graph => graph.graphUri),
+    );
+
+    const useProfileSections = $derived(
+        isCrossProfileDiagram ||
+            (renderOptions.get("includePropertiesFromOtherProfiles") &&
+                hasProfileInfo),
+    );
+
+    const profileSections = $derived(
+        useProfileSections
+            ? buildProfileSections(
+                  isCrossProfileDiagram
+                      ? collectGraphUris()
+                      : ownGraphUriFirst(collectGraphUris()),
+              )
+            : [],
     );
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
@@ -117,10 +133,21 @@
             );
     }
 
-    function buildCrossProfileSections() {
-        const showInherited = userSettings.get("showInheritedProperties", true);
+    function ownGraphUriFirst(graphs) {
+        const own = data.graphUri;
+        if (!graphs.some(graph => graph.graphUri === own)) {
+            return graphs;
+        }
+        return [
+            ...graphs.filter(graph => graph.graphUri === own),
+            ...graphs.filter(graph => graph.graphUri !== own),
+        ];
+    }
 
-        return collectGraphUris()
+    function buildProfileSections(orderedGraphs) {
+        const showInherited = renderOptions.get("showInheritedProperties");
+
+        return orderedGraphs
             .map(({ graphUri, keyword }) => ({
                 graphUri,
                 graphName: getGraphLabel(graphUri, keyword),
@@ -189,14 +216,16 @@
         <span class="text-default-text mt-1 font-bold">{label}</span>
     </div>
     <div
-        class="class-node-divider bg-class-node-lower-background p-2 text-center"
+        class="class-node-divider bg-class-node-lower-background p-2 text-left"
     >
-        {#if isCrossProfileDiagram}
-            {#each crossProfileSections as section (section.graphUri)}
-                <div class="text-default-text text-xs italic opacity-70">
+        {#if useProfileSections}
+            {#each profileSections as section (section.graphUri)}
+                <div
+                    class="text-default-text text-center text-xs italic opacity-70"
+                >
                     {section.graphName}
                 </div>
-                {#if userSettings.get("showInheritedProperties", true)}
+                {#if renderOptions.get("showInheritedProperties")}
                     {#each section.superGroups as superClass}
                         <div
                             class="text-default-text mt-1 flex flex-nowrap items-center justify-center gap-3 py-0.5 text-xs italic opacity-70"
@@ -214,7 +243,7 @@
                         {#each superClass.attributes as attr}
                             <div
                                 class="text-default-text leading-6 opacity-70"
-                                style={userSettings.get(
+                                style={renderOptions.get(
                                     "useColoredPropertiesInMergedView",
                                 ) && attr.color
                                     ? `color: ${attr.color};`
@@ -226,7 +255,7 @@
                         {#each superClass.enumEntries as enumEntry}
                             <div
                                 class="text-default-text leading-6 opacity-70"
-                                style={userSettings.get(
+                                style={renderOptions.get(
                                     "useColoredPropertiesInMergedView",
                                 ) && enumEntry.color
                                     ? `color: ${enumEntry.color};`
@@ -240,7 +269,7 @@
                 {#each section.ownAttributes as attr}
                     <div
                         class="text-default-text leading-6"
-                        style={userSettings.get(
+                        style={renderOptions.get(
                             "useColoredPropertiesInMergedView",
                         ) && attr.color
                             ? `color: ${attr.color};`
@@ -252,7 +281,7 @@
                 {#each section.ownEnumEntries as enumEntry}
                     <div
                         class="text-default-text leading-6"
-                        style={userSettings.get(
+                        style={renderOptions.get(
                             "useColoredPropertiesInMergedView",
                         ) && enumEntry.color
                             ? `color: ${enumEntry.color};`
@@ -263,7 +292,7 @@
                 {/each}
             {/each}
         {:else}
-            {#if userSettings.get("showInheritedProperties", true) && inheritedGroups.length > 0}
+            {#if renderOptions.get("showInheritedProperties") && inheritedGroups.length > 0}
                 {#each inheritedGroups as superClass}
                     <div
                         class="text-default-text flex flex-nowrap items-center justify-center gap-3 py-0.5 text-xs italic opacity-70"

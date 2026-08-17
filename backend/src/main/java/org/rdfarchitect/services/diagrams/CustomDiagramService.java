@@ -20,35 +20,28 @@ package org.rdfarchitect.services.diagrams;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
-import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
-import org.rdfarchitect.api.dto.SuperClassDTO;
-import org.rdfarchitect.api.dto.attributes.AttributeDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramColorDataDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
-import org.rdfarchitect.api.dto.cross_profile_diagram.GraphSourceDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.MergedClassDTO;
-import org.rdfarchitect.api.dto.enumentries.EnumEntryDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.dl.data.dto.DiagramObject;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
 import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
-import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.dl.update.DiagramLayoutServiceUtils;
-import org.rdfarchitect.services.select.GetClassListUseCase;
+import org.rdfarchitect.services.rendering.CIMProfileModel;
+import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -64,7 +57,6 @@ public class CustomDiagramService
                 CrossProfileColorUseCase {
 
     private final DatabasePort databasePort;
-    private final GetClassListUseCase getClassListUseCase;
     private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
@@ -80,30 +72,35 @@ public class CustomDiagramService
     }
 
     @Override
+    public CrossProfileDiagramDTO getCrossProfileDiagram(String datasetName, boolean doLayout) {
+        return getCrossProfileDiagram(datasetName, doLayout, loadProfiles(datasetName));
+    }
+
+    private List<CIMProfileModel> loadProfiles(String datasetName) {
+        return CIMProfileModels.loadAll(
+                databasePort,
+                CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName),
+                datasetName,
+                null);
+    }
+
+    @Override
     public CrossProfileDiagramDTO getCrossProfileDiagram(
-            String datasetName, boolean includeProperties, boolean doLayout) {
-        var graphUris = databasePort.listGraphUris(datasetName);
-        var graphDTOs = listGraphsUseCase.listGraphs(datasetName);
+            String datasetName, boolean doLayout, List<CIMProfileModel> profiles) {
         var graphDTOsMap =
-                graphDTOs.stream().collect(Collectors.toMap(g -> g.getUri().toString(), g -> g));
+                listGraphsUseCase.listGraphs(datasetName).stream()
+                        .collect(Collectors.toMap(g -> g.getUri().toString(), g -> g));
         var crossProfileDiagramInfo = databasePort.getCrossProfileDiagramInfo(datasetName);
         var crossProfileDiagramUUID = crossProfileDiagramInfo.getCrossProfileDiagramUUID();
         var diagramLayout = databasePort.getDatasetDiagramLayout(datasetName);
 
         Map<String, MergedClassDTO> mergeMap = new LinkedHashMap<>();
 
-        for (var graphUri : graphUris) {
-            var graphIdentifier = new GraphIdentifier(datasetName, graphUri);
-            List<ClassUMLAdaptedDTO> classList;
-            if (includeProperties) {
-                classList = getClassListUseCase.getFullClassList(graphIdentifier);
-            } else {
-                classList = getClassListUseCase.getClassList(graphIdentifier, false);
-            }
-            var graphColor = crossProfileDiagramInfo.getColor(graphUri);
+        for (var profile : profiles) {
+            var graphUri = profile.graphUri();
 
-            for (var dto : classList) {
-                var classUri = dto.getPrefix() + dto.getLabel();
+            for (var cimClass : profile.model().getCIMClasses()) {
+                var classUri = cimClass.getUri().toString();
                 var mergedUuid = UUID.nameUUIDFromBytes(classUri.getBytes(StandardCharsets.UTF_8));
 
                 var merged =
@@ -113,98 +110,18 @@ public class CustomDiagramService
                                         MergedClassDTO.builder()
                                                 .uuid(mergedUuid)
                                                 .classUri(uri)
-                                                .label(dto.getLabel())
+                                                .label(cimClass.getLabel().getValue())
                                                 .build());
 
                 merged.getSources()
-                        .add(new ClassSourceDTO(dto.getUuid(), graphDTOsMap.get(graphUri)));
-
-                if (includeProperties) {
-                    mergeProperties(graphUri, dto, merged, graphColor);
-                }
+                        .add(new ClassSourceDTO(cimClass.getUuid(), graphDTOsMap.get(graphUri)));
             }
-            var attributeComparator =
-                    Comparator.comparing(GraphSourceDTO<AttributeDTO>::getGraphUri)
-                            .thenComparing(a -> a.getValue().getLabel().toLowerCase(Locale.ROOT));
-            var enumEntryComparator =
-                    Comparator.comparing(GraphSourceDTO<EnumEntryDTO>::getGraphUri)
-                            .thenComparing(e -> e.getValue().getLabel().toLowerCase(Locale.ROOT));
-
-            mergeMap.values()
-                    .forEach(
-                            merged -> {
-                                merged.getAttributes().sort(attributeComparator);
-                                merged.getEnumEntries().sort(enumEntryComparator);
-                            });
         }
         if (doLayout) {
             doDiagramLayout(diagramLayout, crossProfileDiagramUUID, mergeMap);
         }
         return new CrossProfileDiagramDTO(
                 crossProfileDiagramUUID, new ArrayList<>(mergeMap.values()));
-    }
-
-    private static void mergeProperties(
-            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
-        if (dto.getAttributes() != null) {
-            mergeAttributes(graphUri, dto, merged, graphColor);
-        }
-        if (dto.getEnumEntries() != null) {
-            mergeEnumEntries(graphUri, dto, merged, graphColor);
-        }
-        if (dto.getAssociationPairs() != null) {
-            mergeAssociationPairs(graphUri, dto, merged, graphColor);
-        }
-        if (dto.getSuperClass() != null) {
-            var superClass = dto.getSuperClass();
-            merged.getSuperClasses()
-                    .add(
-                            new GraphSourceDTO<>(
-                                    graphUri,
-                                    graphColor,
-                                    new SuperClassDTO(
-                                            superClass.getPrefix(), superClass.getLabel())));
-        }
-        if (dto.getStereotypes() != null) {
-            mergeStereotypes(dto, merged);
-        }
-    }
-
-    private static void mergeAttributes(
-            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
-        dto.getAttributes()
-                .forEach(
-                        attr ->
-                                merged.getAttributes()
-                                        .add(new GraphSourceDTO<>(graphUri, graphColor, attr)));
-    }
-
-    private static void mergeEnumEntries(
-            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
-        dto.getEnumEntries()
-                .forEach(
-                        entry ->
-                                merged.getEnumEntries()
-                                        .add(new GraphSourceDTO<>(graphUri, graphColor, entry)));
-    }
-
-    private static void mergeAssociationPairs(
-            String graphUri, ClassUMLAdaptedDTO dto, MergedClassDTO merged, String graphColor) {
-        dto.getAssociationPairs()
-                .forEach(
-                        assoc ->
-                                merged.getAssociationPairs()
-                                        .add(new GraphSourceDTO<>(graphUri, graphColor, assoc)));
-    }
-
-    private static void mergeStereotypes(ClassUMLAdaptedDTO dto, MergedClassDTO merged) {
-        dto.getStereotypes()
-                .forEach(
-                        stereotype -> {
-                            if (!merged.getStereotypes().contains(new CIMSStereotype(stereotype))) {
-                                merged.getStereotypes().add(new CIMSStereotype(stereotype));
-                            }
-                        });
     }
 
     private static void doDiagramLayout(

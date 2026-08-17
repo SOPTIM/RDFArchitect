@@ -18,6 +18,7 @@
 import { untrack } from "svelte";
 
 import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
+import { renderOptions } from "$lib/renderOptions.svelte.js";
 import {
     ClassType,
     DiagramType,
@@ -170,11 +171,14 @@ export class DiagramSelectionController {
             return;
         }
 
-        const classType =
-            editorState.selectedDiagram.getProperty("type") ===
-            DiagramType.CROSS_PROFILE
-                ? ClassType.MERGED_CLASS
-                : ClassType.SINGLE_CLASS;
+        const diagramType = editorState.selectedDiagram.getProperty("type");
+        const isMergedContext =
+            diagramType === DiagramType.CROSS_PROFILE ||
+            (diagramType === DiagramType.PACKAGE &&
+                renderOptions.get("includePropertiesFromOtherProfiles"));
+        const classType = isMergedContext
+            ? ClassType.MERGED_CLASS
+            : ClassType.SINGLE_CLASS;
 
         if (event?.shiftKey) {
             const entry = this.buildEntry(nodeClickEvent.node);

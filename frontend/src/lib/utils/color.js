@@ -15,18 +15,17 @@
  *
  */
 
-package org.rdfarchitect.models.dto.rendering;
-
-import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-
-public interface RenderCrossProfileDiagramUseCase {
-
-    /**
-     * Renders the cross-profile (merged) diagram for a dataset from the CIM facades of all its
-     * graphs.
-     *
-     * @param datasetName The name of the dataset.
-     * @return The rendering data for the merged diagram.
-     */
-    RenderingDataDTO renderCrossProfileDiagram(String datasetName);
+export function normalizeHex(value) {
+    if (typeof value !== "string") {
+        return null;
+    }
+    const trimmed = value.trim().toLowerCase();
+    const shorthand = /^#([0-9a-f]{3})$/.exec(trimmed);
+    if (shorthand) {
+        return (
+            "#" +
+            [...shorthand[1]].map(character => character + character).join("")
+        );
+    }
+    return /^#[0-9a-f]{6}$/.test(trimmed) ? trimmed : null;
 }

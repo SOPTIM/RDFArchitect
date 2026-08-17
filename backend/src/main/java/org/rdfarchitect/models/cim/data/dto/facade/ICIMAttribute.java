@@ -30,6 +30,13 @@ public interface ICIMAttribute extends ICIMResource {
 
     ICIMClass getDataType();
 
+    /**
+     * Whether the attribute carries the properties required to render it, i.e. whether {@link
+     * #getLabel()}, {@link #getDataType()} and {@link #getMultiplicity()} resolve instead of
+     * throwing.
+     */
+    boolean isRenderable();
+
     CIMSStereotype getStereotype();
 
     CIMSIsFixed getFixed();
