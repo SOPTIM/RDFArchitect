@@ -224,7 +224,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         inverse.addProperty(CIMS.inverseRoleName, association);
         association.addProperty(CIMS.inverseRoleName, inverse);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         var deletedNode = nodeByLabel(result, "Deleted");
         assertThat(deletedNode.getData().isExternal()).isTrue();

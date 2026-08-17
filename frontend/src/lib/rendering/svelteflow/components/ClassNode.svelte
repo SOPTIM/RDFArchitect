@@ -230,7 +230,6 @@
                 <div
                     class="text-default-text text-center text-xs italic opacity-70"
                 >
-
                     {section.graphName}
                 </div>
                 {#if renderOptions.get("showInheritedProperties")}
