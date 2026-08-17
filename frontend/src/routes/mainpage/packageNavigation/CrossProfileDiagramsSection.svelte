@@ -18,7 +18,7 @@
 <script>
     import {
         faObjectGroup,
-        faFileExport,
+        faPalette,
     } from "@fortawesome/free-solid-svg-icons";
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -32,7 +32,7 @@
     import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
 
     import ClassEntry from "./ClassEntry.svelte";
-    import CrossProfileColorDialog from "./custom-diagram-dialogs/CrossProfileColorDialog.svelte";
+    import SchemaColorsDialog from "./SchemaColorsDialog.svelte";
 
     let { datasetNavEntry, crossProfileID } = $props();
 
@@ -58,6 +58,10 @@
     });
 
     function selectMergedView() {
+        const originGraph = editorState.selectedGraph.getValue();
+        if (originGraph) {
+            editorState.mergedViewOriginGraph.updateValue(originGraph);
+        }
         editorState.selectedDataset.updateValue(datasetNavEntry.label);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
@@ -93,9 +97,9 @@
             onSelect={() => {
                 showColorDialog = true;
             }}
-            faIcon={faFileExport}
+            faIcon={faPalette}
         >
-            Edit Schema Colors
+            Manage Schema Colors
         </ContextMenu.Item.Button>
     </ContextMenu.Content>
 </ContextMenu.Root>
@@ -124,7 +128,7 @@
     </div>
 {/if}
 
-<CrossProfileColorDialog
+<SchemaColorsDialog
     bind:showDialog={showColorDialog}
     datasetName={datasetNavEntry.id}
 />

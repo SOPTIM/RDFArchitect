@@ -20,6 +20,7 @@
     let {
         children,
         faIcon,
+        iconColor = null,
         altText,
         disabled = false,
         onSelect,
@@ -29,5 +30,12 @@
 </script>
 
 <DropdownMenuItem {onSelect} {disabled} {...other}>
-    <ItemButtonBase {faIcon} {disabled} {altText} {variant} center={children} />
+    <ItemButtonBase
+        {faIcon}
+        {iconColor}
+        {disabled}
+        {altText}
+        {variant}
+        center={children}
+    />
 </DropdownMenuItem>

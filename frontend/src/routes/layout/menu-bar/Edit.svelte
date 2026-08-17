@@ -50,7 +50,6 @@
 
     import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import FilterViewDialog from "../../FilterViewDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
     import OntologyDialog from "../../mainpage/packageNavigation/ontology-editor-dialog/OntologyDialog.svelte";
@@ -68,7 +67,6 @@
     let showNewClassDialog = $state(false);
     let showNewGraphDialog = $state(false);
     let showNewPackageDialog = $state(false);
-    let showFilterViewDialog = $state(false);
     let ShowPackageDeleteDependenciesDialog = $state(false);
     let showOntologyDeleteDependenciesDialog = $state(false);
     let showClassDeleteDependenciesDialog = $state(false);
@@ -678,7 +676,6 @@
     datasetName={selectedDataset}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
-<FilterViewDialog bind:showDialog={showFilterViewDialog} />
 {#if ontology}
     <DeleteDependenciesDialog
         bind:showDialog={showOntologyDeleteDependenciesDialog}

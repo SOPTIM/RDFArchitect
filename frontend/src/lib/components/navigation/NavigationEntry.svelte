@@ -34,6 +34,7 @@
         hasChildren = false,
         expanded = false,
         icon = null,
+        iconColor = null,
         secondaryLabel = "",
         badgeText = "",
         badgeVariant = "default",
@@ -142,7 +143,10 @@
         {/if}
     </span>
     {#if icon}
-        <span class="nav-entry__icon">
+        <span
+            class="nav-entry__icon"
+            style={iconColor ? `color: ${iconColor};` : ""}
+        >
             <Fa {icon} />
         </span>
     {/if}

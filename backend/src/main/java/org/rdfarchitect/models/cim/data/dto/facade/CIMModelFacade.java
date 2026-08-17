@@ -50,6 +50,9 @@ public class CIMModelFacade implements ICIMModelFacade {
         var classResources = model.listSubjectsWithProperty(RDF.type, RDFS.Class).toList();
         var classes = new ArrayList<ICIMClass>();
         for (var classResource : classResources) {
+            if (!model.contains(classResource, RDFA.uuid)) {
+                continue;
+            }
             classes.add(new CIMClass(this.graphUri, this.model, classResource));
         }
         return classes;

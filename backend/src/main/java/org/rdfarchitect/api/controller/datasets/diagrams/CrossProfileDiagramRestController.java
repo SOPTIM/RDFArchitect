@@ -57,7 +57,7 @@ public class CrossProfileDiagramRestController {
                 datasetName,
                 originURL);
 
-        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, false, false);
+        var result = getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, false);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagram\" from \"{}\"",
