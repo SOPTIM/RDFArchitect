@@ -179,7 +179,7 @@
 
 ### mermaid
 - **Package:** mermaid
-- **Version:** 11.16.0
+- **Version:** 11.16.1
 - **License:** MIT
 - **URL:** [https://github.com/mermaid-js/mermaid](https://github.com/mermaid-js/mermaid)
 
