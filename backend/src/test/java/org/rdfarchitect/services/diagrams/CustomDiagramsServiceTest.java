@@ -67,7 +67,14 @@ class CustomDiagramsServiceTest {
 
         var result = service.getCustomDiagramsForGraph(graphIdentifier);
 
-        assertThat(result).containsExactly(diagram);
+        assertThat(result)
+                .hasSize(1)
+                .first()
+                .satisfies(
+                        dto -> {
+                            assertThat(dto.getDiagramId()).isEqualTo(diagramId);
+                            assertThat(dto.getName()).isNull();
+                        });
     }
 
     @Test
@@ -81,7 +88,14 @@ class CustomDiagramsServiceTest {
 
         var result = service.getCustomDiagramsForDataset("dataset");
 
-        assertThat(result).containsExactly(diagram);
+        assertThat(result)
+                .hasSize(1)
+                .first()
+                .satisfies(
+                        dto -> {
+                            assertThat(dto.getDiagramId()).isEqualTo(diagramId);
+                            assertThat(dto.getName()).isNull();
+                        });
     }
 
     @Test
