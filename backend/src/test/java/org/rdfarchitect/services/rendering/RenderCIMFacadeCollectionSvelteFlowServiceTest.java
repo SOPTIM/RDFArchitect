@@ -331,7 +331,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         from.addProperty(CIMS.inverseRoleName, to);
         to.addProperty(CIMS.inverseRoleName, from);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
@@ -348,7 +350,9 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
         missingSuperClass.addProperty(RDFA.uuid, MISSING_SUPER_CLASS_UUID.toString());
         model.getResource(NS + "Child").addProperty(RDFS.subClassOf, missingSuperClass);
 
-        var result = (SvelteFlowDTO) renderer.renderUML(facade, coreFilter(), null);
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
 
         assertThat(result.getNodes())
                 .extracting(node -> node.getData().getLabel())
