@@ -184,7 +184,10 @@
             return;
         }
 
-        const result = await packageStore.getPackages(datasetName, graphURI) ?? { internal: [], external: [] };
+        const result = (await packageStore.getPackages(
+            datasetName,
+            graphURI,
+        )) ?? { internal: [], external: [] };
         packages = [...result.internal, ...result.external];
     }
 

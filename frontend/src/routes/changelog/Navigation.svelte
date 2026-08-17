@@ -41,7 +41,7 @@
 
     async function fetchNavigationObject() {
         const newDatasetList = [];
-        const datasets = await datasetStore.getDatasets() ?? [];
+        const datasets = (await datasetStore.getDatasets()) ?? [];
         for (const dataset of datasets) {
             const datasetName = dataset.label;
             let showDatasetContents = datasetName === selectedDatasetName;

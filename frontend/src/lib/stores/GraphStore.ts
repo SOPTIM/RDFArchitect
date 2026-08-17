@@ -19,7 +19,11 @@ import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { type AsyncListSlot, createEmptyListSlot, type Result } from "./storeTypes";
+import {
+    type AsyncListSlot,
+    createEmptyListSlot,
+    type Result,
+} from "./storeTypes";
 import {
     listGraphs,
     deleteGraph,

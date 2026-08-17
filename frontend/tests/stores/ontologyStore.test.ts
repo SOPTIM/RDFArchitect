@@ -110,9 +110,15 @@ describe("ontologyStore", () => {
         });
 
         test("fetches and caches ontology for a given dataset+graph", async () => {
-            vi.mocked(api.getOntology).mockResolvedValue({ data: MOCK_ONTOLOGY, error: undefined });
+            vi.mocked(api.getOntology).mockResolvedValue({
+                data: MOCK_ONTOLOGY,
+                error: undefined,
+            });
 
-            const result = await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
+            const result = await store.getOntologyForGraph(
+                DATASET_A,
+                GRAPH_URI_1,
+            );
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
 
             expect(result).toEqual(MOCK_ONTOLOGY);
@@ -123,7 +129,10 @@ describe("ontologyStore", () => {
         });
 
         test("force=true bypasses the cache", async () => {
-            vi.mocked(api.getOntology).mockResolvedValue({ data: MOCK_ONTOLOGY, error: undefined });
+            vi.mocked(api.getOntology).mockResolvedValue({
+                data: MOCK_ONTOLOGY,
+                error: undefined,
+            });
 
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1, true);
@@ -133,8 +142,14 @@ describe("ontologyStore", () => {
 
         test("treats different graph URIs as separate cache entries", async () => {
             vi.mocked(api.getOntology)
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY_WITH_ENTRIES, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY_WITH_ENTRIES,
+                    error: undefined,
+                });
 
             const r1 = await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
             const r2 = await store.getOntologyForGraph(DATASET_A, GRAPH_URI_2);
@@ -146,8 +161,14 @@ describe("ontologyStore", () => {
 
         test("treats same graph URI under different datasets as separate cache entries", async () => {
             vi.mocked(api.getOntology)
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY_WITH_ENTRIES, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY_WITH_ENTRIES,
+                    error: undefined,
+                });
 
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
             await store.getOntologyForGraph(DATASET_B, GRAPH_URI_1);
@@ -161,7 +182,10 @@ describe("ontologyStore", () => {
                 error: new Error("Network error"),
             });
 
-            const result = await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
+            const result = await store.getOntologyForGraph(
+                DATASET_A,
+                GRAPH_URI_1,
+            );
             expect(result).toBeNull();
         });
     });
@@ -208,7 +232,9 @@ describe("ontologyStore", () => {
 
             const state = get(store);
             expect(state.knownFields.data).toEqual(MOCK_KNOWN_FIELDS);
-            expect(state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data).toEqual(MOCK_ONTOLOGY);
+            expect(
+                state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data,
+            ).toEqual(MOCK_ONTOLOGY);
         });
 
         test("returns null on API error", async () => {
@@ -251,7 +277,9 @@ describe("ontologyStore", () => {
             await store.generateOntologyEntries(DATASET_A, GRAPH_URI_1);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached?.entries).toEqual(MOCK_ENTRIES);
             // Other fields from the original fetch should still be present
             expect(cached?.uuid).toBe(MOCK_ONTOLOGY.uuid);
@@ -267,7 +295,9 @@ describe("ontologyStore", () => {
             await store.generateOntologyEntries(DATASET_A, GRAPH_URI_1);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached?.entries).toEqual(MOCK_ENTRIES);
         });
 
@@ -277,7 +307,10 @@ describe("ontologyStore", () => {
                 error: undefined,
             });
 
-            const result = await store.generateOntologyEntries(DATASET_A, GRAPH_URI_1);
+            const result = await store.generateOntologyEntries(
+                DATASET_A,
+                GRAPH_URI_1,
+            );
 
             expect(result.error).toBeNull();
             expect(result.data).toEqual([]);
@@ -289,13 +322,18 @@ describe("ontologyStore", () => {
                 error: undefined,
             });
 
-            const result = await store.generateOntologyEntries(DATASET_A, GRAPH_URI_1);
+            const result = await store.generateOntologyEntries(
+                DATASET_A,
+                GRAPH_URI_1,
+            );
 
             expect(result.error).toBeNull();
             expect(result.data).toEqual([]);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached?.entries).toEqual([]);
         });
 
@@ -312,12 +350,17 @@ describe("ontologyStore", () => {
                 error,
             });
 
-            const result = await store.generateOntologyEntries(DATASET_A, GRAPH_URI_1);
+            const result = await store.generateOntologyEntries(
+                DATASET_A,
+                GRAPH_URI_1,
+            );
 
             expect(result.error).toBe(error);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached).toEqual(MOCK_ONTOLOGY);
         });
     });
@@ -325,7 +368,10 @@ describe("ontologyStore", () => {
     // -------------------------------------------------------------------------
     describe("createOntology", () => {
         test("calls API with correct arguments", async () => {
-            vi.mocked(api.createOntology).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.createOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
             await store.createOntology(DATASET_A, GRAPH_URI_1, MOCK_ONTOLOGY);
 
@@ -336,12 +382,17 @@ describe("ontologyStore", () => {
         });
 
         test("patches the cache with the sent DTO on success", async () => {
-            vi.mocked(api.createOntology).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.createOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
             await store.createOntology(DATASET_A, GRAPH_URI_1, MOCK_ONTOLOGY);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached).toMatchObject(MOCK_ONTOLOGY);
         });
 
@@ -352,12 +403,19 @@ describe("ontologyStore", () => {
             });
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
 
-            const partialUpdate: api.OntologyDto = { namespace: "http://example.org/newOntology" };
-            vi.mocked(api.createOntology).mockResolvedValue({ data: undefined, error: undefined });
+            const partialUpdate: api.OntologyDto = {
+                namespace: "http://example.org/newOntology",
+            };
+            vi.mocked(api.createOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
             await store.createOntology(DATASET_A, GRAPH_URI_1, partialUpdate);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached?.namespace).toBe("http://example.org/newOntology");
             // Fields not present in the patch should survive from the prior fetch
             expect(cached?.entries).toEqual(MOCK_ONTOLOGY_WITH_ENTRIES.entries);
@@ -371,14 +429,23 @@ describe("ontologyStore", () => {
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
 
             const error = new Error("Create failed");
-            vi.mocked(api.createOntology).mockResolvedValue({ data: undefined, error });
+            vi.mocked(api.createOntology).mockResolvedValue({
+                data: undefined,
+                error,
+            });
 
-            const result = await store.createOntology(DATASET_A, GRAPH_URI_1, MOCK_ONTOLOGY_WITH_ENTRIES);
+            const result = await store.createOntology(
+                DATASET_A,
+                GRAPH_URI_1,
+                MOCK_ONTOLOGY_WITH_ENTRIES,
+            );
 
             expect(result.error).toBe(error);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached).toEqual(MOCK_ONTOLOGY);
         });
     });
@@ -386,7 +453,10 @@ describe("ontologyStore", () => {
     // -------------------------------------------------------------------------
     describe("replaceOntology", () => {
         test("calls API with correct arguments", async () => {
-            vi.mocked(api.replaceOntology).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.replaceOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
             await store.replaceOntology(DATASET_A, GRAPH_URI_1, MOCK_ONTOLOGY);
 
@@ -397,12 +467,17 @@ describe("ontologyStore", () => {
         });
 
         test("patches the cache with the sent DTO on success", async () => {
-            vi.mocked(api.replaceOntology).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.replaceOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
             await store.replaceOntology(DATASET_A, GRAPH_URI_1, MOCK_ONTOLOGY);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached).toMatchObject(MOCK_ONTOLOGY);
         });
 
@@ -413,12 +488,19 @@ describe("ontologyStore", () => {
             });
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
 
-            const partialUpdate: api.OntologyDto = { namespace: "http://example.org/newOntology" };
-            vi.mocked(api.replaceOntology).mockResolvedValue({ data: undefined, error: undefined });
+            const partialUpdate: api.OntologyDto = {
+                namespace: "http://example.org/newOntology",
+            };
+            vi.mocked(api.replaceOntology).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
             await store.replaceOntology(DATASET_A, GRAPH_URI_1, partialUpdate);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached?.namespace).toBe("http://example.org/newOntology");
             expect(cached?.entries).toEqual(MOCK_ONTOLOGY_WITH_ENTRIES.entries);
         });
@@ -431,14 +513,23 @@ describe("ontologyStore", () => {
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
 
             const error = new Error("Replace failed");
-            vi.mocked(api.replaceOntology).mockResolvedValue({ data: undefined, error });
+            vi.mocked(api.replaceOntology).mockResolvedValue({
+                data: undefined,
+                error,
+            });
 
-            const result = await store.replaceOntology(DATASET_A, GRAPH_URI_1, MOCK_ONTOLOGY_WITH_ENTRIES);
+            const result = await store.replaceOntology(
+                DATASET_A,
+                GRAPH_URI_1,
+                MOCK_ONTOLOGY_WITH_ENTRIES,
+            );
 
             expect(result.error).toBe(error);
 
             const state = get(store);
-            const cached = state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data;
+            const cached = state.byGraph.get(
+                makeGraphKey(DATASET_A, GRAPH_URI_1),
+            )?.data;
             expect(cached).toEqual(MOCK_ONTOLOGY);
         });
     });
@@ -447,8 +538,14 @@ describe("ontologyStore", () => {
     describe("invalidateGraph", () => {
         test("removes only the specific graph entry from the cache", async () => {
             vi.mocked(api.getOntology)
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY_WITH_ENTRIES, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY_WITH_ENTRIES,
+                    error: undefined,
+                });
 
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_2);
@@ -456,8 +553,12 @@ describe("ontologyStore", () => {
             store.invalidateGraph(DATASET_A, GRAPH_URI_1);
 
             const state = get(store);
-            expect(state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1))).toBe(false);
-            expect(state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_2))).toBe(true);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+            ).toBe(false);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_2)),
+            ).toBe(true);
         });
 
         test("does not affect the knownFields cache", async () => {
@@ -484,8 +585,14 @@ describe("ontologyStore", () => {
     describe("invalidateDataset", () => {
         test("removes all graph entries belonging to the dataset", async () => {
             vi.mocked(api.getOntology)
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY_WITH_ENTRIES, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY_WITH_ENTRIES,
+                    error: undefined,
+                });
 
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_2);
@@ -493,14 +600,24 @@ describe("ontologyStore", () => {
             store.invalidateDataset(DATASET_A);
 
             const state = get(store);
-            expect(state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1))).toBe(false);
-            expect(state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_2))).toBe(false);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+            ).toBe(false);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_2)),
+            ).toBe(false);
         });
 
         test("does not affect entries from other datasets", async () => {
             vi.mocked(api.getOntology)
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_ONTOLOGY, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_ONTOLOGY,
+                    error: undefined,
+                });
 
             await store.getOntologyForGraph(DATASET_A, GRAPH_URI_1);
             await store.getOntologyForGraph(DATASET_B, GRAPH_URI_1);
@@ -508,8 +625,12 @@ describe("ontologyStore", () => {
             store.invalidateDataset(DATASET_A);
 
             const state = get(store);
-            expect(state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1))).toBe(false);
-            expect(state.byGraph.has(makeGraphKey(DATASET_B, GRAPH_URI_1))).toBe(true);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+            ).toBe(false);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_B, GRAPH_URI_1)),
+            ).toBe(true);
         });
 
         test("does not affect the knownFields cache", async () => {
@@ -536,7 +657,9 @@ describe("ontologyStore", () => {
             store.invalidateDataset(SHORT_DATASET); // prefix "data::" should not match "datasetA::"
 
             const state = get(store);
-            expect(state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1))).toBe(true);
+            expect(
+                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+            ).toBe(true);
         });
     });
 });

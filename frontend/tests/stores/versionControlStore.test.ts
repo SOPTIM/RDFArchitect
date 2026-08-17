@@ -45,17 +45,28 @@ vi.mock("$lib/sharedState.svelte.js", () => ({
     },
 }));
 
-vi.mock("$lib/stores/ClassStore", () => ({ classStore: { invalidateGraph: vi.fn() } }));
-vi.mock("$lib/stores/DiagramStore", () => ({ customDiagramStore: { invalidateDataset: vi.fn() } }));
-vi.mock("$lib/stores/OntologyStore", () => ({ ontologyStore: { invalidateGraph: vi.fn() } }));
-vi.mock("$lib/stores/PackageStore", () => ({ packageStore: { invalidateGraph: vi.fn() } }));
+vi.mock("$lib/stores/ClassStore", () => ({
+    classStore: { invalidateGraph: vi.fn() },
+}));
+vi.mock("$lib/stores/DiagramStore", () => ({
+    customDiagramStore: { invalidateDataset: vi.fn() },
+}));
+vi.mock("$lib/stores/OntologyStore", () => ({
+    ontologyStore: { invalidateGraph: vi.fn() },
+}));
+vi.mock("$lib/stores/PackageStore", () => ({
+    packageStore: { invalidateGraph: vi.fn() },
+}));
 
 vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
     toastStore: { info: vi.fn(), error: vi.fn() },
 }));
 
-vi.mock("$lib/stores/storeHelpers", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../../src/lib/stores/storeHelpers")>();
+vi.mock("$lib/stores/storeHelpers", async importOriginal => {
+    const actual =
+        await importOriginal<
+            typeof import("../../src/lib/stores/storeHelpers")
+        >();
     return {
         ...actual,
         makeGraphKey: vi.fn((dataset, graph) => `${dataset}::${graph}`),
@@ -80,29 +91,51 @@ describe("versionControlStore", () => {
         store = createVersionControlStore();
 
         // Default global state mocks
-        vi.mocked(editorState.selectedDataset.getValue).mockReturnValue(undefined);
-        vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(undefined);
+        vi.mocked(editorState.selectedDataset.getValue).mockReturnValue(
+            undefined,
+        );
+        vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
+            undefined,
+        );
     });
 
     // -------------------------------------------------------------------------
     describe("refresh", () => {
         test("updates state based on explicit arguments", async () => {
-            vi.mocked(api.canUndo).mockResolvedValue({ data: true, error: undefined });
-            vi.mocked(api.canRedo).mockResolvedValue({ data: false, error: undefined });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
 
             await store.refresh(DATASET, GRAPH);
 
             const state = get(store).byGraph.get(KEY);
             expect(state).toEqual({ canUndo: true, canRedo: false });
-            expect(api.canUndo).toHaveBeenCalledWith({ path: { datasetName: DATASET, graphURI: GRAPH } });
+            expect(api.canUndo).toHaveBeenCalledWith({
+                path: { datasetName: DATASET, graphURI: GRAPH },
+            });
         });
 
         test("falls back to editorState if arguments are omitted", async () => {
-            vi.mocked(editorState.selectedDataset.getValue).mockReturnValue(DATASET);
-            vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(GRAPH);
+            vi.mocked(editorState.selectedDataset.getValue).mockReturnValue(
+                DATASET,
+            );
+            vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
+                GRAPH,
+            );
 
-            vi.mocked(api.canUndo).mockResolvedValue({ data: true, error: undefined });
-            vi.mocked(api.canRedo).mockResolvedValue({ data: true, error: undefined });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
 
             await store.refresh();
 
@@ -111,8 +144,14 @@ describe("versionControlStore", () => {
         });
 
         test("sets flags to false if API returns an error", async () => {
-            vi.mocked(api.canUndo).mockResolvedValue({ data: undefined, error: new Error("Server down") });
-            vi.mocked(api.canRedo).mockResolvedValue({ data: undefined, error: new Error("Server down") });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: undefined,
+                error: new Error("Server down"),
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: undefined,
+                error: new Error("Server down"),
+            });
 
             await store.refresh(DATASET, GRAPH);
 
@@ -130,8 +169,14 @@ describe("versionControlStore", () => {
     describe("canUndo / canRedo (Getters)", () => {
         test("returns correct flags from state based on explicit args", async () => {
             // Seed state via refresh
-            vi.mocked(api.canUndo).mockResolvedValue({ data: true, error: undefined });
-            vi.mocked(api.canRedo).mockResolvedValue({ data: false, error: undefined });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
             await store.refresh(DATASET, GRAPH);
 
             expect(store.canUndo(DATASET, GRAPH)).toBe(true);
@@ -146,22 +191,44 @@ describe("versionControlStore", () => {
     // -------------------------------------------------------------------------
     describe("undo", () => {
         test("calls SDK, invalidates stores, toasts, and refreshes on success", async () => {
-            vi.mocked(api.undo).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.undo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
             // Mock refresh endpoints so it doesn't fail when called at the end
-            vi.mocked(api.canUndo).mockResolvedValue({ data: false, error: undefined });
-            vi.mocked(api.canRedo).mockResolvedValue({ data: true, error: undefined });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
 
             const result = await store.undo(DATASET, GRAPH);
 
             expect(result.error).toBeNull();
-            expect(api.undo).toHaveBeenCalledWith({ path: { datasetName: DATASET, graphURI: GRAPH } });
+            expect(api.undo).toHaveBeenCalledWith({
+                path: { datasetName: DATASET, graphURI: GRAPH },
+            });
 
             // Ensure invalidations were broadcast
-            expect(classStore.invalidateGraph).toHaveBeenCalledWith(DATASET, GRAPH);
-            expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(DATASET, GRAPH);
-            expect(packageStore.invalidateGraph).toHaveBeenCalledWith(DATASET, GRAPH);
-            expect(customDiagramStore.invalidateDataset).toHaveBeenCalledWith(DATASET);
+            expect(classStore.invalidateGraph).toHaveBeenCalledWith(
+                DATASET,
+                GRAPH,
+            );
+            expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(
+                DATASET,
+                GRAPH,
+            );
+            expect(packageStore.invalidateGraph).toHaveBeenCalledWith(
+                DATASET,
+                GRAPH,
+            );
+            expect(customDiagramStore.invalidateDataset).toHaveBeenCalledWith(
+                DATASET,
+            );
 
             expect(toastStore.info).toHaveBeenCalledWith("Undone");
             expect(api.canUndo).toHaveBeenCalled(); // Proves refresh was called
@@ -174,7 +241,10 @@ describe("versionControlStore", () => {
             const result = await store.undo(DATASET, GRAPH);
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Undo failed", "Could not undo the last change.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Undo failed",
+                "Could not undo the last change.",
+            );
 
             // Stores should NOT be invalidated if undo failed
             expect(classStore.invalidateGraph).not.toHaveBeenCalled();
@@ -191,20 +261,42 @@ describe("versionControlStore", () => {
     // -------------------------------------------------------------------------
     describe("redo", () => {
         test("calls SDK, invalidates stores, toasts, and refreshes on success", async () => {
-            vi.mocked(api.redo).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.redo).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
-            vi.mocked(api.canUndo).mockResolvedValue({ data: true, error: undefined });
-            vi.mocked(api.canRedo).mockResolvedValue({ data: false, error: undefined });
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: true,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
 
             const result = await store.redo(DATASET, GRAPH);
 
             expect(result.error).toBeNull();
-            expect(api.redo).toHaveBeenCalledWith({ path: { datasetName: DATASET, graphURI: GRAPH } });
+            expect(api.redo).toHaveBeenCalledWith({
+                path: { datasetName: DATASET, graphURI: GRAPH },
+            });
 
-            expect(classStore.invalidateGraph).toHaveBeenCalledWith(DATASET, GRAPH);
-            expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(DATASET, GRAPH);
-            expect(packageStore.invalidateGraph).toHaveBeenCalledWith(DATASET, GRAPH);
-            expect(customDiagramStore.invalidateDataset).toHaveBeenCalledWith(DATASET);
+            expect(classStore.invalidateGraph).toHaveBeenCalledWith(
+                DATASET,
+                GRAPH,
+            );
+            expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(
+                DATASET,
+                GRAPH,
+            );
+            expect(packageStore.invalidateGraph).toHaveBeenCalledWith(
+                DATASET,
+                GRAPH,
+            );
+            expect(customDiagramStore.invalidateDataset).toHaveBeenCalledWith(
+                DATASET,
+            );
 
             expect(toastStore.info).toHaveBeenCalledWith("Redone");
         });
@@ -216,7 +308,10 @@ describe("versionControlStore", () => {
             const result = await store.redo(DATASET, GRAPH);
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Redo failed", "Could not redo the change.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Redo failed",
+                "Could not redo the change.",
+            );
             expect(classStore.invalidateGraph).not.toHaveBeenCalled();
         });
     });

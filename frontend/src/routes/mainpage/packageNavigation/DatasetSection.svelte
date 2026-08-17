@@ -31,7 +31,6 @@
 
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
     import NavigationEntry from "$lib/components/navigation/NavigationEntry.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,

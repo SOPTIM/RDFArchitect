@@ -557,7 +557,8 @@ describe("ClassStore", () => {
 
             const classes = await store.getClasses(DATASET, GRAPH);
             expect(
-                classes?.find(c => c.uuid === "class-1")?.enumEntries?.[0].label,
+                classes?.find(c => c.uuid === "class-1")?.enumEntries?.[0]
+                    .label,
             ).toBe("updated");
         });
 

@@ -22,15 +22,12 @@ import { describeError } from "./StoreLogging";
 import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     getCrossProfileRenderingData,
-    getCrossProfileColors,
-    updateCrossProfileColors,
     getCrossProfileDiagram,
     getCrossProfileDiagramId,
     type CrossProfileDiagramDto,
     type CrossProfileDiagramColorDataDto,
     type RenderingDataDto,
 } from "../api/generated";
-import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
 type StoreState = {
     ids: Map<string, AsyncSlot<string>>;
@@ -89,23 +86,6 @@ function createCrossProfileStore() {
         return { ...s, diagrams };
     }
 
-    function getColorSlot(
-        s: StoreState,
-        datasetName: string,
-    ): AsyncSlot<CrossProfileDiagramColorDataDto> {
-        return s.colors.get(datasetName) ?? createEmptySlot();
-    }
-
-    function setColorSlot(
-        s: StoreState,
-        datasetName: string,
-        patch: Partial<AsyncSlot<CrossProfileDiagramColorDataDto>>,
-    ): StoreState {
-        const colors = new Map(s.colors);
-        colors.set(datasetName, { ...getColorSlot(s, datasetName), ...patch });
-        return { ...s, colors };
-    }
-
     // =========================================================================
     // GETTERS
     // =========================================================================
@@ -142,69 +122,6 @@ function createCrossProfileStore() {
         );
     }
 
-    async function getColors(
-        datasetName: string,
-        force = false,
-    ): Promise<CrossProfileDiagramColorDataDto | null> {
-        if (!datasetName) return null;
-        return loadSlot(
-            store,
-            s => getColorSlot(s, datasetName),
-            (s, patch) => setColorSlot(s, datasetName, patch),
-            () => getCrossProfileColors({ path: { datasetName } }),
-            LOG_PREFIX,
-            `cross-profile colors for dataset="${datasetName}"`,
-            force,
-        );
-    }
-
-    // =========================================================================
-    // MUTATIONS
-    // =========================================================================
-
-    async function saveColors(
-        datasetName: string,
-        colorData: CrossProfileDiagramColorDataDto,
-    ): Promise<Result> {
-        if (!datasetName) return { error: null };
-
-        console.log(
-            `${LOG_PREFIX} Saving cross-profile colors for dataset="${datasetName}"`,
-        );
-
-        const { error } = await updateCrossProfileColors({
-            path: { datasetName },
-            body: colorData,
-        });
-
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Failed to save cross-profile colors for dataset="${datasetName}"`,
-                await describeError(error),
-            );
-            toastStore.error("Save failed", "Could not save color data.");
-            return { error };
-        }
-
-        update(s =>
-            setColorSlot(s, datasetName, {
-                data: colorData,
-                fetchedAt: Date.now(),
-                pending: null,
-                error: null,
-            }),
-        );
-
-        console.log(
-            `${LOG_PREFIX} Saved cross-profile colors for dataset="${datasetName}"`,
-        );
-        toastStore.success(
-            "Colors saved",
-            "Color data was saved successfully.",
-        );
-        return { error: null };
-    }
-
     // =========================================================================
     // INVALIDATION
     // =========================================================================
@@ -233,8 +150,6 @@ function createCrossProfileStore() {
 
         // pass-through
         fetchRenderingData,
-        getColors,
-        saveColors,
 
         // invalidation
         invalidateDataset,
@@ -268,4 +183,4 @@ async function fetchRenderingData(
 
     return { error: null, data: data ?? undefined };
 }
-export { createCrossProfileStore }
+export { createCrossProfileStore };

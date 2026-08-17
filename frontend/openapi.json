@@ -801,6 +801,9 @@
           "includeInheritance" : {
             "type" : "boolean"
           },
+          "includePropertiesFromOtherProfiles" : {
+            "type" : "boolean"
+          },
           "includeRelationsToExternalPackages" : {
             "type" : "boolean"
           },

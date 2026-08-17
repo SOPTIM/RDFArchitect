@@ -31,8 +31,11 @@ vi.mock("$lib/api/generated", () => ({
     listStereotypes: vi.fn(),
 }));
 
-vi.mock("$lib/stores/storeHelpers", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("../../src/lib/stores/storeHelpers")>();
+vi.mock("$lib/stores/storeHelpers", async importOriginal => {
+    const actual =
+        await importOriginal<
+            typeof import("../../src/lib/stores/storeHelpers")
+        >();
     return {
         ...actual,
         makeGraphKey: vi.fn((dataset, graph) => `${dataset}::${graph}`),
@@ -61,7 +64,10 @@ describe("datatypesStore", () => {
     describe("Custom loadSlot behaviors (via getPrimitives)", () => {
         test("fetches data and caches it on subsequent calls", async () => {
             const mockData = ["uri:1", "uri:2"];
-            vi.mocked(api.listPrimitives).mockResolvedValue({ data: mockData as never, error: undefined });
+            vi.mocked(api.listPrimitives).mockResolvedValue({
+                data: mockData as never,
+                error: undefined,
+            });
 
             const res1 = await store.getPrimitives(DATASET, GRAPH);
             const res2 = await store.getPrimitives(DATASET, GRAPH);
@@ -73,7 +79,10 @@ describe("datatypesStore", () => {
 
         test("force=true bypasses the cache", async () => {
             const mockData = ["uri:1"];
-            vi.mocked(api.listPrimitives).mockResolvedValue({ data: mockData as never, error: undefined });
+            vi.mocked(api.listPrimitives).mockResolvedValue({
+                data: mockData as never,
+                error: undefined,
+            });
 
             await store.getPrimitives(DATASET, GRAPH);
             await store.getPrimitives(DATASET, GRAPH, true);
@@ -110,7 +119,10 @@ describe("datatypesStore", () => {
 
         test("handles standard API errors gracefully", async () => {
             const error = new Error("API Failure");
-            vi.mocked(api.listPrimitives).mockResolvedValue({ data: undefined, error });
+            vi.mocked(api.listPrimitives).mockResolvedValue({
+                data: undefined,
+                error,
+            });
 
             const result = await store.getPrimitives(DATASET, GRAPH);
 
@@ -153,22 +165,32 @@ describe("datatypesStore", () => {
     describe("Specific API Getters", () => {
         test("getDatatypes calls listDatatypes", async () => {
             const mockData = [{ id: "type1" }];
-            vi.mocked(api.listDatatypes).mockResolvedValue({ data: mockData as never, error: undefined });
+            vi.mocked(api.listDatatypes).mockResolvedValue({
+                data: mockData as never,
+                error: undefined,
+            });
 
             const result = await store.getDatatypes(DATASET, GRAPH);
 
             expect(result).toEqual(mockData);
-            expect(api.listDatatypes).toHaveBeenCalledWith({ path: { datasetName: DATASET, graphURI: GRAPH } });
+            expect(api.listDatatypes).toHaveBeenCalledWith({
+                path: { datasetName: DATASET, graphURI: GRAPH },
+            });
         });
 
         test("getStereotypes calls listStereotypes", async () => {
             const mockData = ["stereo1"];
-            vi.mocked(api.listStereotypes).mockResolvedValue({ data: mockData, error: undefined });
+            vi.mocked(api.listStereotypes).mockResolvedValue({
+                data: mockData,
+                error: undefined,
+            });
 
             const result = await store.getStereotypes(DATASET, GRAPH);
 
             expect(result).toEqual(mockData);
-            expect(api.listStereotypes).toHaveBeenCalledWith({ path: { datasetName: DATASET, graphURI: GRAPH } });
+            expect(api.listStereotypes).toHaveBeenCalledWith({
+                path: { datasetName: DATASET, graphURI: GRAPH },
+            });
         });
     });
 
@@ -200,9 +222,12 @@ describe("datatypesStore", () => {
             await store.getPrimitives(DATASET, GRAPH);
             expect(api.listPrimitives).toHaveBeenCalledTimes(2);
         });
-        
+
         test("invalidateDataset removes all graphs for a given dataset", async () => {
-            vi.mocked(api.listPrimitives).mockResolvedValue({ data: ["uri1"] as never, error: undefined });
+            vi.mocked(api.listPrimitives).mockResolvedValue({
+                data: ["uri1"] as never,
+                error: undefined,
+            });
 
             await store.getPrimitives(DATASET, GRAPH);
             await store.getPrimitives(DATASET, "other-graph");

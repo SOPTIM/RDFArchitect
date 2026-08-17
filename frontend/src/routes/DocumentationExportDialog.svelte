@@ -18,7 +18,6 @@
 <script>
     import JSZip from "jszip";
 
-    import { BackendConnection } from "$lib/api/backend.js";
     import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import ExportProgressPanel from "$lib/components/ExportProgressPanel.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
@@ -34,20 +33,18 @@
     let {
         showDialog = $bindable(),
         lockedDatasetName,
-        lockedGraphUri
+        lockedGraphUri,
     } = $props();
-
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
     const zipMediaType = {
         mimeType: "application/zip",
         name: "ZIP",
-        fileExtension: ".zip"
+        fileExtension: ".zip",
     };
 
     const supportedMediaTypes = [
         { name: "PNG", ending: "png" },
-        { name: "SVG", ending: "svg" }
+        { name: "SVG", ending: "svg" },
     ];
 
     const supportedDocumentFormats = [
@@ -58,12 +55,14 @@
                 const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(dataset)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
-                    headers: new Headers({ "Content-Type": "application/json" }),
+                    headers: new Headers({
+                        "Content-Type": "application/json",
+                    }),
                     mode: "cors",
                     credentials: "include",
-                    signal
+                    signal,
                 });
-            }
+            },
         },
         {
             name: "AsciiDoc",
@@ -72,18 +71,20 @@
                 const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(dataset)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
-                    headers: new Headers({ "Content-Type": "application/json" }),
+                    headers: new Headers({
+                        "Content-Type": "application/json",
+                    }),
                     mode: "cors",
                     credentials: "include",
-                    signal
+                    signal,
                 });
-            }
-        }
+            },
+        },
     ];
 
     const supportedDiagramPlacements = [
         { key: "link", name: "Link", embed: false },
-        { key: "picture", name: "Picture in the document", embed: true }
+        { key: "picture", name: "Picture in the document", embed: true },
     ];
 
     let selectedDatasetName = $state(null);
@@ -97,20 +98,20 @@
 
     let selectedDocumentFormat = $derived(
         supportedDocumentFormats.find(
-            format => format.ending === selectedDocumentEnding
-        )
+            format => format.ending === selectedDocumentEnding,
+        ),
     );
     let selectedMediaType = $derived(
-        supportedMediaTypes.find(type => type.ending === selectedImageEnding)
+        supportedMediaTypes.find(type => type.ending === selectedImageEnding),
     );
     let embedDiagrams = $derived(
         supportedDiagramPlacements.find(
-            placement => placement.key === selectedPlacementKey
-        )?.embed ?? false
+            placement => placement.key === selectedPlacementKey,
+        )?.embed ?? false,
     );
     let isExporting = $derived(progress !== null);
     let disablePrimary = $derived(
-        !selectedDatasetName || !graphURI || isExporting
+        !selectedDatasetName || !graphURI || isExporting,
     );
 
     function onOpen() {
@@ -135,19 +136,19 @@
                 graphURI,
                 mediaType.ending,
                 embedDiagrams,
-                currentProgress.signal
+                currentProgress.signal,
             );
             if (!response.ok) {
                 toastStore.error(
                     "Export failed",
-                    `Could not export "${graphURI}" as ${documentFormat.name}.`
+                    `Could not export "${graphURI}" as ${documentFormat.name}.`,
                 );
                 return;
             }
             const contentType =
                 response.headers.get("content-type") ?? "text/plain";
             const suggestedFilename = response.headers.get(
-                "content-disposition"
+                "content-disposition",
             );
             let documentText = await response.text();
             currentProgress.documentReady();
@@ -156,7 +157,7 @@
                 selectedDatasetName,
                 graphURI,
                 mediaType,
-                currentProgress
+                currentProgress,
             );
             if (currentProgress.cancelled) {
                 notifyCancelled();
@@ -174,7 +175,7 @@
             const zip = new JSZip();
             zip.file(
                 getDocumentFilename(suggestedFilename, documentFormat),
-                new Blob([documentText], { type: contentType })
+                new Blob([documentText], { type: contentType }),
             );
 
             const imagesFolder = zip.folder("images");
@@ -185,7 +186,7 @@
             currentProgress.startArchive();
             const zipBlob = await zip.generateAsync(
                 { type: "blob" },
-                metadata => currentProgress.archiveProgress(metadata.percent)
+                metadata => currentProgress.archiveProgress(metadata.percent),
             );
             if (currentProgress.cancelled) {
                 notifyCancelled();
@@ -196,12 +197,12 @@
             saveFile(
                 zipBlob,
                 `${getGraphLabel(graphURI)}-${documentFormat.ending}-export.zip`,
-                zipMediaType
+                zipMediaType,
             );
 
             toastStore.success(
                 "Export ready",
-                `"${graphURI}" downloaded as ${documentFormat.name} export (zip).`
+                `"${graphURI}" downloaded as ${documentFormat.name} export (zip).`,
             );
             notifyFailedPackages(currentProgress);
             showDialog = false;
@@ -213,7 +214,7 @@
             console.error("Failed to download documentation export:", e);
             toastStore.error(
                 "Export failed",
-                "An unexpected error occurred while exporting."
+                "An unexpected error occurred while exporting.",
             );
         } finally {
             progress = null;
@@ -223,7 +224,7 @@
     function notifyCancelled() {
         toastStore.info(
             "Export cancelled",
-            "The documentation export was stopped, nothing was downloaded."
+            "The documentation export was stopped, nothing was downloaded.",
         );
     }
 
@@ -236,7 +237,7 @@
         if (failed.length === 0) return;
         toastStore.warning(
             "Diagrams missing",
-            `The diagram of ${failed.map(pkg => `"${pkg.label}"`).join(", ")} could not be rendered and is missing from the archive.`
+            `The diagram of ${failed.map(pkg => `"${pkg.label}"`).join(", ")} could not be rendered and is missing from the archive.`,
         );
     }
 

@@ -71,7 +71,8 @@
 
     async function getCustomDiagrams() {
         existingDiagrams =
-            await customDiagramStore.getDatasetDiagrams(lockedDatasetName) ?? [];
+            (await customDiagramStore.getDatasetDiagrams(lockedDatasetName)) ??
+            [];
         diagramsLoaded = true;
     }
 

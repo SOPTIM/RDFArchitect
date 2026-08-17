@@ -83,7 +83,10 @@ describe("crossProfileStore", () => {
     // -------------------------------------------------------------------------
     describe("getId", () => {
         test("fetches and caches the diagram ID for a dataset", async () => {
-            vi.mocked(api.getCrossProfileDiagramId).mockResolvedValue({ data: MOCK_DIAGRAM_ID, error: undefined });
+            vi.mocked(api.getCrossProfileDiagramId).mockResolvedValue({
+                data: MOCK_DIAGRAM_ID,
+                error: undefined,
+            });
 
             const result1 = await store.getId(DATASET_A);
             const result2 = await store.getId(DATASET_A);
@@ -112,7 +115,10 @@ describe("crossProfileStore", () => {
         });
 
         test("fetches and caches the diagram for a dataset", async () => {
-            vi.mocked(api.getCrossProfileDiagram).mockResolvedValue({ data: MOCK_DIAGRAM, error: undefined });
+            vi.mocked(api.getCrossProfileDiagram).mockResolvedValue({
+                data: MOCK_DIAGRAM,
+                error: undefined,
+            });
 
             const result = await store.getDiagram(DATASET_A);
             await store.getDiagram(DATASET_A);
@@ -125,7 +131,10 @@ describe("crossProfileStore", () => {
         });
 
         test("returns null on API error", async () => {
-            vi.mocked(api.getCrossProfileDiagram).mockResolvedValue({ data: undefined, error: new Error("Network error") });
+            vi.mocked(api.getCrossProfileDiagram).mockResolvedValue({
+                data: undefined,
+                error: new Error("Network error"),
+            });
 
             const result = await store.getDiagram(DATASET_A);
             expect(result).toBeNull();
@@ -135,14 +144,20 @@ describe("crossProfileStore", () => {
     // -------------------------------------------------------------------------
     describe("getColors", () => {
         test("fetches and caches color data", async () => {
-            vi.mocked(api.getCrossProfileColors).mockResolvedValue({ data: MOCK_COLORS, error: undefined });
+            vi.mocked(api.getCrossProfileColors).mockResolvedValue({
+                data: MOCK_COLORS,
+                error: undefined,
+            });
 
             const result = await store.getColors(DATASET_A);
             expect(result).toEqual(MOCK_COLORS);
         });
 
         test("force=true bypasses the cache", async () => {
-            vi.mocked(api.getCrossProfileColors).mockResolvedValue({ data: MOCK_COLORS, error: undefined });
+            vi.mocked(api.getCrossProfileColors).mockResolvedValue({
+                data: MOCK_COLORS,
+                error: undefined,
+            });
 
             await store.getColors(DATASET_A);
             await store.getColors(DATASET_A, true);
@@ -161,7 +176,10 @@ describe("crossProfileStore", () => {
         };
 
         test("updates the API and the local cache on success", async () => {
-            vi.mocked(api.updateCrossProfileColors).mockResolvedValue({ data: undefined, error: undefined });
+            vi.mocked(api.updateCrossProfileColors).mockResolvedValue({
+                data: undefined,
+                error: undefined,
+            });
 
             const result = await store.saveColors(DATASET_A, NEW_COLORS);
 
@@ -174,21 +192,33 @@ describe("crossProfileStore", () => {
             // Ensure store was updated directly
             const state = get(store);
             expect(state.colors.get(DATASET_A)?.data).toEqual(NEW_COLORS);
-            expect(toastStore.success).toHaveBeenCalledWith("Colors saved", "Color data was saved successfully.");
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Colors saved",
+                "Color data was saved successfully.",
+            );
         });
 
         test("returns error and does not update store when API fails", async () => {
             const error = new Error("Failed to save");
-            vi.mocked(api.updateCrossProfileColors).mockResolvedValue({ data: undefined, error });
+            vi.mocked(api.updateCrossProfileColors).mockResolvedValue({
+                data: undefined,
+                error,
+            });
 
             // Seed store with initial data
-            vi.mocked(api.getCrossProfileColors).mockResolvedValue({ data: MOCK_COLORS, error: undefined });
+            vi.mocked(api.getCrossProfileColors).mockResolvedValue({
+                data: MOCK_COLORS,
+                error: undefined,
+            });
             await store.getColors(DATASET_A);
 
             const result = await store.saveColors(DATASET_A, NEW_COLORS);
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Save failed", "Could not save color data.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Save failed",
+                "Could not save color data.",
+            );
 
             // Store should still have the old data
             const state = get(store);
@@ -259,7 +289,10 @@ describe("crossProfileStore", () => {
             expect(api.getCrossProfileRenderingData).not.toHaveBeenCalled();
         });
         test("returns API data directly without caching", async () => {
-            vi.mocked(api.getCrossProfileRenderingData).mockResolvedValue({ data: MOCK_RENDERING_DATA, error: undefined });
+            vi.mocked(api.getCrossProfileRenderingData).mockResolvedValue({
+                data: MOCK_RENDERING_DATA,
+                error: undefined,
+            });
 
             const result = await store.fetchRenderingData(DATASET_A);
 
@@ -275,7 +308,10 @@ describe("crossProfileStore", () => {
 
         test("returns error on failure", async () => {
             const error = new Error("Rendering data failed");
-            vi.mocked(api.getCrossProfileRenderingData).mockResolvedValue({ data: undefined, error });
+            vi.mocked(api.getCrossProfileRenderingData).mockResolvedValue({
+                data: undefined,
+                error,
+            });
 
             const result = await store.fetchRenderingData(DATASET_A);
 

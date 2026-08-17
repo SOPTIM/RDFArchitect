@@ -17,11 +17,8 @@
 
 <script>
     import ModifyDataDialog from "$lib/dialog/ModifyDataDialog.svelte";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { graphColors } from "$lib/graphColors.svelte.js";
     import { URI } from "$lib/models/dto/index.ts";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { crossProfileStore } from "$lib/stores/CrossProfileStore.ts";
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { normalizeHex } from "$lib/utils/color.js";
 
@@ -58,37 +55,14 @@
         originalJson = "";
     }
 
-    async function loadColors() {
-        const { error, data } =
-            await crossProfileStore.fetchColors(datasetName);
-        if (error) {
-            return;
-        }
-
-        const map = data.graphColors ?? {};
-        colorEntries = Object.entries(map).map(([graphURI, color]) => ({
-            graphURI,
-            color,
-        }));
-        snapshotOriginal();
-    }
-
     async function saveColors() {
         const graphColorMap = Object.fromEntries(
             colorEntries.map(entry => [entry.graphURI, entry.color]),
         );
         const saved = await graphColors.replaceAll(datasetName, graphColorMap);
         if (!saved) {
-            toastStore.error(
-                "Save failed",
-                `Could not save color data for "${datasetName}".`,
-            );
             return;
         }
-        toastStore.success(
-            "Colors saved",
-            `Color settings updated for "${datasetName}".`,
-        );
         snapshotOriginal();
     }
 

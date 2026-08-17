@@ -21,7 +21,10 @@ import { packageStore } from "$lib/stores/PackageStore.ts";
 import { getPackageId } from "../packageNavigationUtils.svelte.js";
 
 export async function createPackageListForGraph(datasetName, graphURI) {
-    const packageData = await packageStore.getPackages(datasetName, graphURI) ?? { internal: [], external: [] };
+    const packageData = (await packageStore.getPackages(
+        datasetName,
+        graphURI,
+    )) ?? { internal: [], external: [] };
 
     return [...packageData.internal, ...packageData.external]
         .map(pack => {

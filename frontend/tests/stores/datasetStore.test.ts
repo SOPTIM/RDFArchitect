@@ -18,7 +18,6 @@
 import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-
 import * as api from "../../src/lib/api/generated";
 import { CimPrefixPair } from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
@@ -41,7 +40,11 @@ const DATASET_B = {
 };
 
 /** Raw shape returned by the backend */
-function makeApiDataset(label: string, readOnly = false, prefixes: CimPrefixPair[] = []) {
+function makeApiDataset(
+    label: string,
+    readOnly = false,
+    prefixes: CimPrefixPair[] = [],
+) {
     return { name: label, readOnly, prefixes };
 }
 
@@ -49,8 +52,13 @@ function makeApiDataset(label: string, readOnly = false, prefixes: CimPrefixPair
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockListDatasetsSuccess(...datasets: ReturnType<typeof makeApiDataset>[]) {
-    vi.mocked(api.listDatasets).mockResolvedValue({ data: datasets, error: undefined });
+function mockListDatasetsSuccess(
+    ...datasets: ReturnType<typeof makeApiDataset>[]
+) {
+    vi.mocked(api.listDatasets).mockResolvedValue({
+        data: datasets,
+        error: undefined,
+    });
 }
 
 function mockListDatasetsError(error = new Error("network error")) {

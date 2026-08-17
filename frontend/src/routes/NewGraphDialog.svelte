@@ -77,7 +77,7 @@
             lockedDatasetName ?? editorState.selectedDataset.getValue() ?? "";
         graphUriUserInput = "";
 
-        const datasets = await datasetStore.getDatasets() ?? [];
+        const datasets = (await datasetStore.getDatasets()) ?? [];
         readOnlyDatasets = [];
         modifiableDatasets = [];
         for (const dataset of datasets) {

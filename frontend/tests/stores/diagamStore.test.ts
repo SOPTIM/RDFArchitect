@@ -42,7 +42,7 @@ const MOCK_GRAPH_DIAGRAMS: CustomDiagramDto[] = [
     { diagramId: "diag-3", name: "Graph Diagram 1" } as CustomDiagramDto,
 ];
 
-const MOCK_DIAGRAM_BODY = { diagramId: "diag-4", name: "New Diagram",};
+const MOCK_DIAGRAM_BODY = { diagramId: "diag-4", name: "New Diagram" };
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -131,8 +131,14 @@ describe("customDiagramStore", () => {
 
         test("caches are independent for different datasets", async () => {
             vi.mocked(api.getCustomDatasetDiagramList)
-                .mockResolvedValueOnce({ data: MOCK_DATASET_DIAGRAMS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_DATASET_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                });
 
             const resultA = await store.getDatasetDiagrams(DATASET_A);
             const resultB = await store.getDatasetDiagrams(DATASET_B);
@@ -178,11 +184,23 @@ describe("customDiagramStore", () => {
 
         test("treats different graphURIs under the same dataset as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_DATASET_DIAGRAMS, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_DATASET_DIAGRAMS,
+                    error: undefined,
+                });
 
-            const result1 = await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            const result2 = await store.getGraphDiagrams(DATASET_A, GRAPH_URI_2);
+            const result1 = await store.getGraphDiagrams(
+                DATASET_A,
+                GRAPH_URI_1,
+            );
+            const result2 = await store.getGraphDiagrams(
+                DATASET_A,
+                GRAPH_URI_2,
+            );
 
             expect(result1).toEqual(MOCK_GRAPH_DIAGRAMS);
             expect(result2).toEqual(MOCK_DATASET_DIAGRAMS);
@@ -191,8 +209,14 @@ describe("customDiagramStore", () => {
 
         test("treats same graphURI under different datasets as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_DATASET_DIAGRAMS, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_DATASET_DIAGRAMS,
+                    error: undefined,
+                });
 
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
             await store.getGraphDiagrams(DATASET_B, GRAPH_URI_1);
@@ -237,7 +261,11 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.saveDatasetDiagram(DATASET_A, DIAGRAM_ID, MOCK_DIAGRAM_BODY);
+            const result = await store.saveDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
 
             expect(result.error).toBeNull();
             expect(api.replaceCustomDatasetDiagram).toHaveBeenCalledWith({
@@ -248,7 +276,10 @@ describe("customDiagramStore", () => {
             const state = get(store);
             expect(state.datasetLists.has(DATASET_A)).toBe(true);
 
-            expect(toastStore.success).toHaveBeenCalledWith("Diagram saved", "Dataset diagram was saved.");
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram saved",
+                "Dataset diagram was saved.",
+            );
         });
 
         test("returns error and does not invalidate cache on API failure", async () => {
@@ -264,10 +295,17 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.saveDatasetDiagram(DATASET_A, DIAGRAM_ID, MOCK_DIAGRAM_BODY);
+            const result = await store.saveDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Save failed", "Could not save dataset diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Save failed",
+                "Could not save dataset diagram.",
+            );
 
             // Cache should remain intact
             const state = get(store);
@@ -289,18 +327,32 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.saveGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID, MOCK_DIAGRAM_BODY);
+            const result = await store.saveGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
 
             expect(result.error).toBeNull();
             expect(api.replaceCustomGraphDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI_1, diagramId: DIAGRAM_ID },
+                path: {
+                    datasetName: DATASET_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
                 body: MOCK_DIAGRAM_BODY,
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
 
-            expect(toastStore.success).toHaveBeenCalledWith("Diagram saved", "Graph diagram was saved.");
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram saved",
+                "Graph diagram was saved.",
+            );
         });
 
         test("returns error and does not invalidate cache on API failure", async () => {
@@ -315,13 +367,23 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.saveGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID, MOCK_DIAGRAM_BODY);
+            const result = await store.saveGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                MOCK_DIAGRAM_BODY,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Save failed", "Could not save graph diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Save failed",
+                "Could not save graph diagram.",
+            );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
         });
     });
 
@@ -338,7 +400,10 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.deleteDatasetDiagram(DATASET_A, DIAGRAM_ID);
+            const result = await store.deleteDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+            );
 
             expect(result.error).toBeNull();
             expect(api.deleteCustomDatasetDiagram).toHaveBeenCalledWith({
@@ -348,7 +413,10 @@ describe("customDiagramStore", () => {
             const state = get(store);
             expect(state.datasetLists.has(DATASET_A)).toBe(true);
 
-            expect(toastStore.success).toHaveBeenCalledWith("Diagram deleted", "Dataset diagram was removed.");
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram deleted",
+                "Dataset diagram was removed.",
+            );
         });
 
         test("returns error and preserves cache on API failure", async () => {
@@ -363,10 +431,16 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.deleteDatasetDiagram(DATASET_A, DIAGRAM_ID);
+            const result = await store.deleteDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Delete failed", "Could not delete dataset diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Delete failed",
+                "Could not delete dataset diagram.",
+            );
 
             const state = get(store);
             expect(state.datasetLists.has(DATASET_A)).toBe(true);
@@ -386,17 +460,30 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.deleteGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID);
+            const result = await store.deleteGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+            );
 
             expect(result.error).toBeNull();
             expect(api.deleteCustomGraphDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI_1, diagramId: DIAGRAM_ID },
+                path: {
+                    datasetName: DATASET_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
 
-            expect(toastStore.success).toHaveBeenCalledWith("Diagram deleted", "Graph diagram was removed.");
+            expect(toastStore.success).toHaveBeenCalledWith(
+                "Diagram deleted",
+                "Graph diagram was removed.",
+            );
         });
 
         test("returns error and preserves cache on API failure", async () => {
@@ -411,13 +498,22 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.deleteGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID);
+            const result = await store.deleteGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Delete failed", "Could not delete graph diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Delete failed",
+                "Could not delete graph diagram.",
+            );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
         });
     });
 
@@ -436,7 +532,11 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.addClassesToDatasetDiagram(DATASET_A, DIAGRAM_ID, CLASSES);
+            const result = await store.addClassesToDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(result.error).toBeNull();
             expect(api.addToCustomDatasetDiagram).toHaveBeenCalledWith({
@@ -454,7 +554,11 @@ describe("customDiagramStore", () => {
                 error: undefined,
             });
 
-            await store.addClassesToDatasetDiagram(DATASET_A, DIAGRAM_ID, CLASSES);
+            await store.addClassesToDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(toastStore.success).not.toHaveBeenCalled();
         });
@@ -471,10 +575,17 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.addClassesToDatasetDiagram(DATASET_A, DIAGRAM_ID, CLASSES);
+            const result = await store.addClassesToDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Update failed", "Could not add classes to diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Update failed",
+                "Could not add classes to diagram.",
+            );
 
             const state = get(store);
             expect(state.datasetLists.has(DATASET_A)).toBe(true);
@@ -496,16 +607,27 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.addClassesToGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID, CLASSES);
+            const result = await store.addClassesToGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(result.error).toBeNull();
             expect(api.addToCustomGraphDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI_1, diagramId: DIAGRAM_ID },
+                path: {
+                    datasetName: DATASET_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
                 body: CLASSES,
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(false);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
         });
 
         test("does not show a success toast on success", async () => {
@@ -514,7 +636,12 @@ describe("customDiagramStore", () => {
                 error: undefined,
             });
 
-            await store.addClassesToGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID, CLASSES);
+            await store.addClassesToGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(toastStore.success).not.toHaveBeenCalled();
         });
@@ -531,13 +658,23 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.addClassesToGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID, CLASSES);
+            const result = await store.addClassesToGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Update failed", "Could not add classes to diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Update failed",
+                "Could not add classes to diagram.",
+            );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
         });
     });
 
@@ -556,7 +693,11 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.removeClassesFromDatasetDiagram(DATASET_A, DIAGRAM_ID, CLASS_IDS);
+            const result = await store.removeClassesFromDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                CLASS_IDS,
+            );
 
             expect(result.error).toBeNull();
             expect(api.removeFromCustomDatasetDiagram).toHaveBeenCalledWith({
@@ -580,7 +721,11 @@ describe("customDiagramStore", () => {
             });
             await store.getDatasetDiagrams(DATASET_A);
 
-            const result = await store.removeClassesFromDatasetDiagram(DATASET_A, DIAGRAM_ID, CLASS_IDS);
+            const result = await store.removeClassesFromDatasetDiagram(
+                DATASET_A,
+                DIAGRAM_ID,
+                CLASS_IDS,
+            );
 
             expect(result.error).toBe(error);
 
@@ -613,12 +758,18 @@ describe("customDiagramStore", () => {
 
             expect(result.error).toBeNull();
             expect(api.removeFromDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI_1, diagramId: DIAGRAM_ID },
+                path: {
+                    datasetName: DATASET_A,
+                    graphURI: GRAPH_URI_1,
+                    diagramId: DIAGRAM_ID,
+                },
                 body: CLASSES,
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(false);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
         });
 
         test("returns error and preserves cache on API failure", async () => {
@@ -633,13 +784,23 @@ describe("customDiagramStore", () => {
             });
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
 
-            const result = await store.removeClassesFromGraphDiagram(DATASET_A, GRAPH_URI_1, DIAGRAM_ID, CLASSES);
+            const result = await store.removeClassesFromGraphDiagram(
+                DATASET_A,
+                GRAPH_URI_1,
+                DIAGRAM_ID,
+                CLASSES,
+            );
 
             expect(result.error).toBe(error);
-            expect(toastStore.error).toHaveBeenCalledWith("Update failed", "Could not remove class from diagram.");
+            expect(toastStore.error).toHaveBeenCalledWith(
+                "Update failed",
+                "Could not remove class from diagram.",
+            );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
         });
     });
 
@@ -669,17 +830,33 @@ describe("customDiagramStore", () => {
             store.invalidateDataset(DATASET_A);
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(false);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_2}`)).toBe(false);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_2}`)).toBe(
+                false,
+            );
         });
 
         test("does not affect other datasets or their graph lists", async () => {
             vi.mocked(api.getCustomDatasetDiagramList)
-                .mockResolvedValueOnce({ data: MOCK_DATASET_DIAGRAMS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_DATASET_DIAGRAMS, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_DATASET_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_DATASET_DIAGRAMS,
+                    error: undefined,
+                });
             vi.mocked(api.getCustomGraphDiagramList)
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                });
 
             await store.getDatasetDiagrams(DATASET_A);
             await store.getDatasetDiagrams(DATASET_B);
@@ -691,8 +868,12 @@ describe("customDiagramStore", () => {
             const state = get(store);
             expect(state.datasetLists.has(DATASET_A)).toBe(false);
             expect(state.datasetLists.has(DATASET_B)).toBe(true);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(false);
-            expect(state.graphLists.has(`${DATASET_B}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+            expect(state.graphLists.has(`${DATASET_B}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
         });
 
         test("does not incorrectly match a dataset whose name is a prefix of another", async () => {
@@ -707,7 +888,9 @@ describe("customDiagramStore", () => {
             store.invalidateDataset(SHORT_DATASET);
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                true,
+            );
         });
     });
 
@@ -715,8 +898,14 @@ describe("customDiagramStore", () => {
     describe("invalidateGraph", () => {
         test("removes only the specific graph list entry", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined })
-                .mockResolvedValueOnce({ data: MOCK_GRAPH_DIAGRAMS, error: undefined });
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                })
+                .mockResolvedValueOnce({
+                    data: MOCK_GRAPH_DIAGRAMS,
+                    error: undefined,
+                });
 
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
             await store.getGraphDiagrams(DATASET_A, GRAPH_URI_2);
@@ -724,8 +913,12 @@ describe("customDiagramStore", () => {
             store.invalidateGraph(DATASET_A, GRAPH_URI_1);
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(false);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_2}`)).toBe(true);
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+                false,
+            );
+            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_2}`)).toBe(
+                true,
+            );
         });
 
         test("does not affect the dataset list cache", async () => {

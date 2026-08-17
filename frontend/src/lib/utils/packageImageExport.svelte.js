@@ -57,11 +57,11 @@ function displayFilenameOf(packageUUID, label, fileEnding) {
 }
 
 async function getAllPackages(datasetName, graphURI) {
-    const res = await packageStore.getPackages(datasetName, graphURI) ?? { internal: [], external: [] };
-    return [
-        ...(res.internal ?? []),
-        ...(res.external ?? []),
-    ];
+    const res = (await packageStore.getPackages(datasetName, graphURI)) ?? {
+        internal: [],
+        external: [],
+    };
+    return [...(res.internal ?? []), ...(res.external ?? [])];
 }
 
 async function getPackageDiagram(datasetName, graphURI, packageUUID, signal) {

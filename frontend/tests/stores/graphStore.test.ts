@@ -135,7 +135,10 @@ describe("graphStore", () => {
         test("caches are independent for different datasets", async () => {
             vi.mocked(api.listGraphs)
                 .mockResolvedValueOnce({ data: MOCK_GRAPHS, error: undefined })
-                .mockResolvedValueOnce({ data: [makeGraphDto(GRAPH_URI_2)], error: undefined });
+                .mockResolvedValueOnce({
+                    data: [makeGraphDto(GRAPH_URI_2)],
+                    error: undefined,
+                });
 
             const resultA = await store.getGraphs(DATASET_A);
             const resultB = await store.getGraphs(DATASET_B);
@@ -236,7 +239,11 @@ describe("graphStore", () => {
             });
             await store.getGraphs(DATASET_A);
 
-            const result = await store.importGraphs(DATASET_A, [MOCK_FILE], [GRAPH_URI]);
+            const result = await store.importGraphs(
+                DATASET_A,
+                [MOCK_FILE],
+                [GRAPH_URI],
+            );
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
@@ -303,8 +310,20 @@ describe("graphStore", () => {
             const state = get(store);
             const cached = state.graphs.get(DATASET_A)?.data;
             expect(cached).toBeDefined();
-            expect(cached?.some(g => `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}` === GRAPH_URI)).toBe(false);
-            expect(cached?.some(g => `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}` === GRAPH_URI_2)).toBe(true);
+            expect(
+                cached?.some(
+                    g =>
+                        `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}` ===
+                        GRAPH_URI,
+                ),
+            ).toBe(false);
+            expect(
+                cached?.some(
+                    g =>
+                        `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}` ===
+                        GRAPH_URI_2,
+                ),
+            ).toBe(true);
         });
 
         test("keeps the cache populated after removal (does not invalidate)", async () => {

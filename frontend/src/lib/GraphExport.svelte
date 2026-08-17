@@ -80,7 +80,7 @@
                 selectedDatasetName,
                 graphURI,
             );
-            if (result == null) {
+            if (result == null || result === undefined) {
                 ontology = null;
                 return;
             }

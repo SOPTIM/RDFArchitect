@@ -26,7 +26,6 @@
     import { onMount, onDestroy } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getCrossProfileDiagram } from "$lib/api/apiDatasetUtils.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import {
@@ -118,50 +117,47 @@
                 found = classes.find(c => c.uuid === classUuid) ?? null;
             }
 
-                if (!found) {
-                    found =
-                        classes.find(c =>
-                            c.sources?.some(s => s.classUUID === classUuid),
-                        ) ?? null;
-                }
+            if (!found) {
+                found =
+                    classes.find(c =>
+                        c.sources?.some(s => s.classUUID === classUuid),
+                    ) ?? null;
+            }
 
-                mergedClass = found;
+            mergedClass = found;
 
-                if (found) {
-                    const originGraph =
-                        graphUri ??
-                        editorState.mergedViewOriginGraph.getValue();
-                    if (!graphUri) {
-                        editorState.mergedViewOriginGraph.updateValue(null);
-                    }
-                    const originSource = originGraph
-                        ? found.sources?.find(
-                              s =>
-                                  s.graph?.uri &&
-                                  new URI(s.graph.uri).toString() ===
-                                      String(originGraph),
-                          )
-                        : null;
-                    const hasSaved = found.sources?.some(
-                        s => s.classUUID === savedSourceUuid,
-                    );
-                    activeSourceUuid = hasSaved
-                        ? savedSourceUuid
-                        : (originSource?.classUUID ??
-                          found.sources?.[0]?.classUUID ??
-                          null);
+            if (found) {
+                const originGraph =
+                    graphUri ?? editorState.mergedViewOriginGraph.getValue();
+                if (!graphUri) {
+                    editorState.mergedViewOriginGraph.updateValue(null);
                 }
+                const originSource = originGraph
+                    ? found.sources?.find(
+                          s =>
+                              s.graph?.uri &&
+                              new URI(s.graph.uri).toString() ===
+                                  String(originGraph),
+                      )
+                    : null;
+                const hasSaved = found.sources?.some(
+                    s => s.classUUID === savedSourceUuid,
+                );
+                activeSourceUuid = hasSaved
+                    ? savedSourceUuid
+                    : (originSource?.classUUID ??
+                      found.sources?.[0]?.classUUID ??
+                      null);
+            }
 
-                if (found && found.uuid !== classUuid && !graphUri) {
-                    editorState.selectedClass.updateValue({
-                        type: ClassType.MERGED_CLASS,
-                        id: found.uuid,
-                    });
-                }
-            })
-            .finally(() => {
-                if (!cancellation.cancelled) resolving = false;
-            });
+            if (found && found.uuid !== classUuid && !graphUri) {
+                editorState.selectedClass.updateValue({
+                    type: ClassType.MERGED_CLASS,
+                    id: found.uuid,
+                });
+            }
+        })();
+        if (!cancellation.cancelled) resolving = false;
 
         return () => {
             cancellation.cancelled = true;

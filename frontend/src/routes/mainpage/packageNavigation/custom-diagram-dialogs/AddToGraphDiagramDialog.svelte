@@ -70,12 +70,12 @@
     );
 
     async function getCustomDiagrams() {
-        existingDiagrams = await customDiagramStore.getGraphDiagrams(
-            lockedDatasetName,
-            lockedGraphUri,
-        ) ?? [];
+        existingDiagrams =
+            (await customDiagramStore.getGraphDiagrams(
+                lockedDatasetName,
+                lockedGraphUri,
+            )) ?? [];
         diagramsLoaded = true;
-
     }
 
     function takesAnyClass(diagram) {

@@ -22,7 +22,7 @@
         getCustomShaclNamespacesAsString,
         getGeneratedShaclNamespacesAsString,
         replaceAssociationShacl,
-        replaceAttributeShacl
+        replaceAttributeShacl,
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -214,10 +214,7 @@
             }
 
             if (res.error) {
-                console.warn(
-                    "Failed to save custom SHACL:",
-                    res.error,
-                );
+                console.warn("Failed to save custom SHACL:", res.error);
                 toastStore.error(
                     "Save failed",
                     "Could not save property constraints.",

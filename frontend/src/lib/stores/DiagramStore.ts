@@ -19,7 +19,11 @@ import { writable } from "svelte/store";
 
 import { loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { type AsyncListSlot, createEmptyListSlot, type Result } from "./storeTypes";
+import {
+    type AsyncListSlot,
+    createEmptyListSlot,
+    type Result,
+} from "./storeTypes";
 import {
     getCustomDatasetDiagramList,
     getCustomGraphDiagramList,
@@ -59,7 +63,10 @@ function createCustomDiagramStore() {
         state: StoreState,
         datasetName: string,
     ): AsyncListSlot<CustomDiagramDto> {
-        return state.datasetLists.get(datasetName) ?? createEmptyListSlot<CustomDiagramDto>();
+        return (
+            state.datasetLists.get(datasetName) ??
+            createEmptyListSlot<CustomDiagramDto>()
+        );
     }
 
     function getGraphListState(
@@ -152,11 +159,14 @@ function createCustomDiagramStore() {
             if (!existing?.data) return s;
 
             const datasetLists = new Map(s.datasetLists);
+            const isNew = !existing.data.some(d => d.diagramId === diagramId);
             datasetLists.set(datasetName, {
                 ...existing,
-                data: existing.data.map(d =>
-                    d.diagramId === diagramId ? diagram : d,
-                ),
+                data: isNew
+                    ? [...existing.data, diagram]
+                    : existing.data.map(d =>
+                          d.diagramId === diagramId ? diagram : d,
+                      ),
             });
             return { ...s, datasetLists };
         });
@@ -191,11 +201,14 @@ function createCustomDiagramStore() {
             if (!existing?.data) return s;
 
             const graphLists = new Map(s.graphLists);
+            const isNew = !existing.data.some(d => d.diagramId === diagramId);
             graphLists.set(key, {
                 ...existing,
-                data: existing.data.map(d =>
-                    d.diagramId === diagramId ? diagram : d,
-                ),
+                data: isNew
+                    ? [...existing.data, diagram]
+                    : existing.data.map(d =>
+                          d.diagramId === diagramId ? diagram : d,
+                      ),
             });
             return { ...s, graphLists };
         });

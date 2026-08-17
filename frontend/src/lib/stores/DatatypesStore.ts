@@ -188,7 +188,7 @@ function createVocabStore() {
         datasetName: string,
         graphURI: string,
         force = false,
-    ): Promise<Uri[] | null> {
+    ): Promise<ClassUmlAdaptedDto[] | null> {
         return loadSlot(
             datasetName,
             graphURI,

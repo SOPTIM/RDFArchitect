@@ -25,7 +25,6 @@
         getCustomProfileViewRenderingData,
         getRenderingDataParameterized,
     } from "$lib/api/generated/index.ts";
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
@@ -65,7 +64,9 @@
         forceReloadTrigger.subscribe();
         editorState.selectedDataset.subscribe();
         const dataset = editorState.selectedDataset.getValue();
-        isDatasetReadOnly = dataset ? await datasetStore.isReadOnly(dataset) : false;
+        isDatasetReadOnly = dataset
+            ? await datasetStore.isReadOnly(dataset)
+            : false;
     });
 
     $effect(async () => {

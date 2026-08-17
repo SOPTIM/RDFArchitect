@@ -148,7 +148,10 @@ function upsertAssociationPair(
 }
 
 function createClassStore() {
-    const store = writable<ClassesState>({ byGraph: new Map(), pendingDetails: new Map() });
+    const store = writable<ClassesState>({
+        byGraph: new Map(),
+        pendingDetails: new Map(),
+    });
     const { subscribe, update } = store;
 
     function getGraphState(
