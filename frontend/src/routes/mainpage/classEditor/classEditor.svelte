@@ -121,6 +121,9 @@
         const cancellation = { cancelled: false };
         loadingContext = true;
         loadingClass = true;
+        // Clearing this up front keeps the panel of the previously opened class from showing
+        // through the loading overlay while the newly selected one is fetched.
+        externalClass = null;
         (async () => {
             let res = await bec.getClassInfo(
                 datasetName,
@@ -167,7 +170,6 @@
                 loadingClass = false;
                 return;
             }
-            externalClass = null;
             await loadContext(cancellation);
             await loadReactiveClass(cancellation, classData);
         })();

@@ -83,7 +83,8 @@ public class UpdateClassLayoutService
                             existingDiagramObject,
                             packageUUID,
                             classLayoutPosition.getXPosition(),
-                            classLayoutPosition.getYPosition());
+                            classLayoutPosition.getYPosition(),
+                            null);
                     ctx.commit();
                 }
                 return;
@@ -100,12 +101,18 @@ public class UpdateClassLayoutService
         }
     }
 
+    /**
+     * Moves the point of an existing diagram object.
+     *
+     * @param zPosition the stacking order to apply, or {@code null} to keep the current one.
+     */
     private void moveDiagramObject(
             Model diagramLayoutModel,
             DiagramObject diagramObject,
             UUID diagramUUID,
             float xPosition,
-            float yPosition) {
+            float yPosition,
+            Integer zPosition) {
         var diagramObjectPoint =
                 DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
         if (diagramObjectPoint == null) {
@@ -115,7 +122,10 @@ public class UpdateClassLayoutService
         }
         DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
         diagramObjectPoint.setPosition(
-                new XYZPosition(xPosition, yPosition, diagramObjectPoint.getPosition().getZ()));
+                new XYZPosition(
+                        xPosition,
+                        yPosition,
+                        zPosition != null ? zPosition : diagramObjectPoint.getPosition().getZ()));
         DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
     }
 
@@ -158,16 +168,13 @@ public class UpdateClassLayoutService
                             classPositionDTO.getYPosition());
                     continue;
                 }
-                var diagramObjectPoint =
-                        DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
-                DLUpdates.deleteDiagramObjectPoint(
-                        diagramLayoutModel, diagramObjectPoint.getMRID());
-                diagramObjectPoint.setPosition(
-                        new XYZPosition(
-                                classPositionDTO.getXPosition(),
-                                classPositionDTO.getYPosition(),
-                                classPositionDTO.getZPosition()));
-                DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+                moveDiagramObject(
+                        diagramLayoutModel,
+                        diagramObject,
+                        resolvedPackageUUID,
+                        classPositionDTO.getXPosition(),
+                        classPositionDTO.getYPosition(),
+                        classPositionDTO.getZPosition());
             }
 
             ctx.commit();
@@ -202,15 +209,13 @@ public class UpdateClassLayoutService
                         classPositionDTO.getYPosition());
                 continue;
             }
-            var diagramObjectPoint =
-                    DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, diagramObject.getMRID());
-            DLUpdates.deleteDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint.getMRID());
-            diagramObjectPoint.setPosition(
-                    new XYZPosition(
-                            classPositionDTO.getXPosition(),
-                            classPositionDTO.getYPosition(),
-                            classPositionDTO.getZPosition()));
-            DLUpdates.insertDiagramObjectPoint(diagramLayoutModel, diagramObjectPoint);
+            moveDiagramObject(
+                    diagramLayoutModel,
+                    diagramObject,
+                    diagramUUID,
+                    classPositionDTO.getXPosition(),
+                    classPositionDTO.getYPosition(),
+                    classPositionDTO.getZPosition());
         }
     }
 
