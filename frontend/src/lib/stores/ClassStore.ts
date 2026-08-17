@@ -17,9 +17,9 @@
 
 import { writable, get } from "svelte/store";
 
-import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
+import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncSlot, createEmptySlot, Result } from "./storeTypes";
+import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     // class list & details
     getClassList,
@@ -40,15 +40,15 @@ import {
     createEnumEntry,
     replaceEnumEntry,
     // types
-    AddNewClassRequest,
-    AssociationPairDto,
-    AttributeDto,
-    ClassDto,
-    ClassUmlAdaptedDto,
-    EnumEntryDto,
-    AssociationUuids,
-    PasteClassesRequestDto,
-    CopyClassResponseDto,
+    type AddNewClassRequest,
+    type AssociationPairDto,
+    type AttributeDto,
+    type ClassDto,
+    type ClassUmlAdaptedDto,
+    type EnumEntryDto,
+    type AssociationUuids,
+    type PasteClassesRequestDto,
+    type CopyClassResponseDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -59,6 +59,8 @@ type Variant = "all" | "internalOnly";
 
 type VariantState = AsyncSlot<ClassUmlAdaptedDto[]>;
 
+type ClassDtoWithMetadata = ClassUmlAdaptedDto & { _detailsLoaded?: true };
+
 type GraphClassState = {
     all: VariantState;
     internalOnly: VariantState;
@@ -66,6 +68,7 @@ type GraphClassState = {
 
 type ClassesState = {
     byGraph: Map<GraphKey, GraphClassState>;
+    pendingDetails: Map<string, Promise<ClassUmlAdaptedDto | null>>;
 };
 
 const LOG_PREFIX = "[classStore]";
@@ -87,14 +90,9 @@ function getId(c: ClassUmlAdaptedDto): string | undefined {
 
 // The list endpoint returns classes without details: `attributes`,
 // `enumEntries` and `associationPairs` are omitted. The detail endpoint fills
-// them. Treat the presence of any array as "details are loaded".
+// them and sets the detailsLoaded flag.
 function hasDetails(c: ClassUmlAdaptedDto | null | undefined): boolean {
-    if (!c) return false;
-    return (
-        Array.isArray(c.attributes) ||
-        Array.isArray(c.enumEntries) ||
-        Array.isArray(c.associationPairs)
-    );
+    return !!(c as ClassDtoWithMetadata)?._detailsLoaded;
 }
 
 function findInVariant(
@@ -150,7 +148,7 @@ function upsertAssociationPair(
 }
 
 function createClassStore() {
-    const store = writable<ClassesState>({ byGraph: new Map() });
+    const store = writable<ClassesState>({ byGraph: new Map(), pendingDetails: new Map() });
     const { subscribe, update } = store;
 
     function getGraphState(
@@ -246,12 +244,12 @@ function createClassStore() {
         datasetName: string,
         graphURI: string,
         classUUID: string,
-        includeSuperClasses = false,
         force = false,
     ): Promise<ClassUmlAdaptedDto | null> {
         if (!datasetName || !graphURI || !classUUID) return null;
 
         const key = makeGraphKey(datasetName, graphURI);
+        const pendingKey = `${key}::${classUUID}`;
 
         if (!force) {
             const current = getGraphState(get(store), key);
@@ -259,53 +257,76 @@ function createClassStore() {
                 findInVariant(current.all.data, classUUID) ??
                 findInVariant(current.internalOnly.data, classUUID);
             if (hasDetails(existing)) return existing ?? null;
+
+            const running = get(store).pendingDetails.get(pendingKey);
+            if (running) return running;
         }
 
         console.log(
             `${LOG_PREFIX} Loading class details for classUUID="${classUUID}" in dataset="${datasetName}", graph="${graphURI}"`,
         );
 
-        const { data, error } = await getClassInformation({
-            path: { datasetName, graphURI, classUUID },
-            query: { includeSuperClasses },
-        });
+        const promise = (async (): Promise<ClassUmlAdaptedDto | null> => {
+            const { data, error } = await getClassInformation({
+                path: { datasetName, graphURI, classUUID },
+                query: { includeSuperClasses: true },
+            });
 
-        if (error || !data) {
-            if (error) {
-                console.error(
-                    `${LOG_PREFIX} Failed to load class details for classUUID="${classUUID}"`,
-                    await describeError(error),
-                );
-            } else {
-                console.error(
-                    `${LOG_PREFIX} Class details response was empty for classUUID="${classUUID}"`,
-                );
+            update(s => {
+                const pendingDetails = new Map(s.pendingDetails);
+                pendingDetails.delete(pendingKey);
+                return { ...s, pendingDetails };
+            });
+
+            if (error || !data) {
+                if (error) {
+                    console.error(
+                        `${LOG_PREFIX} Failed to load class details for classUUID="${classUUID}"`,
+                        await describeError(error),
+                    );
+                } else {
+                    console.error(
+                        `${LOG_PREFIX} Class details response was empty for classUUID="${classUUID}"`,
+                    );
+                }
+                return null;
             }
-            return null;
-        }
+
+            const enriched: ClassDtoWithMetadata = {
+                ...data,
+                _detailsLoaded: true,
+            };
+            update(s => {
+                const current = getGraphState(s, key);
+                const mergeInto = (variant: VariantState): VariantState => {
+                    if (!variant.data) return variant;
+                    return {
+                        ...variant,
+                        data: upsertClass(variant.data, enriched),
+                        fetchedAt: Date.now(),
+                        error: null,
+                    };
+                };
+                return setGraphState(s, key, {
+                    all: mergeInto(current.all),
+                    internalOnly: mergeInto(current.internalOnly),
+                });
+            });
+
+            console.log(
+                `${LOG_PREFIX} Loaded class details for classUUID="${classUUID}"`,
+            );
+
+            return enriched;
+        })();
 
         update(s => {
-            const current = getGraphState(s, key);
-            const mergeInto = (variant: VariantState): VariantState => {
-                if (!variant.data) return variant;
-                return {
-                    ...variant,
-                    data: upsertClass(variant.data, data),
-                    fetchedAt: Date.now(),
-                    error: null,
-                };
-            };
-            return setGraphState(s, key, {
-                all: mergeInto(current.all),
-                internalOnly: mergeInto(current.internalOnly),
-            });
+            const pendingDetails = new Map(s.pendingDetails);
+            pendingDetails.set(pendingKey, promise);
+            return { ...s, pendingDetails };
         });
 
-        console.log(
-            `${LOG_PREFIX} Loaded class details for classUUID="${classUUID}"`,
-        );
-
-        return data;
+        return promise;
     }
 
     // =========================================================================
@@ -336,8 +357,74 @@ function createClassStore() {
 
         invalidateGraph(datasetName, graphURI);
         console.log(`${LOG_PREFIX} Created class with uuid="${data ?? ""}"`);
-        toastStore.success("Klasse erstellt", "Class successfully created.");
+        toastStore.success("Class created", "Class successfully created.");
         return { error: null, data: data ?? undefined };
+    }
+
+    async function pasteCopiedClasses(
+        datasetName: string,
+        graphURI: string,
+        request: PasteClassesRequestDto,
+    ): Promise<Result<CopyClassResponseDto[]>> {
+        const sources = request.sources ?? [];
+        const sourceCount = sources.length;
+
+        if (sourceCount === 0) {
+            console.warn(
+                `${LOG_PREFIX} pasteCopiedClasses called with no sources`,
+            );
+            return { error: null };
+        } else if (sourceCount === 1) {
+            const { classUUID } = sources[0];
+            console.log(
+                `${LOG_PREFIX} Pasting class classUUID="${classUUID}" into dataset="${datasetName}", graph="${graphURI}"`,
+            );
+        } else {
+            console.log(
+                `${LOG_PREFIX} Pasting ${sourceCount} classes into dataset="${datasetName}", graph="${graphURI}"`,
+            );
+        }
+
+        const { data, error } = await pasteClasses({
+            path: {
+                targetDatasetName: datasetName,
+                targetGraphURI: graphURI,
+            },
+            body: request,
+        });
+
+        if (error || !data) {
+            console.error(
+                sourceCount === 1
+                    ? `${LOG_PREFIX} Could not paste class classUUID="${sources[0].classUUID}"`
+                    : `${LOG_PREFIX} Could not paste ${sourceCount} classes`,
+                await describeError(error),
+            );
+            toastStore.error("Paste failed", `Could not paste classes.`);
+
+            return { error };
+        }
+
+        invalidateGraph(datasetName, graphURI);
+        if (sourceCount === 1) {
+            console.log(
+                `${LOG_PREFIX} Successfully pasted class ${data[0].name}"`,
+            );
+            toastStore.success("Class pasted", `"${data[0].name}" was pasted.`);
+        } else {
+            console.log(
+                `${LOG_PREFIX} Successfully pasted ${data.length ?? sourceCount} classes`,
+            );
+            toastStore.success(
+                "Classes pasted",
+                `${data.length} classes were pasted.`,
+            );
+        }
+
+        return {
+            error: null,
+            data: data ?? [],
+        };
     }
 
     async function replaceExistingClass(
@@ -558,13 +645,16 @@ function createClassStore() {
             return { error };
         }
 
+        const uuid = data ?? enumEntry.uuid;
+        const stored: EnumEntryDto = { ...enumEntry, uuid };
+
         const key = makeGraphKey(datasetName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
-            enumEntries: upsertByUuid(prev.enumEntries ?? [], enumEntry),
+            enumEntries: upsertByUuid(prev.enumEntries ?? [], stored),
         }));
         console.log(
-            `${LOG_PREFIX} Added enum entry to class classUUID="${classUUID}"`,
+            `${LOG_PREFIX} Added enum entry uuid="${uuid}" to class classUUID="${classUUID}"`,
         );
         toastStore.success(
             "Enum entry created",
@@ -769,11 +859,16 @@ function createClassStore() {
 
     function invalidateGraph(datasetName: string, graphURI: string) {
         const key = makeGraphKey(datasetName, graphURI);
+        const pendingPrefix = `${key}::`;
         console.log(`${LOG_PREFIX} Invalidating graph cache key="${key}"`);
         update(s => {
             const byGraph = new Map(s.byGraph);
             byGraph.delete(key);
-            return { ...s, byGraph };
+            const pendingDetails = new Map(s.pendingDetails);
+            for (const k of pendingDetails.keys()) {
+                if (k.startsWith(pendingPrefix)) pendingDetails.delete(k);
+            }
+            return { ...s, byGraph, pendingDetails };
         });
     }
 
@@ -822,60 +917,4 @@ function createClassStore() {
         invalidateDataset,
     };
 }
-
-async function pasteCopiedClasses(
-    datasetName: string,
-    graphURI: string,
-    request: PasteClassesRequestDto,
-): Promise<Result<CopyClassResponseDto[]>> {
-    const sources = request.sources ?? [];
-    const sourceCount = sources.length;
-
-    if (sourceCount === 0) {
-        console.warn(`${LOG_PREFIX} pasteCopiedClasses called with no sources`);
-        return { error: null };
-    } else if (sourceCount === 1) {
-        const { classUUID } = sources[0];
-        console.log(
-            `${LOG_PREFIX} Pasting class classUUID="${classUUID}" into dataset="${datasetName}", graph="${graphURI}"`,
-        );
-    } else {
-        console.log(
-            `${LOG_PREFIX} Pasting ${sourceCount} classes into dataset="${datasetName}", graph="${graphURI}"`,
-        );
-    }
-
-    const { data, error } = await pasteClasses({
-        path: {
-            targetDatasetName: datasetName,
-            targetGraphURI: graphURI,
-        },
-        body: request,
-    });
-
-    if (error) {
-        console.error(
-            sourceCount === 1
-                ? `${LOG_PREFIX} Could not paste class classUUID="${sources[0].classUUID}"`
-                : `${LOG_PREFIX} Could not paste ${sourceCount} classes`,
-            await describeError(error),
-        );
-
-        return { error };
-    }
-
-    if (sourceCount === 1) {
-        console.log(
-            `${LOG_PREFIX} Successfully pasted class classUUID="${sources[0].classUUID}"`,
-        );
-    } else {
-        console.log(
-            `${LOG_PREFIX} Successfully pasted ${data?.length ?? sourceCount} classes`,
-        );
-    }
-
-    return {
-        error: null,
-        data: data ?? [],
-    };
-}
+export { createClassStore };

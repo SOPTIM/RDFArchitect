@@ -70,7 +70,7 @@ export async function getDataTypes(datasetName, graphUri) {
         datatypes.push(
             new DataType({
                 prefix: primitiveDatatype.prefix,
-                label: primitiveDatatype.label,
+                label: primitiveDatatype.suffix,
                 type: DataTypeTypes.PRIMITIVE,
             }),
         );

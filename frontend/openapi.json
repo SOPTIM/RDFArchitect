@@ -495,8 +495,8 @@
             "format" : "uuid",
             "type" : "string"
           },
-          "graphUri" : {
-            "type" : "string"
+          "graph" : {
+            "$ref" : "#/components/schemas/GraphDTO"
           }
         },
         "type" : "object"
@@ -640,8 +640,23 @@
         },
         "type" : "object"
       },
-      "CustomDiagram" : {
-        "description" : "DTO for the diagram to be replaced."
+      "CustomDiagramDTO" : {
+        "properties" : {
+          "classes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ClassInDiagram"
+            },
+            "type" : "array"
+          },
+          "diagramId" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
       },
       "DataTypeDTO" : {
         "properties" : {
@@ -751,6 +766,17 @@
               "$ref" : "#/components/schemas/ImportWarning"
             },
             "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
+      "GraphDTO" : {
+        "properties" : {
+          "keyword" : {
+            "type" : "string"
+          },
+          "uri" : {
+            "$ref" : "#/components/schemas/URI"
           }
         },
         "type" : "object"
@@ -2360,7 +2386,7 @@
               "application/json" : {
                 "schema" : {
                   "items" : {
-                    "type" : "string"
+                    "$ref" : "#/components/schemas/CustomDiagramDTO"
                   },
                   "type" : "array"
                 }
@@ -2508,7 +2534,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/CustomDiagram"
+                "$ref" : "#/components/schemas/CustomDiagramDTO"
               }
             }
           },
@@ -2689,7 +2715,7 @@
               "*/*" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/URI"
+                    "$ref" : "#/components/schemas/GraphDTO"
                   },
                   "type" : "array"
                 }
@@ -2776,6 +2802,73 @@
           }
         },
         "summary" : "Replace/Insert multiple graphs",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/asciidocexport/{fileEnding}" : {
+      "get" : {
+        "description" : "Export the rdf-schema graph as asciidoc",
+        "operationId" : "getAsciiDocExport",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The file ending of the diagram files.",
+            "in" : "path",
+            "name" : "fileEnding",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "Whether the package diagram is shown in the document instead of only being linked.",
+            "in" : "query",
+            "name" : "embedDiagrams",
+            "required" : false,
+            "schema" : {
+              "default" : false,
+              "type" : "boolean"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/asciidoc" : { }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "export graph as asciidoc",
         "tags" : [
           "graph"
         ]
@@ -5043,7 +5136,7 @@
               "application/json" : {
                 "schema" : {
                   "items" : {
-                    "type" : "string"
+                    "$ref" : "#/components/schemas/CustomDiagramDTO"
                   },
                   "type" : "array"
                 }
@@ -5216,7 +5309,11 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : { }
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CustomDiagramDTO"
+              }
+            }
           },
           "required" : true
         },
@@ -5382,9 +5479,10 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/diagrams/{diagramId}/classes/{classId}" : {
-      "delete" : {
-        "operationId" : "removeFromCustomGraphDiagram",
+    "/api/datasets/{datasetName}/graphs/{graphURI}/htmlexport/{fileEnding}" : {
+      "get" : {
+        "description" : "Export the rdf-schema graph as html",
+        "operationId" : "getHTMLExport",
         "parameters" : [
           {
             "description" : "The name/url of the inquirer.",
@@ -5415,39 +5513,36 @@
             }
           },
           {
-            "description" : "The uuid of the diagram.",
+            "description" : "The file ending of the diagram files.",
             "in" : "path",
-            "name" : "diagramId",
+            "name" : "fileEnding",
             "required" : true,
             "schema" : {
               "type" : "string"
             }
           },
           {
-            "description" : "The uuid of the class to be removed from the diagram.",
-            "in" : "path",
-            "name" : "classId",
-            "required" : true,
+            "description" : "Whether the package diagram is shown in the document instead of only being linked.",
+            "in" : "query",
+            "name" : "embedDiagrams",
+            "required" : false,
             "schema" : {
-              "format" : "uuid",
-              "type" : "string"
+              "default" : false,
+              "type" : "boolean"
             }
           }
         ],
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
+              "text/html" : { }
             },
             "description" : "OK"
           }
         },
+        "summary" : "export graph as html",
         "tags" : [
-          "custom-diagram-class-rest-controller"
+          "graph"
         ]
       }
     },
@@ -6546,7 +6641,7 @@
         ],
         "requestBody" : {
           "content" : {
-            "application/json" : {
+            "multipart/form-data" : {
               "schema" : {
                 "properties" : {
                   "file" : {

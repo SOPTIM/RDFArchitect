@@ -17,15 +17,15 @@
 
 import { writable, get } from "svelte/store";
 
-import { GraphKey, makeGraphKey } from "./storeHelpers";
+import { type GraphKey, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncSlot, createEmptySlot } from "./storeTypes";
+import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 import {
     listPrimitives,
     listDatatypes,
     listStereotypes,
-    ClassUmlAdaptedDto,
-    Uri,
+    type ClassUmlAdaptedDto,
+    type Uri,
 } from "../api/generated";
 
 // =============================================================================
@@ -281,3 +281,4 @@ function createVocabStore() {
         invalidateDataset,
     };
 }
+export { createVocabStore as createDatatypesStore };

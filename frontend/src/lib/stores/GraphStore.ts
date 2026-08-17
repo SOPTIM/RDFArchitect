@@ -19,20 +19,20 @@ import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncListSlot, createEmptyListSlot, Result } from "./storeTypes";
+import { type AsyncListSlot, createEmptyListSlot, type Result } from "./storeTypes";
 import {
     listGraphs,
     deleteGraph,
-    Uri,
     replaceGraphs,
-    GraphBulkImportResponse,
     replaceGraph,
-    ImportWarning,
+    type GraphBulkImportResponse,
+    type ImportWarning,
+    type GraphDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
 type DatasetState = {
-    graphs: Map<string, AsyncListSlot<Uri>>;
+    graphs: Map<string, AsyncListSlot<GraphDto>>;
 };
 
 const LOG_PREFIX = "[graphStore]";
@@ -49,14 +49,14 @@ function createGraphStore() {
     function getDatasetState(
         state: DatasetState,
         datasetName: string,
-    ): AsyncListSlot<Uri> {
+    ): AsyncListSlot<GraphDto> {
         return state.graphs.get(datasetName) ?? createEmptyListSlot();
     }
 
     function setDatasetState(
         state: DatasetState,
         datasetName: string,
-        next: AsyncListSlot<Uri>,
+        next: AsyncListSlot<GraphDto>,
     ): DatasetState {
         const byDataset = new Map(state.graphs);
         byDataset.set(datasetName, next);
@@ -66,7 +66,7 @@ function createGraphStore() {
     async function getGraphs(
         datasetName: string,
         force = false,
-    ): Promise<Uri[] | null> {
+    ): Promise<GraphDto[] | null> {
         if (!datasetName) return null;
         return loadSlot(
             store,
@@ -213,9 +213,10 @@ function createGraphStore() {
 
         update(s => {
             const dsState = getDatasetState(s, datasetName);
+            if (!dsState) return s;
             const nextData =
                 dsState.data?.filter(g => {
-                    const uri = `${g.prefix ?? ""}${g.suffix}`;
+                    const uri = `${g.uri?.prefix ?? ""}${g.uri?.suffix ?? ""}`;
                     return uri !== graphURI;
                 }) ?? null;
 
@@ -276,3 +277,4 @@ function notifyUndisplayableProperties(warnings: ImportWarning[]) {
         } (${details}).`,
     );
 }
+export { createGraphStore };

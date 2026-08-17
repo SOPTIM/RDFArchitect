@@ -36,6 +36,7 @@ import org.rdfarchitect.services.shacl.SHACLInsertUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -72,7 +73,7 @@ public class SHACLCustomContentRestController {
             description = "Replace or insert a shacl graph stored in a file",
             tags = {"graph"},
             responses = {@ApiResponse(responseCode = "200")})
-    @PutMapping("/file")
+    @PutMapping(path = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public String replaceGraphWithFile(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(

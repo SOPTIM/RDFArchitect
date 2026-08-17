@@ -129,7 +129,7 @@
         }
 
         const result = await packageStore.getPackages(datasetName, graphURI);
-        packages = [...result.internal, ...result.external];
+        packages = result ? [...result.internal, ...result.external] : [];
     }
 
     async function getClasses(datasetName, graphURI) {

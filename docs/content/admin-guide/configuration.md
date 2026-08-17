@@ -20,11 +20,3 @@ The authoritative configuration is `backend/src/main/resources/application.yml`.
 | Diagram renderer                   | `rendering.renderer`                    | `svelteflow` (or `mermaid`)  |
 | Session cookie name                | `server.servlet.session.cookie.name`    | `RDFA_SESSION_ID`            |
 | Session cookie `secure` flag       | `server.servlet.session.cookie.secure`  | `false` (set to `true` in production) |
-
-## Frontend runtime config
-
-The frontend is a static SPA with one runtime variable, rewritten at container start by `frontend/docker-entrypoint.sh`:
-
-| Variable              | Default (Docker) | Description                                           |
-| --------------------- | ---------------- | ----------------------------------------------------- |
-| `PUBLIC_BACKEND_URL`  | `/api`           | Where the frontend expects to find the backend.       |

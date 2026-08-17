@@ -23,6 +23,7 @@ import static org.mockito.Mockito.*;
 import org.apache.jena.query.ReadWrite;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
@@ -115,20 +116,20 @@ class CustomDiagramsServiceTest {
     @Test
     void replaceCustomDiagram_newDiagramForDataset_replacesInMap() {
         var diagramId = UUID.randomUUID();
-        var newDiagram = new CustomDiagram(diagramId);
+        var newDiagram = new CustomDiagramDTO(diagramId);
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
 
         when(databasePort.getDatasetDiagrams("dataset")).thenReturn(map);
 
         service.replaceCustomDatasetDiagram("dataset", diagramId.toString(), newDiagram);
 
-        assertThat(map).containsEntry(diagramId, newDiagram);
+        assertThat(map).hasEntrySatisfying(diagramId, diagram -> assertThat(diagram.getDiagramId()).isEqualTo(newDiagram.getDiagramId()));
     }
 
     @Test
     void replaceCustomDiagram_newDiagramForGraph_replacesInMap() {
         var diagramId = UUID.randomUUID();
-        var newDiagram = new CustomDiagram(diagramId);
+        var newDiagram = new CustomDiagramDTO(diagramId);
         var map = new ConcurrentHashMap<UUID, CustomDiagram>();
 
         var graph = mockGraph(map);
@@ -136,7 +137,7 @@ class CustomDiagramsServiceTest {
 
         service.replaceCustomGraphDiagram(graphIdentifier, diagramId.toString(), newDiagram);
 
-        assertThat(map).containsEntry(diagramId, newDiagram);
+        assertThat(map).hasEntrySatisfying(diagramId, diagram -> assertThat(diagram.getDiagramId()).isEqualTo(newDiagram.getDiagramId()));
     }
 
     @Test

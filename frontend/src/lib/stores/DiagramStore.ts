@@ -19,30 +19,30 @@ import { writable } from "svelte/store";
 
 import { loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncListSlot, createEmptyListSlot, Result } from "./storeTypes";
+import { type AsyncListSlot, createEmptyListSlot, type Result } from "./storeTypes";
 import {
     getCustomDatasetDiagramList,
     getCustomGraphDiagramList,
-    type CustomDiagram,
     replaceCustomDatasetDiagram,
     replaceCustomGraphDiagram,
     deleteCustomDatasetDiagram,
     deleteCustomGraphDiagram,
     addToCustomDatasetDiagram,
     removeFromCustomDatasetDiagram,
-    removeFromCustomGraphDiagram,
     addToCustomGraphDiagram,
+    type CustomDiagramDto,
+    removeFromDiagram,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
 type StoreState = {
     // key: dataset
-    datasetLists: Map<string, AsyncListSlot<CustomDiagram>>;
+    datasetLists: Map<string, AsyncListSlot<CustomDiagramDto>>;
     // key: dataset::graph
-    graphLists: Map<string, AsyncListSlot<CustomDiagram>>;
+    graphLists: Map<string, AsyncListSlot<CustomDiagramDto>>;
 };
 
-const LOG_PREFIX = "[customDiagramStore]";
+const LOG_PREFIX = "[CustomDiagramStore]";
 
 export const customDiagramStore = createCustomDiagramStore();
 
@@ -58,18 +58,18 @@ function createCustomDiagramStore() {
     function getDatasetListState(
         state: StoreState,
         datasetName: string,
-    ): AsyncListSlot<CustomDiagram> {
-        return state.datasetLists.get(datasetName) ?? createEmptyListSlot();
+    ): AsyncListSlot<CustomDiagramDto> {
+        return state.datasetLists.get(datasetName) ?? createEmptyListSlot<CustomDiagramDto>();
     }
 
     function getGraphListState(
         state: StoreState,
         datasetName: string,
         graphURI: string,
-    ): AsyncListSlot<CustomDiagram> {
+    ): AsyncListSlot<CustomDiagramDto> {
         return (
             state.graphLists.get(makeGraphKey(datasetName, graphURI)) ??
-            createEmptyListSlot()
+            createEmptyListSlot<CustomDiagramDto>()
         );
     }
 
@@ -77,11 +77,13 @@ function createCustomDiagramStore() {
     async function getDatasetDiagrams(
         datasetName: string,
         force = false,
-    ): Promise<CustomDiagram[] | null> {
+    ): Promise<CustomDiagramDto[] | null> {
         if (!datasetName) return null;
-        return loadSlot(
+        return loadSlot<StoreState, CustomDiagramDto[]>(
             store,
-            s => s.datasetLists.get(datasetName) ?? createEmptyListSlot(),
+            s =>
+                s.datasetLists.get(datasetName) ??
+                createEmptyListSlot<CustomDiagramDto>(),
             (s, patch) => {
                 const map = new Map(s.datasetLists);
                 map.set(datasetName, {
@@ -101,12 +103,14 @@ function createCustomDiagramStore() {
         datasetName: string,
         graphURI: string,
         force = false,
-    ): Promise<CustomDiagram[] | null> {
+    ): Promise<CustomDiagramDto[] | null> {
         if (!datasetName || !graphURI) return null;
         const key = makeGraphKey(datasetName, graphURI);
-        return loadSlot(
+        return loadSlot<StoreState, CustomDiagramDto[]>(
             store,
-            s => s.graphLists.get(key) ?? createEmptyListSlot(),
+            s =>
+                s.graphLists.get(key) ??
+                createEmptyListSlot<CustomDiagramDto>(),
             (s, patch) => {
                 const map = new Map(s.graphLists);
                 map.set(key, {
@@ -127,11 +131,11 @@ function createCustomDiagramStore() {
     async function saveDatasetDiagram(
         datasetName: string,
         diagramId: string,
-        diagram: unknown,
+        diagram: CustomDiagramDto,
     ): Promise<Result> {
         const { error } = await replaceCustomDatasetDiagram({
             path: { datasetName, diagramId },
-            body: diagram as never,
+            body: diagram,
         });
 
         if (error) {
@@ -143,7 +147,20 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        invalidateDataset(datasetName);
+        update(s => {
+            const existing = s.datasetLists.get(datasetName);
+            if (!existing?.data) return s;
+
+            const datasetLists = new Map(s.datasetLists);
+            datasetLists.set(datasetName, {
+                ...existing,
+                data: existing.data.map(d =>
+                    d.diagramId === diagramId ? diagram : d,
+                ),
+            });
+            return { ...s, datasetLists };
+        });
+
         toastStore.success("Diagram saved", "Dataset diagram was saved.");
         return { error: null };
     }
@@ -152,11 +169,11 @@ function createCustomDiagramStore() {
         datasetName: string,
         graphURI: string,
         diagramId: string,
-        diagram: unknown,
+        diagram: CustomDiagramDto,
     ): Promise<Result> {
         const { error } = await replaceCustomGraphDiagram({
             path: { datasetName, graphURI, diagramId },
-            body: diagram as never,
+            body: diagram,
         });
 
         if (error) {
@@ -168,7 +185,21 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        invalidateGraph(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
+        update(s => {
+            const existing = s.graphLists.get(key);
+            if (!existing?.data) return s;
+
+            const graphLists = new Map(s.graphLists);
+            graphLists.set(key, {
+                ...existing,
+                data: existing.data.map(d =>
+                    d.diagramId === diagramId ? diagram : d,
+                ),
+            });
+            return { ...s, graphLists };
+        });
+
         toastStore.success("Diagram saved", "Graph diagram was saved.");
         return { error: null };
     }
@@ -193,7 +224,17 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        invalidateDataset(datasetName);
+        update(s => {
+            const existing = s.datasetLists.get(datasetName);
+            if (!existing?.data) return s;
+            const datasetLists = new Map(s.datasetLists);
+            datasetLists.set(datasetName, {
+                ...existing,
+                data: existing.data.filter(d => d.diagramId !== diagramId),
+            });
+            return { ...s, datasetLists };
+        });
+
         toastStore.success("Diagram deleted", "Dataset diagram was removed.");
         return { error: null };
     }
@@ -219,7 +260,18 @@ function createCustomDiagramStore() {
             return { error };
         }
 
-        invalidateGraph(datasetName, graphURI);
+        const key = makeGraphKey(datasetName, graphURI);
+        update(s => {
+            const existing = s.graphLists.get(key);
+            if (!existing?.data) return s;
+            const graphLists = new Map(s.graphLists);
+            graphLists.set(key, {
+                ...existing,
+                data: existing.data.filter(d => d.diagramId !== diagramId),
+            });
+            return { ...s, graphLists };
+        });
+
         toastStore.success("Diagram deleted", "Graph diagram was removed.");
         return { error: null };
     }
@@ -277,7 +329,7 @@ function createCustomDiagramStore() {
         return { error: null };
     }
 
-    async function removeClassFromDatasetDiagram(
+    async function removeClassesFromDatasetDiagram(
         datasetName: string,
         diagramId: string,
         classIDs: string[],
@@ -287,14 +339,15 @@ function createCustomDiagramStore() {
             body: classIDs,
         });
 
+        const classCount = classIDs.length;
         if (error) {
             console.error(
-                `${LOG_PREFIX} Could not remove class from dataset diagram "${diagramId}"`,
+                `${LOG_PREFIX} Could not remove class${classCount === 1 ? "" : "es"} from dataset diagram "${diagramId}"`,
                 await describeError(error),
             );
             toastStore.error(
                 "Update failed",
-                "Could not remove class from diagram.",
+                `Could not remove class${classCount === 1 ? "" : "es"} from diagram.`,
             );
             return { error };
         }
@@ -303,24 +356,26 @@ function createCustomDiagramStore() {
         return { error: null };
     }
 
-    async function removeClassFromGraphDiagram(
+    async function removeClassesFromGraphDiagram(
         datasetName: string,
         graphURI: string,
         diagramId: string,
-        classId: string,
+        classIds: string[],
     ): Promise<Result> {
-        const { error } = await removeFromCustomGraphDiagram({
-            path: { datasetName, graphURI, diagramId, classId },
+        const { error } = await removeFromDiagram({
+            path: { datasetName, graphURI, diagramId },
+            body: classIds,
         });
 
+        const classCount = classIds.length;
         if (error) {
             console.error(
-                `${LOG_PREFIX} Could not remove class from graph diagram "${diagramId}"`,
+                `${LOG_PREFIX} Could not remove class${classCount === 1 ? "" : "es"} from graph diagram "${diagramId}"`,
                 await describeError(error),
             );
             toastStore.error(
                 "Update failed",
-                "Could not remove class from diagram.",
+                `Could not remove class${classCount === 1 ? "" : "es"} from diagram.`,
             );
             return { error };
         }
@@ -373,11 +428,12 @@ function createCustomDiagramStore() {
         deleteGraphDiagram,
         addClassesToDatasetDiagram,
         addClassesToGraphDiagram,
-        removeClassFromDatasetDiagram,
-        removeClassFromGraphDiagram,
+        removeClassesFromDatasetDiagram,
+        removeClassesFromGraphDiagram,
 
         // invalidation
         invalidateDataset,
         invalidateGraph,
     };
 }
+export { createCustomDiagramStore };

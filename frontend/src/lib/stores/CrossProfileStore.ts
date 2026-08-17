@@ -19,7 +19,7 @@ import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncSlot, createEmptySlot, Result } from "./storeTypes";
+import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     getCrossProfileRenderingData,
     getCrossProfileColors,
@@ -35,6 +35,7 @@ import { toastStore } from "../eventhandling/toastStore.svelte.js";
 type StoreState = {
     ids: Map<string, AsyncSlot<string>>;
     diagrams: Map<string, AsyncSlot<CrossProfileDiagramDto>>;
+    colors: Map<string, AsyncSlot<CrossProfileDiagramColorDataDto>>;
 };
 
 const LOG_PREFIX = "[crossProfileStore]";
@@ -45,6 +46,7 @@ function createCrossProfileStore() {
     const store = writable<StoreState>({
         ids: new Map(),
         diagrams: new Map(),
+        colors: new Map(),
     });
 
     const { subscribe, update } = store;
@@ -87,6 +89,23 @@ function createCrossProfileStore() {
         return { ...s, diagrams };
     }
 
+    function getColorSlot(
+        s: StoreState,
+        datasetName: string,
+    ): AsyncSlot<CrossProfileDiagramColorDataDto> {
+        return s.colors.get(datasetName) ?? createEmptySlot();
+    }
+
+    function setColorSlot(
+        s: StoreState,
+        datasetName: string,
+        patch: Partial<AsyncSlot<CrossProfileDiagramColorDataDto>>,
+    ): StoreState {
+        const colors = new Map(s.colors);
+        colors.set(datasetName, { ...getColorSlot(s, datasetName), ...patch });
+        return { ...s, colors };
+    }
+
     // =========================================================================
     // GETTERS
     // =========================================================================
@@ -123,6 +142,69 @@ function createCrossProfileStore() {
         );
     }
 
+    async function getColors(
+        datasetName: string,
+        force = false,
+    ): Promise<CrossProfileDiagramColorDataDto | null> {
+        if (!datasetName) return null;
+        return loadSlot(
+            store,
+            s => getColorSlot(s, datasetName),
+            (s, patch) => setColorSlot(s, datasetName, patch),
+            () => getCrossProfileColors({ path: { datasetName } }),
+            LOG_PREFIX,
+            `cross-profile colors for dataset="${datasetName}"`,
+            force,
+        );
+    }
+
+    // =========================================================================
+    // MUTATIONS
+    // =========================================================================
+
+    async function saveColors(
+        datasetName: string,
+        colorData: CrossProfileDiagramColorDataDto,
+    ): Promise<Result> {
+        if (!datasetName) return { error: null };
+
+        console.log(
+            `${LOG_PREFIX} Saving cross-profile colors for dataset="${datasetName}"`,
+        );
+
+        const { error } = await updateCrossProfileColors({
+            path: { datasetName },
+            body: colorData,
+        });
+
+        if (error) {
+            console.error(
+                `${LOG_PREFIX} Failed to save cross-profile colors for dataset="${datasetName}"`,
+                await describeError(error),
+            );
+            toastStore.error("Save failed", "Could not save color data.");
+            return { error };
+        }
+
+        update(s =>
+            setColorSlot(s, datasetName, {
+                data: colorData,
+                fetchedAt: Date.now(),
+                pending: null,
+                error: null,
+            }),
+        );
+
+        console.log(
+            `${LOG_PREFIX} Saved cross-profile colors for dataset="${datasetName}"`,
+        );
+        toastStore.success(
+            "Colors saved",
+            "Color data was saved successfully.",
+        );
+        return { error: null };
+    }
+
     // =========================================================================
     // INVALIDATION
     // =========================================================================
@@ -134,9 +216,11 @@ function createCrossProfileStore() {
         update(s => {
             const ids = new Map(s.ids);
             const diagrams = new Map(s.diagrams);
+            const colors = new Map(s.colors);
             ids.delete(datasetName);
             diagrams.delete(datasetName);
-            return { ids, diagrams };
+            colors.delete(datasetName);
+            return { ids, diagrams, colors };
         });
     }
 
@@ -149,7 +233,7 @@ function createCrossProfileStore() {
 
         // pass-through
         fetchRenderingData,
-        fetchColors,
+        getColors,
         saveColors,
 
         // invalidation
@@ -184,59 +268,4 @@ async function fetchRenderingData(
 
     return { error: null, data: data ?? undefined };
 }
-
-async function fetchColors(
-    datasetName: string,
-): Promise<Result<CrossProfileDiagramColorDataDto>> {
-    if (!datasetName) return { error: null };
-
-    console.log(
-        `${LOG_PREFIX} Fetching cross-profile colors for dataset="${datasetName}"`,
-    );
-
-    const { data, error } = await getCrossProfileColors({
-        path: { datasetName },
-    });
-
-    if (error) {
-        console.error(
-            `${LOG_PREFIX} Failed to fetch cross-profile colors for dataset="${datasetName}"`,
-            await describeError(error),
-        );
-        toastStore.error("Load failed", "Could not load color data.");
-        return { error };
-    }
-
-    return { error: null, data: data ?? undefined };
-}
-
-async function saveColors(
-    datasetName: string,
-    colorData: CrossProfileDiagramColorDataDto,
-): Promise<Result> {
-    if (!datasetName) return { error: null };
-
-    console.log(
-        `${LOG_PREFIX} Saving cross-profile colors for dataset="${datasetName}"`,
-    );
-
-    const { error } = await updateCrossProfileColors({
-        path: { datasetName },
-        body: colorData,
-    });
-
-    if (error) {
-        console.error(
-            `${LOG_PREFIX} Failed to save cross-profile colors for dataset="${datasetName}"`,
-            await describeError(error),
-        );
-        toastStore.error("Save failed", "Could not save color data.");
-        return { error };
-    }
-
-    console.log(
-        `${LOG_PREFIX} Saved cross-profile colors for dataset="${datasetName}"`,
-    );
-    toastStore.success("Colors saved", "Color data was saved successfully.");
-    return { error: null };
-}
+export { createCrossProfileStore }

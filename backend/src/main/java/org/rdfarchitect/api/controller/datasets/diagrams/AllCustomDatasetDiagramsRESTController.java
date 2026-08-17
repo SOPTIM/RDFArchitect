@@ -26,6 +26,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
 import lombok.RequiredArgsConstructor;
 
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
@@ -65,10 +66,10 @@ public class AllCustomDatasetDiagramsRESTController {
                                                             schema =
                                                                     @Schema(
                                                                             implementation =
-                                                                                    CustomDiagram
+                                                                                    CustomDiagramDTO
                                                                                             .class)))))
     @GetMapping
-    public List<CustomDiagram> getCustomDatasetDiagramList(
+    public List<CustomDiagramDTO> getCustomDatasetDiagramList(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,

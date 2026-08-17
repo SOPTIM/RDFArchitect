@@ -19,7 +19,10 @@ import { writable, get } from "svelte/store";
 
 import { editorState } from "../sharedState.svelte.js";
 import { classStore } from "./ClassStore";
+import { customDiagramStore } from "./DiagramStore";
+import { ontologyStore } from "./OntologyStore";
 import { packageStore } from "./PackageStore";
+import { makeGraphKey } from "./storeHelpers";
 import {
     undo as sdkUndo,
     redo as sdkRedo,
@@ -31,28 +34,26 @@ import { toastStore } from "../eventhandling/toastStore.svelte.js";
 type Flags = {
     canUndo: boolean;
     canRedo: boolean;
-    pending: Promise<void> | null;
 };
 type State = { byGraph: Map<string, Flags> };
 
 const LOG = "[versionControlStore]";
 
-export const versionControlStore = createStore();
-const key = (dataset: string, graph: string) => `${dataset}::${graph}`;
+export const versionControlStore = createVersionControlStore();
 
 function emptyFlags(): Flags {
-    return { canUndo: false, canRedo: false, pending: null };
+    return { canUndo: false, canRedo: false };
 }
 
-function createStore() {
+function createVersionControlStore() {
     const store = writable<State>({ byGraph: new Map() });
     const { subscribe, update } = store;
 
     function patch(dataset: string, graph: string, next: Partial<Flags>) {
         update(s => {
             const m = new Map(s.byGraph);
-            const cur = m.get(key(dataset, graph)) ?? emptyFlags();
-            m.set(key(dataset, graph), { ...cur, ...next });
+            const cur = m.get(makeGraphKey(dataset, graph)) ?? emptyFlags();
+            m.set(makeGraphKey(dataset, graph), { ...cur, ...next });
             return { byGraph: m };
         });
     }
@@ -75,7 +76,7 @@ function createStore() {
         const targets = resolveTargets(dataset, graph);
         if (!targets) return false;
         return (
-            get(store).byGraph.get(key(targets.dataset, targets.graph))
+            get(store).byGraph.get(makeGraphKey(targets.dataset, targets.graph))
                 ?.canUndo ?? false
         );
     }
@@ -84,7 +85,7 @@ function createStore() {
         const targets = resolveTargets(dataset, graph);
         if (!targets) return false;
         return (
-            get(store).byGraph.get(key(targets.dataset, targets.graph))
+            get(store).byGraph.get(makeGraphKey(targets.dataset, targets.graph))
                 ?.canRedo ?? false
         );
     }
@@ -105,7 +106,10 @@ function createStore() {
             return { error };
         }
         toastStore.info("Undone");
+
         classStore.invalidateGraph(targets.dataset, targets.graph);
+        ontologyStore.invalidateGraph(targets.dataset, targets.graph);
+        customDiagramStore.invalidateDataset(targets.dataset);
         packageStore.invalidateGraph(targets.dataset, targets.graph);
         await refresh(targets.dataset, targets.graph);
         return { error: null };
@@ -127,8 +131,12 @@ function createStore() {
             return { error };
         }
         toastStore.info("Redone");
+
         classStore.invalidateGraph(targets.dataset, targets.graph);
         packageStore.invalidateGraph(targets.dataset, targets.graph);
+        ontologyStore.invalidateGraph(targets.dataset, targets.graph);
+        customDiagramStore.invalidateDataset(targets.dataset);
+
         await refresh(targets.dataset, targets.graph);
         return { error: null };
     }
@@ -148,3 +156,4 @@ function resolveTargets(dataset?: string, graph?: string) {
     const g = graph ?? editorState.selectedGraph.getValue();
     return d && g ? { dataset: d, graph: g } : null;
 }
+export { createVersionControlStore };

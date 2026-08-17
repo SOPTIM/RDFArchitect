@@ -73,8 +73,9 @@
         existingDiagrams = await customDiagramStore.getGraphDiagrams(
             lockedDatasetName,
             lockedGraphUri,
-        );
+        ) ?? [];
         diagramsLoaded = true;
+
     }
 
     function takesAnyClass(diagram) {
@@ -97,6 +98,7 @@
     function onClose() {
         diagramNameInput = "";
         diagramsLoaded = false;
+        existingDiagrams = [];
     }
 
     function classesToAdd() {

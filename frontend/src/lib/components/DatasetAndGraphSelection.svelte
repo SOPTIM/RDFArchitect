@@ -58,7 +58,7 @@
     });
 
     onMount(async () => {
-        datasets = await datasetStore.getDatasets();
+        datasets = await datasetStore.getDatasets() ?? [];
         if (datasetLocked) dataset = lockedDatasetName;
         if (graphLocked) graph = lockedGraphUri;
 

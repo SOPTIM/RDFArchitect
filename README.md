@@ -114,7 +114,6 @@ Backend config (`backend/src/main/resources`):
 
 Frontend runtime config:
 
-- `PUBLIC_BACKEND_URL` controls API base URL (Docker default: `/api`)
 - In container deployments, this is injected via `frontend/docker-entrypoint.sh`
 
 ## API Documentation

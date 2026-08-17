@@ -52,15 +52,12 @@
     }
 
     async function importGraph() {
-        let formData = new FormData();
-        formData.append("file", file);
-
         replaceGraphWithFile({
             path: { datasetName: datasetName, graphURI: graphURI },
-            body: formData,
+            body: { file },
         })
             .then(res => {
-                if (res.ok) {
+                if (!res.error) {
                     console.log("successfully inserted data");
                     toastStore.success(
                         "Constraints imported",

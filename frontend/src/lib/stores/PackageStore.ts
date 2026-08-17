@@ -17,15 +17,15 @@
 
 import { writable } from "svelte/store";
 
-import { GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
+import { type GraphKey, loadSlot, makeGraphKey } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncSlot, createEmptySlot, Result } from "./storeTypes";
+import { type AsyncSlot, createEmptySlot, type Result } from "./storeTypes";
 import {
     listPackages,
     addPackage,
     replacePackage,
-    PackageDto,
     deletePackage,
+    type PackageDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
@@ -372,3 +372,4 @@ function createPackageStore() {
         invalidateDataset,
     };
 }
+export { createPackageStore };

@@ -43,13 +43,13 @@
 
     async function removeFromDiagram() {
         const { error } = graphUri
-            ? await customDiagramStore.removeClassFromGraphDiagram(
+            ? await customDiagramStore.removeClassesFromGraphDiagram(
                   lockedDatasetName,
                   graphUri,
                   diagramId,
                   classIds,
               )
-            : await customDiagramStore.removeClassFromDatasetDiagram(
+            : await customDiagramStore.removeClassesFromDatasetDiagram(
                   lockedDatasetName,
                   diagramId,
                   classIds,

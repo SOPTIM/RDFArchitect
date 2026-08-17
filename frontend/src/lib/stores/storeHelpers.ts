@@ -60,7 +60,7 @@ export async function loadSlot<TState, TData>(
     const slot = getSlot(get(store));
 
     if (!force && slot.data !== null) return slot.data;
-    if (slot.pending !== null) {
+    if (slot.pending !== null && !force) {
         await slot.pending;
         return getSlot(get(store)).data;
     }

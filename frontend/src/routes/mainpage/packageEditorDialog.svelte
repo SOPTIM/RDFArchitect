@@ -58,7 +58,7 @@
         }
 
         const result = await packageStore.getPackages(datasetName, graphUri);
-        packages = [...result.internal, ...result.external];
+        packages = result ? [...result.internal, ...result.external] : [];
 
         if (pack) {
             isNewPackage = false;

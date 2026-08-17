@@ -14,8 +14,6 @@ services:
     frontend:
         build:
             context: ../frontend
-        environment:
-            PUBLIC_BACKEND_URL: "/api"
         expose:
             - "80"
 

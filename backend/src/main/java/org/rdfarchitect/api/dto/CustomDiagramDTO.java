@@ -15,9 +15,22 @@
  *
  */
 
-export function isValidMultiplicity(multiplicity: string | null): boolean {
-    if (multiplicity === null) {
-        return false;
+package org.rdfarchitect.api.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@AllArgsConstructor
+public class CustomDiagramDTO {
+    private final UUID diagramId;
+    private String name;
+    private List<ClassInDiagram> classes;
+
+    public CustomDiagramDTO(UUID diagramId) {
+        this.diagramId = diagramId;
     }
-    return /^M:(\d+|\d+(\.\.(n|\d+)))$/.test(multiplicity);
 }

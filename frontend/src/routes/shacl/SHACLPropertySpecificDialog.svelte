@@ -17,11 +17,12 @@
 
 <script>
     import {
+        getAssociationShacl,
         getAttributeShacl,
         getCustomShaclNamespacesAsString,
         getGeneratedShaclNamespacesAsString,
         replaceAssociationShacl,
-        replaceAttributeShacl,
+        replaceAttributeShacl
     } from "$lib/api/generated/index.ts";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -104,12 +105,12 @@
                     },
                 });
             } else if (type === "associations") {
-                res = await replaceAssociationShacl({
+                res = await getAssociationShacl({
                     path: {
                         datasetName: classDatasetName,
                         graphURI: classGraphUri,
                         classUUID: newViewedClassUUID,
-                        attributeUUID: viewedPropertyUUID,
+                        associationUUID: viewedPropertyUUID,
                     },
                 });
             } else {
@@ -117,7 +118,7 @@
                 return;
             }
 
-            if (!res.ok) {
+            if (res.error) {
                 console.warn(
                     "Failed to fetch SHACL:",
                     res.status,
@@ -125,7 +126,7 @@
                 );
                 return;
             }
-            const data = await res.json();
+            const data = res.data;
             customShacl.propertyShapes = data.custom;
             generatedShacl.propertyShapes = data.generated;
 
@@ -196,8 +197,8 @@
                     path: {
                         datasetName: classDatasetName,
                         graphURI: classGraphUri,
-                        classUUID: editorState.selectedClass.getProperty("id"),
-                        attributeUUID: property.uuid.value,
+                        classUUID: getViewedClassUuid(),
+                        associationUUID: property.uuid.value,
                     },
                     body: ttlString,
                 });
@@ -209,13 +210,13 @@
                     "Save failed",
                     "Could not save property constraints.",
                 );
+                return;
             }
 
             if (res.error) {
                 console.warn(
                     "Failed to save custom SHACL:",
-                    res.status,
-                    res.statusText,
+                    res.error,
                 );
                 toastStore.error(
                     "Save failed",

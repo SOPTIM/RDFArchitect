@@ -22,6 +22,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.controller.Response;
+import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
@@ -94,7 +95,7 @@ public class CustomDatasetDiagramsRESTController {
                     String datasetName,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
-                    CustomDiagram diagram) {
+            CustomDiagramDTO diagram) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",
                 datasetName,

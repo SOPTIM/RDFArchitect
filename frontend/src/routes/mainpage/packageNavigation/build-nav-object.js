@@ -57,7 +57,7 @@ function syncList(targetArray, freshEntries, parent = null) {
 
 export async function getNavEntryList(existingDatasetNavList) {
     const datasets = await datasetStore.getDatasets();
-    const freshEntries = datasets
+    const freshEntries = ( datasets ?? [] )
         .sort((a, b) => a.label.localeCompare(b.label))
         .map(dataset =>
             reuseOrCreate(existingDatasetNavList, {
@@ -89,7 +89,7 @@ export async function getNavEntryList(existingDatasetNavList) {
 async function populateDataset(datasetNavEntry) {
     const existingGraphNavList = datasetNavEntry.children;
 
-    const freshEntries = (await getGraphNames(datasetNavEntry.id))
+    const freshEntries = (await graphStore.getGraphs(datasetNavEntry.id) ?? [])
         .sort((a, b) => getUri(a).localeCompare(getUri(b)))
         .map(graph => {
             const fullUri = getUri(graph);
@@ -115,16 +115,12 @@ async function populateDataset(datasetNavEntry) {
     }
 }
 
-async function getGraphNames(datasetName) {
-    return (await graphStore.getGraphs(datasetName)) ?? [];
-}
-
 export async function populateGraph(datasetNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
     const packageData = await packageStore.getPackages(
         datasetNavObject.id,
         graphNavObject.id,
-    );
+    ) ?? { internal: [], external: [] };
 
     const allClasses = await classStore.getClasses(
         datasetNavObject.id,

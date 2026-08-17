@@ -49,8 +49,8 @@
     }
 
     async function resolveIRI(dataset, graph, iri) {
-        fetchResolveIRI({
-            path: { dataset: dataset, graph: graph, iri: iri },
+        return await fetchResolveIRI({
+            path: { datasetName: dataset, graphURI: graph, iriIdentifier: iri },
         }).then(res => res.data);
     }
 </script>

@@ -71,7 +71,7 @@
 
     async function getCustomDiagrams() {
         existingDiagrams =
-            await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
+            await customDiagramStore.getDatasetDiagrams(lockedDatasetName) ?? [];
         diagramsLoaded = true;
     }
 
@@ -95,6 +95,7 @@
     function onClose() {
         diagramNameInput = "";
         diagramsLoaded = false;
+        existingDiagrams = [];
     }
 
     function classesToAdd() {

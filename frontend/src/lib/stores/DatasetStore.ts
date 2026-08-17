@@ -19,11 +19,11 @@ import { writable } from "svelte/store";
 
 import { loadSlot } from "./storeHelpers";
 import { describeError } from "./StoreLogging";
-import { AsyncSlot, Result, createEmptySlot } from "./storeTypes";
+import { type AsyncSlot, type Result, createEmptySlot } from "./storeTypes";
 import {
     listDatasets,
     deleteDataset,
-    CimPrefixPair,
+    type CimPrefixPair,
     replaceNamespaces,
     enableEditing,
     disableEditing,
@@ -39,12 +39,11 @@ export type DatasetInfo = {
 type DatasetsState = AsyncSlot<DatasetInfo[]>;
 
 const LOG_PREFIX = "[datasetStore]";
-
 export const datasetStore = createDatasetStore();
 
 function createDatasetStore() {
     const store = writable<DatasetsState>(createEmptySlot<DatasetInfo[]>());
-    const { subscribe, update } = store; // ← update hier verfügbar machen
+    const { subscribe, update } = store;
 
     // ----- Load -----
 
@@ -171,12 +170,12 @@ function createDatasetStore() {
             `${LOG_PREFIX} Setting readOnly=${readOnly} for "${datasetName}"`,
         );
 
-        const res = readOnly
+        const { error } = readOnly
             ? await disableEditing({ path: { datasetName } })
             : await enableEditing({ path: { datasetName } });
 
-        if (res?.error) {
-            const msg = await describeError(res.error);
+        if (error) {
+            const msg = await describeError(error);
             console.error(
                 `${LOG_PREFIX} Could not update readOnly flag for "${datasetName}":`,
                 msg,
@@ -189,7 +188,7 @@ function createDatasetStore() {
                     ? `Dataset "${datasetName}" remains editable.`
                     : `Dataset "${datasetName}" remains read-only.`,
             );
-            return { error: res };
+            return { error };
         }
 
         update(s => ({
@@ -233,3 +232,5 @@ function createDatasetStore() {
         saveNamespaces,
     };
 }
+
+export { createDatasetStore };
