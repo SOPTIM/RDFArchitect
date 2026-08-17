@@ -38,11 +38,11 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Exports the springdoc OpenAPI document to a deterministic JSON file so the frontend can
- * generate its API client offline (in CI and in Docker) without a running backend.
+ * Exports the springdoc OpenAPI document to a deterministic JSON file so the frontend can generate
+ * its API client offline (in CI and in Docker) without a running backend.
  *
- * <p>Runs as a standalone Maven goal: {@code mvn compile exec:java@export-openapi}. The output
- * path defaults to {@code ../frontend/openapi.json} (relative to the backend module) and can be
+ * <p>Runs as a standalone Maven goal: {@code mvn compile exec:java@export-openapi}. The output path
+ * defaults to {@code ../frontend/openapi.json} (relative to the backend module) and can be
  * overridden with the first program argument or {@code -Dopenapi.export.path=...}.
  *
  * <p>Boots the full Spring application on an ephemeral port (server.port=0), fetches the spec,

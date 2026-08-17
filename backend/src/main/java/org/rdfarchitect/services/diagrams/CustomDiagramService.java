@@ -17,16 +17,8 @@
 
 package org.rdfarchitect.services.diagrams;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+
 import org.apache.jena.query.ReadWrite;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.cross_profile_diagram.ClassSourceDTO;
@@ -46,14 +38,24 @@ import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 public class CustomDiagramService
         implements GetCustomDiagramsUseCase,
-        ReplaceCustomDiagramUseCase,
-        DeleteCustomDiagramUseCase,
-        RemoveFromCustomDiagramUseCase,
-        CrossProfileColorUseCase {
+                ReplaceCustomDiagramUseCase,
+                DeleteCustomDiagramUseCase,
+                RemoveFromCustomDiagramUseCase,
+                CrossProfileColorUseCase {
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
@@ -62,7 +64,12 @@ public class CustomDiagramService
     public List<CustomDiagramDTO> getCustomDiagramsForGraph(GraphIdentifier graphIdentifier) {
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
             return ctx.getCustomDiagrams().values().stream()
-                    .map(diagram -> new CustomDiagramDTO(diagram.getDiagramId(), diagram.getName(), diagram.getClasses()))
+                    .map(
+                            diagram ->
+                                    new CustomDiagramDTO(
+                                            diagram.getDiagramId(),
+                                            diagram.getName(),
+                                            diagram.getClasses()))
                     .toList();
         }
     }
@@ -70,7 +77,12 @@ public class CustomDiagramService
     @Override
     public List<CustomDiagramDTO> getCustomDiagramsForDataset(String datasetName) {
         return databasePort.getDatasetDiagrams(datasetName).values().stream()
-                .map(diagram -> new CustomDiagramDTO(diagram.getDiagramId(), diagram.getName(), diagram.getClasses()))
+                .map(
+                        diagram ->
+                                new CustomDiagramDTO(
+                                        diagram.getDiagramId(),
+                                        diagram.getName(),
+                                        diagram.getClasses()))
                 .toList();
     }
 
@@ -175,8 +187,11 @@ public class CustomDiagramService
                             + diagramDTO.getDiagramId()
                             + "'");
         }
-        // dto is necessary for swagger to infer the correct type, but we need to create a new CustomDiagram object to store in the database
-        var diagram = new CustomDiagram(diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
+        // dto is necessary for swagger to infer the correct type, but we need to create a new
+        // CustomDiagram object to store in the database
+        var diagram =
+                new CustomDiagram(
+                        diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
         var diagrams = databasePort.getDatasetDiagrams(datasetName);
         diagrams.put(UUID.fromString(diagramId), diagram);
     }
@@ -212,8 +227,13 @@ public class CustomDiagramService
                             + "'");
         }
         try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
-            // dto is necessary for swagger to infer the correct type, but we need to create a new CustomDiagram object to store in the database
-            var diagram = new CustomDiagram(diagramDTO.getDiagramId(), diagramDTO.getName(), diagramDTO.getClasses());
+            // dto is necessary for swagger to infer the correct type, but we need to create a new
+            // CustomDiagram object to store in the database
+            var diagram =
+                    new CustomDiagram(
+                            diagramDTO.getDiagramId(),
+                            diagramDTO.getName(),
+                            diagramDTO.getClasses());
             ctx.getCustomDiagrams().put(UUID.fromString(diagramId), diagram);
             ctx.commit("replaced diagram %s".formatted(diagramId));
         }

@@ -25,7 +25,6 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
@@ -116,7 +115,7 @@ public class CustomDiagramsRESTController {
                     String graphURI,
             @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
             @Parameter(description = "DTO for the diagram to be replaced.") @RequestBody
-            CustomDiagramDTO diagram) {
+                    CustomDiagramDTO diagram) {
         logger.info(
                 "Received PUT request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
                 datasetName,

@@ -20,7 +20,9 @@ package org.rdfarchitect.api.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+
 import java.util.List;
 import java.util.UUID;
 

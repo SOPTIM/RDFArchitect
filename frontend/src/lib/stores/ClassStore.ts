@@ -426,7 +426,7 @@ function createClassStore() {
 
         return {
             error: null,
-            data: data ?? [],
+            data: data,
         };
     }
 

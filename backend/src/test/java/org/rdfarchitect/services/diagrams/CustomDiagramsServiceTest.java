@@ -121,7 +121,12 @@ class CustomDiagramsServiceTest {
 
         service.replaceCustomDatasetDiagram("dataset", diagramId.toString(), newDiagram);
 
-        assertThat(map).hasEntrySatisfying(diagramId, diagram -> assertThat(diagram.getDiagramId()).isEqualTo(newDiagram.getDiagramId()));
+        assertThat(map)
+                .hasEntrySatisfying(
+                        diagramId,
+                        diagram ->
+                                assertThat(diagram.getDiagramId())
+                                        .isEqualTo(newDiagram.getDiagramId()));
     }
 
     @Test
@@ -135,7 +140,12 @@ class CustomDiagramsServiceTest {
 
         service.replaceCustomGraphDiagram(graphIdentifier, diagramId.toString(), newDiagram);
 
-        assertThat(map).hasEntrySatisfying(diagramId, diagram -> assertThat(diagram.getDiagramId()).isEqualTo(newDiagram.getDiagramId()));
+        assertThat(map)
+                .hasEntrySatisfying(
+                        diagramId,
+                        diagram ->
+                                assertThat(diagram.getDiagramId())
+                                        .isEqualTo(newDiagram.getDiagramId()));
     }
 
     @Test

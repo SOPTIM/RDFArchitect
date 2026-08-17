@@ -19,7 +19,6 @@ package org.rdfarchitect.services.diagrams;
 
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 
 public interface ReplaceCustomDiagramUseCase {
 
@@ -40,5 +39,6 @@ public interface ReplaceCustomDiagramUseCase {
      * @param diagramId the id of the diagram to be replaced
      * @param diagram the new diagram to replace the old one with
      */
-    void replaceCustomDatasetDiagram(String datasetName, String diagramId, CustomDiagramDTO diagram);
+    void replaceCustomDatasetDiagram(
+            String datasetName, String diagramId, CustomDiagramDTO diagram);
 }

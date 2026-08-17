@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
