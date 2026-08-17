@@ -33,6 +33,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
@@ -359,6 +360,56 @@ class GraphWithContextCollectionTest {
     }
 
     @Test
+    void rename_updatesGraphUriInSchemaScopedCustomDiagrams() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        collection.create("http://example.org/other", exampleGraphs.get(1));
+        var ownDiagramId = UUID.randomUUID();
+        var ownDiagram = new CustomDiagram(ownDiagramId);
+        ownDiagram.setClasses(
+                List.of(
+                        new ClassInDiagram(
+                                UUID.randomUUID(), new URI("http://example.org/graph1"))));
+        collection
+                .getGraphWithContext("http://example.org/graph1")
+                .getCustomDiagrams()
+                .put(ownDiagramId, ownDiagram);
+        var foreignDiagramId = UUID.randomUUID();
+        var foreignDiagram = new CustomDiagram(foreignDiagramId);
+        foreignDiagram.setClasses(
+                List.of(
+                        new ClassInDiagram(
+                                UUID.randomUUID(), new URI("http://example.org/graph1"))));
+        collection
+                .getGraphWithContext("http://example.org/other")
+                .getCustomDiagrams()
+                .put(foreignDiagramId, foreignDiagram);
+
+        // Act
+        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+
+        // Assert
+        assertThat(
+                        collection
+                                .getGraphWithContext("http://example.org/graph2")
+                                .getCustomDiagrams()
+                                .get(ownDiagramId)
+                                .getClasses())
+                .extracting(entry -> entry.getGraphUri().toString())
+                .containsExactly("http://example.org/graph2");
+        assertThat(
+                        collection
+                                .getGraphWithContext("http://example.org/other")
+                                .getCustomDiagrams()
+                                .get(foreignDiagramId)
+                                .getClasses())
+                .extracting(entry -> entry.getGraphUri().toString())
+                .containsExactly("http://example.org/graph2");
+    }
+
+    @Test
     void rename_movesCrossProfileColorToNewUri() {
         // Arrange
         GraphWithContextCollection collection = new GraphWithContextCollection();
@@ -397,7 +448,7 @@ class GraphWithContextCollectionTest {
         collection.create("http://example.org/graph2", exampleGraphs.get(1));
 
         // Act/Assert
-        assertThatExceptionOfType(IllegalArgumentException.class)
+        assertThatExceptionOfType(ResourceConflictException.class)
                 .isThrownBy(
                         () ->
                                 collection.rename(

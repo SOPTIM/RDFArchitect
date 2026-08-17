@@ -80,7 +80,10 @@ public class DatasetRESTController {
             summary = "Create dataset",
             description = "Creates an empty dataset without any graphs.",
             tags = {"dataset"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(responseCode = "409", description = "Dataset already exists")
+            })
     @PutMapping("/{datasetName}")
     public String createDataset(
             @Parameter(description = "The name/url of the inquirer.")

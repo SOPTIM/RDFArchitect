@@ -95,7 +95,9 @@ export const workspaceState = {
         if (!res.ok) {
             toastStore.error(
                 "Create failed",
-                `Could not create workspace "${name}".`,
+                res.status === 409
+                    ? `A workspace named "${name}" already exists.`
+                    : `Could not create workspace "${name}".`,
             );
             return false;
         }

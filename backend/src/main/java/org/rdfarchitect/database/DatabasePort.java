@@ -126,9 +126,11 @@ public interface DatabasePort {
     List<String> listDatasets();
 
     /**
-     * Creates an empty dataset without any graphs. Existing datasets are left untouched.
+     * Creates an empty dataset without any graphs.
      *
      * @param datasetName the literal dataset name to create
+     * @throws org.rdfarchitect.exception.database.ResourceConflictException if a dataset with that
+     *     name already exists
      */
     void createDataset(String datasetName);
 

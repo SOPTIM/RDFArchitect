@@ -48,7 +48,7 @@ The AsciiDoc export is meant for documentation toolchains (Asciidoctor, Antora, 
 
 ## Share snapshot
 
-**File → Share Snapshot** creates an immutable snapshot of the currently selected dataset and returns a link of the form `https://<host>/?snapshot=<token>`. Anyone opening that link loads the dataset as it was at the moment the snapshot was taken — packages, classes, associations, SHACL, everything — and can navigate the schema exactly like the author did, without needing to install anything.
+**File → Share Snapshot** creates an immutable snapshot of the currently selected workspace and returns a link of the form `https://<host>/?snapshot=<token>`. Anyone opening that link loads the workspace as it was at the moment the snapshot was taken — packages, classes, associations, SHACL, everything — and can navigate the schema exactly like the author did, without needing to install anything.
 
 ![Share snapshot](/img/screenshots/share-snapshot.png)
 
@@ -57,5 +57,5 @@ This is the feature to use when you want reviewers to look at a profile without 
 Three things to be aware of:
 
 - The snapshot link is *the* access control. Anyone with the link can view.
-- Snapshot links load read-only datasets by default. The loaded dataset can be made editable, but the stored snapshot is not modified.
+- Snapshot links load read-only workspaces by default. The loaded workspace can be made editable, but the stored snapshot is not modified.
 - In the current version, snapshots cannot be deleted via the UI.

@@ -25,8 +25,13 @@ public interface RenameGraphUseCase {
      * Renames the graph addressed by {@code graphIdentifier} to {@code newGraphUri}. The content
      * and the history of the graph are kept, references to it are rewritten.
      *
+     * <p>If {@code newKeyword} is given and the graph has a profile header, its {@code
+     * dcat:keyword} is set to that value. Should this fail, the rename is rolled back.
+     *
      * @param graphIdentifier identifies dataset and current graph URI
      * @param newGraphUri the graph URI to rename to
+     * @param newKeyword the display name to store in the profile header, or {@code null} to leave
+     *     the header untouched
      */
-    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
+    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri, String newKeyword);
 }

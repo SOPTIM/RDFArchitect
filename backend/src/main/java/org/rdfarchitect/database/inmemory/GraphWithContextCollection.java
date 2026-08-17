@@ -32,10 +32,12 @@ import org.apache.jena.sparql.graph.PrefixMappingReadOnly;
 import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.RDFUtils;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
@@ -180,7 +182,8 @@ public class GraphWithContextCollection {
                 throw new IllegalArgumentException("Graph URI " + oldGraphUri + " does not exist.");
             }
             if (graphs.containsKey(newGraphUri)) {
-                throw new IllegalArgumentException("Graph URI " + newGraphUri + " already exists.");
+                throw new ResourceConflictException(
+                        "Graph URI " + newGraphUri + " already exists.");
             }
             graphs.put(newGraphUri, graphs.remove(oldGraphUri));
             renameGraphInDiagrams(oldGraphUri, newGraphUri);
@@ -193,7 +196,14 @@ public class GraphWithContextCollection {
     private void renameGraphInDiagrams(String oldGraphUri, String newGraphUri) {
         var oldUri = new URI(oldGraphUri);
         var newUri = new URI(newGraphUri);
-        for (var diagram : customDiagrams.values()) {
+        rewriteGraphUri(customDiagrams.values(), oldUri, newUri);
+        for (var graph : graphs.values()) {
+            rewriteGraphUri(graph.getCustomDiagrams().values(), oldUri, newUri);
+        }
+    }
+
+    private void rewriteGraphUri(Collection<CustomDiagram> diagrams, URI oldUri, URI newUri) {
+        for (var diagram : diagrams) {
             var classes = diagram.getClasses();
             if (classes.stream().noneMatch(entry -> oldUri.equals(entry.getGraphUri()))) {
                 continue;

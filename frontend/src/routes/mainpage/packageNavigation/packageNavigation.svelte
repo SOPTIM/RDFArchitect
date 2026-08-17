@@ -43,6 +43,7 @@
     let workspaceNavEntry = $state(null);
     let namespaces = $state([]);
     let crossProfileID = $state();
+    let latestLoadRequest = 0;
 
     const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
     const readonly = $derived(readonlyValue.current ?? false);
@@ -75,6 +76,7 @@
     });
 
     async function loadWorkspace(workspaceName) {
+        const request = ++latestLoadRequest;
         const previousNavEntry =
             workspaceNavEntry?.id === workspaceName ? workspaceNavEntry : null;
         if (!workspaceName) {
@@ -83,13 +85,19 @@
             crossProfileID = undefined;
             return;
         }
-        workspaceNavEntry = await getWorkspaceNavEntry(
+        const navEntry = await getWorkspaceNavEntry(
             workspaceName,
             previousNavEntry,
         );
-        namespaces = await fetchNamespaces(workspaceName);
-        crossProfileID = await fetchCrossProfileID(workspaceName);
+        const loadedNamespaces = await fetchNamespaces(workspaceName);
+        const loadedCrossProfileID = await fetchCrossProfileID(workspaceName);
         await graphColors.reload(workspaceName);
+        if (request !== latestLoadRequest) {
+            return;
+        }
+        workspaceNavEntry = navEntry;
+        namespaces = loadedNamespaces;
+        crossProfileID = loadedCrossProfileID;
     }
 
     async function fetchNamespaces(workspaceName) {

@@ -11,7 +11,7 @@ RDFArchitect uses a small, deliberately generic vocabulary so that it works equa
 
 | RDFArchitect term   | Typical CIM / CGMES meaning                                                                                                                                                       |
 | ------------------- |-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **Dataset**         | An in-memory workspace. Often one dataset per CGMES release you are working with.                                                                                                 |
+| **Workspace**       | The outermost in-memory container, shown as a tab above the editor. Often one workspace per CGMES release you are working with.                                                   |
 | **Graph** / **Schema** | One *profile*. E.g. `EquipmentProfile`, `TopologyProfile`, `SteadyStateHypothesisProfile`, `StateVariablesProfile` — each becomes one graph.                                   |
 | **Package**         | A UML package within a profile. Corresponds to the `uml:Package` hierarchy used in the CIM UML, e.g. `Core`, `Wires`, `Generation::Production`.                                   |
 | **Class**           | An RDFS `Class`. For CGMES: every `IdentifiedObject` subtype, every `«CIMDatatype»`, every `«Compound»`, every `«enumeration»`.                                                   |
@@ -21,7 +21,7 @@ RDFArchitect uses a small, deliberately generic vocabulary so that it works equa
 | **Stereotype**      | A CIM UML stereotype applied to a class. Common values: `«enumeration»`, `«CIMDatatype»`, `«Primitive»`, `«Compound»`, `«NetworkCodeProfile»`, `«Package»`.                       |
 | **Profile header**  | The `cim:Ontology` resource (or equivalent ENTSO-E / DCAT resource) placed at the top of a profile file, carrying title, version, conformsTo, keyword, license, description, etc. |
 | **Namespace**       | The prefix/URI pair used to name resources. For CGMES: `cim:` → `http://iec.ch/TC57/CIM100#`, `entsoe:` → `http://entsoe.eu/CIM/SchemaExtension/3/1#`, etc.                       |
-| **Snapshot**        | An immutable Fuseki-backed copy of a dataset shared via URL.                                                                                                                      |
+| **Snapshot**        | An immutable Fuseki-backed copy of a workspace shared via URL.                                                                                                                    |
 | **Changelog**       | The edit history of a graph (= of a profile).                                                                                                                                     |
 | **Migration script**| A SPARQL UPDATE that transforms instance data from source profile version to target profile version.                                                                              |
 
@@ -29,8 +29,8 @@ RDFArchitect uses a small, deliberately generic vocabulary so that it works equa
 
 A typical CGMES release arrives as a zip containing several RDF/XML files — one per profile — plus accompanying SHACL files. In RDFArchitect that maps to:
 
-- **One dataset** for the release (e.g. `cgmes-3.0.0`).
-- **One graph per profile** inside the dataset:
+- **One workspace** for the release (e.g. `cgmes-3.0.0`).
+- **One graph per profile** inside the workspace:
   - `EquipmentProfile`
   - `TopologyProfile`
   - `SteadyStateHypothesisProfile`
@@ -45,8 +45,8 @@ Classes that appear in multiple profiles (for example, `Terminal`) are modelled 
 
 Network Code Profiles (e.g. the CGMES-based profiles that underpin the various Network Codes — OPDE, OPDM, etc.) follow the same structure. Because Network Code Profiles are typically *extension profiles* on top of a base CGMES version, a common setup is:
 
-- **Dataset** = one dataset per working context (e.g. `nc-opde-staging`, `nc-opde-released`).
-- **Graph(s)** = the profile(s) being edited. Base CGMES packages are referenced as *external packages*, not re-imported — the classes are visible in the navigation tree and can be associated to, but cannot be modified from within this dataset.
+- **Workspace** = one workspace per working context (e.g. `nc-opde-staging`, `nc-opde-released`).
+- **Graph(s)** = the profile(s) being edited. Base CGMES packages are referenced as *external packages*, not re-imported — the classes are visible in the navigation tree and can be associated to, but cannot be modified from within this workspace.
 - **Profile header** = the ENTSO-E ontology block (title, version, conformsTo, keyword, license, description, and the `Ontology.baseUriScheme` / `Ontology.versionIRI` fields). All of these are reachable from the "Add known fields" menu in the profile header editor.
 - **SHACL** = the official release SHACL is imported as custom SHACL; any additional internal rules you maintain are authored in the same custom SHACL document. The generated SHACL is always also available for comparison.
 

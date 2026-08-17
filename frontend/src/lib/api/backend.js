@@ -97,8 +97,12 @@ export class BackendConnection {
         });
     }
 
-    async renameGraph(workspaceName, graphURI, newGraphURI) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/rename?newGraphURI=${encodeURIComponent(newGraphURI)}`;
+    async renameGraph(workspaceName, graphURI, newGraphURI, newKeyword = null) {
+        const keywordParam =
+            newKeyword === null
+                ? ""
+                : `&newKeyword=${encodeURIComponent(newKeyword)}`;
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/rename?newGraphURI=${encodeURIComponent(newGraphURI)}${keywordParam}`;
         return fetch(url, {
             method: "POST",
             credentials: "include",

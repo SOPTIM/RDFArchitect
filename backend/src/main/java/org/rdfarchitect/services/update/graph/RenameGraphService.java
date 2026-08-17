@@ -19,8 +19,14 @@ package org.rdfarchitect.services.update.graph;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ModelFactory;
+import org.apache.jena.vocabulary.DCAT;
+import org.rdfarchitect.api.dto.ontology.OntologyDTO;
+import org.rdfarchitect.api.dto.ontology.OntologyEntry;
 import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.ontology.OntologyFacade;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -30,7 +36,46 @@ public class RenameGraphService implements RenameGraphUseCase {
     private final DatabasePort databasePort;
 
     @Override
-    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+    public void renameGraph(
+            GraphIdentifier graphIdentifier, String newGraphUri, String newKeyword) {
         databasePort.renameGraph(graphIdentifier, newGraphUri);
+        var renamedIdentifier = new GraphIdentifier(graphIdentifier.datasetName(), newGraphUri);
+        try {
+            updateKeyword(renamedIdentifier, newKeyword);
+        } catch (RuntimeException e) {
+            databasePort.renameGraph(renamedIdentifier, graphIdentifier.graphUri());
+            throw e;
+        }
+    }
+
+    private void updateKeyword(GraphIdentifier graphIdentifier, String newKeyword) {
+        if (newKeyword == null) {
+            return;
+        }
+        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.WRITE)) {
+            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
+            model.setNsPrefixes(databasePort.getPrefixMapping(graphIdentifier.datasetName()));
+            var ontologyFacade = new OntologyFacade(model);
+            var ontology = ontologyFacade.getOntology();
+            if (ontology == null) {
+                return;
+            }
+            applyKeyword(ontology, newKeyword);
+            ontologyFacade.replaceOntology(ontology);
+            ctx.commit("Renamed schema to " + graphIdentifier.graphUri());
+        }
+    }
+
+    private void applyKeyword(OntologyDTO ontology, String newKeyword) {
+        var existingEntry =
+                ontology.getEntries().stream()
+                        .filter(entry -> DCAT.keyword.getURI().equals(entry.getIri()))
+                        .findFirst();
+        if (existingEntry.isPresent()) {
+            existingEntry.get().setValue(newKeyword);
+            return;
+        }
+        ontology.getEntries()
+                .add(new OntologyEntry().setIri(DCAT.keyword.getURI()).setValue(newKeyword));
     }
 }

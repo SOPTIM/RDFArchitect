@@ -32,10 +32,10 @@ For source development, run the backend and frontend separately. See [Local deve
 
 ## First steps in the editor
 
-1. Import a schema with **File → Import → Schema (RDFS)**. RDF/XML, Turtle, and N-Triples are supported. See [Workspace and importing data](/user-guide/workspace-and-importing).
+1. Import a schema with **File → Import → Schema (RDFS)**. RDF/XML, Turtle, and N-Triples are supported. See [The editor and importing data](/user-guide/workspace-and-importing).
 2. Select a package in the left navigation tree to inspect the diagram and class list. See [Organising a schema](/user-guide/organising-schemas).
 3. Select a class to review labels, namespace, package, attributes, associations, stereotypes, comments, and constraints (SHACL). See [Editing classes](/user-guide/editing-classes).
-4. If the dataset is read-only, use **Enable Editing** before making changes. See [Read-only mode](/user-guide/read-only-mode).
+4. If the workspace is read-only, use **Enable Editing** before making changes. See [Read-only mode](/user-guide/read-only-mode).
 5. Export the schema or create a snapshot when you are ready to share it. See [Sharing and exporting](/user-guide/sharing-and-exporting).
 
 For a complete walkthrough, continue with the [User Guide](/user-guide/overview). Administrators should also review [Configuration](/admin-guide/configuration) and [Security](/admin-guide/security) before running a shared instance.

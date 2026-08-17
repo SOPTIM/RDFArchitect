@@ -31,6 +31,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 
@@ -56,7 +57,7 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
     public void createDataset(String datasetName) {
         var store = getOrCreateSessionDataStore();
         if (store.listDatasets().contains(datasetName)) {
-            return;
+            throw new ResourceConflictException("Dataset " + datasetName + " already exists");
         }
         store.createDataset(datasetName);
         initializeNewDataset(store, datasetName);

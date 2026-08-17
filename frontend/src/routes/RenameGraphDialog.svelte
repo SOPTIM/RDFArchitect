@@ -37,7 +37,6 @@
     const uniqueId = uuidv4();
     const defaultNamespace = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
-    const dcatKeywordIri = "http://www.w3.org/ns/dcat#keyword";
     const namespaceInputId = `renameGraphNamespace-${uniqueId}`;
     const namespaceListId = `renameGraphNamespaces-${uniqueId}`;
     const labelInputId = `renameGraphLabel-${uniqueId}`;
@@ -47,7 +46,6 @@
     let initialLabel = $state("");
     let namespaceOptions = $state([]);
     let otherGraphUris = $state([]);
-    let ontology = $state(null);
 
     const trimmedNamespace = $derived(namespaceUserInput.trim());
     const trimmedLabel = $derived(labelUserInput.trim());
@@ -63,9 +61,7 @@
     const uriChanged = $derived(resolvedGraphUri !== graphUri);
     // The tree labels a schema by its dcat:keyword and only falls back to the
     // URI suffix, so a new label has to reach the keyword as well.
-    const hasProfileHeader = $derived(!!ontology);
     const labelChanged = $derived(trimmedLabel !== initialLabel);
-    const keywordFollowsLabel = $derived(hasProfileHeader && labelChanged);
     const disableSubmit = $derived(
         !resolvedGraphUri || namespaceIsInvalid || graphExists || !uriChanged,
     );
@@ -78,7 +74,6 @@
 
         namespaceOptions = await loadNamespaceOptions();
         otherGraphUris = await loadOtherGraphUris();
-        ontology = await loadOntology();
     }
 
     function onClose() {
@@ -87,53 +82,6 @@
         initialLabel = "";
         namespaceOptions = [];
         otherGraphUris = [];
-        ontology = null;
-    }
-
-    async function loadOntology() {
-        if (!workspaceName || !graphUri) {
-            return null;
-        }
-        try {
-            const res = await bec.getOntology(workspaceName, graphUri);
-            const content = await res.text();
-            return content ? JSON.parse(content) : null;
-        } catch (err) {
-            console.error("Failed to load profile header:", err);
-            return null;
-        }
-    }
-
-    function withKeyword(source, keyword) {
-        const entries = source.entries ?? [];
-        if (!keyword) {
-            return {
-                ...source,
-                entries: entries.filter(entry => entry.iri !== dcatKeywordIri),
-            };
-        }
-        if (entries.some(entry => entry.iri === dcatKeywordIri)) {
-            return {
-                ...source,
-                entries: entries.map(entry =>
-                    entry.iri === dcatKeywordIri
-                        ? { ...entry, value: keyword }
-                        : entry,
-                ),
-            };
-        }
-        return {
-            ...source,
-            entries: [
-                ...entries,
-                {
-                    iri: dcatKeywordIri,
-                    isIriEntry: false,
-                    datatypeIri: null,
-                    value: keyword,
-                },
-            ],
-        };
     }
 
     async function loadNamespaceOptions() {
@@ -171,19 +119,24 @@
     async function renameGraph() {
         const oldGraphUri = graphUri;
         const newGraphUri = resolvedGraphUri;
-        const shouldUpdateKeyword = keywordFollowsLabel;
-        const keyword = trimmedLabel;
-        const currentOntology = ontology;
+        const newKeyword = labelChanged ? trimmedLabel : null;
         try {
-            if (!(await sendGraphRename(oldGraphUri, newGraphUri))) {
+            const res = await bec.renameGraph(
+                workspaceName,
+                oldGraphUri,
+                newGraphUri,
+                newKeyword,
+            );
+            if (!res.ok) {
+                toastStore.error(
+                    "Rename failed",
+                    res.status === 409
+                        ? `A schema with the uri "${newGraphUri}" already exists.`
+                        : `Could not rename schema "${oldGraphUri}".`,
+                );
                 return;
             }
-            if (
-                shouldUpdateKeyword &&
-                !(await sendKeyword(newGraphUri, currentOntology, keyword))
-            ) {
-                return;
-            }
+            editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
             toastStore.success(
                 "Schema renamed",
                 `"${oldGraphUri}" is now "${newGraphUri}".`,
@@ -197,39 +150,6 @@
         } finally {
             forceReloadTrigger.trigger();
         }
-    }
-
-    async function sendGraphRename(oldGraphUri, newGraphUri) {
-        const res = await bec.renameGraph(
-            workspaceName,
-            oldGraphUri,
-            newGraphUri,
-        );
-        if (!res.ok) {
-            toastStore.error(
-                "Rename failed",
-                `Could not rename schema "${oldGraphUri}".`,
-            );
-            return false;
-        }
-        editorState.renameGraph(workspaceName, oldGraphUri, newGraphUri);
-        return true;
-    }
-
-    async function sendKeyword(targetGraphUri, currentOntology, keyword) {
-        const res = await bec.putOntology(
-            workspaceName,
-            targetGraphUri,
-            withKeyword(currentOntology, keyword),
-        );
-        if (res && res.ok === false) {
-            toastStore.error(
-                "Rename failed",
-                "Could not update the display name in the profile header.",
-            );
-            return false;
-        }
-        return true;
     }
 </script>
 

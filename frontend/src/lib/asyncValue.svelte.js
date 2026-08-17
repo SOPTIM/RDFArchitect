@@ -35,10 +35,12 @@ import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
 export function asyncValue(getKey, load) {
     let value = $state(null);
     let valueKey = $state(null);
+    let latestRequest = 0;
 
     $effect(() => {
         forceReloadTrigger.subscribe();
         const key = getKey();
+        const request = ++latestRequest;
         if (key === null || key === undefined) {
             value = null;
             valueKey = null;
@@ -46,9 +48,16 @@ export function asyncValue(getKey, load) {
         }
         untrack(async () => {
             try {
-                value = await load(key);
+                const loaded = await load(key);
+                if (request !== latestRequest) {
+                    return;
+                }
+                value = loaded;
                 valueKey = key;
             } catch (err) {
+                if (request !== latestRequest) {
+                    return;
+                }
                 console.error("Failed to load value for", key, err);
                 value = null;
                 valueKey = null;

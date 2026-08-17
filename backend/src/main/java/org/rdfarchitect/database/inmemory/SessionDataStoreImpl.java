@@ -35,6 +35,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -95,7 +96,8 @@ public class SessionDataStoreImpl implements SessionDataStore {
             }
             assertThatDatasetExists(oldDatasetName);
             if (graphCollections.containsKey(newDatasetName)) {
-                throw new DataAccessException("Dataset " + newDatasetName + " already exists");
+                throw new ResourceConflictException(
+                        "Dataset " + newDatasetName + " already exists");
             }
             graphCollections.put(newDatasetName, graphCollections.remove(oldDatasetName));
         } finally {

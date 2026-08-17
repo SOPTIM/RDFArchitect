@@ -50,9 +50,12 @@ public class GraphRenameRESTController {
     @Operation(
             summary = "Rename graph",
             description =
-                    "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten.",
+                    "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
             tags = {"graph"},
-            responses = {@ApiResponse(responseCode = "200")})
+            responses = {
+                @ApiResponse(responseCode = "200"),
+                @ApiResponse(responseCode = "409", description = "Graph URI already exists")
+            })
     @PostMapping
     public String renameGraph(
             @Parameter(description = "The name/url of the inquirer.")
@@ -66,7 +69,12 @@ public class GraphRenameRESTController {
             @Parameter(description = "The url encoded uri of the graph.") @PathVariable
                     String graphURI,
             @Parameter(description = "The url encoded uri to rename the graph to.") @RequestParam
-                    String newGraphURI) {
+                    String newGraphURI,
+            @Parameter(
+                            description =
+                                    "The display name to store as dcat:keyword in the profile header.")
+                    @RequestParam(required = false)
+                    String newKeyword) {
         logger.info(
                 "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" from \"{}\".",
                 datasetName,
@@ -77,7 +85,9 @@ public class GraphRenameRESTController {
         var extendedNewGraphURI = expandURIUseCase.expandUri(datasetName, newGraphURI);
 
         renameGraphUseCase.renameGraph(
-                new GraphIdentifier(datasetName, extendedGraphURI), extendedNewGraphURI);
+                new GraphIdentifier(datasetName, extendedGraphURI),
+                extendedNewGraphURI,
+                newKeyword);
 
         logger.info(
                 "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/rename\" to \"{}\".",

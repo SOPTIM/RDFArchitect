@@ -30,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.List;
@@ -173,7 +174,7 @@ class SessionDataStoreImplTest {
         inMemoryDatabase.createDataset("b");
 
         // Act/Assert
-        assertThatExceptionOfType(DataAccessException.class)
+        assertThatExceptionOfType(ResourceConflictException.class)
                 .isThrownBy(() -> inMemoryDatabase.renameDataset(NAME, "b"));
     }
 

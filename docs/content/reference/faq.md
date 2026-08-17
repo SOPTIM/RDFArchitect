@@ -23,7 +23,7 @@ Yes. RDFArchitect is released under the Apache License 2.0. There is no paid tie
 
 ### Where is my data stored?
 
-Uploaded datasets, graphs, namespaces, and edits are kept in memory on the backend. **Apache Jena Fuseki** is only used for snapshots, so a shared snapshot persists there until it is deleted from Fuseki. RDFArchitect does not send data anywhere external.
+Uploaded workspaces, graphs, namespaces, and edits are kept in memory on the backend. **Apache Jena Fuseki** is only used for snapshots, so a shared snapshot persists there until it is deleted from Fuseki. RDFArchitect does not send data anywhere external.
 
 ### Is there a public hosted version?
 
@@ -39,9 +39,9 @@ Schemas: **RDF/XML (.rdf), Turtle (.ttl), N-Triples (.nt)**. SHACL: the same thr
 
 Yes, its possible to select multiple profiles at once during the import. You can also directly import .zip files with profiles in the root folder, which then get imported.
 
-### My import says the dataset is read-only. What now?
+### My import says the workspace is read-only. What now?
 
-The dataset has been locked against edits. Select the dataset and use **Edit → Enable Editing** in the menu. Snapshot links are opened as read-only datasets by default, but that imported dataset can also be made editable. The original snapshot stored in Fuseki is not changed.
+The workspace has been locked against edits. Select the workspace and use **Edit → Enable Editing** in the menu. Snapshot links are opened as read-only workspaces by default, but that imported workspace can also be made editable. The original snapshot stored in Fuseki is not changed.
 
 ### The imported file does not show all classes I expected.
 
@@ -61,9 +61,9 @@ The default upload limit is 50 MB. For larger files, an administrator can raise 
 
 Three possibilities:
 
-1. The **dataset is read-only** — enable editing (Edit → Enable Editing) or choose a different dataset.
+1. The **workspace is read-only** — enable editing (Edit → Enable Editing) or choose a different workspace.
 2. The class belongs to an **external package** — a package referenced by the schema but not defined in it. By design these are not editable from the current graph.
-3. You are viewing a **snapshot import** — it opens read-only by default, but you can enable editing for the imported dataset. The stored snapshot itself remains unchanged.
+3. You are viewing a **snapshot import** — it opens read-only by default, but you can enable editing for the imported workspace. The stored snapshot itself remains unchanged.
 
 ### What is the "default" package?
 

@@ -34,4 +34,4 @@ A similar dialog exists at the class level to inspect the NodeShapes and the Pro
 
 ## Exporting SHACL
 
-**File → Export → Constraints (SHACL)** downloads a SHACL file. The dialog asks which dataset and graph to use, which parts to include (generated, custom, or both), and in which format. TTL is the default.
+**File → Export → Constraints (SHACL)** downloads a SHACL file. The dialog asks which workspace and graph to use, which parts to include (generated, custom, or both), and in which format. TTL is the default.

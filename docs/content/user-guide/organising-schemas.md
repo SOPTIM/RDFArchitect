@@ -3,7 +3,7 @@ title: Organising a Schema
 sidebar_position: 3
 ---
 
-# Organising a Schema: Datasets, Graphs, Packages
+# Organising a Schema: Workspaces, Graphs, Packages
 
 ## Creating a package
 
@@ -24,7 +24,7 @@ The navigation tree marks these two categories separately, and the editing menus
 
 ## Creating a class
 
-From **Edit → New → Class** you pick the target dataset, graph, package, and a URI namespace for the new class. The combination of label and URI namespace must be unique within the graph; the editor validates this before allowing save. On save, the class opens immediately in the class editor on the right.
+From **Edit → New → Class** you pick the target workspace, graph, package, and a URI namespace for the new class. The combination of label and URI namespace must be unique within the graph; the editor validates this before allowing save. On save, the class opens immediately in the class editor on the right.
 
 ![New class](/img/screenshots/add-class.png)
 
@@ -51,4 +51,4 @@ The dialog only covers what the chosen variant actually copies — after **Paste
 
 ## Deleting
 
-Every destructive action (delete schema, delete dataset, delete package, delete class) goes through a confirmation dialog that states what will be removed. Deletions participate in undo/redo like any other edit (see [Reviewing changes](./history)).
+Every destructive action (delete schema, delete workspace, delete package, delete class) goes through a confirmation dialog that states what will be removed. Deletions participate in undo/redo like any other edit (see [Reviewing changes](./history)).
