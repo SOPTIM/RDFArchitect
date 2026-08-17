@@ -22,44 +22,29 @@ import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.rdfarchitect.api.dto.cross_profile_diagram.CrossProfileDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
-import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.springframework.http.HttpHeaders;
-
-import java.util.List;
-import java.util.UUID;
 
 class CrossProfileDiagramRenderingRestControllerTest {
 
     private RenderCrossProfileDiagramUseCase renderer;
-    private GetCustomDiagramsUseCase getCustomDiagramsUseCase;
     private CrossProfileDiagramRenderingRestController controller;
 
     @BeforeEach
     void setUp() {
         renderer = mock(RenderCrossProfileDiagramUseCase.class);
-        getCustomDiagramsUseCase = mock(GetCustomDiagramsUseCase.class);
-        controller =
-                new CrossProfileDiagramRenderingRestController(renderer, getCustomDiagramsUseCase);
+        controller = new CrossProfileDiagramRenderingRestController(renderer);
     }
 
     @Test
     void getCrossProfileRenderingData_validDataset_returnsRenderingDTO() {
-        var diagramUUID = UUID.randomUUID();
-        var diagram = new CrossProfileDiagramDTO(diagramUUID, List.of());
         var expectedRendering = mock(RenderingDataDTO.class);
-
-        when(getCustomDiagramsUseCase.getCrossProfileDiagram("my-dataset", true, true))
-                .thenReturn(diagram);
-        when(renderer.renderCrossProfileDiagramUML(diagram, "my-dataset"))
-                .thenReturn(expectedRendering);
+        when(renderer.renderCrossProfileDiagram("my-dataset")).thenReturn(expectedRendering);
 
         var result = controller.getCrossProfileRenderingData(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(expectedRendering);
-        verify(getCustomDiagramsUseCase).getCrossProfileDiagram("my-dataset", true, true);
-        verify(renderer).renderCrossProfileDiagramUML(diagram, "my-dataset");
+        verify(renderer).renderCrossProfileDiagram("my-dataset");
     }
 }

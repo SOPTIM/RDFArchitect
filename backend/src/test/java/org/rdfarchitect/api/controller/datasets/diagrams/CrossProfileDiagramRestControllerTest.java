@@ -43,12 +43,12 @@ class CrossProfileDiagramRestControllerTest {
     @Test
     void getCrossProfileRenderingData_validDataset_returnsDTOFromUseCase() {
         var expectedDTO = new CrossProfileDiagramDTO(UUID.randomUUID(), List.of());
-        when(getCustomDiagramsUseCase.getCrossProfileDiagram("my-dataset", false, false))
+        when(getCustomDiagramsUseCase.getCrossProfileDiagram("my-dataset", false))
                 .thenReturn(expectedDTO);
 
         var result = controller.getCrossProfileRenderingData(HttpHeaders.ORIGIN, "my-dataset");
 
         assertThat(result).isEqualTo(expectedDTO);
-        verify(getCustomDiagramsUseCase).getCrossProfileDiagram("my-dataset", false, false);
+        verify(getCustomDiagramsUseCase).getCrossProfileDiagram("my-dataset", false);
     }
 }

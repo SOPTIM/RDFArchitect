@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
-import org.rdfarchitect.services.diagrams.GetCustomDiagramsUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -43,8 +42,6 @@ public class CrossProfileDiagramRenderingRestController {
 
     private final RenderCrossProfileDiagramUseCase renderer;
 
-    private final GetCustomDiagramsUseCase getCustomDiagramsUseCase;
-
     @GetMapping
     public RenderingDataDTO getCrossProfileRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
@@ -60,10 +57,7 @@ public class CrossProfileDiagramRenderingRestController {
                 datasetName,
                 originURL);
 
-        var crossProfileDiagram =
-                getCustomDiagramsUseCase.getCrossProfileDiagram(datasetName, true, true);
-
-        var result = renderer.renderCrossProfileDiagramUML(crossProfileDiagram, datasetName);
+        var result = renderer.renderCrossProfileDiagram(datasetName);
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/crossprofilediagramRendering\" from \"{}\"",

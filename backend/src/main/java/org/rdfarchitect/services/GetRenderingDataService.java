@@ -30,9 +30,12 @@ import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.facade.CIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.rdf.graph.GraphUtils;
+import org.rdfarchitect.services.rendering.CIMProfileModels;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
+import org.rdfarchitect.services.select.ListGraphsUseCase;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -41,6 +44,7 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
 
     private final DatabasePort databasePort;
     private final RenderCIMFacadeCollectionUseCase renderer;
+    private final ListGraphsUseCase listGraphsUseCase;
 
     @Override
     public RenderingDataDTO getRenderingData(
@@ -67,6 +71,27 @@ public class GetRenderingDataService implements GetRenderingDataUseCase {
         var cimModel =
                 new CIMModelFacade(
                         graphIdentifier.graphUri(), ModelFactory.createModelForGraph(rdfGraphCopy));
-        return renderer.renderUML(cimModel, filter, layoutData);
+
+        if (!filter.isIncludePropertiesFromOtherProfiles()) {
+            return renderer.renderUML(cimModel, filter, layoutData, List.of(), null, null);
+        }
+
+        var datasetName = graphIdentifier.datasetName();
+        var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
+        var otherProfiles =
+                CIMProfileModels.loadAll(
+                        databasePort, keywords, datasetName, graphIdentifier.graphUri());
+        var primaryColor =
+                databasePort
+                        .getCrossProfileDiagramInfo(datasetName)
+                        .getColor(graphIdentifier.graphUri());
+
+        return renderer.renderUML(
+                cimModel,
+                filter,
+                layoutData,
+                otherProfiles,
+                primaryColor,
+                keywords.get(graphIdentifier.graphUri()));
     }
 }

@@ -76,6 +76,7 @@ export const SelectionLevel = {
  *  selectedClass: StateObjectPair<Object | null>,
  *  focusedClassUUID: StateValuePair<string | null>,
  *  selectedContext: StateValuePair<string | null>,
+ *  mergedViewOriginGraph: StateValuePair<string | null>,
  *  reset: () => void
  * }}
  */
@@ -91,6 +92,9 @@ export const editorState = {
     selectedContext: new StateValuePair(),
     // The level the user selected last; drives the nav highlight (see SelectionLevel).
     activeSelectionKind: new StateValuePair(),
+    // The graph the user came from when entering the merged view; preselects the
+    // matching source in the merged class editor.
+    mergedViewOriginGraph: new StateValuePair(),
 
     reset() {
         this.selectedDataset.updateValue(null);
@@ -102,6 +106,7 @@ export const editorState = {
         this.focusedClassUUID.updateValue(null);
         this.selectedContext.updateValue(null);
         this.activeSelectionKind.updateValue(null);
+        this.mergedViewOriginGraph.updateValue(null);
         multiSelectState.clear();
     },
 
@@ -162,30 +167,6 @@ export const editorState = {
         this.selectedDiagram.updateValue({ type: null, id: null });
         this.activeSelectionKind.updateValue(SelectionLevel.GRAPH);
     },
-};
-
-/**
- * The graphViewState contains the states of variables relating to the view of a graph.
- * @type {{
- *  showGraphFilter: StateValuePair<boolean>,
- *  filter: StateValuePair<{
- *      includeEnumEntries: boolean,
- *      includeAttributes: boolean,
- *      includeAssociations: boolean,
- *      includeInheritance: boolean,
- *      includeRelationsToExternalPackages: boolean
- *  }>
- * }}
- */
-export const graphViewState = {
-    showGraphFilter: new StateValuePair(false),
-    filter: new StateValuePair({
-        includeEnumEntries: true,
-        includeAttributes: true,
-        includeAssociations: true,
-        includeInheritance: true,
-        includeRelationsToExternalPackages: true,
-    }),
 };
 
 export const forceReloadTrigger = new SimpleTrigger();

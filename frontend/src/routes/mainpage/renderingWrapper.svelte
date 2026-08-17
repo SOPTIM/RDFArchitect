@@ -21,20 +21,19 @@
     import { untrack } from "svelte";
 
     import { BackendConnection } from "$lib/api/backend.js";
-    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import MermaidWrapper from "$lib/rendering/mermaid/mermaidWrapper.svelte";
     import SvelteFlowWrapper from "$lib/rendering/svelteflow/svelteFlowWrapper.svelte";
+    import { renderOptions } from "$lib/renderOptions.svelte.js";
     import {
         editorState,
-        graphViewState,
         forceReloadTrigger,
         DiagramType,
     } from "$lib/sharedState.svelte.js";
 
-    import FilterViewDialog from "../FilterViewDialog.svelte";
+    import RenderFilterBar from "./RenderFilterBar.svelte";
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
@@ -45,7 +44,6 @@
 
     let svelteFlowAPI = $state({});
 
-    let showFilterDialog = $state(false);
     let response = $state(null);
     let isDatasetReadOnly = $state();
     let renderingFormat = $state(null);
@@ -76,7 +74,7 @@
         const graphUri = editorState.selectedGraph.getValue();
         const diagramId = editorState.selectedDiagram.getProperty("id");
         const diagramType = editorState.selectedDiagram.getProperty("type");
-        const filter = graphViewState.filter.getValue();
+        const filter = renderOptions.graphFilter();
 
         const nextDiagramRequestKey = getDiagramRequestKey(
             datasetName,
@@ -130,6 +128,8 @@
             includeInheritance: filter.includeInheritance,
             includeRelationsToExternalPackages:
                 filter.includeRelationsToExternalPackages,
+            includePropertiesFromOtherProfiles:
+                filter.includePropertiesFromOtherProfiles,
         };
 
         try {
@@ -256,42 +256,19 @@
 </script>
 
 {#if editorState.selectedDiagram.getProperty("id")}
-    <div class="bg-window-background flex h-full flex-col justify-between">
-        <div class="relative h-full overflow-hidden">
+    <div class="bg-window-background flex h-full flex-col">
+        {#if displayDiagram}
+            <RenderFilterBar
+                diagramType={editorState.selectedDiagram.getProperty("type")}
+                onResetView={() => handleResetView()}
+                onResetLayout={async () =>
+                    await svelteFlowWrapper.applyELKLayout()}
+                showResetLayout={!isDatasetReadOnly &&
+                    renderingFormat === SVELTEFLOW_FORMAT}
+            />
+        {/if}
+        <div class="relative min-h-0 flex-1 overflow-hidden">
             {#if displayDiagram}
-                <div
-                    class="absolute top-1 left-1 z-1 flex flex-col space-y-0.5"
-                >
-                    <div class="h-9 w-28">
-                        <ButtonControl
-                            variant="default"
-                            callOnClick={() => handleResetView()}
-                        >
-                            Reset View
-                        </ButtonControl>
-                    </div>
-                    {#if editorState.selectedDiagram.getProperty("type") === DiagramType.PACKAGE}
-                        <div class="h-9 w-28">
-                            <ButtonControl
-                                variant="default"
-                                callOnClick={() => (showFilterDialog = true)}
-                            >
-                                Filter View
-                            </ButtonControl>
-                        </div>
-                    {/if}
-                    {#if !isDatasetReadOnly && renderingFormat === SVELTEFLOW_FORMAT}
-                        <div class="h-9 w-28">
-                            <ButtonControl
-                                variant="default"
-                                callOnClick={async () =>
-                                    await svelteFlowWrapper.applyELKLayout()}
-                            >
-                                <span class="text-sm">reset layout</span>
-                            </ButtonControl>
-                        </div>
-                    {/if}
-                </div>
                 {#if isLoading}
                     <div
                         class="bg-window-background absolute inset-0 z-10 flex w-full items-center justify-center"
@@ -358,4 +335,3 @@
         </div>
     </div>
 {/if}
-<FilterViewDialog bind:showDialog={showFilterDialog} />
