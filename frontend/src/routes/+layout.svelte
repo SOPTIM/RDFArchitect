@@ -17,6 +17,7 @@
 
 <script>
     import "../app.css";
+    import { Tooltip } from "bits-ui";
     import { onMount } from "svelte";
 
     import {
@@ -43,6 +44,7 @@
     import File from "./layout/menu-bar/File.svelte";
     import Help from "./layout/menu-bar/Help.svelte";
     import View from "./layout/menu-bar/View.svelte";
+    import PasteClassesDialog from "./PasteClassesDialog.svelte";
     import Searchbar from "./Searchbar.svelte";
 
     import { goto } from "$app/navigation";
@@ -218,64 +220,72 @@
         isLeftAltPressed = false;
     }}
 />
-<div class="fixed top-0 left-0 flex h-screen max-h-screen w-screen flex-col">
-    {#if page.url.pathname !== "/"}
-        <nav
-            class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center"
-        >
-            <!-- Left -->
-            <div class="w-1/3">
-                <div class="flex min-w-0 flex-1 items-center">
-                    <BrandLogo class="toolbar-brand" onclick={navigateHome} />
+<Tooltip.Provider delayDuration={150}>
+    <div
+        class="fixed top-0 left-0 flex h-screen max-h-screen w-screen flex-col"
+    >
+        {#if page.url.pathname !== "/"}
+            <nav
+                class="toolbar-surface text-default-text flex h-12 min-h-12 w-full items-center"
+            >
+                <!-- Left -->
+                <div class="w-1/3">
+                    <div class="flex min-w-0 flex-1 items-center">
+                        <BrandLogo
+                            class="toolbar-brand"
+                            onclick={navigateHome}
+                        />
 
-                    {#if page.url.pathname !== "/"}
-                        <Menubar.Root
-                            bind:value={menubarValue}
-                            class="toolbar-menubar"
-                        >
-                            <File {isDatasetReadOnly} />
-                            <Edit
-                                {canRedo}
-                                {canUndo}
-                                {isDatasetReadOnly}
-                                {reload}
-                            />
-                            <View />
-                            <Help />
-                        </Menubar.Root>
-                    {/if}
-                </div>
-            </div>
-
-            <!-- Center -->
-            <div class="w-1/3">
-                {#if page.url.pathname === "/mainpage"}
-                    <div class="w-full">
-                        <Searchbar />
+                        {#if page.url.pathname !== "/"}
+                            <Menubar.Root
+                                bind:value={menubarValue}
+                                class="toolbar-menubar"
+                            >
+                                <File {isDatasetReadOnly} />
+                                <Edit
+                                    {canRedo}
+                                    {canUndo}
+                                    {isDatasetReadOnly}
+                                    {reload}
+                                />
+                                <View />
+                                <Help />
+                            </Menubar.Root>
+                        {/if}
                     </div>
-                {/if}
-            </div>
+                </div>
 
-            <!-- Right -->
-            <div class="w-1/3">
-                <div
-                    class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
-                >
-                    {#if isDatasetReadOnly}
-                        <ButtonControl
-                            callOnClick={requestEnableEditing}
-                            height={9}
-                        >
-                            Enable Editing
-                        </ButtonControl>
+                <!-- Center -->
+                <div class="w-1/3">
+                    {#if page.url.pathname === "/mainpage"}
+                        <div class="w-full">
+                            <Searchbar />
+                        </div>
                     {/if}
                 </div>
-            </div>
-        </nav>
-    {/if}
 
-    <div class="min-h-0 flex-1">
-        {@render children?.()}
+                <!-- Right -->
+                <div class="w-1/3">
+                    <div
+                        class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
+                    >
+                        {#if isDatasetReadOnly}
+                            <ButtonControl
+                                callOnClick={requestEnableEditing}
+                                height={9}
+                            >
+                                Enable Editing
+                            </ButtonControl>
+                        {/if}
+                    </div>
+                </div>
+            </nav>
+        {/if}
+
+        <div class="min-h-0 flex-1">
+            {@render children?.()}
+        </div>
     </div>
-</div>
-<ToastContainer />
+    <ToastContainer />
+    <PasteClassesDialog />
+</Tooltip.Provider>

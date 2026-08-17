@@ -22,6 +22,9 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.rdf.model.Literal;
 import org.apache.jena.rdf.model.Resource;
 import org.apache.jena.rdf.model.ResourceFactory;
+import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
+
+import java.util.List;
 
 /** Class containing stereotype {@link Resource resources} for CIM. */
 @UtilityClass
@@ -74,4 +77,10 @@ public class CIMStereotypes {
     public final String europeanString = "European";
 
     public final Literal european = ResourceFactory.createPlainLiteral(europeanString);
+
+    public List<CIMSStereotype> withoutConcrete(List<CIMSStereotype> stereotypes) {
+        return stereotypes.stream()
+                .filter(stereotype -> !stereotype.getStereotype().equals(concreteString))
+                .toList();
+    }
 }

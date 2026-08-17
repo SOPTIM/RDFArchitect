@@ -51,6 +51,7 @@ import org.rdfarchitect.models.cim.queries.CIMQueryVars;
 import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.umladapted.data.CIMClassUMLAdapted;
 import org.rdfarchitect.rdf.RDFUtils;
 
@@ -741,7 +742,7 @@ public class CIMUpdates {
     }
 
     private void assertNoClassWithSameIri(Graph graph, URI packageUri) {
-        if (graph.contains(packageUri.toNode(), RDF.type.asNode(), RDFS.Class.asNode())) {
+        if (CIMResourceUtils.containsClass(graph, packageUri)) {
             throw new IllegalArgumentException(
                     "Cannot create package "
                             + packageUri
@@ -750,7 +751,7 @@ public class CIMUpdates {
     }
 
     private void assertNoPackageWithSameIri(Graph graph, URI classUri) {
-        if (graph.contains(classUri.toNode(), RDF.type.asNode(), CIMS.classCategory.asNode())) {
+        if (CIMResourceUtils.containsPackage(graph, classUri)) {
             throw new IllegalArgumentException(
                     "Cannot create class "
                             + classUri

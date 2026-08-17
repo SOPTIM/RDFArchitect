@@ -16,8 +16,7 @@
   -->
 
 <script>
-    import { faChevronRight } from "@fortawesome/free-solid-svg-icons";
-    import { Fa } from "svelte-fa";
+    import CollapseToggle from "$lib/components/CollapseToggle.svelte";
 
     let { title, children, open = true } = $props();
 
@@ -26,24 +25,18 @@
 
 <div class="flex flex-col gap-2">
     {#if title}
-        <button
-            type="button"
-            class="flex cursor-pointer items-center gap-2 border-none bg-transparent p-0"
+        <CollapseToggle
+            expanded={isOpen}
+            label="{isOpen ? 'Hide' : 'Show'} {title}"
             onclick={() => (isOpen = !isOpen)}
         >
-            <Fa
-                icon={faChevronRight}
-                class="text-default-text opacity-80 transition-transform duration-200 {isOpen
-                    ? 'rotate-90'
-                    : ''}"
-            />
             <span
                 class="text-default-text text-sm font-semibold whitespace-nowrap uppercase opacity-80"
             >
                 {title}
             </span>
             <hr class="flex-1 border-t border-gray-600" />
-        </button>
+        </CollapseToggle>
     {/if}
     {#if isOpen}
         <div class="mt-1 flex flex-col gap-2">

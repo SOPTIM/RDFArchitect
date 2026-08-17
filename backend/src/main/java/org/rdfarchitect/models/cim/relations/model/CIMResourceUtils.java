@@ -22,13 +22,24 @@ import lombok.experimental.UtilityClass;
 import org.apache.jena.graph.Graph;
 import org.apache.jena.rdf.model.ModelFactory;
 import org.apache.jena.rdf.model.Resource;
+import org.apache.jena.vocabulary.RDF;
 import org.apache.jena.vocabulary.RDFS;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.CIMS;
 import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 
 import java.util.UUID;
 
 @UtilityClass
 public class CIMResourceUtils {
+
+    public boolean containsClass(Graph graph, URI uri) {
+        return graph.contains(uri.toNode(), RDF.type.asNode(), RDFS.Class.asNode());
+    }
+
+    public boolean containsPackage(Graph graph, URI uri) {
+        return graph.contains(uri.toNode(), RDF.type.asNode(), CIMS.classCategory.asNode());
+    }
 
     /**
      * Checks whether a resource is external/referenced only. In our model this would mean it only

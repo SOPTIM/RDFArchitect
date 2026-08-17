@@ -25,6 +25,7 @@
         EventType,
     } from "$lib/eventhandling/closeEventManager.svelte.js";
     import {
+        findSuperClass,
         mapClassDtoToReactiveClass,
         mapSuperClassesToInherited,
     } from "$lib/models/reactive/mapper/map-dto-to-reactive-object.js";
@@ -67,6 +68,7 @@
         datatypes: [],
         packages: [],
         classes: [],
+        superClass: null,
         targetClassInfos: [],
     };
 
@@ -209,6 +211,7 @@
 
     async function loadReactiveClass(cancelled, classDTO) {
         if (cancelled.cancelled) return;
+        context.superClass = findSuperClass(context.classes, classDTO);
         const newReactiveClass = mapClassDtoToReactiveClass(
             classDTO,
             context,
@@ -289,7 +292,13 @@
         },
         get getClassByUuid() {
             return function (uuid) {
-                return context.classes.find(cls => cls.uuid === uuid);
+                const cls = context.classes.find(cls => cls.uuid === uuid);
+                if (cls) {
+                    return cls;
+                }
+                return context.superClass?.uuid === uuid
+                    ? context.superClass
+                    : undefined;
             };
         },
         get getTargetClassInfoByUuid() {
