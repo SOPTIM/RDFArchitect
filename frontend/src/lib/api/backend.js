@@ -577,7 +577,11 @@ export class BackendConnection {
         });
     }
 
-    async postPastePreview(targetWorkspaceName, targetGraphURI, previewRequest) {
+    async postPastePreview(
+        targetWorkspaceName,
+        targetGraphURI,
+        previewRequest,
+    ) {
         let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetWorkspaceName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste/preview`;
         return await fetch(url, {
             method: "POST",

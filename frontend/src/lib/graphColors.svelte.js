@@ -46,7 +46,7 @@ function defaultColorFor(index) {
 }
 
 function createGraphColors() {
-    let byDataset = $state({});
+    let byWorkspace = $state({});
     const pendingLoads = new Map();
 
     function normalizeColors(colorsByGraph) {
@@ -57,32 +57,32 @@ function createGraphColors() {
         );
     }
 
-    async function put(datasetName, colorsByGraph) {
+    async function put(workspaceName, colorsByGraph) {
         const payload = normalizeColors(colorsByGraph);
         if (Object.keys(payload).length === 0) {
             return Object.keys(colorsByGraph).length === 0;
         }
         try {
-            const res = await bec.putCrossProfileColorData(datasetName, {
+            const res = await bec.putCrossProfileColorData(workspaceName, {
                 graphColors: payload,
             });
             if (!res.ok) {
                 console.error(
-                    `Failed to save schema colors for "${datasetName}": HTTP ${res.status}`,
+                    `Failed to save schema colors for "${workspaceName}": HTTP ${res.status}`,
                 );
             }
             return res.ok;
         } catch (err) {
             console.error(
-                `Failed to save schema colors for "${datasetName}"`,
+                `Failed to save schema colors for "${workspaceName}"`,
                 err,
             );
             return false;
         }
     }
 
-    async function load(datasetName) {
-        const res = await bec.getCrossProfileColorData(datasetName);
+    async function load(workspaceName) {
+        const res = await bec.getCrossProfileColorData(workspaceName);
         if (!res.ok) {
             throw new Error(`HTTP ${res.status}`);
         }
@@ -101,8 +101,8 @@ function createGraphColors() {
                 }
             });
 
-        byDataset[datasetName] = resolved;
-        await put(datasetName, seeded);
+        byWorkspace[workspaceName] = resolved;
+        await put(workspaceName, seeded);
         return resolved;
     }
 
@@ -120,43 +120,43 @@ function createGraphColors() {
         }
     }
 
-    function startLoad(datasetName) {
-        const running = load(datasetName)
+    function startLoad(workspaceName) {
+        const running = load(workspaceName)
             .catch(err => {
                 console.error(
-                    `Error fetching schema colors for dataset "${datasetName}"`,
+                    `Error fetching schema colors for workspace "${workspaceName}"`,
                     err,
                 );
                 return {};
             })
-            .finally(() => pendingLoads.delete(datasetName));
-        pendingLoads.set(datasetName, running);
+            .finally(() => pendingLoads.delete(workspaceName));
+        pendingLoads.set(workspaceName, running);
         return running;
     }
 
     return {
-        get(datasetName, graphUri) {
-            return byDataset[datasetName]?.[graphUri] ?? null;
+        get(workspaceName, graphUri) {
+            return byWorkspace[workspaceName]?.[graphUri] ?? null;
         },
 
-        reload(datasetName) {
-            if (!datasetName) {
+        reload(workspaceName) {
+            if (!workspaceName) {
                 return Promise.resolve({});
             }
-            return pendingLoads.get(datasetName) ?? startLoad(datasetName);
+            return pendingLoads.get(workspaceName) ?? startLoad(workspaceName);
         },
 
-        async set(datasetName, graphUri, color) {
+        async set(workspaceName, graphUri, color) {
             const hex = normalizeHex(color);
             if (!hex) {
                 return false;
             }
-            const previous = byDataset[datasetName] ?? {};
-            byDataset[datasetName] = { ...previous, [graphUri]: hex };
+            const previous = byWorkspace[workspaceName] ?? {};
+            byWorkspace[workspaceName] = { ...previous, [graphUri]: hex };
 
-            const saved = await put(datasetName, { [graphUri]: hex });
+            const saved = await put(workspaceName, { [graphUri]: hex });
             if (!saved) {
-                byDataset[datasetName] = previous;
+                byWorkspace[workspaceName] = previous;
                 toastStore.error(
                     "Save failed",
                     `Could not save the color for "${graphUri}".`,
@@ -167,16 +167,16 @@ function createGraphColors() {
             return true;
         },
 
-        async replaceAll(datasetName, colorsByGraph) {
-            const previous = byDataset[datasetName] ?? {};
-            byDataset[datasetName] = {
+        async replaceAll(workspaceName, colorsByGraph) {
+            const previous = byWorkspace[workspaceName] ?? {};
+            byWorkspace[workspaceName] = {
                 ...previous,
                 ...normalizeColors(colorsByGraph),
             };
 
-            const saved = await put(datasetName, colorsByGraph);
+            const saved = await put(workspaceName, colorsByGraph);
             if (!saved) {
-                byDataset[datasetName] = previous;
+                byWorkspace[workspaceName] = previous;
                 return false;
             }
             refreshMergedViewIfVisible();

@@ -60,7 +60,10 @@
         const graphColorMap = Object.fromEntries(
             colorEntries.map(entry => [entry.graphURI, entry.color]),
         );
-        const saved = await graphColors.replaceAll(workspaceName, graphColorMap);
+        const saved = await graphColors.replaceAll(
+            workspaceName,
+            graphColorMap,
+        );
         if (!saved) {
             toastStore.error(
                 "Save failed",

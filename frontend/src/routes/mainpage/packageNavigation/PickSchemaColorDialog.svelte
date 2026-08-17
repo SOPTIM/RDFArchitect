@@ -22,7 +22,7 @@
 
     let {
         showDialog = $bindable(),
-        datasetName,
+        workspaceName,
         graphUri,
         graphLabel,
     } = $props();
@@ -33,12 +33,12 @@
     const hasChanges = $derived(color !== originalColor);
 
     function onOpen() {
-        color = graphColors.get(datasetName, graphUri) ?? "#000000";
+        color = graphColors.get(workspaceName, graphUri) ?? "#000000";
         originalColor = color;
     }
 
     async function saveColor() {
-        const saved = await graphColors.set(datasetName, graphUri, color);
+        const saved = await graphColors.set(workspaceName, graphUri, color);
         if (saved) {
             originalColor = color;
         }

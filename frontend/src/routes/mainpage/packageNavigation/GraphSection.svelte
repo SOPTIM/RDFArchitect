@@ -115,7 +115,7 @@
     );
 
     const graphColor = $derived(
-        graphColors.get(datasetNavEntry.id, graphNavEntry.id),
+        graphColors.get(workspaceNavEntry.id, graphNavEntry.id),
     );
 
     const isGraphSelected = $derived(
@@ -481,11 +481,11 @@
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <SchemaColorsDialog
     bind:showDialog={showSchemaColorsDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
 />
 <PickSchemaColorDialog
     bind:showDialog={showPickColorDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
     graphLabel={graphNavEntry.label}
 />
