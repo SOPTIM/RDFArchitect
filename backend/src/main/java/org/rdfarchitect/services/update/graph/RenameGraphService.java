@@ -40,11 +40,14 @@ public class RenameGraphService implements RenameGraphUseCase {
             GraphIdentifier graphIdentifier, String newGraphUri, String newKeyword) {
         databasePort.renameGraph(graphIdentifier, newGraphUri);
         var renamedIdentifier = new GraphIdentifier(graphIdentifier.datasetName(), newGraphUri);
+        var keywordUpdated = false;
         try {
             updateKeyword(renamedIdentifier, newKeyword);
-        } catch (RuntimeException e) {
-            databasePort.renameGraph(renamedIdentifier, graphIdentifier.graphUri());
-            throw e;
+            keywordUpdated = true;
+        } finally {
+            if (!keywordUpdated) {
+                databasePort.renameGraph(renamedIdentifier, graphIdentifier.graphUri());
+            }
         }
     }
 

@@ -116,7 +116,9 @@ export const workspaceState = {
         if (!res.ok) {
             toastStore.error(
                 "Rename failed",
-                `Could not rename workspace "${name}".`,
+                res.status === 409
+                    ? `A workspace named "${newName}" already exists.`
+                    : `Could not rename workspace "${name}".`,
             );
             return false;
         }
