@@ -54,16 +54,17 @@ class ClassSchemaOccurrenceServiceTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
+        var graphs = new QueryDatasetService(databasePort);
         service =
                 new ClassSchemaOccurrenceService(
-                        databasePort, new QueryDatasetService(databasePort));
+                        databasePort, graphs, new ClassLocatorService(databasePort, graphs));
         createGraph(sourceGraph, "class-extension-source.ttl");
         createGraph(targetGraph, "class-extension-target-with-core.ttl");
     }
 
     @Test
     void listSchemaOccurrences_reportsTheSchemaThatDefinesTheClass() {
-        var occurrences = service.listSchemaOccurrences(sourceGraph, CHILD_UUID);
+        var occurrences = service.listSchemaOccurrences(DATASET, CHILD_UUID);
 
         assertThat(occurrences).hasSize(2);
         var source =
@@ -83,7 +84,7 @@ class ClassSchemaOccurrenceServiceTest {
 
     @Test
     void listSchemaOccurrences_reportsTheSchemaWithoutTheClass() {
-        var occurrences = service.listSchemaOccurrences(sourceGraph, CHILD_UUID);
+        var occurrences = service.listSchemaOccurrences(DATASET, CHILD_UUID);
 
         var target =
                 occurrences.stream()
@@ -98,9 +99,7 @@ class ClassSchemaOccurrenceServiceTest {
     @Test
     void listSchemaOccurrences_whenTheClassIsUnknown_fails() {
         assertThatThrownBy(
-                        () ->
-                                service.listSchemaOccurrences(
-                                        sourceGraph, UUID.randomUUID().toString()))
+                        () -> service.listSchemaOccurrences(DATASET, UUID.randomUUID().toString()))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 

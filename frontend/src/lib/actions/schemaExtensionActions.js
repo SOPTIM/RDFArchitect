@@ -21,11 +21,14 @@
  * A class is identified across schemas by its uri, so every schema either
  * defines it or does not know it yet. Extending a class into a schema creates
  * the stub it needs to be edited there.
+ *
+ * Classes are addressed by uuid alone: the backend accepts both the uuid a
+ * class carries in a schema and the uuid of its merged class in the
+ * cross-profile view, and picks the schema to copy from itself.
  */
 
 import { extendToSchema, listSchemas } from "$lib/api/generated/index";
 import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-import { URI } from "$lib/models/dto/index.ts";
 import {
     ClassType,
     DiagramType,
@@ -36,11 +39,9 @@ import {
 import { classStore } from "$lib/stores/classStore.ts";
 import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 import { packageStore } from "$lib/stores/packageStore.ts";
-import { uriSuffix } from "$lib/utils/iri.js";
 
 import {
     mergeSchemaOccurrences,
-    sortByGraphOrder,
     sortSchemaOccurrences,
 } from "./schemaOccurrences.js";
 
@@ -50,27 +51,22 @@ export {
     schemaLabel,
     schemaMarker,
     sourceCandidates,
-    sourceOfOccurrence,
     stubsDiffer,
 } from "./schemaOccurrences.js";
 
 /**
  * Lists every schema of the workspace together with the state the class has in
- * it. The class has to exist in the given graph.
+ * it.
  *
  * @returns {Promise<Array<Object>>} one entry per schema, empty on failure
  */
-export async function getClassSchemas(workspaceName, graphUri, classUuid) {
-    if (!workspaceName || !graphUri || !classUuid) {
+export async function getClassSchemas(workspaceName, classUuid) {
+    if (!workspaceName || !classUuid) {
         return [];
     }
     try {
         const { data, error } = await listSchemas({
-            path: {
-                datasetName: workspaceName,
-                graphURI: String(graphUri),
-                classUUID: classUuid,
-            },
+            path: { datasetName: workspaceName, classUUID: classUuid },
         });
         if (error) {
             console.error("failed to load the schemas of a class:", error);
@@ -84,170 +80,68 @@ export async function getClassSchemas(workspaceName, graphUri, classUuid) {
 }
 
 /**
- * Lists the schemas of the workspace for a whole selection of classes.
+ * Lists the schemas for a whole selection of classes: a schema counts as having
+ * the class only when it defines every one of them, so a selection can still be
+ * extended into a schema that misses one of its classes.
  *
- * @param {Array<{uuid: string, graphUri: string|null}>} classes
  * @returns {Promise<Array<Object>>} one entry per schema, empty on failure
  */
-export async function loadClassSchemas(workspaceName, classes) {
-    const sources = await resolveClassSources(workspaceName, classes);
+export async function loadClassSchemas(workspaceName, classUuids) {
     const lists = await Promise.all(
-        sources.flatMap(source =>
-            source.classUuids.map(classUuid =>
-                getClassSchemas(workspaceName, source.graphUri, classUuid),
-            ),
+        (classUuids ?? []).map(classUuid =>
+            getClassSchemas(workspaceName, classUuid),
         ),
     );
     return sortSchemaOccurrences(mergeSchemaOccurrences(lists));
 }
 
 /**
- * Resolves the classes a diagram selection stands for into groups of classes
- * that share one graph. Classes of the cross-profile diagram carry a merged
- * uuid instead of a graph, so they are looked up in the merged diagram first.
- *
- * @param {Array<{uuid: string, graphUri: string|null}>} classes
- * @returns {Promise<Array<{graphUri: string, classUuids: Array<string>}>>}
- */
-export async function resolveClassSources(workspaceName, classes) {
-    const byGraph = new Map();
-    const mergedOnes = [];
-    for (const entry of classes) {
-        if (entry?.graphUri) {
-            addToGroup(byGraph, String(entry.graphUri), entry.uuid);
-        } else if (entry?.uuid) {
-            mergedOnes.push(entry.uuid);
-        }
-    }
-    if (mergedOnes.length > 0) {
-        const diagram = await crossProfileStore.getDiagram(workspaceName);
-        for (const mergedUuid of mergedOnes) {
-            const source = firstSourceOf(diagram, mergedUuid);
-            if (source) {
-                addToGroup(byGraph, source.graphUri, source.classUuid);
-            }
-        }
-    }
-    return [...byGraph.entries()].map(([graphUri, classUuids]) => ({
-        graphUri,
-        classUuids,
-    }));
-}
-
-function addToGroup(byGraph, graphUri, classUuid) {
-    const group = byGraph.get(graphUri) ?? [];
-    if (!group.includes(classUuid)) {
-        group.push(classUuid);
-    }
-    byGraph.set(graphUri, group);
-}
-
-/**
- * The schema a merged class is copied from when the user is not asked: the
- * first one in the order the navigation lists the schemas in, so that it does
- * not depend on how the graphs happen to be stored.
- */
-function firstSourceOf(diagram, mergedUuid) {
-    const merged = (diagram?.classes ?? []).find(
-        candidate =>
-            candidate.uuid === mergedUuid ||
-            candidate.sources?.some(source => source.classUUID === mergedUuid),
-    );
-    const sources = sortByGraphOrder(
-        (merged?.sources ?? []).filter(source => source.graph?.uri),
-        source => source.graph.keyword || uriSuffix(graphUriOf(source)),
-        graphUriOf,
-    );
-    const source = sources[0];
-    if (!source) {
-        return null;
-    }
-    return { graphUri: graphUriOf(source), classUuid: source.classUUID };
-}
-
-function graphUriOf(source) {
-    return new URI(source.graph.uri).toString();
-}
-
-/**
  * Creates the stubs of the given classes in another schema. Classes that the
  * target schema already defines are kept as they are.
  *
- * @param {Array<{graphUri: string, classUuids: Array<string>}>} sources
  * @returns {Promise<Array<Object>|null>} one result per class, null on failure
  */
 export async function extendClassesToSchema(
     workspaceName,
-    sources,
+    classUuids,
     targetGraphUri,
     withInheritance = false,
 ) {
-    const results = [];
-    let failed = 0;
-    for (const source of sources) {
-        try {
-            const { data, error } = await extendToSchema({
-                path: {
-                    datasetName: workspaceName,
-                    graphURI: String(source.graphUri),
-                },
-                body: {
-                    graphUri: String(targetGraphUri),
-                    classUUIDs: source.classUuids,
-                    withInheritance,
-                },
-            });
-            if (error) {
-                console.error(
-                    "failed to extend classes into another schema:",
-                    error,
-                );
-                failed += 1;
-                continue;
-            }
-            results.push(...(data ?? []));
-        } catch (e) {
-            console.error("failed to extend classes into another schema:", e);
-            failed += 1;
+    try {
+        const { data, error } = await extendToSchema({
+            path: { datasetName: workspaceName },
+            body: {
+                graphUri: String(targetGraphUri),
+                classUUIDs: classUuids,
+                withInheritance,
+            },
+        });
+        if (error) {
+            console.error(
+                "failed to extend classes into another schema:",
+                error,
+            );
+            toastStore.error(
+                "Could not extend class",
+                "The class could not be created in the selected schema.",
+            );
+            return null;
         }
-    }
-    if (results.length > 0) {
-        classStore.invalidateGraph(workspaceName, String(targetGraphUri));
-        packageStore.invalidateGraph(workspaceName, String(targetGraphUri));
-        crossProfileStore.invalidateWorkspace(workspaceName);
-    }
-    if (failed > 0) {
+        const results = data ?? [];
+        if (results.length > 0) {
+            classStore.invalidateGraph(workspaceName, String(targetGraphUri));
+            packageStore.invalidateGraph(workspaceName, String(targetGraphUri));
+            crossProfileStore.invalidateWorkspace(workspaceName);
+        }
+        return results;
+    } catch (e) {
+        console.error("failed to extend classes into another schema:", e);
         toastStore.error(
             "Could not extend class",
-            failed === sources.length
-                ? "The class could not be created in the selected schema."
-                : "Some classes could not be created in the selected schema.",
+            "An unexpected error occurred. Please try again.",
         );
-    }
-    // Whatever was created is reported back, so that it is revealed and
-    // reloaded even when another source schema failed.
-    return failed === sources.length ? null : results;
-}
-
-/** Extends the classes into the target schema and reports the outcome. */
-async function extendToSchemaAndReport({
-    workspaceName,
-    sources,
-    targetGraphUri,
-    targetLabel,
-    withInheritance = false,
-}) {
-    const results = await extendClassesToSchema(
-        workspaceName,
-        sources,
-        targetGraphUri,
-        withInheritance,
-    );
-    if (!results) {
         return null;
     }
-    reportExtensionResults(results, targetLabel);
-    return results;
 }
 
 /**
@@ -257,23 +151,23 @@ async function extendToSchemaAndReport({
  */
 export async function extendToSchemaAndReveal({
     workspaceName,
-    sources,
+    classUuids,
     targetGraphUri,
     targetLabel,
     selectedClassUuid = null,
     withInheritance = false,
 }) {
-    const results = await extendToSchemaAndReport({
+    const results = await extendClassesToSchema(
         workspaceName,
-        sources,
+        classUuids,
         targetGraphUri,
-        targetLabel,
         withInheritance,
-    });
+    );
     if (!results) {
         return null;
     }
 
+    reportExtensionResults(results, targetLabel);
     if (
         editorState.selectedDiagram.getProperty("type") ===
         DiagramType.CROSS_PROFILE

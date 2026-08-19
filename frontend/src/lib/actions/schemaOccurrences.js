@@ -27,19 +27,14 @@ export function schemaLabel(occurrence) {
     return occurrence?.keyword || uriSuffix(occurrence?.graphUri);
 }
 
-/** Sorts graphs the way the navigation lists them: short name, then uri. */
-export function sortByGraphOrder(entries, labelOf, uriOf) {
-    return [...(entries ?? [])].sort((a, b) =>
-        compareGraphs(
-            { label: labelOf(a), uri: uriOf(a) },
-            { label: labelOf(b), uri: uriOf(b) },
-        ),
-    );
-}
-
 /** Lists the schemas the way the navigation lists them. */
 export function sortSchemaOccurrences(occurrences) {
-    return sortByGraphOrder(occurrences, schemaLabel, entry => entry.graphUri);
+    return [...(occurrences ?? [])].sort((a, b) =>
+        compareGraphs(
+            { label: schemaLabel(a), uri: a.graphUri },
+            { label: schemaLabel(b), uri: b.graphUri },
+        ),
+    );
 }
 
 /** Marks the schemas that do not know the class yet. */
@@ -123,11 +118,4 @@ export function stubsDiffer(candidates) {
     }
     const first = stubSignature(candidates[0]);
     return candidates.some(candidate => stubSignature(candidate) !== first);
-}
-
-/** The source group of a single class, as the extension expects it. */
-export function sourceOfOccurrence(occurrence) {
-    return [
-        { graphUri: occurrence.graphUri, classUuids: [occurrence.classUUID] },
-    ];
 }

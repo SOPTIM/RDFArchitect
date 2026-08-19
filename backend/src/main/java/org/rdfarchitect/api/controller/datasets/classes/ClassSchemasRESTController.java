@@ -15,7 +15,7 @@
  *
  */
 
-package org.rdfarchitect.api.controller.datasets.graphs.classes;
+package org.rdfarchitect.api.controller.datasets.classes;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -23,8 +23,6 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.ClassSchemaOccurrenceDTO;
-import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ExpandURIUseCase;
 import org.rdfarchitect.services.select.ListClassSchemaOccurrencesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,20 +36,18 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/schemas")
+@RequestMapping("api/datasets/{datasetName}/classes/{classUUID}/schemas")
 @RequiredArgsConstructor
 public class ClassSchemasRESTController {
 
     private static final Logger logger = LoggerFactory.getLogger(ClassSchemasRESTController.class);
-
-    private final ExpandURIUseCase expandURIUseCase;
 
     private final ListClassSchemaOccurrencesUseCase listClassSchemaOccurrencesUseCase;
 
     @Operation(
             summary = "List the schemas of a class",
             description =
-                    "Lists all graphs of the dataset and tells for each of them whether the class is defined there.",
+                    "Lists all graphs of the dataset and tells for each of them whether the class is defined there. The uuid is either the one of a class in one of the graphs, or the one of its merged class.",
             tags = {"class"})
     @GetMapping
     public List<ClassSchemaOccurrenceDTO> listSchemas(
@@ -63,29 +59,19 @@ public class ClassSchemasRESTController {
                     String originURL,
             @Parameter(description = "The literal name of the dataset.") @PathVariable
                     String datasetName,
-            @Parameter(
-                            description =
-                                    "The url encoded uri of the graph, or \"default\" to access the default graph.")
-                    @PathVariable
-                    String graphURI,
             @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/schemas\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/classes/{{}}/schemas\" from \"{}\".",
                 datasetName,
-                graphURI,
                 classUUID,
                 originURL);
 
-        var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
-        var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
-
         var occurrences =
-                listClassSchemaOccurrencesUseCase.listSchemaOccurrences(graphIdentifier, classUUID);
+                listClassSchemaOccurrencesUseCase.listSchemaOccurrences(datasetName, classUUID);
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/schemas\" to \"{}\".",
+                "Sending response to GET request: \"/api/datasets/{{}}/classes/{{}}/schemas\" to \"{}\".",
                 datasetName,
-                graphURI,
                 classUUID,
                 originURL);
         return occurrences;

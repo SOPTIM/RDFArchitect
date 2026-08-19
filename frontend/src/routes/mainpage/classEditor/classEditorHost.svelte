@@ -29,7 +29,6 @@
         schemaLabel,
         schemaMarker,
         sourceCandidates,
-        sourceOfOccurrence,
         stubsDiffer,
     } from "$lib/actions/schemaExtensionActions.js";
     import Badge from "$lib/components/Badge.svelte";
@@ -170,7 +169,7 @@
         const cancellation = { cancelled: false };
         loadingSchemas = true;
         Promise.all([
-            getClassSchemas(currentWorkspace, currentGraph, currentClass),
+            getClassSchemas(currentWorkspace, currentClass),
             workspaceStore.isReadOnly(currentWorkspace),
         ])
             .then(([schemas, readOnly]) => {
@@ -269,7 +268,7 @@
         try {
             await extendToSchemaAndReveal({
                 workspaceName,
-                sources: sourceOfOccurrence(occurrence),
+                classUuids: [occurrence.classUUID],
                 targetGraphUri: activeOccurrence.graphUri,
                 targetLabel: schemaLabel(activeOccurrence),
                 selectedClassUuid: classUuid,
@@ -306,7 +305,13 @@
 
 <div class="relative h-full w-full">
     <div class="flex h-full flex-col">
-        {#if definedOccurrences.length > 0 && activeOccurrence}
+        {#if loadingSchemas && definedOccurrences.length === 0}
+            <div class="border-border shrink-0 border-b px-2 py-1">
+                <div
+                    class="bg-window-background border-button-border h-8 w-full animate-pulse rounded border border-solid"
+                ></div>
+            </div>
+        {:else if definedOccurrences.length > 0 && activeOccurrence}
             <div class="border-border shrink-0 border-b px-2 py-1">
                 <DropdownMenu.Root>
                     <DropdownMenu.Trigger class="w-full">
@@ -411,7 +416,9 @@
         {/if}
     </div>
 
-    {#if resolving || loadingSchemas}
+    <!-- Loading the schema list only fills the dropdown, so it must not hold up
+         the editor itself. -->
+    {#if resolving}
         <div
             class="absolute inset-0 z-50 flex items-center justify-center bg-white/50"
         >

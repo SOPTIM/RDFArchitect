@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 import org.apache.jena.query.ReadWrite;
 import org.apache.jena.rdf.model.ModelFactory;
-import org.apache.jena.rdf.model.RDFNode;
 import org.rdfarchitect.api.dto.ClassSchemaOccurrenceDTO;
 import org.rdfarchitect.api.dto.ClassStubDTO;
 import org.rdfarchitect.database.DatabasePort;
@@ -44,12 +43,12 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
 
     private final DatabasePort databasePort;
     private final ListGraphsUseCase listGraphsUseCase;
+    private final LocateClassUseCase locateClassUseCase;
 
     @Override
     public List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(
-            GraphIdentifier graphIdentifier, String classUUID) {
-        var datasetName = graphIdentifier.datasetName();
-        var classUri = findClassUri(graphIdentifier, classUUID);
+            String datasetName, String classUUID) {
+        var classUri = locateClassUseCase.locate(datasetName, classUUID).classUri();
         var keywords = CIMProfileModels.keywordsByGraphUri(listGraphsUseCase, datasetName);
 
         var occurrences = new ArrayList<ClassSchemaOccurrenceDTO>();
@@ -57,25 +56,6 @@ public class ClassSchemaOccurrenceService implements ListClassSchemaOccurrencesU
             occurrences.add(occurrenceIn(datasetName, graphUri, keywords.get(graphUri), classUri));
         }
         return occurrences;
-    }
-
-    private String findClassUri(GraphIdentifier graphIdentifier, String classUUID) {
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            var model = ModelFactory.createModelForGraph(ctx.getRdfGraph());
-            var subjects = model.listSubjectsWithProperty(RDFA.uuid, classUUID).toList();
-            var resource =
-                    subjects.stream()
-                            .filter(RDFNode::isURIResource)
-                            .findFirst()
-                            .orElseThrow(
-                                    () ->
-                                            new IllegalArgumentException(
-                                                    "Class with UUID "
-                                                            + classUUID
-                                                            + " not found in graph "
-                                                            + graphIdentifier.graphUri()));
-            return resource.getURI();
-        }
     }
 
     private ClassSchemaOccurrenceDTO occurrenceIn(

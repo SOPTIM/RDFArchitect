@@ -37,6 +37,8 @@ import org.rdfarchitect.database.inmemory.InMemoryDatabaseAdapter;
 import org.rdfarchitect.database.inmemory.InMemoryDatabaseImpl;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphFileSourceBuilderImpl;
 import org.rdfarchitect.services.ClassExtensionService;
+import org.rdfarchitect.services.select.ClassLocatorService;
+import org.rdfarchitect.services.select.QueryDatasetService;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.List;
@@ -53,7 +55,11 @@ class ClassExtensionServiceTest {
     void setUp() {
         SessionContext.setSessionId(UUID.randomUUID().toString());
         databasePort = new InMemoryDatabaseAdapter(new InMemoryDatabaseImpl(new SchemaConfig()));
-        classExtensionService = new ClassExtensionService(databasePort);
+        classExtensionService =
+                new ClassExtensionService(
+                        databasePort,
+                        new ClassLocatorService(
+                                databasePort, new QueryDatasetService(databasePort)));
     }
 
     @Test
@@ -82,7 +88,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId, List.of(classUuid), targetGraphId, true);
+                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, true);
 
         // assert
         assertThat(results).hasSize(1);
@@ -236,7 +242,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId, List.of(classUuid), targetGraphId, true);
+                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, true);
 
         // assert
         assertThat(results).hasSize(1);
@@ -309,7 +315,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId, List.of(classUuid), targetGraphId, true);
+                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, true);
 
         // assert
         assertThat(results).hasSize(1);
@@ -355,7 +361,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId, List.of(classUuid), targetGraphId, false);
+                        sourceGraphId.datasetName(), List.of(classUuid), targetGraphId, false);
 
         // assert
         var ex = "http://example.org#";
@@ -431,7 +437,7 @@ class ClassExtensionServiceTest {
         // act
         var results =
                 classExtensionService.extendClasses(
-                        sourceGraphId, List.of(baseUuid), targetGraphId, false);
+                        sourceGraphId.datasetName(), List.of(baseUuid), targetGraphId, false);
 
         // assert
         assertThat(results).hasSize(1);

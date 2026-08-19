@@ -32,6 +32,7 @@ import org.rdfarchitect.models.cim.queries.update.CIMUpdates;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
 import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
+import org.rdfarchitect.services.select.LocateClassUseCase;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -48,23 +49,27 @@ import java.util.UUID;
 public class ClassExtensionService implements ClassExtensionUseCase {
 
     private DatabasePort databasePort;
+    private LocateClassUseCase locateClassUseCase;
 
     @Override
     public List<ClassExtensionResultDTO> extendClasses(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
             List<String> classUUIDs,
             GraphIdentifier newGraphIdentifier,
             boolean withInheritance) {
         var stubsBySourceUUID = new LinkedHashMap<String, CIMClass>();
         var superClassStubs = new ArrayList<CIMClass>();
 
-        try (var ctx = databasePort.getGraphWithContext(graphIdentifier).begin(ReadWrite.READ)) {
-            for (var classUUID : classUUIDs) {
-                stubsBySourceUUID.put(classUUID, fetchStubbedClassCopy(graphIdentifier, classUUID));
+        for (var classUUID : classUUIDs) {
+            var located = locateClassUseCase.locate(datasetName, classUUID);
+            var sourceGraph = new GraphIdentifier(datasetName, located.graphUri());
+            try (var ctx = databasePort.getGraphWithContext(sourceGraph).begin(ReadWrite.READ)) {
+                stubsBySourceUUID.put(
+                        classUUID,
+                        fetchStubbedClassCopy(sourceGraph, located.classUUID().toString()));
                 if (withInheritance) {
                     superClassStubs.addAll(
-                            fetchStubbedSuperClasses(
-                                    ctx.getRdfGraph(), UUID.fromString(classUUID)));
+                            fetchStubbedSuperClasses(ctx.getRdfGraph(), located.classUUID()));
                 }
             }
         }
@@ -162,11 +167,6 @@ public class ClassExtensionService implements ClassExtensionUseCase {
         return insertedUris;
     }
 
-    /**
-     * Reads the identifiers the stubs have in the target graph, keyed by class uri. They can differ
-     * from the ones of the source graph, because a class keeps the uuid it was already referenced
-     * with in the target graph.
-     */
     /**
      * Reads the identifiers the stubs have in the target graph, keyed by class uri. They can differ
      * from the ones of the source graph, because a class keeps the uuid it was already referenced

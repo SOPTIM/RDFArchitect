@@ -78,22 +78,8 @@
     let dialogGraphUri = $state(null);
     let dialogClasses = $state([]);
 
-    /** The classes of the selection as the schema extension expects them: in
-     * the cross-profile diagram they carry a merged uuid instead of a graph. */
-    const extendClasses = $derived(
-        multiActive
-            ? multiSelectState.getSelectedClassRefs(isCrossProfileDiagram)
-            : contextMenuClass
-              ? [
-                    {
-                        uuid: contextMenuClass.uuid,
-                        graphUri: isCrossProfileDiagram
-                            ? null
-                            : (contextMenuClass.graphUri ?? graphUri),
-                    },
-                ]
-              : [],
-    );
+    /** The classes of the selection, addressed by uuid alone. */
+    const extendClassUuids = $derived(selectionUuids);
 
     /** The schema of the diagram the class was right-clicked in, if any. */
     const currentGraphUri = $derived(
@@ -274,7 +260,7 @@
             label="Extend with Inheritance"
             withInheritance
             {workspaceName}
-            classes={extendClasses}
+            classUuids={extendClassUuids}
             {currentGraphUri}
             selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
             {readOnly}
@@ -283,7 +269,7 @@
         <ExtendSchemaSubMenu
             label="Extend in Schema"
             {workspaceName}
-            classes={extendClasses}
+            classUuids={extendClassUuids}
             {currentGraphUri}
             selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
             {readOnly}

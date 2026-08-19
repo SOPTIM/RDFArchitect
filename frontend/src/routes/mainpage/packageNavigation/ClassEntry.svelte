@@ -83,11 +83,8 @@
             classNavEntry.id,
         ),
     );
-    /** The selected classes as the schema extension expects them. */
-    const extendClasses = $derived(
-        multiActive
-            ? multiSelectState.getSelectedClassRefs()
-            : [{ uuid: classNavEntry.id, graphUri: graphNavEntry.id }],
+    const extendClassUuids = $derived(
+        multiActive ? selectedClassIds : [classNavEntry.id],
     );
 
     const isClassEditorOpenHere = $derived(
@@ -407,7 +404,7 @@
                 label="Extend with Inheritance"
                 withInheritance
                 workspaceName={workspaceNavEntry.id}
-                classes={extendClasses}
+                classUuids={extendClassUuids}
                 currentGraphUri={graphNavEntry.id}
                 selectedClassUuid={multiActive ? null : classNavEntry.id}
                 readOnly={readonly}
@@ -415,7 +412,7 @@
             <ExtendSchemaSubMenu
                 label="Extend in Schema"
                 workspaceName={workspaceNavEntry.id}
-                classes={extendClasses}
+                classUuids={extendClassUuids}
                 currentGraphUri={graphNavEntry.id}
                 selectedClassUuid={multiActive ? null : classNavEntry.id}
                 readOnly={readonly}

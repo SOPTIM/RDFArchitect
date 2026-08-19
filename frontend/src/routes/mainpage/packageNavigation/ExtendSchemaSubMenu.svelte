@@ -24,10 +24,8 @@
     import {
         extendToSchemaAndReveal,
         loadClassSchemas,
-        resolveClassSources,
         schemaLabel,
         sourceCandidates,
-        sourceOfOccurrence,
         stubsDiffer,
     } from "$lib/actions/schemaExtensionActions.js";
     import Badge from "$lib/components/Badge.svelte";
@@ -39,7 +37,7 @@
         label,
         withInheritance = false,
         workspaceName,
-        classes = [],
+        classUuids = [],
         currentGraphUri = null,
         selectedClassUuid = null,
         readOnly = false,
@@ -67,12 +65,15 @@
     );
 
     async function loadSchemaOccurrences() {
-        if (loadingSchemas || classes.length === 0) {
+        if (loadingSchemas || classUuids.length === 0) {
             return;
         }
         loadingSchemas = true;
         try {
-            schemaOccurrences = await loadClassSchemas(workspaceName, classes);
+            schemaOccurrences = await loadClassSchemas(
+                workspaceName,
+                classUuids,
+            );
         } finally {
             loadingSchemas = false;
         }
@@ -95,38 +96,29 @@
         const candidates = currentGraphUri
             ? []
             : sourceCandidates(schemaOccurrences, occurrence.graphUri);
-        if (classes.length === 1 && stubsDiffer(candidates)) {
+        if (classUuids.length === 1 && stubsDiffer(candidates)) {
             askForExtendSource({
                 workspaceName,
                 candidates,
                 targetLabel: schemaLabel(occurrence),
-                onPick: picked =>
-                    extendToSchemaAndReveal({
-                        workspaceName,
-                        sources: sourceOfOccurrence(picked),
-                        targetGraphUri: occurrence.graphUri,
-                        targetLabel: schemaLabel(occurrence),
-                        selectedClassUuid,
-                        withInheritance,
-                    }),
+                onPick: picked => extend([picked.classUUID], occurrence),
             });
             onDone();
             return;
         }
-        const sources = await resolveClassSources(workspaceName, classes);
-        await extend(sources, occurrence);
+        await extend(classUuids, occurrence);
         onDone();
     }
 
-    async function extend(sources, occurrence) {
-        if (!occurrence || sources.length === 0) {
+    async function extend(uuids, occurrence) {
+        if (!occurrence || uuids.length === 0) {
             return;
         }
         extending = true;
         try {
             await extendToSchemaAndReveal({
                 workspaceName,
-                sources,
+                classUuids: uuids,
                 targetGraphUri: occurrence.graphUri,
                 targetLabel: schemaLabel(occurrence),
                 selectedClassUuid,
@@ -145,7 +137,7 @@
         faIcon={faFileExport}
         disabled={disabled ||
             extending ||
-            classes.length === 0 ||
+            classUuids.length === 0 ||
             nothingToExtend}
     >
         {label}

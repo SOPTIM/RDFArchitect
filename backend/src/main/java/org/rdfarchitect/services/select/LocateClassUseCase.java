@@ -17,18 +17,20 @@
 
 package org.rdfarchitect.services.select;
 
-import org.rdfarchitect.api.dto.ClassSchemaOccurrenceDTO;
+import java.util.UUID;
 
-import java.util.List;
+public interface LocateClassUseCase {
 
-public interface ListClassSchemaOccurrencesUseCase {
+    /** A class of one graph of the dataset. */
+    record LocatedClass(String graphUri, String classUri, UUID classUUID) {}
 
     /**
-     * Reports for every graph of the dataset whether the class is defined there.
+     * Finds the class a uuid stands for. The uuid is either the one a class carries in one of the
+     * graphs, or the uuid of a merged class of the cross profile view, which belongs to no graph
+     * and is derived from the class uri instead. A merged class is located in the first graph that
+     * defines it, in the order the schemas are listed in.
      *
-     * @param datasetName the dataset the class belongs to
-     * @param classUUID the uuid of the class in one of the graphs, or of its merged class
-     * @return one entry per graph of the dataset, in the order the graphs are stored in
+     * @throws IllegalArgumentException when no graph of the dataset knows the uuid
      */
-    List<ClassSchemaOccurrenceDTO> listSchemaOccurrences(String datasetName, String classUUID);
+    LocatedClass locate(String datasetName, String classUUID);
 }

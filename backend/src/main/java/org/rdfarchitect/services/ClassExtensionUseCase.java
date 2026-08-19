@@ -28,15 +28,16 @@ public interface ClassExtensionUseCase {
      * enables extension of classes by creating an abstract stub of each of them in another graph of
      * the dataset. Classes that are already defined in the new graph are left untouched.
      *
-     * @param graphIdentifier the dataset name and graph URI of the classes to extend
-     * @param classUUIDs the uuids of the classes to be extended
+     * @param datasetName the dataset the classes belong to
+     * @param classUUIDs the uuids of the classes to be extended, either the ones they carry in a
+     *     graph or the ones of their merged classes
      * @param newGraph the identifier of the new graph, where the classes are to be extended
      * @param withInheritance whether the superclasses are stubbed as well. Without them a
      *     superclass stays a referenced only resource in the new graph unless it is defined there.
      * @return one result per requested class, in the order they were requested
      */
     List<ClassExtensionResultDTO> extendClasses(
-            GraphIdentifier graphIdentifier,
+            String datasetName,
             List<String> classUUIDs,
             GraphIdentifier newGraph,
             boolean withInheritance);

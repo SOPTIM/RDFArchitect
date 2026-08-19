@@ -93,18 +93,6 @@ export class MultiSelectState {
         return this.getSelected().length;
     }
 
-    /**
-     * The selection as the schema extension expects it. Classes of the
-     * cross-profile diagram have no graph of their own, so it is left out and
-     * resolved from the merged class instead.
-     */
-    getSelectedClassRefs(withoutGraph = false) {
-        return this.getSelected().map(entry => ({
-            uuid: entry.classUuid,
-            graphUri: withoutGraph ? null : entry.graphUri,
-        }));
-    }
-
     get isMultiSelect() {
         return this.count > 1;
     }

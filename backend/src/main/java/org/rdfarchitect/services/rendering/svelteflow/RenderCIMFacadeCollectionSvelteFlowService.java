@@ -37,13 +37,13 @@ import org.rdfarchitect.models.cim.data.dto.relations.CIMSMultiplicity;
 import org.rdfarchitect.models.cim.data.dto.relations.CIMSStereotype;
 import org.rdfarchitect.models.cim.rdf.resources.CIMStereotypes;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
+import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 import org.rdfarchitect.services.rendering.CIMProfileModel;
 import org.rdfarchitect.services.rendering.RenderCIMFacadeCollectionUseCase;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -170,8 +170,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
                                         new MergedFacadeClass(
                                                 classUri,
                                                 cimClass.getLabel().getValue(),
-                                                UUID.nameUUIDFromBytes(
-                                                        classUri.getBytes(StandardCharsets.UTF_8)),
+                                                CrossProfileUtils.mergedClassUuid(classUri),
                                                 new ArrayList<>()));
                 entry.sources()
                         .add(
