@@ -20,7 +20,8 @@
     import {
         faArrowUpRightFromSquare,
         faDiagramProject,
-        faFileExport,
+        faEye,
+        faPencil,
         faMinus,
         faObjectGroup,
         faTrash,
@@ -44,8 +45,11 @@
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
-    import ExtendClassDialog from "./ExtendClassDialog.svelte";
-    import { classHighlight } from "./packageNavigationUtils.svelte.js";
+    import ExtendSchemaSubMenu from "./ExtendSchemaSubMenu.svelte";
+    import {
+        classHighlight,
+        isClassEditorTarget,
+    } from "./packageNavigationUtils.svelte.js";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
@@ -66,7 +70,6 @@
 
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
-    let showExtendClassDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
     let showAddToWorkspaceDiagramDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
@@ -80,6 +83,21 @@
             classNavEntry.id,
         ),
     );
+    /** The selected classes as the schema extension expects them. */
+    const extendClasses = $derived(
+        multiActive
+            ? multiSelectState.getSelectedClassRefs()
+            : [{ uuid: classNavEntry.id, graphUri: graphNavEntry.id }],
+    );
+
+    const isClassEditorOpenHere = $derived(
+        isClassEditorTarget(
+            workspaceNavEntry.id,
+            graphNavEntry.id,
+            classNavEntry.id,
+        ),
+    );
+
     const shaclClass = $derived({
         uuid: { value: classNavEntry?.id },
         label: { value: classNavEntry?.label ?? "" },
@@ -339,6 +357,14 @@
             icon={faFileLines}
             isSelected={classState === "active"}
             classOpen={classState === "secondary"}
+            markerIcon={isClassEditorOpenHere
+                ? readonly
+                    ? faEye
+                    : faPencil
+                : null}
+            markerTitle={isClassEditorOpenHere
+                ? "Open in the class editor"
+                : ""}
             title={classNavEntry.tooltip}
             {highlightLabel}
             onclick={onEntryClick}
@@ -377,15 +403,23 @@
                 View Constraints (SHACL)
             </ContextMenu.Item.Button>
             <ContextMenu.Separator />
-            <ContextMenu.Item.Button
-                onSelect={() => {
-                    showExtendClassDialog = true;
-                }}
-                disabled={multiActive}
-                faIcon={faFileExport}
-            >
-                Extend Class
-            </ContextMenu.Item.Button>
+            <ExtendSchemaSubMenu
+                label="Extend with Inheritance"
+                withInheritance
+                workspaceName={workspaceNavEntry.id}
+                classes={extendClasses}
+                currentGraphUri={graphNavEntry.id}
+                selectedClassUuid={multiActive ? null : classNavEntry.id}
+                readOnly={readonly}
+            />
+            <ExtendSchemaSubMenu
+                label="Extend in Schema"
+                workspaceName={workspaceNavEntry.id}
+                classes={extendClasses}
+                currentGraphUri={graphNavEntry.id}
+                selectedClassUuid={multiActive ? null : classNavEntry.id}
+                readOnly={readonly}
+            />
             {#if !diagramId}
                 <ContextMenu.Item.Button
                     onSelect={() => {
@@ -483,14 +517,5 @@
         {diagramId}
         classIds={selectedClassIds}
         classLabels={selectedClassLabels}
-    />
-{/if}
-
-{#if showExtendClassDialog}
-    <ExtendClassDialog
-        workspaceName={workspaceNavEntry.id}
-        graphUri={graphNavEntry.id}
-        classUUID={classNavEntry.id}
-        bind:showDialog={showExtendClassDialog}
     />
 {/if}

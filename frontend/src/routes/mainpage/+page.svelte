@@ -23,12 +23,14 @@
     import { resolveIri as fetchResolveIRI } from "$lib/api/generated/index";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
+    import { extendSourceRequest } from "$lib/extendSourceRequest.svelte.js";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
     import NoWorkspacePlaceholder from "./emptyStates/NoWorkspacePlaceholder.svelte";
+    import ExtendSourceDialog from "./packageNavigation/ExtendSourceDialog.svelte";
     import PackageNavigation from "./packageNavigation/packageNavigation.svelte";
     import PackageWindow from "./packageWindow.svelte";
     import WorkspaceTabs from "./workspaceTabs/WorkspaceTabs.svelte";
@@ -117,3 +119,13 @@
         </Splitpanes>
     {/if}
 </div>
+
+{#if extendSourceRequest.open}
+    <ExtendSourceDialog
+        bind:showDialog={extendSourceRequest.open}
+        workspaceName={extendSourceRequest.workspaceName}
+        candidates={extendSourceRequest.candidates}
+        targetLabel={extendSourceRequest.targetLabel}
+        onPick={picked => extendSourceRequest.onPick?.(picked)}
+    />
+{/if}

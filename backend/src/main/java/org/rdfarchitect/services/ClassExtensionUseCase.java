@@ -17,19 +17,27 @@
 
 package org.rdfarchitect.services;
 
-import org.rdfarchitect.api.dto.ClassDTO;
+import org.rdfarchitect.api.dto.ClassExtensionResultDTO;
 import org.rdfarchitect.database.GraphIdentifier;
 
+import java.util.List;
+
 public interface ClassExtensionUseCase {
+
     /**
-     * enables extension of a class by creating an abstract stub of the class and all its
-     * superclasses in the new graph
+     * enables extension of classes by creating an abstract stub of each of them in another graph of
+     * the dataset. Classes that are already defined in the new graph are left untouched.
      *
-     * @param graphIdentifier the dataset name and graph URI of the class to extend
-     * @param classUUID the uuid of the class to be extended
-     * @param newGraph the identifier of the new graph, where the class is to be extended
-     * @return the uuid of the newly created class stub in the new graph
+     * @param graphIdentifier the dataset name and graph URI of the classes to extend
+     * @param classUUIDs the uuids of the classes to be extended
+     * @param newGraph the identifier of the new graph, where the classes are to be extended
+     * @param withInheritance whether the superclasses are stubbed as well. Without them a
+     *     superclass stays a referenced only resource in the new graph unless it is defined there.
+     * @return one result per requested class, in the order they were requested
      */
-    ClassDTO extendClass(
-            GraphIdentifier graphIdentifier, String classUUID, GraphIdentifier newGraph);
+    List<ClassExtensionResultDTO> extendClasses(
+            GraphIdentifier graphIdentifier,
+            List<String> classUUIDs,
+            GraphIdentifier newGraph,
+            boolean withInheritance);
 }

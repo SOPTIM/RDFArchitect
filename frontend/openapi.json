@@ -403,6 +403,26 @@
         },
         "type" : "object"
       },
+      "ClassExtensionResultDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "created" : {
+            "type" : "boolean"
+          },
+          "packageUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "sourceClassUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "ClassInDiagram" : {
         "properties" : {
           "graphUri" : {
@@ -489,6 +509,27 @@
         },
         "type" : "object"
       },
+      "ClassSchemaOccurrenceDTO" : {
+        "properties" : {
+          "classUUID" : {
+            "format" : "uuid",
+            "type" : "string"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "keyword" : {
+            "type" : "string"
+          },
+          "present" : {
+            "type" : "boolean"
+          },
+          "stub" : {
+            "$ref" : "#/components/schemas/ClassStubDTO"
+          }
+        },
+        "type" : "object"
+      },
       "ClassSourceDTO" : {
         "properties" : {
           "classUUID" : {
@@ -497,6 +538,32 @@
           },
           "graph" : {
             "$ref" : "#/components/schemas/GraphDTO"
+          }
+        },
+        "type" : "object"
+      },
+      "ClassStubDTO" : {
+        "properties" : {
+          "comment" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "packageLabel" : {
+            "type" : "string"
+          },
+          "packageUri" : {
+            "type" : "string"
+          },
+          "stereotypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "superClassUri" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -743,6 +810,23 @@
           "uuid" : {
             "format" : "uuid",
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ExtendToSchemaRequest" : {
+        "properties" : {
+          "classUUIDs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "graphUri" : {
+            "type" : "string"
+          },
+          "withInheritance" : {
+            "type" : "boolean"
           }
         },
         "type" : "object"
@@ -3282,6 +3366,71 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/extendToSchema" : {
+      "post" : {
+        "description" : "Creates a stub of every given class in another graph of the same dataset, optionally stubbing their superclasses as well. Classes that are already defined in the target graph are left untouched.",
+        "operationId" : "extendToSchema",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph the classes come from, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExtendToSchemaRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ClassExtensionResultDTO"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Extend classes into another schema",
+        "tags" : [
+          "class"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}" : {
       "delete" : {
         "description" : "Deletes a whole class.",
@@ -4389,78 +4538,6 @@
         ]
       }
     },
-    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/extend" : {
-      "post" : {
-        "description" : "extends a class in another graph",
-        "operationId" : "extendClass",
-        "parameters" : [
-          {
-            "description" : "The name/url of the inquirer.",
-            "in" : "header",
-            "name" : "Origin",
-            "required" : false,
-            "schema" : {
-              "default" : "unknown",
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The literal name of the dataset.",
-            "in" : "path",
-            "name" : "datasetName",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
-            "in" : "path",
-            "name" : "graphURI",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          },
-          {
-            "description" : "The uuid of the class.",
-            "in" : "path",
-            "name" : "classUUID",
-            "required" : true,
-            "schema" : {
-              "type" : "string"
-            }
-          }
-        ],
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/AttributeDTO"
-              }
-            }
-          },
-          "description" : "The new attribute",
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ClassDTO"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "summary" : "Extend class",
-        "tags" : [
-          "class"
-        ]
-      }
-    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/referencedByClasses" : {
       "get" : {
         "description" : "Get all classes referencing this class.",
@@ -4517,6 +4594,70 @@
           }
         },
         "summary" : "Get classes referencing this class",
+        "tags" : [
+          "class"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/schemas" : {
+      "get" : {
+        "description" : "Lists all graphs of the dataset and tells for each of them whether the class is defined there.",
+        "operationId" : "listSchemas",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph, or \"default\" to access the default graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The uuid of the class.",
+            "in" : "path",
+            "name" : "classUUID",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ClassSchemaOccurrenceDTO"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List the schemas of a class",
         "tags" : [
           "class"
         ]

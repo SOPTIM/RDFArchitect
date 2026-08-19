@@ -16,35 +16,20 @@
   -->
 
 <script>
-    import { Fa } from "svelte-fa";
+    let { text, variant = "default" } = $props();
 
-    import ItemBase from "./ItemBase.svelte";
-
-    let {
-        faIcon,
-        iconColor = null,
-        center,
-        altText,
-        disabled,
-        variant = "default",
-    } = $props();
+    const backgrounds = {
+        default: "bg-nav-badge-background text-nav-badge-text",
+        external: "bg-nav-external-badge-background text-nav-badge-text",
+        muted: "bg-border-strong text-default-text",
+        readonly: "bg-border-strong text-default-text",
+    };
 </script>
 
-<ItemBase {disabled} {variant}>
-    <!-- Left -->
-    <div class="menu-icon" style={iconColor ? `color: ${iconColor};` : ""}>
-        <Fa icon={faIcon} />
-    </div>
-
-    <!-- Center -->
-    <div class="menu-label">
-        {@render center?.()}
-    </div>
-
-    <!-- Right -->
-    {#if altText}
-        <div class="menu-shortcut">
-            {altText}
-        </div>
-    {/if}
-</ItemBase>
+<span
+    class="ml-auto shrink-0 rounded-full px-2 py-[0.1rem] text-[0.68rem] tracking-[0.04em] whitespace-nowrap uppercase {backgrounds[
+        variant
+    ] ?? backgrounds.default}"
+>
+    {text}
+</span>

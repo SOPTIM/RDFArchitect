@@ -201,6 +201,9 @@
             classTypeOfClassToOpenNext = classType;
             return;
         }
+        // Opening a class always starts in its own schema again, even when the
+        // editor was switched over to another one before.
+        editorState.clearClassEditorSchema();
         editorState.selectedClassWorkspace.updateValue(workspaceName);
         editorState.selectedClassGraph.updateValue(graphUri);
         editorState.selectedClass.updateValue({

@@ -77,6 +77,8 @@ export const SelectionLevel = {
  *  focusedClassUUID: StateValuePair<string | null>,
  *  selectedContext: StateValuePair<string | null>,
  *  mergedViewOriginGraph: StateValuePair<string | null>,
+ *  classEditorSchema: StateObjectPair<Object | null>,
+ *  openClassOccurrences: StateObjectPair<Object | null>,
  *  reset: () => void
  * }}
  */
@@ -95,6 +97,16 @@ export const editorState = {
     // The graph the user came from when entering the merged view; preselects the
     // matching source in the merged class editor.
     mergedViewOriginGraph: new StateValuePair(),
+    // The schema the class editor shows for one class. Carries the class it was
+    // picked for, so that it is ignored once another class is opened.
+    classEditorSchema: new StateObjectPair({ classUuid: null, graphUri: null }),
+    // The class the class editor has open, with the uuid it carries in every
+    // schema that defines it. Lets the navigation highlight all of them.
+    openClassOccurrences: new StateObjectPair({
+        workspaceName: null,
+        activeGraphUri: null,
+        occurrences: [],
+    }),
 
     reset() {
         this.selectedWorkspace.updateValue(null);
@@ -107,7 +119,21 @@ export const editorState = {
         this.selectedContext.updateValue(null);
         this.activeSelectionKind.updateValue(null);
         this.mergedViewOriginGraph.updateValue(null);
+        this.clearClassEditorSchema();
+        this.clearOpenClassOccurrences();
         multiSelectState.clear();
+    },
+
+    clearClassEditorSchema() {
+        this.classEditorSchema.updateValue({ classUuid: null, graphUri: null });
+    },
+
+    clearOpenClassOccurrences() {
+        this.openClassOccurrences.updateValue({
+            workspaceName: null,
+            activeGraphUri: null,
+            occurrences: [],
+        });
     },
 
     /** Snapshot of everything selected below the workspace level. */

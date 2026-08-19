@@ -19,42 +19,42 @@ package org.rdfarchitect.api.controller.datasets.graphs.classes;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 
 import lombok.RequiredArgsConstructor;
 
-import org.rdfarchitect.api.dto.ClassDTO;
-import org.rdfarchitect.api.dto.attributes.AttributeDTO;
+import org.rdfarchitect.api.dto.ClassSchemaOccurrenceDTO;
 import org.rdfarchitect.database.GraphIdentifier;
-import org.rdfarchitect.services.ClassExtensionUseCase;
 import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.services.select.ListClassSchemaOccurrencesUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
-@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/extend")
+@RequestMapping("api/datasets/{datasetName}/graphs/{graphURI}/classes/{classUUID}/schemas")
 @RequiredArgsConstructor
-public class ClassExtensionRESTController {
-    private static final Logger logger =
-            LoggerFactory.getLogger(ClassExtensionRESTController.class);
+public class ClassSchemasRESTController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClassSchemasRESTController.class);
 
     private final ExpandURIUseCase expandURIUseCase;
-    private final ClassExtensionUseCase classExtensionUseCase;
+
+    private final ListClassSchemaOccurrencesUseCase listClassSchemaOccurrencesUseCase;
 
     @Operation(
-            summary = "Extend class",
-            description = "extends a class in another graph",
+            summary = "List the schemas of a class",
+            description =
+                    "Lists all graphs of the dataset and tells for each of them whether the class is defined there.",
             tags = {"class"})
-    @PostMapping
-    public ClassDTO extendClass(
+    @GetMapping
+    public List<ClassSchemaOccurrenceDTO> listSchemas(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
                             value = HttpHeaders.ORIGIN,
@@ -68,16 +68,9 @@ public class ClassExtensionRESTController {
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphURI,
-            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID,
-            @io.swagger.v3.oas.annotations.parameters.RequestBody(
-                            required = true,
-                            description = "The new attribute",
-                            content =
-                                    @Content(schema = @Schema(implementation = AttributeDTO.class)))
-                    @RequestBody
-                    GraphIdentifier newGraphIdentifier) {
+            @Parameter(description = "The uuid of the class.") @PathVariable String classUUID) {
         logger.info(
-                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/extend\" from \"{}\".",
+                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/schemas\" from \"{}\".",
                 datasetName,
                 graphURI,
                 classUUID,
@@ -86,15 +79,15 @@ public class ClassExtensionRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
         var graphIdentifier = new GraphIdentifier(datasetName, extendedGraphURI);
 
-        var newClass =
-                classExtensionUseCase.extendClass(graphIdentifier, classUUID, newGraphIdentifier);
+        var occurrences =
+                listClassSchemaOccurrencesUseCase.listSchemaOccurrences(graphIdentifier, classUUID);
 
         logger.info(
-                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/extend\" to \"{}\".",
+                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/classes/{{}}/schemas\" to \"{}\".",
                 datasetName,
                 graphURI,
                 classUUID,
                 originURL);
-        return newClass;
+        return occurrences;
     }
 }

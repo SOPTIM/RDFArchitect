@@ -21,7 +21,6 @@
         faAnglesDown,
         faAnglesUp,
         faAngleUp,
-        faFileExport,
         faLayerGroup,
         faCopy,
         faMinus,
@@ -48,7 +47,7 @@
     import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
     import AddToWorkspaceDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
-    import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
+    import ExtendSchemaSubMenu from "../../../../routes/mainpage/packageNavigation/ExtendSchemaSubMenu.svelte";
     import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
@@ -68,10 +67,8 @@
 
     let triggerRef = $state(null);
     let open = $state(false);
-    let dialogClass = $state(null);
     let showDeleteDependenciesDialog = $state(false);
     let showSHACLDialog = $state(false);
-    let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
     let showAddToWorkspaceDiagramDialog = $state(false);
@@ -80,6 +77,30 @@
     let dialogClassLabels = $state([]);
     let dialogGraphUri = $state(null);
     let dialogClasses = $state([]);
+
+    /** The classes of the selection as the schema extension expects them: in
+     * the cross-profile diagram they carry a merged uuid instead of a graph. */
+    const extendClasses = $derived(
+        multiActive
+            ? multiSelectState.getSelectedClassRefs(isCrossProfileDiagram)
+            : contextMenuClass
+              ? [
+                    {
+                        uuid: contextMenuClass.uuid,
+                        graphUri: isCrossProfileDiagram
+                            ? null
+                            : (contextMenuClass.graphUri ?? graphUri),
+                    },
+                ]
+              : [],
+    );
+
+    /** The schema of the diagram the class was right-clicked in, if any. */
+    const currentGraphUri = $derived(
+        isCrossProfileDiagram
+            ? null
+            : (contextMenuClass?.graphUri ?? graphUri) || null,
+    );
 
     let triggerStyle = $derived(getContextMenuTriggerStyle(request));
 
@@ -119,6 +140,11 @@
         multiActive && !multiSelectState.isSingleGraph,
     );
 
+    const isCrossProfileDiagram = $derived(
+        editorState.selectedDiagram.getProperty("type") ===
+            DiagramType.CROSS_PROFILE,
+    );
+
     let classZIndex = $derived(
         contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
     );
@@ -148,7 +174,6 @@
         if (classActionsDisabled || crossGraphDisabled || !contextMenuClass) {
             return;
         }
-        dialogClass = contextMenuClass;
         dialogClassIds = selectionUuids;
         dialogGraphUri = multiActive
             ? (multiSelectState.getSelected()[0]?.graphUri ?? graphUri)
@@ -161,7 +186,6 @@
         if (!contextMenuClass) {
             return;
         }
-        dialogClass = contextMenuClass;
         dialogClassIds = selectionUuids;
         dialogClassLabels = selectionLabels;
         showRemoveFromDiagramDialog = true;
@@ -177,15 +201,6 @@
     function openAddToWorkspaceDiagramDialog() {
         dialogClasses = selectionClasses;
         showAddToWorkspaceDiagramDialog = true;
-        onClose();
-    }
-
-    function openExtendClassDialog() {
-        if (!contextMenuClass) {
-            return;
-        }
-        dialogClass = contextMenuClass;
-        showExtendClassDialog = true;
         onClose();
     }
 
@@ -254,13 +269,27 @@
                     ? `Copy ${selectionUuids.length} Classes`
                     : "Copy Class"}
             </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={openExtendClassDialog}
-                faIcon={faFileExport}
-                disabled={multiActive}
-            >
-                Extend Class
-            </ContextMenu.Item.Button>
+        {/if}
+        <ExtendSchemaSubMenu
+            label="Extend with Inheritance"
+            withInheritance
+            {workspaceName}
+            classes={extendClasses}
+            {currentGraphUri}
+            selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
+            {readOnly}
+            onDone={onClose}
+        />
+        <ExtendSchemaSubMenu
+            label="Extend in Schema"
+            {workspaceName}
+            classes={extendClasses}
+            {currentGraphUri}
+            selectedClassUuid={multiActive ? null : contextMenuClass?.uuid}
+            {readOnly}
+            onDone={onClose}
+        />
+        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -382,13 +411,6 @@
     graphUri={dialogGraphUri ?? graphUri}
     resourceUuids={dialogClassIds}
 />
-<ExtendClassDialog
-    {workspaceName}
-    {graphUri}
-    classUUID={dialogClass?.uuid}
-    bind:showDialog={showExtendClassDialog}
-/>
-
 <SHACLClassSpecificPopUp
     workspaceName={editorState.selectedWorkspace.getValue()}
     graphUri={editorState.selectedGraph.getValue()}
