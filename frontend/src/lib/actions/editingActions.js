@@ -16,7 +16,7 @@
  */
 
 /**
- * Shared actions for toggling the read-only state of a dataset.
+ * Shared actions for toggling the read-only state of a workspace.
  *
  * Each function performs the API call, surfaces a success or error toast,
  * and returns `true` when the write succeeded. Reactive state updates that
@@ -31,47 +31,47 @@ import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 /**
- * Make the dataset editable. Toasts on success and failure.
+ * Make the workspace editable. Toasts on success and failure.
  *
- * @param {string} datasetName
- * @returns {Promise<boolean>} `true` when the dataset is now editable.
+ * @param {string} workspaceName
+ * @returns {Promise<boolean>} `true` when the workspace is now editable.
  */
-export async function enableEditing(datasetName) {
-    if (!datasetName) return false;
-    const res = await bec.enableEditing(datasetName);
+export async function enableEditing(workspaceName) {
+    if (!workspaceName) return false;
+    const res = await bec.enableEditing(workspaceName);
     if (res && res.ok === false) {
         toastStore.error(
             "Could not enable editing",
-            `Dataset "${datasetName}" remains read-only.`,
+            `Workspace "${workspaceName}" remains read-only.`,
         );
         return false;
     }
     toastStore.success(
         "Editing enabled",
-        `Dataset "${datasetName}" is now editable.`,
+        `Workspace "${workspaceName}" is now editable.`,
     );
     return true;
 }
 
 /**
- * Mark the dataset read-only. Toasts on success and failure.
+ * Mark the workspace read-only. Toasts on success and failure.
  *
- * @param {string} datasetName
- * @returns {Promise<boolean>} `true` when the dataset is now read-only.
+ * @param {string} workspaceName
+ * @returns {Promise<boolean>} `true` when the workspace is now read-only.
  */
-export async function disableEditing(datasetName) {
-    if (!datasetName) return false;
-    const res = await bec.disableEditing(datasetName);
+export async function disableEditing(workspaceName) {
+    if (!workspaceName) return false;
+    const res = await bec.disableEditing(workspaceName);
     if (res && res.ok === false) {
         toastStore.error(
             "Could not disable editing",
-            `Dataset "${datasetName}" remains editable.`,
+            `Workspace "${workspaceName}" remains editable.`,
         );
         return false;
     }
     toastStore.success(
         "Editing disabled",
-        `Dataset "${datasetName}" is now read-only.`,
+        `Workspace "${workspaceName}" is now read-only.`,
     );
     return true;
 }

@@ -27,19 +27,19 @@
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 
     import ClassEntry from "./ClassEntry.svelte";
-    import CustomDatasetDiagramDialog from "./custom-diagram-dialogs/CustomDatasetDiagramDialog.svelte";
     import CustomDiagramDeleteDialog from "./custom-diagram-dialogs/CustomDiagramDeleteDialog.svelte";
     import CustomGraphDiagramDialog from "./custom-diagram-dialogs/CustomGraphDiagramDialog.svelte";
+    import CustomWorkspaceDiagramDialog from "./custom-diagram-dialogs/CustomWorkspaceDiagramDialog.svelte";
     import { isSelectedCustomDiagram } from "./packageNavigationUtils.svelte.js";
 
     let {
-        datasetNavEntry,
+        workspaceNavEntry,
         graphNavEntry,
         allGraphNavEntries,
         diagram = $bindable(),
         classes,
         readonly,
-        level = 4,
+        level = 3,
         onToggle,
     } = $props();
 
@@ -97,9 +97,9 @@
     function selectDiagram() {
         const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
-            : DiagramType.CUSTOM_DATASET_DIAGRAM;
+            : DiagramType.CUSTOM_WORKSPACE_DIAGRAM;
         editorState.selectCustomDiagram(
-            datasetNavEntry.label,
+            workspaceNavEntry.label,
             graphNavEntry ? graphNavEntry.id : null,
             diagram.diagramId,
             diagramType,
@@ -115,7 +115,7 @@
                 label={diagram.name}
                 icon={packageIcon}
                 isSelected={isSelectedCustomDiagram(
-                    datasetNavEntry.id,
+                    workspaceNavEntry.id,
                     graphNavEntry?.id,
                     diagram,
                 )}
@@ -152,13 +152,14 @@
         >
             {#each classes as cls (cls.id)}
                 <ClassEntry
-                    {datasetNavEntry}
+                    {workspaceNavEntry}
                     graphNavEntry={getGraphNavEntryForClass(cls.id)}
                     classNavEntry={cls}
                     diagramId={diagram.diagramId}
                     diagramGraphUri={graphNavEntry?.id}
                     {rangeSiblings}
                     {readonly}
+                    level={level + 1}
                 />
             {/each}
         </div>
@@ -168,16 +169,16 @@
 {#if graphNavEntry}
     <CustomGraphDiagramDialog
         bind:showDialog={showEditDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+        lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
         diagramName={diagram.name}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
     />
 {:else}
-    <CustomDatasetDiagramDialog
+    <CustomWorkspaceDiagramDialog
         bind:showDialog={showEditDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+        lockedWorkspaceName={workspaceNavEntry.id}
         diagramName={diagram.name}
         diagramId={diagram.diagramId}
         selectedClasses={diagram.classes}
@@ -186,7 +187,7 @@
 
 <CustomDiagramDeleteDialog
     bind:showDialog={showDeleteDiagramDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry ? graphNavEntry.id : null}
     {diagram}
 />

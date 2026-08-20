@@ -35,6 +35,13 @@ import java.util.UUID;
 public interface InMemoryDatabase {
 
     /**
+     * Creates an empty Dataset without any graphs. If the dataset already exists, nothing happens.
+     *
+     * @param datasetName The name of the Dataset to be created.
+     */
+    void createDataset(String datasetName);
+
+    /**
      * Deletes a complete Dataset with all containing graphs. Waits for ongoing transactions on
      * individual graphs before deleting.
      *

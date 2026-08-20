@@ -45,8 +45,8 @@
         syncContextMenuTrigger,
     } from "./contextMenuUtils.js";
     import DeleteDependenciesDialog from "../../../../routes/delete-relations-dialog/DeleteDependenciesDialog.svelte";
-    import AddToDatasetDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "../../../../routes/mainpage/packageNavigation/custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import ExtendClassDialog from "../../../../routes/mainpage/packageNavigation/ExtendClassDialog.svelte";
     import SHACLClassSpecificPopUp from "../../../../routes/shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
@@ -56,7 +56,7 @@
         disabled = false,
         readOnly = false,
         contextMenuClass = null,
-        datasetName = "",
+        workspaceName = "",
         graphUri = "",
         nodeOrder = [],
         nodeCount = 0,
@@ -74,7 +74,7 @@
     let showExtendClassDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
-    let showAddToDatasetDiagramDialog = $state(false);
+    let showAddToWorkspaceDiagramDialog = $state(false);
 
     let dialogClassIds = $state([]);
     let dialogClassLabels = $state([]);
@@ -174,9 +174,9 @@
         onClose();
     }
 
-    function openAddToDatasetDiagramDialog() {
+    function openAddToWorkspaceDiagramDialog() {
         dialogClasses = selectionClasses;
-        showAddToDatasetDiagramDialog = true;
+        showAddToWorkspaceDiagramDialog = true;
         onClose();
     }
 
@@ -230,7 +230,7 @@
                 graphURI:
                     contextMenuClass.graphUri ??
                     editorState.selectedGraph.getValue(),
-                datasetName: editorState.selectedDataset.getValue(),
+                workspaceName: editorState.selectedWorkspace.getValue(),
             }),
         );
     }
@@ -282,10 +282,10 @@
                 </ContextMenu.Item.Button>
             {/if}
             <ContextMenu.Item.Button
-                onSelect={openAddToDatasetDiagramDialog}
+                onSelect={openAddToWorkspaceDiagramDialog}
                 faIcon={faObjectGroup}
             >
-                Add to Dataset Diagram
+                Add to Workspace Diagram
             </ContextMenu.Item.Button>
         {/if}
         <ContextMenu.SubMenu.Root>
@@ -378,19 +378,19 @@
 
 <DeleteDependenciesDialog
     bind:showDialog={showDeleteDependenciesDialog}
-    {datasetName}
+    {workspaceName}
     graphUri={dialogGraphUri ?? graphUri}
     resourceUuids={dialogClassIds}
 />
 <ExtendClassDialog
-    {datasetName}
+    {workspaceName}
     {graphUri}
     classUUID={dialogClass?.uuid}
     bind:showDialog={showExtendClassDialog}
 />
 
 <SHACLClassSpecificPopUp
-    datasetName={editorState.selectedDataset.getValue()}
+    workspaceName={editorState.selectedWorkspace.getValue()}
     graphUri={editorState.selectedGraph.getValue()}
     reactiveClass={shaclClass}
     bind:showDialog={showSHACLDialog}
@@ -398,7 +398,7 @@
 
 <RemoveFromDiagramDialog
     bind:showDialog={showRemoveFromDiagramDialog}
-    lockedDatasetName={datasetName}
+    lockedWorkspaceName={workspaceName}
     {graphUri}
     diagramId={editorState.selectedDiagram.getProperty("id")}
     classIds={dialogClassIds}
@@ -408,16 +408,16 @@
 {#if showAddToGraphDiagramDialog}
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
-        lockedDatasetName={datasetName}
+        lockedWorkspaceName={workspaceName}
         lockedGraphUri={graphUri}
         classes={dialogClasses}
     />
 {/if}
 
-{#if showAddToDatasetDiagramDialog}
-    <AddToDatasetDiagramDialog
-        bind:showDialog={showAddToDatasetDiagramDialog}
-        lockedDatasetName={datasetName}
+{#if showAddToWorkspaceDiagramDialog}
+    <AddToWorkspaceDiagramDialog
+        bind:showDialog={showAddToWorkspaceDiagramDialog}
+        lockedWorkspaceName={workspaceName}
         lockedGraphUri={graphUri}
         classes={dialogClasses}
     />

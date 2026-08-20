@@ -35,7 +35,7 @@
         showDialog = $bindable(),
         onOpen = () => {},
         onClose = () => {},
-        datasetName,
+        workspaceName,
         graphUri,
         resourceUuid,
         resourceUuids,
@@ -115,10 +115,10 @@
     }
 
     async function fetchDeleteDependencies() {
-        if (!datasetName || !graphUri || targetUuids.length === 0) {
+        if (!workspaceName || !graphUri || targetUuids.length === 0) {
             console.error(
                 "Missing required properties to delete resource:",
-                datasetName,
+                workspaceName,
                 graphUri,
                 targetUuids,
             );
@@ -126,7 +126,7 @@
             return;
         }
         let res = await bec.getDeletionImpact(
-            datasetName,
+            workspaceName,
             graphUri,
             targetUuids,
         );
@@ -181,7 +181,7 @@
         console.log("Submit delete with selections:", payload);
         const isSingle = roots.length === 1;
         const label = isSingle ? roots[0].resourceIdentifier.label : null;
-        let res = await bec.deleteResources(datasetName, graphUri, payload);
+        let res = await bec.deleteResources(workspaceName, graphUri, payload);
         if (!res.ok) {
             console.error("Failed to delete resources:", await res.text());
             toastStore.error(
@@ -193,7 +193,7 @@
         } else {
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();
-            editorState.selectedClassDataset.updateValue(null);
+            editorState.selectedClassWorkspace.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClass.updateValue({ type: null, id: null });
             multiSelectState.clear();

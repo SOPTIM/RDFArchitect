@@ -28,12 +28,12 @@ export class BackendConnection {
     }
 
     async fetchFilteredRenderingData(
-        datasetName,
+        workspaceName,
         graphURI,
         graphFilter,
         signal,
     ) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/rendering`;
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/rendering`;
         return fetch(url, {
             method: "POST",
             mode: "cors",
@@ -44,7 +44,7 @@ export class BackendConnection {
         });
     }
 
-    async getDatasetNames() {
+    async getWorkspaceNames() {
         const url = `${PUBLIC_BACKEND_URL}/datasets`;
         return fetch(url, {
             method: "GET",
@@ -53,8 +53,8 @@ export class BackendConnection {
         });
     }
 
-    async getCrossProfileID(datasetName) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramID`;
+    async getCrossProfileID(workspaceName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/crossprofilediagramID`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -63,8 +63,8 @@ export class BackendConnection {
         });
     }
 
-    async getGraphs(datasetName) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs`;
+    async getGraphs(workspaceName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -73,8 +73,16 @@ export class BackendConnection {
         });
     }
 
-    async deleteDataset(datasetName) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}`;
+    async createWorkspace(workspaceName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}`;
+        return fetch(url, {
+            method: "PUT",
+            credentials: "include",
+        });
+    }
+
+    async deleteWorkspace(workspaceName) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}`;
         return fetch(url, {
             method: "DELETE",
             credentials: "include",
@@ -82,12 +90,12 @@ export class BackendConnection {
     }
 
     async getClassInfo(
-        datasetName,
+        workspaceName,
         graphURI,
         classUUID,
         includeSuperClasses = false,
     ) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}${includeSuperClasses ? "?includeSuperClasses=true" : ""}`;
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}${includeSuperClasses ? "?includeSuperClasses=true" : ""}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -96,8 +104,8 @@ export class BackendConnection {
         });
     }
 
-    async replaceClass(datasetName, graphURI, classUUID, newClass) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
+    async replaceClass(workspaceName, graphURI, classUUID, newClass) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -107,8 +115,8 @@ export class BackendConnection {
         });
     }
 
-    async postClass(datasetName, graphURI, newClass) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
+    async postClass(workspaceName, graphURI, newClass) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes`;
         return fetch(url, {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -117,8 +125,8 @@ export class BackendConnection {
         });
     }
 
-    async getPackages(datasetName, graphURI, signal) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages`;
+    async getPackages(workspaceName, graphURI, signal) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/packages`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -128,8 +136,8 @@ export class BackendConnection {
         });
     }
 
-    async getPackage(datasetName, graphURI, packageUUID) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}`;
+    async getPackage(workspaceName, graphURI, packageUUID) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(packageUUID)}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -138,8 +146,8 @@ export class BackendConnection {
         });
     }
 
-    async getClasses(datasetName, graphURI, includeExternalClasses = false) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes?includeExternalClasses=${includeExternalClasses}`;
+    async getClasses(workspaceName, graphURI, includeExternalClasses = false) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes?includeExternalClasses=${includeExternalClasses}`;
         return fetch(url, {
             method: "GET",
             mode: "cors",
@@ -158,8 +166,8 @@ export class BackendConnection {
         });
     }
 
-    async getPrimitives(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/primitives`;
+    async getPrimitives(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/primitives`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -168,8 +176,8 @@ export class BackendConnection {
         });
     }
 
-    async getDataTypes(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/datatypes`;
+    async getDataTypes(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/datatypes`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -178,8 +186,8 @@ export class BackendConnection {
         });
     }
 
-    async getStereotypes(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/stereotypes`;
+    async getStereotypes(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/stereotypes`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -188,8 +196,8 @@ export class BackendConnection {
         });
     }
 
-    async putAttribute(datasetName, graphURI, classUUID, attribute) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/attributes/${encodeURIComponent(attribute.uuid)}`;
+    async putAttribute(workspaceName, graphURI, classUUID, attribute) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/attributes/${encodeURIComponent(attribute.uuid)}`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -198,8 +206,8 @@ export class BackendConnection {
         });
     }
 
-    async postAttribute(datasetName, graphURI, classUUID, attribute) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/attributes`;
+    async postAttribute(workspaceName, graphURI, classUUID, attribute) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/attributes`;
         return await fetch(url, {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -209,12 +217,12 @@ export class BackendConnection {
     }
 
     async putAssociationPair(
-        datasetName,
+        workspaceName,
         graphURI,
         classUUID,
         associationPair,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/associations/${encodeURIComponent(associationPair.from.uuid)}`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/associations/${encodeURIComponent(associationPair.from.uuid)}`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -223,8 +231,8 @@ export class BackendConnection {
         });
     }
 
-    async postAssociationPair(datasetName, graphURI, classUUID, association) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/associations`;
+    async postAssociationPair(workspaceName, graphURI, classUUID, association) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/associations`;
         return await fetch(url, {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -233,8 +241,8 @@ export class BackendConnection {
         });
     }
 
-    async getDeletionImpact(datasetName, graphURI, resourceUuids) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/deletion-impact`;
+    async getDeletionImpact(workspaceName, graphURI, resourceUuids) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/deletion-impact`;
         return await fetch(url, {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -243,8 +251,8 @@ export class BackendConnection {
         });
     }
 
-    async deleteClass(datasetName, graphURI, classUUID) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
+    async deleteClass(workspaceName, graphURI, classUUID) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}`;
         return await fetch(url, {
             method: "DELETE",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -252,8 +260,8 @@ export class BackendConnection {
         });
     }
 
-    async deleteResources(datasetName, graphURI, deleteRequests) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/delete-requests`;
+    async deleteResources(workspaceName, graphURI, deleteRequests) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/delete-requests`;
         return await fetch(url, {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -262,8 +270,8 @@ export class BackendConnection {
         });
     }
 
-    async postEnumEntry(datasetName, graphURI, classUUID, enumEntry) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries`;
+    async postEnumEntry(workspaceName, graphURI, classUUID, enumEntry) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries`;
         return await fetch(url, {
             method: "POST",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -272,8 +280,8 @@ export class BackendConnection {
         });
     }
 
-    async putEnumEntry(datasetName, graphURI, classUUID, enumEntry) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries/${encodeURIComponent(enumEntry.uuid)}`;
+    async putEnumEntry(workspaceName, graphURI, classUUID, enumEntry) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/enumentries/${encodeURIComponent(enumEntry.uuid)}`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -282,8 +290,8 @@ export class BackendConnection {
         });
     }
 
-    async getNamespaces(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/namespaces`;
+    async getNamespaces(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/namespaces`;
         return await fetch(url, {
             method: "GET",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -291,8 +299,8 @@ export class BackendConnection {
         });
     }
 
-    async replaceNamespaces(datasetName, namespaces) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/namespaces`;
+    async replaceNamespaces(workspaceName, namespaces) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/namespaces`;
         return fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -314,11 +322,11 @@ export class BackendConnection {
     }
 
     async validateSchema(
-        datasetName,
+        workspaceName,
         graphURI,
         cgmesVersion = CGMESVersion.V3_0,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/validate/${encodeURIComponent(cgmesVersion)}`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/validate/${encodeURIComponent(cgmesVersion)}`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -340,8 +348,8 @@ export class BackendConnection {
         });
     }
 
-    async compareSchemas(datasetName, graphURI, file) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/compare`;
+    async compareSchemas(workspaceName, graphURI, file) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/compare`;
         const formData = new FormData();
         formData.append("file", file);
         return await fetch(url, {
@@ -352,16 +360,16 @@ export class BackendConnection {
         });
     }
 
-    async compareDatasetSchemas(
-        datasetName,
+    async compareWorkspaceSchemas(
+        workspaceName,
         graphURI,
-        otherDatasetName,
+        otherWorkspaceName,
         otherGraphURI,
     ) {
         const url =
-            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}` +
+            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}` +
             `/graphs/${encodeURIComponent(graphURI)}/compare` +
-            `?otherDataset=${encodeURIComponent(otherDatasetName)}` +
+            `?otherDataset=${encodeURIComponent(otherWorkspaceName)}` +
             `&otherGraph=${encodeURIComponent(otherGraphURI)}`;
 
         return fetch(url, {
@@ -386,12 +394,12 @@ export class BackendConnection {
         });
     }
 
-    async createSnapshot(datasetName) {
+    async createSnapshot(workspaceName) {
         let url = `${PUBLIC_BACKEND_URL}/snapshots`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
-            body: datasetName,
+            body: workspaceName,
             credentials: "include",
         });
     }
@@ -405,8 +413,8 @@ export class BackendConnection {
         });
     }
 
-    async isReadOnly(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/readonly`;
+    async isReadOnly(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/readonly`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -414,8 +422,8 @@ export class BackendConnection {
         });
     }
 
-    async enableEditing(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/readonly`;
+    async enableEditing(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/readonly`;
         return await fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -423,8 +431,8 @@ export class BackendConnection {
         });
     }
 
-    async disableEditing(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/readonly`;
+    async disableEditing(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/readonly`;
         return await fetch(url, {
             method: "DELETE",
             mode: "cors",
@@ -432,8 +440,8 @@ export class BackendConnection {
         });
     }
 
-    async getChangelog(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/changes`;
+    async getChangelog(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/changes`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -442,9 +450,9 @@ export class BackendConnection {
         });
     }
 
-    async restoreVersion(datasetName, graphURI, version) {
+    async restoreVersion(workspaceName, graphURI, version) {
         console.log(`Restoring version ${version}`);
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/restore`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/restore`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -454,8 +462,8 @@ export class BackendConnection {
         });
     }
 
-    async putPackage(datasetName, graphURI, pack) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(pack.uuid)}`;
+    async putPackage(workspaceName, graphURI, pack) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/packages/${encodeURIComponent(pack.uuid)}`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -466,12 +474,12 @@ export class BackendConnection {
     }
 
     async updateClassPositions(
-        datasetName,
+        workspaceName,
         graphURI,
         packageUUID,
         classPositionDTOList,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/layout/${encodeURIComponent(packageUUID)}/classes`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/layout/${encodeURIComponent(packageUUID)}/classes`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -482,11 +490,11 @@ export class BackendConnection {
     }
 
     async updateGlobalClassPositions(
-        datasetName,
+        workspaceName,
         packageUUID,
         classPositionDTOList,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/layout/${encodeURIComponent(packageUUID)}/classes`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/layout/${encodeURIComponent(packageUUID)}/classes`;
         return await fetch(url, {
             method: "PUT",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -506,8 +514,8 @@ export class BackendConnection {
         });
     }
 
-    async getOntology(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
+    async getOntology(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -516,8 +524,8 @@ export class BackendConnection {
         });
     }
 
-    async postOntology(datasetName, graphURI, newOntology) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
+    async postOntology(workspaceName, graphURI, newOntology) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -527,8 +535,8 @@ export class BackendConnection {
         });
     }
 
-    async putOntology(datasetName, graphURI, newOntology) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
+    async putOntology(workspaceName, graphURI, newOntology) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
         return await fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -538,8 +546,8 @@ export class BackendConnection {
         });
     }
 
-    async deleteOntology(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
+    async deleteOntology(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/ontology`;
         return await fetch(url, {
             method: "DELETE",
             mode: "cors",
@@ -548,8 +556,8 @@ export class BackendConnection {
         });
     }
 
-    async generateOntologyEntries(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/ontology/generate`;
+    async generateOntologyEntries(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/ontology/generate`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -558,8 +566,8 @@ export class BackendConnection {
         });
     }
 
-    async postPasteClasses(targetDatasetName, targetGraphURI, pasteRequest) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetDatasetName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste`;
+    async postPasteClasses(targetWorkspaceName, targetGraphURI, pasteRequest) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetWorkspaceName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -569,8 +577,12 @@ export class BackendConnection {
         });
     }
 
-    async postPastePreview(targetDatasetName, targetGraphURI, previewRequest) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetDatasetName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste/preview`;
+    async postPastePreview(
+        targetWorkspaceName,
+        targetGraphURI,
+        previewRequest,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(targetWorkspaceName)}/graphs/${encodeURIComponent(targetGraphURI)}/paste/preview`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -580,8 +592,8 @@ export class BackendConnection {
         });
     }
 
-    async extendClass(datasetName, graphURI, classUUID, body) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/extend`;
+    async extendClass(workspaceName, graphURI, classUUID, body) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/classes/${encodeURIComponent(classUUID)}/extend`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -591,8 +603,8 @@ export class BackendConnection {
         });
     }
 
-    async getCustomDiagramsForGraph(datasetName, graphURI) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams`;
+    async getCustomDiagramsForGraph(workspaceName, graphURI) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/diagrams`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -601,8 +613,8 @@ export class BackendConnection {
         });
     }
 
-    async getCustomDiagramsForDataset(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams`;
+    async getCustomDiagramsForWorkspace(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/diagrams`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -611,8 +623,12 @@ export class BackendConnection {
         });
     }
 
-    async getCustomGraphDiagramRenderingData(datasetName, graphURI, diagramId) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
+    async getCustomGraphDiagramRenderingData(
+        workspaceName,
+        graphURI,
+        diagramId,
+    ) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -621,8 +637,8 @@ export class BackendConnection {
         });
     }
 
-    async getCustomDatasetDiagramRenderingData(datasetName, diagramId) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
+    async getCustomWorkspaceDiagramRenderingData(workspaceName, diagramId) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -631,8 +647,8 @@ export class BackendConnection {
         });
     }
 
-    async getCrossProfileDiagramRenderingDataForDataset(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramRendering`;
+    async getCrossProfileDiagramRenderingDataForWorkspace(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/crossprofilediagramRendering`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -641,8 +657,8 @@ export class BackendConnection {
         });
     }
 
-    async getCrossProfileDiagramForDataset(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagram`;
+    async getCrossProfileDiagramForWorkspace(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/crossprofilediagram`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -651,8 +667,8 @@ export class BackendConnection {
         });
     }
 
-    async getCrossProfileColorData(datasetName) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramColors`;
+    async getCrossProfileColorData(workspaceName) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/crossprofilediagramColors`;
         return await fetch(url, {
             method: "GET",
             mode: "cors",
@@ -661,8 +677,8 @@ export class BackendConnection {
         });
     }
 
-    async putCrossProfileColorData(datasetName, colorData) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/crossprofilediagramColors`;
+    async putCrossProfileColorData(workspaceName, colorData) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/crossprofilediagramColors`;
         return await fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -672,8 +688,8 @@ export class BackendConnection {
         });
     }
 
-    async putCustomDiagram(datasetName, graphURI, diagramId, newDiagram) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
+    async putCustomDiagram(workspaceName, graphURI, diagramId, newDiagram) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -683,8 +699,8 @@ export class BackendConnection {
         });
     }
 
-    async putCustomDatasetDiagram(datasetName, diagramId, newDiagram) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
+    async putCustomWorkspaceDiagram(workspaceName, diagramId, newDiagram) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {
             method: "PUT",
             mode: "cors",
@@ -694,8 +710,8 @@ export class BackendConnection {
         });
     }
 
-    async addToCustomGraphDiagram(datasetName, graphURI, diagramId, classes) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+    async addToCustomGraphDiagram(workspaceName, graphURI, diagramId, classes) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -705,8 +721,8 @@ export class BackendConnection {
         });
     }
 
-    async addToCustomDatasetDiagram(datasetName, diagramId, classes) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+    async addToCustomWorkspaceDiagram(workspaceName, diagramId, classes) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
         return await fetch(url, {
             method: "POST",
             mode: "cors",
@@ -717,12 +733,12 @@ export class BackendConnection {
     }
 
     async removeFromCustomGraphDiagram(
-        datasetName,
+        workspaceName,
         graphURI,
         diagramId,
         classIds,
     ) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
         return await fetch(url, {
             method: "DELETE",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -731,8 +747,8 @@ export class BackendConnection {
         });
     }
 
-    async removeFromCustomDatasetDiagram(datasetName, diagramId, classIds) {
-        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
+    async removeFromCustomWorkspaceDiagram(workspaceName, diagramId, classIds) {
+        let url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/diagrams/${encodeURIComponent(diagramId)}/classes`;
         return await fetch(url, {
             method: "DELETE",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -741,16 +757,16 @@ export class BackendConnection {
         });
     }
 
-    async deleteCustomDatasetDiagram(datasetName, diagramId) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/diagrams/${encodeURIComponent(diagramId)}`;
+    async deleteCustomWorkspaceDiagram(workspaceName, diagramId) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {
             method: "DELETE",
             credentials: "include",
         });
     }
 
-    async deleteCustomGraphDiagram(datasetName, graphUri, diagramId) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphUri)}/diagrams/${encodeURIComponent(diagramId)}`;
+    async deleteCustomGraphDiagram(workspaceName, graphUri, diagramId) {
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphUri)}/diagrams/${encodeURIComponent(diagramId)}`;
         return await fetch(url, {
             method: "DELETE",
             credentials: "include",
@@ -766,13 +782,13 @@ export class BackendConnection {
     }
 
     async getHTMLExport(
-        datasetName,
+        workspaceName,
         graphURI,
         fileEnding,
         embedDiagrams = false,
         signal,
     ) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/htmlexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
         return await fetch(url, {
             method: "GET",
             headers: new Headers({ "Content-Type": "application/json" }),
@@ -783,13 +799,13 @@ export class BackendConnection {
     }
 
     async getAsciiDocExport(
-        datasetName,
+        workspaceName,
         graphURI,
         fileEnding,
         embedDiagrams = false,
         signal,
     ) {
-        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetName)}/graphs/${encodeURIComponent(graphURI)}/asciidocexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
+        const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspaceName)}/graphs/${encodeURIComponent(graphURI)}/asciidocexport/${encodeURIComponent(fileEnding)}?embedDiagrams=${embedDiagrams}`;
         return await fetch(url, {
             method: "GET",
             headers: new Headers({ "Content-Type": "application/json" }),

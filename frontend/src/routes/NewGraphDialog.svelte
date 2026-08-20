@@ -18,7 +18,7 @@
 <script>
     import { v4 as uuidv4 } from "uuid";
 
-    import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
+    import { getWorkspaceNames } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -31,25 +31,26 @@
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable(), lockedDatasetName } = $props();
+    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const uniqueId = uuidv4();
     const defaultGraphUriPrefix = "http://graph#";
     const uriSchemePattern = /^[a-zA-Z][a-zA-Z\d+.-]*:/;
-    const datasetInputId = `datasetNameNewGraph-${uniqueId}`;
-    const datasetListId = `datasetNamesNewGraph-${uniqueId}`;
+    const workspaceInputId = `workspaceNameNewGraph-${uniqueId}`;
+    const workspaceListId = `workspaceNamesNewGraph-${uniqueId}`;
     const graphInputId = `graphUriNewGraph-${uniqueId}`;
 
-    let datasetNameUserInput = $state("");
+    let workspaceNameUserInput = $state("");
     let graphUriUserInput = $state("");
-    let readOnlyDatasets = $state([]);
-    let modifiableDatasets = $state([]);
+    let readOnlyWorkspaces = $state([]);
+    let modifiableWorkspaces = $state([]);
     let graphNames = $state([]);
 
-    const datasetSelectionLocked = $derived(!!lockedDatasetName);
-    const datasetIsReadOnly = $derived(
-        datasetNameUserInput && readOnlyDatasets.includes(datasetNameUserInput),
+    const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
+    const workspaceIsReadOnly = $derived(
+        workspaceNameUserInput &&
+            readOnlyWorkspaces.includes(workspaceNameUserInput),
     );
 
     const resolvedGraphUri = $derived(resolveGraphUri(graphUriUserInput));
@@ -58,9 +59,9 @@
             graphNames.some(g => new URI(g).toString() === resolvedGraphUri),
     );
     const disableSubmit = $derived(
-        !datasetNameUserInput ||
+        !workspaceNameUserInput ||
             !resolvedGraphUri ||
-            datasetIsReadOnly ||
+            workspaceIsReadOnly ||
             graphExists,
     );
     function resolveGraphUri(graphInput) {
@@ -75,46 +76,48 @@
     }
 
     async function onOpen() {
-        datasetNameUserInput =
-            lockedDatasetName ?? editorState.selectedDataset.getValue() ?? "";
+        workspaceNameUserInput =
+            lockedWorkspaceName ??
+            editorState.selectedWorkspace.getValue() ??
+            "";
         graphUriUserInput = "";
 
-        const datasetNames = await getDatasetNames();
-        modifiableDatasets = datasetNames.modifiable;
-        readOnlyDatasets = datasetNames.readonly;
+        const workspaceNames = await getWorkspaceNames();
+        modifiableWorkspaces = workspaceNames.modifiable;
+        readOnlyWorkspaces = workspaceNames.readonly;
 
         await refreshGraphNames();
     }
 
     function onClose() {
-        datasetNameUserInput = "";
+        workspaceNameUserInput = "";
         graphUriUserInput = "";
         graphNames = [];
     }
 
     async function refreshGraphNames() {
-        if (!datasetNameUserInput) {
+        if (!workspaceNameUserInput) {
             graphNames = [];
             return;
         }
 
-        if (!modifiableDatasets.includes(datasetNameUserInput)) {
+        if (!modifiableWorkspaces.includes(workspaceNameUserInput)) {
             graphNames = [];
             return;
         }
 
-        const res = await bec.getGraphs(datasetNameUserInput);
+        const res = await bec.getGraphs(workspaceNameUserInput);
         graphNames = await res.json();
     }
 
     async function addGraph() {
-        const datasetNameLocal = datasetNameUserInput;
+        const workspaceNameLocal = workspaceNameUserInput;
         const graphURILocal = resolvedGraphUri;
 
         const promise = fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
-                encodeURIComponent(datasetNameLocal) +
+                encodeURIComponent(workspaceNameLocal) +
                 "/graphs/" +
                 encodeURIComponent(graphURILocal) +
                 "/content",
@@ -124,7 +127,7 @@
             },
         ).then(res => {
             if (res.ok) {
-                editorState.selectedDataset.updateValue(datasetNameLocal);
+                editorState.selectedWorkspace.updateValue(workspaceNameLocal);
                 editorState.selectedGraph.updateValue(graphURILocal);
                 editorState.selectedDiagram.updateValue({
                     type: DiagramType.PACKAGE,
@@ -133,7 +136,7 @@
                 editorState.selectedClass.updateValue({ type: null, id: null });
                 toastStore.success(
                     "Schema created",
-                    `"${graphURILocal}" was added to "${datasetNameLocal}".`,
+                    `"${graphURILocal}" was added to "${workspaceNameLocal}".`,
                 );
             } else {
                 console.log("failed to create graph");
@@ -169,35 +172,28 @@
     disablePrimary={disableSubmit}
 >
     <div class="mx-2 flex h-full flex-col">
-        {#if !datasetSelectionLocked}
-            <label for={datasetInputId} class="mb-1">Dataset</label>
+        {#if !workspaceSelectionLocked}
+            <label for={workspaceInputId} class="mb-1">Workspace</label>
             <input
                 class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                 type="text"
-                id={datasetInputId}
-                list={datasetListId}
-                placeholder="Dataset name"
-                bind:value={datasetNameUserInput}
+                id={workspaceInputId}
+                list={workspaceListId}
+                placeholder="Workspace name"
+                bind:value={workspaceNameUserInput}
                 onchange={() => refreshGraphNames()}
             />
-            <datalist id={datasetListId}>
-                {#each modifiableDatasets as datasetName}
-                    <option value={datasetName}>{datasetName}</option>
+            <datalist id={workspaceListId}>
+                {#each modifiableWorkspaces as workspaceName}
+                    <option value={workspaceName}>{workspaceName}</option>
                 {/each}
             </datalist>
 
-            {#if datasetIsReadOnly}
+            {#if workspaceIsReadOnly}
                 <div class="mt-1 mb-1 h-6 text-sm">
-                    Cannot create schemas in read-only dataset
+                    Cannot create schemas in read-only workspace
                 </div>
             {/if}
-        {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {lockedDatasetName}
-            </div>
         {/if}
 
         <label for={graphInputId} class="mt-2 mb-1">Schema (RDFS)</label>

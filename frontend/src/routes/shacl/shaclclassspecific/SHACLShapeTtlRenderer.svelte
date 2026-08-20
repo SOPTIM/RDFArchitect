@@ -49,9 +49,9 @@
 
     let userInput = $state("");
 
-    let classDatasetName = $derived(
-        editorState.selectedClassDataset.getValue() ??
-            editorState.selectedDataset.getValue(),
+    let classWorkspaceName = $derived(
+        editorState.selectedClassWorkspace.getValue() ??
+            editorState.selectedWorkspace.getValue(),
     );
     let classGraphUri = $derived(
         editorState.selectedClassGraph.getValue() ??
@@ -82,7 +82,7 @@
         fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
-                encodeURIComponent(classDatasetName) +
+                encodeURIComponent(classWorkspaceName) +
                 "/graphs/" +
                 encodeURIComponent(classGraphUri) +
                 "/classes/" +

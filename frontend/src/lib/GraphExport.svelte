@@ -20,10 +20,10 @@
     import { onMount } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
@@ -36,7 +36,7 @@
     let {
         showDialog = $bindable(),
         disablePrimary = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
@@ -44,7 +44,7 @@
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let selectedDatasetName = $state(null);
+    let selectedWorkspaceName = $state(null);
     let graphURI = $state(null);
     let selectedMediaType = $state();
 
@@ -66,20 +66,23 @@
     $effect(
         () =>
             (disablePrimary =
-                !selectedDatasetName || !graphURI || !selectedMediaType),
+                !selectedWorkspaceName || !graphURI || !selectedMediaType),
     );
 
     $effect(async () => {
-        if (selectedDatasetName) {
-            namespaces = await getNamespaces(selectedDatasetName);
+        if (selectedWorkspaceName) {
+            namespaces = await getNamespaces(selectedWorkspaceName);
         } else {
             namespaces = [];
         }
     });
 
     $effect(async () => {
-        if (selectedDatasetName && graphURI) {
-            let ontologyJSON = await getOntology(selectedDatasetName, graphURI);
+        if (selectedWorkspaceName && graphURI) {
+            let ontologyJSON = await getOntology(
+                selectedWorkspaceName,
+                graphURI,
+            );
             if (!ontologyJSON) {
                 ontology = null;
                 return;
@@ -94,9 +97,9 @@
     });
 
     $effect(async () => {
-        if (selectedDatasetName && graphURI && hasOntology) {
+        if (selectedWorkspaceName && graphURI && hasOntology) {
             const res = await bec.generateOntologyEntries(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
             );
             generatedOntologyEntries = await res.json();
@@ -107,11 +110,11 @@
     });
 
     onMount(async () => {
-        selectedDatasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        selectedWorkspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
-        if (selectedDatasetName) {
-            namespaces = await getNamespaces(selectedDatasetName);
+        if (selectedWorkspaceName) {
+            namespaces = await getNamespaces(selectedWorkspaceName);
         }
         const saved = userSettings.get("defaultExportFormat", null);
         selectedMediaType = saved
@@ -126,15 +129,15 @@
     }
 
     async function fetchGraphFile(getAPIRoute) {
-        return fetch(getAPIRoute(selectedDatasetName, graphURI), {
+        return fetch(getAPIRoute(selectedWorkspaceName, graphURI), {
             method: "GET",
             headers: new Headers({ Accept: selectedMediaType.mimeType }),
             credentials: "include",
         });
     }
 
-    async function getOntology(datasetName) {
-        const res = await bec.getOntology(datasetName, graphURI);
+    async function getOntology(workspaceName) {
+        const res = await bec.getOntology(workspaceName, graphURI);
         let content = await res.text();
         if (!content) {
             return content;
@@ -146,7 +149,7 @@
     export async function handleExport(getAPIRoute) {
         if (
             !getAPIRoute ||
-            !selectedDatasetName ||
+            !selectedWorkspaceName ||
             !graphURI ||
             !selectedMediaType
         ) {
@@ -159,7 +162,7 @@
                 }
             }
             const ontologyRes = await bec.putOntology(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
                 ontology.getPlainObject(),
             );
@@ -216,10 +219,10 @@
 </script>
 
 <div class="mx-2 mt-2 flex h-full flex-col">
-    <DatasetAndGraphSelection
-        bind:dataset={selectedDatasetName}
+    <WorkspaceAndGraphSelection
+        bind:workspace={selectedWorkspaceName}
         bind:graph={graphURI}
-        {lockedDatasetName}
+        {lockedWorkspaceName}
         {lockedGraphUri}
         displayAsCard={false}
     />

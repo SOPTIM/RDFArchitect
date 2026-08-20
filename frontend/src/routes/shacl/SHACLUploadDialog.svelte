@@ -17,7 +17,7 @@
 
 <script>
     import ButtonControl from "$lib/components/ButtonControl.svelte";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -28,23 +28,23 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
     const fileInputId = `actual-file-input-shacl-upload-${crypto.randomUUID()}`;
-    let datasetName = $state("");
+    let workspaceName = $state("");
     let graphURI = $state("");
     let file = $state(null);
 
-    const lockedDatasetNameValue = $derived(lockedDatasetName);
+    const lockedWorkspaceNameValue = $derived(lockedWorkspaceName);
     const lockedGraphUriValue = $derived(lockedGraphUri);
-    let disableSubmit = $derived(!file || !datasetName || !graphURI);
+    let disableSubmit = $derived(!file || !workspaceName || !graphURI);
 
     async function onOpen() {
         if (showDialog) {
-            datasetName =
-                lockedDatasetNameValue ??
-                editorState.selectedDataset.getValue();
+            workspaceName =
+                lockedWorkspaceNameValue ??
+                editorState.selectedWorkspace.getValue();
             graphURI =
                 lockedGraphUriValue ?? editorState.selectedGraph.getValue();
             file = null;
@@ -57,7 +57,7 @@
         fetch(
             PUBLIC_BACKEND_URL +
                 "/datasets/" +
-                encodeURIComponent(datasetName) +
+                encodeURIComponent(workspaceName) +
                 "/graphs/" +
                 encodeURIComponent(graphURI) +
                 "/shacl/custom/file",
@@ -105,10 +105,10 @@
     title="Import Constraints (SHACL)"
 >
     <div class="mx-2 flex h-full flex-col">
-        <DatasetAndGraphSelection
-            bind:dataset={datasetName}
+        <WorkspaceAndGraphSelection
+            bind:workspace={workspaceName}
             bind:graph={graphURI}
-            {lockedDatasetName}
+            {lockedWorkspaceName}
             {lockedGraphUri}
             displayAsCard={false}
         />

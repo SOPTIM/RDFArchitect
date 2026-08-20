@@ -232,7 +232,7 @@ class SessionDataStoreImplTest {
     }
 
     @Test
-    void remove_lastExistingGraph_removesDataset() {
+    void remove_lastExistingGraph_keepsEmptyDataset() {
         // Arrange
         exampleGraphs = List.of(createExampleGraph());
         inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
@@ -241,7 +241,33 @@ class SessionDataStoreImplTest {
         inMemoryDatabase.remove(GRAPH_IDENTIFIER);
 
         // Assert
-        assertThat(inMemoryDatabase.listDatasets()).isEmpty();
+        assertThat(inMemoryDatabase.listDatasets()).containsExactly(NAME);
+        assertThat(inMemoryDatabase.listGraphUris(NAME)).isEmpty();
+    }
+
+    @Test
+    void createDataset_newName_createsEmptyDataset() {
+        // Arrange
+
+        // Act
+        inMemoryDatabase.createDataset(NAME);
+
+        // Assert
+        assertThat(inMemoryDatabase.listDatasets()).containsExactly(NAME);
+        assertThat(inMemoryDatabase.listGraphUris(NAME)).isEmpty();
+    }
+
+    @Test
+    void createDataset_existingName_keepsExistingGraphs() {
+        // Arrange
+        exampleGraphs = List.of(createExampleGraph());
+        inMemoryDatabase.create(GRAPH_IDENTIFIER, exampleGraphs.getFirst());
+
+        // Act
+        inMemoryDatabase.createDataset(NAME);
+
+        // Assert
+        assertThat(inMemoryDatabase.containsGraph(GRAPH_IDENTIFIER)).isTrue();
     }
 
     @Test

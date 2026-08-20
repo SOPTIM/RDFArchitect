@@ -22,22 +22,20 @@
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import {
-        forceReloadTrigger,
-        editorState,
-    } from "$lib/sharedState.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
-    let { showDialog = $bindable(), datasetName } = $props();
+    let { showDialog = $bindable(), workspaceName } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const baseDeletionDescription =
-        "All schemas and packages inside this dataset will be permanently removed.";
+        "All schemas and packages inside this workspace will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
         graphs = null;
-        if (datasetName) {
-            const res = await bec.getGraphs(datasetName);
+        if (workspaceName) {
+            const res = await bec.getGraphs(workspaceName);
             graphs = await res.json();
         } else {
             graphs = [];
@@ -49,28 +47,19 @@
         graphs = null;
     }
 
-    async function deleteDataset() {
+    async function deleteWorkspace() {
+        const deletedWorkspace = workspaceName;
+        if (!deletedWorkspace) {
+            return;
+        }
         try {
-            if (datasetName) {
-                const res = await bec.deleteDataset(datasetName);
-                if (res && res.ok === false) {
-                    toastStore.error(
-                        "Delete failed",
-                        `Could not delete dataset "${datasetName}".`,
-                    );
-                    return;
-                }
+            if (!(await workspaceState.remove(deletedWorkspace))) {
+                return;
             }
-
-            if (editorState.selectedDataset.getValue() === datasetName) {
-                editorState.reset();
-            }
-            if (datasetName) {
-                toastStore.success(
-                    "Dataset deleted",
-                    `"${datasetName}" was removed.`,
-                );
-            }
+            toastStore.success(
+                "Workspace deleted",
+                `"${deletedWorkspace}" was removed.`,
+            );
         } finally {
             forceReloadTrigger.trigger();
         }
@@ -82,9 +71,11 @@
     {onOpen}
     {onClose}
     size="w-full max-w-lg"
-    primaryLabel="Delete Dataset"
-    onPrimary={deleteDataset}
-    title={datasetName ? `Delete Dataset "${datasetName}"?` : "Delete Dataset?"}
+    primaryLabel="Delete Workspace"
+    onPrimary={deleteWorkspace}
+    title={workspaceName
+        ? `Delete Workspace "${workspaceName}"?`
+        : "Delete Workspace?"}
     primaryVariant="danger"
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
@@ -92,7 +83,7 @@
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-3/4 text-sm leading-relaxed">
             {(() => {
-                if (!datasetName || graphs === null) {
+                if (!workspaceName || graphs === null) {
                     return baseDeletionDescription;
                 }
                 const graphCount = graphs.length ?? 0;

@@ -18,7 +18,7 @@
 import { mount, unmount } from "svelte";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
 
 /** Graph list as the backend returns it: the URI next to its dcat:keyword. */
 const GRAPHS = [
@@ -35,7 +35,7 @@ const GRAPHS = [
 let mounted = null;
 let target = null;
 
-/** The second select holds the graphs, the first one the datasets. */
+/** The second select holds the graphs, the first one the workspaces. */
 function graphSelect(container) {
     return container.querySelectorAll("select")[1];
 }
@@ -43,7 +43,7 @@ function graphSelect(container) {
 async function render(props) {
     target = document.createElement("div");
     document.body.appendChild(target);
-    mounted = mount(DatasetAndGraphSelection, { target, props });
+    mounted = mount(WorkspaceAndGraphSelection, { target, props });
     await vi.waitFor(() =>
         expect(graphSelect(target).options.length).toBe(GRAPHS.length + 1),
     );
@@ -59,13 +59,13 @@ vi.mock("$lib/config/runtime", () => ({
     PUBLIC_BACKEND_URL: "http://localhost/api",
 }));
 
-vi.mock("$lib/api/apiDatasetUtils.js", () => ({
+vi.mock("$lib/api/apiWorkspaceUtils.js", () => ({
     isReadOnly: async () => false,
 }));
 
 vi.mock("$lib/api/backend.js", () => ({
     BackendConnection: class {
-        async getDatasetNames() {
+        async getWorkspaceNames() {
             return { json: async () => ["cgmes"] };
         }
         async getGraphs() {
@@ -81,9 +81,9 @@ afterEach(() => {
     target = null;
 });
 
-describe("DatasetAndGraphSelection", () => {
+describe("WorkspaceAndGraphSelection", () => {
     test("uses the full graph URI as the value of an option", async () => {
-        const container = await render({ dataset: "cgmes", graph: null });
+        const container = await render({ workspace: "cgmes", graph: null });
 
         expect(graphOptions(container).map(option => option.value)).toEqual([
             "http://iec.ch/TC57/CIM100#EQ",
@@ -92,16 +92,16 @@ describe("DatasetAndGraphSelection", () => {
     });
 
     test("labels a graph by its keyword and falls back to the URI suffix", async () => {
-        const container = await render({ dataset: "cgmes", graph: null });
+        const container = await render({ workspace: "cgmes", graph: null });
 
         expect(
             graphOptions(container).map(option => option.textContent.trim()),
         ).toEqual(["EQ", "Topology"]);
     });
 
-    test("keeps a preselected graph that is part of the dataset", async () => {
+    test("keeps a preselected graph that is part of the workspace", async () => {
         const container = await render({
-            dataset: "cgmes",
+            workspace: "cgmes",
             graph: "http://iec.ch/TC57/CIM100#EQ",
         });
 
@@ -112,9 +112,9 @@ describe("DatasetAndGraphSelection", () => {
         );
     });
 
-    test("clears a graph that is not part of the dataset", async () => {
+    test("clears a graph that is not part of the workspace", async () => {
         const container = await render({
-            dataset: "cgmes",
+            workspace: "cgmes",
             graph: "http://example.org/gone#XY",
         });
 

@@ -17,9 +17,9 @@
 
 import { StateValuePair } from "./statePrimitives.svelte.js";
 
-/** Stable identity key for a selection entry (dataset + graph + class uuid). */
+/** Stable identity key for a selection entry (workspace + graph + class uuid). */
 function entryKey(entry) {
-    return `${entry.datasetName}::${entry.graphUri}::${entry.classUuid}`;
+    return `${entry.workspaceName}::${entry.graphUri}::${entry.classUuid}`;
 }
 
 /** Unions two selection-entry lists, keeping order and de-duplicating by key. */
@@ -72,8 +72,8 @@ export class MultiSelectState {
         return this.selectedClasses.subscribe();
     }
 
-    isSelected(datasetName, graphUri, classUuid) {
-        const key = entryKey({ datasetName, graphUri, classUuid });
+    isSelected(workspaceName, graphUri, classUuid) {
+        const key = entryKey({ workspaceName, graphUri, classUuid });
         return this.#selectedKeys().has(key);
     }
 
@@ -98,7 +98,7 @@ export class MultiSelectState {
     }
 
     /**
-     * True when all selected classes share the same dataset and graph.
+     * True when all selected classes share the same workspace and graph.
      */
     get isSingleGraph() {
         const list = this.getSelected();
@@ -108,19 +108,19 @@ export class MultiSelectState {
         const first = list[0];
         return list.every(
             e =>
-                e.datasetName === first.datasetName &&
+                e.workspaceName === first.workspaceName &&
                 e.graphUri === first.graphUri,
         );
     }
 
     /**
-     * The selection mapped to copyState's `{ classUUID, graphURI, datasetName }` shape.
+     * The selection mapped to copyState's `{ classUUID, graphURI, workspaceName }` shape.
      */
     toCopyEntries() {
         return this.getSelected().map(e => ({
             classUUID: e.classUuid,
             graphURI: e.graphUri,
-            datasetName: e.datasetName,
+            workspaceName: e.workspaceName,
         }));
     }
 

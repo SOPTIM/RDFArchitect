@@ -45,7 +45,7 @@
         console.log("restoreVersion", changeId);
 
         const res = await bec.restoreVersion(
-            editorState.selectedDataset.getValue(),
+            editorState.selectedWorkspace.getValue(),
             editorState.selectedGraph.getValue(),
             changeId,
         );
@@ -134,7 +134,7 @@
         {:else}
             <ButtonControl
                 disabled={readonly}
-                title={readonly ? "Cannot restore in read-only dataset" : ""}
+                title={readonly ? "Cannot restore in read-only workspace" : ""}
                 callOnClick={() => restoreVersion(change.changeId)}
             >
                 Restore Version

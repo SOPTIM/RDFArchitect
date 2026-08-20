@@ -82,7 +82,7 @@
     import { goto } from "$app/navigation";
 
     let {
-        datasetNavEntry,
+        workspaceNavEntry,
         graphNavEntry,
         namespaces = [],
         readonly = false,
@@ -115,14 +115,14 @@
     );
 
     const graphColor = $derived(
-        graphColors.get(datasetNavEntry.id, graphNavEntry.id),
+        graphColors.get(workspaceNavEntry.id, graphNavEntry.id),
     );
 
     const isGraphSelected = $derived(
-        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
+        isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id),
     );
     const graphSelectionState = $derived(
-        graphHighlight(datasetNavEntry.id, graphNavEntry.id),
+        graphHighlight(workspaceNavEntry.id, graphNavEntry.id),
     );
     $effect(() => {
         if (isGraphSelected && !wasGraphSelected) {
@@ -138,13 +138,13 @@
 
     async function initialize() {
         ontology = await getOntology();
-        canUndo = await fetchCanUndo(datasetNavEntry.id, graphNavEntry.id);
-        canRedo = await fetchCanRedo(datasetNavEntry.id, graphNavEntry.id);
+        canUndo = await fetchCanUndo(workspaceNavEntry.id, graphNavEntry.id);
+        canRedo = await fetchCanRedo(workspaceNavEntry.id, graphNavEntry.id);
     }
 
     async function getOntology() {
         const res = await bec.getOntology(
-            datasetNavEntry.label,
+            workspaceNavEntry.label,
             graphNavEntry.id,
         );
         let content = await res.text();
@@ -167,14 +167,14 @@
         if (
             (kind === SelectionLevel.PACKAGE ||
                 kind === SelectionLevel.DIAGRAM) &&
-            isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)
+            isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id)
         ) {
             editorState.dissolveToGraph();
         }
     }
 
     function focusGraphContext() {
-        editorState.selectGraph(datasetNavEntry.label, graphNavEntry.id);
+        editorState.selectGraph(workspaceNavEntry.label, graphNavEntry.id);
     }
 </script>
 
@@ -182,7 +182,7 @@
     <ContextMenu.Root>
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
-                level={2}
+                level={1}
                 label={graphNavEntry.label}
                 icon={faDiagramProject}
                 iconColor={graphColor}
@@ -244,9 +244,11 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    undo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) forceReloadTrigger.trigger();
-                    });
+                    undo(workspaceNavEntry.id, graphNavEntry.id).then(
+                        success => {
+                            if (success) forceReloadTrigger.trigger();
+                        },
+                    );
                 }}
                 disabled={readonly || !canUndo}
                 faIcon={faRotateLeft}
@@ -257,9 +259,11 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
-                    redo(datasetNavEntry.id, graphNavEntry.id).then(success => {
-                        if (success) forceReloadTrigger.trigger();
-                    });
+                    redo(workspaceNavEntry.id, graphNavEntry.id).then(
+                        success => {
+                            if (success) forceReloadTrigger.trigger();
+                        },
+                    );
                 }}
                 disabled={readonly || !canRedo}
                 faIcon={faRotateRight}
@@ -426,7 +430,7 @@
         >
             {#each graphNavEntry.children as packageNavEntry (packageNavEntry.id)}
                 <PackageButton
-                    {datasetNavEntry}
+                    {workspaceNavEntry}
                     {graphNavEntry}
                     {packageNavEntry}
                     {namespaces}
@@ -435,7 +439,7 @@
             {/each}
 
             <CustomDiagramsSection
-                {datasetNavEntry}
+                {workspaceNavEntry}
                 {graphNavEntry}
                 {readonly}
             />
@@ -445,50 +449,50 @@
 
 <ExportDialog
     bind:showDialog={showExportDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <CustomGraphDiagramDialog
     bind:showDialog={showNewDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <CompareDialog
     bind:showDialog={showCompareDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLUploadDialog
     bind:showDialog={showSHACLUploadDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLExportDialog
     bind:showDialog={showSHACLExportDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <SchemaColorsDialog
     bind:showDialog={showSchemaColorsDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
 />
 <PickSchemaColorDialog
     bind:showDialog={showPickColorDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
     graphLabel={graphNavEntry.label}
 />
 <OntologyDialog
     bind:showDialog={showEditOntologyDialog}
     graphUri={graphNavEntry.id}
-    dataset={datasetNavEntry.id}
+    workspace={workspaceNavEntry.id}
     {namespaces}
     bind:ontology
     {readonly}
@@ -498,17 +502,17 @@
 <DeleteDependenciesDialog
     bind:showDialog={showDeleteDependenciesDialog}
     onClose={initialize}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
     resourceUuid={ontology.uuid}
 />
 <ValidationDialog
     bind:showDialog={showValidationDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <DocumentationExportDialog
     bind:showDialog={showDocumentationExportDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />

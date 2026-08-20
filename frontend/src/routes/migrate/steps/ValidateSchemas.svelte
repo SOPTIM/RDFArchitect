@@ -63,15 +63,15 @@
         let sideB;
         switch (s.compareMode) {
             case CompareMode.STORED_TO_STORED:
-                sideA = { dataset: s.datasetA, graph: s.graphA };
-                sideB = { dataset: s.datasetB, graph: s.graphB };
+                sideA = { workspace: s.workspaceA, graph: s.graphA };
+                sideB = { workspace: s.workspaceB, graph: s.graphB };
                 break;
             case CompareMode.FILE_TO_STORED:
                 sideA = { file: s.fileA };
-                sideB = { dataset: s.datasetB, graph: s.graphB };
+                sideB = { workspace: s.workspaceB, graph: s.graphB };
                 break;
             case CompareMode.STORED_TO_FILE:
-                sideA = { dataset: s.datasetA, graph: s.graphA };
+                sideA = { workspace: s.workspaceA, graph: s.graphA };
                 sideB = { file: s.fileA };
                 break;
             case CompareMode.FILE_TO_FILE:
@@ -102,14 +102,14 @@
 
     /**
      * Validates one side of the migration based on whether it is a stored
-     * schema (dataset + graph) or an uploaded file.
+     * schema (workspace + graph) or an uploaded file.
      */
-    async function validateSide({ dataset, graph, file }, cgmesVersion) {
+    async function validateSide({ workspace, graph, file }, cgmesVersion) {
         let response;
         if (file) {
             response = await bec.validateFile(file, cgmesVersion);
-        } else if (dataset && graph) {
-            response = await bec.validateSchema(dataset, graph, cgmesVersion);
+        } else if (workspace && graph) {
+            response = await bec.validateSchema(workspace, graph, cgmesVersion);
         } else {
             return null;
         }

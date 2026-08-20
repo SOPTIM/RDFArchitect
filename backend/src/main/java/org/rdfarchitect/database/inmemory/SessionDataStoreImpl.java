@@ -58,7 +58,17 @@ public class SessionDataStoreImpl implements SessionDataStore {
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
 
-    private void createDataset(String datasetName) {
+    @Override
+    public void createDataset(String datasetName) {
+        lock.lock();
+        try {
+            createDatasetIfAbsent(datasetName);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void createDatasetIfAbsent(String datasetName) {
         graphCollections.putIfAbsent(datasetName, new GraphWithContextCollection());
     }
 
@@ -90,7 +100,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         lock.lock();
         try {
-            createDataset(graphIdentifier.datasetName());
+            createDatasetIfAbsent(graphIdentifier.datasetName());
             return graphCollections
                     .get(graphIdentifier.datasetName())
                     .getGraphWithContext(graphIdentifier.graphUri());
@@ -136,7 +146,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
         lock.lock();
         try {
-            createDataset(graphIdentifier.datasetName());
+            createDatasetIfAbsent(graphIdentifier.datasetName());
             graphCollections
                     .get(graphIdentifier.datasetName())
                     .create(graphIdentifier.graphUri(), newGraph);
@@ -155,9 +165,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
                 return;
             }
             graphCollections.get(datasetName).remove(graphUri);
-            if (graphCollections.get(datasetName).listGraphUris().isEmpty()) {
-                graphCollections.remove(datasetName);
-            }
         } finally {
             lock.unlock();
         }

@@ -53,6 +53,16 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
             new ConcurrentHashMap<>();
 
     @Override
+    public void createDataset(String datasetName) {
+        var store = getOrCreateSessionDataStore();
+        if (store.listDatasets().contains(datasetName)) {
+            return;
+        }
+        store.createDataset(datasetName);
+        initializeNewDataset(store, datasetName);
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         getOrCreateSessionDataStore().deleteDataset(datasetName);
     }
@@ -104,14 +114,18 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
                 .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
         if (isNewDataset) {
-            store.enableEditing(datasetName);
-            var configNamespaces = schemaConfig.getNamespaces();
-            var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
-            for (var entry : configNamespaces.entrySet()) {
-                prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
-            }
-            store.setPrefixMapping(datasetName, prefixMapping);
+            initializeNewDataset(store, datasetName);
         }
+    }
+
+    private void initializeNewDataset(SessionDataStore store, String datasetName) {
+        store.enableEditing(datasetName);
+        var configNamespaces = schemaConfig.getNamespaces();
+        var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
+        for (var entry : configNamespaces.entrySet()) {
+            prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
+        }
+        store.setPrefixMapping(datasetName, prefixMapping);
     }
 
     @Override

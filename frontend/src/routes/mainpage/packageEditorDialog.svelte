@@ -41,7 +41,7 @@
         showDialog = $bindable(),
         pack,
         readonly = false,
-        datasetName = null,
+        workspaceName = null,
         graphUri = null,
     } = $props();
 
@@ -59,7 +59,7 @@
 
     async function onOpen() {
         await fetchPackages();
-        namespaces = await getNamespaces(datasetName);
+        namespaces = await getNamespaces(workspaceName);
         if (pack) {
             isNewPackage = false;
             pkg = new ReactivePackage({
@@ -87,12 +87,12 @@
         });
     }
     async function fetchPackages() {
-        if (!datasetName || !graphUri) {
+        if (!workspaceName || !graphUri) {
             packages = [];
             return;
         }
         try {
-            packages = await getPackages(datasetName, graphUri);
+            packages = await getPackages(workspaceName, graphUri);
         } catch (err) {
             console.error("Failed to load packages:", err);
             packages = [];
@@ -101,12 +101,12 @@
 
     async function savePackage() {
         console.log(
-            "Saving package in dataset",
-            datasetName,
+            "Saving package in workspace",
+            workspaceName,
             "and graph",
             graphUri,
         );
-        if (!datasetName || !graphUri) {
+        if (!workspaceName || !graphUri) {
             return;
         }
 
@@ -115,7 +115,7 @@
             apiPackage.label,
             pack?.label,
         );
-        const res = await bec.putPackage(datasetName, graphUri, apiPackage);
+        const res = await bec.putPackage(workspaceName, graphUri, apiPackage);
 
         if (res.ok) {
             console.log("Successfully saved package");

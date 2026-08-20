@@ -16,13 +16,13 @@
   -->
 
 <script>
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -36,7 +36,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -48,7 +48,7 @@
     };
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let selectedDatasetName = $state(null);
+    let selectedWorkspaceName = $state(null);
     let selectedGraphURI = $state(null);
     let packageLabel = $state(null);
     let packageComment = $state(null);
@@ -67,7 +67,7 @@
     );
 
     let disableSubmit = $derived(
-        !selectedDatasetName ||
+        !selectedWorkspaceName ||
             !selectedGraphURI ||
             !packageURINamespace ||
             !packageLabel ||
@@ -75,17 +75,17 @@
     );
 
     $effect(async () => {
-        namespaces = await getNamespaces(selectedDatasetName);
+        namespaces = await getNamespaces(selectedWorkspaceName);
         packageURINamespace = null;
     });
 
     $effect(async () => {
-        await getResources(selectedDatasetName, selectedGraphURI);
+        await getResources(selectedWorkspaceName, selectedGraphURI);
     });
 
     async function onOpen() {
-        selectedDatasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        selectedWorkspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         selectedGraphURI =
             lockedGraphUri ?? editorState.selectedGraph.getValue();
 
@@ -93,13 +93,13 @@
         packageLabel = null;
         packageComment = null;
 
-        if (!selectedDatasetName) {
+        if (!selectedWorkspaceName) {
             return;
         }
-        namespaces = await getNamespaces(selectedDatasetName);
+        namespaces = await getNamespaces(selectedWorkspaceName);
 
         if (selectedGraphURI) {
-            await getResources(selectedDatasetName, selectedGraphURI);
+            await getResources(selectedWorkspaceName, selectedGraphURI);
         } else {
             packages = [];
             classes = [];
@@ -107,7 +107,7 @@
     }
 
     function onClose() {
-        selectedDatasetName = null;
+        selectedWorkspaceName = null;
         selectedGraphURI = null;
         namespaces = [];
         packageURINamespace = null;
@@ -117,19 +117,19 @@
         packageComment = null;
     }
 
-    async function getResources(datasetName, graphURI) {
+    async function getResources(workspaceName, graphURI) {
         await Promise.all([
-            getPackages(datasetName, graphURI),
-            getClasses(datasetName, graphURI),
+            getPackages(workspaceName, graphURI),
+            getClasses(workspaceName, graphURI),
         ]);
     }
 
-    async function getPackages(datasetName, graphURI) {
-        if (!datasetName || !graphURI) {
+    async function getPackages(workspaceName, graphURI) {
+        if (!workspaceName || !graphURI) {
             packages = [];
             return;
         }
-        const res = await bec.getPackages(datasetName, graphURI);
+        const res = await bec.getPackages(workspaceName, graphURI);
         const packagesJSON = await res.json();
         packages = [
             ...packagesJSON.internalPackageList,
@@ -137,12 +137,12 @@
         ];
     }
 
-    async function getClasses(datasetName, graphURI) {
-        if (!datasetName || !graphURI) {
+    async function getClasses(workspaceName, graphURI) {
+        if (!workspaceName || !graphURI) {
             classes = [];
             return;
         }
-        const res = await bec.getClasses(datasetName, graphURI);
+        const res = await bec.getClasses(workspaceName, graphURI);
         classes = await res.json();
     }
 
@@ -210,7 +210,7 @@
                 console.log(
                     `successfully added package ${packageLabel} with UUID ${uuid}`,
                 );
-                editorState.selectedDataset.updateValue(ds);
+                editorState.selectedWorkspace.updateValue(ds);
                 editorState.selectedGraph.updateValue(graph);
                 editorState.selectedDiagram.updateValue({
                     type: DiagramType.PACKAGE,
@@ -243,7 +243,7 @@
     primaryLabel="Create Package"
     onPrimary={() =>
         newPackage(
-            selectedDatasetName,
+            selectedWorkspaceName,
             selectedGraphURI,
             packageLabel,
             packageComment,
@@ -253,12 +253,12 @@
     title="New Package"
 >
     <div class="mx-2 flex h-full flex-col">
-        <DatasetAndGraphSelection
-            bind:dataset={selectedDatasetName}
+        <WorkspaceAndGraphSelection
+            bind:workspace={selectedWorkspaceName}
             bind:graph={selectedGraphURI}
-            {lockedDatasetName}
+            {lockedWorkspaceName}
             {lockedGraphUri}
-            allowSelectionOfReadonlyDatasets={false}
+            allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
 
@@ -269,10 +269,10 @@
             id={domIds.packageURINamespace}
             bind:value={packageURINamespace}
             options={namespaces}
-            disabled={!selectedDatasetName}
-            placeholder={selectedDatasetName
+            disabled={!selectedWorkspaceName}
+            placeholder={selectedWorkspaceName
                 ? "Select namespace"
-                : "Select a dataset first"}
+                : "Select a workspace first"}
             getOptionValue={namespace => namespace.substitutedPrefix}
             getOptionLabel={namespace =>
                 `${namespace.substitutedPrefix} (${namespace.prefix})`}

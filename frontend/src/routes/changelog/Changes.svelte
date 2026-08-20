@@ -15,7 +15,7 @@
   -->
 
 <script>
-    import { isReadOnly } from "$lib/api/apiDatasetUtils.js";
+    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import {
@@ -31,31 +31,33 @@
 
     let changelog = $state();
 
-    let readonlyDataset = $state(true);
+    let readonlyWorkspace = $state(true);
 
-    let selectedDatasetName = $derived(editorState.selectedDataset.getValue());
+    let selectedWorkspaceName = $derived(
+        editorState.selectedWorkspace.getValue(),
+    );
     let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        if (selectedDatasetName) {
-            readonlyDataset = await isReadOnly(selectedDatasetName);
+        if (selectedWorkspaceName) {
+            readonlyWorkspace = await isReadOnly(selectedWorkspaceName);
         }
     });
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        if (selectedDatasetName && selectedGraphUri) {
+        if (selectedWorkspaceName && selectedGraphUri) {
             await getChangelog();
         }
     });
 
     async function getChangelog() {
-        if (!selectedDatasetName || !selectedGraphUri) {
+        if (!selectedWorkspaceName || !selectedGraphUri) {
             return;
         }
         const res = await bec.getChangelog(
-            selectedDatasetName,
+            selectedWorkspaceName,
             selectedGraphUri,
         );
         if (res.ok) {
@@ -88,7 +90,7 @@
                             {getExpanded}
                             {setExpanded}
                             newest={i === 0}
-                            readonly={readonlyDataset}
+                            readonly={readonlyWorkspace}
                         />
                     {/each}
                 </tbody>

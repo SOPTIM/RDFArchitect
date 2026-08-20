@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
+import org.rdfarchitect.services.update.dataset.CreateDatasetUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
 import org.springframework.http.HttpHeaders;
 
@@ -32,14 +33,18 @@ import java.util.List;
 class DatasetRESTControllerTest {
 
     private ListDatasetsUseCase listDatasetsUseCase;
+    private CreateDatasetUseCase createDatasetUseCase;
     private DeleteDatasetUseCase deleteDatasetUseCase;
     private DatasetRESTController controller;
 
     @BeforeEach
     void setUp() {
         listDatasetsUseCase = mock(ListDatasetsUseCase.class);
+        createDatasetUseCase = mock(CreateDatasetUseCase.class);
         deleteDatasetUseCase = mock(DeleteDatasetUseCase.class);
-        controller = new DatasetRESTController(listDatasetsUseCase, deleteDatasetUseCase);
+        controller =
+                new DatasetRESTController(
+                        listDatasetsUseCase, createDatasetUseCase, deleteDatasetUseCase);
     }
 
     @Test
@@ -50,6 +55,14 @@ class DatasetRESTControllerTest {
 
         assertThat(result).containsExactly("dataset-a", "dataset-b");
         verify(listDatasetsUseCase).listDatasets();
+    }
+
+    @Test
+    void createDataset_invokesUseCaseAndReturnsSuccess() {
+        var response = controller.createDataset(HttpHeaders.ORIGIN, "dataset-a");
+
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(createDatasetUseCase).createDataset("dataset-a");
     }
 
     @Test

@@ -20,7 +20,7 @@
     import { Fa } from "svelte-fa";
     import { v4 as uuidv4 } from "uuid";
 
-    import { getDatasetNames } from "$lib/api/apiDatasetUtils.js";
+    import { getWorkspaceNames } from "$lib/api/apiWorkspaceUtils.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -32,9 +32,9 @@
         forceReloadTrigger,
     } from "../lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable(), lockedDatasetName } = $props();
+    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
-    const DEFAULT_DATASET_NAME = "default";
+    const DEFAULT_WORKSPACE_NAME = "default";
     const GRAPH_NAMESPACE_URI = "http://graph#"; // Keep in sync with RDFA.GRAPH_URI (backend)
     const DEFAULT_GRAPH_NAME = "graph";
     const supportedFileExtensions = supportedRDFMediaTypes.map(
@@ -42,48 +42,48 @@
     );
     const allowedFileExtensions = supportedFileExtensions.join(", ");
     const uniqueId = uuidv4();
-    const datasetInputId = `datasetNameImport-${uniqueId}`;
-    const datasetListId = `datasetNamesImport-${uniqueId}`;
+    const workspaceInputId = `workspaceNameImport-${uniqueId}`;
+    const workspaceListId = `workspaceNamesImport-${uniqueId}`;
     const fileInputId = `actual-file-input-${uniqueId}`;
-    let datasetNameUserInput = $state("");
+    let workspaceNameUserInput = $state("");
     let files = $state([]);
     let dragActive = $state(false);
     let fileInputValue = $state("");
     let rejectedFiles = $state([]);
 
-    let readOnlyDatasets = $state([]);
-    let modifiableDatasets = $state([]);
+    let readOnlyWorkspaces = $state([]);
+    let modifiableWorkspaces = $state([]);
 
     let enableSubmit = $derived(
-        files.length > 0 && !isDatasetReadOnly(datasetNameUserInput),
+        files.length > 0 && !isWorkspaceReadOnly(workspaceNameUserInput),
     );
 
-    const datasetSelectionLocked = $derived(!!lockedDatasetName);
+    const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
 
     async function onOpen() {
         clearInputs();
-        datasetNameUserInput =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        workspaceNameUserInput =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
 
-        const datasetNames = await getDatasetNames();
-        modifiableDatasets = datasetNames.modifiable;
-        readOnlyDatasets = datasetNames.readonly;
+        const workspaceNames = await getWorkspaceNames();
+        modifiableWorkspaces = workspaceNames.modifiable;
+        readOnlyWorkspaces = workspaceNames.readonly;
     }
 
     function onClose() {
         clearInputs();
     }
     function clearInputs() {
-        datasetNameUserInput = "";
+        workspaceNameUserInput = "";
         files = [];
         dragActive = false;
         fileInputValue = "";
         rejectedFiles = [];
     }
 
-    function isDatasetReadOnly(datasetName) {
-        const targetDataset = datasetName || DEFAULT_DATASET_NAME;
-        return readOnlyDatasets.includes(targetDataset);
+    function isWorkspaceReadOnly(workspaceName) {
+        const targetWorkspace = workspaceName || DEFAULT_WORKSPACE_NAME;
+        return readOnlyWorkspaces.includes(targetWorkspace);
     }
 
     function getSanitizedGraphName(fileName) {
@@ -174,8 +174,8 @@
         }
     }
 
-    function getUserInputDatasetName() {
-        return datasetNameUserInput || DEFAULT_DATASET_NAME;
+    function getUserInputWorkspaceName() {
+        return workspaceNameUserInput || DEFAULT_WORKSPACE_NAME;
     }
 
     function buildRequestBody(files) {
@@ -195,9 +195,9 @@
         return formData;
     }
 
-    function putFiles(files, datasetname) {
+    function putFiles(files, workspacename) {
         return fetch(
-            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(datasetname)}/graphs/content`,
+            `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspacename)}/graphs/content`,
             {
                 method: "PUT",
                 body: buildRequestBody(files),
@@ -205,12 +205,12 @@
             },
         );
     }
-    async function parseResponse(response, datasetName) {
+    async function parseResponse(response, workspaceName) {
         if (!response.ok) {
             console.log("failed to insert data");
             toastStore.error(
                 "Import failed",
-                `Could not import into "${datasetName}".`,
+                `Could not import into "${workspaceName}".`,
             );
             return;
         }
@@ -223,7 +223,7 @@
             console.warn("failed imports:", failedImports);
         }
 
-        //only update the selected dataset and graph if at least one import was successful, otherwise keep the old selection
+        //only update the selected workspace and graph if at least one import was successful, otherwise keep the old selection
         const importedGraphUris = body.importedGraphUris ?? [];
         if (importedGraphUris.length === 0) {
             toastStore.error(
@@ -236,15 +236,15 @@
         }
         console.log("imported graphs:", importedGraphUris);
 
-        editorState.selectedDataset.updateValue(datasetName);
+        editorState.selectedWorkspace.updateValue(workspaceName);
         editorState.selectedGraph.updateValue(importedGraphUris[0]);
         editorState.selectedDiagram.updateValue({ type: null, id: null });
-        editorState.selectedClassDataset.updateValue(null);
+        editorState.selectedClassWorkspace.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
         editorState.selectedClass.updateValue({ type: null, id: null });
 
         const importedCount = importedGraphUris.length;
-        const summary = `${importedCount} graph${importedCount === 1 ? "" : "s"} imported into "${datasetName}".`;
+        const summary = `${importedCount} graph${importedCount === 1 ? "" : "s"} imported into "${workspaceName}".`;
         if (failedImports.length > 0) {
             toastStore.warning(
                 "Import partially succeeded",
@@ -279,15 +279,15 @@
     }
 
     async function importGraphs() {
-        const datasetNameUserInputLocal = getUserInputDatasetName();
+        const workspaceNameUserInputLocal = getUserInputWorkspaceName();
         const filesLocal = files;
         console.warn(
-            "Importing files into dataset:",
-            datasetNameUserInputLocal,
+            "Importing files into workspace:",
+            workspaceNameUserInputLocal,
         );
         try {
-            const res = await putFiles(filesLocal, datasetNameUserInputLocal);
-            await parseResponse(res, datasetNameUserInputLocal);
+            const res = await putFiles(filesLocal, workspaceNameUserInputLocal);
+            await parseResponse(res, workspaceNameUserInputLocal);
         } catch (e) {
             console.log("failed to insert data:");
             console.log(e);
@@ -312,34 +312,27 @@
     size="w-1/3"
 >
     <div class="mx-2 flex h-full max-h-[80vh] flex-col">
-        {#if !datasetSelectionLocked}
-            <label for={datasetInputId} class="mb-1">Dataset</label>
+        {#if !workspaceSelectionLocked}
+            <label for={workspaceInputId} class="mb-1">Workspace</label>
             <input
                 class="border-border bg-window-background focus:border-blue ring-none h-9 w-full rounded border-2 p-2 outline-none"
                 type="text"
-                id={datasetInputId}
-                list={datasetListId}
-                placeholder={DEFAULT_DATASET_NAME}
-                bind:value={datasetNameUserInput}
+                id={workspaceInputId}
+                list={workspaceListId}
+                placeholder={DEFAULT_WORKSPACE_NAME}
+                bind:value={workspaceNameUserInput}
             />
-            <datalist id={datasetListId}>
-                {#each modifiableDatasets as datasetName}
-                    <option value={datasetName}>{datasetName}</option>
+            <datalist id={workspaceListId}>
+                {#each modifiableWorkspaces as workspaceName}
+                    <option value={workspaceName}>{workspaceName}</option>
                 {/each}
             </datalist>
 
-            {#if isDatasetReadOnly(datasetNameUserInput)}
+            {#if isWorkspaceReadOnly(workspaceNameUserInput)}
                 <div class="text-red mt-1 mb-1 h-6 text-sm">
-                    Cannot import into read-only dataset
+                    Cannot import into read-only workspace
                 </div>
             {/if}
-        {:else}
-            <p class="mb-1 font-semibold">Dataset</p>
-            <div
-                class="border-border bg-default-background text-default-text h-9 w-full rounded border-2 px-3 py-1.5"
-            >
-                {lockedDatasetName}
-            </div>
         {/if}
         <div class="mt-4">
             <input

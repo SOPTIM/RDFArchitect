@@ -17,9 +17,9 @@
 
 <script>
     import { BackendConnection } from "$lib/api/backend.js";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -30,7 +30,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -43,7 +43,7 @@
 
     let validationMode = $state(ValidationMode.STORED);
 
-    let dataset = $state(null);
+    let workspace = $state(null);
     let graph = $state(null);
     let file = $state(null);
     let cgmesVersion = $state(CGMESVersion.V3_0);
@@ -57,7 +57,7 @@
         {
             value: ValidationMode.FILE,
             label: "Uploaded schema",
-            disabled: !!lockedDatasetName || !!lockedGraphUri,
+            disabled: !!lockedWorkspaceName || !!lockedGraphUri,
         },
     ]);
 
@@ -75,13 +75,14 @@
             return !file;
         }
         if (validationMode === ValidationMode.STORED) {
-            return !dataset || !graph;
+            return !workspace || !graph;
         }
         return true;
     });
 
     function onOpen() {
-        dataset = lockedDatasetName ?? editorState.selectedDataset.getValue();
+        workspace =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graph = lockedGraphUri ?? editorState.selectedGraph.getValue();
         file = null;
         cgmesVersion = CGMESVersion.V3_0;
@@ -89,7 +90,7 @@
 
     function onClose() {
         validationMode = ValidationMode.STORED;
-        dataset = null;
+        workspace = null;
         graph = null;
         file = null;
         cgmesVersion = CGMESVersion.V3_0;
@@ -108,7 +109,7 @@
                 break;
             case ValidationMode.STORED:
                 response = await bec.validateSchema(
-                    dataset,
+                    workspace,
                     graph,
                     cgmesVersion,
                 );
@@ -184,10 +185,10 @@
                     <span class="text-text-subtle px-1 text-xs font-medium">
                         Schema
                     </span>
-                    <DatasetAndGraphSelection
-                        bind:dataset
+                    <WorkspaceAndGraphSelection
+                        bind:workspace
                         bind:graph
-                        {lockedDatasetName}
+                        {lockedWorkspaceName}
                         {lockedGraphUri}
                     />
                 </div>

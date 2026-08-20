@@ -74,7 +74,7 @@
             domainIri,
         );
         const result = await saveApiEnumEntryToBackend(
-            classEditorContext.datasetName,
+            classEditorContext.workspaceName,
             classEditorContext.graphUri,
             classUuid,
             apiEnumEntry,

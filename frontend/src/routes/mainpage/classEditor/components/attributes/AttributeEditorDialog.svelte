@@ -90,7 +90,7 @@
             domainIri,
         );
         const result = await saveApiAttributeToBackend(
-            classEditorContext.datasetName,
+            classEditorContext.workspaceName,
             classEditorContext.graphUri,
             classUuid,
             apiAttribute,

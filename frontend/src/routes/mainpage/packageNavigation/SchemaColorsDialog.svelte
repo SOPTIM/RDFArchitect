@@ -23,7 +23,7 @@
     import { userSettings } from "$lib/userSettings.svelte.js";
     import { normalizeHex } from "$lib/utils/color.js";
 
-    let { showDialog = $bindable(), datasetName } = $props();
+    let { showDialog = $bindable(), workspaceName } = $props();
 
     let colorEntries = $state([]);
     let originalJson = $state("[]");
@@ -43,8 +43,8 @@
     );
 
     async function onOpen() {
-        if (!datasetName) return;
-        const loaded = await graphColors.reload(datasetName);
+        if (!workspaceName) return;
+        const loaded = await graphColors.reload(workspaceName);
         colorEntries = Object.entries(loaded)
             .sort(([a], [b]) => a.localeCompare(b))
             .map(([graphURI, color]) => ({ graphURI, color }));
@@ -60,17 +60,20 @@
         const graphColorMap = Object.fromEntries(
             colorEntries.map(entry => [entry.graphURI, entry.color]),
         );
-        const saved = await graphColors.replaceAll(datasetName, graphColorMap);
+        const saved = await graphColors.replaceAll(
+            workspaceName,
+            graphColorMap,
+        );
         if (!saved) {
             toastStore.error(
                 "Save failed",
-                `Could not save color data for "${datasetName}".`,
+                `Could not save color data for "${workspaceName}".`,
             );
             return;
         }
         toastStore.success(
             "Colors saved",
-            `Color settings updated for "${datasetName}".`,
+            `Color settings updated for "${workspaceName}".`,
         );
         snapshotOriginal();
     }
@@ -105,7 +108,7 @@
     bind:showDialog
     {onOpen}
     {onClose}
-    title="Schema Colors – {datasetName}"
+    title="Schema Colors – {workspaceName}"
     saveChanges={saveColors}
     discardChanges={discardColors}
     {hasChanges}
@@ -115,7 +118,7 @@
         <div class="flex min-h-0 flex-1 flex-col">
             {#if colorEntries.length === 0}
                 <p class="text-muted-foreground text-sm italic">
-                    No schemas available for this dataset.
+                    No schemas available for this workspace.
                 </p>
             {:else}
                 <p class="text-muted-foreground mb-2 text-sm">

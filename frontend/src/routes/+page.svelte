@@ -161,7 +161,7 @@
             <div class="text-default-text/90 mt-3 space-y-2 text-sm">
                 <p>
                     • Use the search bar at the top to quickly find classes,
-                    attributes or packages across datasets.
+                    attributes or packages across workspaces.
                 </p>
                 <p>
                     • Keyboard shortcuts: Undo (Ctrl+Z) and Redo (Ctrl+Y) work

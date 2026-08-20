@@ -39,7 +39,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         diagramName = "",
         diagramId,
         selectedClasses = [],
@@ -78,7 +78,7 @@
     async function fetchOtherDiagrams() {
         try {
             const res =
-                await bec.getCustomDiagramsForDataset(lockedDatasetName);
+                await bec.getCustomDiagramsForWorkspace(lockedWorkspaceName);
             const diagrams = await res.json();
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
@@ -89,14 +89,14 @@
         }
     }
 
-    async function getGraphs(datasetName) {
-        const result = await bec.getGraphs(datasetName);
+    async function getGraphs(workspaceName) {
+        const result = await bec.getGraphs(workspaceName);
         return await result.json();
     }
 
     async function fetchGraphs() {
         try {
-            const res = await getGraphs(lockedDatasetName);
+            const res = await getGraphs(lockedWorkspaceName);
             graphs = res
                 .map(graph => {
                     return {
@@ -116,7 +116,7 @@
         for (const graph of graphs) {
             const graphUri = getUri(graph);
             packagesByGraph[graphUri] = await createPackageListForGraph(
-                lockedDatasetName,
+                lockedWorkspaceName,
                 graphUri,
             );
         }
@@ -129,7 +129,7 @@
         await Promise.all(
             graphURIs.map(async graphUri => {
                 result[graphUri] = await createClassListForGraph(
-                    lockedDatasetName,
+                    lockedWorkspaceName,
                     graphUri,
                     selectedClasses,
                 );
@@ -203,17 +203,17 @@
         };
 
         try {
-            const res = await bec.putCustomDatasetDiagram(
-                lockedDatasetName,
+            const res = await bec.putCustomWorkspaceDiagram(
+                lockedWorkspaceName,
                 localDiagramId,
                 diagramData,
             );
 
             if (res.ok) {
-                editorState.selectedDataset.updateValue(lockedDatasetName);
+                editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
                 editorState.selectedGraph.updateValue(null);
                 editorState.selectedDiagram.updateValue({
-                    type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+                    type: DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
                     id: localDiagramId,
                 });
                 toastStore.success(
@@ -238,8 +238,8 @@
     {onOpen}
     {onClose}
     title={diagramId
-        ? `Edit Dataset Diagram "${diagramName}"`
-        : "New Dataset Diagram"}
+        ? `Edit Workspace Diagram "${diagramName}"`
+        : "New Workspace Diagram"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}

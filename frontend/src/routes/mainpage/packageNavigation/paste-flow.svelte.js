@@ -30,13 +30,13 @@ export const pasteFlow = $state({
 let target = null;
 
 export async function startPaste(
-    datasetName,
+    workspaceName,
     graphURI,
     targetPackageUUID,
     options,
 ) {
-    target = { datasetName, graphURI, targetPackageUUID };
-    const preview = await loadPastePreview(datasetName, graphURI, options);
+    target = { workspaceName, graphURI, targetPackageUUID };
+    const preview = await loadPastePreview(workspaceName, graphURI, options);
     if (preview === PASTE_PREVIEW_FAILED) {
         return;
     }
@@ -50,6 +50,6 @@ export async function startPaste(
 }
 
 export async function confirmPaste(options) {
-    const { datasetName, graphURI, targetPackageUUID } = target;
-    await saveCopyClass(datasetName, graphURI, targetPackageUUID, options);
+    const { workspaceName, graphURI, targetPackageUUID } = target;
+    await saveCopyClass(workspaceName, graphURI, targetPackageUUID, options);
 }

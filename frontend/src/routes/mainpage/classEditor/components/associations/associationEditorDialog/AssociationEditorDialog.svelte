@@ -51,7 +51,7 @@
             const existingClassInfo = ctx.getTargetClassInfoByUuid(targetValue);
             if (!existingClassInfo) {
                 const res = await bec.getClassInfo(
-                    ctx.datasetName,
+                    ctx.workspaceName,
                     ctx.graphUri,
                     targetValue,
                 );
@@ -107,7 +107,7 @@
             classEditorContext.getClassByUuid,
         );
         const result = await saveApiAssociationToBackend(
-            classEditorContext.datasetName,
+            classEditorContext.workspaceName,
             classEditorContext.graphUri,
             classUuid,
             apiAssociation,

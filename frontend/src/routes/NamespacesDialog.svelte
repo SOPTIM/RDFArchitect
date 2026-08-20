@@ -18,7 +18,7 @@
     import { tick } from "svelte";
     import { Fa } from "svelte-fa";
 
-    import { getNamespaces } from "$lib/api/apiDatasetUtils.js";
+    import { getNamespaces } from "$lib/api/apiWorkspaceUtils.js";
     import { BackendConnection } from "$lib/api/backend.js";
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import FaIconButton from "$lib/components/FaIconButton.svelte";
@@ -39,25 +39,26 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable() } = $props();
+    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
     const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
-    let datasetName = $state("");
+    let workspaceName = $state("");
     let readonly = $state(false);
     let namespaces = $state([]);
 
     let listRef;
 
     async function onOpen() {
-        datasetName = editorState.selectedDataset.getValue();
-        if (!datasetName) return;
-        readonly = await isReadOnly(datasetName);
-        await loadNamespaces(datasetName);
+        workspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
+        if (!workspaceName) return;
+        readonly = await isReadOnly(workspaceName);
+        await loadNamespaces(workspaceName);
     }
 
-    async function loadNamespaces(datasetNameLocal) {
-        const namespaceDTOs = await getNamespaces(datasetNameLocal);
+    async function loadNamespaces(workspaceNameLocal) {
+        const namespaceDTOs = await getNamespaces(workspaceNameLocal);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });
@@ -72,8 +73,8 @@
         );
     }
 
-    async function isReadOnly(datasetNameLocal) {
-        const res = await bec.isReadOnly(datasetNameLocal);
+    async function isReadOnly(workspaceNameLocal) {
+        const res = await bec.isReadOnly(workspaceNameLocal);
         return await res.json();
     }
 
@@ -93,17 +94,20 @@
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
         try {
-            const res = await bec.replaceNamespaces(datasetName, namespaceDTOs);
+            const res = await bec.replaceNamespaces(
+                workspaceName,
+                namespaceDTOs,
+            );
             if (res && res.ok === false) {
                 toastStore.error(
                     "Save failed",
-                    `Could not save namespaces for "${datasetName}".`,
+                    `Could not save namespaces for "${workspaceName}".`,
                 );
                 return;
             }
             toastStore.success(
                 "Namespaces saved",
-                `Updated for "${datasetName}".`,
+                `Updated for "${workspaceName}".`,
             );
         } catch (err) {
             console.error("Failed to save namespaces:", err);
@@ -135,9 +139,9 @@
     <div class="mx-2 flex h-[60vh] max-h-[60vh] flex-col">
         <h2 class="mb-2 flex-none text-lg font-semibold">
             {#if readonly}
-                View Namespaces - {datasetName}
+                View Namespaces - {workspaceName}
             {:else}
-                Edit Namespaces - {datasetName}
+                Edit Namespaces - {workspaceName}
             {/if}
         </h2>
 

@@ -44,15 +44,15 @@
     let showCompareDialog = $state(false);
     let showValidationDialog = $state(false);
 
-    let selectedDataset = $derived(editorState.selectedDataset.getValue());
+    let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
-    let hasGraphSelected = $derived(!!selectedDataset && selectedGraph);
+    let hasGraphSelected = $derived(!!selectedWorkspace && selectedGraph);
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
     });
 

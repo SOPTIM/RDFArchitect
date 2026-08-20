@@ -21,15 +21,15 @@ import { editorState } from "$lib/sharedState.svelte.js";
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 export function saveApiAssociationToBackend(
-    dataset,
+    workspace,
     graph,
     classUUID,
     associationDTO,
     isNewAssociation,
 ) {
     const saveAssociationPairCall = isNewAssociation
-        ? bec.postAssociationPair(dataset, graph, classUUID, associationDTO)
-        : bec.putAssociationPair(dataset, graph, classUUID, associationDTO);
+        ? bec.postAssociationPair(workspace, graph, classUUID, associationDTO)
+        : bec.putAssociationPair(workspace, graph, classUUID, associationDTO);
 
     return saveAssociationPairCall
         .then(async res => {

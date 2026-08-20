@@ -21,10 +21,10 @@
     import { get } from "svelte/store";
     import { Fa } from "svelte-fa";
 
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
@@ -43,10 +43,10 @@
     let cgmesVersionA = $state(CGMESVersion.V3_0);
     let cgmesVersionB = $state(CGMESVersion.V3_0);
 
-    let datasetA = $state(null);
+    let workspaceA = $state(null);
     let graphA = $state(null);
 
-    let datasetB = $state(null);
+    let workspaceB = $state(null);
     let graphB = $state(null);
 
     let fileA = $state(null);
@@ -86,15 +86,15 @@
         }
 
         if (compareMode === CompareMode.FILE_TO_STORED) {
-            disableNext = !fileA || !datasetB || !graphB;
+            disableNext = !fileA || !workspaceB || !graphB;
         }
 
         if (compareMode === CompareMode.STORED_TO_FILE) {
-            disableNext = !datasetA || !graphA || !fileA;
+            disableNext = !workspaceA || !graphA || !fileA;
         }
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
-            disableNext = !datasetA || !graphA || !datasetB || !graphB;
+            disableNext = !workspaceA || !graphA || !workspaceB || !graphB;
         }
     });
 
@@ -104,16 +104,16 @@
         compareMode = storedState.compareMode ?? CompareMode.FILE_TO_STORED;
         cgmesVersionA = storedState.cgmesVersionA ?? CGMESVersion.V3_0;
         cgmesVersionB = storedState.cgmesVersionB ?? CGMESVersion.V3_0;
-        datasetA = storedState.datasetA;
+        workspaceA = storedState.workspaceA;
         graphA = storedState.graphA;
-        datasetB = storedState.datasetB;
+        workspaceB = storedState.workspaceB;
         graphB = storedState.graphB;
         fileA = storedState.fileA;
         fileB = storedState.fileB;
     });
 
     function onCompareModeChange() {
-        datasetB = null;
+        workspaceB = null;
         graphB = null;
 
         fileA = null;
@@ -122,20 +122,20 @@
 
     function swapSelections() {
         if (compareMode === CompareMode.STORED_TO_STORED) {
-            [datasetA, datasetB] = [datasetB, datasetA];
+            [workspaceA, workspaceB] = [workspaceB, workspaceA];
             [graphA, graphB] = [graphB, graphA];
         } else if (compareMode === CompareMode.FILE_TO_FILE) {
             [fileA, fileB] = [fileB, fileA];
         } else if (compareMode === CompareMode.FILE_TO_STORED) {
-            datasetA = datasetB;
+            workspaceA = workspaceB;
             graphA = graphB;
-            datasetB = null;
+            workspaceB = null;
             graphB = null;
             compareMode = CompareMode.STORED_TO_FILE;
         } else if (compareMode === CompareMode.STORED_TO_FILE) {
-            datasetB = datasetA;
+            workspaceB = workspaceA;
             graphB = graphA;
-            datasetA = null;
+            workspaceA = null;
             graphA = null;
             compareMode = CompareMode.FILE_TO_STORED;
         }
@@ -148,16 +148,16 @@
         let body = new FormData();
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
-            body.append("datasetA", datasetA);
+            body.append("datasetA", workspaceA);
             body.append("graphA", graphA);
-            body.append("datasetB", datasetB);
+            body.append("datasetB", workspaceB);
             body.append("graphB", graphB);
         } else if (compareMode === CompareMode.FILE_TO_STORED) {
             body.append("fileA", fileA);
-            body.append("datasetB", datasetB);
+            body.append("datasetB", workspaceB);
             body.append("graphB", graphB);
         } else if (compareMode === CompareMode.STORED_TO_FILE) {
-            body.append("datasetA", datasetA);
+            body.append("datasetA", workspaceA);
             body.append("graphA", graphA);
             body.append("fileA", fileA);
         } else if (compareMode === CompareMode.FILE_TO_FILE) {
@@ -178,9 +178,9 @@
                     compareMode,
                     cgmesVersionA,
                     cgmesVersionB,
-                    datasetA,
+                    workspaceA,
                     graphA,
-                    datasetB,
+                    workspaceB,
                     graphB,
                     fileA,
                     fileB,
@@ -232,8 +232,8 @@
                 <span class="text-text-subtle px-1 text-xs font-medium">
                     Before
                 </span>
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetA}
+                <WorkspaceAndGraphSelection
+                    bind:workspace={workspaceA}
                     bind:graph={graphA}
                 />
                 <div
@@ -269,8 +269,8 @@
                 <span class="text-text-subtle px-1 text-xs font-medium">
                     After
                 </span>
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetB}
+                <WorkspaceAndGraphSelection
+                    bind:workspace={workspaceB}
                     bind:graph={graphB}
                 />
                 <div
@@ -333,8 +333,8 @@
                 <span class="text-text-subtle px-1 text-xs font-medium">
                     After
                 </span>
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetB}
+                <WorkspaceAndGraphSelection
+                    bind:workspace={workspaceB}
                     bind:graph={graphB}
                 />
                 <div
@@ -359,8 +359,8 @@
                 <span class="text-text-subtle px-1 text-xs font-medium">
                     Before
                 </span>
-                <DatasetAndGraphSelection
-                    bind:dataset={datasetA}
+                <WorkspaceAndGraphSelection
+                    bind:workspace={workspaceA}
                     bind:graph={graphA}
                 />
                 <div

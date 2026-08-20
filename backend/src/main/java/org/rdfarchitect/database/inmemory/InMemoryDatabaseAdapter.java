@@ -99,6 +99,11 @@ public class InMemoryDatabaseAdapter implements DatabasePort {
     }
 
     @Override
+    public void createDataset(String datasetName) {
+        database.createDataset(datasetName);
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         database.deleteDataset(datasetName);
     }

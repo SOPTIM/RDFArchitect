@@ -22,15 +22,15 @@ import { editorState } from "$lib/sharedState.svelte.js";
 const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
 
 export async function saveApiAttributeToBackend(
-    dataset,
+    workspace,
     graph,
     classUUID,
     attribute,
     isNewAttribute,
 ) {
     const saveAttributeCall = isNewAttribute
-        ? bec.postAttribute(dataset, graph, classUUID, attribute)
-        : bec.putAttribute(dataset, graph, classUUID, attribute);
+        ? bec.postAttribute(workspace, graph, classUUID, attribute)
+        : bec.putAttribute(workspace, graph, classUUID, attribute);
 
     try {
         const res = await saveAttributeCall;
