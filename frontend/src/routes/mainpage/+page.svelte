@@ -22,6 +22,7 @@
 
     import { BackendConnection } from "$lib/api/backend.js";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
+    import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
@@ -41,6 +42,7 @@
     const hasNoWorkspaces = $derived(
         workspaceState.isLoaded() && workspaceState.getNames().length === 0,
     );
+    const schemaCountKnown = $derived(schemaCount.current !== null);
     const hasNoSchemas = $derived(
         !hasNoWorkspaces && schemaCount.current === 0,
     );
@@ -94,6 +96,12 @@
     <WorkspaceTabs />
     {#if hasNoWorkspaces}
         <NoWorkspacePlaceholder />
+    {:else if !schemaCountKnown}
+        <div
+            class="bg-window-background flex min-h-0 flex-1 items-center justify-center"
+        >
+            <LoadingSpinner />
+        </div>
     {:else if hasNoSchemas}
         <NoSchemaPlaceholder workspaceName={activeWorkspace} />
     {:else}

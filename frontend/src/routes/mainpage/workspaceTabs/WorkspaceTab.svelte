@@ -32,7 +32,7 @@
     let { name, active = false, onActivate } = $props();
 
     const tabClasses =
-        "flex h-[2.2rem] max-w-64 items-center rounded-t-lg border border-b-0 pr-[0.15rem] transition-colors";
+        "group relative flex h-[2.2rem] max-w-64 min-w-[9rem] items-center rounded-t-lg border border-b-0 pr-[0.15rem] transition-colors";
     const activeTabClasses =
         "border-button-default-background bg-nav-active-background text-nav-active-text";
     const inactiveTabClasses =
@@ -53,9 +53,13 @@
                 type="button"
                 role="tab"
                 aria-selected={active}
-                class="focus-visible:outline-button-default-background inline-flex h-full max-w-52 min-w-0 cursor-pointer items-center gap-[0.4rem] pr-[0.35rem] pl-[0.6rem] text-[0.9rem] font-medium text-inherit focus-visible:outline-2 focus-visible:-outline-offset-2"
+                aria-label={name}
+                class="focus-visible:outline-button-default-background absolute inset-0 cursor-pointer rounded-t-lg focus-visible:outline-2 focus-visible:-outline-offset-2"
                 title={name}
                 onclick={() => onActivate?.()}
+            ></button>
+            <span
+                class="pointer-events-none relative inline-flex min-w-0 items-center gap-[0.4rem] pr-[0.35rem] pl-[0.6rem] text-[0.9rem] font-medium"
             >
                 <span class="inline-flex">
                     <Fa icon={faDatabase} />
@@ -69,10 +73,10 @@
                         <Fa icon={faLock} />
                     </span>
                 {/if}
-            </button>
+            </span>
             <button
                 type="button"
-                class="hover:bg-button-hover-background hover:text-button-hover-text focus-visible:outline-button-default-background h-[1.35rem] w-[1.35rem] cursor-pointer rounded-md text-[0.8rem] text-inherit transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2"
+                class="hover:bg-button-hover-background hover:text-button-hover-text focus-visible:outline-button-default-background invisible relative ml-auto h-[1.35rem] w-[1.35rem] shrink-0 cursor-pointer rounded-md text-[0.8rem] text-inherit transition-colors group-focus-within:visible group-hover:visible focus-visible:visible focus-visible:outline-2 focus-visible:-outline-offset-2"
                 aria-label={`Delete workspace ${name}`}
                 title="Delete Workspace"
                 onclick={() => (showDeleteDialog = true)}
