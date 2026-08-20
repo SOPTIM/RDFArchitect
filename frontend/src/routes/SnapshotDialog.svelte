@@ -29,41 +29,41 @@
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
 
-    let { showDialog = $bindable(), lockedDatasetName } = $props();
+    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
-    const datasetSelectId = `datasetSelect-${uuidv4()}`;
+    const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
 
-    let datasetName = $state(null);
-    let datasets = $state();
+    let workspaceName = $state(null);
+    let workspaces = $state();
     let base64Token = $state();
 
-    const datasetSelectionLocked = $derived(!!lockedDatasetName);
+    const workspaceSelectionLocked = $derived(!!lockedWorkspaceName);
 
     async function onOpen() {
-        datasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
-        datasets = await datasetStore.getDatasets();
+        workspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
+        workspaces = await datasetStore.getDatasets();
     }
 
     async function snapshotDataset() {
         const { data, error } = await createSnapshot({
-            path: { datasetName: datasetName },
+            path: { datasetName: workspaceName },
         });
         if (!error) {
             base64Token = data;
             console.log(
-                "Successfully created snapshot for dataset",
-                datasetName,
+                "Successfully created snapshot for workspace",
+                workspaceName,
             );
             toastStore.success(
                 "Snapshot ready",
-                `Share link created for "${datasetName}".`,
+                `Share link created for "${workspaceName}".`,
             );
         } else {
-            console.error("Error creating snapshot for dataset:", error);
+            console.error("Error creating snapshot for workspace:", error);
             toastStore.error(
                 "Snapshot failed",
-                `Could not create a snapshot for "${datasetName}".`,
+                `Could not create a snapshot for "${workspaceName}".`,
             );
         }
     }
@@ -88,22 +88,24 @@
     bind:showDialog
     {onOpen}
     primaryLabel="Share Snapshot"
-    onPrimary={snapshotDataset}
+    onPrimary={snapshotWorkspace}
     closeOnPrimary={false}
     title="Share Snapshot"
-    disablePrimary={!datasetName}
+    disablePrimary={!workspaceName}
 >
     <div class="mx-2 flex h-full flex-col">
-        <label for={datasetSelectId} class="mb-1">Dataset</label>
+        {#if !workspaceSelectionLocked}
+        <label for={workspaceSelectId} class="mb-1">Workspace</label>
         <SelectEditControl
-            id={datasetSelectId}
-            bind:value={datasetName}
-            options={datasets}
-            getOptionValue={dataset => dataset.label}
-            getOptionLabel={dataset => dataset.label}
-            disabled={datasetSelectionLocked || datasetStore.data?.length === 0}
-            placeholder="Select dataset"
+            id={workspaceSelectId}
+            bind:value={workspaceName}
+            options={workspaces}
+            getOptionValue={workspace => workspace.label}
+            getOptionLabel={workspace => workspace.label}
+            disabled={workspaces.length === 0}
+            placeholder="Select workspace"
         />
+        {/if}
 
         <div class="mt-4 flex h-full flex-col">
             <p class="mb-1">Snapshot Link</p>

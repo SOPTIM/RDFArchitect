@@ -16,7 +16,7 @@
   -->
 
 <script>
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         DiagramType,
@@ -28,32 +28,32 @@
 
     let {
         showDialog = $bindable(),
-        datasetName,
+        workspaceName,
         graphUri,
         classUUID,
     } = $props();
 
-    let selectedDatasetName = $state(null);
+    let selectedWorkspaceName = $state(null);
     let selectedGraphURI = $state(null);
 
-    let disableSubmit = $derived(!selectedDatasetName || !selectedGraphURI);
+    let disableSubmit = $derived(!selectedWorkspaceName || !selectedGraphURI);
 
     async function extendClass() {
         let body = {
-            datasetName: selectedDatasetName,
+            workspaceName: selectedWorkspaceName,
             graphUri: selectedGraphURI,
         };
 
         const { data, error } = await classStore.extendClass(
-            datasetName,
+            workspaceName,
             graphUri,
             classUUID,
             body,
         );
         if (error) return;
 
-        crossProfileStore.invalidateDataset(selectedDatasetName);
-        editorState.selectedDataset.updateValue(selectedDatasetName);
+        crossProfileStore.invalidateDataset(selectedWorkspaceName);
+        editorState.selectedDataset.updateValue(selectedWorkspaceName);
         editorState.selectedGraph.updateValue(selectedGraphURI);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
@@ -74,10 +74,10 @@
         <p class="text-default-text w-2/3 text-sm leading-relaxed">
             Please select the schema that you want to extend this class in
         </p>
-        <DatasetAndGraphSelection
-            bind:dataset={selectedDatasetName}
+        <WorkspaceAndGraphSelection
+            bind:workspace={selectedWorkspaceName}
             bind:graph={selectedGraphURI}
-            allowSelectionOfReadonlyDatasets={false}
+            allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
     </div>

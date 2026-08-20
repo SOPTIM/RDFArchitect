@@ -55,42 +55,36 @@ function syncList(targetArray, freshEntries, parent = null) {
     freshEntries.forEach(entry => (entry.parent = parent));
 }
 
-export async function getNavEntryList(existingDatasetNavList) {
-    const datasets = await datasetStore.getDatasets();
-    const freshEntries = (datasets ?? [])
-        .sort((a, b) => a.label.localeCompare(b.label))
-        .map(dataset =>
-            reuseOrCreate(existingDatasetNavList, {
-                label: dataset.label,
-                id: dataset.label,
-            }),
-        );
-
-    const result = existingDatasetNavList ?? [];
-    syncList(result, freshEntries, null);
-
-    for (const datasetNavEntry of result) {
-        try {
-            await populateDataset(datasetNavEntry);
-        } catch (err) {
-            console.error(
-                "Error populating dataset " + datasetNavEntry.id,
-                err,
-            );
-            toastStore.error(
-                "Failed to load dataset",
-                `Could not load graphs for dataset "${datasetNavEntry.id}". Other datasets are still available.`,
-            );
-        }
+/**
+ * Builds the navigation tree of a single workspace. Schemas are the top level;
+ * the returned entry only carries them and is not rendered itself.
+ */
+export async function getWorkspaceNavEntry(workspaceName, existingNavEntry) {
+    if (!workspaceName) {
+        return null;
     }
-    return result;
+    const workspaceNavEntry =
+        existingNavEntry?.id === workspaceName
+            ? existingNavEntry
+            : new NavEntry({ label: workspaceName, id: workspaceName });
+
+    try {
+        await populateWorkspace(workspaceNavEntry);
+    } catch (err) {
+        console.error("Error populating workspace " + workspaceName, err);
+        toastStore.error(
+            "Failed to load workspace",
+            `Could not load schemas for workspace "${workspaceName}".`,
+        );
+    }
+    return workspaceNavEntry;
 }
 
-async function populateDataset(datasetNavEntry) {
-    const existingGraphNavList = datasetNavEntry.children;
+async function populateWorkspace(workspaceNavEntry) {
+    const existingGraphNavList = workspaceNavEntry.children;
 
     const freshEntries = (
-        (await graphStore.getGraphs(datasetNavEntry.id)) ?? []
+        (await graphStore.getGraphs(workspaceNavEntry.id)) ?? []
     )
         .sort((a, b) => getUri(a).localeCompare(getUri(b)))
         .map(graph => {
@@ -102,25 +96,25 @@ async function populateDataset(datasetNavEntry) {
             });
         });
 
-    if (datasetNavEntry.children) {
-        syncList(datasetNavEntry.children, freshEntries, datasetNavEntry);
+    if (workspaceNavEntry.children) {
+        syncList(workspaceNavEntry.children, freshEntries, workspaceNavEntry);
     } else {
-        datasetNavEntry.children = freshEntries;
-        freshEntries.forEach(entry => (entry.parent = datasetNavEntry));
+        workspaceNavEntry.children = freshEntries;
+        freshEntries.forEach(entry => (entry.parent = workspaceNavEntry));
     }
 
-    for (const graphNavEntry of datasetNavEntry.children) {
-        if (isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)) {
+    for (const graphNavEntry of workspaceNavEntry.children) {
+        if (isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id)) {
             graphNavEntry.parent?.open();
         }
-        await populateGraph(datasetNavEntry, graphNavEntry);
+        await populateGraph(workspaceNavEntry, graphNavEntry);
     }
 }
 
-export async function populateGraph(datasetNavObject, graphNavObject) {
+export async function populateGraph(workspaceNavObject, graphNavObject) {
     const existingPackageList = graphNavObject.children;
     const packageData = (await packageStore.getPackages(
-        datasetNavObject.id,
+        workspaceNavObject.id,
         graphNavObject.id,
     )) ?? { internal: [], external: [] };
 
@@ -152,7 +146,7 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
     for (const packageNavEntry of graphNavObject.children) {
         if (
             isSelectedPackage(
-                datasetNavObject.id,
+                workspaceNavObject.id,
                 graphNavObject.id,
                 packageNavEntry.id,
             )
@@ -162,7 +156,7 @@ export async function populateGraph(datasetNavObject, graphNavObject) {
         populatePackage(
             packageNavEntry,
             allClasses,
-            datasetNavObject.id,
+            workspaceNavObject.id,
             graphNavObject.id,
         );
     }
@@ -196,7 +190,7 @@ function reuseOrCreatePackage(existingPackageList, packObj, isExternal) {
     return entry;
 }
 
-function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
+function populatePackage(packageNavObject, allClasses, workspaceId, graphId) {
     const existingClassList = packageNavObject.children;
 
     allClasses = allClasses ?? [];
@@ -228,7 +222,7 @@ function populatePackage(packageNavObject, allClasses, datasetId, graphId) {
         let diagramType = editorState.selectedDiagram.getProperty("type");
         if (
             diagramType === DiagramType.PACKAGE &&
-            isSelectedClass(datasetId, graphId, classNavEntry.id)
+            isSelectedClass(workspaceId, graphId, classNavEntry.id)
         ) {
             classNavEntry.parent?.open();
         }

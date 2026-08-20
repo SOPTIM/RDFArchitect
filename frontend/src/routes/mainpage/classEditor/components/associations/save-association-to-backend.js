@@ -19,7 +19,7 @@ import { editorState } from "$lib/sharedState.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
 
 export async function saveApiAssociationToBackend(
-    dataset,
+    workspace,
     graph,
     classUUID,
     associationDTO,
@@ -27,13 +27,13 @@ export async function saveApiAssociationToBackend(
 ) {
     const res = isNewAssociation
         ? await classStore.addAssociationPair(
-              dataset,
+            workspace,
               graph,
               classUUID,
               associationDTO,
           )
         : await classStore.replaceAssociationPair(
-              dataset,
+            workspace,
               graph,
               classUUID,
               associationDTO,

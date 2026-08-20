@@ -24,7 +24,7 @@
         existingEntries,
         scrollToBottom,
         namespaces,
-        dataset,
+        workspace,
         graphUri,
     } = $props();
 
@@ -48,7 +48,7 @@
     async function onOpen() {
         knownFields = await ontologyStore.getKnownFields();
         const { data } = await ontologyStore.generateOntologyEntries(
-            dataset,
+            workspace,
             graphUri,
         );
         generatedEntries = data;

@@ -25,17 +25,22 @@
     } from "$lib/sharedState.svelte.js";
     import { customDiagramStore } from "$lib/stores/diagramStore.ts";
 
-    let { showDialog = $bindable(), datasetName, graphUri, diagram } = $props();
+    let {
+        showDialog = $bindable(),
+        workspaceName,
+        graphUri,
+        diagram,
+    } = $props();
 
     async function deleteCustomDiagram() {
         const { error } = graphUri
             ? await customDiagramStore.deleteGraphDiagram(
-                  datasetName,
+                  workspaceName,
                   graphUri,
                   diagram.diagramId,
               )
             : await customDiagramStore.deleteDatasetDiagram(
-                  datasetName,
+                  workspaceName,
                   diagram.diagramId,
               );
         if (error) return;
@@ -47,7 +52,7 @@
                 type: null,
                 id: null,
             });
-            editorState.selectedClassDataset.updateValue(null);
+            editorState.selectedClassWorkspace.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClass.updateValue({ type: null, id: null });
         }

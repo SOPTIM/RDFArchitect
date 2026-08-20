@@ -35,7 +35,7 @@
         showDialog = $bindable(),
         pack,
         readonly = false,
-        datasetName = null,
+        workspaceName = null,
         graphUri = null,
     } = $props();
 
@@ -50,14 +50,14 @@
     }
 
     async function onOpen() {
-        namespaces = await datasetStore.getNamespaces(datasetName);
+        namespaces = await datasetStore.getNamespaces(workspaceName);
 
-        if (!datasetName || !graphUri) {
+        if (!workspaceName || !graphUri) {
             packages = [];
             return;
         }
 
-        const result = await packageStore.getPackages(datasetName, graphUri);
+        const result = await packageStore.getPackages(workspaceName, graphUri);
         packages = result ? [...result.internal, ...result.external] : [];
 
         if (pack) {
@@ -88,7 +88,7 @@
     }
 
     async function savePackage() {
-        if (!datasetName || !graphUri) {
+        if (!workspaceName || !graphUri) {
             return;
         }
 
@@ -98,7 +98,7 @@
             pack?.label,
         );
         const res = await packageStore.savePackage(
-            datasetName,
+            workspaceName,
             graphUri,
             apiPackage,
         );

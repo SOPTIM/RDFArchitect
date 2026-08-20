@@ -21,9 +21,9 @@ import { datatypesStore } from "$lib/stores/datatypesStore.ts";
 import { packageStore } from "$lib/stores/packageStore.ts";
 import { getXsdPrimitives } from "$lib/stores/xsdDatatypesStore.ts";
 
-export async function getPackages(datasetName, graphUri) {
+export async function getPackages(workspaceName, graphUri) {
     // fetch packages
-    const packageData = await packageStore.getPackages(datasetName, graphUri);
+    const packageData = await packageStore.getPackages(workspaceName, graphUri);
 
     // Combine internal and external packages
     let packages = [];
@@ -44,14 +44,14 @@ export async function getPackages(datasetName, graphUri) {
     return packages;
 }
 
-export async function getDataTypes(datasetName, graphUri) {
+export async function getDataTypes(workspaceName, graphUri) {
     const xsd = await getXsdPrimitives();
     const primitivesDto = await datatypesStore.getPrimitives(
-        datasetName,
+        workspaceName,
         graphUri,
     );
     const dataTypesDto = await datatypesStore.getDatatypes(
-        datasetName,
+        workspaceName,
         graphUri,
     );
 
@@ -95,13 +95,13 @@ export async function getDataTypes(datasetName, graphUri) {
 }
 
 export async function getClasses(
-    datasetName,
+    workspaceName,
     graphUri,
     includeExternalClasses = true,
 ) {
     const res =
         (await classStore.getClasses(
-            datasetName,
+            workspaceName,
             graphUri,
             includeExternalClasses,
         )) ?? [];

@@ -25,7 +25,9 @@ import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.DatasetDTO;
 import org.rdfarchitect.services.select.ListDatasetsUseCase;
+import org.rdfarchitect.services.update.dataset.CreateDatasetUseCase;
 import org.rdfarchitect.services.update.dataset.DeleteDatasetUseCase;
+import org.rdfarchitect.services.update.dataset.RenameDatasetUseCase;
 import org.springframework.http.HttpHeaders;
 
 import java.util.List;
@@ -33,14 +35,23 @@ import java.util.List;
 class DatasetRESTControllerTest {
 
     private ListDatasetsUseCase listDatasetsUseCase;
+    private CreateDatasetUseCase createDatasetUseCase;
     private DeleteDatasetUseCase deleteDatasetUseCase;
+    private RenameDatasetUseCase renameDatasetUseCase;
     private DatasetRESTController controller;
 
     @BeforeEach
     void setUp() {
         listDatasetsUseCase = mock(ListDatasetsUseCase.class);
+        createDatasetUseCase = mock(CreateDatasetUseCase.class);
         deleteDatasetUseCase = mock(DeleteDatasetUseCase.class);
-        controller = new DatasetRESTController(listDatasetsUseCase, deleteDatasetUseCase);
+        renameDatasetUseCase = mock(RenameDatasetUseCase.class);
+        controller =
+                new DatasetRESTController(
+                        listDatasetsUseCase,
+                        createDatasetUseCase,
+                        deleteDatasetUseCase,
+                        renameDatasetUseCase);
     }
 
     @Test
@@ -53,6 +64,22 @@ class DatasetRESTControllerTest {
 
         assertThat(result).containsExactly(dataset1, dataset2);
         verify(listDatasetsUseCase).listDatasets();
+    }
+
+    @Test
+    void createDataset_invokesUseCaseAndReturnsSuccess() {
+        var response = controller.createDataset(HttpHeaders.ORIGIN, "dataset-a");
+
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(createDatasetUseCase).createDataset("dataset-a");
+    }
+
+    @Test
+    void renameDataset_invokesUseCaseAndReturnsSuccess() {
+        var response = controller.renameDataset(HttpHeaders.ORIGIN, "dataset-a", "dataset-b");
+
+        assertThat(response).isEqualTo(Response.SUCCESS);
+        verify(renameDatasetUseCase).renameDataset("dataset-a", "dataset-b");
     }
 
     @Test

@@ -56,15 +56,15 @@ function displayFilenameOf(packageUUID, label, fileEnding) {
     return `${slugifyLabel(label)}-${packageUUID}.${fileEnding}`;
 }
 
-async function getAllPackages(datasetName, graphURI) {
-    const res = (await packageStore.getPackages(datasetName, graphURI)) ?? {
+async function getAllPackages(workspaceName, graphURI) {
+    const res = (await packageStore.getPackages(workspaceName, graphURI)) ?? {
         internal: [],
         external: [],
     };
     return [...(res.internal ?? []), ...(res.external ?? [])];
 }
 
-async function getPackageDiagram(datasetName, graphURI, packageUUID, signal) {
+async function getPackageDiagram(workspaceName, graphURI, packageUUID, signal) {
     const filter = {
         packageUUID,
         includeEnumEntries: true,
@@ -74,7 +74,7 @@ async function getPackageDiagram(datasetName, graphURI, packageUUID, signal) {
         includeRelationsToExternalPackages: true,
     };
     const res = await getRenderingDataParameterized({
-        path: { datasetName: datasetName, graphURI: graphURI },
+        path: { datasetName: workspaceName, graphURI: graphURI },
         body: filter,
         signal: signal,
     });
@@ -153,14 +153,14 @@ async function renderPackage(nodes, edges, fileType) {
  *     their outcome, and whose cancellation stops the loop at the next package
  */
 export async function generatePackageImages(
-    datasetName,
+    workspaceName,
     graphURI,
     fileType,
     progress,
 ) {
     const images = [];
     const signal = progress?.signal;
-    const packages = await getAllPackages(datasetName, graphURI);
+    const packages = await getAllPackages(workspaceName, graphURI);
 
     progress?.startDiagrams(
         packages.map(pkg => ({
@@ -179,7 +179,7 @@ export async function generatePackageImages(
         progress?.packageStarted(packageUUID);
         try {
             const diagram = await getPackageDiagram(
-                datasetName,
+                workspaceName,
                 graphURI,
                 packageUUID,
                 signal,

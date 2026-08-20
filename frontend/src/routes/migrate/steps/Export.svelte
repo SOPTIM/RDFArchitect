@@ -89,7 +89,7 @@
                 </li>
                 <li>
                     <span class="font-medium">Apply the update:</span>
-                    Execute the SPARQL UPDATE script on your dataset
+                    Execute the SPARQL UPDATE script on your workspace
                 </li>
                 <li>
                     <span class="font-medium">Verify the resulting data:</span>

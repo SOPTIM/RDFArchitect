@@ -16,38 +16,55 @@
   -->
 
 <script>
-    import {
-        faDiagramProject,
-        faFileImport,
-    } from "@fortawesome/free-solid-svg-icons";
     import { setContext, untrack } from "svelte";
 
+    import { getNamespaces, isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
+    import { BackendConnection } from "$lib/api/backend.js";
+    import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime.js";
+    import { graphColors } from "$lib/graphColors.svelte.js";
     import {
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { SimpleTrigger } from "$lib/statePrimitives.svelte.js";
 
-    import { getNavEntryList } from "./build-nav-object.js";
-    import DatasetSection from "./DatasetSection.svelte";
-    import ImportDialog from "../../ImportDialog.svelte";
-    import NewGraphDialog from "../../NewGraphDialog.svelte";
+    import { getWorkspaceNavEntry } from "./build-nav-object.js";
+    import CrossProfileDiagramsSection from "./CrossProfileDiagramsSection.svelte";
+    import CustomDiagramsSection from "./CustomDiagramsSection.svelte";
+    import GraphSection from "./GraphSection.svelte";
+    import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
+    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     const localReloadTrigger = new SimpleTrigger();
-    let initialDatasetsLoaded = $state(false);
-    let showImportDialog = $state(false);
-    let showNewGraphDialog = $state(false);
-    let datasetNavEntryList = $state(null);
+    const readonlyValue = asyncValue(() => activeWorkspace, isReadOnly);
+
+    let workspaceNavEntry = $state(null);
+    let namespaces = $state([]);
+    let crossProfileID = $state();
+    let latestLoadRequest = 0;
+
+    const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
+    const readonly = $derived(readonlyValue.current ?? false);
+    // Entries of a workspace that is no longer active must not be rendered:
+    // their sections would fire requests mixing the new workspace with the old
+    // schemas while the tree is being rebuilt.
+    const navEntryReady = $derived(workspaceNavEntry?.id === activeWorkspace);
+    const graphNavEntries = $derived(
+        navEntryReady ? (workspaceNavEntry?.children ?? []) : [],
+    );
+    const packagesWithClassesCount = $derived(
+        graphNavEntries
+            .flatMap(graphNavEntry => graphNavEntry.children ?? [])
+            .filter(packageNavEntry => packageNavEntry.children?.length > 0)
+            .length,
+    );
 
     $effect(async () => {
         forceReloadTrigger.subscribe();
-        await untrack(
-            async () =>
-                (datasetNavEntryList =
-                    await getNavEntryList(datasetNavEntryList)),
-        );
-        initialDatasetsLoaded = true;
+        const workspaceName = activeWorkspace;
+        await untrack(async () => await loadWorkspace(workspaceName));
         localReloadTrigger.trigger();
     });
 
@@ -57,6 +74,50 @@
             untrack(() => editorState.markClassActive());
         }
     });
+
+    async function loadWorkspace(workspaceName) {
+        const request = ++latestLoadRequest;
+        const previousNavEntry =
+            workspaceNavEntry?.id === workspaceName ? workspaceNavEntry : null;
+        if (!workspaceName) {
+            workspaceNavEntry = null;
+            namespaces = [];
+            crossProfileID = undefined;
+            return;
+        }
+        const navEntry = await getWorkspaceNavEntry(
+            workspaceName,
+            previousNavEntry,
+        );
+        const loadedNamespaces = await fetchNamespaces(workspaceName);
+        const loadedCrossProfileID = await fetchCrossProfileID(workspaceName);
+        await graphColors.reload(workspaceName);
+        if (request !== latestLoadRequest) {
+            return;
+        }
+        workspaceNavEntry = navEntry;
+        namespaces = loadedNamespaces;
+        crossProfileID = loadedCrossProfileID;
+    }
+
+    async function fetchNamespaces(workspaceName) {
+        try {
+            return await getNamespaces(workspaceName);
+        } catch (err) {
+            console.error("Failed to load namespaces:", err);
+            return [];
+        }
+    }
+
+    async function fetchCrossProfileID(workspaceName) {
+        try {
+            const res = await bec.getCrossProfileID(workspaceName);
+            return await res.text();
+        } catch (err) {
+            console.error("Failed to load merged view id:", err);
+            return undefined;
+        }
+    }
 
     setContext("packageNavigation", {
         reloadTrigger: localReloadTrigger,
@@ -75,42 +136,39 @@
                     <div
                         class="no-scrollbar min-h-0 flex-1 overflow-y-auto py-[0.4rem]"
                     >
-                        {#if datasetNavEntryList && datasetNavEntryList.length > 0}
-                            <div
-                                class="flex w-full flex-col items-stretch justify-start gap-[0.1rem] px-2"
-                            >
-                                {#key datasetNavEntryList}
-                                    {#each datasetNavEntryList as datasetNavEntry (datasetNavEntry.id)}
-                                        <DatasetSection {datasetNavEntry} />
+                        {#if navEntryReady}
+                            {#key activeWorkspace}
+                                <div
+                                    class="flex w-full flex-col items-stretch justify-start gap-[0.1rem] px-2"
+                                >
+                                    {#each graphNavEntries as graphNavEntry (graphNavEntry.id)}
+                                        <GraphSection
+                                            {workspaceNavEntry}
+                                            {graphNavEntry}
+                                            {namespaces}
+                                            {readonly}
+                                        />
                                     {/each}
-                                {/key}
-                            </div>
-                        {:else if initialDatasetsLoaded}
-                            <div class="text-default-text px-4 py-2 text-sm">
-                                No schemas imported yet.
-                                <br />
-                                Right-click to create or import a schema.
-                            </div>
+
+                                    {#if packagesWithClassesCount > 1}
+                                        <CrossProfileDiagramsSection
+                                            {workspaceNavEntry}
+                                            {crossProfileID}
+                                        />
+                                    {/if}
+
+                                    <CustomDiagramsSection
+                                        {workspaceNavEntry}
+                                        allGraphNavEntries={graphNavEntries}
+                                        {readonly}
+                                    />
+                                </div>
+                            {/key}
                         {/if}
                     </div>
                 </div>
             </div>
         </ContextMenu.TriggerArea>
-        <ContextMenu.Content>
-            <ContextMenu.Item.Button
-                onSelect={() => (showNewGraphDialog = true)}
-                faIcon={faDiagramProject}
-            >
-                New Schema
-            </ContextMenu.Item.Button>
-            <ContextMenu.Item.Button
-                onSelect={() => (showImportDialog = true)}
-                faIcon={faFileImport}
-            >
-                Import Schema (RDFS)
-            </ContextMenu.Item.Button>
-        </ContextMenu.Content>
-        <ImportDialog bind:showDialog={showImportDialog} />
-        <NewGraphDialog bind:showDialog={showNewGraphDialog} />
+        <WorkspaceActionsMenu workspaceName={activeWorkspace} {readonly} />
     </ContextMenu.Root>
 </div>

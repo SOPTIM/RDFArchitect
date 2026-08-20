@@ -36,24 +36,24 @@
     } from "$lib/sharedState.svelte.js";
     import { datasetStore } from "$lib/stores/datasetStore.ts";
 
-    let { showDialog = $bindable() } = $props();
+    let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
-    let datasetName = $state("");
+    let workspaceName = $state("");
     let readonly = $state(false);
     let namespaces = $state([]);
 
     let listRef;
 
     async function onOpen() {
-        datasetName = editorState.selectedDataset.getValue();
-        if (!datasetName) return;
-        readonly = await datasetStore.isReadOnly(datasetName);
-        await loadNamespaces(datasetName);
+        workspaceName = editorState.selectedWorkspace.getValue();
+        if (!workspaceName) return;
+        readonly = await datasetStore.isReadOnly(workspaceName);
+        await loadNamespaces(workspaceName);
     }
 
-    async function loadNamespaces(datasetNameLocal) {
+    async function loadNamespaces(workspaceNameLocal) {
         const namespaceDTOs =
-            await datasetStore.getNamespaces(datasetNameLocal);
+            await datasetStore.getNamespaces(workspaceNameLocal);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });
@@ -84,7 +84,7 @@
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
         const { error } = await datasetStore.saveNamespaces(
-            datasetName,
+            workspaceName,
             namespaceDTOs,
         );
 
@@ -112,9 +112,9 @@
     <div class="mx-2 flex h-[60vh] max-h-[60vh] flex-col">
         <h2 class="mb-2 flex-none text-lg font-semibold">
             {#if readonly}
-                View Namespaces - {datasetName}
+                View Namespaces - {workspaceName}
             {:else}
-                Edit Namespaces - {datasetName}
+                Edit Namespaces - {workspaceName}
             {/if}
         </h2>
 

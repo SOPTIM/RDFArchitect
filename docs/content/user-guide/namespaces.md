@@ -7,7 +7,7 @@ import manageNamespacesScreenshot from '@site/static/img/screenshots/manage-name
 
 # Working with Namespaces
 
-Namespaces are managed per dataset from **Edit → Edit Namespaces** (or **View Namespaces** when read-only). The dialog lists every prefix/URI pair currently defined for the dataset, and lets you add, rename, or delete prefixes.
+Namespaces are managed per workspace from **Edit → Edit Namespaces** (or **View Namespaces** when read-only). The dialog lists every prefix/URI pair currently defined for the workspace, and lets you add, rename, or delete prefixes.
 
 <img src={manageNamespacesScreenshot} alt="Edit namespaces" className="screenshot--medium" />
 

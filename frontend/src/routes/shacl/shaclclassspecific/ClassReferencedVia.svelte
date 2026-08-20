@@ -24,9 +24,9 @@
 
     let { classUUID, onClickOnClass } = $props();
     let classesReferencingThisClass = $state({});
-    let classDatasetName = $derived(
-        editorState.selectedClassDataset.getValue() ??
-            editorState.selectedDataset.getValue(),
+    let classWorkspaceName = $derived(
+        editorState.selectedClassWorkspace.getValue() ??
+            editorState.selectedWorkspace.getValue(),
     );
     let classGraphUri = $derived(
         editorState.selectedClassGraph.getValue() ??
@@ -36,7 +36,7 @@
     function fetchClassesReferencingThisClass(classUUID) {
         getClassesReferencingThisClass({
             path: {
-                datasetName: classDatasetName,
+                datasetName: classWorkspaceName,
                 graphURI: classGraphUri,
                 classUUID: classUUID,
             },

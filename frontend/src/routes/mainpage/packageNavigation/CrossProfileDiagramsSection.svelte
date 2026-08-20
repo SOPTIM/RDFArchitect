@@ -34,7 +34,7 @@
     import ClassEntry from "./ClassEntry.svelte";
     import SchemaColorsDialog from "./SchemaColorsDialog.svelte";
 
-    let { datasetNavEntry, crossProfileID } = $props();
+    let { workspaceNavEntry, crossProfileID } = $props();
 
     let showColorDialog = $state(false);
     let isOpen = $state(false);
@@ -42,7 +42,8 @@
 
     const isMergedViewSelected = $derived(
         !editorState.selectedGraph.getValue() &&
-            editorState.selectedDataset.getValue() === datasetNavEntry.label &&
+            editorState.selectedWorkspace.getValue() ===
+                workspaceNavEntry.label &&
             editorState.selectedDiagram.getProperty("type") ===
                 DiagramType.CROSS_PROFILE,
     );
@@ -51,8 +52,9 @@
         forceReloadTrigger.subscribe();
         (async () => {
             const diagram = await crossProfileStore.getDiagram(
-                datasetNavEntry.label,
+                workspaceNavEntry.label,
             );
+        getCrossProfileDiagram(workspaceNavEntry.label).then(diagram => {
             classes = diagram?.classes ?? [];
         })();
     });
@@ -62,7 +64,7 @@
         if (originGraph) {
             editorState.mergedViewOriginGraph.updateValue(originGraph);
         }
-        editorState.selectedDataset.updateValue(datasetNavEntry.label);
+        editorState.selectedWorkspace.updateValue(workspaceNavEntry.label);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.CROSS_PROFILE,
@@ -72,7 +74,7 @@
 </script>
 
 <div
-    class="bg-border my-1 ml-14 h-0.5"
+    class="bg-border my-1 ml-10 h-0.5"
     role="presentation"
     oncontextmenu={e => e.stopPropagation()}
 ></div>
@@ -80,7 +82,7 @@
 <ContextMenu.Root>
     <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
         <NavigationEntry
-            level={2}
+            level={1}
             label="Merged View"
             icon={faObjectGroup}
             hasChildren={classes.length > 0}
@@ -108,7 +110,7 @@
     <div class="flex w-full flex-col items-stretch gap-[0.1rem]">
         {#each classes as cls (cls.uuid)}
             <ClassEntry
-                {datasetNavEntry}
+                {workspaceNavEntry}
                 diagramId={editorState.selectedDiagram.getProperty("id")}
                 graphNavEntry={{ id: null }}
                 classNavEntry={{
@@ -123,6 +125,7 @@
                 classType={ClassType.MERGED_CLASS}
                 diagramType={DiagramType.CROSS_PROFILE}
                 readonly={true}
+                level={2}
             />
         {/each}
     </div>
@@ -130,5 +133,5 @@
 
 <SchemaColorsDialog
     bind:showDialog={showColorDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
 />

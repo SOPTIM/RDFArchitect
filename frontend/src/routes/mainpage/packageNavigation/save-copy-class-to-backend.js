@@ -35,7 +35,7 @@ export const PASTE_PREVIEW_FAILED = Symbol("pastePreviewFailed");
 
 function sourcesOf(entries) {
     return entries.map(e => ({
-        sourceDatasetName: e.datasetName,
+        sourceDatasetName: e.workspaceName,
         sourceGraphURI: e.graphURI,
         classUUID: e.classUUID,
     }));
@@ -46,7 +46,7 @@ function sourcesOf(entries) {
  * the chosen paste variant copies can make the paste incomplete, so only that decides. A preview
  * that fails reports PASTE_PREVIEW_FAILED and has already told the user that the paste failed.
  */
-export async function loadPastePreview(datasetName, graphURI, options) {
+export async function loadPastePreview(workspaceName, graphURI, options) {
     const entries = copyState.getEntries();
     const copiesAnything = PASTE_REFERENCE_KINDS.some(
         ({ option }) => options[option],
@@ -54,7 +54,7 @@ export async function loadPastePreview(datasetName, graphURI, options) {
     if (entries.length === 0 || !copiesAnything) return null;
     try {
         const { data, error } = await previewPaste({
-            path: { datasetName, graphURI },
+            path: { workspaceName, graphURI },
             body: {
                 sources: sourcesOf(entries),
             },
@@ -80,7 +80,7 @@ function reportPreviewFailure(reason) {
 }
 
 export async function saveCopyClass(
-    datasetName,
+    workspaceName,
     graphURI,
     targetPackageUUID,
     options,
@@ -98,15 +98,15 @@ export async function saveCopyClass(
     };
     try {
         const { data, error } = await classStore.saveCopyClass(
-            datasetName,
+            workspaceName,
             graphURI,
             payload,
         );
         if (!error) {
             const pasted = data;
-            crossProfileStore.invalidateDataset(datasetName);
-            editorState.selectedDataset.updateValue(datasetName);
-            editorState.selectedClassDataset.updateValue(datasetName);
+            crossProfileStore.invalidateDataset(workspaceName);
+            editorState.selectedWorkspace.updateValue(workspaceName);
+            editorState.selectedClassWorkspace.updateValue(workspaceName);
             editorState.selectedGraph.updateValue(graphURI);
             editorState.selectedClassGraph.updateValue(graphURI);
             editorState.selectedDiagram.updateValue({

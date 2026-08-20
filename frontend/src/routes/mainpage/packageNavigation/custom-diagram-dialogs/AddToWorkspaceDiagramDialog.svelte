@@ -29,7 +29,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
         classes,
     } = $props();
@@ -71,7 +71,7 @@
 
     async function getCustomDiagrams() {
         existingDiagrams =
-            (await customDiagramStore.getDatasetDiagrams(lockedDatasetName)) ??
+            (await customDiagramStore.getDatasetDiagrams(lockedWorkspaceName)) ??
             [];
         diagramsLoaded = true;
     }
@@ -123,17 +123,17 @@
         };
 
         const { error } = await customDiagramStore.saveDatasetDiagram(
-            lockedDatasetName,
+            lockedWorkspaceName,
             diagramId,
             diagramData,
         );
 
         if (error) return;
 
-        editorState.selectedDataset.updateValue(lockedDatasetName);
+        editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
-            type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+            type: DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
             id: diagramId,
         });
         forceReloadTrigger.trigger();
@@ -141,7 +141,7 @@
 
     async function addToDiagram(diagram) {
         const { error } = await customDiagramStore.addClassesToDatasetDiagram(
-            lockedDatasetName,
+            lockedWorkspaceName,
             diagram.diagramId,
             classesToAdd(),
         );
@@ -158,7 +158,7 @@
     primaryLabel={createsNewDiagram ? "Create Diagram" : "Add to Diagram"}
     onPrimary={submitDialog}
     disablePrimary={disableSubmit}
-    title="Add to Dataset Diagram"
+    title="Add to Workspace Diagram"
 >
     <div class="mx-2 flex h-full flex-col">
         <label for="diagram-select" class="mt-3 mb-1 block text-sm">

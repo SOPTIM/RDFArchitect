@@ -30,8 +30,8 @@
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
-    let datasetList = $state([]);
-    let selectedDatasetName = $derived(editorState.selectedDataset.getValue());
+    let workspaceList = $state([]);
+    let selectedWorkspaceName = $derived(editorState.selectedWorkspace.getValue());
     let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
 
     $effect(async () => {
@@ -40,64 +40,66 @@
     });
 
     async function fetchNavigationObject() {
-        const newDatasetList = [];
-        const datasets = (await datasetStore.getDatasets()) ?? [];
-        for (const dataset of datasets) {
-            const datasetName = dataset.label;
-            let showDatasetContents = datasetName === selectedDatasetName;
-            showDatasetContents |= datasetList.find(
-                datasetObject => datasetObject.label === datasetName,
+        const newWorkspaceList = [];
+        const workspaces = (await datasetStore.getDatasets()) ?? [];
+        for (const workspace of workspaces) {
+            const workspaceName = workspace.label;
+            let showWorkspaceContents = workspaceName === selectedWorkspaceName;
+            showWorkspaceContents |= workspaceList.find(
+                workspaceObject => workspaceObject.label === workspaceName,
             )?.showContents;
-            newDatasetList.push({
-                label: datasetName,
+            newWorkspaceList.push({
+                label: workspaceName,
                 graphs: [],
-                showContents: showDatasetContents,
+                showContents: showWorkspaceContents,
             });
-            const graphs = (await graphStore.getGraphs(datasetName)) ?? [];
-            graphs.forEach(graph => newDatasetList.at(-1).graphs.push(graph));
+            const graphs = (await graphStore.getGraphs(workspaceName)) ?? [];
+            graphs.forEach(graph => newWorkspaceList.at(-1).graphs.push(graph));
         }
-        datasetList = newDatasetList;
+        workspaceList = newWorkspaceList;
     }
 </script>
 
 <div class="nav-sidebar h-full w-full">
     <div class="nav-sidebar__scroll no-scrollbar">
-        {#if datasetList && datasetList.length > 0}
+        {#if workspaceList && workspaceList.length > 0}
             <div class="flex flex-col gap-1 pr-2">
-                {#each datasetList as dataset}
+                {#each workspaceList as workspace}
                     <div>
                         <NavigationEntry
                             level={1}
-                            label={dataset.label}
+                            label={workspace.label}
                             icon={faDatabase}
-                            hasChildren={dataset.graphs.length > 0}
-                            expanded={dataset.showContents}
-                            isSelected={dataset.label === selectedDatasetName}
-                            title={dataset.label}
+                            hasChildren={workspace.graphs.length > 0}
+                            expanded={workspace.showContents}
+                            isSelected={workspace.label ===
+                                selectedWorkspaceName}
+                            title={workspace.label}
                             onclick={() => {
-                                editorState.selectedDataset.updateValue(
-                                    dataset.label,
+                                editorState.selectedWorkspace.updateValue(
+                                    workspace.label,
                                 );
                             }}
                             onToggle={() => {
-                                if (!dataset.graphs.length) return;
-                                dataset.showContents = !dataset.showContents;
+                                if (!workspace.graphs.length) return;
+                                workspace.showContents =
+                                    !workspace.showContents;
                             }}
                         />
-                        {#if dataset.showContents}
-                            {#each dataset.graphs as graph}
+                        {#if workspace.showContents}
+                            {#each workspace.graphs as graph}
                                 <NavigationEntry
                                     level={2}
                                     label={graph.keyword ?? graph.uri.suffix}
                                     secondaryLabel={graph.uri.prefix ?? ""}
                                     icon={faDiagramProject}
-                                    isSelected={selectedDatasetName ===
-                                        dataset.label &&
+                                    isSelected={selectedWorkspaceName ===
+                                        workspace.label &&
                                         getUri(graph) === selectedGraphUri}
                                     title={getUri(graph)}
                                     onclick={() => {
-                                        editorState.selectedDataset.updateValue(
-                                            dataset.label,
+                                        editorState.selectedWorkspace.updateValue(
+                                            workspace.label,
                                         );
                                         editorState.selectedGraph.updateValue(
                                             getUri(graph),

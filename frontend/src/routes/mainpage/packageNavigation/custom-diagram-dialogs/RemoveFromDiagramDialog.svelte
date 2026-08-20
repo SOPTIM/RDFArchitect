@@ -27,7 +27,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         graphUri,
         diagramId,
         classIds = [],
@@ -44,13 +44,13 @@
     async function removeFromDiagram() {
         const { error } = graphUri
             ? await customDiagramStore.removeClassesFromGraphDiagram(
-                  lockedDatasetName,
+                  lockedWorkspaceName,
                   graphUri,
                   diagramId,
                   classIds,
               )
             : await customDiagramStore.removeClassesFromDatasetDiagram(
-                  lockedDatasetName,
+                  lockedWorkspaceName,
                   diagramId,
                   classIds,
               );

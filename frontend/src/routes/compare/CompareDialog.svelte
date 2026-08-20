@@ -23,7 +23,7 @@
         compareSchemasFromFiles,
         compareStoredSchemas,
     } from "$lib/api/generated/index.ts";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
@@ -37,7 +37,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -50,10 +50,10 @@
 
     let compareMode = $state(CompareMode.STORED_TO_STORED);
 
-    let datasetA = $state(null);
+    let workspaceA = $state(null);
     let graphA = $state(null);
 
-    let datasetB = $state(null);
+    let workspaceB = $state(null);
     let graphB = $state(null);
 
     let fileA = $state(null);
@@ -78,7 +78,7 @@
         {
             value: CompareMode.FILE_TO_FILE,
             label: "Uploaded schema → Uploaded schema",
-            disabled: !!lockedDatasetName || !!lockedGraphUri,
+            disabled: !!lockedWorkspaceName || !!lockedGraphUri,
         },
     ]);
 
@@ -88,25 +88,26 @@
         }
 
         if (compareMode === CompareMode.FILE_TO_STORED) {
-            return !datasetB || !graphB || !fileA;
+            return !workspaceB || !graphB || !fileA;
         }
 
         if (compareMode === CompareMode.STORED_TO_FILE) {
-            return !datasetA || !graphA || !fileA;
+            return !workspaceA || !graphA || !fileA;
         }
 
         if (compareMode === CompareMode.STORED_TO_STORED) {
-            return !datasetA || !graphA || !datasetB || !graphB;
+            return !workspaceA || !graphA || !workspaceB || !graphB;
         }
 
         return true;
     });
 
     function onOpen() {
-        datasetA = lockedDatasetName ?? editorState.selectedDataset.getValue();
+        workspaceA =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graphA = lockedGraphUri ?? editorState.selectedGraph.getValue();
 
-        datasetB = null;
+        workspaceB = null;
         graphB = null;
 
         fileA = null;
@@ -116,10 +117,10 @@
     function onClose() {
         compareMode = CompareMode.STORED_TO_STORED;
 
-        datasetA = null;
+        workspaceA = null;
         graphA = null;
 
-        datasetB = null;
+        workspaceB = null;
         graphB = null;
 
         fileA = null;
@@ -129,7 +130,7 @@
     function onCompareModeChange(mode) {
         compareMode = mode;
 
-        datasetB = null;
+        workspaceB = null;
         graphB = null;
 
         fileA = null;
@@ -138,20 +139,20 @@
 
     function swapSelections() {
         if (compareMode === CompareMode.STORED_TO_STORED) {
-            [datasetA, datasetB] = [datasetB, datasetA];
+            [workspaceA, workspaceB] = [workspaceB, workspaceA];
             [graphA, graphB] = [graphB, graphA];
         } else if (compareMode === CompareMode.FILE_TO_FILE) {
             [fileA, fileB] = [fileB, fileA];
         } else if (compareMode === CompareMode.FILE_TO_STORED) {
-            datasetA = datasetB;
+            workspaceA = workspaceB;
             graphA = graphB;
-            datasetB = null;
+            workspaceB = null;
             graphB = null;
             compareMode = CompareMode.STORED_TO_FILE;
         } else if (compareMode === CompareMode.STORED_TO_FILE) {
-            datasetB = datasetA;
+            workspaceB = workspaceA;
             graphB = graphA;
-            datasetA = null;
+            workspaceA = null;
             graphA = null;
             compareMode = CompareMode.FILE_TO_STORED;
         }
@@ -195,21 +196,21 @@
                 break;
             case CompareMode.FILE_TO_STORED:
                 response = await compareSchemas({
-                    path: { datasetName: datasetB, graphURI: graphB },
+                    path: { datasetName: workspaceB, graphURI: graphB },
                     body: fileA,
                 });
                 break;
             case CompareMode.STORED_TO_FILE:
                 response = await compareSchemas({
-                    path: { datasetName: datasetA, graphURI: graphA },
+                    path: { datasetName: workspaceA, graphURI: graphA },
                     body: fileB,
                 });
                 invert = true;
                 break;
             case CompareMode.STORED_TO_STORED:
                 response = await compareStoredSchemas({
-                    path: { datasetName: datasetA, graphURI: graphA },
-                    query: { otherDataset: datasetB, otherGraph: graphB },
+                    path: { datasetName: workspaceA, graphURI: graphA },
+                    query: { otherDataset: workspaceB, otherGraph: graphB },
                 });
                 break;
             default:
@@ -224,9 +225,9 @@
         compareState.changeList.updateValue(changeList);
         migrationState.set({
             compareMode,
-            datasetA,
+            workspaceA,
             graphA,
-            datasetB,
+            workspaceB,
             graphB,
             fileA,
             fileB,
@@ -273,10 +274,10 @@
                     <span class="text-text-subtle px-1 text-xs font-medium">
                         Before
                     </span>
-                    <DatasetAndGraphSelection
-                        bind:dataset={datasetA}
+                    <WorkspaceAndGraphSelection
+                        bind:workspace={workspaceA}
                         bind:graph={graphA}
-                        {lockedDatasetName}
+                        {lockedWorkspaceName}
                         {lockedGraphUri}
                     />
                 </div>
@@ -298,8 +299,8 @@
                     <span class="text-text-subtle px-1 text-xs font-medium">
                         After
                     </span>
-                    <DatasetAndGraphSelection
-                        bind:dataset={datasetB}
+                    <WorkspaceAndGraphSelection
+                        bind:workspace={workspaceB}
                         bind:graph={graphB}
                     />
                 </div>
@@ -334,10 +335,10 @@
                     <span class="text-text-subtle px-1 text-xs font-medium">
                         After
                     </span>
-                    <DatasetAndGraphSelection
-                        bind:dataset={datasetB}
+                    <WorkspaceAndGraphSelection
+                        bind:workspace={workspaceB}
                         bind:graph={graphB}
-                        {lockedDatasetName}
+                        {lockedWorkspaceName}
                         {lockedGraphUri}
                     />
                 </div>
@@ -348,10 +349,10 @@
                     <span class="text-text-subtle px-1 text-xs font-medium">
                         Before
                     </span>
-                    <DatasetAndGraphSelection
-                        bind:dataset={datasetA}
+                    <WorkspaceAndGraphSelection
+                        bind:workspace={workspaceA}
                         bind:graph={graphA}
-                        {lockedDatasetName}
+                        {lockedWorkspaceName}
                         {lockedGraphUri}
                     />
                 </div>

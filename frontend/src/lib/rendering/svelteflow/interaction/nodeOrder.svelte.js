@@ -163,7 +163,7 @@ export class NodeOrderController {
         if (editorState.selectedGraph.getValue()) {
             updateClassPositions({
                 path: {
-                    datasetName: editorState.selectedDataset.getValue(),
+                    datasetName: editorState.selectedWorkspace.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
                     diagramUUID: editorState.selectedDiagram.getProperty("id"),
                 },
@@ -172,7 +172,7 @@ export class NodeOrderController {
         } else {
             updateDatasetClassPositions({
                 path: {
-                    datasetName: editorState.selectedDataset.getValue(),
+                    datasetName: editorState.selectedWorkspace.getValue(),
                     diagramUUID: editorState.selectedDiagram.getProperty("id"),
                 },
                 body: { classPositionDTOList },

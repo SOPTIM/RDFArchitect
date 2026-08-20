@@ -41,8 +41,8 @@
     } from "$lib/sharedState.svelte.js";
     import { shortenIri } from "$lib/utils/iri.js";
 
-    import AddToDatasetDiagramDialog from "./custom-diagram-dialogs/AddToDatasetDiagramDialog.svelte";
     import AddToGraphDiagramDialog from "./custom-diagram-dialogs/AddToGraphDiagramDialog.svelte";
+    import AddToWorkspaceDiagramDialog from "./custom-diagram-dialogs/AddToWorkspaceDiagramDialog.svelte";
     import RemoveFromDiagramDialog from "./custom-diagram-dialogs/RemoveFromDiagramDialog.svelte";
     import ExtendClassDialog from "./ExtendClassDialog.svelte";
     import { classHighlight } from "./packageNavigationUtils.svelte.js";
@@ -50,13 +50,14 @@
     import SHACLClassSpecificPopUp from "../../shacl/shaclclassspecific/SHACLClassSpecificPopUp.svelte";
 
     let {
-        datasetNavEntry,
+        workspaceNavEntry,
         graphNavEntry,
         classNavEntry,
         diagramId,
         diagramGraphUri,
         rangeSiblings = null,
         namespaces = [],
+        level = 3,
         readonly = false,
         onPackChange = () => {},
         classType = ClassType.SINGLE_CLASS,
@@ -67,13 +68,17 @@
     let showSHACLDialog = $state(false);
     let showExtendClassDialog = $state(false);
     let showAddToGraphDiagramDialog = $state(false);
-    let showAddToDatasetDiagramDialog = $state(false);
+    let showAddToWorkspaceDiagramDialog = $state(false);
     let showRemoveFromDiagramDialog = $state(false);
 
     const highlightLabel = $derived(shortenIri(namespaces, classNavEntry.id));
 
     const classState = $derived(
-        classHighlight(datasetNavEntry.id, graphNavEntry.id, classNavEntry.id),
+        classHighlight(
+            workspaceNavEntry.id,
+            graphNavEntry.id,
+            classNavEntry.id,
+        ),
     );
     const shaclClass = $derived({
         uuid: { value: classNavEntry?.id },
@@ -82,7 +87,7 @@
 
     const isMultiSelected = $derived(
         multiSelectState.isSelected(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
             classNavEntry.id,
         ),
@@ -116,7 +121,7 @@
         graphUri = graphNavEntry?.id,
     ) {
         return {
-            datasetName: datasetNavEntry.id,
+            workspaceName: workspaceNavEntry.id,
             graphUri,
             classUuid: navEntry.id,
             classLabel: navEntry.label,
@@ -144,7 +149,7 @@
                 anchor &&
                 isOpenPackageClass(anchor) &&
                 !(
-                    anchor.datasetName === entry.datasetName &&
+                    anchor.workspaceName === entry.workspaceName &&
                     anchor.graphUri === entry.graphUri &&
                     anchor.classUuid === entry.classUuid
                 )
@@ -197,7 +202,8 @@
         }
         return (
             uuid === entry.classUuid &&
-            editorState.selectedClassDataset.getValue() === entry.datasetName &&
+            editorState.selectedClassWorkspace.getValue() ===
+                entry.workspaceName &&
             editorState.selectedClassGraph.getValue() === entry.graphUri
         );
     }
@@ -224,7 +230,7 @@
                   u =>
                       u.navEntry.id === anchor.classUuid &&
                       u.graphUri === anchor.graphUri &&
-                      anchor.datasetName === datasetNavEntry.id,
+                      anchor.workspaceName === workspaceNavEntry.id,
               )
             : -1;
         const targetIdx = units.findIndex(
@@ -256,7 +262,7 @@
         if (
             multiSelectState.count > 0 &&
             !multiSelectState.isSelected(
-                datasetNavEntry.id,
+                workspaceNavEntry.id,
                 graphNavEntry.id,
                 classNavEntry.id,
             )
@@ -276,7 +282,9 @@
         onPackChange();
         if (!editorState.selectedClass.getProperty("id")) {
             eventStack.executeNewestEvent(classNavEntry.id);
-            editorState.selectedClassDataset.updateValue(datasetNavEntry.id);
+            editorState.selectedClassWorkspace.updateValue(
+                workspaceNavEntry.id,
+            );
             editorState.selectedClassGraph.updateValue(graphNavEntry.id);
             editorState.selectedClass.updateValue({
                 type: classType,
@@ -286,7 +294,7 @@
         }
         //The event executed to open the discard confirm delete dialog
         eventStack.executeNewestEvent({
-            datasetName: datasetNavEntry.id,
+            workspaceName: workspaceNavEntry.id,
             graphUri: graphNavEntry?.id ?? null,
             classUuid: classNavEntry.id,
             classType: classType,
@@ -302,7 +310,7 @@
     }
 
     function showClassInPackage() {
-        editorState.selectedDataset.updateValue(datasetNavEntry.id);
+        editorState.selectedWorkspace.updateValue(workspaceNavEntry.id);
         editorState.selectedGraph.updateValue(graphNavEntry.id);
         editorState.selectedDiagram.updateValue({
             type: diagramType,
@@ -317,7 +325,7 @@
             multiSelectState.copyEntriesOr({
                 classUUID: classNavEntry.id,
                 graphURI: graphNavEntry.id,
-                datasetName: datasetNavEntry.id,
+                workspaceName: workspaceNavEntry.id,
             }),
         );
     }
@@ -326,7 +334,7 @@
 <ContextMenu.Root>
     <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
         <NavigationEntry
-            level={4}
+            {level}
             label={classNavEntry.label}
             icon={faFileLines}
             isSelected={classState === "active"}
@@ -390,12 +398,12 @@
                 </ContextMenu.Item.Button>
                 <ContextMenu.Item.Button
                     onSelect={() => {
-                        showAddToDatasetDiagramDialog = true;
+                        showAddToWorkspaceDiagramDialog = true;
                     }}
                     disabled={crossGraphDisabled}
                     faIcon={faObjectGroup}
                 >
-                    Add to Dataset Diagram
+                    Add to Workspace Diagram
                 </ContextMenu.Item.Button>
             {/if}
             <ContextMenu.Separator />
@@ -434,7 +442,7 @@
 {#if showDeleteDependenciesDialog}
     <DeleteDependenciesDialog
         bind:showDialog={showDeleteDependenciesDialog}
-        datasetName={datasetNavEntry.id}
+        workspaceName={workspaceNavEntry.id}
         graphUri={graphNavEntry.id}
         resourceUuids={selectedClassIds}
     />
@@ -442,7 +450,7 @@
 
 {#if showSHACLDialog}
     <SHACLClassSpecificPopUp
-        datasetName={datasetNavEntry.id}
+        workspaceName={workspaceNavEntry.id}
         graphUri={graphNavEntry.id}
         reactiveClass={shaclClass}
         bind:showDialog={showSHACLDialog}
@@ -452,16 +460,16 @@
 {#if showAddToGraphDiagramDialog}
     <AddToGraphDiagramDialog
         bind:showDialog={showAddToGraphDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+        lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
         classes={selectedClassNavEntries}
     />
 {/if}
 
-{#if showAddToDatasetDiagramDialog}
-    <AddToDatasetDiagramDialog
-        bind:showDialog={showAddToDatasetDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+{#if showAddToWorkspaceDiagramDialog}
+    <AddToWorkspaceDiagramDialog
+        bind:showDialog={showAddToWorkspaceDiagramDialog}
+        lockedWorkspaceName={workspaceNavEntry.id}
         lockedGraphUri={graphNavEntry.id}
         classes={selectedClassNavEntries}
     />
@@ -470,7 +478,7 @@
 {#if showRemoveFromDiagramDialog}
     <RemoveFromDiagramDialog
         bind:showDialog={showRemoveFromDiagramDialog}
-        lockedDatasetName={datasetNavEntry.id}
+        lockedWorkspaceName={workspaceNavEntry.id}
         graphUri={diagramGraphUri}
         {diagramId}
         classIds={selectedClassIds}
@@ -480,7 +488,7 @@
 
 {#if showExtendClassDialog}
     <ExtendClassDialog
-        datasetName={datasetNavEntry.id}
+        workspaceName={workspaceNavEntry.id}
         graphUri={graphNavEntry.id}
         classUUID={classNavEntry.id}
         bind:showDialog={showExtendClassDialog}

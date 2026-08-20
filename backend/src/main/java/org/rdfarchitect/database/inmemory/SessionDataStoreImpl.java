@@ -35,6 +35,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -58,7 +59,17 @@ public class SessionDataStoreImpl implements SessionDataStore {
     // lock to prohibit dirty reads/writes
     private final ReentrantLock lock = new ReentrantLock();
 
-    private void createDataset(String datasetName) {
+    @Override
+    public void createDataset(String datasetName) {
+        lock.lock();
+        try {
+            createDatasetIfAbsent(datasetName);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private void createDatasetIfAbsent(String datasetName) {
         graphCollections.putIfAbsent(datasetName, new GraphWithContextCollection());
     }
 
@@ -71,6 +82,37 @@ public class SessionDataStoreImpl implements SessionDataStore {
             }
             graphCollections.get(datasetName).clear();
             graphCollections.remove(datasetName);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void renameDataset(String oldDatasetName, String newDatasetName) {
+        lock.lock();
+        try {
+            if (oldDatasetName.equals(newDatasetName)) {
+                return;
+            }
+            assertThatDatasetExists(oldDatasetName);
+            if (graphCollections.containsKey(newDatasetName)) {
+                throw new ResourceConflictException(
+                        "Dataset " + newDatasetName + " already exists");
+            }
+            graphCollections.put(newDatasetName, graphCollections.remove(oldDatasetName));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+        lock.lock();
+        try {
+            assertThatGraphExists(graphIdentifier);
+            graphCollections
+                    .get(graphIdentifier.datasetName())
+                    .rename(graphIdentifier.graphUri(), newGraphUri);
         } finally {
             lock.unlock();
         }
@@ -90,7 +132,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public GraphContext getGraphWithContext(GraphIdentifier graphIdentifier) {
         lock.lock();
         try {
-            createDataset(graphIdentifier.datasetName());
+            createDatasetIfAbsent(graphIdentifier.datasetName());
             return graphCollections
                     .get(graphIdentifier.datasetName())
                     .getGraphWithContext(graphIdentifier.graphUri());
@@ -136,7 +178,7 @@ public class SessionDataStoreImpl implements SessionDataStore {
     public void create(GraphIdentifier graphIdentifier, Graph newGraph) {
         lock.lock();
         try {
-            createDataset(graphIdentifier.datasetName());
+            createDatasetIfAbsent(graphIdentifier.datasetName());
             graphCollections
                     .get(graphIdentifier.datasetName())
                     .create(graphIdentifier.graphUri(), newGraph);
@@ -155,9 +197,6 @@ public class SessionDataStoreImpl implements SessionDataStore {
                 return;
             }
             graphCollections.get(datasetName).remove(graphUri);
-            if (graphCollections.get(datasetName).listGraphUris().isEmpty()) {
-                graphCollections.remove(datasetName);
-            }
         } finally {
             lock.unlock();
         }

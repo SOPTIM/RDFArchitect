@@ -23,34 +23,34 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
 
     let {
-        dataset = $bindable(),
+        workspace = $bindable(),
         graph = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
-        allowSelectionOfReadonlyDatasets = true,
+        allowSelectionOfReadonlyWorkspaces = true,
         displayAsCard = true,
     } = $props();
 
-    const datasetSelectId = `datasetSelect-${uuidv4()}`;
+    const workspaceSelectId = `workspaceSelect-${uuidv4()}`;
     const graphSelectId = `graphSelect-${uuidv4()}`;
 
-    let datasets = $state([]);
+    let workspaces = $state([]);
     let graphs = $state([]);
 
-    const datasetLocked = $derived(lockedDatasetName !== undefined);
+    const workspaceLocked = $derived(lockedWorkspaceName !== undefined);
     const graphLocked = $derived(lockedGraphUri !== undefined);
 
-    const graphSelectDisabled = $derived(graphLocked || !dataset);
+    const graphSelectDisabled = $derived(graphLocked || !workspace);
 
     $effect(async () => {
-        if (datasetLocked) return;
-        if (!dataset) {
+        if (workspaceLocked) return;
+        if (!workspace) {
             graph = graphLocked ? lockedGraphUri : null;
             graphs = [];
             return;
         }
 
-        graphs = (await graphStore.getGraphs(dataset)) ?? [];
+        graphs = (await graphStore.getGraphs(workspace)) ?? [];
         const valid = graphs.some(graphName => getUri(graphName) === graph);
         if (!valid && !graphLocked) {
             graph = null;
@@ -58,21 +58,21 @@
     });
 
     onMount(async () => {
-        datasets = (await datasetStore.getDatasets()) ?? [];
-        if (datasetLocked) dataset = lockedDatasetName;
+        workspaces = (await datasetStore.getDatasets()) ?? [];
+        if (workspaceLocked) workspace = lockedWorkspaceName;
         if (graphLocked) graph = lockedGraphUri;
 
-        if (!datasetLocked && dataset && !allowSelectionOfReadonlyDatasets) {
-            const selectedDataset = datasets.find(
-                option => option.label === dataset,
+        if (!workspaceLocked && workspace && !allowSelectionOfReadonlyWorkspaces) {
+            const selectedWorkspace = workspaces.find(
+                option => option.label === workspace,
             );
-            if (!selectedDataset || selectedDataset.readOnly) {
-                dataset = null;
+            if (!selectedWorkspace || selectedWorkspace.readOnly) {
+                workspace = null;
             }
         }
 
-        if (dataset) {
-            graphs = await graphStore.getGraphs(dataset);
+        if (workspace) {
+            graphs = await graphStore.getGraphs(workspace);
         } else {
             graphs = [];
         }
@@ -94,22 +94,29 @@
         ? "border-border bg-background-subtle rounded border p-3"
         : ""}
 >
-    <label for={datasetSelectId} class="mb-1 block text-sm">Dataset</label>
-    <SelectEditControl
-        id={datasetSelectId}
-        bind:value={dataset}
-        options={datasets}
-        getOptionIsDisabled={dataset =>
-            !allowSelectionOfReadonlyDatasets && dataset.readOnly}
-        getOptionValue={dataset => dataset.label}
-        getOptionLabel={dataset =>
-            dataset.label + (dataset.readOnly ? " (readonly)" : "")}
-        disabled={datasetLocked || (datasets?.length ?? 0) === 0}
-        placeholder="Select dataset"
-        onchange={() => (graph = null)}
-    />
+    {#if !workspaceLocked}
+        <label for={workspaceSelectId} class="mb-1 block text-sm">
+            Workspace
+        </label>
+        <SelectEditControl
+            id={workspaceSelectId}
+            bind:value={workspace}
+            options={workspaces}
+            getOptionIsDisabled={workspace =>
+                !allowSelectionOfReadonlyWorkspaces && workspace.readonly}
+            getOptionValue={workspace => workspace.label}
+            getOptionLabel={workspace =>
+                workspace.label + (workspace.readOnly ? " (readonly)" : "")}
+            disabled={(workspaces?.length ?? 0) === 0}
+            placeholder="Select workspace"
+            onchange={() => (graph = null)}
+        />
+    {/if}
 
-    <label for={graphSelectId} class="mt-3 mb-1 block text-sm">
+    <label
+        for={graphSelectId}
+        class={`mb-1 block text-sm ${workspaceLocked ? "" : "mt-3"}`}
+    >
         Schema (RDFS)
     </label>
     <SelectEditControl
@@ -117,7 +124,7 @@
         bind:value={graph}
         options={graphs}
         disabled={graphSelectDisabled}
-        placeholder={dataset ? "Select schema" : "Select a dataset first"}
+        placeholder={workspace ? "Select schema" : "Select a workspace first"}
         getOptionValue={getUri}
         getOptionLabel={g => g.keyword ?? g.uri.suffix}
     />

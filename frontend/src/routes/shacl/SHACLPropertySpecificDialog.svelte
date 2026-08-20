@@ -49,9 +49,9 @@
     let showGeneratedShacl = $state(false);
     let showGeneratedNamespaces = $state(false);
     let showCustomNamespaces = $state(false);
-    let classDatasetName = $derived(
-        editorState.selectedClassDataset.getValue() ??
-            editorState.selectedDataset.getValue(),
+    let classWorkspaceName = $derived(
+        editorState.selectedClassWorkspace.getValue() ??
+            editorState.selectedWorkspace.getValue(),
     );
     let classGraphUri = $derived(
         editorState.selectedClassGraph.getValue() ??

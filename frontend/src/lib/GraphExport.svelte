@@ -21,7 +21,7 @@
     import { Fa } from "svelte-fa";
 
     import { DropdownMenu } from "$lib/components/bitsui/dropdown/index";
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
@@ -35,13 +35,13 @@
     let {
         showDialog = $bindable(),
         disablePrimary = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
         generateOntologyEntries = false,
         supportedMediaTypes = supportedRDFMediaTypes,
     } = $props();
 
-    let selectedDatasetName = $state(null);
+    let selectedWorkspaceName = $state(null);
     let graphURI = $state(null);
     let selectedMediaType = $state();
 
@@ -63,21 +63,21 @@
     $effect(
         () =>
             (disablePrimary =
-                !selectedDatasetName || !graphURI || !selectedMediaType),
+                !selectedWorkspaceName || !graphURI || !selectedMediaType),
     );
 
     $effect(async () => {
-        if (selectedDatasetName) {
-            namespaces = await datasetStore.getNamespaces(selectedDatasetName);
+        if (selectedWorkspaceName) {
+            namespaces = await datasetStore.getNamespaces(selectedWorkspaceName);
         } else {
             namespaces = [];
         }
     });
 
     $effect(async () => {
-        if (selectedDatasetName && graphURI) {
+        if (selectedWorkspaceName && graphURI) {
             const result = await ontologyStore.getOntologyForGraph(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
             );
             if (result == null || result === undefined) {
@@ -94,9 +94,9 @@
     });
 
     $effect(async () => {
-        if (selectedDatasetName && graphURI && hasOntology) {
+        if (selectedWorkspaceName && graphURI && hasOntology) {
             const { error, data } = await ontologyStore.generateOntologyEntries(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
             );
             if (!error) {
@@ -111,8 +111,8 @@
     });
 
     onMount(async () => {
-        selectedDatasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        selectedWorkspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
         const saved = userSettings.get("defaultExportFormat", null);
         selectedMediaType = saved
@@ -127,7 +127,7 @@
     }
 
     async function fetchGraphFile(getAPIRoute) {
-        return fetch(getAPIRoute(selectedDatasetName, graphURI), {
+        return fetch(getAPIRoute(selectedWorkspaceName, graphURI), {
             method: "GET",
             headers: new Headers({ Accept: selectedMediaType.mimeType }),
             credentials: "include",
@@ -138,7 +138,7 @@
     export async function handleExport(getAPIRoute) {
         if (
             !getAPIRoute ||
-            !selectedDatasetName ||
+            !selectedWorkspaceName ||
             !graphURI ||
             !selectedMediaType
         ) {
@@ -151,7 +151,7 @@
                 }
             }
             const { error } = await ontologyStore.replaceOntology(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
                 ontology.getPlainObject(),
             );
@@ -203,10 +203,10 @@
 </script>
 
 <div class="mx-2 mt-2 flex h-full flex-col">
-    <DatasetAndGraphSelection
-        bind:dataset={selectedDatasetName}
+    <WorkspaceAndGraphSelection
+        bind:workspace={selectedWorkspaceName}
         bind:graph={graphURI}
-        {lockedDatasetName}
+        {lockedWorkspaceName}
         {lockedGraphUri}
         displayAsCard={false}
     />

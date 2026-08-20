@@ -25,7 +25,7 @@
     import SHACLShapeTtlRenderer from "./SHACLShapeTtlRenderer.svelte";
 
     let {
-        datasetName,
+        workspaceName,
         graphUri,
         reactiveClass,
         showDialog = $bindable(),
@@ -60,7 +60,7 @@
         try {
             const { data, error } = await getShaclRelatedToClass({
                 path: {
-                    datasetName: datasetName,
+                    datasetName: workspaceName,
                     graphURI: graphUri,
                     classUUID: reactiveClass.uuid.value,
                 },
@@ -80,7 +80,7 @@
     }
 
     function goToClass(classUUID) {
-        editorState.selectedClassDataset.updateValue(datasetName);
+        editorState.selectedClassWorkspace.updateValue(workspaceName);
         editorState.selectedClassGraph.updateValue(graphUri);
         editorState.selectedClass.updateValue({
             type: ClassType.SINGLE_CLASS,

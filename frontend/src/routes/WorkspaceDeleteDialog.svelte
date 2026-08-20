@@ -30,36 +30,43 @@
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
+    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
+    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
+    import { workspaceState } from "$lib/workspaceState.svelte.js";
 
-    let { showDialog = $bindable(), datasetName } = $props();
+    let { showDialog = $bindable(), workspaceName } = $props();
 
     const baseDeletionDescription =
-        "All schemas and packages inside this dataset will be permanently removed.";
+        "All schemas and packages inside this workspace will be permanently removed.";
     let graphs = $state(null);
 
     async function onOpen() {
-        graphs = await graphStore.getGraphs(datasetName);
+        graphs = await graphStore.getGraphs(workspaceName);
     }
 
     function onClose() {
         graphs = null;
     }
 
-    async function deleteDataset() {
+    async function deleteWorkspace() {
+        const deletedWorkspace = workspaceName;
+        if (!deletedWorkspace) {
+            return;
+        }
         try {
-            if (!datasetName) return;
+            if (!workspaceName) return;
 
-            const res = await datasetStore.remove(datasetName);
+            const res = await datasetStore.remove(workspaceName);
             if (res.error) return;
 
-            graphStore.invalidateDataset(datasetName);
-            classStore.invalidateDataset(datasetName);
-            packageStore.invalidateDataset(datasetName);
-            datatypesStore.invalidateDataset(datasetName);
-            ontologyStore.invalidateDataset(datasetName);
-            customDiagramStore.invalidateDataset(datasetName);
+            graphStore.invalidateDataset(workspaceName);
+            classStore.invalidateDataset(workspaceName);
+            packageStore.invalidateDataset(workspaceName);
+            datatypesStore.invalidateDataset(workspaceName);
+            ontologyStore.invalidateDataset(workspaceName);
+            customDiagramStore.invalidateDataset(workspaceName);
 
-            if (editorState.selectedDataset.getValue() === datasetName) {
+            if (editorState.selectedWorkspace.getValue() === workspaceName) {
                 editorState.reset();
             }
         } finally {
@@ -73,9 +80,11 @@
     {onOpen}
     {onClose}
     size="w-full max-w-lg"
-    primaryLabel="Delete Dataset"
-    onPrimary={deleteDataset}
-    title={datasetName ? `Delete Dataset "${datasetName}"?` : "Delete Dataset?"}
+    primaryLabel="Delete Workspace"
+    onPrimary={deleteWorkspace}
+    title={workspaceName
+        ? `Delete Workspace "${workspaceName}"?`
+        : "Delete Workspace?"}
     primaryVariant="danger"
     titleIcon={faExclamation}
     titleIconStyle="text-white text-xl bg-red w-8 min-h-8 p-1.5 rounded-md flex items-center justify-center"
@@ -83,7 +92,7 @@
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-3/4 text-sm leading-relaxed">
             {(() => {
-                if (!datasetName || graphs === null) {
+                if (!workspaceName || graphs === null) {
                     return baseDeletionDescription;
                 }
                 const graphCount = graphs.length ?? 0;

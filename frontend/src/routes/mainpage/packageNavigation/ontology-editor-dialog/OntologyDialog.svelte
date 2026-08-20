@@ -36,7 +36,7 @@
 
     let {
         showDialog = $bindable(),
-        dataset,
+        workspace,
         graphUri,
         namespaces,
         ontology = $bindable(),
@@ -84,7 +84,7 @@
 
     async function onOpen() {
         if (!namespaces) {
-            namespaces = await datasetStore.getNamespaces(dataset);
+            namespaces = await datasetStore.getNamespaces(workspace);
         }
 
         namespaces = withOntologyDefaultNamespaces(namespaces);
@@ -126,7 +126,7 @@
     async function save() {
         loadingOntology = true;
         try {
-            await saveOntology(dataset, graphUri, ontologyObject);
+            await saveOntology(workspace, graphUri, ontologyObject);
             const ontology = await getOntology();
             if (ontology) {
                 ontologyObject = new ReactiveOntology(
@@ -161,14 +161,14 @@
         if (!graphUri) {
             return null;
         }
-        return await ontologyStore.getOntologyForGraph(dataset, graphUri);
+        return await ontologyStore.getOntologyForGraph(workspace, graphUri);
     }
 
-    async function saveOntology(datasetName, graphUri, ontologyObject) {
+    async function saveOntology(workspaceName, graphUri, ontologyObject) {
         const serializable = ontologyObject.getPlainObject();
         if (ontologyObject.uuid.value) {
             await ontologyStore.replaceOntology(
-                datasetName,
+                workspaceName,
                 graphUri,
                 serializable,
             );
@@ -340,6 +340,6 @@
     existingEntries={ontologyObject.entries}
     scrollToBottom={scrollEntriesToBottom}
     {namespaces}
-    {dataset}
+    {workspace}
     {graphUri}
 />

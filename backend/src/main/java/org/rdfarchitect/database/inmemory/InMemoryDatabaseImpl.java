@@ -31,6 +31,7 @@ import org.rdfarchitect.database.GraphContext;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
 import org.rdfarchitect.services.diagrams.CrossProfileUtils;
 
@@ -53,8 +54,28 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
             new ConcurrentHashMap<>();
 
     @Override
+    public void createDataset(String datasetName) {
+        var store = getOrCreateSessionDataStore();
+        if (store.listDatasets().contains(datasetName)) {
+            throw new ResourceConflictException("Dataset " + datasetName + " already exists");
+        }
+        store.createDataset(datasetName);
+        initializeNewDataset(store, datasetName);
+    }
+
+    @Override
     public void deleteDataset(String datasetName) {
         getOrCreateSessionDataStore().deleteDataset(datasetName);
+    }
+
+    @Override
+    public void renameDataset(String oldDatasetName, String newDatasetName) {
+        getOrCreateSessionDataStore().renameDataset(oldDatasetName, newDatasetName);
+    }
+
+    @Override
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+        getOrCreateSessionDataStore().renameGraph(graphIdentifier, newGraphUri);
     }
 
     @Override
@@ -104,14 +125,18 @@ public class InMemoryDatabaseImpl implements InMemoryDatabase {
         store.getCrossProfileDiagramInfo(graphIdentifier.datasetName())
                 .setColor(graphIdentifier.graphUri(), CrossProfileUtils.generateRandomDarkColor());
         if (isNewDataset) {
-            store.enableEditing(datasetName);
-            var configNamespaces = schemaConfig.getNamespaces();
-            var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
-            for (var entry : configNamespaces.entrySet()) {
-                prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
-            }
-            store.setPrefixMapping(datasetName, prefixMapping);
+            initializeNewDataset(store, datasetName);
         }
+    }
+
+    private void initializeNewDataset(SessionDataStore store, String datasetName) {
+        store.enableEditing(datasetName);
+        var configNamespaces = schemaConfig.getNamespaces();
+        var prefixMapping = new PrefixMappingImpl().setNsPrefixes(PrefixMapping.Standard);
+        for (var entry : configNamespaces.entrySet()) {
+            prefixMapping.setNsPrefix(entry.getKey(), entry.getValue());
+        }
+        store.setPrefixMapping(datasetName, prefixMapping);
     }
 
     @Override

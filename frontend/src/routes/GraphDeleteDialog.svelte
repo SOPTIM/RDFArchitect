@@ -33,18 +33,18 @@
 
     let { showDialog = $bindable() } = $props();
 
-    let datasetName = $state();
+    let workspaceName = $state();
     let graphURI = $state();
 
-    let disableSubmit = $derived(!datasetName || !graphURI);
+    let disableSubmit = $derived(!workspaceName || !graphURI);
 
     async function onOpen() {
-        datasetName = editorState.selectedDataset.getValue();
+        workspaceName = editorState.selectedWorkspace.getValue();
         graphURI = editorState.selectedGraph.getValue();
     }
 
     function onClose() {
-        datasetName = null;
+        workspaceName = null;
         graphURI = null;
     }
 
@@ -52,21 +52,21 @@
         const { error } = await graphStore.remove(datasetName, graphURI);
         if (error) return;
 
-        editorState.selectedDataset.updateValue(null);
+        editorState.selectedWorkspace.updateValue(null);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
             type: null,
             id: null,
         });
-        editorState.selectedClassDataset.updateValue(null);
+        editorState.selectedClassWorkspace.updateValue(null);
         editorState.selectedClassGraph.updateValue(null);
         editorState.selectedClass.updateValue({ type: null, id: null });
 
-        classStore.invalidateGraph(datasetName, graphURI);
-        packageStore.invalidateGraph(datasetName, graphURI);
-        datatypesStore.invalidateGraph(datasetName, graphURI);
-        ontologyStore.invalidateGraph(datasetName, graphURI);
-        customDiagramStore.invalidateGraph(datasetName, graphURI);
+        classStore.invalidateGraph(workspaceName, graphURI);
+        packageStore.invalidateGraph(workspaceName, graphURI);
+        datatypesStore.invalidateGraph(workspaceName, graphURI);
+        ontologyStore.invalidateGraph(workspaceName, graphURI);
+        customDiagramStore.invalidateGraph(workspaceName, graphURI);
 
         forceReloadTrigger.trigger();
     }
@@ -86,9 +86,9 @@
 >
     <div class="space-y-4 px-3 py-3">
         <p class="text-default-text w-3/4 text-sm leading-relaxed">
-            {datasetName
-                ? `The schema will be removed from dataset "${datasetName}".`
-                : "Select a dataset and schema to delete."}
+            {workspaceName
+                ? `The schema will be removed from workspace "${workspaceName}".`
+                : "Select a workspace and schema to delete."}
             <br />
             This action is not reversible.
         </p>

@@ -57,20 +57,20 @@
     let canRedo = $state(false);
     let menubarValue = $state(undefined);
 
-    let isDatasetReadOnly = $state(false);
+    let isWorkspaceReadOnly = $state(false);
 
     let isLeftAltPressed = false;
 
-    let selectedDataset = $derived(editorState.selectedDataset.getValue());
+    let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
 
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
         isDatasetReadOnly = selectedDataset
-            ? await datasetStore.isReadOnly(selectedDataset)
+            ? await datasetStore.isReadOnly(selectedWorkspace)
             : false;
     });
 
@@ -86,11 +86,11 @@
     });
 
     async function requestEnableEditing() {
-        if (!selectedDataset || !isDatasetReadOnly) {
+        if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
         }
         const { error } = await datasetStore.updateReadonly(
-            selectedDataset,
+            selectedWorkspace,
             false,
         );
         if (error) return;
@@ -98,7 +98,7 @@
         forceReloadTrigger.trigger();
         editorState.selectedClass.trigger();
         editorState.selectedDiagram.trigger();
-        isDatasetReadOnly = false;
+        isWorkspaceReadOnly = false;
     }
 
     async function loadSnapshot() {
@@ -124,13 +124,13 @@
         const dataset = editorState.selectedDataset.getValue();
         const graph = editorState.selectedGraph.getValue();
         await versionControlStore.refresh(dataset, graph);
-        canUndo = await versionControlStore.canUndo(dataset, graph);
-        canRedo = await versionControlStore.canRedo(dataset, graph);
+        canUndo = await versionControlStore.canUndo(workspaceName, graph);
+        canRedo = await versionControlStore.canRedo(workspaceName, graph);
     }
 
     async function reload() {
         await fetchUndoRedo();
-        editorState.selectedDataset.trigger();
+        editorState.selectedWorkspace.trigger();
         editorState.selectedGraph.trigger();
         editorState.selectedClass.trigger();
         forceReloadTrigger.trigger();
@@ -245,11 +245,11 @@
                                 bind:value={menubarValue}
                                 class="toolbar-menubar"
                             >
-                                <File {isDatasetReadOnly} />
+                                <File {isWorkspaceReadOnly} />
                                 <Edit
                                     {canRedo}
                                     {canUndo}
-                                    {isDatasetReadOnly}
+                                    {isWorkspaceReadOnly}
                                     {reload}
                                 />
                                 <View />
@@ -273,7 +273,7 @@
                     <div
                         class="mr-2 ml-auto flex max-w-35 flex-1 justify-end space-x-2"
                     >
-                        {#if isDatasetReadOnly}
+                        {#if isWorkspaceReadOnly}
                             <ButtonControl
                                 callOnClick={requestEnableEditing}
                                 height={9}

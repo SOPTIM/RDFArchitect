@@ -18,9 +18,10 @@
 <script>
     import JSZip from "jszip";
 
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import DatasetAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ExportProgressPanel from "$lib/components/ExportProgressPanel.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
@@ -32,7 +33,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -51,8 +52,8 @@
         {
             name: "HTML",
             ending: "html",
-            fetch: (dataset, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(dataset)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+            fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
+                const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/htmlexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -67,8 +68,8 @@
         {
             name: "AsciiDoc",
             ending: "adoc",
-            fetch: (dataset, graph, imageEnding, embedDiagrams, signal) => {
-                const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(dataset)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
+            fetch: (workspace, graph, imageEnding, embedDiagrams, signal) => {
+                const url = `${PUBLIC_BACKEND_URL}/datasets/${encodeURIComponent(workspace)}/graphs/${encodeURIComponent(graph)}/asciidocexport/${encodeURIComponent(imageEnding)}?embedDiagrams=${embedDiagrams}`;
                 return fetch(url, {
                     method: "GET",
                     headers: new Headers({
@@ -87,7 +88,7 @@
         { key: "picture", name: "Picture in the document", embed: true },
     ];
 
-    let selectedDatasetName = $state(null);
+    let selectedWorkspaceName = $state(null);
     let graphURI = $state(null);
     let selectedDocumentEnding = $state(supportedDocumentFormats[0].ending);
     let selectedImageEnding = $state(supportedMediaTypes[0].ending);
@@ -111,12 +112,12 @@
     );
     let isExporting = $derived(progress !== null);
     let disablePrimary = $derived(
-        !selectedDatasetName || !graphURI || isExporting,
+        !selectedWorkspaceName || !graphURI || isExporting,
     );
 
     function onOpen() {
-        selectedDatasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        selectedWorkspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         graphURI = lockedGraphUri ?? editorState.selectedGraph.getValue();
     }
 
@@ -125,14 +126,14 @@
     }
 
     async function onPrimary() {
-        if (!selectedDatasetName || !graphURI || isExporting) return;
+        if (!selectedWorkspaceName || !graphURI || isExporting) return;
         const documentFormat = selectedDocumentFormat;
         const mediaType = selectedMediaType;
         const currentProgress = new ExportProgress();
         progress = currentProgress;
         try {
             const response = await documentFormat.fetch(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
                 mediaType.ending,
                 embedDiagrams,
@@ -154,7 +155,7 @@
             currentProgress.documentReady();
 
             const images = await generatePackageImages(
-                selectedDatasetName,
+                selectedWorkspaceName,
                 graphURI,
                 mediaType,
                 currentProgress,
@@ -272,10 +273,10 @@
         <ExportProgressPanel {progress} />
     {:else}
         <div class="mx-2 mt-2 flex h-full flex-col space-y-3">
-            <DatasetAndGraphSelection
-                bind:dataset={selectedDatasetName}
+            <WorkspaceAndGraphSelection
+                bind:workspace={selectedWorkspaceName}
                 bind:graph={graphURI}
-                {lockedDatasetName}
+                {lockedWorkspaceName}
                 {lockedGraphUri}
                 displayAsCard={false}
             />

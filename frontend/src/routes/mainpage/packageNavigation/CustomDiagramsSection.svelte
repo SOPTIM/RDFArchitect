@@ -29,11 +29,11 @@
 
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
     import {
-        isSelectedDataset,
+        isSelectedWorkspace,
         isSelectedGraph,
     } from "./packageNavigationUtils.svelte.js";
 
-    let { datasetNavEntry, graphNavEntry, allGraphNavEntries, readonly } =
+    let { workspaceNavEntry, graphNavEntry, allGraphNavEntries, readonly } =
         $props();
 
     let diagramsExpanded = $state(false);
@@ -42,17 +42,17 @@
 
     let isSelected = $derived(
         graphNavEntry
-            ? isSelectedGraph(datasetNavEntry.id, graphNavEntry.id) &&
+            ? isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id) &&
                   editorState.selectedDiagram.getProperty("type") ===
                       DiagramType.CUSTOM_GRAPH_DIAGRAM
             : !editorState.selectedGraph.getValue() &&
-                  isSelectedDataset(datasetNavEntry.id) &&
+                  isSelectedWorkspace(workspaceNavEntry.id) &&
                   editorState.selectedDiagram.getProperty("type") ===
-                      DiagramType.CUSTOM_DATASET_DIAGRAM,
+                      DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
     );
-    let level = $derived(graphNavEntry ? 3 : 2);
+    let level = $derived(graphNavEntry ? 2 : 1);
     let label = $derived(
-        graphNavEntry ? "Schema Diagrams" : "Dataset Diagrams",
+        graphNavEntry ? "Schema Diagrams" : "Workspace Diagrams",
     );
 
     $effect(() => {
@@ -80,12 +80,12 @@
             let diagramList;
             if (graphNavEntry) {
                 diagramList = await customDiagramStore.getGraphDiagrams(
-                    datasetNavEntry.id,
+                    workspaceNavEntry.id,
                     graphNavEntry.id,
                 );
             } else {
                 diagramList = await customDiagramStore.getDatasetDiagrams(
-                    datasetNavEntry.id,
+                    workspaceNavEntry.id,
                 );
             }
             const previous = diagrams ?? [];
@@ -119,9 +119,9 @@
             const keepExpanded = prev?.showContents ?? false;
             const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
             const isSelected = graphNavEntry
-                ? isSelectedGraph(datasetNavEntry, graphNavEntry) &&
+                ? isSelectedGraph(workspaceNavEntry, graphNavEntry) &&
                   selectedDiagramId === diagram.diagramId
-                : isSelectedDataset(datasetNavEntry) &&
+                : isSelectedWorkspace(workspaceNavEntry) &&
                   selectedDiagramId === diagram.diagramId;
 
             return {
@@ -167,9 +167,9 @@
     function handleClick() {
         const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
-            : DiagramType.CUSTOM_DATASET_DIAGRAM;
+            : DiagramType.CUSTOM_WORKSPACE_DIAGRAM;
         editorState.selectCustomDiagram(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry?.id,
             null,
             diagramType,
@@ -179,7 +179,7 @@
 
 {#if diagrams.length > 0}
     <div
-        class="bg-border my-1 ml-14 h-0.5"
+        class="bg-border my-1 ml-10 h-0.5"
         role="presentation"
         oncontextmenu={e => e.stopPropagation()}
     ></div>
@@ -202,13 +202,13 @@
     {#if diagramsExpanded && diagrams.length > 0}
         {#each diagrams as diagram, index (diagram.diagramId)}
             <CustomDiagramButton
-                {datasetNavEntry}
+                {workspaceNavEntry}
                 {graphNavEntry}
                 {allGraphNavEntries}
                 bind:diagram={diagrams[index]}
                 classes={classesByDiagram[diagram.diagramId]}
                 {readonly}
-                level={graphNavEntry ? 4 : 3}
+                level={graphNavEntry ? 3 : 2}
                 onToggle={() => ensureClassesLoaded(diagram)}
             />
         {/each}

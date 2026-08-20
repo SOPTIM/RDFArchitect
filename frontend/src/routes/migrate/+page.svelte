@@ -84,9 +84,9 @@
     onDestroy(() => {
         migrationState.set({
             compareMode: null,
-            datasetA: null,
+            workspaceA: null,
             graphA: null,
-            datasetB: null,
+            workspaceB: null,
             graphB: null,
             fileA: null,
             fileB: null,

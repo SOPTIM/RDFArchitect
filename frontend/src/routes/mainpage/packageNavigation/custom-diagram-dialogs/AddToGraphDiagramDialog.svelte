@@ -29,7 +29,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
         classes,
     } = $props();
@@ -72,7 +72,7 @@
     async function getCustomDiagrams() {
         existingDiagrams =
             (await customDiagramStore.getGraphDiagrams(
-                lockedDatasetName,
+                lockedWorkspaceName,
                 lockedGraphUri,
             )) ?? [];
         diagramsLoaded = true;
@@ -125,14 +125,14 @@
         };
 
         const { error } = await customDiagramStore.saveGraphDiagram(
-            lockedDatasetName,
+            lockedWorkspaceName,
             lockedGraphUri,
             diagramId,
             diagramData,
         );
         if (error) return;
 
-        editorState.selectedDataset.updateValue(lockedDatasetName);
+        editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
         editorState.selectedGraph.updateValue(lockedGraphUri);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
@@ -143,7 +143,7 @@
 
     async function addToDiagram(diagram) {
         const { error } = await customDiagramStore.addClassesToGraphDiagram(
-            lockedDatasetName,
+            lockedWorkspaceName,
             lockedGraphUri,
             diagram.diagramId,
             classesToAdd(),

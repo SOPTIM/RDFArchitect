@@ -46,16 +46,16 @@ function defaultColorFor(index) {
 }
 
 function createGraphColors() {
-    let byDataset = $state({});
+    let byWorkspace = $state({});
     const pendingLoads = new Map();
 
-    async function load(datasetName) {
+    async function load(workspaceName) {
         const { data, error } = await getCrossProfileColors({
-            path: { datasetName: datasetName },
+            path: { datasetName:workspaceName },
         });
         if (error) {
             console.error(
-                `Failed to load schema colors for "${datasetName}"`,
+                `Failed to load schema colors for "${workspaceName}"`,
                 error,
             );
             return {};
@@ -75,48 +75,48 @@ function createGraphColors() {
                 }
             });
 
-        byDataset[datasetName] = resolved;
-        await put(datasetName, seeded);
+        byWorkspace[workspaceName] = resolved;
+        await put(workspaceName, seeded);
         return resolved;
     }
 
-    function startLoad(datasetName) {
-        const running = load(datasetName)
+    function startLoad(workspaceName) {
+        const running = load(workspaceName)
             .catch(err => {
                 console.error(
-                    `Error fetching schema colors for dataset "${datasetName}"`,
+                    `Error fetching schema colors for workspace "${workspaceName}"`,
                     err,
                 );
                 return {};
             })
-            .finally(() => pendingLoads.delete(datasetName));
-        pendingLoads.set(datasetName, running);
+            .finally(() => pendingLoads.delete(workspaceName));
+        pendingLoads.set(workspaceName, running);
         return running;
     }
 
     return {
-        get(datasetName, graphUri) {
-            return byDataset[datasetName]?.[graphUri] ?? null;
+        get(workspaceName, graphUri) {
+            return byWorkspace[workspaceName]?.[graphUri] ?? null;
         },
 
-        reload(datasetName) {
-            if (!datasetName) {
+        reload(workspaceName) {
+            if (!workspaceName) {
                 return Promise.resolve({});
             }
-            return pendingLoads.get(datasetName) ?? startLoad(datasetName);
+            return pendingLoads.get(workspaceName) ?? startLoad(workspaceName);
         },
 
-        async set(datasetName, graphUri, color) {
+        async set(workspaceName, graphUri, color) {
             const hex = normalizeHex(color);
             if (!hex) {
                 return false;
             }
-            const previous = byDataset[datasetName] ?? {};
-            byDataset[datasetName] = { ...previous, [graphUri]: hex };
+            const previous = byWorkspace[workspaceName] ?? {};
+            byWorkspace[workspaceName] = { ...previous, [graphUri]: hex };
 
-            const saved = await put(datasetName, { [graphUri]: hex });
+            const saved = await put(workspaceName, { [graphUri]: hex });
             if (!saved) {
-                byDataset[datasetName] = previous;
+                byWorkspace[workspaceName] = previous;
                 toastStore.error(
                     "Save failed",
                     `Could not save the color for "${graphUri}".`,
@@ -127,16 +127,16 @@ function createGraphColors() {
             return true;
         },
 
-        async replaceAll(datasetName, colorsByGraph) {
-            const previous = byDataset[datasetName] ?? {};
-            byDataset[datasetName] = {
+        async replaceAll(workspaceName, colorsByGraph) {
+            const previous = byWorkspace[workspaceName] ?? {};
+            byWorkspace[workspaceName] = {
                 ...previous,
                 ...normalizeColors(colorsByGraph),
             };
 
-            const saved = await put(datasetName, colorsByGraph);
+            const saved = await put(workspaceName, colorsByGraph);
             if (!saved) {
-                byDataset[datasetName] = previous;
+                byWorkspace[workspaceName] = previous;
                 return false;
             }
             refreshMergedViewIfVisible();

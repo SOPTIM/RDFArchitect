@@ -49,7 +49,6 @@
     import { packageStore } from "$lib/stores/packageStore.ts";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
 
-    import DatasetDeleteDialog from "../../DatasetDeleteDialog.svelte";
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import PackageEditorDialog from "../../mainpage/packageEditorDialog.svelte";
@@ -61,8 +60,11 @@
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import RenameGraphDialog from "../../RenameGraphDialog.svelte";
+    import RenameWorkspaceDialog from "../../RenameWorkspaceDialog.svelte";
+    import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
 
-    let { canUndo, canRedo, isDatasetReadOnly, reload = () => {} } = $props();
+    let { canUndo, canRedo, isWorkspaceReadOnly, reload = () => {} } = $props();
 
     const shortcutsUnregister = [];
 
@@ -73,13 +75,15 @@
     let showOntologyDeleteDependenciesDialog = $state(false);
     let showClassDeleteDependenciesDialog = $state(false);
     let showGraphDeleteDialog = $state(false);
-    let showDatasetDeleteDialog = $state(false);
+    let showWorkspaceDeleteDialog = $state(false);
+    let showGraphRenameDialog = $state(false);
+    let showWorkspaceRenameDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
 
     let packageDialogTarget = $state(null);
-    let packageDialogDataset = $state(null);
+    let packageDialogWorkspace = $state(null);
     let packageDialogGraph = $state(null);
     let selectedPackageDetails = $state(null);
     let packageDetailsRequestId = 0;
@@ -87,24 +91,24 @@
 
     let ontology = $state();
 
-    let selectedDataset = $derived(editorState.selectedDataset.getValue());
+    let selectedWorkspace = $derived(editorState.selectedWorkspace.getValue());
     let selectedGraph = $derived(editorState.selectedGraph.getValue());
-    let hasDatasetSelected = $derived(!!selectedDataset);
+    let hasWorkspaceSelected = $derived(!!selectedWorkspace);
     let hasGraphSelected = $derived(
-        hasDatasetSelected && !!editorState.selectedGraph.getValue(),
+        hasWorkspaceSelected && !!editorState.selectedGraph.getValue(),
     );
-    let canAccessNamespaces = $derived(hasDatasetSelected);
+    let canAccessNamespaces = $derived(hasWorkspaceSelected);
     let canEditCurrentPackage = $derived(
         selectedPackageDetails &&
             !selectedPackageDetails.external &&
             selectedPackageDetails.label !== "default" &&
-            !isDatasetReadOnly,
+            !isWorkspaceReadOnly,
     );
     let canDeleteCurrentPackage = $derived(
         selectedPackageDetails &&
             !selectedPackageDetails.external &&
             selectedPackageDetails.label !== "default" &&
-            !isDatasetReadOnly,
+            !isWorkspaceReadOnly,
     );
     let graphHasOntology = $derived(!!ontology);
 
@@ -121,7 +125,7 @@
         const selected = multiSelectState.getSelected();
         if (selected.length > 0) {
             return {
-                datasetName: selected[0].datasetName,
+                workspaceName: selected[0].workspaceName,
                 graphUri: selected[0].graphUri,
                 uuids: selected.map(e => e.classUuid),
                 singleGraph: multiSelectState.isSingleGraph,
@@ -130,7 +134,7 @@
         const uuid = editorState.selectedClass.getProperty("id");
         if (uuid) {
             return {
-                datasetName: editorState.selectedClassDataset.getValue(),
+                workspaceName: editorState.selectedClassWorkspace.getValue(),
                 graphUri: editorState.selectedClassGraph.getValue(),
                 uuids: [uuid],
                 singleGraph: true,
@@ -139,12 +143,12 @@
         return null;
     });
     let disableDeleteClassButton = $derived(
-        isDatasetReadOnly ||
+        isWorkspaceReadOnly ||
             !deleteClassSelection ||
             !deleteClassSelection.singleGraph,
     );
 
-    // A custom diagram isn't deletable here, so it resolves to its graph/dataset.
+    // A custom diagram isn't deletable here, so it resolves to its graph/workspace.
     let deleteShortcutTarget = $derived.by(() => {
         if (deleteClassSelection) {
             return SelectionLevel.CLASS;
@@ -156,16 +160,27 @@
             case SelectionLevel.GRAPH:
                 return hasGraphSelected
                     ? SelectionLevel.GRAPH
-                    : SelectionLevel.DATASET;
-            case SelectionLevel.DATASET:
-                return SelectionLevel.DATASET;
+                    : SelectionLevel.WORKSPACE;
+            case SelectionLevel.WORKSPACE:
+                return SelectionLevel.WORKSPACE;
             default:
                 return null;
         }
     });
 
+    // Shift+F6 renames the schema in context, or the workspace when the
+    // selection sits at workspace level.
+    let renameShortcutTarget = $derived.by(() => {
+        if (inferSelectionLevel() !== SelectionLevel.WORKSPACE) {
+            if (hasGraphSelected) {
+                return SelectionLevel.GRAPH;
+            }
+        }
+        return hasWorkspaceSelected ? SelectionLevel.WORKSPACE : null;
+    });
+
     let disablePasteButton = $derived(
-        isDatasetReadOnly ||
+        isWorkspaceReadOnly ||
             !hasGraphSelected ||
             !editorState.selectedDiagram.getProperty("id") ||
             copyState.isEmpty,
@@ -175,7 +190,7 @@
         editorState.selectedDiagram.subscribe();
         editorState.selectedClass.subscribe();
         editorState.selectedGraph.subscribe();
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
         ontology = await getOntology();
         packages = await getPackages();
@@ -220,6 +235,12 @@
                 () => toggleReadonly(),
                 true,
             ),
+            shortcutStore.register(
+                "renameSelection",
+                ["shift", "f6"],
+                () => renameSelectionWithShortcut(),
+                true,
+            ),
             shortcutStore.register("copyClass", ["ctrl", "c"], () =>
                 copyClassWithShortcut(),
             ),
@@ -247,18 +268,18 @@
         }
 
         return await ontologyStore.getOntologyForGraph(
-            selectedDataset,
+            selectedWorkspace,
             selectedGraph,
         );
     }
 
     async function requestEnableEditing() {
-        if (!selectedDataset || !isDatasetReadOnly) {
+        if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
         }
 
         const { error } = await datasetStore.updateReadonly(
-            selectedDataset,
+            selectedWorkspace,
             false,
         );
         if (error) return;
@@ -268,12 +289,12 @@
     }
 
     async function requestDisableEditing() {
-        if (!selectedDataset || isDatasetReadOnly) {
+        if (!selectedWorkspace || isWorkspaceReadOnly) {
             return;
         }
 
         const { error } = await datasetStore.updateReadonly(
-            selectedDataset,
+            selectedWorkspace,
             true,
         );
         if (error) return;
@@ -290,7 +311,7 @@
     function launchPackageEditor() {
         if (!selectedPackageDetails) return;
         packageDialogTarget = { ...selectedPackageDetails };
-        packageDialogDataset = selectedDataset;
+        packageDialogWorkspace = selectedWorkspace;
         packageDialogGraph = selectedGraph;
         showPackageEditorDialog = true;
     }
@@ -298,7 +319,7 @@
     function launchPackageDeleteDialog() {
         if (!canDeleteCurrentPackage || !selectedPackageDetails) return;
         packageDialogTarget = { ...selectedPackageDetails };
-        packageDialogDataset = selectedDataset;
+        packageDialogWorkspace = selectedWorkspace;
         packageDialogGraph = selectedGraph;
         ShowPackageDeleteDependenciesDialog = true;
     }
@@ -309,7 +330,7 @@
         }
 
         const packageData = await packageStore.getPackages(
-            selectedDataset,
+            selectedWorkspace,
             selectedGraph,
         );
 
@@ -330,11 +351,11 @@
     }
 
     async function refreshSelectedPackageDetails(packages) {
-        const datasetName = editorState.selectedDataset.getValue();
+        const workspaceName = editorState.selectedWorkspace.getValue();
         const graphURI = editorState.selectedGraph.getValue();
         const packageId = editorState.selectedDiagram.getProperty("id");
 
-        if (!datasetName || !graphURI || !packageId) {
+        if (!workspaceName || !graphURI || !packageId) {
             selectedPackageDetails = null;
             return;
         }
@@ -388,14 +409,14 @@
             multiSelectState.copyEntriesOr({
                 classUUID: editorState.selectedClass.getProperty("id"),
                 graphURI: editorState.selectedClassGraph.getValue(),
-                datasetName: editorState.selectedClassDataset.getValue(),
+                workspaceName: editorState.selectedClassWorkspace.getValue(),
             }),
         );
     }
 
     async function pasteClass(options) {
         await startPaste(
-            editorState.selectedDataset.getValue(),
+            editorState.selectedWorkspace.getValue(),
             editorState.selectedGraph.getValue(),
             selectedPackageDetails?.uuid ?? null,
             options,
@@ -419,12 +440,26 @@
                 launchPackageDeleteDialog();
                 break;
             case SelectionLevel.GRAPH:
-                if (!isDatasetReadOnly) {
+                if (!isWorkspaceReadOnly) {
                     showGraphDeleteDialog = true;
                 }
                 break;
-            case SelectionLevel.DATASET:
-                showDatasetDeleteDialog = true;
+            case SelectionLevel.WORKSPACE:
+                showWorkspaceDeleteDialog = true;
+                break;
+        }
+    }
+
+    function renameSelectionWithShortcut() {
+        if (isWorkspaceReadOnly) {
+            return;
+        }
+        switch (renameShortcutTarget) {
+            case SelectionLevel.GRAPH:
+                showGraphRenameDialog = true;
+                break;
+            case SelectionLevel.WORKSPACE:
+                showWorkspaceRenameDialog = true;
                 break;
         }
     }
@@ -436,7 +471,7 @@
     }
 
     function toggleReadonly() {
-        if (isDatasetReadOnly) {
+        if (isWorkspaceReadOnly) {
             requestEnableEditing();
         } else {
             requestDisableEditing();
@@ -475,16 +510,18 @@
             </Menubar.SubMenu.Content>
         </Menubar.SubMenu.Root>
         <Menubar.SubMenu.Root>
-            <Menubar.SubMenu.Trigger faIcon={isDatasetReadOnly ? faEye : faPen}>
-                {isDatasetReadOnly ? "View" : "Edit"}
+            <Menubar.SubMenu.Trigger
+                faIcon={isWorkspaceReadOnly ? faEye : faPen}
+            >
+                {isWorkspaceReadOnly ? "View" : "Edit"}
             </Menubar.SubMenu.Trigger>
             <Menubar.SubMenu.Content>
                 <Menubar.Item.Button
                     onSelect={() => (showEditOntologyDialog = true)}
                     disabled={!hasGraphSelected ||
-                        (isDatasetReadOnly && !graphHasOntology)}
+                        (isWorkspaceReadOnly && !graphHasOntology)}
                     faIcon={graphHasOntology
-                        ? isDatasetReadOnly
+                        ? isWorkspaceReadOnly
                             ? faEye
                             : faPen
                         : faPlus}
@@ -525,7 +562,7 @@
         <Menubar.Separator />
         <Menubar.Item.Button
             onSelect={() => undo()}
-            disabled={isDatasetReadOnly || !canUndo}
+            disabled={isWorkspaceReadOnly || !canUndo}
             faIcon={faRotateLeft}
             altText="Ctrl+Z"
         >
@@ -533,17 +570,17 @@
         </Menubar.Item.Button>
         <Menubar.Item.Button
             onSelect={() => redo()}
-            disabled={isDatasetReadOnly || !canRedo}
+            disabled={isWorkspaceReadOnly || !canRedo}
             faIcon={faRotateRight}
             altText="Ctrl+Y"
         >
             Redo
         </Menubar.Item.Button>
         <Menubar.Separator />
-        {#if !hasDatasetSelected || isDatasetReadOnly}
+        {#if !hasWorkspaceSelected || isWorkspaceReadOnly}
             <Menubar.Item.Button
                 onSelect={() => requestEnableEditing()}
-                disabled={!hasDatasetSelected || !isDatasetReadOnly}
+                disabled={!hasWorkspaceSelected || !isWorkspaceReadOnly}
                 faIcon={faPenToSquare}
                 altText="Ctrl+Alt+R"
             >
@@ -552,7 +589,7 @@
         {:else}
             <Menubar.Item.Button
                 onSelect={() => requestDisableEditing()}
-                disabled={!hasDatasetSelected || isDatasetReadOnly}
+                disabled={!hasWorkspaceSelected || isWorkspaceReadOnly}
                 faIcon={faLock}
                 altText="Ctrl+Alt+R"
             >
@@ -565,13 +602,34 @@
             faIcon={faTags}
             altText="Ctrl+Shift+A"
         >
-            {#if isDatasetReadOnly}
+            {#if isWorkspaceReadOnly}
                 View Namespaces
             {:else}
                 Edit Namespaces
             {/if}
         </Menubar.Item.Button>
         <Menubar.Separator />
+        <Menubar.SubMenu.Root>
+            <Menubar.SubMenu.Trigger faIcon={faPen}>
+                Rename
+            </Menubar.SubMenu.Trigger>
+            <Menubar.SubMenu.Content>
+                <Menubar.Item.Button
+                    onSelect={() => (showWorkspaceRenameDialog = true)}
+                    disabled={!hasWorkspaceSelected || isWorkspaceReadOnly}
+                    faIcon={faPen}
+                >
+                    Workspace
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => (showGraphRenameDialog = true)}
+                    disabled={!hasGraphSelected || isWorkspaceReadOnly}
+                    faIcon={faDiagramProject}
+                >
+                    Schema
+                </Menubar.Item.Button>
+            </Menubar.SubMenu.Content>
+        </Menubar.SubMenu.Root>
         <Menubar.SubMenu.Root>
             <Menubar.SubMenu.Trigger faIcon={faTrash} variant="danger">
                 Delete
@@ -606,17 +664,17 @@
 {#if packageDialogTarget && showPackageEditorDialog}
     <PackageEditorDialog
         bind:showDialog={showPackageEditorDialog}
-        datasetName={packageDialogDataset}
+        workspaceName={packageDialogWorkspace}
         graphUri={packageDialogGraph}
         {packages}
         pack={packageDialogTarget}
-        readonly={isDatasetReadOnly}
+        readonly={isWorkspaceReadOnly}
     />
 {/if}
 {#if packageDialogTarget && ShowPackageDeleteDependenciesDialog}
     <DeleteDependenciesDialog
         bind:showDialog={ShowPackageDeleteDependenciesDialog}
-        datasetName={packageDialogDataset}
+        workspaceName={packageDialogWorkspace}
         graphUri={packageDialogGraph}
         resourceUuid={packageDialogTarget.uuid}
     />
@@ -624,22 +682,31 @@
 {#if showClassDeleteDependenciesDialog && deleteClassSelection}
     <DeleteDependenciesDialog
         bind:showDialog={showClassDeleteDependenciesDialog}
-        datasetName={deleteClassSelection.datasetName}
+        workspaceName={deleteClassSelection.workspaceName}
         graphUri={deleteClassSelection.graphUri}
         resourceUuids={deleteClassSelection.uuids}
     />
 {/if}
 <GraphDeleteDialog bind:showDialog={showGraphDeleteDialog} />
-<DatasetDeleteDialog
-    bind:showDialog={showDatasetDeleteDialog}
-    datasetName={selectedDataset}
+<WorkspaceDeleteDialog
+    bind:showDialog={showWorkspaceDeleteDialog}
+    workspaceName={selectedWorkspace}
+/>
+<RenameWorkspaceDialog
+    bind:showDialog={showWorkspaceRenameDialog}
+    workspaceName={selectedWorkspace}
+/>
+<RenameGraphDialog
+    bind:showDialog={showGraphRenameDialog}
+    workspaceName={selectedWorkspace}
+    graphUri={selectedGraph}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 {#if ontology}
     <DeleteDependenciesDialog
         bind:showDialog={showOntologyDeleteDependenciesDialog}
         onClose={reload}
-        datasetName={editorState.selectedDataset.getValue()}
+        workspaceName={editorState.selectedWorkspace.getValue()}
         graphUri={editorState.selectedGraph.getValue()}
         resourceUuid={ontology.uuid}
     />
@@ -649,8 +716,8 @@
     <OntologyDialog
         bind:showDialog={showEditOntologyDialog}
         graphUri={selectedGraph}
-        dataset={selectedDataset}
+        workspace={selectedWorkspace}
         bind:ontology
-        readonly={isDatasetReadOnly}
+        readonly={isWorkspaceReadOnly}
     />
 {/if}

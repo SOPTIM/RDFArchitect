@@ -16,7 +16,7 @@
   -->
 
 <script>
-    import DatasetAndGraphSelection from "$lib/components/DatasetAndGraphSelection.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
@@ -35,7 +35,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -46,7 +46,7 @@
         packageComment: "packageCommentNewPackage" + uuid,
     };
 
-    let selectedDatasetName = $state(null);
+    let selectedWorkspaceName = $state(null);
     let selectedGraphURI = $state(null);
     let packageLabel = $state(null);
     let packageComment = $state(null);
@@ -65,7 +65,7 @@
     );
 
     let disableSubmit = $derived(
-        !selectedDatasetName ||
+        !selectedWorkspaceName ||
             !selectedGraphURI ||
             !packageURINamespace ||
             !packageLabel ||
@@ -73,17 +73,17 @@
     );
 
     $effect(async () => {
-        namespaces = await datasetStore.getNamespaces(selectedDatasetName);
+        namespaces = await datasetStore.getNamespaces(selectedWorkspaceName);
         packageURINamespace = null;
     });
 
     $effect(async () => {
-        await getResources(selectedDatasetName, selectedGraphURI);
+        await getResources(selectedWorkspaceName, selectedGraphURI);
     });
 
     async function onOpen() {
-        selectedDatasetName =
-            lockedDatasetName ?? editorState.selectedDataset.getValue();
+        selectedWorkspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         selectedGraphURI =
             lockedGraphUri ?? editorState.selectedGraph.getValue();
 
@@ -91,13 +91,13 @@
         packageLabel = null;
         packageComment = null;
 
-        if (!selectedDatasetName) {
+        if (!selectedWorkspaceName) {
             return;
         }
-        namespaces = await datasetStore.getNamespaces(selectedDatasetName);
+        namespaces = await datasetStore.getNamespaces(selectedWorkspaceName);
 
         if (selectedGraphURI) {
-            await getResources(selectedDatasetName, selectedGraphURI);
+            await getResources(selectedWorkspaceName, selectedGraphURI);
         } else {
             packages = [];
             classes = [];
@@ -105,7 +105,7 @@
     }
 
     function onClose() {
-        selectedDatasetName = null;
+        selectedWorkspaceName = null;
         selectedGraphURI = null;
         namespaces = [];
         packageURINamespace = null;
@@ -115,29 +115,29 @@
         packageComment = null;
     }
 
-    async function getResources(datasetName, graphURI) {
+    async function getResources(workspaceName, graphURI) {
         await Promise.all([
-            getPackages(datasetName, graphURI),
-            getClasses(datasetName, graphURI),
+            getPackages(workspaceName, graphURI),
+            getClasses(workspaceName, graphURI),
         ]);
     }
 
-    async function getPackages(datasetName, graphURI) {
-        if (!datasetName || !graphURI) {
+    async function getPackages(workspaceName, graphURI) {
+        if (!workspaceName || !graphURI) {
             packages = [];
             return;
         }
 
-        const result = await packageStore.getPackages(datasetName, graphURI);
+        const result = await packageStore.getPackages(workspaceName, graphURI);
         packages = result ? [...result.internal, ...result.external] : [];
     }
 
-    async function getClasses(datasetName, graphURI) {
-        if (!datasetName || !graphURI) {
+    async function getClasses(workspaceName, graphURI) {
+        if (!workspaceName || !graphURI) {
             classes = [];
             return;
         }
-        classes = (await classStore.getClasses(datasetName, graphURI)) ?? [];
+        classes = (await classStore.getClasses(workspaceName, graphURI)) ?? [];
     }
 
     function getResourceIri(resource) {
@@ -163,7 +163,7 @@
 
         if (error) return;
 
-        editorState.selectedDataset.updateValue(ds);
+        editorState.selectedWorkspace.updateValue(ds);
         editorState.selectedGraph.updateValue(graph);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,
@@ -180,7 +180,7 @@
     primaryLabel="Create Package"
     onPrimary={() =>
         newPackage(
-            selectedDatasetName,
+            selectedWorkspaceName,
             selectedGraphURI,
             packageLabel,
             packageComment,
@@ -190,12 +190,12 @@
     title="New Package"
 >
     <div class="mx-2 flex h-full flex-col">
-        <DatasetAndGraphSelection
-            bind:dataset={selectedDatasetName}
+        <WorkspaceAndGraphSelection
+            bind:workspace={selectedWorkspaceName}
             bind:graph={selectedGraphURI}
-            {lockedDatasetName}
+            {lockedWorkspaceName}
             {lockedGraphUri}
-            allowSelectionOfReadonlyDatasets={false}
+            allowSelectionOfReadonlyWorkspaces={false}
             displayAsCard={false}
         />
 
@@ -206,10 +206,10 @@
             id={domIds.packageURINamespace}
             bind:value={packageURINamespace}
             options={namespaces}
-            disabled={!selectedDatasetName}
-            placeholder={selectedDatasetName
+            disabled={!selectedWorkspaceName}
+            placeholder={selectedWorkspaceName
                 ? "Select namespace"
-                : "Select a dataset first"}
+                : "Select a workspace first"}
             getOptionValue={namespace => namespace.prefix}
             getOptionLabel={namespace =>
                 `${namespace.substitutedPrefix} (${namespace.prefix})`}

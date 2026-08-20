@@ -126,12 +126,38 @@ public interface DatabasePort {
     List<String> listDatasets();
 
     /**
+     * Creates an empty dataset without any graphs.
+     *
+     * @param datasetName the literal dataset name to create
+     * @throws org.rdfarchitect.exception.database.ResourceConflictException if a dataset with that
+     *     name already exists
+     */
+    void createDataset(String datasetName);
+
+    /**
      * Removes the dataset identified by {@code datasetName} and clears all graphs that belong to
      * it.
      *
      * @param datasetName the literal dataset name to delete
      */
     void deleteDataset(String datasetName);
+
+    /**
+     * Renames a dataset, keeping all of its graphs, diagrams and namespaces.
+     *
+     * @param oldDatasetName the current literal dataset name
+     * @param newDatasetName the literal dataset name to rename to
+     */
+    void renameDataset(String oldDatasetName, String newDatasetName);
+
+    /**
+     * Renames a graph within its dataset and rewrites all references to it. The content and history
+     * of the graph are kept.
+     *
+     * @param graphIdentifier identifies dataset and current graph URI
+     * @param newGraphUri the graph URI to rename to
+     */
+    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
 
     /**
      * Synchronizes dataset metadata and graph structure from the backing database.

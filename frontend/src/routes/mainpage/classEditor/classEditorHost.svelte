@@ -43,7 +43,7 @@
 
     import ClassEditor from "./classEditor.svelte";
 
-    let { datasetName, graphUri, classUuid, isMerged } = $props();
+    let { workspaceName, graphUri, classUuid, isMerged } = $props();
 
     let mergedClass = $state(null);
     let resolving = $state(false);
@@ -84,7 +84,7 @@
     });
 
     $effect(() => {
-        if (!datasetName || !classUuid) return;
+        if (!workspaceName || !classUuid) return;
         forceReloadTrigger.subscribe();
 
         if (!isMerged) {
@@ -102,7 +102,7 @@
         resolving = true;
 
         (async () => {
-            const diagram = await crossProfileStore.getDiagram(datasetName);
+            const diagram = await crossProfileStore.getDiagram(workspaceName);
 
             if (cancellation.cancelled) return;
             const classes = diagram?.classes ?? [];
@@ -175,7 +175,7 @@
 
     function sourceColor(source) {
         const uri = sourceGraphUri(source);
-        return uri ? graphColors.get(datasetName, uri) : null;
+        return uri ? graphColors.get(workspaceName, uri) : null;
     }
 
     function sourceLabel(source) {
@@ -184,18 +184,18 @@
 
     function closeClassEditorHost(
         {
-            datasetName = null,
+            workspaceName = null,
             graphUri = null,
             classUuid = null,
             classType = null,
         } = {
-            datasetName: null,
+            workspaceName: null,
             graphUri: null,
             classUuid: null,
             classType: null,
         },
     ) {
-        editorState.selectedClassDataset.updateValue(datasetName);
+        editorState.selectedClassWorkspace.updateValue(workspaceName);
         editorState.selectedClassGraph.updateValue(graphUri);
         editorState.selectedClass.updateValue({
             type: classType,
@@ -251,7 +251,7 @@
         {:else if resolvedGraphUri && resolvedClassUuid}
             <div class="h-full overflow-auto">
                 <ClassEditor
-                    {datasetName}
+                    {workspaceName}
                     graphUri={resolvedGraphUri}
                     classUuid={resolvedClassUuid}
                 />

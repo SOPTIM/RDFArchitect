@@ -86,13 +86,13 @@
 
 ### @typescript-eslint/parser
 - **Package:** @typescript-eslint/parser
-- **Version:** 8.66.0
+- **Version:** 8.67.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/parser](https://typescript-eslint.io/packages/parser)
 
 ### @xyflow/svelte
 - **Package:** @xyflow/svelte
-- **Version:** 1.6.2
+- **Version:** 1.6.3
 - **License:** MIT
 - **URL:** [https://svelteflow.dev](https://svelteflow.dev)
 
@@ -150,7 +150,7 @@
 
 ### eslint-plugin-svelte
 - **Package:** eslint-plugin-svelte
-- **Version:** 3.22.0
+- **Version:** 3.23.0
 - **License:** MIT
 - **URL:** [https://sveltejs.github.io/eslint-plugin-svelte](https://sveltejs.github.io/eslint-plugin-svelte)
 
@@ -162,7 +162,7 @@
 
 ### globals
 - **Package:** globals
-- **Version:** 17.9.0
+- **Version:** 17.11.0
 - **License:** MIT
 
 ### html-to-image
@@ -215,7 +215,7 @@
 
 ### svelte
 - **Package:** svelte
-- **Version:** 5.56.8
+- **Version:** 5.56.9
 - **License:** MIT
 - **URL:** [https://svelte.dev](https://svelte.dev)
 
@@ -257,7 +257,7 @@
 
 ### typescript-eslint
 - **Package:** typescript-eslint
-- **Version:** 8.66.0
+- **Version:** 8.67.0
 - **License:** MIT
 - **URL:** [https://typescript-eslint.io/packages/typescript-eslint](https://typescript-eslint.io/packages/typescript-eslint)
 

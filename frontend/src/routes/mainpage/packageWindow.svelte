@@ -26,9 +26,9 @@
     let classEditorPaneWidth = $state(27);
     let paneSizeByPackage = $state({});
 
-    let classDatasetName = $derived(
-        editorState.selectedClassDataset.getValue() ??
-            editorState.selectedDataset.getValue(),
+    let classWorkspaceName = $derived(
+        editorState.selectedClassWorkspace.getValue() ??
+            editorState.selectedWorkspace.getValue(),
     );
     let classGraphUri = $derived(
         editorState.selectedClassGraph.getValue() ??
@@ -43,7 +43,7 @@
         selectionTrigger && !!editorState.selectedClass.getProperty("id"),
     );
     const renderingKey = $derived(
-        `${editorState.selectedDataset.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
+        `${editorState.selectedWorkspace.getValue() ?? ""}::${editorState.selectedGraph.getValue() ?? ""}::${editorState.selectedDiagram.getProperty("id") ?? ""}`,
     );
 
     const isMergedClass = $derived(
@@ -52,7 +52,7 @@
     );
 
     $effect(() => {
-        editorState.selectedDataset.subscribe();
+        editorState.selectedWorkspace.subscribe();
         editorState.selectedGraph.subscribe();
         editorState.selectedDiagram.subscribe();
         const packageKey = getPackageKey();
@@ -64,13 +64,13 @@
     });
 
     function getPackageKey() {
-        const dataset = editorState.selectedDataset.getValue();
+        const workspace = editorState.selectedWorkspace.getValue();
         const graph = editorState.selectedGraph.getValue();
         const pack = editorState.selectedDiagram.getProperty("id");
-        if (!dataset || !graph || !pack) {
+        if (!workspace || !graph || !pack) {
             return null;
         }
-        return `${dataset}::${graph}::${pack}`;
+        return `${workspace}::${graph}::${pack}`;
     }
 
     function handleSplitPaneResize(event) {
@@ -114,7 +114,7 @@
         >
             {#if isClassSelected}
                 <ClassEditorHost
-                    datasetName={classDatasetName}
+                    workspaceName={classWorkspaceName}
                     graphUri={classGraphUri}
                     classUuid={editorState.selectedClass.getProperty("id")}
                     isMerged={isMergedClass}

@@ -37,6 +37,7 @@
         faEyeDropper,
         faPalette,
         faSliders,
+        faPen,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -68,6 +69,7 @@
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import RenameGraphDialog from "../../RenameGraphDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
@@ -76,7 +78,7 @@
     import { goto } from "$app/navigation";
 
     let {
-        datasetNavEntry,
+        workspaceNavEntry,
         graphNavEntry,
         namespaces = [],
         readonly = false,
@@ -85,6 +87,7 @@
     let ontology = $state();
     let showExportDialog = $state(false);
     let showDeleteDialog = $state(false);
+    let showRenameDialog = $state(false);
     let showNewPackageDialog = $state(false);
     let showNewDiagramDialog = $state(false);
     let showCompareDialog = $state(false);
@@ -107,14 +110,14 @@
     );
 
     const graphColor = $derived(
-        graphColors.get(datasetNavEntry.id, graphNavEntry.id),
+        graphColors.get(workspaceNavEntry.id, graphNavEntry.id),
     );
 
     const isGraphSelected = $derived(
-        isSelectedGraph(datasetNavEntry.id, graphNavEntry.id),
+        isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id),
     );
     const graphSelectionState = $derived(
-        graphHighlight(datasetNavEntry.id, graphNavEntry.id),
+        graphHighlight(workspaceNavEntry.id, graphNavEntry.id),
     );
     $effect(() => {
         if (isGraphSelected && !wasGraphSelected) {
@@ -130,7 +133,7 @@
 
     async function initialize() {
         ontology = await ontologyStore.getOntologyForGraph(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
         );
 
@@ -180,14 +183,14 @@
         if (
             (kind === SelectionLevel.PACKAGE ||
                 kind === SelectionLevel.DIAGRAM) &&
-            isSelectedGraph(datasetNavEntry.id, graphNavEntry.id)
+            isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id)
         ) {
             editorState.dissolveToGraph();
         }
     }
 
     function focusGraphContext() {
-        editorState.selectGraph(datasetNavEntry.label, graphNavEntry.id);
+        editorState.selectGraph(workspaceNavEntry.label, graphNavEntry.id);
     }
 </script>
 
@@ -195,7 +198,7 @@
     <ContextMenu.Root>
         <ContextMenu.TriggerArea class="flex w-full flex-col items-stretch">
             <NavigationEntry
-                level={2}
+                level={1}
                 label={graphNavEntry.label}
                 icon={faDiagramProject}
                 iconColor={graphColor}
@@ -419,6 +422,17 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
+                    showRenameDialog = true;
+                }}
+                disabled={readonly}
+                faIcon={faPen}
+                altText="Shift+F6"
+            >
+                Rename Schema
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
                     showDeleteDialog = true;
                 }}
                 disabled={readonly}
@@ -435,7 +449,7 @@
         >
             {#each graphNavEntry.children as packageNavEntry (packageNavEntry.id)}
                 <PackageButton
-                    {datasetNavEntry}
+                    {workspaceNavEntry}
                     {graphNavEntry}
                     {packageNavEntry}
                     {namespaces}
@@ -444,7 +458,7 @@
             {/each}
 
             <CustomDiagramsSection
-                {datasetNavEntry}
+                {workspaceNavEntry}
                 {graphNavEntry}
                 {readonly}
             />
@@ -454,50 +468,55 @@
 
 <ExportDialog
     bind:showDialog={showExportDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
+<RenameGraphDialog
+    bind:showDialog={showRenameDialog}
+    workspaceName={workspaceNavEntry.id}
+    graphUri={graphNavEntry.id}
+/>
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <CustomGraphDiagramDialog
     bind:showDialog={showNewDiagramDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <CompareDialog
     bind:showDialog={showCompareDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLUploadDialog
     bind:showDialog={showSHACLUploadDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLExportDialog
     bind:showDialog={showSHACLExportDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <SHACLFullViewDialog bind:showDialog={showSHACLFullViewDialog} />
 <SchemaColorsDialog
     bind:showDialog={showSchemaColorsDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
 />
 <PickSchemaColorDialog
     bind:showDialog={showPickColorDialog}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
     graphLabel={graphNavEntry.label}
 />
 <OntologyDialog
     bind:showDialog={showEditOntologyDialog}
     graphUri={graphNavEntry.id}
-    dataset={datasetNavEntry.id}
+    workspace={workspaceNavEntry.id}
     {namespaces}
     bind:ontology
     {readonly}
@@ -507,17 +526,17 @@
 <DeleteDependenciesDialog
     bind:showDialog={showDeleteDependenciesDialog}
     onClose={initialize}
-    datasetName={datasetNavEntry.id}
+    workspaceName={workspaceNavEntry.id}
     graphUri={graphNavEntry.id}
     resourceUuid={ontology.uuid}
 />
 <ValidationDialog
     bind:showDialog={showValidationDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />
 <DocumentationExportDialog
     bind:showDialog={showDocumentationExportDialog}
-    lockedDatasetName={datasetNavEntry.id}
+    lockedWorkspaceName={workspaceNavEntry.id}
     lockedGraphUri={graphNavEntry.id}
 />

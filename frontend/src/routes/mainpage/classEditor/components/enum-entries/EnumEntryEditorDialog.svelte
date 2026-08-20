@@ -77,7 +77,7 @@
 
         const { error, data } = isNewEnumEntry
             ? await classStore.addEnumEntry(
-                  classEditorContext.datasetName,
+                  classEditorContext.workspaceName,
                   classEditorContext.graphUri,
                   classUuid,
                   apiEnumEntry,

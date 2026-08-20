@@ -58,7 +58,7 @@
     import Stereotypes from "./components/stereotypes/Stereotypes.svelte";
     import SuperClass from "./components/SuperClass.svelte";
 
-    const { datasetName, graphUri, classUuid } = $props();
+    const { workspaceName, graphUri, classUuid } = $props();
 
     const enumerationStereotype =
         "http://iec.ch/TC57/NonStandard/UML#enumeration";
@@ -73,7 +73,7 @@
         targetClassInfos: [],
     };
 
-    let isDatasetReadOnly = $state(false);
+    let isWorkspaceReadOnly = $state(false);
 
     let reactiveClass = $state();
 
@@ -99,7 +99,7 @@
 
     let showDiscardSaveConfirmDialog = $state(false);
 
-    let datasetOfClassToOpenNext = $state(null);
+    let workspaceOfClassToOpenNext = $state(null);
     let graphOfClassToOpenNext = $state(null);
     let classToOpenNext = $state(null);
     let classTypeOfClassToOpenNext = $state(null);
@@ -122,7 +122,7 @@
         externalClass = null;
         (async () => {
             const classDto = await classStore.getClassInfo(
-                datasetName,
+                workspaceName,
                 graphUri,
                 classUuid,
                 true,
@@ -130,12 +130,12 @@
             if (cancellation.cancelled) return;
             if (classDto == null) {
                 return closeClassEditor({
-                    datasetName: datasetName,
+                    workspaceName: workspaceName,
                     graphUri: graphUri,
                     classUuid: null,
                 });
             }
-            const readOnly = await datasetStore.isReadOnly(datasetName);
+            const readOnly = await datasetStore.isReadOnly(workspaceName);
             if (cancellation.cancelled) return;
             isDatasetReadOnly = readOnly;
             if (classDto.external) {
@@ -157,7 +157,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = await datasetStore.isReadOnly(datasetName);
+        isDatasetReadOnly = await datasetStore.isReadOnly(workspaceName);
     });
 
     onMount(() => {
@@ -181,12 +181,12 @@
 
     export function closeClassEditor(
         {
-            datasetName = null,
+            workspaceName = null,
             graphUri = null,
             classUuid = null,
             classType = null,
         } = {
-            datasetName: null,
+            workspaceName: null,
             graphUri: null,
             classUuid: null,
             classType: null,
@@ -196,13 +196,13 @@
         loadingClass = false;
         if (!showDiscardSaveConfirmDialog && reactiveClass?.isModified) {
             showDiscardSaveConfirmDialog = true;
-            datasetOfClassToOpenNext = datasetName;
+            workspaceOfClassToOpenNext = workspaceName;
             graphOfClassToOpenNext = graphUri;
             classToOpenNext = classUuid;
             classTypeOfClassToOpenNext = classType;
             return;
         }
-        editorState.selectedClassDataset.updateValue(datasetName);
+        editorState.selectedClassWorkspace.updateValue(workspaceName);
         editorState.selectedClassGraph.updateValue(graphUri);
         editorState.selectedClass.updateValue({
             type: classType,
@@ -219,7 +219,7 @@
     async function createReferencedClass() {
         creatingClass = true;
 
-        const { error } = await classStore.addClass(datasetName, graphUri, {
+        const { error } = await classStore.addClass(workspaceName, graphUri, {
             packageDTO: await packageOfCurrentDiagram(),
             classURIPrefix: externalClass.prefix,
             className: externalClass.label,
@@ -235,15 +235,15 @@
         if (!diagramId || diagramId === "default") {
             return null;
         }
-        const packages = await getPackages(datasetName, graphUri);
+        const packages = await getPackages(workspaceName, graphUri);
         return packages.find(pkg => pkg.uuid === diagramId) ?? null;
     }
 
     async function loadContext(cancellation) {
         const [classes, packages, datatypes] = await Promise.all([
-            getClasses(datasetName, graphUri),
-            getPackages(datasetName, graphUri),
-            getDataTypes(datasetName, graphUri),
+            getClasses(workspaceName, graphUri),
+            getPackages(workspaceName, graphUri),
+            getDataTypes(workspaceName, graphUri),
         ]);
         if (cancellation.cancelled) return;
         context.classes = classes;
@@ -290,7 +290,7 @@
         let targetClassInfos = await Promise.all(
             targetUuids.map(async uuid => {
                 const res = await classStore.getClassInfo(
-                    datasetName,
+                    workspaceName,
                     graphUri,
                     uuid,
                 );
@@ -309,14 +309,14 @@
     }
 
     setContext("classEditor", {
-        get datasetName() {
-            return datasetName;
+        get workspaceName() {
+            return workspaceName;
         },
         get graphUri() {
             return graphUri;
         },
         get readOnly() {
-            return isDatasetReadOnly;
+            return isWorkspaceReadOnly;
         },
         get namespaces() {
             return context.namespaces;
@@ -390,7 +390,7 @@
                 multiSelectState.clear();
             }
             closeClassEditor({
-                datasetName,
+                workspaceName,
                 graphUri,
                 classUuid: classUuidToOpen,
                 classType: ClassType.SINGLE_CLASS,
@@ -418,7 +418,7 @@
                         This class is referenced here but not defined in this
                         schema.
                     </span>
-                    {#if !isDatasetReadOnly}
+                    {#if !isWorkspaceReadOnly}
                         <ButtonControl
                             callOnClick={createReferencedClass}
                             disabled={creatingClass}
@@ -438,7 +438,7 @@
                         {reactiveClass}
                         bind:showDiscardSaveConfirmDialog
                         bind:pendingAction
-                        {datasetOfClassToOpenNext}
+                        {workspaceOfClassToOpenNext}
                         {graphOfClassToOpenNext}
                         {classToOpenNext}
                         {classTypeOfClassToOpenNext}

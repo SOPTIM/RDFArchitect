@@ -36,4 +36,11 @@ public class CrossProfileDiagramInfo {
     public void setColor(String graphUri, String color) {
         colors.put(graphUri, color);
     }
+
+    public void renameGraph(String oldGraphUri, String newGraphUri) {
+        var color = colors.remove(oldGraphUri);
+        if (color != null) {
+            colors.put(newGraphUri, color);
+        }
+    }
 }

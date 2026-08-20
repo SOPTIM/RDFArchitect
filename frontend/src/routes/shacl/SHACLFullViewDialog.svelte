@@ -37,10 +37,10 @@
 
     function onOpen() {
         if (
-            !editorState.selectedDataset.getValue() ||
+            !editorState.selectedWorkspace.getValue() ||
             !editorState.selectedGraph.getValue()
         ) {
-            customSHACL = "No dataset or schema selected.";
+            customSHACL = "No workspace or schema selected.";
             customSHACLBackup = customSHACL;
             readOnly = true;
         } else {
@@ -59,7 +59,7 @@
         try {
             let { data, error } = await getGeneratedShaclasString({
                 path: {
-                    datasetName: editorState.selectedDataset.getValue(),
+                    datasetName: editorState.selectedWorkspace.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
                 },
             });
@@ -82,7 +82,7 @@
         try {
             let { data, error } = await getCustomShaclasString({
                 path: {
-                    datasetName: editorState.selectedDataset.getValue(),
+                    datasetName: editorState.selectedWorkspace.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
                 },
             });
@@ -104,7 +104,7 @@
         try {
             let { error } = await replaceGraphWithGraphString({
                 path: {
-                    datasetName: editorState.selectedDataset.getValue(),
+                    datasetName: editorState.selectedWorkspace.getValue(),
                     graphURI: editorState.selectedGraph.getValue(),
                 },
                 body: customSHACL ? customSHACL : " ",
@@ -135,7 +135,7 @@
     {onOpen}
     {onClose}
     size="w-2/3 h-4/5"
-    title={`Constraints (SHACL) for: "${editorState.selectedDataset.getValue()}/${editorState.selectedGraph.getValue()}"`}
+    title={`Constraints (SHACL) for: "${editorState.selectedWorkspace.getValue()}/${editorState.selectedGraph.getValue()}"`}
     primaryLabel={null}
 >
     <div class="flex h-full flex-col space-y-2">

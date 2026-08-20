@@ -19,16 +19,16 @@ import { editorState } from "$lib/sharedState.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
 
 export async function saveApiAttributeToBackend(
-    dataset,
+    workspace,
     graph,
     classUUID,
     attribute,
     isNewAttribute,
 ) {
     const res = isNewAttribute
-        ? await classStore.addAttribute(dataset, graph, classUUID, attribute)
+        ? await classStore.addAttribute(workspace, graph, classUUID, attribute)
         : await classStore.replaceAttribute(
-              dataset,
+            workspace,
               graph,
               classUUID,
               attribute,

@@ -38,7 +38,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         diagramName = "",
         diagramId,
         selectedClasses = [],
@@ -76,7 +76,7 @@
     async function fetchOtherDiagrams() {
         try {
             const diagrams =
-                await customDiagramStore.getDatasetDiagrams(lockedDatasetName);
+                await customDiagramStore.getDatasetDiagrams(lockedWorkspaceName);
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
             );
@@ -87,7 +87,7 @@
     }
 
     async function fetchGraphs() {
-        const result = (await graphStore.getGraphs(lockedDatasetName)) ?? [];
+        const result = (await graphStore.getGraphs(lockedWorkspaceName)) ?? [];
         graphs = result
             .map(graph => {
                 return {
@@ -103,7 +103,7 @@
         for (const graph of graphs) {
             const graphUri = getUri(graph);
             packagesByGraph[graphUri] = await createPackageListForGraph(
-                lockedDatasetName,
+                lockedWorkspaceName,
                 graphUri,
             );
         }
@@ -116,7 +116,7 @@
         await Promise.all(
             graphURIs.map(async graphUri => {
                 result[graphUri] = await createClassListForGraph(
-                    lockedDatasetName,
+                    lockedWorkspaceName,
                     graphUri,
                     selectedClasses,
                 );
@@ -190,17 +190,17 @@
         };
 
         const { error } = await customDiagramStore.saveDatasetDiagram(
-            lockedDatasetName,
+            lockedWorkspaceName,
             localDiagramId,
             diagramData,
         );
 
         if (error) return;
 
-        editorState.selectedDataset.updateValue(lockedDatasetName);
+        editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
         editorState.selectedGraph.updateValue(null);
         editorState.selectedDiagram.updateValue({
-            type: DiagramType.CUSTOM_DATASET_DIAGRAM,
+            type: DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
             id: localDiagramId,
         });
         forceReloadTrigger.trigger();
@@ -212,8 +212,8 @@
     {onOpen}
     {onClose}
     title={diagramId
-        ? `Edit Dataset Diagram "${diagramName}"`
-        : "New Dataset Diagram"}
+        ? `Edit Workspace Diagram "${diagramName}"`
+        : "New Workspace Diagram"}
     primaryLabel="Save"
     onPrimary={submitDiagramClasses}
     disablePrimary={disableSubmit}

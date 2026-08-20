@@ -70,7 +70,7 @@ export class DiagramSelectionController {
 
     buildEntry(node) {
         return {
-            datasetName: editorState.selectedDataset.getValue(),
+            workspaceName: editorState.selectedWorkspace.getValue(),
             graphUri: this.#selectionGraphUri(node),
             classUuid: node.id,
             classLabel: node.data?.label ?? node.id,
@@ -139,7 +139,7 @@ export class DiagramSelectionController {
 
     #routeClassEditor(graphUri, classUuid, classType) {
         eventStack.executeNewestEvent({
-            datasetName: editorState.selectedDataset.getValue(),
+            workspaceName: editorState.selectedWorkspace.getValue(),
             graphUri,
             classUuid,
             classType,
@@ -198,8 +198,8 @@ export class DiagramSelectionController {
 
         if (!editorState.selectedClass.getProperty("id")) {
             eventStack.executeNewestEvent(id);
-            editorState.selectedClassDataset.updateValue(
-                editorState.selectedDataset.getValue(),
+            editorState.selectedClassWorkspace.updateValue(
+                editorState.selectedWorkspace.getValue(),
             );
             editorState.selectedClassGraph.updateValue(graphUri);
             editorState.selectedClass.updateValue({

@@ -40,6 +40,13 @@ class UpdateDatasetServiceTest {
     }
 
     @Test
+    void createDataset_validDatasetName_callsCreateOnDatabasePort() {
+        service.createDataset("test-dataset");
+
+        verify(databasePort).createDataset("test-dataset");
+    }
+
+    @Test
     void deleteDataset_validDatasetName_callsDeleteOnDatabasePort() {
         service.deleteDataset("test-dataset");
 

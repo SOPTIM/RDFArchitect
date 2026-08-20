@@ -43,7 +43,7 @@
         reactiveClass,
         showDiscardSaveConfirmDialog = $bindable(),
         pendingAction = $bindable(),
-        datasetOfClassToOpenNext,
+        workspaceOfClassToOpenNext,
         graphOfClassToOpenNext,
         classToOpenNext,
         classTypeOfClassToOpenNext,
@@ -65,19 +65,19 @@
     let labelHideClass = $derived(
         readonly ? "@max-[12rem]:hidden" : "@max-[30rem]:hidden",
     );
-    let datasetName = $derived(classEditorContext.datasetName);
+    let workspaceName = $derived(classEditorContext.workspaceName);
     let graphUri = $derived(classEditorContext.graphUri);
 
     $effect(() => {
         editorState.selectedDiagram.subscribe();
         readonly = classEditorContext.readOnly;
-        datasetName = classEditorContext.datasetName;
+        workspaceName = classEditorContext.workspaceName;
         graphUri = classEditorContext.graphUri;
     });
 
     onMount(() => {
         readonly = classEditorContext.readOnly;
-        datasetName = classEditorContext.datasetName;
+        workspaceName = classEditorContext.workspaceName;
         graphUri = classEditorContext.graphUri;
     });
 
@@ -107,7 +107,7 @@
 
     async function saveChangesToBackend(classDto) {
         const { error } = await classStore.replaceClass(
-            datasetName,
+            workspaceName,
             graphUri,
             classDto.uuid,
             classDto,
@@ -137,8 +137,8 @@
             pendingAction();
             pendingAction = null;
         } else {
-            editorState.selectedClassDataset.updateValue(
-                datasetOfClassToOpenNext,
+            editorState.selectedClassWorkspace.updateValue(
+                workspaceOfClassToOpenNext,
             );
             editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
             editorState.selectedClass.updateValue({
@@ -150,7 +150,9 @@
 
     function handleSave() {
         saveChanges();
-        editorState.selectedClassDataset.updateValue(datasetOfClassToOpenNext);
+        editorState.selectedClassWorkspace.updateValue(
+            workspaceOfClassToOpenNext,
+        );
         editorState.selectedClassGraph.updateValue(graphOfClassToOpenNext);
         editorState.selectedClass.updateValue({
             type: classTypeOfClassToOpenNext,
@@ -216,14 +218,14 @@
 </div>
 
 <SHACLClassSpecificPopUp
-    {datasetName}
+    {workspaceName}
     {graphUri}
     {reactiveClass}
     bind:showDialog={showSHACLClassDialog}
     class={reactiveClass}
 />
 <DeleteDependenciesDialog
-    {datasetName}
+    {workspaceName}
     {graphUri}
     resourceUuid={reactiveClass.uuid.value}
     bind:showDialog={showDeleteDependenciesDialog}

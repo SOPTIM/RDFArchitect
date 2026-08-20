@@ -24,7 +24,7 @@
 
     let {
         showDialog = $bindable(),
-        lockedDatasetName,
+        lockedWorkspaceName,
         lockedGraphUri,
     } = $props();
 
@@ -39,10 +39,10 @@
         shaclExportDialog
             ? () =>
                   shaclExportDialog.handleExport(
-                      (datasetName, graphURI) =>
+                      (workspaceName, graphURI) =>
                           PUBLIC_BACKEND_URL +
                           "/api/datasets/" +
-                          encodeURIComponent(datasetName) +
+                          encodeURIComponent(workspaceName) +
                           "/graphs/" +
                           encodeURIComponent(graphURI) +
                           "/shacl/" +
@@ -82,7 +82,7 @@
             bind:showDialog
             bind:disablePrimary
             bind:onSubmit={onPrimary}
-            {lockedDatasetName}
+            {lockedWorkspaceName}
             {lockedGraphUri}
             supportedMediaTypes={reorderedSupportedRDFMediaTypes}
         />
