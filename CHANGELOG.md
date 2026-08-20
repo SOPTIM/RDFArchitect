@@ -11,10 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- RDFA-684: Rename workspaces and graphs ([fb11b0b5](https://github.com/SOPTIM/RDFArchitect/commit/fb11b0b5), [#227](https://github.com/SOPTIM/RDFArchitect/pull/227))
-- RDFA-696: Workspaces as tabs ([065d0f58](https://github.com/SOPTIM/RDFArchitect/commit/065d0f58), [#226](https://github.com/SOPTIM/RDFArchitect/pull/226))
 - RDFA-552: Paste options dialog ([c777ea98](https://github.com/SOPTIM/RDFArchitect/commit/c777ea98), [#218](https://github.com/SOPTIM/RDFArchitect/pull/218))
 - RDFA-582: Show properties from other profiles ([1e640a98](https://github.com/SOPTIM/RDFArchitect/commit/1e640a98), [#209](https://github.com/SOPTIM/RDFArchitect/pull/209))
+
+### Changed
+
+- RDFA-684: Rename workspaces and graphs ([fb11b0b5](https://github.com/SOPTIM/RDFArchitect/commit/fb11b0b5), [#227](https://github.com/SOPTIM/RDFArchitect/pull/227))
+- RDFA-696: Workspaces as tabs ([065d0f58](https://github.com/SOPTIM/RDFArchitect/commit/065d0f58), [#226](https://github.com/SOPTIM/RDFArchitect/pull/226))
 
 ### Fixed
 
