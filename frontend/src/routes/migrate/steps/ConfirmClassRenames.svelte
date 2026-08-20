@@ -42,8 +42,7 @@
         const linked = new Set(renamedFrom.keys());
         return visibleAdded
             .filter(c => !linked.has(c.label))
-            .sort((a, b) => a.label.localeCompare(b.label),
-        );
+            .sort((a, b) => a.label.localeCompare(b.label));
     });
 
     onMount(() => {
@@ -75,9 +74,12 @@
                 const hiddenTargetIRIs = hiddenRenames
                     .map(r => r.newResource?.iri)
                     .filter(iri => iri != null);
-                visibleAdded = data.added.filter(
-                    addedClass => !hiddenTargetIRIs.includes(addedClass.iri),
-                ).sort((a, b) => a.label.localeCompare(b.label));
+                visibleAdded = data.added
+                    .filter(
+                        addedClass =>
+                            !hiddenTargetIRIs.includes(addedClass.iri),
+                    )
+                    .sort((a, b) => a.label.localeCompare(b.label));
 
                 for (let rename of deletedAndRenamed) {
                     if (rename.newResource) {

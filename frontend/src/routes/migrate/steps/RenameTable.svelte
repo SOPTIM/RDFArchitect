@@ -68,18 +68,14 @@
                                 onchange={e => handleSelectionChange(rename, e)}
                                 value={rename.newResource?.label ?? ""}
                             >
-                                <option value="">
-                                    —
-                                </option>
+                                <option value="">—</option>
                                 {#if rename.newResource && allAddedItems.some(a => a.label === rename.newResource.label)}
                                     <option value={rename.newResource.label}>
                                         {rename.newResource.label}
                                     </option>
                                 {/if}
                                 {#each unlinkedNewItems as item (item.label)}
-                                    <option
-                                        value={item.label}
-                                    >
+                                    <option value={item.label}>
                                         {item.label}
                                     </option>
                                 {/each}

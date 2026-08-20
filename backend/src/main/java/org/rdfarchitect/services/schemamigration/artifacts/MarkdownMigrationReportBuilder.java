@@ -520,7 +520,9 @@ public class MarkdownMigrationReportBuilder implements MigrationReportBuilder {
     }
 
     private boolean isPrefixOnlyFieldRename(SemanticFieldChange change) {
-        if (change.getFrom() == null || change.getTo() == null) return false;
+        if (change.getFrom() == null || change.getTo() == null) {
+            return false;
+        }
         if (change.getSemanticFieldChangeType() == SemanticFieldChangeType.DOMAIN_RENAME
                 || change.getSemanticFieldChangeType() == SemanticFieldChangeType.SUPERCLASS_RENAME
                 || change.getSemanticFieldChangeType() != SemanticFieldChangeType.TARGET_RENAME) {

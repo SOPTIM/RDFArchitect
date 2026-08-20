@@ -25,7 +25,6 @@
     import EmptyStateCard from "$lib/components/EmptyStateCard.svelte";
 
     import RenameTable from "../RenameTable.svelte";
-    import { onMount } from "svelte";
 
     const { classes, isLoading } = $props();
 
@@ -156,7 +155,7 @@
                                         Added Associations
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.associations.added.sort((a, b) => a.label.localeCompare(b.label)) as addedAssociation}
+                                        {#each cls.associations.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedAssociation}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >

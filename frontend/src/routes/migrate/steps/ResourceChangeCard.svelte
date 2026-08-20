@@ -137,7 +137,7 @@
 
     {#if resource.changes && resource.changes.length > 0 && resource.semanticResourceChangeType !== "DELETE"}
         <div
-            class="flex text-default-text mb-1 text-sm font-medium"
+            class="text-default-text mb-1 flex text-sm font-medium"
             onclick={toggleExpanded}
         >
             Changes

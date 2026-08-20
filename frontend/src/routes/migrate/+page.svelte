@@ -134,7 +134,7 @@
         <div class="flex justify-center space-x-4">
             {#each steps as step, i}
                 <span
-                    class={`text-center px-2 text-sm ${i === currentStepIndex ? "border-b-2 font-bold text-blue-700" : "text-button-disabled-background"}`}
+                    class={`px-2 text-center text-sm ${i === currentStepIndex ? "border-b-2 font-bold text-blue-700" : "text-button-disabled-background"}`}
                 >
                     {step.title}
                 </span>

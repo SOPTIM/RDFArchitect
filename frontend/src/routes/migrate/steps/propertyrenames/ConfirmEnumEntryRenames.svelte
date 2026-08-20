@@ -155,7 +155,7 @@
                                         Added Enum Entries
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.enumEntries.added.sort((a, b) => a.label.localeCompare(b.label)) as addedEnumEntry}
+                                        {#each cls.enumEntries.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedEnumEntry}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >

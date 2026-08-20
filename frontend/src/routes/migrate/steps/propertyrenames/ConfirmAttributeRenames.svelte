@@ -156,7 +156,7 @@
                                         Added Attributes
                                     </h3>
                                     <div class="space-y-1">
-                                        {#each cls.attributes.added.sort((a, b) => a.label.localeCompare(b.label)) as addedAttribute}
+                                        {#each cls.attributes.added.sort( (a, b) => a.label.localeCompare(b.label) ) as addedAttribute}
                                             <div
                                                 class="bg-lightgray flex items-center justify-between px-3 py-1 text-sm"
                                             >
