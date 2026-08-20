@@ -69,10 +69,14 @@
         editorState.selectedGraph.subscribe();
         editorState.selectedDataset.subscribe();
         forceReloadTrigger.subscribe();
-        await fetchUndoRedo();
         isDatasetReadOnly = selectedDataset
             ? await datasetStore.isReadOnly(selectedDataset)
             : false;
+    });
+
+    $effect(async () => {
+        forceReloadTrigger.subscribe();
+        await fetchUndoRedo();
     });
 
     onMount(() => {
@@ -120,8 +124,8 @@
         const dataset = editorState.selectedDataset.getValue();
         const graph = editorState.selectedGraph.getValue();
         await versionControlStore.refresh(dataset, graph);
-        canUndo = versionControlStore.canUndo();
-        canRedo = versionControlStore.canRedo();
+        canUndo = await versionControlStore.canUndo(dataset, graph);
+        canRedo = await versionControlStore.canRedo(dataset, graph);
     }
 
     async function reload() {

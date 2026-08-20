@@ -524,6 +524,9 @@
             },
             "type" : "array"
           },
+          "external" : {
+            "type" : "boolean"
+          },
           "label" : {
             "type" : "string"
           },

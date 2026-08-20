@@ -15,7 +15,6 @@
  *
  */
 
-import { get } from "svelte/store";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import * as api from "../../src/lib/api/generated";
@@ -84,7 +83,6 @@ describe("versionControlStore", () => {
     let store: ReturnType<typeof createVersionControlStore>;
     const DATASET = "datasetA";
     const GRAPH = "http://example.org/graph";
-    const KEY = `${DATASET}::${GRAPH}`;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -113,8 +111,8 @@ describe("versionControlStore", () => {
 
             await store.refresh(DATASET, GRAPH);
 
-            const state = get(store).byGraph.get(KEY);
-            expect(state).toEqual({ canUndo: true, canRedo: false });
+            expect(await store.canUndo(DATASET, GRAPH)).toBe(true);
+            expect(await store.canRedo(DATASET, GRAPH)).toBe(false);
             expect(api.canUndo).toHaveBeenCalledWith({
                 path: { datasetName: DATASET, graphURI: GRAPH },
             });
@@ -139,8 +137,8 @@ describe("versionControlStore", () => {
 
             await store.refresh();
 
-            const state = get(store).byGraph.get(KEY);
-            expect(state).toEqual({ canUndo: true, canRedo: true });
+            expect(await store.canUndo(DATASET, GRAPH)).toBe(true);
+            expect(await store.canRedo(DATASET, GRAPH)).toBe(true);
         });
 
         test("sets flags to false if API returns an error", async () => {
@@ -155,8 +153,8 @@ describe("versionControlStore", () => {
 
             await store.refresh(DATASET, GRAPH);
 
-            const state = get(store).byGraph.get(KEY);
-            expect(state).toEqual({ canUndo: false, canRedo: false });
+            expect(await store.canUndo(DATASET, GRAPH)).toBe(false);
+            expect(await store.canRedo(DATASET, GRAPH)).toBe(false);
         });
 
         test("does nothing if no targets resolve", async () => {
@@ -179,12 +177,20 @@ describe("versionControlStore", () => {
             });
             await store.refresh(DATASET, GRAPH);
 
-            expect(store.canUndo(DATASET, GRAPH)).toBe(true);
-            expect(store.canRedo(DATASET, GRAPH)).toBe(false);
+            expect(await store.canUndo(DATASET, GRAPH)).toBe(true);
+            expect(await store.canRedo(DATASET, GRAPH)).toBe(false);
         });
 
-        test("returns false for unknown graph", () => {
-            expect(store.canUndo("unknown", "unknown")).toBe(false);
+        test("returns false for unknown graph", async () => {
+            vi.mocked(api.canUndo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            vi.mocked(api.canRedo).mockResolvedValue({
+                data: false,
+                error: undefined,
+            });
+            expect(await store.canUndo("unknown", "unknown")).toBe(false);
         });
     });
 

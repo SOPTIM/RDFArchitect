@@ -74,7 +74,6 @@ describe("crossProfileStore", () => {
             const state = get(store);
             expect(state.ids.size).toBe(0);
             expect(state.diagrams.size).toBe(0);
-            expect(state.colors.size).toBe(0);
         });
     });
 
@@ -163,7 +162,6 @@ describe("crossProfileStore", () => {
         const state = get(store);
         expect(state.ids.has(DATASET_A)).toBe(false);
         expect(state.diagrams.has(DATASET_A)).toBe(false);
-        expect(state.colors.has(DATASET_A)).toBe(false);
     });
 
     // -------------------------------------------------------------------------
@@ -189,7 +187,6 @@ describe("crossProfileStore", () => {
             const state = get(store);
             expect(state.ids.size).toBe(0);
             expect(state.diagrams.size).toBe(0);
-            expect(state.colors.size).toBe(0);
         });
 
         test("returns error on failure", async () => {

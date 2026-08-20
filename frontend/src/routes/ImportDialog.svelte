@@ -22,6 +22,7 @@
 
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
@@ -208,7 +209,10 @@
             editorState.selectedClassDataset.updateValue(null);
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClass.updateValue({ type: null, id: null });
+
+            graphStore.invalidateDataset(datasetNameUserInputLocal);
             datasetStore.invalidate();
+            crossProfileStore.invalidateDataset(datasetNameUserInputLocal);
             forceReloadTrigger.trigger();
         }
     }

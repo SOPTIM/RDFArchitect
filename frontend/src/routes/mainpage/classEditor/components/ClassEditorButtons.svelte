@@ -33,6 +33,7 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { datatypesStore } from "$lib/stores/datatypesStore.ts";
 
     import DeleteDependenciesDialog from "../../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
@@ -113,6 +114,7 @@
         );
         if (!error) {
             reactiveClass.save();
+            crossProfileStore.invalidateDataset(datasetName);
             editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();

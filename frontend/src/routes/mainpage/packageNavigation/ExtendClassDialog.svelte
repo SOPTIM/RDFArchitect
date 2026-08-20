@@ -24,6 +24,7 @@
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -51,6 +52,7 @@
         );
         if (error) return;
 
+        crossProfileStore.invalidateDataset(selectedDatasetName);
         editorState.selectedDataset.updateValue(selectedDatasetName);
         editorState.selectedGraph.updateValue(selectedGraphURI);
         editorState.selectedDiagram.updateValue({

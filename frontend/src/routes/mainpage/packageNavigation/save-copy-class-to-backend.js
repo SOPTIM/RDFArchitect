@@ -29,6 +29,7 @@ import {
     forceReloadTrigger,
 } from "$lib/sharedState.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
+import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
 
 export const PASTE_PREVIEW_FAILED = Symbol("pastePreviewFailed");
 
@@ -103,6 +104,7 @@ export async function saveCopyClass(
         );
         if (!error) {
             const pasted = data;
+            crossProfileStore.invalidateDataset(datasetName);
             editorState.selectedDataset.updateValue(datasetName);
             editorState.selectedClassDataset.updateValue(datasetName);
             editorState.selectedGraph.updateValue(graphURI);

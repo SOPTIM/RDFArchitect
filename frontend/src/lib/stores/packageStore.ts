@@ -24,7 +24,6 @@ import {
     listPackages,
     addPackage,
     replacePackage,
-    deletePackage,
     type PackageDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
@@ -150,34 +149,6 @@ function createPackageStore() {
         });
     }
 
-    function removeLocalPackage(
-        datasetName: string,
-        graphURI: string,
-        packageUUID: string,
-    ) {
-        if (!datasetName || !graphURI || !packageUUID) return;
-        const key = makeGraphKey(datasetName, graphURI);
-
-        update(s => {
-            const current = getGraphState(s, key);
-            if (!current.data) return s;
-
-            const internal = current.data.internal.filter(
-                p => p.uuid !== packageUUID,
-            );
-            const external = current.data.external.filter(
-                p => p.uuid !== packageUUID,
-            );
-
-            return setGraphState(s, key, {
-                ...current,
-                data: { internal, external },
-                fetchedAt: Date.now(),
-                error: null,
-            });
-        });
-    }
-
     // ----- Mutations -----
 
     async function addNewPackage(
@@ -290,55 +261,6 @@ function createPackageStore() {
         return addNewPackage(datasetName, graphURI, pkg);
     }
 
-    async function deleteExistingPackage(
-        datasetName: string,
-        graphURI: string,
-        pkg: PackageDto,
-    ): Promise<Result> {
-        const label = getPackageDisplayLabel(pkg);
-
-        if (!pkg.uuid) {
-            const error = new Error("pkg.uuid is required for deletePackage");
-            console.error(`${LOG_PREFIX} ${error.message}`);
-            toastStore.error(
-                "Delete failed",
-                `Could not delete package "${label}".`,
-            );
-            return { error };
-        }
-
-        console.log(
-            `${LOG_PREFIX} Deleting package "${label}" (uuid=${pkg.uuid}) from`,
-            { datasetName, graphURI },
-        );
-
-        const { error } = await deletePackage({
-            path: { datasetName, graphURI, packageUUID: pkg.uuid },
-        });
-
-        if (error) {
-            const msg = await describeError(error);
-            console.error(
-                `${LOG_PREFIX} Could not delete package "${label}":`,
-                msg,
-            );
-            toastStore.error(
-                "Delete failed",
-                `Could not delete package "${label}".`,
-            );
-            return { error };
-        }
-
-        removeLocalPackage(datasetName, graphURI, pkg.uuid);
-
-        console.log(
-            `${LOG_PREFIX} Deleted package "${label}" (uuid=${pkg.uuid})`,
-        );
-        toastStore.success("Package deleted", `"${label}" was removed.`);
-
-        return { error: null };
-    }
-
     // ----- Invalidation -----
 
     function invalidateGraph(datasetName: string, graphURI: string) {
@@ -366,7 +288,6 @@ function createPackageStore() {
         getPackages,
         addPackage: addNewPackage,
         replacePackage: replaceExistingPackage,
-        deletePackage: deleteExistingPackage,
         savePackage,
         invalidateGraph,
         invalidateDataset,

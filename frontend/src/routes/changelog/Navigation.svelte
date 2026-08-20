@@ -53,7 +53,7 @@
                 graphs: [],
                 showContents: showDatasetContents,
             });
-            const graphs = await graphStore.getGraphs(datasetName);
+            const graphs = (await graphStore.getGraphs(datasetName)) ?? [];
             graphs.forEach(graph => newDatasetList.at(-1).graphs.push(graph));
         }
         datasetList = newDatasetList;

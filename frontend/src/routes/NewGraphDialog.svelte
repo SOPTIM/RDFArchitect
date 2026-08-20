@@ -107,7 +107,7 @@
             return;
         }
 
-        graphNames = await graphStore.getGraphs(datasetNameUserInput);
+        graphNames = (await graphStore.getGraphs(datasetNameUserInput)) ?? [];
     }
 
     async function addGraph() {
@@ -129,6 +129,7 @@
         editorState.selectedClass.updateValue({ type: null, id: null });
 
         graphStore.invalidateDataset(datasetNameLocal);
+        datasetStore.invalidate();
         forceReloadTrigger.trigger();
     }
 </script>

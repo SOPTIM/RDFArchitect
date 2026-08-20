@@ -27,7 +27,6 @@ import {
     // class-level mutations
     addClass,
     replaceClass,
-    deleteClass,
     extendClass,
     pasteClasses,
     // attribute mutations
@@ -462,31 +461,6 @@ function createClassStore() {
         return { error: null };
     }
 
-    async function deleteExistingClass(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ): Promise<Result> {
-        console.log(`${LOG_PREFIX} Deleting class classUUID="${classUUID}"`);
-
-        const { error } = await deleteClass({
-            path: { datasetName, graphURI, classUUID },
-        });
-        if (error) {
-            console.error(
-                `${LOG_PREFIX} Could not delete class classUUID="${classUUID}"`,
-                await describeError(error),
-            );
-            toastStore.error("Delete failed", "Class could not be deleted.");
-            return { error };
-        }
-
-        removeClassLocally(datasetName, graphURI, classUUID);
-        console.log(`${LOG_PREFIX} Deleted class classUUID="${classUUID}"`);
-        toastStore.success("Class deleted", "Class was deleted.");
-        return { error: null };
-    }
-
     async function extendExistingClass(
         datasetName: string,
         graphURI: string,
@@ -827,39 +801,6 @@ function createClassStore() {
         return { error: null, data: data ?? undefined };
     }
 
-    // =========================================================================
-    // LOCAL-ONLY HELPERS & INVALIDATION
-    // =========================================================================
-
-    function removeClassLocally(
-        datasetName: string,
-        graphURI: string,
-        classUUID: string,
-    ) {
-        if (!datasetName || !graphURI || !classUUID) return;
-        const key = makeGraphKey(datasetName, graphURI);
-
-        update(s => {
-            const current = s.byGraph.get(key);
-            if (!current) return s;
-
-            const dropFrom = (variant: VariantState): VariantState => {
-                if (!variant.data) return variant;
-                return {
-                    ...variant,
-                    data: variant.data.filter(c => getId(c) !== classUUID),
-                    fetchedAt: Date.now(),
-                    error: null,
-                };
-            };
-
-            return setGraphState(s, key, {
-                all: dropFrom(current.all),
-                internalOnly: dropFrom(current.internalOnly),
-            });
-        });
-    }
-
     function invalidateGraph(datasetName: string, graphURI: string) {
         const key = makeGraphKey(datasetName, graphURI);
         const pendingPrefix = `${key}::`;
@@ -899,7 +840,6 @@ function createClassStore() {
         // class-level mutations
         addClass: addNewClass,
         replaceClass: replaceExistingClass,
-        deleteClass: deleteExistingClass,
         extendClass: extendExistingClass,
         saveCopyClass: pasteCopiedClasses,
 

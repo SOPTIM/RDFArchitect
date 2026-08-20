@@ -137,7 +137,7 @@
             classes = [];
             return;
         }
-        classes = await classStore.getClasses(datasetName, graphURI);
+        classes = (await classStore.getClasses(datasetName, graphURI)) ?? [];
     }
 
     function getResourceIri(resource) {

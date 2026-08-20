@@ -27,6 +27,7 @@
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { classStore } from "$lib/stores/classStore.ts";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -245,6 +246,7 @@
             className: form.className,
         });
         updateEditorSelection(form, classUUID);
+        crossProfileStore.invalidateDataset(form.datasetName);
     }
 
     async function newClass() {

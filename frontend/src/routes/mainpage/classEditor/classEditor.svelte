@@ -218,33 +218,16 @@
      */
     async function createReferencedClass() {
         creatingClass = true;
-        try {
-            const res = await bec.postClass(datasetName, graphUri, {
-                packageDTO: await packageOfCurrentDiagram(),
-                classURIPrefix: externalClass.prefix,
-                className: externalClass.label,
-            });
-            if (!res.ok) {
-                toastStore.error(
-                    "Create failed",
-                    `Could not create class "${externalClass.label}".`,
-                );
-                return;
-            }
-            toastStore.success(
-                "Class created",
-                `"${externalClass.label}" was added.`,
-            );
+
+        const { error } = await classStore.addClass(datasetName, graphUri, {
+            packageDTO: await packageOfCurrentDiagram(),
+            classURIPrefix: externalClass.prefix,
+            className: externalClass.label,
+        });
+        if (!error) {
             forceReloadTrigger.trigger();
-        } catch (e) {
-            console.error("failed to create referenced class:", e);
-            toastStore.error(
-                "Create failed",
-                "An unexpected error occurred while creating the class.",
-            );
-        } finally {
-            creatingClass = false;
         }
+        creatingClass = false;
     }
 
     async function packageOfCurrentDiagram() {
@@ -257,18 +240,20 @@
     }
 
     async function loadContext(cancellation) {
-        const [classes, packages, datatypes] =
-            await Promise.all([
-                getClasses(datasetName, graphUri),
-                getPackages(datasetName, graphUri),
-                getDataTypes(datasetName, graphUri),
-            ]);
+        const [classes, packages, datatypes] = await Promise.all([
+            getClasses(datasetName, graphUri),
+            getPackages(datasetName, graphUri),
+            getDataTypes(datasetName, graphUri),
+        ]);
         if (cancellation.cancelled) return;
         context.classes = classes;
         context.packages = packages;
         context.datatypes = datatypes;
-        context.stereotypes = datatypesStore.getStereotypes(datasetName, graphUri);
-        context.namespaces = datasetStore.getNamespaces(datasetName);
+        context.stereotypes = await datatypesStore.getStereotypes(
+            datasetName,
+            graphUri,
+        );
+        context.namespaces = await datasetStore.getNamespaces(datasetName);
         loadingContext = false;
         editorState.selectedContext.trigger();
     }

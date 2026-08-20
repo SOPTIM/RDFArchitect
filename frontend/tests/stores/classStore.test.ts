@@ -367,56 +367,6 @@ describe("ClassStore", () => {
     });
 
     // =========================================================================
-    describe("deleteClass", () => {
-        test("removes the class from the store locally", async () => {
-            vi.mocked(api.getClassList).mockResolvedValue(
-                ok([makeClass("uuid-1"), makeClass("uuid-2")]),
-            );
-            vi.mocked(api.deleteClass).mockResolvedValue(ok(undefined));
-
-            await store.getClasses(DATASET, GRAPH);
-            await store.deleteClass(DATASET, GRAPH, "uuid-1");
-
-            // No re-fetch should have happened
-            expect(api.getClassList).toHaveBeenCalledTimes(1);
-
-            const classes = await store.getClasses(DATASET, GRAPH);
-            expect(classes?.map(c => c.uuid)).toEqual(["uuid-2"]);
-        });
-
-        test("removes class from both variants", async () => {
-            vi.mocked(api.getClassList).mockResolvedValue(
-                ok([makeClass("uuid-1"), makeClass("uuid-2")]),
-            );
-            vi.mocked(api.deleteClass).mockResolvedValue(ok(undefined));
-
-            await store.getClasses(DATASET, GRAPH, false);
-            await store.getClasses(DATASET, GRAPH, true);
-
-            await store.deleteClass(DATASET, GRAPH, "uuid-1");
-
-            const internal = await store.getClasses(DATASET, GRAPH, false);
-            const all = await store.getClasses(DATASET, GRAPH, true);
-
-            expect(internal?.find(c => c.uuid === "uuid-1")).toBeUndefined();
-            expect(all?.find(c => c.uuid === "uuid-1")).toBeUndefined();
-        });
-
-        test("returns error and keeps the class in the store on failure", async () => {
-            vi.mocked(api.getClassList).mockResolvedValue(
-                ok([makeClass("uuid-1")]),
-            );
-            vi.mocked(api.deleteClass).mockResolvedValue(err());
-
-            await store.getClasses(DATASET, GRAPH);
-            await store.deleteClass(DATASET, GRAPH, "uuid-1");
-
-            const classes = await store.getClasses(DATASET, GRAPH);
-            expect(classes?.find(c => c.uuid === "uuid-1")).toBeDefined();
-        });
-    });
-
-    // =========================================================================
     describe("addAttribute", () => {
         test("appends the attribute with backend-assigned UUID to the class in the store", async () => {
             const cls = makeClass("class-1");

@@ -15,14 +15,16 @@
  *
  */
 
-import { writable, get } from "svelte/store";
+import { writable } from "svelte/store";
 
 import { editorState } from "../sharedState.svelte.js";
 import { classStore } from "./classStore";
+import { datatypesStore } from "./datatypesStore";
 import { customDiagramStore } from "./diagramStore";
 import { ontologyStore } from "./ontologyStore";
 import { packageStore } from "./packageStore";
-import { makeGraphKey } from "./storeHelpers";
+import { loadSlot, makeGraphKey } from "./storeHelpers";
+import { type AsyncSlot, createEmptySlot } from "./storeTypes";
 import {
     undo as sdkUndo,
     redo as sdkRedo,
@@ -31,63 +33,117 @@ import {
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
-type Flags = {
-    canUndo: boolean;
-    canRedo: boolean;
+type GraphFlags = {
+    canUndo: AsyncSlot<boolean>;
+    canRedo: AsyncSlot<boolean>;
 };
-type State = { byGraph: Map<string, Flags> };
+
+type State = { byGraph: Map<string, GraphFlags> };
 
 const LOG = "[versionControlStore]";
 
 export const versionControlStore = createVersionControlStore();
 
-function emptyFlags(): Flags {
-    return { canUndo: false, canRedo: false };
+function getGraphFlags(s: State, dataset: string, graph: string): GraphFlags {
+    return (
+        s.byGraph.get(makeGraphKey(dataset, graph)) ?? {
+            canUndo: createEmptySlot(),
+            canRedo: createEmptySlot(),
+        }
+    );
+}
+
+function setGraphFlags(
+    s: State,
+    dataset: string,
+    graph: string,
+    patch: Partial<GraphFlags>,
+): State {
+    const m = new Map(s.byGraph);
+    m.set(makeGraphKey(dataset, graph), {
+        ...getGraphFlags(s, dataset, graph),
+        ...patch,
+    });
+    return { byGraph: m };
 }
 
 function createVersionControlStore() {
     const store = writable<State>({ byGraph: new Map() });
-    const { subscribe, update } = store;
+    const { subscribe } = store;
 
-    function patch(dataset: string, graph: string, next: Partial<Flags>) {
-        update(s => {
-            const m = new Map(s.byGraph);
-            const cur = m.get(makeGraphKey(dataset, graph)) ?? emptyFlags();
-            m.set(makeGraphKey(dataset, graph), { ...cur, ...next });
-            return { byGraph: m };
-        });
+    async function canUndo(
+        dataset?: string,
+        graph?: string,
+        force = false,
+    ): Promise<boolean> {
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) return false;
+        return (
+            (await loadSlot(
+                store,
+                s => getGraphFlags(s, targets.dataset, targets.graph).canUndo,
+                (s, patch) =>
+                    setGraphFlags(s, targets.dataset, targets.graph, {
+                        canUndo: {
+                            ...getGraphFlags(s, targets.dataset, targets.graph)
+                                .canUndo,
+                            ...patch,
+                        },
+                    }),
+                () =>
+                    sdkCanUndo({
+                        path: {
+                            datasetName: targets.dataset,
+                            graphURI: targets.graph,
+                        },
+                    }),
+                LOG,
+                `canUndo for dataset="${targets.dataset}" graph="${targets.graph}"`,
+                force,
+            )) ?? false
+        );
+    }
+
+    async function canRedo(
+        dataset?: string,
+        graph?: string,
+        force = false,
+    ): Promise<boolean> {
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) return false;
+        return (
+            (await loadSlot(
+                store,
+                s => getGraphFlags(s, targets.dataset, targets.graph).canRedo,
+                (s, patch) =>
+                    setGraphFlags(s, targets.dataset, targets.graph, {
+                        canRedo: {
+                            ...getGraphFlags(s, targets.dataset, targets.graph)
+                                .canRedo,
+                            ...patch,
+                        },
+                    }),
+                () =>
+                    sdkCanRedo({
+                        path: {
+                            datasetName: targets.dataset,
+                            graphURI: targets.graph,
+                        },
+                    }),
+                LOG,
+                `canRedo for dataset="${targets.dataset}" graph="${targets.graph}"`,
+                force,
+            )) ?? false
+        );
     }
 
     async function refresh(dataset?: string, graph?: string) {
-        const d = dataset ?? editorState.selectedDataset.getValue();
-        const g = graph ?? editorState.selectedGraph.getValue();
-        if (!d || !g) return;
-        const [u, r] = await Promise.all([
-            sdkCanUndo({ path: { datasetName: d, graphURI: g } }),
-            sdkCanRedo({ path: { datasetName: d, graphURI: g } }),
+        const targets = resolveTargets(dataset, graph);
+        if (!targets) return;
+        await Promise.all([
+            canUndo(targets.dataset, targets.graph, true),
+            canRedo(targets.dataset, targets.graph, true),
         ]);
-        patch(d, g, {
-            canUndo: !u.error && u.data === true,
-            canRedo: !r.error && r.data === true,
-        });
-    }
-
-    function canUndo(dataset?: string, graph?: string): boolean {
-        const targets = resolveTargets(dataset, graph);
-        if (!targets) return false;
-        return (
-            get(store).byGraph.get(makeGraphKey(targets.dataset, targets.graph))
-                ?.canUndo ?? false
-        );
-    }
-
-    function canRedo(dataset?: string, graph?: string): boolean {
-        const targets = resolveTargets(dataset, graph);
-        if (!targets) return false;
-        return (
-            get(store).byGraph.get(makeGraphKey(targets.dataset, targets.graph))
-                ?.canRedo ?? false
-        );
     }
 
     async function doUndo(dataset?: string, graph?: string) {
@@ -111,6 +167,7 @@ function createVersionControlStore() {
         ontologyStore.invalidateGraph(targets.dataset, targets.graph);
         customDiagramStore.invalidateDataset(targets.dataset);
         packageStore.invalidateGraph(targets.dataset, targets.graph);
+        datatypesStore.invalidateGraph(targets.dataset, targets.graph);
         await refresh(targets.dataset, targets.graph);
         return { error: null };
     }
@@ -136,7 +193,6 @@ function createVersionControlStore() {
         packageStore.invalidateGraph(targets.dataset, targets.graph);
         ontologyStore.invalidateGraph(targets.dataset, targets.graph);
         customDiagramStore.invalidateDataset(targets.dataset);
-
         await refresh(targets.dataset, targets.graph);
         return { error: null };
     }

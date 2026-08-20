@@ -99,11 +99,12 @@ export async function getClasses(
     graphUri,
     includeExternalClasses = true,
 ) {
-    const res = await classStore.getClasses(
-        datasetName,
-        graphUri,
-        includeExternalClasses,
-    ) ?? [];
+    const res =
+        (await classStore.getClasses(
+            datasetName,
+            graphUri,
+            includeExternalClasses,
+        )) ?? [];
     let classes = res.map(cls => new Class(cls));
     console.debug("CLASSES:", classes);
     return classes;

@@ -109,7 +109,7 @@ public class UpdateClassService
 
         if (releasedUuid != null) {
             deleteClassLayoutDataUseCase.deleteClassLayoutData(graphIdentifier, releasedUuid);
-            removeFromDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
+            removeFromCustomDiagramUseCase.removeFromAllDiagrams(graphIdentifier, releasedUuid);
         }
 
         updateDiagramObjectNameUseCase.updateDiagramObjectName(

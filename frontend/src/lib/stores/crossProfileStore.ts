@@ -25,14 +25,12 @@ import {
     getCrossProfileDiagram,
     getCrossProfileDiagramId,
     type CrossProfileDiagramDto,
-    type CrossProfileDiagramColorDataDto,
     type RenderingDataDto,
 } from "../api/generated";
 
 type StoreState = {
     ids: Map<string, AsyncSlot<string>>;
     diagrams: Map<string, AsyncSlot<CrossProfileDiagramDto>>;
-    colors: Map<string, AsyncSlot<CrossProfileDiagramColorDataDto>>;
 };
 
 const LOG_PREFIX = "[crossProfileStore]";
@@ -43,7 +41,6 @@ function createCrossProfileStore() {
     const store = writable<StoreState>({
         ids: new Map(),
         diagrams: new Map(),
-        colors: new Map(),
     });
 
     const { subscribe, update } = store;
@@ -133,11 +130,9 @@ function createCrossProfileStore() {
         update(s => {
             const ids = new Map(s.ids);
             const diagrams = new Map(s.diagrams);
-            const colors = new Map(s.colors);
             ids.delete(datasetName);
             diagrams.delete(datasetName);
-            colors.delete(datasetName);
-            return { ids, diagrams, colors };
+            return { ids, diagrams };
         });
     }
 

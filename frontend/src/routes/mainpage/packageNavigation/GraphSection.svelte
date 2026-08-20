@@ -134,11 +134,12 @@
             graphNavEntry.id,
         );
 
-        canUndo = versionControlStore.canUndo(
+        await versionControlStore.refresh(datasetNavEntry.id, graphNavEntry.id);
+        canUndo = await versionControlStore.canUndo(
             datasetNavEntry.id,
             graphNavEntry.id,
         );
-        canRedo = versionControlStore.canRedo(
+        canRedo = await versionControlStore.canRedo(
             datasetNavEntry.id,
             graphNavEntry.id,
         );
