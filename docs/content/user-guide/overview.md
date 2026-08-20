@@ -15,20 +15,20 @@ This guide assumes you have the application running. If you don't, see [Installa
 
 Before the tour, three terms do a lot of work in RDFArchitect and it is worth fixing them up front.
 
-**Dataset.** A dataset is the outermost container. Think of it as a workspace held in backend memory. Use separate datasets when you want to keep releases, comparison versions, or loaded snapshots apart from each other. Every import, every graph, every change is scoped to exactly one dataset.
+**Workspace.** A workspace is the outermost container, held in backend memory and shown as a tab above the editor. Use separate workspaces when you want to keep releases, comparison versions, or loaded snapshots apart from each other. Every import, every graph, every change is scoped to exactly one workspace.
 
-**Graph (schema).** Inside a dataset, each **schema** lives in its own named graph. When you import a CGMES profile — say, `EquipmentProfile_v3.0.0.rdf` — that profile becomes *one graph* inside the dataset. You can have many graphs side-by-side in the same dataset (e.g. EQ, TP, SSH, SV profiles of a CGMES release), and you can move between them from the navigation tree on the left.
+**Graph (schema).** Inside a workspace, each **schema** lives in its own named graph. When you import a CGMES profile — say, `EquipmentProfile_v3.0.0.rdf` — that profile becomes *one graph* inside the workspace. You can have many graphs side-by-side in the same workspace (e.g. EQ, TP, SSH, SV profiles of a CGMES release), and you can move between them from the navigation tree on the left.
 
 **Package.** Inside a graph, classes are grouped into UML-style packages (e.g. `Core`, `Wires`, `Generation::Production`). Packages are the first-class organisational unit for the diagram area: when you select a package, the centre canvas draws exactly the classes that belong to it, with associations to classes in other packages shown at the boundary.
 
-Classes complete the hierarchy shown in the navigation tree: *"Dataset → Graph → Package → Class"*. Almost every action you trigger is implicitly scoped by what you have selected in that tree.
+Classes complete the hierarchy shown in the navigation tree: *"Workspace → Graph → Package → Class"*. Almost every action you trigger is implicitly scoped by what you have selected in that tree.
 
-**Custom Diagrams** In addition to the Packages defined by the schema, you can also define your own custom diagrams. These custom diagrams can either be defined on the graph level, in which case they can only contain classes defined in that graph, or they can be defined on the dataset level. Custom Diagram only store references to the original classes so any changes to those classes will always be reflected in their original package and any custom diagram that they belong to. Similarly, if a class is deleted it will be deleted from all its occurences.
+**Custom Diagrams** In addition to the Packages defined by the schema, you can also define your own custom diagrams. These custom diagrams can either be defined on the graph level, in which case they can only contain classes defined in that graph, or they can be defined on the workspace level. Custom Diagram only store references to the original classes so any changes to those classes will always be reflected in their original package and any custom diagram that they belong to. Similarly, if a class is deleted it will be deleted from all its occurences.
 
 ## How this guide is organised
 
-1. **[The workspace and importing data](./workspace-and-importing)** — the editor layout and how to get content in.
-2. **[Organising a schema](./organising-schemas)** — datasets, graphs, packages.
+1. **[The editor and importing data](./workspace-and-importing)** — the editor layout and how to get content in.
+2. **[Organising a schema](./organising-schemas)** — workspaces, graphs, packages.
 3. **[Editing classes](./editing-classes)** — the right-hand class editor.
 4. **[Working with namespaces](./namespaces)**.
 5. **[The profile header](./profile-header)** — ontology metadata.

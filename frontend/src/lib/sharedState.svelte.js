@@ -147,6 +147,32 @@ export const editorState = {
         );
     },
 
+    /** Moves the selection onto a workspace that was renamed. */
+    renameWorkspace(oldName, newName) {
+        if (this.selectedWorkspace.getValue() === oldName) {
+            this.selectedWorkspace.updateValue(newName);
+        }
+        if (this.selectedClassWorkspace.getValue() === oldName) {
+            this.selectedClassWorkspace.updateValue(newName);
+        }
+    },
+
+    /** Moves the selection onto a graph that was renamed. */
+    renameGraph(workspaceName, oldGraphUri, newGraphUri) {
+        if (
+            this.selectedWorkspace.getValue() === workspaceName &&
+            this.selectedGraph.getValue() === oldGraphUri
+        ) {
+            this.selectedGraph.updateValue(newGraphUri);
+        }
+        if (
+            this.selectedClassWorkspace.getValue() === workspaceName &&
+            this.selectedClassGraph.getValue() === oldGraphUri
+        ) {
+            this.selectedClassGraph.updateValue(newGraphUri);
+        }
+    },
+
     selectWorkspace(workspaceName) {
         multiSelectState.clear();
         this.activeSelectionKind.updateValue(SelectionLevel.WORKSPACE);

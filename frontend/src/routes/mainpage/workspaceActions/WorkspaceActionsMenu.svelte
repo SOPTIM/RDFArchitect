@@ -20,6 +20,7 @@
         faDiagramProject,
         faFileImport,
         faLock,
+        faPen,
         faPenToSquare,
         faPlus,
         faShare,
@@ -37,6 +38,7 @@
     import ImportDialog from "../../ImportDialog.svelte";
     import NamespacesDialog from "../../NamespacesDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
+    import RenameWorkspaceDialog from "../../RenameWorkspaceDialog.svelte";
     import SnapshotDialog from "../../SnapshotDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
     import CustomWorkspaceDiagramDialog from "../packageNavigation/custom-diagram-dialogs/CustomWorkspaceDiagramDialog.svelte";
@@ -49,6 +51,7 @@
         showImportDialog = $bindable(false),
     } = $props();
 
+    let showRenameDialog = $state(false);
     let showNewDiagramDialog = $state(false);
     let showNamespacesDialog = $state(false);
     let showSnapshotDialog = $state(false);
@@ -124,6 +127,14 @@
     {/if}
     <ContextMenu.Separator />
     <ContextMenu.Item.Button
+        onSelect={() => (showRenameDialog = true)}
+        disabled={readonly}
+        faIcon={faPen}
+        altText="Shift+F6"
+    >
+        Rename Workspace
+    </ContextMenu.Item.Button>
+    <ContextMenu.Item.Button
         onSelect={() => (showDeleteDialog = true)}
         faIcon={faTrash}
         variant="danger"
@@ -152,4 +163,5 @@
     bind:showDialog={showSnapshotDialog}
     lockedWorkspaceName={workspaceName}
 />
+<RenameWorkspaceDialog bind:showDialog={showRenameDialog} {workspaceName} />
 <WorkspaceDeleteDialog bind:showDialog={showDeleteDialog} {workspaceName} />

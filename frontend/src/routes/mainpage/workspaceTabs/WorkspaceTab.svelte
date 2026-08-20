@@ -19,7 +19,7 @@
     import {
         faDatabase,
         faLock,
-        faXmark,
+        faTrash,
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
@@ -81,7 +81,7 @@
                 title="Delete Workspace"
                 onclick={() => (showDeleteDialog = true)}
             >
-                <Fa icon={faXmark} />
+                <Fa icon={faTrash} />
             </button>
         </div>
     </ContextMenu.TriggerArea>

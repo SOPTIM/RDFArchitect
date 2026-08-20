@@ -37,6 +37,7 @@
         faEyeDropper,
         faPalette,
         faSliders,
+        faPen,
     } from "@fortawesome/free-solid-svg-icons";
     import { getContext } from "svelte";
 
@@ -74,6 +75,7 @@
     import ExportDialog from "../../ExportDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import RenameGraphDialog from "../../RenameGraphDialog.svelte";
     import SHACLExportDialog from "../../shacl/SHACLExportDialog.svelte";
     import SHACLFullViewDialog from "../../shacl/SHACLFullViewDialog.svelte";
     import SHACLUploadDialog from "../../shacl/SHACLUploadDialog.svelte";
@@ -93,6 +95,7 @@
     let ontology = $state();
     let showExportDialog = $state(false);
     let showDeleteDialog = $state(false);
+    let showRenameDialog = $state(false);
     let showNewPackageDialog = $state(false);
     let showNewDiagramDialog = $state(false);
     let showCompareDialog = $state(false);
@@ -414,6 +417,17 @@
             <ContextMenu.Item.Button
                 onSelect={() => {
                     focusGraphContext();
+                    showRenameDialog = true;
+                }}
+                disabled={readonly}
+                faIcon={faPen}
+                altText="Shift+F6"
+            >
+                Rename Schema
+            </ContextMenu.Item.Button>
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    focusGraphContext();
                     showDeleteDialog = true;
                 }}
                 disabled={readonly}
@@ -453,6 +467,11 @@
     lockedGraphUri={graphNavEntry.id}
 />
 <GraphDeleteDialog bind:showDialog={showDeleteDialog} />
+<RenameGraphDialog
+    bind:showDialog={showRenameDialog}
+    workspaceName={workspaceNavEntry.id}
+    graphUri={graphNavEntry.id}
+/>
 <NewPackageDialog
     bind:showDialog={showNewPackageDialog}
     lockedWorkspaceName={workspaceNavEntry.id}

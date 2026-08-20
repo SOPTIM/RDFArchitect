@@ -11,7 +11,7 @@ A structured checklist of what RDFArchitect does, organised by the role most lik
 
 ### Import a CGMES / ENTSO-E profile
 
-Open `.rdf`, `.ttl`, or `.nt` files directly from the UI. Every file becomes one graph inside a dataset of your choice. Multiple profiles from the same release (EQ / TP / SSH / SV, or the different Network Code Profiles) can live side-by-side in one dataset.
+Open `.rdf`, `.ttl`, or `.nt` files directly from the UI. Every file becomes one graph inside a workspace of your choice. Multiple profiles from the same release (EQ / TP / SSH / SV, or the different Network Code Profiles) can live side-by-side in one workspace.
 
 ### Navigate a schema by package
 
@@ -47,13 +47,13 @@ Every attribute and association row in the class editor has a SHACL icon that op
 
 ## For software architects and schema maintainers
 
-### Dataset / graph / package model
+### Workspace / graph / package model
 
-Many in-memory datasets, many graphs per dataset, many packages per graph. The hierarchy is enforced by the UI and by the REST API, and every edit is scoped by it.
+Many in-memory workspaces, many graphs per workspace, many packages per graph. The hierarchy is enforced by the UI and by the REST API, and every edit is scoped by it.
 
 ### Namespace management
 
-Per-dataset namespace table with validation for unique prefixes. Prefixes can be added, renamed, and deleted. Export honours the active namespace table.
+Per-workspace namespace table with validation for unique prefixes. Prefixes can be added, renamed, and deleted. Export honours the active namespace table.
 
 ### Undo, redo, and version history
 
@@ -91,13 +91,13 @@ SHACL shapes are generated automatically from the schema. They include, among ot
 
 Import the official SHACL of a CGMES/ENTSO-E release and store it next to the generated shapes. Custom SHACL can be edited freely and is not regenerated when the schema changes. Both sets are visible at graph level and at class level.
 
-### Read-only datasets
+### Read-only workspaces
 
-A toggle that locks a dataset against all editing actions. Imported datasets and snapshot views are read-only by default, and can be unlocked with **Enable Editing** when changes are needed.
+A toggle that locks a workspace against all editing actions. Imported workspaces and snapshot views are read-only by default, and can be unlocked with **Enable Editing** when changes are needed.
 
 ### Snapshots
 
-One-click immutable copy of a dataset, stored in Fuseki, reachable by a URL with a base64 token. Anyone with the URL can load the full dataset — navigation, diagrams, SHACL — as a read-only dataset without installing anything. The loaded dataset can be made editable, but the stored snapshot is not modified.
+One-click immutable copy of a workspace, stored in Fuseki, reachable by a URL with a base64 token. Anyone with the URL can load the full workspace — navigation, diagrams, SHACL — as a read-only workspace without installing anything. The loaded workspace can be made editable, but the stored snapshot is not modified.
 
 ### Export
 
@@ -143,7 +143,9 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Export SHACL                          | File → Export → Constraints (SHACL)              |
 | Share snapshot                        | File → Share Snapshot                            |
 | Delete schema                         | File → Delete → Schema                           |
-| Delete dataset                        | File → Delete → Dataset                          |
+| Delete workspace                      | File → Delete → Workspace                        |
+| Rename workspace                      | Edit → Rename → Workspace                        |
+| Rename schema                         | Edit → Rename → Schema                           |
 | New class                             | Edit → New → Class                               |
 | New package                           | Edit → New → Package                             |
 | New empty schema                      | Edit → New → Schema                              |
@@ -159,7 +161,7 @@ Spring Boot backend, SvelteKit frontend, Apache Jena, Apache Jena Fuseki. All ma
 | Migrate schema (5-step wizard)        | View → Migrate Schema                            |
 | Full SHACL view (generated+custom)    | View → View Constraints (SHACL)                  |
 | Help / feedback / about               | Help menu                                        |
-| Search across the dataset             | Search bar at the top                            |
+| Search across the workspace           | Search bar at the top                            |
 | Property-specific constraints (SHACL) | Class editor → SHACL icon next to each row       |
 | Class-level constraints (SHACL)       | Class editor → SHACL section                     |
 | API documentation (Swagger UI)        | `http://<backend-host>:8080/swagger-ui.html`     |

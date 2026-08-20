@@ -31,10 +31,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.rdfarchitect.database.inmemory.diagrams.ClassInDiagram;
+import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
+import org.rdfarchitect.exception.database.ResourceConflictException;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 class GraphWithContextCollectionTest {
 
@@ -309,6 +314,145 @@ class GraphWithContextCollectionTest {
 
         // Assert
         assertThat(collection.listGraphUris()).isEmpty();
+    }
+
+    @Test
+    void rename_existingGraphUri_keepsContentUnderNewUri() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+
+        // Act
+        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+
+        // Assert
+        assertThat(collection.listGraphUris()).containsExactly("http://example.org/graph2");
+        try (var ctx =
+                collection.getGraphWithContext("http://example.org/graph2").begin(ReadWrite.READ)) {
+            assertThat(ctx.getRdfGraph().isIsomorphicWith(exampleGraphs.get(1))).isTrue();
+        }
+    }
+
+    @Test
+    void rename_updatesGraphUriInCustomDiagrams() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+        exampleGraphs = List.of(createExampleGraph());
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        var diagramId = UUID.randomUUID();
+        var classUuid = UUID.randomUUID();
+        var diagram = new CustomDiagram(diagramId);
+        diagram.setClasses(
+                List.of(
+                        new ClassInDiagram(classUuid, new URI("http://example.org/graph1")),
+                        new ClassInDiagram(
+                                UUID.randomUUID(), new URI("http://example.org/other"))));
+        collection.getCustomDiagrams().put(diagramId, diagram);
+
+        // Act
+        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+
+        // Assert
+        assertThat(collection.getCustomDiagrams().get(diagramId).getClasses())
+                .extracting(entry -> entry.getGraphUri().toString())
+                .containsExactly("http://example.org/graph2", "http://example.org/other");
+    }
+
+    @Test
+    void rename_updatesGraphUriInSchemaScopedCustomDiagrams() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        collection.create("http://example.org/other", exampleGraphs.get(1));
+        var ownDiagramId = UUID.randomUUID();
+        var ownDiagram = new CustomDiagram(ownDiagramId);
+        ownDiagram.setClasses(
+                List.of(
+                        new ClassInDiagram(
+                                UUID.randomUUID(), new URI("http://example.org/graph1"))));
+        collection
+                .getGraphWithContext("http://example.org/graph1")
+                .getCustomDiagrams()
+                .put(ownDiagramId, ownDiagram);
+        var foreignDiagramId = UUID.randomUUID();
+        var foreignDiagram = new CustomDiagram(foreignDiagramId);
+        foreignDiagram.setClasses(
+                List.of(
+                        new ClassInDiagram(
+                                UUID.randomUUID(), new URI("http://example.org/graph1"))));
+        collection
+                .getGraphWithContext("http://example.org/other")
+                .getCustomDiagrams()
+                .put(foreignDiagramId, foreignDiagram);
+
+        // Act
+        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+
+        // Assert
+        assertThat(
+                        collection
+                                .getGraphWithContext("http://example.org/graph2")
+                                .getCustomDiagrams()
+                                .get(ownDiagramId)
+                                .getClasses())
+                .extracting(entry -> entry.getGraphUri().toString())
+                .containsExactly("http://example.org/graph2");
+        assertThat(
+                        collection
+                                .getGraphWithContext("http://example.org/other")
+                                .getCustomDiagrams()
+                                .get(foreignDiagramId)
+                                .getClasses())
+                .extracting(entry -> entry.getGraphUri().toString())
+                .containsExactly("http://example.org/graph2");
+    }
+
+    @Test
+    void rename_movesCrossProfileColorToNewUri() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+        exampleGraphs = List.of(createExampleGraph());
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        collection.getCrossProfileDiagramInfo().setColor("http://example.org/graph1", "#123456");
+
+        // Act
+        collection.rename("http://example.org/graph1", "http://example.org/graph2");
+
+        // Assert
+        var info = collection.getCrossProfileDiagramInfo();
+        assertThat(info.getColor("http://example.org/graph2")).isEqualTo("#123456");
+        assertThat(info.getColor("http://example.org/graph1")).isNull();
+    }
+
+    @Test
+    void rename_nonExistingGraphUri_throwsException() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+
+        // Act/Assert
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(
+                        () ->
+                                collection.rename(
+                                        "http://example.org/missing", "http://example.org/graph2"));
+    }
+
+    @Test
+    void rename_alreadyTakenGraphUri_throwsException() {
+        // Arrange
+        GraphWithContextCollection collection = new GraphWithContextCollection();
+        exampleGraphs = List.of(createExampleGraph(), createExampleGraph());
+        collection.create("http://example.org/graph1", exampleGraphs.getFirst());
+        collection.create("http://example.org/graph2", exampleGraphs.get(1));
+
+        // Act/Assert
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(
+                        () ->
+                                collection.rename(
+                                        "http://example.org/graph1", "http://example.org/graph2"));
     }
 
     @Test

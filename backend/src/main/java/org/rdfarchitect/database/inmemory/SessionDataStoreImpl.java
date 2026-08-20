@@ -35,6 +35,7 @@ import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.database.inmemory.diagrams.CrossProfileDiagramInfo;
 import org.rdfarchitect.database.inmemory.diagrams.CustomDiagram;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.models.cim.queries.select.CIMBaseQueryBuilder;
 import org.rdfarchitect.rdf.graph.source.builder.implementations.GraphSourceBuilderImpl;
 import org.rdfarchitect.rdf.graph.wrapper.DiagramLayout;
@@ -81,6 +82,37 @@ public class SessionDataStoreImpl implements SessionDataStore {
             }
             graphCollections.get(datasetName).clear();
             graphCollections.remove(datasetName);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void renameDataset(String oldDatasetName, String newDatasetName) {
+        lock.lock();
+        try {
+            if (oldDatasetName.equals(newDatasetName)) {
+                return;
+            }
+            assertThatDatasetExists(oldDatasetName);
+            if (graphCollections.containsKey(newDatasetName)) {
+                throw new ResourceConflictException(
+                        "Dataset " + newDatasetName + " already exists");
+            }
+            graphCollections.put(newDatasetName, graphCollections.remove(oldDatasetName));
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri) {
+        lock.lock();
+        try {
+            assertThatGraphExists(graphIdentifier);
+            graphCollections
+                    .get(graphIdentifier.datasetName())
+                    .rename(graphIdentifier.graphUri(), newGraphUri);
         } finally {
             lock.unlock();
         }

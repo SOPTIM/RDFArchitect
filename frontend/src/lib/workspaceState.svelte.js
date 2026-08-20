@@ -95,7 +95,9 @@ export const workspaceState = {
         if (!res.ok) {
             toastStore.error(
                 "Create failed",
-                `Could not create workspace "${name}".`,
+                res.status === 409
+                    ? `A workspace named "${name}" already exists.`
+                    : `Could not create workspace "${name}".`,
             );
             return false;
         }
@@ -106,6 +108,32 @@ export const workspaceState = {
             ),
         );
         this.activate(name);
+        return true;
+    },
+
+    async rename(name, newName) {
+        const res = await bec.renameWorkspace(name, newName);
+        if (!res.ok) {
+            toastStore.error(
+                "Rename failed",
+                res.status === 409
+                    ? `A workspace named "${newName}" already exists.`
+                    : `Could not rename workspace "${name}".`,
+            );
+            return false;
+        }
+        if (selectionByWorkspace.has(name)) {
+            selectionByWorkspace.set(newName, selectionByWorkspace.get(name));
+            selectionByWorkspace.delete(name);
+        }
+        this.names.updateValue(
+            this.getNames()
+                .map(workspaceName =>
+                    workspaceName === name ? newName : workspaceName,
+                )
+                .sort((a, b) => a.localeCompare(b)),
+        );
+        editorState.renameWorkspace(name, newName);
         return true;
     },
 

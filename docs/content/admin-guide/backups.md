@@ -5,7 +5,7 @@ sidebar_position: 5
 
 # Backups
 
-RDFArchitect keeps uploaded datasets and edits in backend memory. Fuseki backups cover snapshots only.
+RDFArchitect keeps uploaded workspaces and edits in backend memory. Fuseki backups cover snapshots only.
 
 ## Recommended routine
 
@@ -37,4 +37,4 @@ curl -XPOST -H 'Content-Type: application/n-quads' \
 - The backend itself — stateless, can be rebuilt from the image.
 - The frontend — stateless, can be rebuilt from the image.
 - The gateway configuration — in version control.
-- Uploaded datasets and edits — they live in backend memory and should be exported from RDFArchitect if they need to be kept outside the running session.
+- Uploaded workspaces and edits — they live in backend memory and should be exported from RDFArchitect if they need to be kept outside the running session.

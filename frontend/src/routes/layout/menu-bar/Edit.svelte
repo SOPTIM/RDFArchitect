@@ -66,6 +66,8 @@
     import NewClassDialog from "../../NewClassDialog.svelte";
     import NewGraphDialog from "../../NewGraphDialog.svelte";
     import NewPackageDialog from "../../NewPackageDialog.svelte";
+    import RenameGraphDialog from "../../RenameGraphDialog.svelte";
+    import RenameWorkspaceDialog from "../../RenameWorkspaceDialog.svelte";
     import WorkspaceDeleteDialog from "../../WorkspaceDeleteDialog.svelte";
 
     let { canUndo, canRedo, isWorkspaceReadOnly, reload = () => {} } = $props();
@@ -82,6 +84,8 @@
     let showClassDeleteDependenciesDialog = $state(false);
     let showGraphDeleteDialog = $state(false);
     let showWorkspaceDeleteDialog = $state(false);
+    let showGraphRenameDialog = $state(false);
+    let showWorkspaceRenameDialog = $state(false);
     let showPackageEditorDialog = $state(false);
     let showNamespaceDialog = $state(false);
     let showEditOntologyDialog = $state(false);
@@ -172,6 +176,17 @@
         }
     });
 
+    // Shift+F6 renames the schema in context, or the workspace when the
+    // selection sits at workspace level.
+    let renameShortcutTarget = $derived.by(() => {
+        if (inferSelectionLevel() !== SelectionLevel.WORKSPACE) {
+            if (hasGraphSelected) {
+                return SelectionLevel.GRAPH;
+            }
+        }
+        return hasWorkspaceSelected ? SelectionLevel.WORKSPACE : null;
+    });
+
     let disablePasteButton = $derived(
         isWorkspaceReadOnly ||
             !hasGraphSelected ||
@@ -226,6 +241,12 @@
                 "toggleEdit",
                 ["ctrl", "alt", "r"],
                 () => toggleReadonly(),
+                true,
+            ),
+            shortcutStore.register(
+                "renameSelection",
+                ["shift", "f6"],
+                () => renameSelectionWithShortcut(),
                 true,
             ),
             shortcutStore.register("copyClass", ["ctrl", "c"], () =>
@@ -420,6 +441,20 @@
         }
     }
 
+    function renameSelectionWithShortcut() {
+        if (isWorkspaceReadOnly) {
+            return;
+        }
+        switch (renameShortcutTarget) {
+            case SelectionLevel.GRAPH:
+                showGraphRenameDialog = true;
+                break;
+            case SelectionLevel.WORKSPACE:
+                showWorkspaceRenameDialog = true;
+                break;
+        }
+    }
+
     function pasteClassWithShortcut(options) {
         if (!disablePasteButton) {
             pasteClass(options);
@@ -566,6 +601,27 @@
         </Menubar.Item.Button>
         <Menubar.Separator />
         <Menubar.SubMenu.Root>
+            <Menubar.SubMenu.Trigger faIcon={faPen}>
+                Rename
+            </Menubar.SubMenu.Trigger>
+            <Menubar.SubMenu.Content>
+                <Menubar.Item.Button
+                    onSelect={() => (showWorkspaceRenameDialog = true)}
+                    disabled={!hasWorkspaceSelected || isWorkspaceReadOnly}
+                    faIcon={faPen}
+                >
+                    Workspace
+                </Menubar.Item.Button>
+                <Menubar.Item.Button
+                    onSelect={() => (showGraphRenameDialog = true)}
+                    disabled={!hasGraphSelected || isWorkspaceReadOnly}
+                    faIcon={faDiagramProject}
+                >
+                    Schema
+                </Menubar.Item.Button>
+            </Menubar.SubMenu.Content>
+        </Menubar.SubMenu.Root>
+        <Menubar.SubMenu.Root>
             <Menubar.SubMenu.Trigger faIcon={faTrash} variant="danger">
                 Delete
             </Menubar.SubMenu.Trigger>
@@ -626,6 +682,15 @@
 <WorkspaceDeleteDialog
     bind:showDialog={showWorkspaceDeleteDialog}
     workspaceName={selectedWorkspace}
+/>
+<RenameWorkspaceDialog
+    bind:showDialog={showWorkspaceRenameDialog}
+    workspaceName={selectedWorkspace}
+/>
+<RenameGraphDialog
+    bind:showDialog={showGraphRenameDialog}
+    workspaceName={selectedWorkspace}
+    graphUri={selectedGraph}
 />
 <NamespacesDialog bind:showDialog={showNamespaceDialog} />
 {#if ontology}

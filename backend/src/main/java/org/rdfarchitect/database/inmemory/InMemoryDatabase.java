@@ -50,6 +50,25 @@ public interface InMemoryDatabase {
     void deleteDataset(String datasetName);
 
     /**
+     * Renames a Dataset, keeping all of its graphs, diagrams and namespaces.
+     *
+     * @param oldDatasetName The current name of the Dataset.
+     * @param newDatasetName The name to rename the Dataset to.
+     * @throws DataAccessException if the Dataset does not exist or the new name is already taken.
+     */
+    void renameDataset(String oldDatasetName, String newDatasetName);
+
+    /**
+     * Renames a named graph within its Dataset and rewrites all references to it. The content and
+     * history of the graph are kept.
+     *
+     * @param graphIdentifier The identifier of the graph to rename.
+     * @param newGraphUri The graph URI to rename to.
+     * @throws DataAccessException if the Dataset or graph does not exist.
+     */
+    void renameGraph(GraphIdentifier graphIdentifier, String newGraphUri);
+
+    /**
      * Returns a list of all datasets in the database
      *
      * @return List of datasets

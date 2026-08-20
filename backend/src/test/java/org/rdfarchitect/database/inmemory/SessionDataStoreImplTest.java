@@ -30,6 +30,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.exception.database.DataAccessException;
+import org.rdfarchitect.exception.database.ResourceConflictException;
 import org.rdfarchitect.rdf.TestRDFUtils;
 
 import java.util.List;
@@ -140,6 +141,70 @@ class SessionDataStoreImplTest {
 
         // Assert
         assertThat(inMemoryDatabase.listDatasets()).containsExactly("any");
+    }
+
+    @Test
+    void renameDataset_existingName_keepsGraphsUnderNewName() {
+        // Arrange
+        exampleGraphs = List.of(createExampleGraph());
+        var graphUri = "http://example.org/graph1";
+        inMemoryDatabase.create(new GraphIdentifier(NAME, graphUri), exampleGraphs.getFirst());
+        inMemoryDatabase.disableEditing(NAME);
+
+        // Act
+        inMemoryDatabase.renameDataset(NAME, "b");
+
+        // Assert
+        assertThat(inMemoryDatabase.listDatasets()).containsExactly("b");
+        assertThat(inMemoryDatabase.listGraphUris("b")).containsExactly(graphUri);
+        assertThat(inMemoryDatabase.isReadOnly("b")).isTrue();
+    }
+
+    @Test
+    void renameDataset_nonExistingName_throwsException() {
+        // Act/Assert
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> inMemoryDatabase.renameDataset("missing", "b"));
+    }
+
+    @Test
+    void renameDataset_alreadyTakenName_throwsException() {
+        // Arrange
+        inMemoryDatabase.createDataset(NAME);
+        inMemoryDatabase.createDataset("b");
+
+        // Act/Assert
+        assertThatExceptionOfType(ResourceConflictException.class)
+                .isThrownBy(() -> inMemoryDatabase.renameDataset(NAME, "b"));
+    }
+
+    @Test
+    void renameGraph_existingGraph_registersGraphUnderNewUri() {
+        // Arrange
+        exampleGraphs = List.of(createExampleGraph());
+        var graphIdentifier = new GraphIdentifier(NAME, "http://example.org/graph1");
+        inMemoryDatabase.create(graphIdentifier, exampleGraphs.getFirst());
+
+        // Act
+        inMemoryDatabase.renameGraph(graphIdentifier, "http://example.org/graph2");
+
+        // Assert
+        assertThat(inMemoryDatabase.listGraphUris(NAME))
+                .containsExactly("http://example.org/graph2");
+    }
+
+    @Test
+    void renameGraph_nonExistingGraph_throwsException() {
+        // Arrange
+        inMemoryDatabase.createDataset(NAME);
+        var graphIdentifier = new GraphIdentifier(NAME, "http://example.org/missing");
+
+        // Act/Assert
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(
+                        () ->
+                                inMemoryDatabase.renameGraph(
+                                        graphIdentifier, "http://example.org/graph2"));
     }
 
     @Test
