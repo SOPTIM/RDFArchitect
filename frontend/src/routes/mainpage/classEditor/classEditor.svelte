@@ -19,6 +19,7 @@
     import { onDestroy, onMount, setContext } from "svelte";
     import { Pane, Splitpanes } from "svelte-splitpanes";
 
+    import ButtonControl from "$lib/components/ButtonControl.svelte";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import {
         eventStack,
@@ -76,6 +77,10 @@
 
     let reactiveClass = $state();
 
+    let externalClass = $state(null);
+
+    let creatingClass = $state(false);
+
     let inheritedAttributes = $state([]);
 
     let inheritedAssociations = $state([]);
@@ -112,6 +117,9 @@
         const cancellation = { cancelled: false };
         loadingContext = true;
         loadingClass = true;
+        // Clearing this up front keeps the panel of the previously opened class from showing
+        // through the loading overlay while the newly selected one is fetched.
+        externalClass = null;
         (async () => {
             const classDto = await classStore.getClassInfo(
                 datasetName,
@@ -119,6 +127,7 @@
                 classUuid,
                 true,
             );
+            if (cancellation.cancelled) return;
             if (classDto == null) {
                 return closeClassEditor({
                     datasetName: datasetName,
@@ -126,7 +135,17 @@
                     classUuid: null,
                 });
             }
-            await loadContext();
+            const readOnly = await datasetStore.isReadOnly(datasetName);
+            if (cancellation.cancelled) return;
+            isDatasetReadOnly = readOnly;
+            if (classDto.external) {
+                reactiveClass = undefined;
+                externalClass = classDto;
+                loadingContext = false;
+                loadingClass = false;
+                return;
+            }
+            await loadContext(cancellation);
             await loadReactiveClass(cancellation, classDto);
         })();
 
@@ -191,20 +210,65 @@
         });
     }
 
-    async function loadContext() {
-        [
-            context.classes,
-            context.packages,
-            context.datatypes,
-            context.stereotypes,
-            context.namespaces,
-        ] = await Promise.all([
-            getClasses(datasetName, graphUri),
-            getPackages(datasetName, graphUri),
-            getDataTypes(datasetName, graphUri),
-            datatypesStore.getStereotypes(datasetName, graphUri),
-            datasetStore.getNamespaces(datasetName),
-        ]);
+    /**
+     * Creates the class for a referenced only resource. Its namespace comes from the referenced
+     * uri and its package from the diagram it is shown in, so nothing has to be asked for. The
+     * backend reuses the uuid of the referenced resource, so the class keeps its identity and its
+     * layout data.
+     */
+    async function createReferencedClass() {
+        creatingClass = true;
+        try {
+            const res = await bec.postClass(datasetName, graphUri, {
+                packageDTO: await packageOfCurrentDiagram(),
+                classURIPrefix: externalClass.prefix,
+                className: externalClass.label,
+            });
+            if (!res.ok) {
+                toastStore.error(
+                    "Create failed",
+                    `Could not create class "${externalClass.label}".`,
+                );
+                return;
+            }
+            toastStore.success(
+                "Class created",
+                `"${externalClass.label}" was added.`,
+            );
+            forceReloadTrigger.trigger();
+        } catch (e) {
+            console.error("failed to create referenced class:", e);
+            toastStore.error(
+                "Create failed",
+                "An unexpected error occurred while creating the class.",
+            );
+        } finally {
+            creatingClass = false;
+        }
+    }
+
+    async function packageOfCurrentDiagram() {
+        const diagramId = editorState.selectedDiagram.getProperty("id");
+        if (!diagramId || diagramId === "default") {
+            return null;
+        }
+        const packages = await getPackages(datasetName, graphUri);
+        return packages.find(pkg => pkg.uuid === diagramId) ?? null;
+    }
+
+    async function loadContext(cancellation) {
+        const [classes, packages, datatypes] =
+            await Promise.all([
+                getClasses(datasetName, graphUri),
+                getPackages(datasetName, graphUri),
+                getDataTypes(datasetName, graphUri),
+            ]);
+        if (cancellation.cancelled) return;
+        context.classes = classes;
+        context.packages = packages;
+        context.datatypes = datatypes;
+        context.stereotypes = datatypesStore.getStereotypes(datasetName, graphUri);
+        context.namespaces = datasetStore.getNamespaces(datasetName);
         loadingContext = false;
         editorState.selectedContext.trigger();
     }
@@ -356,7 +420,30 @@
         horizontal
         class="bg-window-background h-full"
     >
-        {#if reactiveClass}
+        {#if externalClass}
+            <Pane
+                size={100}
+                class="bg-window-background z-2 size-full rounded-xs border-none"
+            >
+                <div
+                    class="text-default-text flex size-full flex-col items-center justify-center gap-3 p-4 text-center"
+                >
+                    <span class="text-lg font-bold">{externalClass.label}</span>
+                    <span class="text-sm opacity-70">
+                        This class is referenced here but not defined in this
+                        schema.
+                    </span>
+                    {#if !isDatasetReadOnly}
+                        <ButtonControl
+                            callOnClick={createReferencedClass}
+                            disabled={creatingClass}
+                        >
+                            Create class
+                        </ButtonControl>
+                    {/if}
+                </div>
+            </Pane>
+        {:else if reactiveClass}
             <Pane
                 size={75}
                 class="bg-window-background z-2 size-full rounded-xs border-none"

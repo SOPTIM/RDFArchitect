@@ -17,6 +17,8 @@
 
 package org.rdfarchitect.services.dl.update;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.jena.rdf.model.ResourceFactory;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,8 @@ import org.rdfarchitect.api.dto.dl.ClassPositionDTO;
 import org.rdfarchitect.api.dto.packages.PackageDTO;
 import org.rdfarchitect.dl.data.DLUtils;
 import org.rdfarchitect.dl.data.dto.relations.MRID;
+import org.rdfarchitect.dl.queries.select.DLObjectFetcher;
+import org.rdfarchitect.dl.queries.update.DLUpdates;
 import org.rdfarchitect.dl.rdf.resources.DL;
 import org.rdfarchitect.services.dl.DiagramLayoutServicesTestBase;
 import org.rdfarchitect.services.dl.update.classlayout.UpdateClassLayoutService;
@@ -80,6 +84,71 @@ class UpdateClassLayoutServiceTest extends DiagramLayoutServicesTestBase {
         // Assert
         assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
         assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
+    }
+
+    @Test
+    void createClassLayoutData_layoutDataExists_keepsExistingLayoutData() {
+        // Arrange: a class that already has layout data, as when it takes over an uri whose
+        // class was deleted while references to it remained
+        addGraphFromFile("package_and_class.ttl");
+        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("http://example.org#")
+                        .build();
+        var classPositionDTO = new ClassPositionDTO();
+        classPositionDTO.setClassUUID(CLASS_A_UUID);
+        classPositionDTO.setXPosition(123.0F);
+        classPositionDTO.setYPosition(456.0F);
+        service.updateClassPositions(graphIdentifier, PACKAGE_A_UUID, List.of(classPositionDTO));
+
+        // Act
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, null);
+
+        // Assert
+        assertThat(
+                        diagramLayout
+                                .getDiagramLayoutModelDirect()
+                                .listSubjectsWithProperty(
+                                        DL.belongsToIdentifiedObject,
+                                        ResourceFactory.createResource(
+                                                new MRID(CLASS_A_UUID).getFullMRID()))
+                                .toList())
+                .hasSize(1);
+        assertDiagramObjectCoordinates(CLASS_A_UUID, 123.0F, 456.0F);
+    }
+
+    @Test
+    void createClassLayoutData_layoutDataWithoutPoint_placesClassAtRequestedPosition() {
+        // Arrange: a diagram object that lost its point, so the class has layout data but no place
+        addGraphFromFile("package_and_class.ttl");
+        updateDiagramLayoutService.createDiagramLayout(graphIdentifier);
+        var doMRID = assertDiagramObject(CLASS_A_UUID, PACKAGE_A_UUID, CLASS_A_LABEL);
+        var diagramLayoutModel = diagramLayout.getDiagramLayoutModelDirect();
+        DLUpdates.deleteDiagramObjectPoint(
+                diagramLayoutModel,
+                DLObjectFetcher.fetchDOPForDO(diagramLayoutModel, doMRID).getMRID());
+        assertDiagramObjectPointDoesNotExist(doMRID);
+
+        var packageDTO =
+                PackageDTO.builder()
+                        .uuid(PACKAGE_A_UUID)
+                        .label(PACKAGE_A_LABEL)
+                        .prefix("http://example.org#")
+                        .build();
+        var classLayoutPosition = new ClassLayoutPositionDTO();
+        classLayoutPosition.setXPosition(12.0F);
+        classLayoutPosition.setYPosition(34.0F);
+
+        // Act
+        service.createClassLayoutData(
+                graphIdentifier, packageDTO, CLASS_A_LABEL, CLASS_A_UUID, classLayoutPosition);
+
+        // Assert
+        assertDiagramObjectCoordinates(CLASS_A_UUID, 12.0F, 34.0F);
     }
 
     @Test

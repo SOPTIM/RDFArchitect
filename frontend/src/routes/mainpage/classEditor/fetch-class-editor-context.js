@@ -94,9 +94,17 @@ export async function getDataTypes(datasetName, graphUri) {
     return datatypes;
 }
 
-export async function getClasses(datasetName, graphUri) {
-    const classDTOs = await classStore.getClasses(datasetName, graphUri, true);
-    let classes = classDTOs.map(cls => new Class(cls));
+export async function getClasses(
+    datasetName,
+    graphUri,
+    includeExternalClasses = true,
+) {
+    const res = await classStore.getClasses(
+        datasetName,
+        graphUri,
+        includeExternalClasses,
+    ) ?? [];
+    let classes = res.map(cls => new Class(cls));
     console.debug("CLASSES:", classes);
     return classes;
 }

@@ -40,6 +40,13 @@ public class ClassUMLAdaptedDTO {
 
     private UUID uuid;
 
+    /**
+     * Whether the class is only referenced by other resources instead of being defined in this
+     * graph. Such a class has no properties and can only be edited once it is created. Nullable so
+     * that a client can send a class back without having to carry the flag.
+     */
+    private Boolean external;
+
     private String prefix;
 
     private String label;

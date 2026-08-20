@@ -29,6 +29,13 @@ public class NodeDataDTO {
 
     private String label;
     private String graphUri;
+
+    /**
+     * Whether the class is only referenced by other resources instead of being defined in this
+     * graph. Such a node has no properties to render and cannot be edited until it is created.
+     */
+    private boolean external;
+
     private String belongsToCategory;
     private List<String> stereotypes;
     private List<AttributeDTO> attributes;

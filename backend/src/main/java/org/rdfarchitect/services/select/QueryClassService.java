@@ -19,7 +19,9 @@ package org.rdfarchitect.services.select;
 
 import lombok.RequiredArgsConstructor;
 
+import org.apache.jena.graph.Graph;
 import org.apache.jena.query.ReadWrite;
+import org.apache.jena.rdf.model.ModelFactory;
 import org.rdfarchitect.api.dto.ClassDTO;
 import org.rdfarchitect.api.dto.ClassMapper;
 import org.rdfarchitect.api.dto.ClassUMLAdaptedDTO;
@@ -28,8 +30,11 @@ import org.rdfarchitect.database.DatabasePort;
 import org.rdfarchitect.database.GraphIdentifier;
 import org.rdfarchitect.models.cim.data.CIMObjectFetcher;
 import org.rdfarchitect.models.cim.data.dto.CIMClass;
+import org.rdfarchitect.models.cim.data.dto.relations.uri.URI;
+import org.rdfarchitect.models.cim.rdf.resources.RDFA;
 import org.rdfarchitect.models.cim.relations.CIMClassRelationFinder;
 import org.rdfarchitect.models.cim.relations.ClassRelationsDTO;
+import org.rdfarchitect.models.cim.relations.model.CIMResourceUtils;
 import org.rdfarchitect.models.cim.umladapted.CIMUMLObjectFactory;
 import org.springframework.stereotype.Service;
 
@@ -59,7 +64,7 @@ public class QueryClassService
                     CIMUMLObjectFactory.createCIMClassUMLAdapted(
                             graph, graphIdentifier.graphUri(), prefixMapping, classUUID);
             if (cimClass == null) {
-                return null;
+                return referencedOnlyClassDTO(graph, classUUID);
             }
             var classDTO = umlAdaptedClassMapper.toDTO(cimClass);
             if (includeSuperClasses) {
@@ -72,6 +77,31 @@ public class QueryClassService
             }
             return classDTO;
         }
+    }
+
+    /**
+     * Builds the information for a class that is only referenced by other resources instead of
+     * being defined in this graph. It carries nothing but its uri and uuid, so only the name can be
+     * shown until the class is created.
+     */
+    private ClassUMLAdaptedDTO referencedOnlyClassDTO(Graph graph, String classUUID) {
+        var model = ModelFactory.createModelForGraph(graph);
+        var subjects = model.listSubjectsWithProperty(RDFA.uuid, classUUID).toList();
+        if (subjects.size() != 1) {
+            return null;
+        }
+        var resource = subjects.getFirst();
+        if (!resource.isURIResource() || !CIMResourceUtils.isExternalResource(resource)) {
+            return null;
+        }
+        var uri = new URI(resource.getURI());
+        return ClassUMLAdaptedDTO.builder()
+                .uuid(UUID.fromString(classUUID))
+                .external(true)
+                .prefix(uri.getPrefix())
+                .label(uri.getSuffix())
+                .stereotypes(List.of())
+                .build();
     }
 
     @Override
