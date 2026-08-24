@@ -143,7 +143,6 @@
 
                                     <CustomDiagramsSection
                                         {workspaceNavEntry}
-                                        allGraphNavEntries={graphNavEntries}
                                         {readonly}
                                     />
                                 </div>

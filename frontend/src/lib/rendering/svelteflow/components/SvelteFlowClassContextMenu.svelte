@@ -33,8 +33,9 @@
     import ContextMenuSeparator from "$lib/components/bitsui/contextmenu/ContextMenuSeparator.svelte";
     import {
         copyState,
-        DiagramType,
         editorState,
+        isCustomDiagramType,
+        isMergedDiagramType,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
 
@@ -83,7 +84,7 @@
 
     /** The schema of the diagram the class was right-clicked in, if any. */
     const currentGraphUri = $derived(
-        isCrossProfileDiagram
+        isMergedDiagram
             ? null
             : (contextMenuClass?.graphUri ?? graphUri) || null,
     );
@@ -126,10 +127,11 @@
         multiActive && !multiSelectState.isSingleGraph,
     );
 
-    const isCrossProfileDiagram = $derived(
-        editorState.selectedDiagram.getProperty("type") ===
-            DiagramType.CROSS_PROFILE,
+    const diagramType = $derived(
+        editorState.selectedDiagram.getProperty("type"),
     );
+    const isMergedDiagram = $derived(isMergedDiagramType(diagramType));
+    const isCustomDiagram = $derived(isCustomDiagramType(diagramType));
 
     let classZIndex = $derived(
         contextMenuClass ? nodeOrder.indexOf(contextMenuClass.uuid) : -1,
@@ -245,7 +247,7 @@
         {disabled}
     />
     <ContextMenu.Content>
-        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+        {#if !isMergedDiagram}
             <ContextMenu.Item.Button
                 onSelect={copyClass}
                 faIcon={faCopy}
@@ -275,7 +277,7 @@
             {readOnly}
             onDone={onClose}
         />
-        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+        {#if !isMergedDiagram}
             <ContextMenu.Separator />
             <ContextMenu.Item.Button
                 onSelect={() => {
@@ -363,9 +365,9 @@
                 </ContextMenu.Item.Button>
             </ContextMenu.SubMenu.Content>
         </ContextMenu.SubMenu.Root>
-        {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.CROSS_PROFILE}
+        {#if isCustomDiagram || !isMergedDiagram}
             <ContextMenuSeparator />
-            {#if editorState.selectedDiagram.getProperty("type") !== DiagramType.PACKAGE}
+            {#if isCustomDiagram}
                 <ContextMenu.Item.Button
                     onSelect={openRemoveFromDiagramDialog}
                     faIcon={faMinus}
@@ -376,17 +378,19 @@
                         : "Remove from Diagram"}
                 </ContextMenu.Item.Button>
             {/if}
-            <ContextMenu.Item.Button
-                onSelect={openDeleteClassDialog}
-                disabled={classActionsDisabled || crossGraphDisabled}
-                faIcon={faTrash}
-                variant="danger"
-                altText="Del"
-            >
-                {multiActive
-                    ? `Delete ${selectionUuids.length} Classes`
-                    : "Delete Class"}
-            </ContextMenu.Item.Button>
+            {#if !isMergedDiagram}
+                <ContextMenu.Item.Button
+                    onSelect={openDeleteClassDialog}
+                    disabled={classActionsDisabled || crossGraphDisabled}
+                    faIcon={faTrash}
+                    variant="danger"
+                    altText="Del"
+                >
+                    {multiActive
+                        ? `Delete ${selectionUuids.length} Classes`
+                        : "Delete Class"}
+                </ContextMenu.Item.Button>
+            {/if}
         {/if}
     </ContextMenu.Content>
 </ContextMenu.Root>

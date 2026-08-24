@@ -23,17 +23,17 @@ import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
+import org.rdfarchitect.models.dto.rendering.RenderMergedDiagramUseCase;
 import org.springframework.http.HttpHeaders;
 
 class CrossProfileDiagramRenderingRestControllerTest {
 
-    private RenderCrossProfileDiagramUseCase renderer;
+    private RenderMergedDiagramUseCase renderer;
     private CrossProfileDiagramRenderingRestController controller;
 
     @BeforeEach
     void setUp() {
-        renderer = mock(RenderCrossProfileDiagramUseCase.class);
+        renderer = mock(RenderMergedDiagramUseCase.class);
         controller = new CrossProfileDiagramRenderingRestController(renderer);
     }
 

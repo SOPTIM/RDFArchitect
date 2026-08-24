@@ -24,9 +24,9 @@ import lombok.RequiredArgsConstructor;
 import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
+import org.rdfarchitect.models.dto.rendering.RenderMergedDiagramUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
-import org.rdfarchitect.services.rendering.RenderCIMCollectionUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -49,7 +49,7 @@ public class CustomDatasetDiagramsRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(CustomDatasetDiagramsRESTController.class);
 
-    private final RenderCIMCollectionUseCase renderer;
+    private final RenderMergedDiagramUseCase renderer;
 
     private final DeleteCustomDiagramUseCase deleteCustomDiagramUseCase;
 
@@ -72,7 +72,7 @@ public class CustomDatasetDiagramsRESTController {
                 diagramId,
                 originURL);
 
-        var result = renderer.renderDatasetDiagram(datasetName, UUID.fromString(diagramId));
+        var result = renderer.renderCustomDatasetDiagram(datasetName, UUID.fromString(diagramId));
 
         logger.info(
                 "Sending response to GET request: \"/api/datasets/{{}}/diagrams/{{}}\" from \"{}\"",

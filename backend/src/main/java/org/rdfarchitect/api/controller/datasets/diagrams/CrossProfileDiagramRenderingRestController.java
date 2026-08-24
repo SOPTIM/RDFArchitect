@@ -22,7 +22,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
-import org.rdfarchitect.models.dto.rendering.RenderCrossProfileDiagramUseCase;
+import org.rdfarchitect.models.dto.rendering.RenderMergedDiagramUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -40,7 +40,7 @@ public class CrossProfileDiagramRenderingRestController {
     private static final Logger logger =
             LoggerFactory.getLogger(CrossProfileDiagramRenderingRestController.class);
 
-    private final RenderCrossProfileDiagramUseCase renderer;
+    private final RenderMergedDiagramUseCase renderer;
 
     @GetMapping
     public RenderingDataDTO getCrossProfileRenderingData(

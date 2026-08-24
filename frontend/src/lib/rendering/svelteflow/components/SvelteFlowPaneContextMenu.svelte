@@ -27,6 +27,7 @@
         copyState,
         DiagramType,
         editorState,
+        isMergedDiagramType,
     } from "$lib/sharedState.svelte.js";
 
     import {
@@ -117,7 +118,7 @@
         style={triggerStyle}
         {disabled}
     />
-    {#if diagramType !== DiagramType.CROSS_PROFILE}
+    {#if !isMergedDiagramType(diagramType)}
         <ContextMenu.Content>
             {#if diagramType === DiagramType.PACKAGE}
                 <ContextMenu.Item.Button

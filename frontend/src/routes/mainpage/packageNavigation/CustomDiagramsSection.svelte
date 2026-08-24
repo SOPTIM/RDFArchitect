@@ -25,6 +25,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
+    import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
     import { customDiagramStore } from "$lib/stores/diagramStore.ts";
 
     import CustomDiagramButton from "./CustomDiagramButton.svelte";
@@ -33,12 +34,12 @@
         isSelectedGraph,
     } from "./packageNavigationUtils.svelte.js";
 
-    let { workspaceNavEntry, graphNavEntry, allGraphNavEntries, readonly } =
-        $props();
+    let { workspaceNavEntry, graphNavEntry, readonly } = $props();
 
     let diagramsExpanded = $state(false);
     let diagrams = $state([]);
     let classesByDiagram = $state({});
+    let mergedClassLookup = null;
 
     let isSelected = $derived(
         graphNavEntry
@@ -99,11 +100,13 @@
             );
 
             //reset classes after potential removal
-            classesByDiagram = {};
-            const expandedDiagrams = diagrams.filter(d => d.showContents);
-            await Promise.all(
-                expandedDiagrams.map(d => ensureClassesLoaded(d)),
+            mergedClassLookup = null;
+            const reloaded = await Promise.all(
+                diagrams
+                    .filter(d => d.showContents)
+                    .map(async d => [d.diagramId, await classesOf(d)]),
             );
+            classesByDiagram = Object.fromEntries(reloaded);
         } catch (err) {
             console.error("Failed to load diagrams:", err);
         }
@@ -117,11 +120,11 @@
         return diagramList.map(diagram => {
             const prev = previous.find(p => diagram.diagramId === p.diagramId);
             const keepExpanded = prev?.showContents ?? false;
-            const userCollapsed = prev?.userCollapsed ?? !keepExpanded;
+            const userCollapsed = prev?.userCollapsed ?? false;
             const isSelected = graphNavEntry
-                ? isSelectedGraph(workspaceNavEntry, graphNavEntry) &&
+                ? isSelectedGraph(workspaceNavEntry.id, graphNavEntry.id) &&
                   selectedDiagramId === diagram.diagramId
-                : isSelectedWorkspace(workspaceNavEntry) &&
+                : isSelectedWorkspace(workspaceNavEntry.id) &&
                   selectedDiagramId === diagram.diagramId;
 
             return {
@@ -138,40 +141,101 @@
         if (classesByDiagram[diagram.diagramId]) {
             return;
         }
+        try {
+            const classes = await classesOf(diagram);
+            classesByDiagram = {
+                ...classesByDiagram,
+                [diagram.diagramId]: classes,
+            };
+        } catch (err) {
+            console.error("Failed to load diagram classes:", err);
+        }
+    }
 
-        let classes = [];
-        if (graphNavEntry) {
-            classes = graphNavEntry.children
-                .map(pack =>
-                    pack.children.filter(cls =>
-                        diagram.classes.some(dc => dc.uuid === cls.id),
-                    ),
-                )
-                .flat();
-        } else {
-            allGraphNavEntries.forEach(graph => {
-                let classesInGraph = graph.children
-                    .map(pack =>
-                        pack.children.filter(cls =>
-                            diagram.classes.some(dc => dc.uuid === cls.id),
-                        ),
-                    )
-                    .flat();
+    async function classesOf(diagram) {
+        return graphNavEntry
+            ? classesOfSchema(diagram)
+            : mergedClassesOf(diagram, await mergedClassBySourceUuid());
+    }
 
-                classes.push(...classesInGraph);
+    function classesOfSchema(diagram) {
+        const parent = {
+            id: diagram.diagramId,
+            open: () => selectDiagram(diagram),
+        };
+        return graphNavEntry.children
+            .map(pack =>
+                pack.children.filter(cls =>
+                    diagram.classes.some(dc => dc.uuid === cls.id),
+                ),
+            )
+            .flat()
+            .map(cls => ({
+                id: cls.id,
+                label: cls.label,
+                tooltip: cls.tooltip,
+                parent,
+            }));
+    }
+
+    function mergedClassBySourceUuid() {
+        if (!mergedClassLookup) {
+            const request = crossProfileStore
+                .getDiagram(workspaceNavEntry.id)
+                .then(crossProfileDiagram => {
+                    const bySourceUuid = new Map();
+                    for (const merged of crossProfileDiagram?.classes ?? []) {
+                        for (const source of merged.sources ?? []) {
+                            bySourceUuid.set(source.classUUID, merged);
+                        }
+                    }
+                    return bySourceUuid;
+                });
+            mergedClassLookup = request;
+            request.catch(() => {
+                if (mergedClassLookup === request) {
+                    mergedClassLookup = null;
+                }
             });
         }
-        classesByDiagram[diagram.diagramId] = classes;
+        return mergedClassLookup;
+    }
+
+    function mergedClassesOf(diagram, bySourceUuid) {
+        const parent = {
+            id: diagram.diagramId,
+            open: () => selectDiagram(diagram),
+        };
+        const classes = [];
+        const seen = new Set();
+        for (const diagramClass of diagram.classes) {
+            const merged = bySourceUuid.get(diagramClass.uuid);
+            if (!merged || seen.has(merged.uuid)) {
+                continue;
+            }
+            seen.add(merged.uuid);
+            classes.push({
+                id: merged.uuid,
+                label: merged.label,
+                tooltip: merged.classUri,
+                parent,
+            });
+        }
+        return classes;
     }
 
     function handleClick() {
+        selectDiagram(null);
+    }
+
+    function selectDiagram(diagram) {
         const diagramType = graphNavEntry
             ? DiagramType.CUSTOM_GRAPH_DIAGRAM
             : DiagramType.CUSTOM_WORKSPACE_DIAGRAM;
         editorState.selectCustomDiagram(
             workspaceNavEntry.id,
             graphNavEntry?.id,
-            null,
+            diagram?.diagramId ?? null,
             diagramType,
         );
     }
@@ -204,7 +268,6 @@
             <CustomDiagramButton
                 {workspaceNavEntry}
                 {graphNavEntry}
-                {allGraphNavEntries}
                 bind:diagram={diagrams[index]}
                 classes={classesByDiagram[diagram.diagramId]}
                 {readonly}

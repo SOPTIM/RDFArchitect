@@ -31,4 +31,7 @@ public interface GetRenderingDataUseCase {
 
     RenderingDataDTO getRenderingData(
             GraphIdentifier graphIdentifier, GraphFilter filter, UUID packageUUID);
+
+    RenderingDataDTO getCustomDiagramRenderingData(
+            GraphIdentifier graphIdentifier, GraphFilter filter, UUID diagramUUID);
 }

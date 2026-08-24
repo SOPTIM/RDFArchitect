@@ -59,6 +59,21 @@ public class CIMModelFacade implements ICIMModelFacade {
     }
 
     @Override
+    public ICIMClass getCIMClass(UUID uuid) {
+        if (uuid == null) {
+            return null;
+        }
+        var classResources =
+                model.listSubjectsWithProperty(RDFA.uuid, uuid.toString())
+                        .filterKeep(resource -> resource.hasProperty(RDF.type, RDFS.Class))
+                        .toList();
+        if (classResources.isEmpty()) {
+            return null;
+        }
+        return new CIMClass(this.graphUri, this.model, classResources.getFirst());
+    }
+
+    @Override
     public List<ICIMClassCategory> getCIMClassCategories() {
         var packageResources =
                 new LinkedHashSet<Resource>(

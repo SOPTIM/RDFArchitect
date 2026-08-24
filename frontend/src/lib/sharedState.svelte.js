@@ -52,6 +52,16 @@ export const ClassType = {
     MERGED_CLASS: "mergedClass",
 };
 
+export const MERGED_DIAGRAM_TYPES = [
+    DiagramType.CROSS_PROFILE,
+    DiagramType.CUSTOM_WORKSPACE_DIAGRAM,
+];
+
+export const SINGLE_SCHEMA_DIAGRAM_TYPES = [
+    DiagramType.PACKAGE,
+    DiagramType.CUSTOM_GRAPH_DIAGRAM,
+];
+
 /**
  * Navigation levels, least to most specific. `activeSelectionKind` holds one to
  * mark the last-picked level (recency the nested fields can't express alone).
@@ -326,3 +336,14 @@ export const migrationState = writable({
     cgmesVersionA: null,
     cgmesVersionB: null,
 });
+
+export function isMergedDiagramType(diagramType) {
+    return MERGED_DIAGRAM_TYPES.includes(diagramType);
+}
+
+export function isCustomDiagramType(diagramType) {
+    return (
+        diagramType === DiagramType.CUSTOM_GRAPH_DIAGRAM ||
+        diagramType === DiagramType.CUSTOM_WORKSPACE_DIAGRAM
+    );
+}

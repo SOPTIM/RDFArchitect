@@ -140,12 +140,12 @@
         );
         if (error) return;
 
-        editorState.selectedWorkspace.updateValue(lockedWorkspaceName);
-        editorState.selectedGraph.updateValue(lockedGraphUri);
-        editorState.selectedDiagram.updateValue({
-            type: DiagramType.CUSTOM_GRAPH_DIAGRAM,
-            id: localDiagramId,
-        });
+        editorState.selectCustomDiagram(
+            lockedWorkspaceName,
+            lockedGraphUri,
+            localDiagramId,
+            DiagramType.CUSTOM_GRAPH_DIAGRAM,
+        );
         forceReloadTrigger.trigger();
     }
 </script>

@@ -23,6 +23,7 @@ import org.rdfarchitect.models.cim.data.dto.facade.ICIMModelFacade;
 import org.rdfarchitect.models.cim.rendering.GraphFilter;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Converts a {@link ICIMModelFacade} to a DTO that contains data required to render a UML diagram.
@@ -61,6 +62,23 @@ public interface RenderCIMFacadeCollectionUseCase {
      * @param layoutData pre-fetched cross-profile diagram layout data (may be null)
      * @return a dto that contains all data required to render the merged UML diagram
      */
+    default RenderingDataDTO renderMergedUML(
+            List<CIMProfileModel> profiles, RenderingLayoutData layoutData) {
+        return renderMergedUML(profiles, layoutData, null);
+    }
+
+    /**
+     * Generates the rendering data for a merged diagram that only shows a manually chosen subset of
+     * the merged classes, as custom diagrams do. Classes outside the subset still contribute
+     * inherited properties, they just do not become nodes of their own.
+     *
+     * @param profiles all profiles of the dataset, each contributing its color
+     * @param layoutData pre-fetched diagram layout data (may be null)
+     * @param renderedClassUris the class IRIs that become nodes, or null to render all of them
+     * @return a dto that contains all data required to render the merged UML diagram
+     */
     RenderingDataDTO renderMergedUML(
-            List<CIMProfileModel> profiles, RenderingLayoutData layoutData);
+            List<CIMProfileModel> profiles,
+            RenderingLayoutData layoutData,
+            Set<String> renderedClassUris);
 }

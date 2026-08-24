@@ -25,16 +25,17 @@ import org.rdfarchitect.api.controller.Response;
 import org.rdfarchitect.api.dto.CustomDiagramDTO;
 import org.rdfarchitect.api.dto.rendering.RenderingDataDTO;
 import org.rdfarchitect.database.GraphIdentifier;
+import org.rdfarchitect.models.cim.rendering.GraphFilter;
 import org.rdfarchitect.services.ExpandURIUseCase;
+import org.rdfarchitect.services.GetRenderingDataUseCase;
 import org.rdfarchitect.services.diagrams.DeleteCustomDiagramUseCase;
 import org.rdfarchitect.services.diagrams.ReplaceCustomDiagramUseCase;
-import org.rdfarchitect.services.rendering.RenderGraphDiagramUseCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -51,7 +52,7 @@ public class CustomDiagramsRESTController {
     private static final Logger logger =
             LoggerFactory.getLogger(CustomDiagramsRESTController.class);
 
-    private final RenderGraphDiagramUseCase renderGraphDiagramUseCase;
+    private final GetRenderingDataUseCase getRenderingDataUseCase;
 
     private final DeleteCustomDiagramUseCase deleteCustomDiagramUseCase;
 
@@ -59,7 +60,7 @@ public class CustomDiagramsRESTController {
 
     private final ExpandURIUseCase expandURIUseCase;
 
-    @GetMapping
+    @PostMapping
     public RenderingDataDTO getCustomProfileViewRenderingData(
             @Parameter(description = "The name/url of the inquirer.")
                     @RequestHeader(
@@ -74,9 +75,10 @@ public class CustomDiagramsRESTController {
                                     "The url encoded uri of the graph, or \"default\" to access the default graph.")
                     @PathVariable
                     String graphURI,
-            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId) {
+            @Parameter(description = "The uuid of the diagram.") @PathVariable String diagramId,
+            @RequestBody GraphFilter filter) {
         logger.info(
-                "Received GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Received POST request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
                 datasetName,
                 graphURI,
                 diagramId,
@@ -85,12 +87,13 @@ public class CustomDiagramsRESTController {
         var extendedGraphURI = expandURIUseCase.expandUri(datasetName, graphURI);
 
         var result =
-                renderGraphDiagramUseCase.renderGraphDiagram(
+                getRenderingDataUseCase.getCustomDiagramRenderingData(
                         new GraphIdentifier(datasetName, extendedGraphURI),
+                        filter,
                         UUID.fromString(diagramId));
 
         logger.info(
-                "Sending response to GET request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
+                "Sending response to POST request: \"/api/datasets/{{}}/graphs/{{}}/diagrams/{{}}\" from \"{}\"",
                 datasetName,
                 graphURI,
                 diagramId,

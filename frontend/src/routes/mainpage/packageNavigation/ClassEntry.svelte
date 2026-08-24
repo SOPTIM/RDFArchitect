@@ -37,6 +37,7 @@
         copyState,
         editorState,
         ClassType,
+        isCustomDiagramType,
         mergeSelections,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
@@ -326,7 +327,9 @@
 
     function showClassInPackage() {
         editorState.selectedWorkspace.updateValue(workspaceNavEntry.id);
-        editorState.selectedGraph.updateValue(graphNavEntry.id);
+        editorState.selectedGraph.updateValue(
+            diagramGraphUri ?? graphNavEntry.id,
+        );
         editorState.selectedDiagram.updateValue({
             type: diagramType,
             id: classNavEntry.parent?.id ?? "default",
@@ -438,18 +441,23 @@
                 </ContextMenu.Item.Button>
             {/if}
             <ContextMenu.Separator />
-            {#if diagramId}
-                <ContextMenu.Item.Button
-                    onSelect={() => {
-                        showRemoveFromDiagramDialog = true;
-                    }}
-                    disabled={!!diagramGraphUri && crossGraphDisabled}
-                    faIcon={faMinus}
-                    variant="danger"
-                >
-                    Remove from Diagram
-                </ContextMenu.Item.Button>
+        {/if}
+        {#if isCustomDiagramType(diagramType)}
+            {#if classType !== ClassType.SINGLE_CLASS}
+                <ContextMenu.Separator />
             {/if}
+            <ContextMenu.Item.Button
+                onSelect={() => {
+                    showRemoveFromDiagramDialog = true;
+                }}
+                disabled={!!diagramGraphUri && crossGraphDisabled}
+                faIcon={faMinus}
+                variant="danger"
+            >
+                Remove from Diagram
+            </ContextMenu.Item.Button>
+        {/if}
+        {#if classType === ClassType.SINGLE_CLASS}
             <ContextMenu.Item.Button
                 onSelect={() => {
                     if (!multiActive) {
