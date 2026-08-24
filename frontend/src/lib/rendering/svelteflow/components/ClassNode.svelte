@@ -88,6 +88,7 @@
 
     const cursorClass = $derived(dragging ? "cursor-move" : "cursor-pointer");
     const isExternal = $derived(data.external === true);
+    const isOutsidePackage = $derived(data.outsidePackage === true);
 
     function graphUriOf(prop) {
         return prop.graphUri ?? "";
@@ -178,7 +179,11 @@
 
 <div
     class={`class-node-shell bg-class-node-upper-background relative isolate min-w-45 overflow-hidden rounded-md bg-clip-padding font-sans text-sm ${cursorClass} ${
-        isExternal ? "class-node-external" : ""
+        isExternal
+            ? "class-node-external"
+            : isOutsidePackage
+              ? "class-node-outside-package"
+              : ""
     } ${
         highlightState === "active"
             ? "class-node-highlighted"
@@ -367,6 +372,12 @@
         --color-class-node-upper-background: rgba(224, 224, 224, 0.45);
         --color-class-node-lower-background: rgba(242, 242, 242, 0.4);
         --color-default-text: #5a5a5a;
+    }
+
+    .class-node-outside-package {
+        --color-class-node-upper-background: #eeeeee;
+        --color-class-node-lower-background: #fafafa;
+        --color-default-text: #6a6a6a;
     }
 
     .class-node-external::after {

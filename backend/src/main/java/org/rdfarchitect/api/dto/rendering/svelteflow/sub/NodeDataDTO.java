@@ -36,6 +36,8 @@ public class NodeDataDTO {
      */
     private boolean external;
 
+    private boolean outsidePackage;
+
     private String belongsToCategory;
     private List<String> stereotypes;
     private List<AttributeDTO> attributes;

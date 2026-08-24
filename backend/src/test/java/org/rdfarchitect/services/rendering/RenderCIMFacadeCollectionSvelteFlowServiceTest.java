@@ -453,6 +453,44 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("marks only classes outside the rendered package as outsidePackage")
+    void marksClassesOutsideThePackage() {
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(result.getNodes())
+                .filteredOn(node -> node.getData().isOutsidePackage())
+                .extracting(node -> node.getData().getLabel())
+                .containsExactly("Terminal");
+        assertThat(nodeByLabel(result, "Child").getData().isOutsidePackage()).isFalse();
+    }
+
+    @Test
+    @DisplayName("marks no class as outsidePackage when external relations are disabled")
+    void marksNoClassOutsideThePackageWithoutExternalRelations() {
+        var filter = coreFilter();
+        filter.setIncludeRelationsToExternalPackages(false);
+
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+
+        assertThat(result.getNodes()).noneMatch(node -> node.getData().isOutsidePackage());
+    }
+
+    @Test
+    @DisplayName("marks no class as outsidePackage in a custom diagram")
+    void marksNoClassOutsideThePackageInCustomDiagram() {
+        var filter = new GraphFilter(true);
+        filter.setAllowedUUIDs(List.of(CHILD_UUID.toString(), TERMINAL_UUID.toString()));
+
+        var result =
+                (SvelteFlowDTO) renderer.renderUML(facade, filter, null, List.of(), null, null);
+
+        assertThat(result.getNodes()).noneMatch(node -> node.getData().isOutsidePackage());
+    }
+
+    @Test
     @DisplayName("omits classes of other packages that only share an external super class")
     void omitsSiblingClassesOfExternalSuperClass() {
         var other = model.getResource(NS + "OtherPackage");
