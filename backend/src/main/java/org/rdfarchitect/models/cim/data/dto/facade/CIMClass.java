@@ -77,6 +77,19 @@ public class CIMClass extends CIMResource implements ICIMClass {
     }
 
     @Override
+    public List<ICIMClass> getSubClasses() {
+        return subClassesOf(this.getGraphUri(), this.getModel(), this.getJenaResource());
+    }
+
+    static List<ICIMClass> subClassesOf(String graphUri, Model model, Resource resource) {
+        var subClasses = new ArrayList<ICIMClass>();
+        for (var res : byUri(model.listSubjectsWithProperty(RDFS.subClassOf, resource))) {
+            subClasses.add(fromResource(graphUri, model, res));
+        }
+        return subClasses;
+    }
+
+    @Override
     public ICIMClassCategory getBelongsToCategory() {
         var category = getUniqueJenaProperty(CIMS.belongsToCategory);
         if (category == null) {

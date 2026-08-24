@@ -417,7 +417,7 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
 
         if (filter.isIncludeRelationsToExternalPackages()) {
-            addExternallyRelatedClasses(cimModel, filter, classes);
+            addExternallyRelatedClasses(filter, classes);
         }
 
         return classes;
@@ -430,13 +430,11 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         return UUID.fromString(filter.getPackageUUID());
     }
 
-    private void addExternallyRelatedClasses(
-            ICIMModelFacade cimModel, GraphFilter filter, Map<String, ICIMClass> classes) {
+    private void addExternallyRelatedClasses(GraphFilter filter, Map<String, ICIMClass> classes) {
         if (!filter.isIncludeAssociations() && !filter.isIncludeInheritance()) {
             return;
         }
         var classesInPackage = List.copyOf(classes.values());
-        var definedClasses = cimModel.getCIMClasses();
 
         if (filter.isIncludeAssociations()) {
             for (var cimClass : classesInPackage) {
@@ -449,24 +447,12 @@ public class RenderCIMFacadeCollectionSvelteFlowService
         }
 
         if (filter.isIncludeInheritance()) {
-            var packageUris = classes.keySet();
             for (var cimClass : classesInPackage) {
                 for (var superClass : cimClass.getSuperClasses()) {
                     addExternallyRelatedClass(classes, superClass);
                 }
-            }
-            for (var cimClass : definedClasses) {
-                if (classes.containsKey(cimClass.getUri().toString())) {
-                    continue;
-                }
-                var extendsPackageClass =
-                        cimClass.getSuperClasses().stream()
-                                .anyMatch(
-                                        superClass ->
-                                                packageUris.contains(
-                                                        superClass.getUri().toString()));
-                if (extendsPackageClass) {
-                    classes.put(cimClass.getUri().toString(), cimClass);
+                for (var subClass : cimClass.getSubClasses()) {
+                    addExternallyRelatedClass(classes, subClass);
                 }
             }
         }

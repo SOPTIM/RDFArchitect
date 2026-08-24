@@ -453,6 +453,58 @@ class RenderCIMFacadeCollectionSvelteFlowServiceTest {
     }
 
     @Test
+    @DisplayName("omits classes of other packages that only share an external super class")
+    void omitsSiblingClassesOfExternalSuperClass() {
+        var other = model.getResource(NS + "OtherPackage");
+        var sharedBase = addClass("SharedBase", UUID.randomUUID(), other);
+        model.getResource(NS + "Root").addProperty(RDFS.subClassOf, sharedBase);
+        var sibling = addClass("Sibling", UUID.randomUUID(), other);
+        sibling.addProperty(RDFS.subClassOf, sharedBase);
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(result.getNodes())
+                .extracting(node -> node.getData().getLabel())
+                .contains("SharedBase")
+                .doesNotContain("Sibling");
+    }
+
+    @Test
+    @DisplayName("does not cascade beyond directly related classes of other packages")
+    void doesNotCascadeBeyondDirectlyRelatedClasses() {
+        var other = model.getResource(NS + "OtherPackage");
+        var terminalSpecialisation = addClass("TerminalSpecialisation", UUID.randomUUID(), other);
+        terminalSpecialisation.addProperty(RDFS.subClassOf, model.getResource(NS + "Terminal"));
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(result.getNodes())
+                .extracting(node -> node.getData().getLabel())
+                .contains("Terminal")
+                .doesNotContain("TerminalSpecialisation");
+    }
+
+    @Test
+    @DisplayName("renders classes of other packages that directly extend a package class")
+    void rendersDirectSubClassesFromOtherPackages() {
+        var other = model.getResource(NS + "OtherPackage");
+        var externalChild = addClass("ExternalChild", UUID.randomUUID(), other);
+        externalChild.addProperty(RDFS.subClassOf, model.getResource(NS + "Base"));
+
+        var result =
+                (SvelteFlowDTO)
+                        renderer.renderUML(facade, coreFilter(), null, List.of(), null, null);
+
+        assertThat(result.getNodes())
+                .extracting(node -> node.getData().getLabel())
+                .contains("ExternalChild");
+    }
+
+    @Test
     @DisplayName("renders classes without a category for the default package")
     void rendersDefaultPackage() {
         var filter = new GraphFilter(true);
