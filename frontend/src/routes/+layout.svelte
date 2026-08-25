@@ -32,8 +32,8 @@
     import { eventStack } from "$lib/eventhandling/closeEventManager.svelte.js";
     import { shortcutStore } from "$lib/eventhandling/shortcutStore.svelte.js";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         DiagramType,
@@ -69,8 +69,8 @@
         editorState.selectedGraph.subscribe();
         editorState.selectedWorkspace.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = selectedDataset
-            ? await datasetStore.isReadOnly(selectedWorkspace)
+        isWorkspaceReadOnly = selectedWorkspace
+            ? await workspaceStore.isReadOnly(selectedWorkspace)
             : false;
     });
 
@@ -89,7 +89,7 @@
         if (!selectedWorkspace || !isWorkspaceReadOnly) {
             return;
         }
-        const { error } = await datasetStore.updateReadonly(
+        const { error } = await workspaceStore.updateReadonly(
             selectedWorkspace,
             false,
         );
@@ -121,9 +121,9 @@
     }
 
     async function fetchUndoRedo() {
-        const dataset = editorState.selectedDataset.getValue();
+        const workspaceName = editorState.selectedWorkspace.getValue();
         const graph = editorState.selectedGraph.getValue();
-        await versionControlStore.refresh(dataset, graph);
+        await versionControlStore.refresh(workspaceName, graph);
         canUndo = await versionControlStore.canUndo(workspaceName, graph);
         canRedo = await versionControlStore.canRedo(workspaceName, graph);
     }

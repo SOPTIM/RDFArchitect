@@ -48,15 +48,12 @@
                 DiagramType.CROSS_PROFILE,
     );
 
-    $effect(() => {
+    $effect(() => async () => {
         forceReloadTrigger.subscribe();
-        (async () => {
-            const diagram = await crossProfileStore.getDiagram(
-                workspaceNavEntry.label,
-            );
-        getCrossProfileDiagram(workspaceNavEntry.label).then(diagram => {
-            classes = diagram?.classes ?? [];
-        })();
+        const diagram = await crossProfileStore.getDiagram(
+            workspaceNavEntry.label,
+        );
+        classes = diagram?.classes ?? [];
     });
 
     function selectMergedView() {

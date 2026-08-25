@@ -25,7 +25,7 @@ import { createCrossProfileStore } from "../../src/lib/stores/crossProfileStore"
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const DATASET_A = "datasetA";
+const WORKSPACE_A = "workspaceA";
 
 const MOCK_DIAGRAM_ID = "diag-123";
 const MOCK_DIAGRAM = {
@@ -79,24 +79,24 @@ describe("crossProfileStore", () => {
 
     // -------------------------------------------------------------------------
     describe("getId", () => {
-        test("fetches and caches the diagram ID for a dataset", async () => {
+        test("fetches and caches the diagram ID for a workspace", async () => {
             vi.mocked(api.getCrossProfileDiagramId).mockResolvedValue({
                 data: MOCK_DIAGRAM_ID,
                 error: undefined,
             });
 
-            const result1 = await store.getId(DATASET_A);
-            const result2 = await store.getId(DATASET_A);
+            const result1 = await store.getId(WORKSPACE_A);
+            const result2 = await store.getId(WORKSPACE_A);
 
             expect(result1).toBe(MOCK_DIAGRAM_ID);
             expect(result2).toBe(MOCK_DIAGRAM_ID);
             expect(api.getCrossProfileDiagramId).toHaveBeenCalledTimes(1); // Cached
 
             const state = get(store);
-            expect(state.ids.get(DATASET_A)?.data).toBe(MOCK_DIAGRAM_ID);
+            expect(state.ids.get(WORKSPACE_A)?.data).toBe(MOCK_DIAGRAM_ID);
         });
 
-        test("returns null if datasetName is empty", async () => {
+        test("returns null if workspaceName is empty", async () => {
             const result = await store.getId("");
             expect(result).toBeNull();
             expect(api.getCrossProfileDiagramId).not.toHaveBeenCalled();
@@ -105,26 +105,26 @@ describe("crossProfileStore", () => {
 
     // -------------------------------------------------------------------------
     describe("getDiagram", () => {
-        test("getDiagram returns null if datasetName is empty", async () => {
+        test("getDiagram returns null if workspaceName is empty", async () => {
             const result = await store.getDiagram("");
             expect(result).toBeNull();
             expect(api.getCrossProfileDiagram).not.toHaveBeenCalled();
         });
 
-        test("fetches and caches the diagram for a dataset", async () => {
+        test("fetches and caches the diagram for a workspace", async () => {
             vi.mocked(api.getCrossProfileDiagram).mockResolvedValue({
                 data: MOCK_DIAGRAM,
                 error: undefined,
             });
 
-            const result = await store.getDiagram(DATASET_A);
-            await store.getDiagram(DATASET_A);
+            const result = await store.getDiagram(WORKSPACE_A);
+            await store.getDiagram(WORKSPACE_A);
 
             expect(result).toEqual(MOCK_DIAGRAM);
             expect(api.getCrossProfileDiagram).toHaveBeenCalledTimes(1);
 
             const state = get(store);
-            expect(state.diagrams.get(DATASET_A)?.data).toEqual(MOCK_DIAGRAM);
+            expect(state.diagrams.get(WORKSPACE_A)?.data).toEqual(MOCK_DIAGRAM);
         });
 
         test("returns null on API error", async () => {
@@ -133,14 +133,14 @@ describe("crossProfileStore", () => {
                 error: new Error("Network error"),
             });
 
-            const result = await store.getDiagram(DATASET_A);
+            const result = await store.getDiagram(WORKSPACE_A);
             expect(result).toBeNull();
         });
     });
 
     // -------------------------------------------------------------------------
 
-    test("invalidateDataset removes the dataset from both caches (ids, diagrams)", async () => {
+    test("invalidateWorkspace removes the workspace from both caches (ids, diagrams)", async () => {
         vi.mocked(api.getCrossProfileDiagramId).mockResolvedValue({
             data: "id-1",
             error: undefined,
@@ -154,19 +154,19 @@ describe("crossProfileStore", () => {
             error: undefined,
         });
 
-        await store.getId(DATASET_A);
-        await store.getDiagram(DATASET_A);
+        await store.getId(WORKSPACE_A);
+        await store.getDiagram(WORKSPACE_A);
 
-        store.invalidateDataset(DATASET_A);
+        store.invalidateWorkspace(WORKSPACE_A);
 
         const state = get(store);
-        expect(state.ids.has(DATASET_A)).toBe(false);
-        expect(state.diagrams.has(DATASET_A)).toBe(false);
+        expect(state.ids.has(WORKSPACE_A)).toBe(false);
+        expect(state.diagrams.has(WORKSPACE_A)).toBe(false);
     });
 
     // -------------------------------------------------------------------------
     describe("fetchRenderingData", () => {
-        test("fetchRenderingData returns error:null without calling API if datasetName is empty", async () => {
+        test("fetchRenderingData returns error:null without calling API if workspaceName is empty", async () => {
             const result = await store.fetchRenderingData("");
             expect(result.error).toBeNull();
             expect(result.data).toBeUndefined();
@@ -178,7 +178,7 @@ describe("crossProfileStore", () => {
                 error: undefined,
             });
 
-            const result = await store.fetchRenderingData(DATASET_A);
+            const result = await store.fetchRenderingData(WORKSPACE_A);
 
             expect(result.data).toEqual(MOCK_RENDERING_DATA);
             expect(result.error).toBeNull();
@@ -196,7 +196,7 @@ describe("crossProfileStore", () => {
                 error,
             });
 
-            const result = await store.fetchRenderingData(DATASET_A);
+            const result = await store.fetchRenderingData(WORKSPACE_A);
 
             expect(result.error).toBe(error);
             expect(result.data).toBeUndefined();

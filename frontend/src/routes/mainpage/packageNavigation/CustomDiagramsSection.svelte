@@ -84,7 +84,7 @@
                     graphNavEntry.id,
                 );
             } else {
-                diagramList = await customDiagramStore.getDatasetDiagrams(
+                diagramList = await customDiagramStore.getWorkspaceDiagrams(
                     workspaceNavEntry.id,
                 );
             }

@@ -39,7 +39,7 @@ vi.mock("$lib/api/generated", () => ({
 
 vi.mock("$lib/sharedState.svelte.js", () => ({
     editorState: {
-        selectedDataset: { getValue: vi.fn() },
+        selectedWorkspace: { getValue: vi.fn() },
         selectedGraph: { getValue: vi.fn() },
     },
 }));
@@ -48,7 +48,7 @@ vi.mock("$lib/stores/classStore", () => ({
     classStore: { invalidateGraph: vi.fn() },
 }));
 vi.mock("$lib/stores/diagramStore", () => ({
-    customDiagramStore: { invalidateDataset: vi.fn() },
+    customDiagramStore: { invalidateWorkspace: vi.fn() },
 }));
 vi.mock("$lib/stores/ontologyStore", () => ({
     ontologyStore: { invalidateGraph: vi.fn() },
@@ -68,7 +68,7 @@ vi.mock("$lib/stores/storeHelpers", async importOriginal => {
         >();
     return {
         ...actual,
-        makeGraphKey: vi.fn((dataset, graph) => `${dataset}::${graph}`),
+        makeGraphKey: vi.fn((workspace, graph) => `${workspace}::${graph}`),
     };
 });
 
@@ -81,7 +81,7 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("versionControlStore", () => {
     let store: ReturnType<typeof createVersionControlStore>;
-    const DATASET = "datasetA";
+    const WORKSPACE = "workspaceA";
     const GRAPH = "http://example.org/graph";
 
     beforeEach(() => {
@@ -89,7 +89,7 @@ describe("versionControlStore", () => {
         store = createVersionControlStore();
 
         // Default global state mocks
-        vi.mocked(editorState.selectedDataset.getValue).mockReturnValue(
+        vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
             undefined,
         );
         vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
@@ -109,18 +109,18 @@ describe("versionControlStore", () => {
                 error: undefined,
             });
 
-            await store.refresh(DATASET, GRAPH);
+            await store.refresh(WORKSPACE, GRAPH);
 
-            expect(await store.canUndo(DATASET, GRAPH)).toBe(true);
-            expect(await store.canRedo(DATASET, GRAPH)).toBe(false);
+            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
+            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
             expect(api.canUndo).toHaveBeenCalledWith({
-                path: { datasetName: DATASET, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE, graphURI: GRAPH },
             });
         });
 
         test("falls back to editorState if arguments are omitted", async () => {
-            vi.mocked(editorState.selectedDataset.getValue).mockReturnValue(
-                DATASET,
+            vi.mocked(editorState.selectedWorkspace.getValue).mockReturnValue(
+                WORKSPACE,
             );
             vi.mocked(editorState.selectedGraph.getValue).mockReturnValue(
                 GRAPH,
@@ -137,8 +137,8 @@ describe("versionControlStore", () => {
 
             await store.refresh();
 
-            expect(await store.canUndo(DATASET, GRAPH)).toBe(true);
-            expect(await store.canRedo(DATASET, GRAPH)).toBe(true);
+            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
+            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(true);
         });
 
         test("sets flags to false if API returns an error", async () => {
@@ -151,10 +151,10 @@ describe("versionControlStore", () => {
                 error: new Error("Server down"),
             });
 
-            await store.refresh(DATASET, GRAPH);
+            await store.refresh(WORKSPACE, GRAPH);
 
-            expect(await store.canUndo(DATASET, GRAPH)).toBe(false);
-            expect(await store.canRedo(DATASET, GRAPH)).toBe(false);
+            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(false);
+            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
         });
 
         test("does nothing if no targets resolve", async () => {
@@ -175,10 +175,10 @@ describe("versionControlStore", () => {
                 data: false,
                 error: undefined,
             });
-            await store.refresh(DATASET, GRAPH);
+            await store.refresh(WORKSPACE, GRAPH);
 
-            expect(await store.canUndo(DATASET, GRAPH)).toBe(true);
-            expect(await store.canRedo(DATASET, GRAPH)).toBe(false);
+            expect(await store.canUndo(WORKSPACE, GRAPH)).toBe(true);
+            expect(await store.canRedo(WORKSPACE, GRAPH)).toBe(false);
         });
 
         test("returns false for unknown graph", async () => {
@@ -212,28 +212,28 @@ describe("versionControlStore", () => {
                 error: undefined,
             });
 
-            const result = await store.undo(DATASET, GRAPH);
+            const result = await store.undo(WORKSPACE, GRAPH);
 
             expect(result.error).toBeNull();
             expect(api.undo).toHaveBeenCalledWith({
-                path: { datasetName: DATASET, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE, graphURI: GRAPH },
             });
 
             // Ensure invalidations were broadcast
             expect(classStore.invalidateGraph).toHaveBeenCalledWith(
-                DATASET,
+                WORKSPACE,
                 GRAPH,
             );
             expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(
-                DATASET,
+                WORKSPACE,
                 GRAPH,
             );
             expect(packageStore.invalidateGraph).toHaveBeenCalledWith(
-                DATASET,
+                WORKSPACE,
                 GRAPH,
             );
-            expect(customDiagramStore.invalidateDataset).toHaveBeenCalledWith(
-                DATASET,
+            expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
             );
 
             expect(toastStore.info).toHaveBeenCalledWith("Undone");
@@ -244,7 +244,7 @@ describe("versionControlStore", () => {
             const error = new Error("Conflict");
             vi.mocked(api.undo).mockResolvedValue({ data: undefined, error });
 
-            const result = await store.undo(DATASET, GRAPH);
+            const result = await store.undo(WORKSPACE, GRAPH);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
@@ -281,27 +281,27 @@ describe("versionControlStore", () => {
                 error: undefined,
             });
 
-            const result = await store.redo(DATASET, GRAPH);
+            const result = await store.redo(WORKSPACE, GRAPH);
 
             expect(result.error).toBeNull();
             expect(api.redo).toHaveBeenCalledWith({
-                path: { datasetName: DATASET, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE, graphURI: GRAPH },
             });
 
             expect(classStore.invalidateGraph).toHaveBeenCalledWith(
-                DATASET,
+                WORKSPACE,
                 GRAPH,
             );
             expect(ontologyStore.invalidateGraph).toHaveBeenCalledWith(
-                DATASET,
+                WORKSPACE,
                 GRAPH,
             );
             expect(packageStore.invalidateGraph).toHaveBeenCalledWith(
-                DATASET,
+                WORKSPACE,
                 GRAPH,
             );
-            expect(customDiagramStore.invalidateDataset).toHaveBeenCalledWith(
-                DATASET,
+            expect(customDiagramStore.invalidateWorkspace).toHaveBeenCalledWith(
+                WORKSPACE,
             );
 
             expect(toastStore.info).toHaveBeenCalledWith("Redone");
@@ -311,7 +311,7 @@ describe("versionControlStore", () => {
             const error = new Error("Cannot redo");
             vi.mocked(api.redo).mockResolvedValue({ data: undefined, error });
 
-            const result = await store.redo(DATASET, GRAPH);
+            const result = await store.redo(WORKSPACE, GRAPH);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(

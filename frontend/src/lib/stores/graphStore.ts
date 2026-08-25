@@ -29,13 +29,14 @@ import {
     deleteGraph,
     replaceGraphs,
     replaceGraph,
+    renameGraph as sdkRenameGraph,
     type GraphBulkImportResponse,
     type ImportWarning,
     type GraphDto,
 } from "../api/generated";
 import { toastStore } from "../eventhandling/toastStore.svelte.js";
 
-type DatasetState = {
+type WorkspaceState = {
     graphs: Map<string, AsyncListSlot<GraphDto>>;
 };
 
@@ -44,64 +45,64 @@ const LOG_PREFIX = "[graphStore]";
 export const graphStore = createGraphStore();
 
 function createGraphStore() {
-    const store = writable<DatasetState>({
+    const store = writable<WorkspaceState>({
         graphs: new Map(),
     });
 
     const { subscribe, update } = store;
 
-    function getDatasetState(
-        state: DatasetState,
-        datasetName: string,
+    function getWorkspaceState(
+        state: WorkspaceState,
+        workspaceName: string,
     ): AsyncListSlot<GraphDto> {
-        return state.graphs.get(datasetName) ?? createEmptyListSlot();
+        return state.graphs.get(workspaceName) ?? createEmptyListSlot();
     }
 
-    function setDatasetState(
-        state: DatasetState,
-        datasetName: string,
+    function setWorkspaceState(
+        state: WorkspaceState,
+        workspaceName: string,
         next: AsyncListSlot<GraphDto>,
-    ): DatasetState {
-        const byDataset = new Map(state.graphs);
-        byDataset.set(datasetName, next);
-        return { ...state, graphs: byDataset };
+    ): WorkspaceState {
+        const byWorkspace = new Map(state.graphs);
+        byWorkspace.set(workspaceName, next);
+        return { ...state, graphs: byWorkspace };
     }
 
     async function getGraphs(
-        datasetName: string,
+        workspaceName: string,
         force = false,
     ): Promise<GraphDto[] | null> {
-        if (!datasetName) return null;
+        if (!workspaceName) return null;
         return loadSlot(
             store,
-            s => getDatasetState(s, datasetName),
+            s => getWorkspaceState(s, workspaceName),
             (s, patch) =>
-                setDatasetState(s, datasetName, {
-                    ...getDatasetState(s, datasetName),
+                setWorkspaceState(s, workspaceName, {
+                    ...getWorkspaceState(s, workspaceName),
                     ...patch,
                 }),
-            () => listGraphs({ path: { datasetName } }),
+            () => listGraphs({ path: { datasetName: workspaceName } }),
             LOG_PREFIX,
-            `graphs for dataset="${datasetName}"`,
+            `graphs for workspace="${workspaceName}"`,
             force,
         );
     }
 
     async function addEmptyGraph(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Adding empty graph "${graphURI}" to dataset "${datasetName}"`,
+            `${LOG_PREFIX} Adding empty graph "${graphURI}" to workspace "${workspaceName}"`,
         );
 
         const { error } = await replaceGraph({
-            path: { datasetName, graphURI },
+            path: { datasetName: workspaceName, graphURI },
         });
 
         if (error) {
             console.error(
-                `Failed to create empty graph "${graphURI}" to dataset "${datasetName}"`,
+                `Failed to create empty graph "${graphURI}" to workspace "${workspaceName}"`,
             );
             toastStore.error(
                 "Create failed",
@@ -110,22 +111,22 @@ function createGraphStore() {
             return { error };
         }
 
-        invalidateDataset(datasetName);
+        invalidateWorkspace(workspaceName);
         console.log(`${LOG_PREFIX} Added empty graph "${graphURI}"`);
         toastStore.success(
             "Schema created",
-            `"${graphURI}" was added to "${datasetName}".`,
+            `"${graphURI}" was added to "${workspaceName}".`,
         );
         return { error: null };
     }
 
     async function importGraphs(
-        datasetName: string,
+        workspaceName: string,
         files: File[],
         graphUris: string[],
     ): Promise<Result<GraphBulkImportResponse>> {
         console.log(
-            `${LOG_PREFIX} Importing graphs into dataset "${datasetName}"`,
+            `${LOG_PREFIX} Importing graphs into workspace "${workspaceName}"`,
         );
 
         if (!files || files.length === 0) {
@@ -138,7 +139,7 @@ function createGraphStore() {
         }
 
         const { data, error } = await replaceGraphs({
-            path: { datasetName },
+            path: { datasetName: workspaceName },
             body: {
                 files: files,
             },
@@ -152,12 +153,12 @@ function createGraphStore() {
             );
             toastStore.error(
                 "Import failed",
-                `Could not import into "${datasetName}".`,
+                `Could not import into "${workspaceName}".`,
             );
             return { error };
         }
 
-        invalidateDataset(datasetName);
+        invalidateWorkspace(workspaceName);
 
         const importedGraphUris = data?.importedGraphUris ?? [];
         const failedImports = data?.failedImports ?? [];
@@ -190,22 +191,66 @@ function createGraphStore() {
         return { error: null, data };
     }
 
+    async function renameGraph(
+        workspaceName: string,
+        oldGraphURI: string,
+        newGraphURI: string,
+        newKeyword: string | null = null,
+    ): Promise<Result> {
+        console.log(
+            `${LOG_PREFIX} Renaming graph "${oldGraphURI}" to "${newGraphURI}" in workspace "${workspaceName}"`,
+        );
+
+        const { error } = await sdkRenameGraph({
+            path: { datasetName: workspaceName, graphURI: oldGraphURI },
+            query: {
+                newGraphURI,
+                ...(newKeyword !== null ? { newKeyword } : {}),
+            },
+        });
+
+        if (error) {
+            const isConflict = (error as { status?: number })?.status === 409;
+            console.error(
+                `${LOG_PREFIX} Failed to rename graph "${oldGraphURI}"`,
+                await describeError(error),
+            );
+            toastStore.error(
+                "Rename failed",
+                isConflict
+                    ? `A schema with the uri "${newGraphURI}" already exists.`
+                    : `Could not rename schema "${oldGraphURI}".`,
+            );
+            return { error };
+        }
+
+        invalidateWorkspace(workspaceName);
+        console.log(
+            `${LOG_PREFIX} Renamed graph "${oldGraphURI}" to "${newGraphURI}"`,
+        );
+        toastStore.success(
+            "Schema renamed",
+            `"${oldGraphURI}" is now "${newGraphURI}".`,
+        );
+        return { error: null };
+    }
+
     async function removeGraph(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Deleting graph "${graphURI}" from dataset "${datasetName}"`,
+            `${LOG_PREFIX} Deleting graph "${graphURI}" from workspace "${workspaceName}"`,
         );
 
         const { error } = await deleteGraph({
-            path: { datasetName, graphURI },
+            path: { datasetName: workspaceName, graphURI },
         });
 
         if (error) {
             const msg = await describeError(error);
             console.error(
-                `${LOG_PREFIX} Could not delete graph "${graphURI}" from dataset "${datasetName}":`,
+                `${LOG_PREFIX} Could not delete graph "${graphURI}" from workspace "${workspaceName}":`,
                 msg,
             );
             toastStore.error(
@@ -216,7 +261,7 @@ function createGraphStore() {
         }
 
         update(s => {
-            const dsState = getDatasetState(s, datasetName);
+            const dsState = getWorkspaceState(s, workspaceName);
             if (!dsState) return s;
             const nextData =
                 dsState.data?.filter(g => {
@@ -224,25 +269,25 @@ function createGraphStore() {
                     return uri !== graphURI;
                 }) ?? null;
 
-            return setDatasetState(s, datasetName, {
+            return setWorkspaceState(s, workspaceName, {
                 ...dsState,
                 data: nextData,
             });
         });
 
         console.log(
-            `${LOG_PREFIX} Deleted graph "${graphURI}" from dataset "${datasetName}"`,
+            `${LOG_PREFIX} Deleted graph "${graphURI}" from workspace "${workspaceName}"`,
         );
         toastStore.success("Schema deleted", `"${graphURI}" was removed.`);
 
         return { error: null };
     }
 
-    function invalidateDataset(datasetName: string) {
+    function invalidateWorkspace(workspaceName: string) {
         update(s => {
-            const byDataset = new Map(s.graphs);
-            byDataset.delete(datasetName);
-            return { ...s, graphs: byDataset };
+            const byWorkspace = new Map(s.graphs);
+            byWorkspace.delete(workspaceName);
+            return { ...s, graphs: byWorkspace };
         });
     }
 
@@ -250,9 +295,10 @@ function createGraphStore() {
         subscribe,
         getGraphs,
         addEmptyGraph,
+        renameGraph,
         importGraphs,
         remove: removeGraph,
-        invalidateDataset,
+        invalidateWorkspace,
     };
 }
 

@@ -44,9 +44,9 @@ const LOG = "[versionControlStore]";
 
 export const versionControlStore = createVersionControlStore();
 
-function getGraphFlags(s: State, dataset: string, graph: string): GraphFlags {
+function getGraphFlags(s: State, workspace: string, graph: string): GraphFlags {
     return (
-        s.byGraph.get(makeGraphKey(dataset, graph)) ?? {
+        s.byGraph.get(makeGraphKey(workspace, graph)) ?? {
             canUndo: createEmptySlot(),
             canRedo: createEmptySlot(),
         }
@@ -55,13 +55,13 @@ function getGraphFlags(s: State, dataset: string, graph: string): GraphFlags {
 
 function setGraphFlags(
     s: State,
-    dataset: string,
+    workspace: string,
     graph: string,
     patch: Partial<GraphFlags>,
 ): State {
     const m = new Map(s.byGraph);
-    m.set(makeGraphKey(dataset, graph), {
-        ...getGraphFlags(s, dataset, graph),
+    m.set(makeGraphKey(workspace, graph), {
+        ...getGraphFlags(s, workspace, graph),
         ...patch,
     });
     return { byGraph: m };
@@ -72,89 +72,95 @@ function createVersionControlStore() {
     const { subscribe } = store;
 
     async function canUndo(
-        dataset?: string,
+        workspace?: string,
         graph?: string,
         force = false,
     ): Promise<boolean> {
-        const targets = resolveTargets(dataset, graph);
+        const targets = resolveTargets(workspace, graph);
         if (!targets) return false;
         return (
             (await loadSlot(
                 store,
-                s => getGraphFlags(s, targets.dataset, targets.graph).canUndo,
+                s => getGraphFlags(s, targets.workspace, targets.graph).canUndo,
                 (s, patch) =>
-                    setGraphFlags(s, targets.dataset, targets.graph, {
+                    setGraphFlags(s, targets.workspace, targets.graph, {
                         canUndo: {
-                            ...getGraphFlags(s, targets.dataset, targets.graph)
-                                .canUndo,
+                            ...getGraphFlags(
+                                s,
+                                targets.workspace,
+                                targets.graph,
+                            ).canUndo,
                             ...patch,
                         },
                     }),
                 () =>
                     sdkCanUndo({
                         path: {
-                            datasetName: targets.dataset,
+                            datasetName: targets.workspace,
                             graphURI: targets.graph,
                         },
                     }),
                 LOG,
-                `canUndo for dataset="${targets.dataset}" graph="${targets.graph}"`,
+                `canUndo for workspace="${targets.workspace}" graph="${targets.graph}"`,
                 force,
             )) ?? false
         );
     }
 
     async function canRedo(
-        dataset?: string,
+        workspace?: string,
         graph?: string,
         force = false,
     ): Promise<boolean> {
-        const targets = resolveTargets(dataset, graph);
+        const targets = resolveTargets(workspace, graph);
         if (!targets) return false;
         return (
             (await loadSlot(
                 store,
-                s => getGraphFlags(s, targets.dataset, targets.graph).canRedo,
+                s => getGraphFlags(s, targets.workspace, targets.graph).canRedo,
                 (s, patch) =>
-                    setGraphFlags(s, targets.dataset, targets.graph, {
+                    setGraphFlags(s, targets.workspace, targets.graph, {
                         canRedo: {
-                            ...getGraphFlags(s, targets.dataset, targets.graph)
-                                .canRedo,
+                            ...getGraphFlags(
+                                s,
+                                targets.workspace,
+                                targets.graph,
+                            ).canRedo,
                             ...patch,
                         },
                     }),
                 () =>
                     sdkCanRedo({
                         path: {
-                            datasetName: targets.dataset,
+                            datasetName: targets.workspace,
                             graphURI: targets.graph,
                         },
                     }),
                 LOG,
-                `canRedo for dataset="${targets.dataset}" graph="${targets.graph}"`,
+                `canRedo for workspace="${targets.workspace}" graph="${targets.graph}"`,
                 force,
             )) ?? false
         );
     }
 
-    async function refresh(dataset?: string, graph?: string) {
-        const targets = resolveTargets(dataset, graph);
+    async function refresh(workspace?: string, graph?: string) {
+        const targets = resolveTargets(workspace, graph);
         if (!targets) return;
         await Promise.all([
-            canUndo(targets.dataset, targets.graph, true),
-            canRedo(targets.dataset, targets.graph, true),
+            canUndo(targets.workspace, targets.graph, true),
+            canRedo(targets.workspace, targets.graph, true),
         ]);
     }
 
-    async function doUndo(dataset?: string, graph?: string) {
-        const targets = resolveTargets(dataset, graph);
+    async function doUndo(workspace?: string, graph?: string) {
+        const targets = resolveTargets(workspace, graph);
         if (!targets) {
             console.error(`${LOG} undo failed`, "No undo target selected.");
             toastStore.error("Undo failed", "No undo target selected.");
             return { error: "No undo target selected." };
         }
         const { error } = await sdkUndo({
-            path: { datasetName: targets.dataset, graphURI: targets.graph },
+            path: { datasetName: targets.workspace, graphURI: targets.graph },
         });
         if (error) {
             console.error(`${LOG} undo failed`, error);
@@ -163,24 +169,24 @@ function createVersionControlStore() {
         }
         toastStore.info("Undone");
 
-        classStore.invalidateGraph(targets.dataset, targets.graph);
-        ontologyStore.invalidateGraph(targets.dataset, targets.graph);
-        customDiagramStore.invalidateDataset(targets.dataset);
-        packageStore.invalidateGraph(targets.dataset, targets.graph);
-        datatypesStore.invalidateGraph(targets.dataset, targets.graph);
-        await refresh(targets.dataset, targets.graph);
+        classStore.invalidateGraph(targets.workspace, targets.graph);
+        ontologyStore.invalidateGraph(targets.workspace, targets.graph);
+        customDiagramStore.invalidateWorkspace(targets.workspace);
+        packageStore.invalidateGraph(targets.workspace, targets.graph);
+        datatypesStore.invalidateGraph(targets.workspace, targets.graph);
+        await refresh(targets.workspace, targets.graph);
         return { error: null };
     }
 
-    async function doRedo(dataset?: string, graph?: string) {
-        const targets = resolveTargets(dataset, graph);
+    async function doRedo(workspace?: string, graph?: string) {
+        const targets = resolveTargets(workspace, graph);
         if (!targets) {
             console.error(`${LOG} redo failed`, "No redo target selected.");
             toastStore.error("Redo failed", "No redo target selected.");
             return { error: "No redo target selected." };
         }
         const { error } = await sdkRedo({
-            path: { datasetName: targets.dataset, graphURI: targets.graph },
+            path: { datasetName: targets.workspace, graphURI: targets.graph },
         });
         if (error) {
             console.error(`${LOG} redo failed`, error);
@@ -189,11 +195,11 @@ function createVersionControlStore() {
         }
         toastStore.info("Redone");
 
-        classStore.invalidateGraph(targets.dataset, targets.graph);
-        packageStore.invalidateGraph(targets.dataset, targets.graph);
-        ontologyStore.invalidateGraph(targets.dataset, targets.graph);
-        customDiagramStore.invalidateDataset(targets.dataset);
-        await refresh(targets.dataset, targets.graph);
+        classStore.invalidateGraph(targets.workspace, targets.graph);
+        packageStore.invalidateGraph(targets.workspace, targets.graph);
+        ontologyStore.invalidateGraph(targets.workspace, targets.graph);
+        customDiagramStore.invalidateWorkspace(targets.workspace);
+        await refresh(targets.workspace, targets.graph);
         return { error: null };
     }
 
@@ -207,9 +213,9 @@ function createVersionControlStore() {
     };
 }
 
-function resolveTargets(dataset?: string, graph?: string) {
-    const d = dataset ?? editorState.selectedDataset.getValue();
+function resolveTargets(workspace?: string, graph?: string) {
+    const d = workspace ?? editorState.selectedWorkspace.getValue();
     const g = graph ?? editorState.selectedGraph.getValue();
-    return d && g ? { dataset: d, graph: g } : null;
+    return d && g ? { workspace: d, graph: g } : null;
 }
 export { createVersionControlStore };

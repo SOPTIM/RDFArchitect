@@ -84,7 +84,7 @@
                   isNewEnumEntry,
               )
             : await classStore.replaceEnumEntry(
-                  classEditorContext.datasetName,
+                  classEditorContext.workspaceName,
                   classEditorContext.graphUri,
                   classUuid,
                   apiEnumEntry,

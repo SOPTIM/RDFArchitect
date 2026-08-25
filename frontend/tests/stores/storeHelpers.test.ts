@@ -54,9 +54,9 @@ function runLoadSlot(
 // ---------------------------------------------------------------------------
 
 describe("makeGraphKey", () => {
-    test("produces a key in the format 'dataset::graphURI'", () => {
-        expect(makeGraphKey("myDataset", "http://example.org/graph")).toBe(
-            "myDataset::http://example.org/graph",
+    test("produces a key in the format 'workspace::graphURI'", () => {
+        expect(makeGraphKey("myworkspace", "http://example.org/graph")).toBe(
+            "myworkspace::http://example.org/graph",
         );
     });
 
@@ -66,7 +66,7 @@ describe("makeGraphKey", () => {
         );
     });
 
-    test("different dataset names produce different keys", () => {
+    test("different workspace names produce different keys", () => {
         expect(makeGraphKey("ds1", "http://g")).not.toBe(
             makeGraphKey("ds2", "http://g"),
         );

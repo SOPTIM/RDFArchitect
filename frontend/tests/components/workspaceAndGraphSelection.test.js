@@ -61,9 +61,9 @@ vi.mock("$lib/stores/graphStore.ts", () => ({
     },
 }));
 
-vi.mock("$lib/stores/datasetStore.ts", () => ({
-    datasetStore: {
-        getDatasets: vi
+vi.mock("$lib/stores/workspaceStore.ts", () => ({
+    workspaceStore: {
+        getWorkspaces: vi
             .fn()
             .mockResolvedValue([{ label: "cgmes", readOnly: false }]),
     },

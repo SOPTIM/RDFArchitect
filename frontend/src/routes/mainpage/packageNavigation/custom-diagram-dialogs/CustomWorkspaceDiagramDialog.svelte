@@ -76,7 +76,9 @@
     async function fetchOtherDiagrams() {
         try {
             const diagrams =
-                await customDiagramStore.getDatasetDiagrams(lockedWorkspaceName);
+                await customDiagramStore.getWorkspaceDiagrams(
+                    lockedWorkspaceName,
+                );
             otherDiagrams = diagrams.filter(
                 d => d.diagramId !== localDiagramId,
             );
@@ -189,7 +191,7 @@
             classes: selectedClassList,
         };
 
-        const { error } = await customDiagramStore.saveDatasetDiagram(
+        const { error } = await customDiagramStore.saveWorkspaceDiagram(
             lockedWorkspaceName,
             localDiagramId,
             diagramData,

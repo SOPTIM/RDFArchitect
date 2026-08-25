@@ -25,13 +25,15 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import { getUri } from "../mainpage/packageNavigation/packageNavigationUtils.svelte.js";
 
     let workspaceList = $state([]);
-    let selectedWorkspaceName = $derived(editorState.selectedWorkspace.getValue());
+    let selectedWorkspaceName = $derived(
+        editorState.selectedWorkspace.getValue(),
+    );
     let selectedGraphUri = $derived(editorState.selectedGraph.getValue());
 
     $effect(async () => {
@@ -41,7 +43,7 @@
 
     async function fetchNavigationObject() {
         const newWorkspaceList = [];
-        const workspaces = (await datasetStore.getDatasets()) ?? [];
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         for (const workspace of workspaces) {
             const workspaceName = workspace.label;
             let showWorkspaceContents = workspaceName === selectedWorkspaceName;

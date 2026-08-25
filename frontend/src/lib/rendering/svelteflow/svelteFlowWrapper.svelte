@@ -36,7 +36,7 @@
         forceReloadTrigger,
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import AssociationEdge from "./components/AssociationEdge.svelte";
     import ClassNode from "./components/ClassNode.svelte";
@@ -206,7 +206,7 @@
     async function refreshReadOnlyState() {
         const workspace = editorState.selectedWorkspace.getValue();
         isWorkspaceReadOnly = workspace
-            ? await datasetStore.isReadOnly(workspace)
+            ? await workspaceStore.isReadOnly(workspace)
             : false;
     }
 

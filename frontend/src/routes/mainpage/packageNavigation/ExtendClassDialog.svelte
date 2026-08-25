@@ -52,8 +52,8 @@
         );
         if (error) return;
 
-        crossProfileStore.invalidateDataset(selectedWorkspaceName);
-        editorState.selectedDataset.updateValue(selectedWorkspaceName);
+        crossProfileStore.invalidateWorkspace(selectedWorkspaceName);
+        editorState.selectedWorkspace.updateValue(selectedWorkspaceName);
         editorState.selectedGraph.updateValue(selectedGraphURI);
         editorState.selectedDiagram.updateValue({
             type: DiagramType.PACKAGE,

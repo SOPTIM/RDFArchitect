@@ -2182,6 +2182,57 @@
         "tags" : [
           "dataset"
         ]
+      },
+      "put" : {
+        "description" : "Creates an empty dataset without any graphs.",
+        "operationId" : "createDataset",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Dataset already exists"
+          }
+        },
+        "summary" : "Create dataset",
+        "tags" : [
+          "dataset"
+        ]
       }
     },
     "/api/datasets/{datasetName}/content" : {
@@ -6393,6 +6444,86 @@
         ]
       }
     },
+    "/api/datasets/{datasetName}/graphs/{graphURI}/rename" : {
+      "post" : {
+        "description" : "Renames a graph within its dataset, keeping its content and history. References to the graph, i.e. in custom diagrams, are rewritten. If a new keyword is given, it replaces the dcat:keyword of the profile header.",
+        "operationId" : "renameGraph",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri of the graph.",
+            "in" : "path",
+            "name" : "graphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The url encoded uri to rename the graph to.",
+            "in" : "query",
+            "name" : "newGraphURI",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The display name to store as dcat:keyword in the profile header.",
+            "in" : "query",
+            "name" : "newKeyword",
+            "required" : false,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Graph URI already exists"
+          }
+        },
+        "summary" : "Rename graph",
+        "tags" : [
+          "graph"
+        ]
+      }
+    },
     "/api/datasets/{datasetName}/graphs/{graphURI}/rendering" : {
       "post" : {
         "description" : "Returns rendering data for UML diagrams. The content varies based on environment configuration (Mermaid or Svelteflow).",
@@ -7759,6 +7890,58 @@
         "tags" : [
           "dataset",
           "read-only"
+        ]
+      }
+    },
+    "/api/datasets/{datasetName}/rename" : {
+      "post" : {
+        "description" : "Renames a dataset, keeping all of its graphs, diagrams and namespaces.",
+        "operationId" : "renameDataset",
+        "parameters" : [
+          {
+            "description" : "The name/url of the inquirer.",
+            "in" : "header",
+            "name" : "Origin",
+            "required" : false,
+            "schema" : {
+              "default" : "unknown",
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name of the dataset.",
+            "in" : "path",
+            "name" : "datasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "description" : "The literal name to rename the dataset to.",
+            "in" : "query",
+            "name" : "newDatasetName",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Rename dataset",
+        "tags" : [
+          "dataset"
         ]
       }
     },

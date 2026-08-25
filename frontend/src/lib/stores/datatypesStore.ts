@@ -102,10 +102,10 @@ function createVocabStore() {
 
     /**
      * Generic loader for a slot in a graph's vocabulary. Caches data per
-     * (dataset, graph) and per slot, coalesces concurrent fetches.
+     * (workspace, graph) and per slot, coalesces concurrent fetches.
      */
     async function loadSlot<K extends keyof GraphVocabulary>(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         slot: K,
         label: string,
@@ -115,10 +115,10 @@ function createVocabStore() {
         }>,
         force: boolean,
     ): Promise<GraphVocabulary[K]["data"]> {
-        if (!datasetName || !graphURI)
+        if (!workspaceName || !graphURI)
             return null as GraphVocabulary[K]["data"];
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         const slotState = getGraphVocabulary(get(store), key)[slot];
 
         if (!force && slotState.data !== null) {
@@ -132,7 +132,7 @@ function createVocabStore() {
         }
 
         console.log(
-            `${LOG_PREFIX} Loading ${label} for dataset="${datasetName}", graph="${graphURI}", force=${force}`,
+            `${LOG_PREFIX} Loading ${label} for workspace="${workspaceName}", graph="${graphURI}", force=${force}`,
         );
 
         const promise = (async (): Promise<GraphVocabulary[K]["data"]> => {
@@ -141,7 +141,7 @@ function createVocabStore() {
 
                 if (error) {
                     console.error(
-                        `${LOG_PREFIX} Failed to load ${label} for dataset="${datasetName}", graph="${graphURI}":`,
+                        `${LOG_PREFIX} Failed to load ${label} for workspace="${workspaceName}", graph="${graphURI}":`,
                         await describeError(error),
                     );
                     update(s =>
@@ -161,13 +161,13 @@ function createVocabStore() {
                 );
 
                 console.log(
-                    `${LOG_PREFIX} Loaded ${(data ?? []).length} ${label} for dataset="${datasetName}", graph="${graphURI}"`,
+                    `${LOG_PREFIX} Loaded ${(data ?? []).length} ${label} for workspace="${workspaceName}", graph="${graphURI}"`,
                 );
 
                 return result as GraphVocabulary[K]["data"];
             } catch (err) {
                 console.error(
-                    `${LOG_PREFIX} Unexpected error while loading ${label} for dataset="${datasetName}", graph="${graphURI}":`,
+                    `${LOG_PREFIX} Unexpected error while loading ${label} for workspace="${workspaceName}", graph="${graphURI}":`,
                     err,
                 );
                 update(s =>
@@ -185,54 +185,54 @@ function createVocabStore() {
     // ----- Getters -----
 
     function getPrimitives(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         force = false,
     ): Promise<ClassUmlAdaptedDto[] | null> {
         return loadSlot(
-            datasetName,
+            workspaceName,
             graphURI,
             "primitives",
             "primitives",
             () =>
                 listPrimitives({
-                    path: { datasetName, graphURI },
+                    path: { datasetName: workspaceName, graphURI },
                 }),
             force,
         );
     }
 
     function getDatatypes(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         force = false,
     ): Promise<ClassUmlAdaptedDto[] | null> {
         return loadSlot(
-            datasetName,
+            workspaceName,
             graphURI,
             "datatypes",
             "datatypes",
             () =>
                 listDatatypes({
-                    path: { datasetName, graphURI },
+                    path: { datasetName: workspaceName, graphURI },
                 }),
             force,
         );
     }
 
     function getStereotypes(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         force = false,
     ): Promise<string[] | null> {
         return loadSlot(
-            datasetName,
+            workspaceName,
             graphURI,
             "stereotypes",
             "stereotypes",
             () =>
                 listStereotypes({
-                    path: { datasetName, graphURI },
+                    path: { datasetName: workspaceName, graphURI },
                 }),
             force,
         );
@@ -243,8 +243,8 @@ function createVocabStore() {
     // =========================================================================
 
     /** Marks a graph's vocabularies as stale; next loader call will refetch. */
-    function invalidateGraph(datasetName: string, graphURI: string) {
-        const key = makeGraphKey(datasetName, graphURI);
+    function invalidateGraph(workspaceName: string, graphURI: string) {
+        const key = makeGraphKey(workspaceName, graphURI);
         console.log(`${LOG_PREFIX} Invalidating graph cache key="${key}"`);
         update(s => {
             const byGraph = new Map(s.byGraph);
@@ -253,11 +253,11 @@ function createVocabStore() {
         });
     }
 
-    /** Marks all graphs of a dataset as stale. */
-    function invalidateDataset(datasetName: string) {
-        const prefix = `${datasetName}::`;
+    /** Marks all graphs of a workspace as stale. */
+    function invalidateWorkspace(workspaceName: string) {
+        const prefix = `${workspaceName}::`;
         console.log(
-            `${LOG_PREFIX} Invalidating dataset cache dataset="${datasetName}"`,
+            `${LOG_PREFIX} Invalidating workspace cache workspace="${workspaceName}"`,
         );
         update(s => {
             const byGraph = new Map(s.byGraph);
@@ -278,7 +278,7 @@ function createVocabStore() {
 
         // Invalidation
         invalidateGraph,
-        invalidateDataset,
+        invalidateWorkspace,
     };
 }
 export { createVocabStore as createDatatypesStore };

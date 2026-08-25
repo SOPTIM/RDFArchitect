@@ -49,35 +49,38 @@ function createCrossProfileStore() {
     // HELPERS
     // =========================================================================
 
-    function getIdSlot(s: StoreState, datasetName: string): AsyncSlot<string> {
-        return s.ids.get(datasetName) ?? createEmptySlot();
+    function getIdSlot(
+        s: StoreState,
+        workspaceName: string,
+    ): AsyncSlot<string> {
+        return s.ids.get(workspaceName) ?? createEmptySlot();
     }
 
     function setIdSlot(
         s: StoreState,
-        datasetName: string,
+        workspaceName: string,
         patch: Partial<AsyncSlot<string>>,
     ): StoreState {
         const ids = new Map(s.ids);
-        ids.set(datasetName, { ...getIdSlot(s, datasetName), ...patch });
+        ids.set(workspaceName, { ...getIdSlot(s, workspaceName), ...patch });
         return { ...s, ids };
     }
 
     function getDiagramSlot(
         s: StoreState,
-        datasetName: string,
+        workspaceName: string,
     ): AsyncSlot<CrossProfileDiagramDto> {
-        return s.diagrams.get(datasetName) ?? createEmptySlot();
+        return s.diagrams.get(workspaceName) ?? createEmptySlot();
     }
 
     function setDiagramSlot(
         s: StoreState,
-        datasetName: string,
+        workspaceName: string,
         patch: Partial<AsyncSlot<CrossProfileDiagramDto>>,
     ): StoreState {
         const diagrams = new Map(s.diagrams);
-        diagrams.set(datasetName, {
-            ...getDiagramSlot(s, datasetName),
+        diagrams.set(workspaceName, {
+            ...getDiagramSlot(s, workspaceName),
             ...patch,
         });
         return { ...s, diagrams };
@@ -88,33 +91,39 @@ function createCrossProfileStore() {
     // =========================================================================
 
     async function getId(
-        datasetName: string,
+        workspaceName: string,
         force = false,
     ): Promise<string | null> {
-        if (!datasetName) return null;
+        if (!workspaceName) return null;
         return loadSlot(
             store,
-            s => getIdSlot(s, datasetName),
-            (s, patch) => setIdSlot(s, datasetName, patch),
-            () => getCrossProfileDiagramId({ path: { datasetName } }),
+            s => getIdSlot(s, workspaceName),
+            (s, patch) => setIdSlot(s, workspaceName, patch),
+            () =>
+                getCrossProfileDiagramId({
+                    path: { datasetName: workspaceName },
+                }),
             LOG_PREFIX,
-            `cross-profile ID for dataset="${datasetName}"`,
+            `cross-profile ID for workspace="${workspaceName}"`,
             force,
         );
     }
 
     async function getDiagram(
-        datasetName: string,
+        workspaceName: string,
         force = false,
     ): Promise<CrossProfileDiagramDto | null> {
-        if (!datasetName) return null;
+        if (!workspaceName) return null;
         return loadSlot(
             store,
-            s => getDiagramSlot(s, datasetName),
-            (s, patch) => setDiagramSlot(s, datasetName, patch),
-            () => getCrossProfileDiagram({ path: { datasetName } }),
+            s => getDiagramSlot(s, workspaceName),
+            (s, patch) => setDiagramSlot(s, workspaceName, patch),
+            () =>
+                getCrossProfileDiagram({
+                    path: { datasetName: workspaceName },
+                }),
             LOG_PREFIX,
-            `cross-profile diagram for dataset="${datasetName}"`,
+            `cross-profile diagram for workspace="${workspaceName}"`,
             force,
         );
     }
@@ -123,15 +132,15 @@ function createCrossProfileStore() {
     // INVALIDATION
     // =========================================================================
 
-    function invalidateDataset(datasetName: string) {
+    function invalidateWorkspace(workspaceName: string) {
         console.log(
-            `${LOG_PREFIX} Invalidating cross-profile cache for dataset="${datasetName}"`,
+            `${LOG_PREFIX} Invalidating cross-profile cache for workspace="${workspaceName}"`,
         );
         update(s => {
             const ids = new Map(s.ids);
             const diagrams = new Map(s.diagrams);
-            ids.delete(datasetName);
-            diagrams.delete(datasetName);
+            ids.delete(workspaceName);
+            diagrams.delete(workspaceName);
             return { ids, diagrams };
         });
     }
@@ -147,7 +156,7 @@ function createCrossProfileStore() {
         fetchRenderingData,
 
         // invalidation
-        invalidateDataset,
+        invalidateWorkspace,
     };
 }
 
@@ -156,21 +165,21 @@ function createCrossProfileStore() {
 // =========================================================================
 
 async function fetchRenderingData(
-    datasetName: string,
+    workspaceName: string,
 ): Promise<Result<RenderingDataDto>> {
-    if (!datasetName) return { error: null };
+    if (!workspaceName) return { error: null };
 
     console.log(
-        `${LOG_PREFIX} Fetching cross-profile rendering data for dataset="${datasetName}"`,
+        `${LOG_PREFIX} Fetching cross-profile rendering data for workspace="${workspaceName}"`,
     );
 
     const { data, error } = await getCrossProfileRenderingData({
-        path: { datasetName },
+        path: { datasetName: workspaceName },
     });
 
     if (error) {
         console.error(
-            `${LOG_PREFIX} Failed to fetch cross-profile rendering data for dataset="${datasetName}"`,
+            `${LOG_PREFIX} Failed to fetch cross-profile rendering data for workspace="${workspaceName}"`,
             await describeError(error),
         );
         return { error };

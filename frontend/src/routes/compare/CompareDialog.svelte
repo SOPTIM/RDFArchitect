@@ -23,9 +23,9 @@
         compareSchemasFromFiles,
         compareStoredSchemas,
     } from "$lib/api/generated/index.ts";
-    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
         compareState,

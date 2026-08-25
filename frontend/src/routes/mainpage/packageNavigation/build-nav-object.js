@@ -20,7 +20,6 @@ import { URI } from "$lib/models/dto/index.ts";
 import { NavEntry } from "$lib/models/nav/NavEntry.svelte.js";
 import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
 import { classStore } from "$lib/stores/classStore.ts";
-import { datasetStore } from "$lib/stores/datasetStore.ts";
 import { graphStore } from "$lib/stores/graphStore.ts";
 import { packageStore } from "$lib/stores/packageStore.ts";
 import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
@@ -119,7 +118,7 @@ export async function populateGraph(workspaceNavObject, graphNavObject) {
     )) ?? { internal: [], external: [] };
 
     const allClasses = await classStore.getClasses(
-        datasetNavObject.id,
+        workspaceNavObject.id,
         graphNavObject.id,
     );
 

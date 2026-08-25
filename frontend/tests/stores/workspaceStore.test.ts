@@ -21,26 +21,26 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import * as api from "../../src/lib/api/generated";
 import { type CimPrefixPair } from "../../src/lib/api/generated";
 import { toastStore } from "../../src/lib/eventhandling/toastStore.svelte.js";
-import { createDatasetStore } from "../../src/lib/stores/datasetStore";
+import { createWorkspaceStore } from "../../src/lib/stores/workspaceStore";
 
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const DATASET_A = {
-    label: "datasetA",
+const WORKSPACE_A = {
+    label: "workspaceA",
     readOnly: false,
     prefixes: [{ prefix: "ex", substitutedPrefix: "http://example.org/" }],
 };
 
-const DATASET_B = {
-    label: "datasetB",
+const WORKSPACE_B = {
+    label: "workspaceB",
     readOnly: true,
     prefixes: [],
 };
 
 /** Raw shape returned by the backend */
-function makeApiDataset(
+function makeApiWorkspace(
     label: string,
     readOnly = false,
     prefixes: CimPrefixPair[] = [],
@@ -52,16 +52,16 @@ function makeApiDataset(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function mockListDatasetsSuccess(
-    ...datasets: ReturnType<typeof makeApiDataset>[]
+function mockListWorkspacesSuccess(
+    ...workspaces: ReturnType<typeof makeApiWorkspace>[]
 ) {
     vi.mocked(api.listDatasets).mockResolvedValue({
-        data: datasets,
+        data: workspaces,
         error: undefined,
     });
 }
 
-function mockListDatasetsError(error = new Error("network error")) {
+function mockListWorkspacesError(error = new Error("network error")) {
     vi.mocked(api.listDatasets).mockResolvedValue({ data: undefined, error });
 }
 
@@ -82,12 +82,12 @@ vi.mock("$lib/eventhandling/toastStore.svelte.js", () => ({
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("DatasetStore", () => {
-    let store: ReturnType<typeof createDatasetStore>;
+describe("WorkspaceStore", () => {
+    let store: ReturnType<typeof createWorkspaceStore>;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        store = createDatasetStore();
+        store = createWorkspaceStore();
     });
 
     // -------------------------------------------------------------------------
@@ -101,42 +101,42 @@ describe("DatasetStore", () => {
         });
     });
     // -------------------------------------------------------------------------
-    describe("getDatasets", () => {
-        test("maps API response to DatasetInfo shape", async () => {
-            mockListDatasetsSuccess(
-                makeApiDataset("datasetA", false, [
+    describe("getWorkspaces", () => {
+        test("maps API response to WorkspaceInfo shape", async () => {
+            mockListWorkspacesSuccess(
+                makeApiWorkspace("workspaceA", false, [
                     { prefix: "ex", substitutedPrefix: "http://example.org/" },
                 ]),
-                makeApiDataset("datasetB", true),
+                makeApiWorkspace("workspaceB", true),
             );
 
-            const result = await store.getDatasets();
+            const result = await store.getWorkspaces();
 
-            expect(result).toEqual([DATASET_A, DATASET_B]);
+            expect(result).toEqual([WORKSPACE_A, WORKSPACE_B]);
         });
 
         test("returns null when the API returns an error", async () => {
-            mockListDatasetsError();
+            mockListWorkspacesError();
 
-            const result = await store.getDatasets();
+            const result = await store.getWorkspaces();
 
             expect(result).toBeNull();
         });
 
         test("returns cached data on second call without re-fetching", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
 
-            await store.getDatasets();
-            await store.getDatasets();
+            await store.getWorkspaces();
+            await store.getWorkspaces();
 
             expect(api.listDatasets).toHaveBeenCalledTimes(1);
         });
 
         test("force=true bypasses cache and re-fetches", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
 
-            await store.getDatasets();
-            await store.getDatasets(true);
+            await store.getWorkspaces();
+            await store.getWorkspaces(true);
 
             expect(api.listDatasets).toHaveBeenCalledTimes(2);
         });
@@ -149,7 +149,7 @@ describe("DatasetStore", () => {
                 error: undefined,
             });
 
-            const result = await store.getDatasets();
+            const result = await store.getWorkspaces();
 
             expect(result?.[0]).toEqual({
                 label: "",
@@ -161,21 +161,21 @@ describe("DatasetStore", () => {
 
     // -------------------------------------------------------------------------
     describe("isReadOnly", () => {
-        test("returns readOnly flag for a known dataset", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA", true));
+        test("returns readOnly flag for a known workspace", async () => {
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA", true));
 
-            expect(await store.isReadOnly("datasetA")).toBe(true);
+            expect(await store.isReadOnly("workspaceA")).toBe(true);
         });
 
-        test("returns null for an unknown dataset", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+        test("returns null for an unknown workspace", async () => {
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
 
             expect(await store.isReadOnly("doesNotExist")).toBeNull();
         });
-        test("returns null if getDatasets fails to fetch data", async () => {
-            mockListDatasetsError(new Error("Network offline"));
+        test("returns null if gets fails to fetch data", async () => {
+            mockListWorkspacesError(new Error("Network offline"));
 
-            const result = await store.isReadOnly("datasetA");
+            const result = await store.isReadOnly("workspaceA");
 
             expect(result).toBeNull();
         });
@@ -183,29 +183,29 @@ describe("DatasetStore", () => {
 
     // -------------------------------------------------------------------------
     describe("getNamespaces", () => {
-        test("returns prefixes for a known dataset", async () => {
-            mockListDatasetsSuccess(
-                makeApiDataset("datasetA", false, [
+        test("returns prefixes for a known workspace", async () => {
+            mockListWorkspacesSuccess(
+                makeApiWorkspace("workspaceA", false, [
                     { prefix: "ex", substitutedPrefix: "http://example.org/" },
                 ]),
             );
 
-            const prefixes = await store.getNamespaces("datasetA");
+            const prefixes = await store.getNamespaces("workspaceA");
 
             expect(prefixes).toEqual([
                 { prefix: "ex", substitutedPrefix: "http://example.org/" },
             ]);
         });
 
-        test("returns empty array for unknown dataset", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+        test("returns empty array for unknown workspace", async () => {
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
 
             expect(await store.getNamespaces("unknown")).toEqual([]);
         });
-        test("returns an empty array if getDatasets fails to fetch data", async () => {
-            mockListDatasetsError(new Error("Network offline"));
+        test("returns an empty array if getWorkspaces fails to fetch data", async () => {
+            mockListWorkspacesError(new Error("Network offline"));
 
-            const result = await store.getNamespaces("datasetA");
+            const result = await store.getNamespaces("workspaceA");
 
             expect(result).toEqual([]);
         });
@@ -213,58 +213,58 @@ describe("DatasetStore", () => {
 
     // -------------------------------------------------------------------------
     describe("remove", () => {
-        test("removes the dataset from the store on success", async () => {
-            mockListDatasetsSuccess(
-                makeApiDataset("datasetA"),
-                makeApiDataset("datasetB"),
+        test("removes the workspace from the store on success", async () => {
+            mockListWorkspacesSuccess(
+                makeApiWorkspace("workspaceA"),
+                makeApiWorkspace("workspaceB"),
             );
             vi.mocked(api.deleteDataset).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            await store.getDatasets();
-            await store.remove("datasetA");
+            await store.getWorkspaces();
+            await store.remove("workspaceA");
 
             const state = get(store);
-            expect(state.data?.map(d => d.label)).toEqual(["datasetB"]);
+            expect(state.data?.map(d => d.label)).toEqual(["workspaceB"]);
         });
 
         test("returns error and shows error toast when API fails", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
             const err = new Error("server error");
             vi.mocked(api.deleteDataset).mockResolvedValue({
                 data: undefined,
                 error: err,
             });
 
-            await store.getDatasets();
-            const result = await store.remove("datasetA");
+            await store.getWorkspaces();
+            const result = await store.remove("workspaceA");
 
             expect(result.error).toBe(err);
             expect(toastStore.error).toHaveBeenCalledOnce();
         });
 
         test("shows success toast on successful deletion", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
             vi.mocked(api.deleteDataset).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            await store.getDatasets();
-            await store.remove("datasetA");
+            await store.getWorkspaces();
+            await store.remove("workspaceA");
 
             expect(toastStore.success).toHaveBeenCalledOnce();
         });
-        test("does not crash if called before datasets are fetched", async () => {
+        test("does not crash if called before workspaces are fetched", async () => {
             vi.mocked(api.deleteDataset).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            // Notice we are NOT calling await store.getDatasets() first
-            const result = await store.remove("datasetA");
+            // Notice we are NOT calling await store.getWorkspaces() first
+            const result = await store.remove("workspaceA");
 
             expect(result.error).toBeNull();
             const state = get(store);
@@ -279,24 +279,24 @@ describe("DatasetStore", () => {
         ];
 
         test("updates prefixes in the store on success", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
             vi.mocked(api.replaceNamespaces).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            await store.getDatasets();
-            await store.saveNamespaces("datasetA", newPrefixes);
+            await store.getWorkspaces();
+            await store.saveNamespaces("workspaceA", newPrefixes);
 
             const state = get(store);
             expect(
-                state.data?.find(d => d.label === "datasetA")?.prefixes,
+                state.data?.find(d => d.label === "workspaceA")?.prefixes,
             ).toEqual(newPrefixes);
         });
 
         test("returns error and does not update store when API fails", async () => {
-            mockListDatasetsSuccess(
-                makeApiDataset("datasetA", false, [
+            mockListWorkspacesSuccess(
+                makeApiWorkspace("workspaceA", false, [
                     { prefix: "old", substitutedPrefix: "http://old.org/" },
                 ]),
             );
@@ -306,25 +306,31 @@ describe("DatasetStore", () => {
                 error: err,
             });
 
-            await store.getDatasets();
-            const result = await store.saveNamespaces("datasetA", newPrefixes);
+            await store.getWorkspaces();
+            const result = await store.saveNamespaces(
+                "workspaceA",
+                newPrefixes,
+            );
 
             expect(result.error).toBe(err);
             // original prefixes unchanged
             const state = get(store);
             expect(
-                state.data?.find(d => d.label === "datasetA")?.prefixes,
+                state.data?.find(d => d.label === "workspaceA")?.prefixes,
             ).toEqual([
                 { prefix: "old", substitutedPrefix: "http://old.org/" },
             ]);
         });
-        test("does not crash if called before datasets are fetched", async () => {
+        test("does not crash if called before workspaces are fetched", async () => {
             vi.mocked(api.replaceNamespaces).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            const result = await store.saveNamespaces("datasetA", newPrefixes);
+            const result = await store.saveNamespaces(
+                "workspaceA",
+                newPrefixes,
+            );
 
             expect(result.error).toBeNull();
             const state = get(store);
@@ -335,61 +341,61 @@ describe("DatasetStore", () => {
     // -------------------------------------------------------------------------
     describe("updateReadonly", () => {
         test("calls disableEditing when readOnly=true and updates store", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA", false));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA", false));
             vi.mocked(api.disableEditing).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            await store.getDatasets();
-            await store.updateReadonly("datasetA", true);
+            await store.getWorkspaces();
+            await store.updateReadonly("workspaceA", true);
 
             expect(api.disableEditing).toHaveBeenCalledOnce();
             expect(api.enableEditing).not.toHaveBeenCalled();
             const state = get(store);
             expect(
-                state.data?.find(d => d.label === "datasetA")?.readOnly,
+                state.data?.find(d => d.label === "workspaceA")?.readOnly,
             ).toBe(true);
         });
 
         test("calls enableEditing when readOnly=false and updates store", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA", true));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA", true));
             vi.mocked(api.enableEditing).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            await store.getDatasets();
-            await store.updateReadonly("datasetA", false);
+            await store.getWorkspaces();
+            await store.updateReadonly("workspaceA", false);
 
             expect(api.enableEditing).toHaveBeenCalledOnce();
             const state = get(store);
             expect(
-                state.data?.find(d => d.label === "datasetA")?.readOnly,
+                state.data?.find(d => d.label === "workspaceA")?.readOnly,
             ).toBe(false);
         });
 
         test("returns error and shows error toast when API fails", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA", false));
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA", false));
             const err = new Error("forbidden");
             vi.mocked(api.disableEditing).mockResolvedValue({
                 data: undefined,
                 error: err,
             });
 
-            await store.getDatasets();
-            const result = await store.updateReadonly("datasetA", true);
+            await store.getWorkspaces();
+            const result = await store.updateReadonly("workspaceA", true);
 
             expect(result.error).toBe(err);
             expect(toastStore.error).toHaveBeenCalledOnce();
         });
-        test("does not crash if called before datasets are fetched", async () => {
+        test("does not crash if called before workspaces are fetched", async () => {
             vi.mocked(api.disableEditing).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
 
-            const result = await store.updateReadonly("datasetA", true);
+            const result = await store.updateReadonly("workspaceA", true);
 
             expect(result.error).toBeNull();
             const state = get(store);
@@ -399,12 +405,12 @@ describe("DatasetStore", () => {
 
     // -------------------------------------------------------------------------
     describe("invalidate", () => {
-        test("clears cached data so the next getDatasets re-fetches", async () => {
-            mockListDatasetsSuccess(makeApiDataset("datasetA"));
+        test("clears cached data so the next getWorkspaces re-fetches", async () => {
+            mockListWorkspacesSuccess(makeApiWorkspace("workspaceA"));
 
-            await store.getDatasets();
+            await store.getWorkspaces();
             store.invalidate();
-            await store.getDatasets();
+            await store.getWorkspaces();
 
             expect(api.listDatasets).toHaveBeenCalledTimes(2);
         });

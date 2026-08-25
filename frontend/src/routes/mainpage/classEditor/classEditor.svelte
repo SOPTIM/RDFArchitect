@@ -38,8 +38,8 @@
         multiSelectState,
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { datatypesStore } from "$lib/stores/datatypesStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         getClasses,
@@ -135,9 +135,9 @@
                     classUuid: null,
                 });
             }
-            const readOnly = await datasetStore.isReadOnly(workspaceName);
+            const readOnly = await workspaceStore.isReadOnly(workspaceName);
             if (cancellation.cancelled) return;
-            isDatasetReadOnly = readOnly;
+            isWorkspaceReadOnly = readOnly;
             if (classDto.external) {
                 reactiveClass = undefined;
                 externalClass = classDto;
@@ -157,7 +157,7 @@
     $effect(async () => {
         editorState.selectedDiagram.subscribe();
         forceReloadTrigger.subscribe();
-        isDatasetReadOnly = await datasetStore.isReadOnly(workspaceName);
+        isWorkspaceReadOnly = await workspaceStore.isReadOnly(workspaceName);
     });
 
     onMount(() => {
@@ -250,10 +250,10 @@
         context.packages = packages;
         context.datatypes = datatypes;
         context.stereotypes = await datatypesStore.getStereotypes(
-            datasetName,
+            workspaceName,
             graphUri,
         );
-        context.namespaces = await datasetStore.getNamespaces(datasetName);
+        context.namespaces = await workspaceStore.getNamespaces(workspaceName);
         loadingContext = false;
         editorState.selectedContext.trigger();
     }

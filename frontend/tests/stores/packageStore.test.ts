@@ -26,8 +26,8 @@ import { makeGraphKey } from "../../src/lib/stores/storeHelpers";
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const DATASET_A = "datasetA";
-const DATASET_B = "datasetB";
+const WORKSPACE_A = "workspaceA";
+const WORKSPACE_B = "workspaceB";
 const GRAPH_URI_1 = "http://example.org/graph1";
 const GRAPH_URI_2 = "http://example.org/graph2";
 
@@ -62,7 +62,7 @@ async function seedCache(store: ReturnType<typeof createPackageStore>) {
         data: MOCK_PACKAGE_LIST_RESPONSE,
         error: undefined,
     });
-    await store.getPackages(DATASET_A, GRAPH_URI_1);
+    await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
 }
 
 // ---------------------------------------------------------------------------
@@ -102,14 +102,14 @@ describe("packageStore", () => {
 
     // -------------------------------------------------------------------------
     describe("getPackages", () => {
-        test("returns null if datasetName is empty", async () => {
+        test("returns null if workspaceName is empty", async () => {
             const result = await store.getPackages("", GRAPH_URI_1);
             expect(result).toBeNull();
             expect(api.listPackages).not.toHaveBeenCalled();
         });
 
         test("returns null if graphURI is empty", async () => {
-            const result = await store.getPackages(DATASET_A, "");
+            const result = await store.getPackages(WORKSPACE_A, "");
             expect(result).toBeNull();
             expect(api.listPackages).not.toHaveBeenCalled();
         });
@@ -126,13 +126,13 @@ describe("packageStore", () => {
                 error: undefined,
             });
 
-            const result = await store.getPackages(DATASET_A, GRAPH_URI_1);
-            await store.getPackages(DATASET_A, GRAPH_URI_1);
+            const result = await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
 
             expect(result).toEqual(MOCK_PACKAGE_LIST_INFO);
             expect(api.listPackages).toHaveBeenCalledTimes(1);
             expect(api.listPackages).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI_1 },
+                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI_1 },
             });
         });
 
@@ -145,7 +145,7 @@ describe("packageStore", () => {
                 error: undefined,
             });
 
-            const result = await store.getPackages(DATASET_A, GRAPH_URI_1);
+            const result = await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
             expect(result?.internal).toEqual([]);
             expect(result?.external).toEqual([]);
         });
@@ -156,13 +156,13 @@ describe("packageStore", () => {
                 error: undefined,
             });
 
-            await store.getPackages(DATASET_A, GRAPH_URI_1);
-            await store.getPackages(DATASET_A, GRAPH_URI_1, true);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1, true);
 
             expect(api.listPackages).toHaveBeenCalledTimes(2);
         });
 
-        test("different dataset+graph combinations are cached independently", async () => {
+        test("different workspace+graph combinations are cached independently", async () => {
             vi.mocked(api.listPackages)
                 .mockResolvedValueOnce({
                     data: MOCK_PACKAGE_LIST_RESPONSE,
@@ -173,8 +173,8 @@ describe("packageStore", () => {
                     error: undefined,
                 });
 
-            await store.getPackages(DATASET_A, GRAPH_URI_1);
-            await store.getPackages(DATASET_A, GRAPH_URI_2);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_2);
 
             expect(api.listPackages).toHaveBeenCalledTimes(2);
         });
@@ -185,7 +185,7 @@ describe("packageStore", () => {
                 error: new Error("Network error"),
             });
 
-            const result = await store.getPackages(DATASET_A, GRAPH_URI_1);
+            const result = await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
             expect(result).toBeNull();
         });
     });
@@ -199,10 +199,10 @@ describe("packageStore", () => {
                 error: undefined,
             });
 
-            await store.addPackage(DATASET_A, GRAPH_URI_1, newPkg);
+            await store.addPackage(WORKSPACE_A, GRAPH_URI_1, newPkg);
 
             expect(api.addPackage).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI_1 },
+                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI_1 },
                 body: newPkg,
             });
         });
@@ -215,7 +215,7 @@ describe("packageStore", () => {
             });
 
             const result = await store.addPackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 newPkg,
             );
@@ -236,11 +236,11 @@ describe("packageStore", () => {
             });
             await seedCache(store);
 
-            await store.addPackage(DATASET_A, GRAPH_URI_1, newPkg);
+            await store.addPackage(WORKSPACE_A, GRAPH_URI_1, newPkg);
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             const added = cached?.internal.find(p => p.uuid === serverUUID);
             expect(added).toBeDefined();
@@ -260,11 +260,11 @@ describe("packageStore", () => {
             });
             await seedCache(store);
 
-            await store.addPackage(DATASET_A, GRAPH_URI_1, newPkg);
+            await store.addPackage(WORKSPACE_A, GRAPH_URI_1, newPkg);
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             // PKG_UUID_1 was already in the cache; the find-and-replace path should fire
             const found = cached?.internal.find(p => p.uuid === PKG_UUID_1);
@@ -280,11 +280,11 @@ describe("packageStore", () => {
             });
             await seedCache(store);
 
-            await store.addPackage(DATASET_A, GRAPH_URI_1, newPkg);
+            await store.addPackage(WORKSPACE_A, GRAPH_URI_1, newPkg);
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             expect(cached?.internal.some(p => p.uuid === serverUUID)).toBe(
                 true,
@@ -298,12 +298,12 @@ describe("packageStore", () => {
                 error: undefined,
             });
 
-            await store.addPackage(DATASET_A, GRAPH_URI_1, newPkg);
+            await store.addPackage(WORKSPACE_A, GRAPH_URI_1, newPkg);
 
             const state = get(store);
             // No cache entry should have been created
             expect(
-                state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data,
+                state.byGraph.get(makeGraphKey(WORKSPACE_A, GRAPH_URI_1))?.data,
             ).toBeUndefined();
         });
 
@@ -315,7 +315,7 @@ describe("packageStore", () => {
             });
             await seedCache(store);
 
-            const result = await store.addPackage(DATASET_A, GRAPH_URI_1, {
+            const result = await store.addPackage(WORKSPACE_A, GRAPH_URI_1, {
                 label: "New",
             });
 
@@ -323,7 +323,7 @@ describe("packageStore", () => {
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             expect(cached).toEqual(MOCK_PACKAGE_LIST_INFO);
         });
@@ -341,11 +341,11 @@ describe("packageStore", () => {
                 label: "Updated",
             };
 
-            await store.replacePackage(DATASET_A, GRAPH_URI_1, updatedPkg);
+            await store.replacePackage(WORKSPACE_A, GRAPH_URI_1, updatedPkg);
 
             expect(api.replacePackage).toHaveBeenCalledWith({
                 path: {
-                    datasetName: DATASET_A,
+                    datasetName: WORKSPACE_A,
                     graphURI: GRAPH_URI_1,
                     packageUUID: PKG_UUID_1,
                 },
@@ -357,7 +357,7 @@ describe("packageStore", () => {
             const pkgWithoutUUID: api.PackageDto = { label: "No UUID" };
 
             const result = await store.replacePackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 pkgWithoutUUID,
             );
@@ -377,11 +377,11 @@ describe("packageStore", () => {
                 uuid: PKG_UUID_1,
                 label: "Updated Label",
             };
-            await store.replacePackage(DATASET_A, GRAPH_URI_1, updatedPkg);
+            await store.replacePackage(WORKSPACE_A, GRAPH_URI_1, updatedPkg);
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             const found = cached?.internal.find(p => p.uuid === PKG_UUID_1);
             expect(found?.label).toBe("Updated Label");
@@ -399,11 +399,11 @@ describe("packageStore", () => {
                 uuid: PKG_UUID_2,
                 label: "Now Internal",
             };
-            await store.replacePackage(DATASET_A, GRAPH_URI_1, pkg);
+            await store.replacePackage(WORKSPACE_A, GRAPH_URI_1, pkg);
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             expect(cached?.external.some(p => p.uuid === PKG_UUID_2)).toBe(
                 false,
@@ -417,14 +417,14 @@ describe("packageStore", () => {
             });
 
             await store.replacePackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 MOCK_PKG_INTERNAL,
             );
 
             const state = get(store);
             expect(
-                state.byGraph.get(makeGraphKey(DATASET_A, GRAPH_URI_1))?.data,
+                state.byGraph.get(makeGraphKey(WORKSPACE_A, GRAPH_URI_1))?.data,
             ).toBeUndefined();
         });
 
@@ -437,7 +437,7 @@ describe("packageStore", () => {
             });
 
             const result = await store.replacePackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 MOCK_PKG_INTERNAL,
             );
@@ -446,7 +446,7 @@ describe("packageStore", () => {
 
             const state = get(store);
             const cached = state.byGraph.get(
-                makeGraphKey(DATASET_A, GRAPH_URI_1),
+                makeGraphKey(WORKSPACE_A, GRAPH_URI_1),
             )?.data;
             expect(cached).toEqual(MOCK_PACKAGE_LIST_INFO);
         });
@@ -461,7 +461,7 @@ describe("packageStore", () => {
             });
 
             const result = await store.savePackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 MOCK_PKG_INTERNAL,
             );
@@ -480,7 +480,7 @@ describe("packageStore", () => {
             });
 
             const result = await store.savePackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 newPkg,
             );
@@ -499,7 +499,7 @@ describe("packageStore", () => {
             });
 
             const result = await store.savePackage(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 MOCK_PKG_INTERNAL,
             );
@@ -514,7 +514,7 @@ describe("packageStore", () => {
                 error,
             });
 
-            const result = await store.savePackage(DATASET_A, GRAPH_URI_1, {
+            const result = await store.savePackage(WORKSPACE_A, GRAPH_URI_1, {
                 label: "No UUID",
             });
 
@@ -529,74 +529,74 @@ describe("packageStore", () => {
                 data: MOCK_PACKAGE_LIST_RESPONSE,
                 error: undefined,
             });
-            await store.getPackages(DATASET_A, GRAPH_URI_1);
-            await store.getPackages(DATASET_A, GRAPH_URI_2);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_2);
 
-            store.invalidateGraph(DATASET_A, GRAPH_URI_1);
+            store.invalidateGraph(WORKSPACE_A, GRAPH_URI_1);
 
             const state = get(store);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_1)),
             ).toBe(false);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_2)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_2)),
             ).toBe(true);
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("invalidateDataset", () => {
-        test("removes all graph entries for the dataset", async () => {
+    describe("invalidateWorkspace", () => {
+        test("removes all graph entries for the workspace", async () => {
             vi.mocked(api.listPackages).mockResolvedValue({
                 data: MOCK_PACKAGE_LIST_RESPONSE,
                 error: undefined,
             });
-            await store.getPackages(DATASET_A, GRAPH_URI_1);
-            await store.getPackages(DATASET_A, GRAPH_URI_2);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_2);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_1)),
             ).toBe(false);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_2)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_2)),
             ).toBe(false);
         });
 
-        test("does not affect entries from other datasets", async () => {
+        test("does not affect entries from other workspaces", async () => {
             vi.mocked(api.listPackages).mockResolvedValue({
                 data: MOCK_PACKAGE_LIST_RESPONSE,
                 error: undefined,
             });
-            await store.getPackages(DATASET_A, GRAPH_URI_1);
-            await store.getPackages(DATASET_B, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1);
+            await store.getPackages(WORKSPACE_B, GRAPH_URI_1);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_1)),
             ).toBe(false);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_B, GRAPH_URI_1)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_B, GRAPH_URI_1)),
             ).toBe(true);
         });
 
-        test("does not incorrectly match a dataset whose name is a prefix of another", async () => {
-            const SHORT_DATASET = "data";
+        test("does not incorrectly match a workspace whose name is a prefix of another", async () => {
+            const SHORT_WORKSPACE = "data";
             vi.mocked(api.listPackages).mockResolvedValue({
                 data: MOCK_PACKAGE_LIST_RESPONSE,
                 error: undefined,
             });
-            await store.getPackages(DATASET_A, GRAPH_URI_1); // key: "datasetA::..."
+            await store.getPackages(WORKSPACE_A, GRAPH_URI_1); // key: "workspaceA::..."
 
-            store.invalidateDataset(SHORT_DATASET); // "data::" should not match "datasetA::"
+            store.invalidateWorkspace(SHORT_WORKSPACE); // "data::" should not match "workspaceA::"
 
             const state = get(store);
             expect(
-                state.byGraph.has(makeGraphKey(DATASET_A, GRAPH_URI_1)),
+                state.byGraph.has(makeGraphKey(WORKSPACE_A, GRAPH_URI_1)),
             ).toBe(true);
         });
     });

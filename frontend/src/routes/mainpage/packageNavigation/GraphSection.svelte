@@ -137,20 +137,23 @@
             graphNavEntry.id,
         );
 
-        await versionControlStore.refresh(datasetNavEntry.id, graphNavEntry.id);
+        await versionControlStore.refresh(
+            workspaceNavEntry.id,
+            graphNavEntry.id,
+        );
         canUndo = await versionControlStore.canUndo(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
         );
         canRedo = await versionControlStore.canRedo(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
         );
     }
 
     async function undo() {
         const { error } = await versionControlStore.undo(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
         );
 
@@ -161,7 +164,7 @@
 
     async function redo() {
         const { error } = await versionControlStore.redo(
-            datasetNavEntry.id,
+            workspaceNavEntry.id,
             graphNavEntry.id,
         );
 

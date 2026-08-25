@@ -49,7 +49,7 @@
     }
 
     async function deleteGraph() {
-        const { error } = await graphStore.remove(datasetName, graphURI);
+        const { error } = await graphStore.remove(workspaceName, graphURI);
         if (error) return;
 
         editorState.selectedWorkspace.updateValue(null);

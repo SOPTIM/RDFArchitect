@@ -98,7 +98,7 @@
             if (type === "attributes") {
                 res = await getAttributeShacl({
                     path: {
-                        datasetName: classDatasetName,
+                        datasetName: classWorkspaceName,
                         graphURI: classGraphUri,
                         classUUID: newViewedClassUUID,
                         attributeUUID: viewedPropertyUUID,
@@ -107,7 +107,7 @@
             } else if (type === "associations") {
                 res = await getAssociationShacl({
                     path: {
-                        datasetName: classDatasetName,
+                        datasetName: classWorkspaceName,
                         graphURI: classGraphUri,
                         classUUID: newViewedClassUUID,
                         associationUUID: viewedPropertyUUID,
@@ -141,13 +141,13 @@
             const [generatedRes, customRes] = await Promise.all([
                 getGeneratedShaclNamespacesAsString({
                     path: {
-                        datasetName: classDatasetName,
+                        datasetName: classWorkspaceName,
                         graphURI: classGraphUri,
                     },
                 }),
                 getCustomShaclNamespacesAsString({
                     path: {
-                        datasetName: classDatasetName,
+                        datasetName: classWorkspaceName,
                         graphURI: classGraphUri,
                     },
                 }),
@@ -185,7 +185,7 @@
             if (type === "attributes") {
                 res = await replaceAttributeShacl({
                     path: {
-                        datasetName: classDatasetName,
+                        datasetName: classWorkspaceName,
                         graphURI: classGraphUri,
                         classUUID: getViewedClassUuid(),
                         attributeUUID: property.uuid.value,
@@ -195,7 +195,7 @@
             } else if (type === "associations") {
                 res = await replaceAssociationShacl({
                     path: {
-                        datasetName: classDatasetName,
+                        datasetName: classWorkspaceName,
                         graphURI: classGraphUri,
                         classUUID: getViewedClassUuid(),
                         associationUUID: property.uuid.value,

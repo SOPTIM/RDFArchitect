@@ -28,8 +28,8 @@
     import DiscardCancelConfirmDialog from "$lib/dialog/DiscardCancelConfirmDialog.svelte";
     import { ReactiveOntology } from "$lib/models/reactive/models/ontology/reactive-ontology.svelte.js";
     import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import AddKnownFieldsDialog from "./AddKnownFieldsDialog.svelte";
     import OntologyEntryRow from "./OntologyEntryRow.svelte";
@@ -84,7 +84,7 @@
 
     async function onOpen() {
         if (!namespaces) {
-            namespaces = await datasetStore.getNamespaces(workspace);
+            namespaces = await workspaceStore.getNamespaces(workspace);
         }
 
         namespaces = withOntologyDefaultNamespaces(namespaces);
@@ -174,7 +174,7 @@
             );
         } else {
             await ontologyStore.createOntology(
-                datasetName,
+                workspaceName,
                 graphUri,
                 serializable,
             );

@@ -199,9 +199,9 @@
                     : "Could not delete the selected resources.",
             );
         } else {
-            packageStore.invalidateGraph(datasetName, graphUri);
-            classStore.invalidateGraph(datasetName, graphUri);
-            crossProfileStore.invalidateDataset(datasetName);
+            packageStore.invalidateGraph(workspaceName, graphUri);
+            classStore.invalidateGraph(workspaceName, graphUri);
+            crossProfileStore.invalidateWorkspace(workspaceName);
 
             console.log("Successfully submitted delete request");
             forceReloadTrigger.trigger();

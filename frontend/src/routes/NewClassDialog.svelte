@@ -19,17 +19,17 @@
     import { untrack } from "svelte";
     import { v4 as uuidv4 } from "uuid";
 
-    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { ReactiveValueWrapper } from "$lib/models/reactive/reactive-wrappers/reactive-value-wrapper.svelte.js";
     import { isInvalidClassLabel } from "$lib/models/reactive/validity-rules/validityFunctions.js";
     import { classStore } from "$lib/stores/classStore.ts";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { getPackageDisplayLabel } from "$lib/utils/package-label.js";
 
     import {
@@ -96,7 +96,7 @@
     });
 
     async function onWorkspaceOrGraphChanged(ds, graph) {
-        namespaces = await datasetStore.getNamespaces(ds);
+        namespaces = await workspaceStore.getNamespaces(ds);
         if (classURINamespace) classURINamespace.value = null;
         classPackage = null;
 
@@ -146,7 +146,7 @@
         if (!workspaceName || !graphURI) {
             return;
         }
-        namespaces = await datasetStore.getNamespaces(datasetName);
+        namespaces = await workspaceStore.getNamespaces(workspaceName);
 
         await getPackages(workspaceName, graphURI);
         compareClasses = await getClasses(workspaceName, graphURI, false);
@@ -246,7 +246,7 @@
             className: form.className,
         });
         updateEditorSelection(form, classUUID);
-        crossProfileStore.invalidateDataset(form.datasetName);
+        crossProfileStore.invalidateWorkspace(form.workspaceName);
     }
 
     async function newClass() {

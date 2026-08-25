@@ -20,19 +20,16 @@
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import {
-        forceReloadTrigger,
         editorState,
+        forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { datatypesStore } from "$lib/stores/datatypesStore.ts";
     import { customDiagramStore } from "$lib/stores/diagramStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
-    import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { forceReloadTrigger } from "$lib/sharedState.svelte.js";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     let { showDialog = $bindable(), workspaceName } = $props();
 
@@ -49,22 +46,21 @@
     }
 
     async function deleteWorkspace() {
-        const deletedWorkspace = workspaceName;
-        if (!deletedWorkspace) {
+        if (!workspaceName) {
             return;
         }
         try {
             if (!workspaceName) return;
 
-            const res = await datasetStore.remove(workspaceName);
+            const res = await workspaceStore.remove(workspaceName);
             if (res.error) return;
 
-            graphStore.invalidateDataset(workspaceName);
-            classStore.invalidateDataset(workspaceName);
-            packageStore.invalidateDataset(workspaceName);
-            datatypesStore.invalidateDataset(workspaceName);
-            ontologyStore.invalidateDataset(workspaceName);
-            customDiagramStore.invalidateDataset(workspaceName);
+            graphStore.invalidateWorkspace(workspaceName);
+            classStore.invalidateWorkspace(workspaceName);
+            packageStore.invalidateWorkspace(workspaceName);
+            datatypesStore.invalidateWorkspace(workspaceName);
+            ontologyStore.invalidateWorkspace(workspaceName);
+            customDiagramStore.invalidateWorkspace(workspaceName);
 
             if (editorState.selectedWorkspace.getValue() === workspaceName) {
                 editorState.reset();

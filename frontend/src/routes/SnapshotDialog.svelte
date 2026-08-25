@@ -24,7 +24,7 @@
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ButtonControl from "../lib/components/ButtonControl.svelte";
     import { editorState } from "../lib/sharedState.svelte.js";
@@ -42,10 +42,10 @@
     async function onOpen() {
         workspaceName =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
-        workspaces = await datasetStore.getDatasets();
+        workspaces = await workspaceStore.getWorkspaces();
     }
 
-    async function snapshotDataset() {
+    async function snapshotWorkspace() {
         const { data, error } = await createSnapshot({
             path: { datasetName: workspaceName },
         });
@@ -95,16 +95,16 @@
 >
     <div class="mx-2 flex h-full flex-col">
         {#if !workspaceSelectionLocked}
-        <label for={workspaceSelectId} class="mb-1">Workspace</label>
-        <SelectEditControl
-            id={workspaceSelectId}
-            bind:value={workspaceName}
-            options={workspaces}
-            getOptionValue={workspace => workspace.label}
-            getOptionLabel={workspace => workspace.label}
-            disabled={workspaces.length === 0}
-            placeholder="Select workspace"
-        />
+            <label for={workspaceSelectId} class="mb-1">Workspace</label>
+            <SelectEditControl
+                id={workspaceSelectId}
+                bind:value={workspaceName}
+                options={workspaces}
+                getOptionValue={workspace => workspace.label}
+                getOptionLabel={workspace => workspace.label}
+                disabled={workspaces.length === 0}
+                placeholder="Select workspace"
+            />
         {/if}
 
         <div class="mt-4 flex h-full flex-col">

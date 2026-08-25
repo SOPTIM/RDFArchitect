@@ -38,7 +38,7 @@ vi.mock("$lib/stores/storeHelpers", async importOriginal => {
         >();
     return {
         ...actual,
-        makeGraphKey: vi.fn((dataset, graph) => `${dataset}::${graph}`),
+        makeGraphKey: vi.fn((workspace, graph) => `${workspace}::${graph}`),
     };
 });
 
@@ -52,9 +52,9 @@ vi.spyOn(console, "error").mockImplementation(() => {});
 
 describe("datatypesStore", () => {
     let store: ReturnType<typeof createDatatypesStore>;
-    const DATASET = "datasetA";
+    const WORKSPACE = "workspaceA";
     const GRAPH = "http://example.org/graph";
-    const KEY = `${DATASET}::${GRAPH}`;
+    const KEY = `${WORKSPACE}::${GRAPH}`;
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -69,8 +69,8 @@ describe("datatypesStore", () => {
                 error: undefined,
             });
 
-            const res1 = await store.getPrimitives(DATASET, GRAPH);
-            const res2 = await store.getPrimitives(DATASET, GRAPH);
+            const res1 = await store.getPrimitives(WORKSPACE, GRAPH);
+            const res2 = await store.getPrimitives(WORKSPACE, GRAPH);
 
             expect(res1).toEqual(mockData);
             expect(res2).toEqual(mockData);
@@ -84,8 +84,8 @@ describe("datatypesStore", () => {
                 error: undefined,
             });
 
-            await store.getPrimitives(DATASET, GRAPH);
-            await store.getPrimitives(DATASET, GRAPH, true);
+            await store.getPrimitives(WORKSPACE, GRAPH);
+            await store.getPrimitives(WORKSPACE, GRAPH, true);
 
             expect(api.listPrimitives).toHaveBeenCalledTimes(2);
         });
@@ -100,9 +100,9 @@ describe("datatypesStore", () => {
 
             // Fire multiple requests simultaneously
             const [res1, res2, res3] = await Promise.all([
-                store.getPrimitives(DATASET, GRAPH),
-                store.getPrimitives(DATASET, GRAPH),
-                store.getPrimitives(DATASET, GRAPH),
+                store.getPrimitives(WORKSPACE, GRAPH),
+                store.getPrimitives(WORKSPACE, GRAPH),
+                store.getPrimitives(WORKSPACE, GRAPH),
             ]);
 
             expect(res1).toEqual(mockData);
@@ -111,9 +111,9 @@ describe("datatypesStore", () => {
             expect(api.listPrimitives).toHaveBeenCalledTimes(1);
         });
 
-        test("returns null if datasetName or graphURI is missing", async () => {
+        test("returns null if workspaceName or graphURI is missing", async () => {
             expect(await store.getPrimitives("", GRAPH)).toBeNull();
-            expect(await store.getPrimitives(DATASET, "")).toBeNull();
+            expect(await store.getPrimitives(WORKSPACE, "")).toBeNull();
             expect(api.listPrimitives).not.toHaveBeenCalled();
         });
 
@@ -124,7 +124,7 @@ describe("datatypesStore", () => {
                 error,
             });
 
-            const result = await store.getPrimitives(DATASET, GRAPH);
+            const result = await store.getPrimitives(WORKSPACE, GRAPH);
 
             expect(result).toBeNull();
             const state = get(store).byGraph.get(KEY);
@@ -135,7 +135,7 @@ describe("datatypesStore", () => {
             const exception = new Error("Unexpected crash");
             vi.mocked(api.listPrimitives).mockRejectedValue(exception);
 
-            const result = await store.getPrimitives(DATASET, GRAPH);
+            const result = await store.getPrimitives(WORKSPACE, GRAPH);
 
             expect(result).toBeNull();
             const state = get(store).byGraph.get(KEY);
@@ -152,10 +152,10 @@ describe("datatypesStore", () => {
                 error: undefined,
             });
 
-            await store.getPrimitives(DATASET, GRAPH);
-            store.invalidateGraph(DATASET, GRAPH); // löscht alle drei
+            await store.getPrimitives(WORKSPACE, GRAPH);
+            store.invalidateGraph(WORKSPACE, GRAPH); // löscht alle drei
 
-            await store.getPrimitives(DATASET, GRAPH);
+            await store.getPrimitives(WORKSPACE, GRAPH);
             expect(api.listPrimitives).toHaveBeenCalledTimes(2); // refetched
             expect(api.listDatatypes).toHaveBeenCalledTimes(0); // war nie gefetcht
         });
@@ -170,11 +170,11 @@ describe("datatypesStore", () => {
                 error: undefined,
             });
 
-            const result = await store.getDatatypes(DATASET, GRAPH);
+            const result = await store.getDatatypes(WORKSPACE, GRAPH);
 
             expect(result).toEqual(mockData);
             expect(api.listDatatypes).toHaveBeenCalledWith({
-                path: { datasetName: DATASET, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE, graphURI: GRAPH },
             });
         });
 
@@ -185,11 +185,11 @@ describe("datatypesStore", () => {
                 error: undefined,
             });
 
-            const result = await store.getStereotypes(DATASET, GRAPH);
+            const result = await store.getStereotypes(WORKSPACE, GRAPH);
 
             expect(result).toEqual(mockData);
             expect(api.listStereotypes).toHaveBeenCalledWith({
-                path: { datasetName: DATASET, graphURI: GRAPH },
+                path: { datasetName: WORKSPACE, graphURI: GRAPH },
             });
         });
     });
@@ -202,14 +202,14 @@ describe("datatypesStore", () => {
                 error: undefined,
             });
 
-            await store.getPrimitives(DATASET, GRAPH);
-            await store.getPrimitives(DATASET, "other-graph");
+            await store.getPrimitives(WORKSPACE, GRAPH);
+            await store.getPrimitives(WORKSPACE, "other-graph");
 
-            store.invalidateGraph(DATASET, GRAPH);
+            store.invalidateGraph(WORKSPACE, GRAPH);
 
             const state = get(store).byGraph;
             expect(state.has(KEY)).toBe(false);
-            expect(state.has(`${DATASET}::other-graph`)).toBe(true);
+            expect(state.has(`${WORKSPACE}::other-graph`)).toBe(true);
         });
 
         test("after invalidateGraph, the next call re-fetches", async () => {
@@ -217,28 +217,28 @@ describe("datatypesStore", () => {
                 data: [] as never,
                 error: undefined,
             });
-            await store.getPrimitives(DATASET, GRAPH);
-            store.invalidateGraph(DATASET, GRAPH);
-            await store.getPrimitives(DATASET, GRAPH);
+            await store.getPrimitives(WORKSPACE, GRAPH);
+            store.invalidateGraph(WORKSPACE, GRAPH);
+            await store.getPrimitives(WORKSPACE, GRAPH);
             expect(api.listPrimitives).toHaveBeenCalledTimes(2);
         });
 
-        test("invalidateDataset removes all graphs for a given dataset", async () => {
+        test("invalidateWorkspace removes all graphs for a given workspace", async () => {
             vi.mocked(api.listPrimitives).mockResolvedValue({
                 data: ["uri1"] as never,
                 error: undefined,
             });
 
-            await store.getPrimitives(DATASET, GRAPH);
-            await store.getPrimitives(DATASET, "other-graph");
-            await store.getPrimitives("datasetB", GRAPH);
+            await store.getPrimitives(WORKSPACE, GRAPH);
+            await store.getPrimitives(WORKSPACE, "other-graph");
+            await store.getPrimitives("workspaceB", GRAPH);
 
-            store.invalidateDataset(DATASET);
+            store.invalidateWorkspace(WORKSPACE);
 
             const state = get(store).byGraph;
             expect(state.has(KEY)).toBe(false);
-            expect(state.has(`${DATASET}::other-graph`)).toBe(false);
-            expect(state.has(`datasetB::${GRAPH}`)).toBe(true);
+            expect(state.has(`${WORKSPACE}::other-graph`)).toBe(false);
+            expect(state.has(`workspaceB::${GRAPH}`)).toBe(true);
         });
     });
 });

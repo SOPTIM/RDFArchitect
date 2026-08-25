@@ -30,7 +30,7 @@
     import { saveFile, supportedRDFMediaTypes } from "$lib/utils/fileUtils.ts";
 
     import { editorState } from "../lib/sharedState.svelte.js";
-    import { datasetStore } from "./stores/datasetStore.ts";
+    import { workspaceStore } from "./stores/workspaceStore.ts";
 
     let {
         showDialog = $bindable(),
@@ -68,7 +68,9 @@
 
     $effect(async () => {
         if (selectedWorkspaceName) {
-            namespaces = await datasetStore.getNamespaces(selectedWorkspaceName);
+            namespaces = await workspaceStore.getNamespaces(
+                selectedWorkspaceName,
+            );
         } else {
             namespaces = [];
         }

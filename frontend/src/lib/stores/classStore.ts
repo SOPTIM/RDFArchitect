@@ -214,13 +214,13 @@ function createClassStore() {
     // ----- Getters -----
 
     async function getClasses(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         includeExternal = false,
         force = false,
     ): Promise<ClassUmlAdaptedDto[] | null> {
-        if (!datasetName || !graphURI) return null;
-        const key = makeGraphKey(datasetName, graphURI);
+        if (!workspaceName || !graphURI) return null;
+        const key = makeGraphKey(workspaceName, graphURI);
         const variant: Variant = includeExternal ? "all" : "internalOnly";
 
         return loadSlot(
@@ -233,24 +233,24 @@ function createClassStore() {
                 }),
             () =>
                 getClassList({
-                    path: { datasetName, graphURI },
+                    path: { datasetName: workspaceName, graphURI },
                     query: { includeExternalClasses: includeExternal },
                 }),
             LOG_PREFIX,
-            `classes for dataset="${datasetName}", graph="${graphURI}", variant="${variant}"`,
+            `classes for workspace="${workspaceName}", graph="${graphURI}", variant="${variant}"`,
             force,
         );
     }
 
     async function getClassInfo(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         force = false,
     ): Promise<ClassUmlAdaptedDto | null> {
-        if (!datasetName || !graphURI || !classUUID) return null;
+        if (!workspaceName || !graphURI || !classUUID) return null;
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         const pendingKey = `${key}::${classUUID}`;
 
         if (!force) {
@@ -265,12 +265,12 @@ function createClassStore() {
         }
 
         console.log(
-            `${LOG_PREFIX} Loading class details for classUUID="${classUUID}" in dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Loading class details for classUUID="${classUUID}" in workspace="${workspaceName}", graph="${graphURI}"`,
         );
 
         const promise = (async (): Promise<ClassUmlAdaptedDto | null> => {
             const { data, error } = await getClassInformation({
-                path: { datasetName, graphURI, classUUID },
+                path: { datasetName: workspaceName, graphURI, classUUID },
                 query: { includeSuperClasses: true },
             });
 
@@ -336,16 +336,16 @@ function createClassStore() {
     // =========================================================================
 
     async function addNewClass(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         request: AddNewClassRequest,
     ): Promise<Result<string>> {
         console.log(
-            `${LOG_PREFIX} Creating class in dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Creating class in workspace="${workspaceName}", graph="${graphURI}"`,
         );
 
         const { data, error } = await addClass({
-            path: { datasetName, graphURI },
+            path: { datasetName: workspaceName, graphURI },
             body: request,
         });
         if (error) {
@@ -357,14 +357,14 @@ function createClassStore() {
             return { error };
         }
 
-        invalidateGraph(datasetName, graphURI);
+        invalidateGraph(workspaceName, graphURI);
         console.log(`${LOG_PREFIX} Created class with uuid="${data ?? ""}"`);
         toastStore.success("Class created", "Class successfully created.");
         return { error: null, data: data ?? undefined };
     }
 
     async function pasteCopiedClasses(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         request: PasteClassesRequestDto,
     ): Promise<Result<CopyClassResponseDto[]>> {
@@ -379,17 +379,17 @@ function createClassStore() {
         } else if (sourceCount === 1) {
             const { classUUID } = sources[0];
             console.log(
-                `${LOG_PREFIX} Pasting class classUUID="${classUUID}" into dataset="${datasetName}", graph="${graphURI}"`,
+                `${LOG_PREFIX} Pasting class classUUID="${classUUID}" into workspace="${workspaceName}", graph="${graphURI}"`,
             );
         } else {
             console.log(
-                `${LOG_PREFIX} Pasting ${sourceCount} classes into dataset="${datasetName}", graph="${graphURI}"`,
+                `${LOG_PREFIX} Pasting ${sourceCount} classes into workspace="${workspaceName}", graph="${graphURI}"`,
             );
         }
 
         const { data, error } = await pasteClasses({
             path: {
-                targetDatasetName: datasetName,
+                targetDatasetName: workspaceName,
                 targetGraphURI: graphURI,
             },
             body: request,
@@ -407,7 +407,7 @@ function createClassStore() {
             return { error };
         }
 
-        invalidateGraph(datasetName, graphURI);
+        invalidateGraph(workspaceName, graphURI);
         if (sourceCount === 1) {
             console.log(
                 `${LOG_PREFIX} Successfully pasted class ${data[0].name}"`,
@@ -430,7 +430,7 @@ function createClassStore() {
     }
 
     async function replaceExistingClass(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         cls: ClassUmlAdaptedDto,
@@ -438,7 +438,7 @@ function createClassStore() {
         console.log(`${LOG_PREFIX} Replacing class classUUID="${classUUID}"`);
 
         const { error } = await replaceClass({
-            path: { datasetName, graphURI, classUUID },
+            path: { datasetName: workspaceName, graphURI, classUUID },
             body: cls,
         });
         if (error) {
@@ -450,7 +450,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             ...cls,
@@ -462,7 +462,7 @@ function createClassStore() {
     }
 
     async function extendExistingClass(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         attribute: AttributeDto,
@@ -470,7 +470,7 @@ function createClassStore() {
         console.log(`${LOG_PREFIX} Extending class classUUID="${classUUID}"`);
 
         const { data, error } = await extendClass({
-            path: { datasetName, graphURI, classUUID },
+            path: { datasetName: workspaceName, graphURI, classUUID },
             body: attribute,
         });
         if (error) {
@@ -485,7 +485,7 @@ function createClassStore() {
             return { error };
         }
 
-        invalidateGraph(datasetName, graphURI);
+        invalidateGraph(workspaceName, graphURI);
         console.log(`${LOG_PREFIX} Extended class classUUID="${classUUID}"`);
         toastStore.success("Class extended", "Class was extended.");
         return { error: null, data: data ?? undefined };
@@ -496,7 +496,7 @@ function createClassStore() {
     // =========================================================================
 
     async function addAttribute(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         attribute: AttributeDto,
@@ -506,7 +506,7 @@ function createClassStore() {
         );
 
         const { data, error } = await createAttribute({
-            path: { datasetName, graphURI, classUUID },
+            path: { datasetName: workspaceName, graphURI, classUUID },
             body: attribute,
         });
         if (error) {
@@ -524,7 +524,7 @@ function createClassStore() {
         const newUUID = data ?? attribute.uuid;
         const stored: AttributeDto = { ...attribute, uuid: newUUID };
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], stored),
@@ -541,7 +541,7 @@ function createClassStore() {
     }
 
     async function replaceExistingAttribute(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         attribute: AttributeDto,
@@ -561,7 +561,7 @@ function createClassStore() {
 
         const { data, error } = await replaceAttribute({
             path: {
-                datasetName,
+                datasetName: workspaceName,
                 graphURI,
                 classUUID,
                 attributeUUID: attribute.uuid,
@@ -577,7 +577,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             attributes: upsertByUuid(prev.attributes ?? [], attribute),
@@ -597,7 +597,7 @@ function createClassStore() {
     // =========================================================================
 
     async function addEnumEntry(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         enumEntry: EnumEntryDto,
@@ -607,7 +607,7 @@ function createClassStore() {
         );
 
         const { data, error } = await createEnumEntry({
-            path: { datasetName, graphURI, classUUID },
+            path: { datasetName: workspaceName, graphURI, classUUID },
             body: enumEntry,
         });
         if (error) {
@@ -625,7 +625,7 @@ function createClassStore() {
         const uuid = data ?? enumEntry.uuid;
         const stored: EnumEntryDto = { ...enumEntry, uuid };
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             enumEntries: upsertByUuid(prev.enumEntries ?? [], stored),
@@ -641,7 +641,7 @@ function createClassStore() {
     }
 
     async function replaceExistingEnumEntry(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         enumEntry: EnumEntryDto,
@@ -661,7 +661,7 @@ function createClassStore() {
 
         const { data, error } = await replaceEnumEntry({
             path: {
-                datasetName,
+                datasetName: workspaceName,
                 graphURI,
                 classUUID,
                 enumEntryUUID: enumEntry.uuid,
@@ -677,7 +677,7 @@ function createClassStore() {
             return { error };
         }
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             enumEntries: upsertByUuid(prev.enumEntries ?? [], enumEntry),
@@ -694,7 +694,7 @@ function createClassStore() {
     // =========================================================================
 
     async function addAssociationPair(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         pair: AssociationPairDto,
@@ -704,7 +704,7 @@ function createClassStore() {
         );
 
         const { data, error } = await createAssociation({
-            path: { datasetName, graphURI, classUUID },
+            path: { datasetName: workspaceName, graphURI, classUUID },
             body: pair,
         });
         if (error) {
@@ -724,7 +724,7 @@ function createClassStore() {
             to: { ...pair.to, uuid: data?.toUUID ?? pair.to?.uuid },
         };
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => ({
             ...prev,
             associationPairs: upsertAssociationPair(
@@ -743,7 +743,7 @@ function createClassStore() {
     }
 
     async function replaceAssociationPair(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         classUUID: string,
         pair: AssociationPairDto,
@@ -763,7 +763,12 @@ function createClassStore() {
         );
 
         const { data, error } = await replaceAssociation({
-            path: { datasetName, graphURI, classUUID, associationUUID },
+            path: {
+                datasetName: workspaceName,
+                graphURI,
+                classUUID,
+                associationUUID,
+            },
             body: pair,
         });
         if (error) {
@@ -783,7 +788,7 @@ function createClassStore() {
             to: { ...pair.to, uuid: data?.toUUID ?? pair.to?.uuid },
         };
 
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         mutateClassInPlace(key, classUUID, prev => {
             const filtered = (prev.associationPairs ?? []).filter(
                 p => p.from?.uuid !== associationUUID,
@@ -801,8 +806,8 @@ function createClassStore() {
         return { error: null, data: data ?? undefined };
     }
 
-    function invalidateGraph(datasetName: string, graphURI: string) {
-        const key = makeGraphKey(datasetName, graphURI);
+    function invalidateGraph(workspaceName: string, graphURI: string) {
+        const key = makeGraphKey(workspaceName, graphURI);
         const pendingPrefix = `${key}::`;
         console.log(`${LOG_PREFIX} Invalidating graph cache key="${key}"`);
         update(s => {
@@ -816,10 +821,10 @@ function createClassStore() {
         });
     }
 
-    function invalidateDataset(datasetName: string) {
-        const prefix = `${datasetName}::`;
+    function invalidateWorkspace(workspaceName: string) {
+        const prefix = `${workspaceName}::`;
         console.log(
-            `${LOG_PREFIX} Invalidating dataset cache dataset="${datasetName}"`,
+            `${LOG_PREFIX} Invalidating workspace cache workspace="${workspaceName}"`,
         );
         update(s => {
             const byGraph = new Map(s.byGraph);
@@ -857,7 +862,7 @@ function createClassStore() {
 
         // invalidation
         invalidateGraph,
-        invalidateDataset,
+        invalidateWorkspace,
     };
 }
 export { createClassStore };

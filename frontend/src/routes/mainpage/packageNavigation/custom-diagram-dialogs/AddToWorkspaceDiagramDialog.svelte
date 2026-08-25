@@ -71,8 +71,9 @@
 
     async function getCustomDiagrams() {
         existingDiagrams =
-            (await customDiagramStore.getDatasetDiagrams(lockedWorkspaceName)) ??
-            [];
+            (await customDiagramStore.getWorkspaceDiagrams(
+                lockedWorkspaceName,
+            )) ?? [];
         diagramsLoaded = true;
     }
 
@@ -122,7 +123,7 @@
             classes: classesToAdd(),
         };
 
-        const { error } = await customDiagramStore.saveDatasetDiagram(
+        const { error } = await customDiagramStore.saveWorkspaceDiagram(
             lockedWorkspaceName,
             diagramId,
             diagramData,
@@ -140,7 +141,7 @@
     }
 
     async function addToDiagram(diagram) {
-        const { error } = await customDiagramStore.addClassesToDatasetDiagram(
+        const { error } = await customDiagramStore.addClassesToWorkspaceDiagram(
             lockedWorkspaceName,
             diagram.diagramId,
             classesToAdd(),

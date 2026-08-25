@@ -19,8 +19,8 @@
     import { v4 as uuidv4 } from "uuid";
 
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     let {
         workspace = $bindable(),
@@ -58,11 +58,15 @@
     });
 
     onMount(async () => {
-        workspaces = (await datasetStore.getDatasets()) ?? [];
+        workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         if (workspaceLocked) workspace = lockedWorkspaceName;
         if (graphLocked) graph = lockedGraphUri;
 
-        if (!workspaceLocked && workspace && !allowSelectionOfReadonlyWorkspaces) {
+        if (
+            !workspaceLocked &&
+            workspace &&
+            !allowSelectionOfReadonlyWorkspaces
+        ) {
             const selectedWorkspace = workspaces.find(
                 option => option.label === workspace,
             );

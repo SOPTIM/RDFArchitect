@@ -27,13 +27,13 @@ export async function saveApiAssociationToBackend(
 ) {
     const res = isNewAssociation
         ? await classStore.addAssociationPair(
-            workspace,
+              workspace,
               graph,
               classUUID,
               associationDTO,
           )
         : await classStore.replaceAssociationPair(
-            workspace,
+              workspace,
               graph,
               classUUID,
               associationDTO,

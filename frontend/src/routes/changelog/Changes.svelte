@@ -20,7 +20,7 @@
         forceReloadTrigger,
         editorState,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import ChangesRow from "./ChangesRow.svelte";
 
@@ -38,8 +38,9 @@
     $effect(async () => {
         forceReloadTrigger.subscribe();
         if (selectedWorkspaceName) {
-            readonlyWorkspace =
-                await datasetStore.isReadOnly(selectedWorkspaceName);
+            readonlyWorkspace = await workspaceStore.isReadOnly(
+                selectedWorkspaceName,
+            );
         }
     });
 

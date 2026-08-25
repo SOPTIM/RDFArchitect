@@ -27,15 +27,15 @@ import { createCustomDiagramStore } from "../../src/lib/stores/diagramStore";
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const DATASET_A = "datasetA";
-const DATASET_B = "datasetB";
+const WORKSPACE_A = "workspaceA";
+const WORKSPACE_B = "workspaceB";
 const GRAPH_URI_1 = "http://example.org/graph1";
 const GRAPH_URI_2 = "http://example.org/graph2";
 const DIAGRAM_ID = "diag-456";
 
-const MOCK_DATASET_DIAGRAMS: CustomDiagramDto[] = [
-    { diagramId: "diag-1", name: "Dataset Diagram 1" } as CustomDiagramDto,
-    { diagramId: "diag-2", name: "Dataset Diagram 2" } as CustomDiagramDto,
+const MOCK_WORKSPACE_DIAGRAMS: CustomDiagramDto[] = [
+    { diagramId: "diag-1", name: "Workspace Diagram 1" } as CustomDiagramDto,
+    { diagramId: "diag-2", name: "Workspace Diagram 2" } as CustomDiagramDto,
 ];
 
 const MOCK_GRAPH_DIAGRAMS: CustomDiagramDto[] = [
@@ -81,40 +81,40 @@ describe("customDiagramStore", () => {
     describe("Initial State", () => {
         test("store initializes with empty maps", () => {
             const state = get(store);
-            expect(state.datasetLists.size).toBe(0);
+            expect(state.workspaceLists.size).toBe(0);
             expect(state.graphLists.size).toBe(0);
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("getDatasetDiagrams", () => {
-        test("returns null for empty datasetName without calling API", async () => {
-            const result = await store.getDatasetDiagrams("");
+    describe("getWorkspaceDiagrams", () => {
+        test("returns null for empty workspaceName without calling API", async () => {
+            const result = await store.getWorkspaceDiagrams("");
             expect(result).toBeNull();
             expect(api.getCustomDatasetDiagramList).not.toHaveBeenCalled();
         });
 
-        test("fetches and caches diagrams for a dataset", async () => {
+        test("fetches and caches diagrams for a workspace", async () => {
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
 
-            const result = await store.getDatasetDiagrams(DATASET_A);
-            await store.getDatasetDiagrams(DATASET_A);
+            const result = await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            expect(result).toEqual(MOCK_DATASET_DIAGRAMS);
+            expect(result).toEqual(MOCK_WORKSPACE_DIAGRAMS);
             expect(api.getCustomDatasetDiagramList).toHaveBeenCalledTimes(1);
         });
 
         test("force=true bypasses the cache and re-fetches", async () => {
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
 
-            await store.getDatasetDiagrams(DATASET_A);
-            await store.getDatasetDiagrams(DATASET_A, true);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A, true);
 
             expect(api.getCustomDatasetDiagramList).toHaveBeenCalledTimes(2);
         });
@@ -125,14 +125,14 @@ describe("customDiagramStore", () => {
                 error: new Error("Network error"),
             });
 
-            const result = await store.getDatasetDiagrams(DATASET_A);
+            const result = await store.getWorkspaceDiagrams(WORKSPACE_A);
             expect(result).toBeNull();
         });
 
-        test("caches are independent for different datasets", async () => {
+        test("caches are independent for different workspaces", async () => {
             vi.mocked(api.getCustomDatasetDiagramList)
                 .mockResolvedValueOnce({
-                    data: MOCK_DATASET_DIAGRAMS,
+                    data: MOCK_WORKSPACE_DIAGRAMS,
                     error: undefined,
                 })
                 .mockResolvedValueOnce({
@@ -140,10 +140,10 @@ describe("customDiagramStore", () => {
                     error: undefined,
                 });
 
-            const resultA = await store.getDatasetDiagrams(DATASET_A);
-            const resultB = await store.getDatasetDiagrams(DATASET_B);
+            const resultA = await store.getWorkspaceDiagrams(WORKSPACE_A);
+            const resultB = await store.getWorkspaceDiagrams(WORKSPACE_B);
 
-            expect(resultA).toEqual(MOCK_DATASET_DIAGRAMS);
+            expect(resultA).toEqual(MOCK_WORKSPACE_DIAGRAMS);
             expect(resultB).toEqual(MOCK_GRAPH_DIAGRAMS);
             expect(api.getCustomDatasetDiagramList).toHaveBeenCalledTimes(2);
         });
@@ -151,75 +151,78 @@ describe("customDiagramStore", () => {
 
     // -------------------------------------------------------------------------
     describe("getGraphDiagrams", () => {
-        test("returns null if datasetName is empty", async () => {
+        test("returns null if workspaceName is empty", async () => {
             const result = await store.getGraphDiagrams("", GRAPH_URI_1);
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
         test("returns null if graphURI is empty", async () => {
-            const result = await store.getGraphDiagrams(DATASET_A, "");
+            const result = await store.getGraphDiagrams(WORKSPACE_A, "");
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
-        test("returns null if both datasetName and graphURI are empty", async () => {
+        test("returns null if both workspaceName and graphURI are empty", async () => {
             const result = await store.getGraphDiagrams("", "");
             expect(result).toBeNull();
             expect(api.getCustomGraphDiagramList).not.toHaveBeenCalled();
         });
 
-        test("fetches and caches diagrams for a dataset+graph pair", async () => {
+        test("fetches and caches diagrams for a workspace+graph pair", async () => {
             vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
 
-            const result = await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            const result = await store.getGraphDiagrams(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+            );
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             expect(result).toEqual(MOCK_GRAPH_DIAGRAMS);
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(1);
         });
 
-        test("treats different graphURIs under the same dataset as separate cache entries", async () => {
+        test("treats different graphURIs under the same workspace as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
                 .mockResolvedValueOnce({
                     data: MOCK_GRAPH_DIAGRAMS,
                     error: undefined,
                 })
                 .mockResolvedValueOnce({
-                    data: MOCK_DATASET_DIAGRAMS,
+                    data: MOCK_WORKSPACE_DIAGRAMS,
                     error: undefined,
                 });
 
             const result1 = await store.getGraphDiagrams(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
             );
             const result2 = await store.getGraphDiagrams(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_2,
             );
 
             expect(result1).toEqual(MOCK_GRAPH_DIAGRAMS);
-            expect(result2).toEqual(MOCK_DATASET_DIAGRAMS);
+            expect(result2).toEqual(MOCK_WORKSPACE_DIAGRAMS);
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
         });
 
-        test("treats same graphURI under different datasets as separate cache entries", async () => {
+        test("treats same graphURI under different workspaces as separate cache entries", async () => {
             vi.mocked(api.getCustomGraphDiagramList)
                 .mockResolvedValueOnce({
                     data: MOCK_GRAPH_DIAGRAMS,
                     error: undefined,
                 })
                 .mockResolvedValueOnce({
-                    data: MOCK_DATASET_DIAGRAMS,
+                    data: MOCK_WORKSPACE_DIAGRAMS,
                     error: undefined,
                 });
 
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            await store.getGraphDiagrams(DATASET_B, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_B, GRAPH_URI_1);
 
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
         });
@@ -230,8 +233,8 @@ describe("customDiagramStore", () => {
                 error: undefined,
             });
 
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1, true);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1, true);
 
             expect(api.getCustomGraphDiagramList).toHaveBeenCalledTimes(2);
         });
@@ -242,13 +245,16 @@ describe("customDiagramStore", () => {
                 error: new Error("Server error"),
             });
 
-            const result = await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            const result = await store.getGraphDiagrams(
+                WORKSPACE_A,
+                GRAPH_URI_1,
+            );
             expect(result).toBeNull();
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("saveDatasetDiagram", () => {
+    describe("saveWorkspaceDiagram", () => {
         test("calls API with correct arguments updates cache on success", async () => {
             vi.mocked(api.replaceCustomDatasetDiagram).mockResolvedValue({
                 data: undefined,
@@ -256,29 +262,29 @@ describe("customDiagramStore", () => {
             });
             // Seed the cache
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.saveDatasetDiagram(
-                DATASET_A,
+            const result = await store.saveWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 MOCK_DIAGRAM_BODY,
             );
 
             expect(result.error).toBeNull();
             expect(api.replaceCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, diagramId: DIAGRAM_ID },
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: MOCK_DIAGRAM_BODY,
             });
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
 
             expect(toastStore.success).toHaveBeenCalledWith(
                 "Diagram saved",
-                "Dataset diagram was saved.",
+                "Workspace diagram was saved.",
             );
         });
 
@@ -290,13 +296,13 @@ describe("customDiagramStore", () => {
             });
             // Seed the cache
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.saveDatasetDiagram(
-                DATASET_A,
+            const result = await store.saveWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 MOCK_DIAGRAM_BODY,
             );
@@ -304,12 +310,12 @@ describe("customDiagramStore", () => {
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
                 "Save failed",
-                "Could not save dataset diagram.",
+                "Could not save workspace diagram.",
             );
 
             // Cache should remain intact
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
         });
     });
 
@@ -325,10 +331,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.saveGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 MOCK_DIAGRAM_BODY,
@@ -337,7 +343,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.replaceCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: DATASET_A,
+                    datasetName: WORKSPACE_A,
                     graphURI: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
@@ -345,7 +351,7 @@ describe("customDiagramStore", () => {
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
 
@@ -365,10 +371,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.saveGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 MOCK_DIAGRAM_BODY,
@@ -381,42 +387,37 @@ describe("customDiagramStore", () => {
             );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("deleteDatasetDiagram", () => {
-        test("calls API with correct arguments and updates dataset cache on success", async () => {
+    describe("deleteWorkspaceDiagram", () => {
+        test("calls API with correct arguments and updates workspace cache on success", async () => {
             vi.mocked(api.deleteCustomDatasetDiagram).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.deleteDatasetDiagram(
-                DATASET_A,
+            const result = await store.deleteWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
             );
 
             expect(result.error).toBeNull();
             expect(api.deleteCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, diagramId: DIAGRAM_ID },
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
             });
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
-
-            expect(toastStore.success).toHaveBeenCalledWith(
-                "Diagram deleted",
-                "Dataset diagram was removed.",
-            );
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
         });
 
         test("returns error and preserves cache on API failure", async () => {
@@ -426,24 +427,24 @@ describe("customDiagramStore", () => {
                 error,
             });
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.deleteDatasetDiagram(
-                DATASET_A,
+            const result = await store.deleteWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
             );
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
                 "Delete failed",
-                "Could not delete dataset diagram.",
+                "Could not delete workspace diagram.",
             );
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
         });
     });
 
@@ -458,10 +459,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.deleteGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
             );
@@ -469,14 +470,14 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.deleteCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: DATASET_A,
+                    datasetName: WORKSPACE_A,
                     graphURI: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
 
@@ -496,10 +497,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.deleteGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
             );
@@ -511,41 +512,41 @@ describe("customDiagramStore", () => {
             );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("addClassesToDatasetDiagram", () => {
+    describe("addClassesToWorkspaceDiagram", () => {
         const CLASSES = ["ClassA", "ClassB"];
 
-        test("calls API with correct arguments and invalidates dataset cache on success", async () => {
+        test("calls API with correct arguments and invalidates workspace cache on success", async () => {
             vi.mocked(api.addToCustomDatasetDiagram).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.addClassesToDatasetDiagram(
-                DATASET_A,
+            const result = await store.addClassesToWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 CLASSES,
             );
 
             expect(result.error).toBeNull();
             expect(api.addToCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, diagramId: DIAGRAM_ID },
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: CLASSES,
             });
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(false);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
         });
 
         test("does not show a success toast on success", async () => {
@@ -554,8 +555,8 @@ describe("customDiagramStore", () => {
                 error: undefined,
             });
 
-            await store.addClassesToDatasetDiagram(
-                DATASET_A,
+            await store.addClassesToWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 CLASSES,
             );
@@ -570,13 +571,13 @@ describe("customDiagramStore", () => {
                 error,
             });
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.addClassesToDatasetDiagram(
-                DATASET_A,
+            const result = await store.addClassesToWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 CLASSES,
             );
@@ -588,7 +589,7 @@ describe("customDiagramStore", () => {
             );
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
         });
     });
 
@@ -605,10 +606,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.addClassesToGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 CLASSES,
@@ -617,7 +618,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.addToCustomGraphDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: DATASET_A,
+                    datasetName: WORKSPACE_A,
                     graphURI: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
@@ -625,7 +626,7 @@ describe("customDiagramStore", () => {
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 false,
             );
         });
@@ -637,7 +638,7 @@ describe("customDiagramStore", () => {
             });
 
             await store.addClassesToGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 CLASSES,
@@ -656,10 +657,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.addClassesToGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 CLASSES,
@@ -672,41 +673,41 @@ describe("customDiagramStore", () => {
             );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("removeClassesFromDatasetDiagram", () => {
+    describe("removeClassesFromWorkspaceDiagram", () => {
         const CLASS_IDS = ["ClassA", "ClassB"];
 
-        test("calls API with correct arguments and invalidates dataset cache on success", async () => {
+        test("calls API with correct arguments and invalidates workspace cache on success", async () => {
             vi.mocked(api.removeFromCustomDatasetDiagram).mockResolvedValue({
                 data: undefined,
                 error: undefined,
             });
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.removeClassesFromDatasetDiagram(
-                DATASET_A,
+            const result = await store.removeClassesFromWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 CLASS_IDS,
             );
 
             expect(result.error).toBeNull();
             expect(api.removeFromCustomDatasetDiagram).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, diagramId: DIAGRAM_ID },
+                path: { datasetName: WORKSPACE_A, diagramId: DIAGRAM_ID },
                 body: CLASS_IDS,
             });
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(false);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
         });
 
         test("returns error and preserves cache on API failure", async () => {
@@ -716,13 +717,13 @@ describe("customDiagramStore", () => {
                 error,
             });
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            const result = await store.removeClassesFromDatasetDiagram(
-                DATASET_A,
+            const result = await store.removeClassesFromWorkspaceDiagram(
+                WORKSPACE_A,
                 DIAGRAM_ID,
                 CLASS_IDS,
             );
@@ -730,7 +731,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBe(error);
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
         });
     });
 
@@ -747,10 +748,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.removeClassesFromGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 CLASSES,
@@ -759,7 +760,7 @@ describe("customDiagramStore", () => {
             expect(result.error).toBeNull();
             expect(api.removeFromDiagram).toHaveBeenCalledWith({
                 path: {
-                    datasetName: DATASET_A,
+                    datasetName: WORKSPACE_A,
                     graphURI: GRAPH_URI_1,
                     diagramId: DIAGRAM_ID,
                 },
@@ -767,7 +768,7 @@ describe("customDiagramStore", () => {
             });
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 false,
             );
         });
@@ -782,10 +783,10 @@ describe("customDiagramStore", () => {
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
             const result = await store.removeClassesFromGraphDiagram(
-                DATASET_A,
+                WORKSPACE_A,
                 GRAPH_URI_1,
                 DIAGRAM_ID,
                 CLASSES,
@@ -798,54 +799,54 @@ describe("customDiagramStore", () => {
             );
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("invalidateDataset", () => {
-        test("removes the dataset list cache for the given dataset", async () => {
+    describe("invalidateWorkspace", () => {
+        test("removes the workspace list cache for the given workspace", async () => {
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
-            await store.getDatasetDiagrams(DATASET_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(false);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
         });
 
-        test("also removes all graph list cache entries belonging to that dataset", async () => {
+        test("also removes all graph list cache entries belonging to that workspace", async () => {
             vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_2);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_2);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 false,
             );
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_2}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_2}`)).toBe(
                 false,
             );
         });
 
-        test("does not affect other datasets or their graph lists", async () => {
+        test("does not affect other workspaces or their graph lists", async () => {
             vi.mocked(api.getCustomDatasetDiagramList)
                 .mockResolvedValueOnce({
-                    data: MOCK_DATASET_DIAGRAMS,
+                    data: MOCK_WORKSPACE_DIAGRAMS,
                     error: undefined,
                 })
                 .mockResolvedValueOnce({
-                    data: MOCK_DATASET_DIAGRAMS,
+                    data: MOCK_WORKSPACE_DIAGRAMS,
                     error: undefined,
                 });
             vi.mocked(api.getCustomGraphDiagramList)
@@ -858,37 +859,37 @@ describe("customDiagramStore", () => {
                     error: undefined,
                 });
 
-            await store.getDatasetDiagrams(DATASET_A);
-            await store.getDatasetDiagrams(DATASET_B);
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            await store.getGraphDiagrams(DATASET_B, GRAPH_URI_1);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getWorkspaceDiagrams(WORKSPACE_B);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_B, GRAPH_URI_1);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(false);
-            expect(state.datasetLists.has(DATASET_B)).toBe(true);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(false);
+            expect(state.workspaceLists.has(WORKSPACE_B)).toBe(true);
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 false,
             );
-            expect(state.graphLists.has(`${DATASET_B}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_B}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
         });
 
-        test("does not incorrectly match a dataset whose name is a prefix of another", async () => {
-            // e.g. invalidating "data" should not clear "datasetA"
-            const SHORT_DATASET = "data";
+        test("does not incorrectly match a workspace whose name is a prefix of another", async () => {
+            // e.g. invalidating "data" should not clear "workspaceA"
+            const SHORT_WORKSPACE = "data";
             vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
                 data: MOCK_GRAPH_DIAGRAMS,
                 error: undefined,
             });
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1); // key: "datasetA::..."
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1); // key: "workspaceA::..."
 
-            store.invalidateDataset(SHORT_DATASET);
+            store.invalidateWorkspace(SHORT_WORKSPACE);
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 true,
             );
         });
@@ -907,23 +908,23 @@ describe("customDiagramStore", () => {
                     error: undefined,
                 });
 
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_2);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_2);
 
-            store.invalidateGraph(DATASET_A, GRAPH_URI_1);
+            store.invalidateGraph(WORKSPACE_A, GRAPH_URI_1);
 
             const state = get(store);
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_1}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_1}`)).toBe(
                 false,
             );
-            expect(state.graphLists.has(`${DATASET_A}::${GRAPH_URI_2}`)).toBe(
+            expect(state.graphLists.has(`${WORKSPACE_A}::${GRAPH_URI_2}`)).toBe(
                 true,
             );
         });
 
-        test("does not affect the dataset list cache", async () => {
+        test("does not affect the workspace list cache", async () => {
             vi.mocked(api.getCustomDatasetDiagramList).mockResolvedValue({
-                data: MOCK_DATASET_DIAGRAMS,
+                data: MOCK_WORKSPACE_DIAGRAMS,
                 error: undefined,
             });
             vi.mocked(api.getCustomGraphDiagramList).mockResolvedValue({
@@ -931,13 +932,13 @@ describe("customDiagramStore", () => {
                 error: undefined,
             });
 
-            await store.getDatasetDiagrams(DATASET_A);
-            await store.getGraphDiagrams(DATASET_A, GRAPH_URI_1);
+            await store.getWorkspaceDiagrams(WORKSPACE_A);
+            await store.getGraphDiagrams(WORKSPACE_A, GRAPH_URI_1);
 
-            store.invalidateGraph(DATASET_A, GRAPH_URI_1);
+            store.invalidateGraph(WORKSPACE_A, GRAPH_URI_1);
 
             const state = get(store);
-            expect(state.datasetLists.has(DATASET_A)).toBe(true);
+            expect(state.workspaceLists.has(WORKSPACE_A)).toBe(true);
         });
     });
 });

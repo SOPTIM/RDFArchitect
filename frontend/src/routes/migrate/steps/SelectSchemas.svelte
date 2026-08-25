@@ -22,11 +22,10 @@
     import { Fa } from "svelte-fa";
 
     import { computeMigrationContext } from "$lib/api/generated/index.ts";
-    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import FileSelectButton from "$lib/components/FileSelectButton.svelte";
     import InfoBox from "$lib/components/InfoBox.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import { toastStore } from "$lib/eventhandling/toastStore.svelte.js";
     import { CGMESVersion } from "$lib/models/cgmes-constants.js";
     import { migrationState } from "$lib/sharedState.svelte.js";
@@ -149,9 +148,9 @@
         try {
             let { error } = await computeMigrationContext({
                 query: {
-                    datasetA: datasetA,
+                    datasetA: workspaceA,
                     graphA: graphA,
-                    datasetB: datasetB,
+                    datasetB: workspaceB,
                     graphB: graphB,
                 },
                 body: { fileA: fileA, fileB: fileB },

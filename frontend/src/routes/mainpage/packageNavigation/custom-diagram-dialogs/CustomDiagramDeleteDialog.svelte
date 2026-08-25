@@ -39,7 +39,7 @@
                   graphUri,
                   diagram.diagramId,
               )
-            : await customDiagramStore.deleteDatasetDiagram(
+            : await customDiagramStore.deleteWorkspaceDiagram(
                   workspaceName,
                   diagram.diagramId,
               );

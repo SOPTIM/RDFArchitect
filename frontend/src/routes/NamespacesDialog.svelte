@@ -34,7 +34,7 @@
         editorState,
         forceReloadTrigger,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     let { showDialog = $bindable(), lockedWorkspaceName } = $props();
 
@@ -45,15 +45,16 @@
     let listRef;
 
     async function onOpen() {
-        workspaceName = editorState.selectedWorkspace.getValue();
+        workspaceName =
+            lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
         if (!workspaceName) return;
-        readonly = await datasetStore.isReadOnly(workspaceName);
+        readonly = await workspaceStore.isReadOnly(workspaceName);
         await loadNamespaces(workspaceName);
     }
 
     async function loadNamespaces(workspaceNameLocal) {
         const namespaceDTOs =
-            await datasetStore.getNamespaces(workspaceNameLocal);
+            await workspaceStore.getNamespaces(workspaceNameLocal);
         const objectsForReactiveNamespaces = namespaceDTOs.map(namespaceDto => {
             return mapNamespaceDtoToReactiveNamespace(namespaceDto);
         });
@@ -83,7 +84,7 @@
         const namespaceDTOs = plainReactiveNamespaces.map(namespace => {
             return mapReactiveNamespaceToNamespaceDto(namespace);
         });
-        const { error } = await datasetStore.saveNamespaces(
+        const { error } = await workspaceStore.saveNamespaces(
             workspaceName,
             namespaceDTOs,
         );

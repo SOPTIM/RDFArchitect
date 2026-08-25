@@ -69,11 +69,11 @@ function createOntologyStore() {
     }
 
     function patchGraphDto(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         patch: Partial<OntologyDto>,
     ) {
-        const key = makeGraphKey(datasetName, graphURI);
+        const key = makeGraphKey(workspaceName, graphURI);
         update(s => {
             const current = getGraphState(s, key);
             const merged: OntologyDto = {
@@ -92,20 +92,21 @@ function createOntologyStore() {
     // ---------- load ontology for graph ----------
 
     async function getOntologyForGraph(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         force = false,
     ): Promise<OntologyDto | null> {
-        if (!datasetName || !graphURI) return null;
-        const key = makeGraphKey(datasetName, graphURI);
+        if (!workspaceName || !graphURI) return null;
+        const key = makeGraphKey(workspaceName, graphURI);
         return loadSlot(
             store,
             s => getGraphState(s, key),
             (s, patch) =>
                 setGraphState(s, key, { ...getGraphState(s, key), ...patch }),
-            () => getOntology({ path: { datasetName, graphURI } }),
+            () =>
+                getOntology({ path: { datasetName: workspaceName, graphURI } }),
             LOG_PREFIX,
-            `ontology for dataset="${datasetName}", graph="${graphURI}"`,
+            `ontology for workspace="${workspaceName}", graph="${graphURI}"`,
             force,
         );
     }
@@ -132,15 +133,15 @@ function createOntologyStore() {
     // ---------- generated ontology entries ----------
 
     async function generateOntologyEntries(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
     ): Promise<Result<OntologyEntry[]>> {
         console.log(
-            `${LOG_PREFIX} Generating ontology entries for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Generating ontology entries for workspace="${workspaceName}", graph="${graphURI}"`,
         );
 
         const { data, error } = await getOntologyEntries({
-            path: { datasetName, graphURI },
+            path: { datasetName: workspaceName, graphURI },
         });
 
         if (error) {
@@ -157,10 +158,10 @@ function createOntologyStore() {
 
         const entries = data ?? [];
 
-        patchGraphDto(datasetName, graphURI, { entries });
+        patchGraphDto(workspaceName, graphURI, { entries });
 
         console.log(
-            `${LOG_PREFIX} Generated ${entries.length} ontology entries for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Generated ${entries.length} ontology entries for workspace="${workspaceName}", graph="${graphURI}"`,
         );
 
         return { error: null, data: entries };
@@ -169,16 +170,16 @@ function createOntologyStore() {
     // ---------- mutations ----------
 
     async function createOntologyForGraph(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         newOntology: OntologyDto,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Creating ontology for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Creating ontology for workspace="${workspaceName}", graph="${graphURI}"`,
         );
 
         const { error } = await createOntology({
-            path: { datasetName, graphURI },
+            path: { datasetName: workspaceName, graphURI },
             body: newOntology,
         });
 
@@ -195,10 +196,10 @@ function createOntologyStore() {
         }
 
         // No DTO returned from server -> patch local cache with what we sent.
-        patchGraphDto(datasetName, graphURI, newOntology);
+        patchGraphDto(workspaceName, graphURI, newOntology);
 
         console.log(
-            `${LOG_PREFIX} Created ontology for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Created ontology for workspace="${workspaceName}", graph="${graphURI}"`,
         );
         toastStore.success("Ontology created", "Ontology was created.");
 
@@ -206,16 +207,16 @@ function createOntologyStore() {
     }
 
     async function replaceOntologyForGraph(
-        datasetName: string,
+        workspaceName: string,
         graphURI: string,
         newOntology: OntologyDto,
     ): Promise<Result> {
         console.log(
-            `${LOG_PREFIX} Replacing ontology for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Replacing ontology for workspace="${workspaceName}", graph="${graphURI}"`,
         );
 
         const { error } = await replaceOntology({
-            path: { datasetName, graphURI },
+            path: { datasetName: workspaceName, graphURI },
             body: newOntology,
         });
 
@@ -229,10 +230,10 @@ function createOntologyStore() {
         }
 
         // No DTO returned from server -> patch local cache with the new state.
-        patchGraphDto(datasetName, graphURI, newOntology);
+        patchGraphDto(workspaceName, graphURI, newOntology);
 
         console.log(
-            `${LOG_PREFIX} Replaced ontology for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Replaced ontology for workspace="${workspaceName}", graph="${graphURI}"`,
         );
         toastStore.success("Ontology saved", "Ontology changes were saved.");
 
@@ -241,10 +242,10 @@ function createOntologyStore() {
 
     // ---------- invalidation ----------
 
-    function invalidateGraph(datasetName: string, graphURI: string) {
-        const key = makeGraphKey(datasetName, graphURI);
+    function invalidateGraph(workspaceName: string, graphURI: string) {
+        const key = makeGraphKey(workspaceName, graphURI);
         console.log(
-            `${LOG_PREFIX} Invalidating ontology cache for dataset="${datasetName}", graph="${graphURI}"`,
+            `${LOG_PREFIX} Invalidating ontology cache for workspace="${workspaceName}", graph="${graphURI}"`,
         );
         update(s => {
             const byGraph = new Map(s.byGraph);
@@ -253,10 +254,10 @@ function createOntologyStore() {
         });
     }
 
-    function invalidateDataset(datasetName: string) {
-        const prefix = `${datasetName}::`;
+    function invalidateWorkspace(workspaceName: string) {
+        const prefix = `${workspaceName}::`;
         console.log(
-            `${LOG_PREFIX} Invalidating ontology cache for dataset="${datasetName}"`,
+            `${LOG_PREFIX} Invalidating ontology cache for workspace="${workspaceName}"`,
         );
         update(s => {
             const byGraph = new Map(s.byGraph);
@@ -283,7 +284,7 @@ function createOntologyStore() {
 
         // invalidation
         invalidateGraph,
-        invalidateDataset,
+        invalidateWorkspace,
     };
 }
 export { createOntologyStore };

@@ -23,8 +23,8 @@
     import ButtonControl from "$lib/components/ButtonControl.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
     import { supportedRDFMediaTypes } from "$lib/utils/fileUtils";
 
     import {
@@ -65,7 +65,7 @@
         workspaceNameUserInput =
             lockedWorkspaceName ?? editorState.selectedWorkspace.getValue();
 
-        const workspaces = (await datasetStore.getDatasets()) ?? [];
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         for (const workspace of workspaces) {
             if (workspace.readOnly) {
                 readOnlyWorkspaces.push(workspace.label);
@@ -85,8 +85,8 @@
         dragActive = false;
         fileInputValue = "";
         rejectedFiles = [];
-        modifiableDatasets = [];
-        readOnlyDatasets = [];
+        modifiableWorkspaces = [];
+        readOnlyWorkspaces = [];
     }
 
     function isWorkspaceReadOnly(workspaceName) {
@@ -201,7 +201,9 @@
         );
 
         if (!error && data.importedGraphUris?.length > 0) {
-            editorState.selectedWorkspace.updateValue(workspaceNameUserInputLocal);
+            editorState.selectedWorkspace.updateValue(
+                workspaceNameUserInputLocal,
+            );
             editorState.selectedGraph.updateValue(
                 data.importedGraphUris[0] || null,
             );
@@ -210,9 +212,9 @@
             editorState.selectedClassGraph.updateValue(null);
             editorState.selectedClass.updateValue({ type: null, id: null });
 
-            graphStore.invalidateDataset(workspaceNameUserInputLocal);
-            datasetStore.invalidate();
-            crossProfileStore.invalidateDataset(workspaceNameUserInputLocal);
+            graphStore.invalidateWorkspace(workspaceNameUserInputLocal);
+            workspaceStore.invalidate();
+            crossProfileStore.invalidateWorkspace(workspaceNameUserInputLocal);
             forceReloadTrigger.trigger();
         }
     }

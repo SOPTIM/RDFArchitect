@@ -146,7 +146,7 @@ async function renderPackage(nodes, edges, fileType) {
 /**
  * Renders one diagram per package of the graph.
  *
- * @param datasetName
+ * @param workspaceName
  * @param graphURI
  * @param fileType
  * @param progress optional {@link ExportProgress} that receives the packages and

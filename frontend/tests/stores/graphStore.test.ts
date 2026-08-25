@@ -26,8 +26,8 @@ import { createGraphStore } from "../../src/lib/stores/graphStore";
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const DATASET_A = "datasetA";
-const DATASET_B = "datasetB";
+const WORKSPACE_A = "workspaceA";
+const WORKSPACE_B = "workspaceB";
 const GRAPH_URI = "http://example.org/graph1";
 const GRAPH_URI_2 = "http://example.org/graph2";
 
@@ -88,25 +88,25 @@ describe("graphStore", () => {
 
     // -------------------------------------------------------------------------
     describe("getGraphs", () => {
-        test("returns null for empty datasetName without calling API", async () => {
+        test("returns null for empty workspaceName without calling API", async () => {
             const result = await store.getGraphs("");
             expect(result).toBeNull();
             expect(api.listGraphs).not.toHaveBeenCalled();
         });
 
-        test("fetches and caches graphs for a dataset", async () => {
+        test("fetches and caches graphs for a workspace", async () => {
             vi.mocked(api.listGraphs).mockResolvedValue({
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
 
-            const result = await store.getGraphs(DATASET_A);
-            await store.getGraphs(DATASET_A);
+            const result = await store.getGraphs(WORKSPACE_A);
+            await store.getGraphs(WORKSPACE_A);
 
             expect(result).toEqual(MOCK_GRAPHS);
             expect(api.listGraphs).toHaveBeenCalledTimes(1);
             expect(api.listGraphs).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A },
+                path: { datasetName: WORKSPACE_A },
             });
         });
 
@@ -116,8 +116,8 @@ describe("graphStore", () => {
                 error: undefined,
             });
 
-            await store.getGraphs(DATASET_A);
-            await store.getGraphs(DATASET_A, true);
+            await store.getGraphs(WORKSPACE_A);
+            await store.getGraphs(WORKSPACE_A, true);
 
             expect(api.listGraphs).toHaveBeenCalledTimes(2);
         });
@@ -128,11 +128,11 @@ describe("graphStore", () => {
                 error: new Error("Network error"),
             });
 
-            const result = await store.getGraphs(DATASET_A);
+            const result = await store.getGraphs(WORKSPACE_A);
             expect(result).toBeNull();
         });
 
-        test("caches are independent for different datasets", async () => {
+        test("caches are independent for different workspaces", async () => {
             vi.mocked(api.listGraphs)
                 .mockResolvedValueOnce({ data: MOCK_GRAPHS, error: undefined })
                 .mockResolvedValueOnce({
@@ -140,8 +140,8 @@ describe("graphStore", () => {
                     error: undefined,
                 });
 
-            const resultA = await store.getGraphs(DATASET_A);
-            const resultB = await store.getGraphs(DATASET_B);
+            const resultA = await store.getGraphs(WORKSPACE_A);
+            const resultB = await store.getGraphs(WORKSPACE_B);
 
             expect(resultA).toEqual(MOCK_GRAPHS);
             expect(resultB).toEqual([makeGraphDto(GRAPH_URI_2)]);
@@ -151,7 +151,7 @@ describe("graphStore", () => {
 
     // -------------------------------------------------------------------------
     describe("addEmptyGraph", () => {
-        test("calls API with correct arguments and invalidates dataset cache on success", async () => {
+        test("calls API with correct arguments and invalidates workspace cache on success", async () => {
             vi.mocked(api.replaceGraph).mockResolvedValue({
                 data: undefined,
                 error: undefined,
@@ -160,21 +160,21 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.addEmptyGraph(DATASET_A, GRAPH_URI);
+            const result = await store.addEmptyGraph(WORKSPACE_A, GRAPH_URI);
 
             expect(result.error).toBeNull();
             expect(api.replaceGraph).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI },
+                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
             });
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(false);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(false);
 
             expect(toastStore.success).toHaveBeenCalledWith(
                 "Schema created",
-                `"${GRAPH_URI}" was added to "${DATASET_A}".`,
+                `"${GRAPH_URI}" was added to "${WORKSPACE_A}".`,
             );
         });
 
@@ -188,9 +188,9 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.addEmptyGraph(DATASET_A, GRAPH_URI);
+            const result = await store.addEmptyGraph(WORKSPACE_A, GRAPH_URI);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
@@ -199,14 +199,18 @@ describe("graphStore", () => {
             );
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(true);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(true);
         });
     });
 
     // -------------------------------------------------------------------------
     describe("importGraphs", () => {
         test("returns an error immediately if no files are provided", async () => {
-            const result = await store.importGraphs(DATASET_A, [], [GRAPH_URI]);
+            const result = await store.importGraphs(
+                WORKSPACE_A,
+                [],
+                [GRAPH_URI],
+            );
 
             expect(result.error).toBeInstanceOf(Error);
             expect(api.replaceGraphs).not.toHaveBeenCalled();
@@ -218,10 +222,10 @@ describe("graphStore", () => {
                 error: undefined,
             });
 
-            await store.importGraphs(DATASET_A, [MOCK_FILE], [GRAPH_URI]);
+            await store.importGraphs(WORKSPACE_A, [MOCK_FILE], [GRAPH_URI]);
 
             expect(api.replaceGraphs).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A },
+                path: { datasetName: WORKSPACE_A },
                 body: { files: [MOCK_FILE] },
                 query: { graphUris: [GRAPH_URI] },
             });
@@ -237,10 +241,10 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
             const result = await store.importGraphs(
-                DATASET_A,
+                WORKSPACE_A,
                 [MOCK_FILE],
                 [GRAPH_URI],
             );
@@ -248,14 +252,14 @@ describe("graphStore", () => {
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
                 "Import failed",
-                `Could not import into "${DATASET_A}".`,
+                `Could not import into "${WORKSPACE_A}".`,
             );
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(true);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(true);
         });
 
-        test("invalidates dataset cache on successful import", async () => {
+        test("invalidates workspace cache on successful import", async () => {
             vi.mocked(api.replaceGraphs).mockResolvedValue({
                 data: MOCK_BULK_RESPONSE,
                 error: undefined,
@@ -264,12 +268,12 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            await store.importGraphs(DATASET_A, [MOCK_FILE], [GRAPH_URI]);
+            await store.importGraphs(WORKSPACE_A, [MOCK_FILE], [GRAPH_URI]);
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(false);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(false);
         });
     });
 
@@ -284,13 +288,13 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.remove(DATASET_A, GRAPH_URI);
+            const result = await store.remove(WORKSPACE_A, GRAPH_URI);
 
             expect(result.error).toBeNull();
             expect(api.deleteGraph).toHaveBeenCalledWith({
-                path: { datasetName: DATASET_A, graphURI: GRAPH_URI },
+                path: { datasetName: WORKSPACE_A, graphURI: GRAPH_URI },
             });
         });
 
@@ -303,12 +307,12 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            await store.remove(DATASET_A, GRAPH_URI);
+            await store.remove(WORKSPACE_A, GRAPH_URI);
 
             const state = get(store);
-            const cached = state.graphs.get(DATASET_A)?.data;
+            const cached = state.graphs.get(WORKSPACE_A)?.data;
             expect(cached).toBeDefined();
             expect(
                 cached?.some(
@@ -335,12 +339,12 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            await store.remove(DATASET_A, GRAPH_URI);
+            await store.remove(WORKSPACE_A, GRAPH_URI);
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(true);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(true);
         });
 
         test("returns error and preserves the full cached list on API failure", async () => {
@@ -353,9 +357,9 @@ describe("graphStore", () => {
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            const result = await store.remove(DATASET_A, GRAPH_URI);
+            const result = await store.remove(WORKSPACE_A, GRAPH_URI);
 
             expect(result.error).toBe(error);
             expect(toastStore.error).toHaveBeenCalledWith(
@@ -364,7 +368,7 @@ describe("graphStore", () => {
             );
 
             const state = get(store);
-            expect(state.graphs.get(DATASET_A)?.data).toEqual(MOCK_GRAPHS);
+            expect(state.graphs.get(WORKSPACE_A)?.data).toEqual(MOCK_GRAPHS);
         });
 
         test("handles removal when nothing is cached without throwing", async () => {
@@ -374,43 +378,43 @@ describe("graphStore", () => {
             });
 
             // No prior getGraphs call — cache is empty
-            const result = await store.remove(DATASET_A, GRAPH_URI);
+            const result = await store.remove(WORKSPACE_A, GRAPH_URI);
 
             expect(result.error).toBeNull();
             // Cache entry data should be null since there was nothing to filter
             const state = get(store);
-            expect(state.graphs.get(DATASET_A)?.data).toBeNull();
+            expect(state.graphs.get(WORKSPACE_A)?.data).toBeNull();
         });
     });
 
     // -------------------------------------------------------------------------
-    describe("invalidateDataset", () => {
-        test("removes the dataset entry from the cache", async () => {
+    describe("invalidateWorkspace", () => {
+        test("removes the workspace entry from the cache", async () => {
             vi.mocked(api.listGraphs).mockResolvedValue({
                 data: MOCK_GRAPHS,
                 error: undefined,
             });
-            await store.getGraphs(DATASET_A);
+            await store.getGraphs(WORKSPACE_A);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(false);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(false);
         });
 
-        test("does not affect other datasets", async () => {
+        test("does not affect other workspaces", async () => {
             vi.mocked(api.listGraphs)
                 .mockResolvedValueOnce({ data: MOCK_GRAPHS, error: undefined })
                 .mockResolvedValueOnce({ data: MOCK_GRAPHS, error: undefined });
 
-            await store.getGraphs(DATASET_A);
-            await store.getGraphs(DATASET_B);
+            await store.getGraphs(WORKSPACE_A);
+            await store.getGraphs(WORKSPACE_B);
 
-            store.invalidateDataset(DATASET_A);
+            store.invalidateWorkspace(WORKSPACE_A);
 
             const state = get(store);
-            expect(state.graphs.has(DATASET_A)).toBe(false);
-            expect(state.graphs.has(DATASET_B)).toBe(true);
+            expect(state.graphs.has(WORKSPACE_A)).toBe(false);
+            expect(state.graphs.has(WORKSPACE_B)).toBe(true);
         });
     });
 });

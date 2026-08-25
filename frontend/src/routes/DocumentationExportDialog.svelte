@@ -18,7 +18,6 @@
 <script>
     import JSZip from "jszip";
 
-    import DatasetAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ExportProgressPanel from "$lib/components/ExportProgressPanel.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";

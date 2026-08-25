@@ -16,17 +16,17 @@
   -->
 
 <script>
-    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import SelectEditControl from "$lib/components/SelectEditControl.svelte";
     import TextAreaControl from "$lib/components/TextAreaControl.svelte";
     import TextEditControl from "$lib/components/TextEditControl.svelte";
     import ViolationMessages from "$lib/components/ViolationMessages.svelte";
+    import WorkspaceAndGraphSelection from "$lib/components/WorkspaceAndGraphSelection.svelte";
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { Package } from "$lib/models/dto";
     import { DiagramType } from "$lib/sharedState.svelte.js";
     import { classStore } from "$lib/stores/classStore.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         editorState,
@@ -73,7 +73,7 @@
     );
 
     $effect(async () => {
-        namespaces = await datasetStore.getNamespaces(selectedWorkspaceName);
+        namespaces = await workspaceStore.getNamespaces(selectedWorkspaceName);
         packageURINamespace = null;
     });
 
@@ -94,7 +94,7 @@
         if (!selectedWorkspaceName) {
             return;
         }
-        namespaces = await datasetStore.getNamespaces(selectedWorkspaceName);
+        namespaces = await workspaceStore.getNamespaces(selectedWorkspaceName);
 
         if (selectedGraphURI) {
             await getResources(selectedWorkspaceName, selectedGraphURI);

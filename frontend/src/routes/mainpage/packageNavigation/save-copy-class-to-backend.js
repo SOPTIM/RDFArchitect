@@ -104,7 +104,7 @@ export async function saveCopyClass(
         );
         if (!error) {
             const pasted = data;
-            crossProfileStore.invalidateDataset(workspaceName);
+            crossProfileStore.invalidateWorkspace(workspaceName);
             editorState.selectedWorkspace.updateValue(workspaceName);
             editorState.selectedClassWorkspace.updateValue(workspaceName);
             editorState.selectedGraph.updateValue(graphURI);

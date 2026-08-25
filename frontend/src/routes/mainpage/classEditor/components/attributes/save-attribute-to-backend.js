@@ -28,7 +28,7 @@ export async function saveApiAttributeToBackend(
     const res = isNewAttribute
         ? await classStore.addAttribute(workspace, graph, classUUID, attribute)
         : await classStore.replaceAttribute(
-            workspace,
+              workspace,
               graph,
               classUUID,
               attribute,

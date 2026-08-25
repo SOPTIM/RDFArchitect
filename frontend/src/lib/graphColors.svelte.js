@@ -51,7 +51,7 @@ function createGraphColors() {
 
     async function load(workspaceName) {
         const { data, error } = await getCrossProfileColors({
-            path: { datasetName:workspaceName },
+            path: { datasetName: workspaceName },
         });
         if (error) {
             console.error(
@@ -167,22 +167,22 @@ function refreshMergedViewIfVisible() {
     }
 }
 
-async function put(datasetName, colorsByGraph) {
+async function put(workspaceName, colorsByGraph) {
     const payload = normalizeColors(colorsByGraph);
     if (Object.keys(payload).length === 0) {
         return Object.keys(colorsByGraph).length === 0;
     }
     try {
         const { error } = await updateCrossProfileColors({
-            path: { datasetName: datasetName },
+            path: { datasetName: workspaceName },
             body: { graphColors: payload },
         });
         if (error) {
-            console.error(`Failed to save schema colors for "${datasetName}"`);
+            console.error(`Failed to save schema colors for "${workspaceName}"`);
         }
         return true;
     } catch (err) {
-        console.error(`Failed to save schema colors for "${datasetName}"`, err);
+        console.error(`Failed to save schema colors for "${workspaceName}"`, err);
         return false;
     }
 }

@@ -20,8 +20,8 @@
 
     import ActionDialog from "$lib/dialog/ActionDialog.svelte";
     import { URI } from "$lib/models/dto/index.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { graphStore } from "$lib/stores/graphStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import {
         DiagramType,
@@ -80,7 +80,7 @@
             "";
         graphUriUserInput = "";
 
-        const workspaces = (await datasetStore.getDatasets()) ?? [];
+        const workspaces = (await workspaceStore.getWorkspaces()) ?? [];
         readOnlyWorkspaces = [];
         modifiableWorkspaces = [];
         for (const workspace of workspaces) {
@@ -131,8 +131,8 @@
         });
         editorState.selectedClass.updateValue({ type: null, id: null });
 
-        graphStore.invalidateDataset(datasetNameLocal);
-        datasetStore.invalidate();
+        graphStore.invalidateWorkspace(workspaceNameLocal);
+        workspaceStore.invalidate();
         forceReloadTrigger.trigger();
     }
 </script>

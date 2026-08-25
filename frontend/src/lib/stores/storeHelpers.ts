@@ -26,8 +26,11 @@ import { type AsyncSlot } from "./storeTypes";
 
 export type GraphKey = `${string}::${string}`;
 
-export function makeGraphKey(datasetName: string, graphURI: string): GraphKey {
-    return `${datasetName}::${graphURI}`;
+export function makeGraphKey(
+    workspaceName: string,
+    graphURI: string,
+): GraphKey {
+    return `${workspaceName}::${graphURI}`;
 }
 
 // =============================================================================

@@ -36,7 +36,7 @@
         DiagramType,
     } from "$lib/sharedState.svelte.js";
     import { crossProfileStore } from "$lib/stores/crossProfileStore.ts";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import RenderFilterBar from "./RenderFilterBar.svelte";
 
@@ -65,7 +65,7 @@
         editorState.selectedWorkspace.subscribe();
         const workspace = editorState.selectedWorkspace.getValue();
         isWorkspaceReadOnly = workspace
-            ? await datasetStore.isReadOnly(workspace)
+            ? await workspaceStore.isReadOnly(workspace)
             : false;
     });
 

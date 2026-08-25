@@ -44,10 +44,10 @@
         multiSelectState,
         SelectionLevel,
     } from "$lib/sharedState.svelte.js";
-    import { datasetStore } from "$lib/stores/datasetStore.ts";
     import { ontologyStore } from "$lib/stores/ontologyStore.ts";
     import { packageStore } from "$lib/stores/packageStore.ts";
     import { versionControlStore } from "$lib/stores/versionControlStore.ts";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import DeleteDependenciesDialog from "../../delete-relations-dialog/DeleteDependenciesDialog.svelte";
     import GraphDeleteDialog from "../../GraphDeleteDialog.svelte";
@@ -278,7 +278,7 @@
             return;
         }
 
-        const { error } = await datasetStore.updateReadonly(
+        const { error } = await workspaceStore.updateReadonly(
             selectedWorkspace,
             false,
         );
@@ -293,7 +293,7 @@
             return;
         }
 
-        const { error } = await datasetStore.updateReadonly(
+        const { error } = await workspaceStore.updateReadonly(
             selectedWorkspace,
             true,
         );

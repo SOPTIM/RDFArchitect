@@ -21,11 +21,10 @@
     import { validate } from "uuid";
 
     import { resolveIri as fetchResolveIRI } from "$lib/api/generated/index";
-    import { BackendConnection } from "$lib/api/backend.js";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
-    import { PUBLIC_BACKEND_URL } from "$lib/config/runtime";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
+    import { graphStore } from "$lib/stores/graphStore.ts";
     import { workspaceState } from "$lib/workspaceState.svelte.js";
 
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
@@ -34,7 +33,6 @@
     import PackageWindow from "./packageWindow.svelte";
     import WorkspaceTabs from "./workspaceTabs/WorkspaceTabs.svelte";
 
-    const bec = new BackendConnection(fetch, PUBLIC_BACKEND_URL);
     // The placeholder replaces the navigation, so the schema count is loaded
     // here — inside the navigation it would never refresh again.
     const schemaCount = asyncValue(() => activeWorkspace, loadSchemaCount);
@@ -53,8 +51,7 @@
     });
 
     async function loadSchemaCount(workspaceName) {
-        const res = await bec.getGraphs(workspaceName);
-        return (await res.json()).length;
+        return (await graphStore.getGraphs(workspaceName)).length;
     }
 
     async function parseModelSelectionUrlParameters() {
@@ -78,7 +75,11 @@
 
     async function resolveIRI(workspace, graph, iri) {
         return await fetchResolveIRI({
-            path: { datasetName: workspace, graphURI: graph, iriIdentifier: iri },
+            path: {
+                datasetName: workspace,
+                graphURI: graph,
+                iriIdentifier: iri,
+            },
         }).then(res => res.data);
     }
 </script>

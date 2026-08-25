@@ -102,7 +102,7 @@
             classEditorContext.getPackageByUuid,
         );
         saveChangesToBackend(classDto);
-        datatypesStore.invalidateGraph(datasetName, graphUri);
+        datatypesStore.invalidateGraph(workspaceName, graphUri);
     }
 
     async function saveChangesToBackend(classDto) {
@@ -114,7 +114,7 @@
         );
         if (!error) {
             reactiveClass.save();
-            crossProfileStore.invalidateDataset(datasetName);
+            crossProfileStore.invalidateWorkspace(workspaceName);
             editorState.selectedClass.trigger();
             editorState.selectedDiagram.trigger();
             forceReloadTrigger.trigger();

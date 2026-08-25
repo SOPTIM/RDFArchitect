@@ -49,7 +49,7 @@
                   diagramId,
                   classIds,
               )
-            : await customDiagramStore.removeClassesFromDatasetDiagram(
+            : await customDiagramStore.removeClassesFromWorkspaceDiagram(
                   lockedWorkspaceName,
                   diagramId,
                   classIds,
