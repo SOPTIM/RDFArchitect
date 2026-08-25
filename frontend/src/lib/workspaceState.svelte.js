@@ -15,8 +15,6 @@
  *
  */
 
-import { get } from "svelte/store";
-
 import { editorState } from "$lib/sharedState.svelte.js";
 import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
@@ -32,14 +30,6 @@ const selectionByWorkspace = new Map();
  * schemas) is loaded where it is shown, see `asyncValue`.
  */
 export const workspaceState = {
-
-    async getNames() {
-        return await workspaceStore.getWorkspaces();
-    },
-
-    isLoaded() {
-        return get(workspaceStore).data !== null;
-    },
 
     getActive() {
         return editorState.selectedWorkspace.getValue();
@@ -57,13 +47,13 @@ export const workspaceState = {
         }
 
         for (const workspace of selectionByWorkspace.keys()) {
-            if (!workspaces.includes(workspace)) {
+            if (!workspaces.some(ws => ws.label === workspace)) {
                 selectionByWorkspace.delete(workspace);
             }
         }
 
         const active = this.getActive();
-        if (!active || !workspaces.includes(active)) {
+        if (!active || !workspaces.some(ws => ws.label === active)) {
             this.activate(workspaces[0] ?? null);
         }
     },

@@ -25,7 +25,7 @@
     import LoadingSpinner from "$lib/components/LoadingSpinner.svelte";
     import { DiagramType, editorState } from "$lib/sharedState.svelte.js";
     import { graphStore } from "$lib/stores/graphStore.ts";
-    import { workspaceState } from "$lib/workspaceState.svelte.js";
+    import { workspaceStore} from "$lib/stores/workspaceStore.ts";
 
     import NoSchemaPlaceholder from "./emptyStates/NoSchemaPlaceholder.svelte";
     import NoWorkspacePlaceholder from "./emptyStates/NoWorkspacePlaceholder.svelte";
@@ -38,8 +38,11 @@
     const schemaCount = asyncValue(() => activeWorkspace, loadSchemaCount);
 
     const activeWorkspace = $derived(editorState.selectedWorkspace.getValue());
+    const workspaceNames = $derived(
+        ($workspaceStore.data ?? []).map(ws => ws.label)
+    );
     const hasNoWorkspaces = $derived(
-        workspaceState.isLoaded() && workspaceState.getNames().length === 0,
+        $workspaceStore.data !== null && workspaceNames.length === 0
     );
     const schemaCountKnown = $derived(schemaCount.current !== null);
     const hasNoSchemas = $derived(
@@ -51,7 +54,8 @@
     });
 
     async function loadSchemaCount(workspaceName) {
-        return (await graphStore.getGraphs(workspaceName)).length;
+        const graphs = await graphStore.getGraphs(workspaceName) ?? [];
+        return graphs.length;
     }
 
     async function parseModelSelectionUrlParameters() {

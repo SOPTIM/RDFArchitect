@@ -16,7 +16,7 @@
   -->
 
 <script>
-    import { setContext, untrack } from "svelte";
+    import { onMount, setContext, untrack } from "svelte";
 
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
@@ -37,7 +37,10 @@
 
 
     const localReloadTrigger = new SimpleTrigger();
-    const readonlyValue = asyncValue(() => activeWorkspace, workspaceStore.isReadOnly(activeWorkspace));
+    const readonlyValue = asyncValue(
+        () => activeWorkspace,
+        (workspace) => workspaceStore.isReadOnly(workspace)
+    );
 
     let workspaceNavEntry = $state(null);
     let namespaces = $state([]);

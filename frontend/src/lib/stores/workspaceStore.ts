@@ -167,7 +167,7 @@ function createWorkspaceStore() {
         console.log(`${LOG_PREFIX} Renamed workspace "${workspaceName}"`);
         toastStore.success(
             "Workspace renamed",
-            `"${workspaceName}" was renamed.`,
+            `"${workspaceName}" is now "${newWorkspaceName}".`,
         );
 
         return { error: null };

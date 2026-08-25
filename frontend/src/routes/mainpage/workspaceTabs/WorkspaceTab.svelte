@@ -23,9 +23,9 @@
     } from "@fortawesome/free-solid-svg-icons";
     import { Fa } from "svelte-fa";
 
-    import { isReadOnly } from "$lib/api/apiWorkspaceUtils.js";
     import { asyncValue } from "$lib/asyncValue.svelte.js";
     import { ContextMenu } from "$lib/components/bitsui/contextmenu";
+    import { workspaceStore } from "$lib/stores/workspaceStore.ts";
 
     import WorkspaceActionsMenu from "../workspaceActions/WorkspaceActionsMenu.svelte";
 
@@ -38,7 +38,7 @@
     const inactiveTabClasses =
         "text-nav-text border-transparent hover:bg-nav-hover-background";
 
-    const readonlyValue = asyncValue(() => name, isReadOnly);
+    const readonlyValue = asyncValue(() => name, workspaceStore.isReadOnly);
 
     let showDeleteDialog = $state(false);
     const readonly = $derived(readonlyValue.current ?? false);
